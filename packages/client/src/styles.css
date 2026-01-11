@@ -1,0 +1,286 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  background-color: #0a0a0a;
+  color: #00ff00;
+  font-family: "Courier New", monospace;
+  min-height: 100vh;
+}
+
+#app {
+  min-height: 100vh;
+}
+
+#app.login-view {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+#app.game-view {
+  display: block;
+}
+
+#login-container {
+  text-align: center;
+  padding: 2rem;
+  border: 2px solid #00ff00;
+  background-color: #111;
+  max-width: 400px;
+  width: 100%;
+}
+
+#login-container h1 {
+  margin-bottom: 2rem;
+  font-size: 1.8rem;
+  text-shadow: 0 0 10px #00ff00;
+}
+
+.form-group {
+  margin-bottom: 1rem;
+  text-align: left;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 0.5rem;
+}
+
+.form-group input {
+  width: 100%;
+  padding: 0.75rem;
+  background-color: #000;
+  border: 1px solid #00ff00;
+  color: #00ff00;
+  font-family: inherit;
+  font-size: 1rem;
+}
+
+.form-group input:focus {
+  outline: none;
+  box-shadow: 0 0 5px #00ff00;
+}
+
+button {
+  width: 100%;
+  padding: 1rem;
+  margin-top: 1rem;
+  background-color: #00ff00;
+  color: #000;
+  border: none;
+  font-family: inherit;
+  font-size: 1rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+button:hover {
+  background-color: #00cc00;
+  box-shadow: 0 0 10px #00ff00;
+}
+
+.error {
+  color: #ff4444;
+  margin-top: 1rem;
+}
+
+.success {
+  color: #00ff00;
+  margin-top: 1rem;
+}
+
+.form-link {
+  margin-top: 1rem;
+  font-size: 0.9rem;
+}
+
+.form-link a {
+  color: #00ff00;
+  text-decoration: underline;
+}
+
+.form-link a:hover {
+  color: #00cc00;
+}
+
+#register-container {
+  text-align: center;
+  padding: 2rem;
+  border: 2px solid #00ff00;
+  background-color: #111;
+  max-width: 400px;
+  width: 100%;
+}
+
+#register-container h1 {
+  margin-bottom: 2rem;
+  font-size: 1.8rem;
+  text-shadow: 0 0 10px #00ff00;
+}
+
+#terminal-container {
+  display: none;
+  width: 100%;
+  height: 100vh;
+  padding: 0;
+  flex-direction: column;
+}
+
+#terminal-container.active {
+  display: flex;
+}
+
+/* Navigation Menu */
+#main-nav {
+  display: flex;
+  align-items: center;
+  padding: 0.5rem 1rem;
+  background-color: #111;
+  border-bottom: 1px solid #00ff00;
+  flex-shrink: 0;
+}
+
+.nav-brand {
+  font-size: 1.2rem;
+  font-weight: bold;
+  text-shadow: 0 0 10px #00ff00;
+  color: #00ff00;
+}
+
+.nav-spacer {
+  flex: 1;
+}
+
+/* Dropdown Menu System */
+.nav-user-menu {
+  position: relative;
+}
+
+.nav-user-btn {
+  background: transparent;
+  border: 1px solid #00ff00;
+  color: #00ff00;
+  padding: 0.5rem 1rem;
+  font-family: inherit;
+  font-size: 0.9rem;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.nav-user-btn:hover {
+  background-color: rgba(0, 255, 0, 0.1);
+}
+
+.dropdown-menu {
+  display: none;
+  position: absolute;
+  top: 100%;
+  right: 0;
+  min-width: 180px;
+  background-color: #1a1a1a;
+  border: 1px solid #00ff00;
+  border-radius: 4px;
+  margin-top: 4px;
+  z-index: 1000;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+}
+
+.nav-user-menu.open .dropdown-menu {
+  display: block;
+}
+
+.dropdown-item {
+  display: block;
+  width: 100%;
+  padding: 0.6rem 1rem;
+  background: transparent;
+  border: none;
+  color: #ccc;
+  text-align: left;
+  font-family: inherit;
+  font-size: 0.9rem;
+  cursor: pointer;
+  text-decoration: none;
+  transition: all 0.15s;
+}
+
+.dropdown-item:hover {
+  background-color: rgba(0, 255, 0, 0.15);
+  color: #00ff00;
+}
+
+.dropdown-divider {
+  height: 1px;
+  background-color: #333;
+  margin: 0.25rem 0;
+}
+
+/* Dropdown Sections */
+.dropdown-section {
+  padding: 0;
+}
+
+.dropdown-header {
+  padding: 0.5rem 1rem;
+  font-size: 0.75rem;
+  font-weight: bold;
+  color: #00ff00;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.dropdown-item.indent {
+  padding-left: 1.5rem;
+}
+
+#logout-btn {
+  color: #ff4444 !important;
+}
+
+#logout-btn:hover {
+  background-color: rgba(255, 68, 68, 0.15) !important;
+  color: #ff4444 !important;
+}
+
+#terminal {
+  flex: 1;
+  width: 100%;
+  overflow: hidden;
+  min-height: 0;
+}
+
+#command-bar {
+  display: flex;
+  align-items: center;
+  padding: 0.5rem 1rem;
+  background-color: #111;
+  border-top: 1px solid #00ff00;
+  flex-shrink: 0;
+}
+
+#command-bar .prompt {
+  color: #00ff00;
+  margin-right: 0.5rem;
+  font-weight: bold;
+}
+
+#command-input {
+  flex: 1;
+  background-color: #000;
+  border: 1px solid #00ff00;
+  color: #00ff00;
+  padding: 0.5rem;
+  font-family: 'Courier New', monospace;
+  font-size: 1rem;
+}
+
+#command-input:focus {
+  outline: none;
+  box-shadow: 0 0 5px #00ff00;
+}

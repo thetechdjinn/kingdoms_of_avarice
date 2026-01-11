@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Kingdoms of Avarice</title>
+    <link rel="stylesheet" href="/src/styles.css" />
+  </head>
+  <body>
+    <div id="app" class="login-view">
+      <div id="login-container">
+        <h1>Kingdoms of Avarice</h1>
+        <form id="login-form">
+          <div class="form-group">
+            <label for="username">Username</label>
+            <input type="text" id="username" name="username" required />
+          </div>
+          <div class="form-group">
+            <label for="password">Password</label>
+            <input type="password" id="password" name="password" required />
+          </div>
+          <button type="submit">Enter the Realm</button>
+          <p id="login-error" class="error"></p>
+          <p class="form-link">
+            New player? <a href="#" id="show-register">Create an account</a>
+          </p>
+        </form>
+      </div>
+      <div id="register-container" style="display: none">
+        <h1>Create Account</h1>
+        <form id="register-form">
+          <div class="form-group">
+            <label for="reg-username">Username</label>
+            <input
+              type="text"
+              id="reg-username"
+              name="username"
+              required
+              minlength="3"
+              maxlength="20"
+            />
+          </div>
+          <div class="form-group">
+            <label for="reg-password">Password</label>
+            <input
+              type="password"
+              id="reg-password"
+              name="password"
+              required
+              minlength="6"
+            />
+          </div>
+          <div class="form-group">
+            <label for="reg-email">Email (optional)</label>
+            <input type="email" id="reg-email" name="email" />
+          </div>
+          <button type="submit">Create Account</button>
+          <p id="register-error" class="error"></p>
+          <p id="register-success" class="success"></p>
+          <p class="form-link"><a href="#" id="show-login">Back to login</a></p>
+        </form>
+      </div>
+      <div id="terminal-container">
+        <nav id="main-nav">
+          <div class="nav-brand">Kingdoms of Avarice</div>
+          <div class="nav-spacer"></div>
+          <div class="nav-user-menu">
+            <button class="nav-user-btn" id="nav-username">User</button>
+            <div class="dropdown-menu" id="user-dropdown">
+              <div
+                class="dropdown-section"
+                id="developer-menu"
+                style="display: none"
+              >
+                <div class="dropdown-header">Developer</div>
+                <a href="/editor.html" class="dropdown-item indent"
+                  >Room Editor</a
+                >
+              </div>
+              <div
+                class="dropdown-divider"
+                id="menu-divider"
+                style="display: none"
+              ></div>
+              <button class="dropdown-item" id="logout-btn">Logout</button>
+            </div>
+          </div>
+        </nav>
+        <div id="terminal"></div>
+        <div id="command-bar">
+          <span class="prompt">&gt;</span>
+          <input
+            type="text"
+            id="command-input"
+            placeholder="Enter command..."
+            autocomplete="off"
+          />
+        </div>
+      </div>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

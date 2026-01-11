@@ -1,0 +1,22 @@
+{
+  "name": "kingdoms-of-avarice",
+  "version": "1.0.0",
+  "private": true,
+  "description": "A web-based MUD game inspired by MajorMUD",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\"",
+    "dev:client": "npm run dev --workspace=@koa/client",
+    "dev:server": "npm run dev --workspace=@koa/server",
+    "build": "npm run build --workspaces",
+    "build:shared": "npm run build --workspace=@koa/shared",
+    "build:client": "npm run build --workspace=@koa/client",
+    "build:server": "npm run build --workspace=@koa/server"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "typescript": "^5.3.3"
+  }
+}

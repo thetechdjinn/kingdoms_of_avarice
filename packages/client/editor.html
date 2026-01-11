@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Room Editor - Kingdoms of Avarice</title>
+    <link rel="stylesheet" href="/src/editor.css" />
+  </head>
+  <body>
+    <div id="editor-app">
+      <nav id="main-nav">
+        <div class="nav-brand">Kingdoms of Avarice</div>
+        <div class="nav-spacer"></div>
+        <div class="nav-user-menu">
+          <button class="nav-user-btn" id="nav-username">User</button>
+          <div class="dropdown-menu" id="user-dropdown">
+            <a href="/" class="dropdown-item">Game</a>
+            <div class="dropdown-section" id="developer-menu">
+              <div class="dropdown-header">Developer</div>
+              <a href="/editor.html" class="dropdown-item indent active">Room Editor</a>
+            </div>
+            <div class="dropdown-divider"></div>
+            <button class="dropdown-item" id="logout-btn">Logout</button>
+          </div>
+        </div>
+      </nav>
+      
+      <div id="editor-layout">
+        <aside id="room-list-panel">
+          <div class="panel-header">
+            <h2>Rooms</h2>
+            <button id="new-room-btn" class="btn-primary">+ New Room</button>
+          </div>
+          <div id="area-filter">
+            <label for="area-select">Filter by Area:</label>
+            <select id="area-select">
+              <option value="">All Areas</option>
+            </select>
+            <button id="manage-areas-btn" class="btn-small" title="Manage Areas">⚙</button>
+          </div>
+          <ul id="room-list"></ul>
+          
+          <!-- Area Management Modal -->
+          <div id="area-modal" class="modal" style="display: none;">
+            <div class="modal-content">
+              <div class="modal-header">
+                <h3>Manage Areas</h3>
+                <button id="close-area-modal" class="close-btn">&times;</button>
+              </div>
+              <div class="modal-body">
+                <p class="hint">Click an area to rename it. Type a new area name in the room's Area field to create a new area.</p>
+                <ul id="area-list"></ul>
+              </div>
+            </div>
+          </div>
+        </aside>
+        
+        <main id="room-editor-panel">
+          <div id="no-room-selected">
+            <p>Select a room from the list or create a new one.</p>
+          </div>
+          
+          <form id="room-form" style="display: none;">
+            <div class="form-header">
+              <h2 id="room-form-title">Edit Room</h2>
+              <span id="room-id-display"></span>
+            </div>
+            
+            <div class="form-group">
+              <label for="room-name">Name</label>
+              <input type="text" id="room-name" required />
+            </div>
+            
+            <div class="form-group">
+              <label for="room-area">Area <span class="hint-inline">(type to create new)</span></label>
+              <input type="text" id="room-area" list="area-suggestions" placeholder="Enter existing or new area name" />
+              <datalist id="area-suggestions"></datalist>
+            </div>
+            
+            <div class="form-group">
+              <label for="room-description">Description</label>
+              <textarea id="room-description" rows="5"></textarea>
+            </div>
+            
+            <div class="form-section">
+              <h3>Exits</h3>
+              <div id="exits-list"></div>
+              <div id="add-exit-form">
+                <select id="exit-direction">
+                  <option value="">Select direction...</option>
+                  <option value="north">North</option>
+                  <option value="south">South</option>
+                  <option value="east">East</option>
+                  <option value="west">West</option>
+                  <option value="up">Up</option>
+                  <option value="down">Down</option>
+                  <option value="northeast">Northeast</option>
+                  <option value="northwest">Northwest</option>
+                  <option value="southeast">Southeast</option>
+                  <option value="southwest">Southwest</option>
+                </select>
+                <select id="exit-target">
+                  <option value="">Select target room...</option>
+                </select>
+                <label class="checkbox-label">
+                  <input type="checkbox" id="exit-bidirectional" checked />
+                  Two-way
+                </label>
+                <button type="button" id="add-exit-btn" class="btn-secondary">Add Exit</button>
+              </div>
+            </div>
+            
+            <div class="form-actions">
+              <button type="submit" class="btn-primary">Save Room</button>
+              <button type="button" id="delete-room-btn" class="btn-danger">Delete Room</button>
+            </div>
+          </form>
+        </main>
+        
+        <aside id="map-panel">
+          <h2>Map Preview</h2>
+          <div id="map-container">
+            <canvas id="room-map"></canvas>
+          </div>
+        </aside>
+      </div>
+    </div>
+    <script type="module" src="/src/editor.ts"></script>
+  </body>
+</html>
