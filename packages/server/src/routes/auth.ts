@@ -218,8 +218,10 @@ export function setupAuthRoutes(app: Express): void {
     }
 
     const { playerId } = req.body;
-    if (!playerId) {
-      res.status(400).json({ error: 'Player ID required' });
+    
+    // Validate playerId is a positive integer
+    if (!playerId || typeof playerId !== 'number' || !Number.isInteger(playerId) || playerId <= 0) {
+      res.status(400).json({ error: 'Valid player ID required' });
       return;
     }
 

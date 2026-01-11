@@ -58,15 +58,24 @@ export function setupGameSocket(wss: WebSocketServer): void {
       resourceType: ResourceType.MANA,
     };
     
-    // Load brief mode from database
-    authWs.briefMode = await playerRepo.getBriefMode(payload.playerId);
+    // Load brief mode from database (default to false on error)
+    try {
+      authWs.briefMode = await playerRepo.getBriefMode(payload.playerId);
+    } catch (error) {
+      console.error('Failed to load brief mode:', error);
+      authWs.briefMode = false;
+    }
 
     connectedPlayers.set(payload.playerId, authWs);
     
-    // Load player's saved room location from database
-    const savedRoomId = await playerRepo.getCurrentRoomId(payload.playerId);
-    setPlayerLocation(payload.playerId, savedRoomId);
-    const startRoomId = savedRoomId;
+    // Load player's saved room location from database (default to room 1 on error)
+    let startRoomId = 1;
+    try {
+      startRoomId = await playerRepo.getCurrentRoomId(payload.playerId);
+    } catch (error) {
+      console.error('Failed to load player room:', error);
+    }
+    setPlayerLocation(payload.playerId, startRoomId);
 
     // Broadcast to all players that someone entered the realm
     broadcastToAll(`${payload.username} entered the realm.`, authWs.playerId);

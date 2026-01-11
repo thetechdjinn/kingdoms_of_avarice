@@ -55,25 +55,37 @@ function initTerminal(): void {
   setupAutoFocus();
 }
 
+// Store references to event handlers so we can remove them
+let terminalClickHandler: (() => void) | null = null;
+let windowFocusHandler: (() => void) | null = null;
+
 function setupAutoFocus(): void {
   const commandInput = document.getElementById('command-input') as HTMLInputElement;
   if (!commandInput) return;
 
+  // Remove previous listeners if they exist
+  const terminalContainer = document.getElementById('terminal-container');
+  if (terminalClickHandler && terminalContainer) {
+    terminalContainer.removeEventListener('click', terminalClickHandler);
+  }
+  if (windowFocusHandler) {
+    window.removeEventListener('focus', windowFocusHandler);
+  }
+
   // Initial focus
   commandInput.focus();
 
+  // Create new handlers
+  terminalClickHandler = () => commandInput.focus();
+  windowFocusHandler = () => commandInput.focus();
+
   // Re-focus when clicking anywhere in the terminal container
-  const terminalContainer = document.getElementById('terminal-container');
   if (terminalContainer) {
-    terminalContainer.addEventListener('click', () => {
-      commandInput.focus();
-    });
+    terminalContainer.addEventListener('click', terminalClickHandler);
   }
 
   // Re-focus when window gains focus
-  window.addEventListener('focus', () => {
-    commandInput.focus();
-  });
+  window.addEventListener('focus', windowFocusHandler);
 }
 
 function handleCommandInput(event: KeyboardEvent): void {

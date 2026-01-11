@@ -95,7 +95,7 @@ export async function processCommand(
     return { type: MessageType.SYSTEM, message: 'Type "x" to leave the realm.' };
   }
 
-  if (command === 'x') {
+  if (command === 'x' && args.length === 0) {
     return handleExit(socket);
   }
 
@@ -270,12 +270,13 @@ function handleSay(
     return { type: MessageType.ERROR, message: 'Say what?' };
   }
 
-  // Send to others: "Username says:"
+  // Send to others in the same room: "Username says:"
   const othersMessage = `${colors.sayName(socket.username + ' says:')} ${colors.say('"' + message + '"')}`;
+  const currentRoomId = getPlayerLocation(socket.playerId);
   
-  // Broadcast to all other connected players
+  // Broadcast to players in the same room only
   for (const [playerId, playerSocket] of connectedPlayers) {
-    if (playerId !== socket.playerId) {
+    if (playerId !== socket.playerId && getPlayerLocation(playerId) === currentRoomId) {
       const gameMessage: GameMessage = {
         type: MessageType.OUTPUT,
         payload: othersMessage,

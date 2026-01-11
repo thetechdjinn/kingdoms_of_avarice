@@ -6,6 +6,11 @@ interface PendingUser {
 async function checkAuth(): Promise<boolean> {
   try {
     const response = await fetch('/api/auth/me', { credentials: 'include' });
+    
+    if (!response.ok) {
+      return false;
+    }
+    
     const data = await response.json();
     
     if (data.authenticated) {
@@ -59,15 +64,35 @@ async function loadPendingUsers(): Promise<void> {
       return;
     }
 
-    listEl.innerHTML = users.map(user => `
-      <div class="user-item" data-user-id="${user.id}">
-        <div class="user-info">
-          <span class="user-name">${escapeHtml(user.username)}</span>
-          <span class="user-id">ID: ${user.id}</span>
-        </div>
-        <button class="btn-approve" onclick="approveUser(${user.id})">Approve</button>
-      </div>
-    `).join('');
+    listEl.innerHTML = '';
+    
+    for (const user of users) {
+      const userItem = document.createElement('div');
+      userItem.className = 'user-item';
+      userItem.dataset.userId = String(user.id);
+      
+      const userInfo = document.createElement('div');
+      userInfo.className = 'user-info';
+      
+      const userName = document.createElement('span');
+      userName.className = 'user-name';
+      userName.textContent = user.username;
+      
+      const userId = document.createElement('span');
+      userId.className = 'user-id';
+      userId.textContent = `ID: ${user.id}`;
+      
+      const approveBtn = document.createElement('button');
+      approveBtn.className = 'btn-approve';
+      approveBtn.textContent = 'Approve';
+      approveBtn.addEventListener('click', () => approveUser(user.id));
+      
+      userInfo.appendChild(userName);
+      userInfo.appendChild(userId);
+      userItem.appendChild(userInfo);
+      userItem.appendChild(approveBtn);
+      listEl.appendChild(userItem);
+    }
   } catch (error) {
     console.error('Failed to load pending users:', error);
     listEl.innerHTML = '<p class="no-users">Error loading users</p>';
@@ -119,12 +144,6 @@ async function approveUser(playerId: number): Promise<void> {
   }
 }
 
-function escapeHtml(text: string): string {
-  const div = document.createElement('div');
-  div.textContent = text;
-  return div.innerHTML;
-}
-
 async function handleLogout(): Promise<void> {
   try {
     await fetch('/api/logout', {
@@ -137,8 +156,6 @@ async function handleLogout(): Promise<void> {
   window.location.href = '/';
 }
 
-// Make approveUser available globally
-(window as unknown as { approveUser: typeof approveUser }).approveUser = approveUser;
 
 document.addEventListener('DOMContentLoaded', async () => {
   const isAdmin = await checkAuth();
