@@ -64,7 +64,7 @@ export async function processCommand(
     // Check if looking in a direction
     if (args.length > 0) {
       const direction = DIRECTION_ALIASES[args[0]] || args[0];
-      return handleLookDirection(currentRoomId, direction, world, _connectedPlayers);
+      return handleLookDirection(socket, currentRoomId, direction, world, _connectedPlayers);
     }
     return handleLook(socket, currentRoomId, world, _connectedPlayers, false);
   }
@@ -153,6 +153,7 @@ function handleLook(
 }
 
 function handleLookDirection(
+  socket: AuthenticatedSocket,
   currentRoomId: number,
   direction: string,
   world: GameWorld,
@@ -167,6 +168,10 @@ function handleLookDirection(
   if (!targetRoom) {
     return { type: MessageType.ERROR, message: `There is no exit ${direction}.` };
   }
+
+  // Notify players in the target room that someone is peeking in
+  const oppositeDir = OPPOSITE_DIRECTIONS[direction] || direction;
+  broadcastToRoom(targetRoom.id, `${socket.username} peeks in from the ${oppositeDir}.`, socket.playerId);
 
   // Show the full room including players and exits
   const playersInRoom = getPlayersInRoom(targetRoom.id, connectedPlayers);
