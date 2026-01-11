@@ -1,16 +1,21 @@
 import { WebSocketServer, WebSocket } from 'ws';
 import { IncomingMessage } from 'http';
 import { parse as parseCookie } from 'cookie';
-import { MessageType, GameMessage, Role } from '@koa/shared';
+import { MessageType, GameMessage, Role, VitalsData, ResourceType } from '@koa/shared';
 import { verifyToken, COOKIE_NAME } from '../routes/auth.js';
 import { GameWorld } from './world.js';
 import { processCommand } from './commands.js';
+import { getPlayerLocation, setPlayerLocation } from './adminCommands.js';
+import * as playerRepo from '../db/repositories/playerRepository.js';
 
 interface AuthenticatedSocket extends WebSocket {
   playerId: number;
   username: string;
   characterId?: number;
   roles: Role[];
+  vitals: VitalsData;
+  briefMode: boolean;
+  exitTimer?: NodeJS.Timeout;
 }
 
 const connectedPlayers = new Map<number, AuthenticatedSocket>();
@@ -44,14 +49,53 @@ export function setupGameSocket(wss: WebSocketServer): void {
     authWs.username = payload.username;
     authWs.roles = payload.roles || [];
 
+    // Initialize default vitals (will be replaced when character system is complete)
+    authWs.vitals = {
+      hp: 100,
+      maxHp: 100,
+      resource: 50,
+      maxResource: 50,
+      resourceType: ResourceType.MANA,
+    };
+    
+    // Load brief mode from database (default to false on error)
+    try {
+      authWs.briefMode = await playerRepo.getBriefMode(payload.playerId);
+    } catch (error) {
+      console.error('Failed to load brief mode:', error);
+      authWs.briefMode = false;
+    }
+
     connectedPlayers.set(payload.playerId, authWs);
+    
+    // Load player's saved room location from database (default to room 1 on error)
+    let startRoomId = 1;
+    try {
+      startRoomId = await playerRepo.getCurrentRoomId(payload.playerId);
+    } catch (error) {
+      console.error('Failed to load player room:', error);
+    }
+    setPlayerLocation(payload.playerId, startRoomId);
+
+    // Broadcast to all players that someone entered the realm
+    broadcastToAll(`${payload.username} entered the realm.`, authWs.playerId);
 
     sendMessage(authWs, MessageType.SYSTEM, '\r\n=== Welcome to Kingdoms of Avarice ===\r\n');
     
-    const room = gameWorld.getRoom(1);
+    const room = gameWorld.getRoom(startRoomId);
     if (room) {
-      sendMessage(authWs, MessageType.OUTPUT, gameWorld.formatRoomDescription(room));
+      // Get other players in the room (excluding self)
+      const otherPlayers: string[] = [];
+      for (const [playerId, socket] of connectedPlayers) {
+        if (playerId !== payload.playerId && getPlayerLocation(playerId) === startRoomId) {
+          otherPlayers.push(socket.username);
+        }
+      }
+      sendMessage(authWs, MessageType.OUTPUT, gameWorld.formatRoomDescription(room, otherPlayers));
     }
+
+    // Send initial vitals
+    sendVitals(authWs);
 
     ws.on('message', async (data) => {
       try {
@@ -59,6 +103,8 @@ export function setupGameSocket(wss: WebSocketServer): void {
         if (message.type === MessageType.COMMAND) {
           const response = await processCommand(message.payload, authWs, gameWorld, connectedPlayers);
           sendMessage(authWs, response.type, response.message);
+          // Send vitals after every command
+          sendVitals(authWs);
         }
       } catch {
         sendMessage(authWs, MessageType.ERROR, 'Invalid message format');
@@ -66,6 +112,8 @@ export function setupGameSocket(wss: WebSocketServer): void {
     });
 
     ws.on('close', () => {
+      // Broadcast to all players that someone left the realm
+      broadcastToAll(`${payload.username} left the realm.`, payload.playerId);
       connectedPlayers.delete(payload.playerId);
       console.log(`Player ${payload.username} disconnected`);
     });
@@ -77,6 +125,43 @@ export function setupGameSocket(wss: WebSocketServer): void {
 function sendMessage(ws: AuthenticatedSocket, type: MessageType, payload: string): void {
   const message: GameMessage = { type, payload, timestamp: Date.now() };
   ws.send(JSON.stringify(message));
+}
+
+function sendVitals(ws: AuthenticatedSocket): void {
+  const message: GameMessage = {
+    type: MessageType.VITALS,
+    payload: JSON.stringify(ws.vitals),
+    timestamp: Date.now(),
+  };
+  ws.send(JSON.stringify(message));
+}
+
+// Broadcast a system message to all connected players (except excludePlayerId)
+function broadcastToAll(text: string, excludePlayerId?: number): void {
+  const message: GameMessage = {
+    type: MessageType.SYSTEM,
+    payload: text,
+    timestamp: Date.now(),
+  };
+  for (const [playerId, socket] of connectedPlayers) {
+    if (playerId !== excludePlayerId) {
+      socket.send(JSON.stringify(message));
+    }
+  }
+}
+
+// Broadcast to players in a specific room (except excludePlayerId)
+export function broadcastToRoom(roomId: number, text: string, excludePlayerId?: number): void {
+  const message: GameMessage = {
+    type: MessageType.OUTPUT,
+    payload: text,
+    timestamp: Date.now(),
+  };
+  for (const [playerId, socket] of connectedPlayers) {
+    if (playerId !== excludePlayerId && getPlayerLocation(playerId) === roomId) {
+      socket.send(JSON.stringify(message));
+    }
+  }
 }
 
 export { connectedPlayers, AuthenticatedSocket };

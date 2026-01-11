@@ -9,6 +9,8 @@ export enum MessageType {
   OUTPUT = "output",
   ERROR = "error",
   SYSTEM = "system",
+  VITALS = "vitals",
+  LOGOUT = "logout",
 }
 
 // WebSocket message structure
@@ -16,6 +18,22 @@ export interface GameMessage {
   type: MessageType;
   payload: string;
   timestamp?: number;
+}
+
+// Resource types for different character classes
+export enum ResourceType {
+  MANA = "MA",    // Mages, Clerics
+  KAI = "KA",     // Monks (future)
+  NONE = "NONE",  // Warriors, Rogues (no secondary resource)
+}
+
+// Vitals data sent to client for statline display
+export interface VitalsData {
+  hp: number;
+  maxHp: number;
+  resource?: number;      // Current mana/kai/etc
+  maxResource?: number;   // Max mana/kai/etc
+  resourceType: ResourceType;
 }
 
 // Player state shared between client and server

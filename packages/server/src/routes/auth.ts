@@ -54,7 +54,7 @@ export function setupAuthRoutes(app: Express): void {
         // Get player roles for token
         const roles = await roleRepo.getPlayerRoles(player.id);
 
-        const token = jwt.sign({ playerId: player.id, username, roles }, JWT_SECRET, { expiresIn: '24h' });
+        const token = jwt.sign({ playerId: player.id, username: player.username, roles }, JWT_SECRET, { expiresIn: '24h' });
 
         res.cookie(COOKIE_NAME, token, {
           httpOnly: true,
@@ -164,6 +164,78 @@ export function setupAuthRoutes(app: Express): void {
   app.post('/api/logout', (_req: Request, res: Response) => {
     res.clearCookie(COOKIE_NAME);
     res.json({ success: true });
+  });
+
+  // Admin: Get pending users
+  app.get('/api/admin/pending-users', async (req: Request, res: Response) => {
+    const token = req.cookies[COOKIE_NAME];
+    if (!token) {
+      res.status(401).json({ error: 'Not authenticated' });
+      return;
+    }
+
+    const payload = verifyToken(token);
+    if (!payload) {
+      res.status(401).json({ error: 'Invalid token' });
+      return;
+    }
+
+    // Check if user is admin
+    const isAdmin = payload.roles?.includes(Role.ADMIN);
+    if (!isAdmin) {
+      res.status(403).json({ error: 'Admin access required' });
+      return;
+    }
+
+    try {
+      const pendingUsers = await roleRepo.getPendingPlayers();
+      res.json({ users: pendingUsers });
+    } catch (error) {
+      console.error('Error fetching pending users:', error);
+      res.status(500).json({ error: 'Server error' });
+    }
+  });
+
+  // Admin: Approve a user
+  app.post('/api/admin/approve-user', async (req: Request, res: Response) => {
+    const token = req.cookies[COOKIE_NAME];
+    if (!token) {
+      res.status(401).json({ error: 'Not authenticated' });
+      return;
+    }
+
+    const payload = verifyToken(token);
+    if (!payload) {
+      res.status(401).json({ error: 'Invalid token' });
+      return;
+    }
+
+    // Check if user is admin
+    const isAdmin = payload.roles?.includes(Role.ADMIN);
+    if (!isAdmin) {
+      res.status(403).json({ error: 'Admin access required' });
+      return;
+    }
+
+    const { playerId } = req.body;
+    
+    // Validate playerId is a positive integer
+    if (!playerId || typeof playerId !== 'number' || !Number.isInteger(playerId) || playerId <= 0) {
+      res.status(400).json({ error: 'Valid player ID required' });
+      return;
+    }
+
+    try {
+      const success = await roleRepo.approvePlayer(playerId, payload.playerId);
+      if (success) {
+        res.json({ success: true, message: 'User approved' });
+      } else {
+        res.status(500).json({ error: 'Failed to approve user' });
+      }
+    } catch (error) {
+      console.error('Error approving user:', error);
+      res.status(500).json({ error: 'Server error' });
+    }
   });
 
   // Check current authentication status and roles

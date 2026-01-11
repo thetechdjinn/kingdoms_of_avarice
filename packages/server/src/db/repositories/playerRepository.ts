@@ -8,6 +8,8 @@ export interface Player {
   email: string | null;
   created_at: Date;
   last_login: Date | null;
+  brief_mode: boolean;
+  current_room_id: number;
 }
 
 export interface CreatePlayerInput {
@@ -31,7 +33,7 @@ export async function createPlayer(input: CreatePlayerInput): Promise<Player> {
 
 export async function findPlayerByUsername(username: string): Promise<Player | null> {
   const result = await query<Player>(
-    'SELECT * FROM players WHERE username = $1',
+    'SELECT * FROM players WHERE LOWER(username) = LOWER($1)',
     [username]
   );
   
@@ -60,9 +62,39 @@ export async function updateLastLogin(playerId: number): Promise<void> {
 
 export async function playerExists(username: string): Promise<boolean> {
   const result = await query<{ exists: boolean }>(
-    'SELECT EXISTS(SELECT 1 FROM players WHERE username = $1) as exists',
+    'SELECT EXISTS(SELECT 1 FROM players WHERE LOWER(username) = LOWER($1)) as exists',
     [username]
   );
   
   return result.rows[0].exists;
+}
+
+export async function getBriefMode(playerId: number): Promise<boolean> {
+  const result = await query<{ brief_mode: boolean }>(
+    'SELECT brief_mode FROM players WHERE id = $1',
+    [playerId]
+  );
+  return result.rows[0]?.brief_mode ?? false;
+}
+
+export async function setBriefMode(playerId: number, briefMode: boolean): Promise<void> {
+  await query(
+    'UPDATE players SET brief_mode = $1 WHERE id = $2',
+    [briefMode, playerId]
+  );
+}
+
+export async function getCurrentRoomId(playerId: number): Promise<number> {
+  const result = await query<{ current_room_id: number }>(
+    'SELECT current_room_id FROM players WHERE id = $1',
+    [playerId]
+  );
+  return result.rows[0]?.current_room_id ?? 1;
+}
+
+export async function setCurrentRoomId(playerId: number, roomId: number): Promise<void> {
+  await query(
+    'UPDATE players SET current_room_id = $1 WHERE id = $2',
+    [roomId, playerId]
+  );
 }

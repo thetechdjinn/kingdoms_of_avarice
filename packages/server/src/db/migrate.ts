@@ -19,6 +19,17 @@ export async function runMigrations(): Promise<void> {
     const schema = readFileSync(schemaPath, 'utf-8');
     
     await getPool().query(schema);
+    
+    // Add brief_mode column if it doesn't exist (for existing databases)
+    await getPool().query(`
+      ALTER TABLE players ADD COLUMN IF NOT EXISTS brief_mode BOOLEAN DEFAULT FALSE
+    `);
+    
+    // Add current_room_id column if it doesn't exist (for existing databases)
+    await getPool().query(`
+      ALTER TABLE players ADD COLUMN IF NOT EXISTS current_room_id INTEGER DEFAULT 1
+    `);
+    
     console.log('Database migrations completed successfully');
 
     // Initialize roles
