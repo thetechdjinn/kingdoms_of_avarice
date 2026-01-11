@@ -151,13 +151,50 @@ export class GameWorld {
     return this.rooms.get(targetId);
   }
 
-  formatRoomDescription(room: Room): string {
+  formatRoomDescription(room: Room, otherPlayers: string[] = [], briefMode: boolean = false): string {
     const exits = Array.from(room.exits.keys());
     const exitStr = exits.length > 0 ? exits.join(', ') : 'none';
 
-    return `${colors.roomName(room.name)}\r\n` +
-           `${colors.roomDesc(room.description)}\r\n` +
-           `${colors.exitLabel('Exits:')} ${colors.exits(exitStr)}`;
+    let output = `${colors.roomName(room.name)}\r\n`;
+    
+    // Only show description if not in brief mode
+    if (!briefMode) {
+      const wrappedDesc = this.wordWrap(room.description, 80);
+      output += `${colors.roomDesc(wrappedDesc)}\r\n`;
+    }
+    
+    // Add "Also here:" line if there are other players
+    if (otherPlayers.length > 0) {
+      const playerNames = otherPlayers.map(name => colors.playerInRoom(name)).join(', ');
+      output += `${colors.alsoHereLabel('Also here:')} ${playerNames}\r\n`;
+    }
+    
+    output += `${colors.exitLabel('Obvious exits:')} ${colors.exits(exitStr)}`;
+    
+    return output;
+  }
+
+  private wordWrap(text: string, maxWidth: number): string {
+    const words = text.split(' ');
+    const lines: string[] = [];
+    let currentLine = '';
+
+    for (const word of words) {
+      if (currentLine.length === 0) {
+        currentLine = word;
+      } else if (currentLine.length + 1 + word.length <= maxWidth) {
+        currentLine += ' ' + word;
+      } else {
+        lines.push(currentLine);
+        currentLine = word;
+      }
+    }
+
+    if (currentLine.length > 0) {
+      lines.push(currentLine);
+    }
+
+    return lines.join('\r\n');
   }
 
   getRoomData(room: Room): RoomData {

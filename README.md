@@ -6,7 +6,7 @@ A web-based MUD (Multi-User Dungeon) game inspired by the classic MajorMUD.
 
 - **Frontend:** Vite + TypeScript + xterm.js
 - **Backend:** Node.js + Express + WebSocket
-- **Database:** PostgreSQL (planned)
+- **Database:** PostgreSQL
 
 ## Getting Started
 

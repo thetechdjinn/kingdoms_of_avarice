@@ -1,52 +1,96 @@
 import { Terminal } from 'xterm';
-import { FitAddon } from 'xterm-addon-fit';
-import { MessageType, GameMessage } from '@koa/shared';
+import { MessageType, GameMessage, VitalsData, ResourceType } from '@koa/shared';
 import 'xterm/css/xterm.css';
 
 let terminal: Terminal | null = null;
 let socket: WebSocket | null = null;
+let currentVitals: VitalsData | null = null;
+let statlineDisplayed = false;
+
+// Fixed terminal dimensions (classic MUD style)
+const TERMINAL_COLS = 80;
+const TERMINAL_ROWS = 25;
+
+// Filter input to printable ASCII characters only (security)
+function sanitizeInput(input: string): string {
+  // Allow printable ASCII characters (space through tilde: 0x20-0x7E)
+  return input.replace(/[^\x20-\x7E]/g, '');
+}
+
+// Calculate font size to fill ~95% of viewport height
+function calculateFontSize(): number {
+  const navHeight = 45; // Approximate nav bar height
+  const commandBarHeight = 50; // Approximate command bar height
+  const padding = 20; // Terminal padding
+  const availableHeight = window.innerHeight * 0.95 - navHeight - commandBarHeight - padding;
+  // Each row is approximately 1.2x the font size in height
+  const fontSize = Math.floor(availableHeight / (TERMINAL_ROWS * 1.2));
+  return Math.max(12, Math.min(fontSize, 32)); // Clamp between 12 and 32
+}
 
 function initTerminal(): void {
   const terminalContainer = document.getElementById('terminal');
   if (!terminalContainer) return;
 
   terminal = new Terminal({
+    cols: TERMINAL_COLS,
+    rows: TERMINAL_ROWS,
     cursorBlink: false,
-    fontSize: 16,
+    fontSize: calculateFontSize(),
     fontFamily: 'Courier New, monospace',
     theme: {
       background: '#0a0a0a',
       foreground: '#00ff00',
       cursor: '#0a0a0a',
       cursorAccent: '#0a0a0a',
+      magenta: '#aa00aa',
+      brightMagenta: '#ff55ff',
     },
     disableStdin: true,
   });
 
-  const fitAddon = new FitAddon();
-  terminal.loadAddon(fitAddon);
   terminal.open(terminalContainer);
-  fitAddon.fit();
 
-  window.addEventListener('resize', () => fitAddon.fit());
+  // Keep focus on command input
+  setupAutoFocus();
+}
 
+function setupAutoFocus(): void {
   const commandInput = document.getElementById('command-input') as HTMLInputElement;
-  if (commandInput) {
-    commandInput.focus();
+  if (!commandInput) return;
+
+  // Initial focus
+  commandInput.focus();
+
+  // Re-focus when clicking anywhere in the terminal container
+  const terminalContainer = document.getElementById('terminal-container');
+  if (terminalContainer) {
+    terminalContainer.addEventListener('click', () => {
+      commandInput.focus();
+    });
   }
+
+  // Re-focus when window gains focus
+  window.addEventListener('focus', () => {
+    commandInput.focus();
+  });
 }
 
 function handleCommandInput(event: KeyboardEvent): void {
   if (event.key !== 'Enter') return;
 
   const input = event.target as HTMLInputElement;
-  const command = input.value.trim();
+  const command = sanitizeInput(input.value.trim());
 
   if (command) {
     if (terminal) {
-      terminal.write(`\x1b[1;32m> ${command}\x1b[0m\r\n`);
+      clearStatline();
+      terminal.write(`\x1b[1;37m${command}\x1b[0m\r\n`);
     }
     sendCommand(command);
+  } else {
+    // Empty enter re-renders the room (respects brief mode)
+    sendCommand('glance');
   }
 
   input.value = '';
@@ -99,18 +143,80 @@ function handleServerMessage(message: GameMessage): void {
 
   switch (message.type) {
     case MessageType.OUTPUT:
+      clearStatline();
       terminal.write(message.payload);
       terminal.write('\r\n');
+      renderStatline();
       break;
     case MessageType.ERROR:
+      clearStatline();
       terminal.write(`\x1b[31m${message.payload}\x1b[0m`);
       terminal.write('\r\n');
+      renderStatline();
       break;
     case MessageType.SYSTEM:
+      clearStatline();
       terminal.write(`\x1b[33m${message.payload}\x1b[0m`);
       terminal.write('\r\n');
+      renderStatline();
+      break;
+    case MessageType.VITALS:
+      try {
+        currentVitals = JSON.parse(message.payload) as VitalsData;
+        clearStatline();
+        renderStatline();
+      } catch {
+        console.error('Failed to parse vitals');
+      }
+      break;
+    case MessageType.LOGOUT:
+      // Server requested logout - call the logout API and redirect to login
+      handleLogout();
       break;
   }
+}
+
+// Get ANSI color code based on percentage of max
+function getStatColor(current: number, max: number): string {
+  const percent = (current / max) * 100;
+  if (percent <= 25) {
+    return '\x1b[1;31m'; // Bold red for <= 25%
+  } else if (percent <= 50) {
+    return '\x1b[1;33m'; // Bold yellow for <= 50%
+  } else {
+    return '\x1b[1;37m'; // Bold white for > 50%
+  }
+}
+
+// Clear the statline from the terminal
+function clearStatline(): void {
+  if (!terminal || !statlineDisplayed) return;
+  // Move to beginning of line and clear it
+  terminal.write('\r\x1b[K');
+  statlineDisplayed = false;
+}
+
+// Render the statline at the current cursor position
+function renderStatline(): void {
+  if (!terminal || !currentVitals) return;
+
+  const hpColor = getStatColor(currentVitals.hp, currentVitals.maxHp);
+  const reset = '\x1b[0m';
+  
+  let statline = `[HP=${hpColor}${currentVitals.hp}${reset}`;
+
+  // Add secondary resource if applicable
+  if (currentVitals.resourceType !== ResourceType.NONE && 
+      currentVitals.resource !== undefined && 
+      currentVitals.maxResource !== undefined) {
+    const resourceColor = getStatColor(currentVitals.resource, currentVitals.maxResource);
+    statline += `/${currentVitals.resourceType}=${resourceColor}${currentVitals.resource}${reset}`;
+  }
+
+  statline += ']: ';
+
+  terminal.write(statline);
+  statlineDisplayed = true;
 }
 
 async function handleLogin(event: Event): Promise<void> {
@@ -201,8 +307,14 @@ async function handleRegister(event: Event): Promise<void> {
     const data = await response.json();
 
     if (data.success) {
-      if (successEl) successEl.textContent = 'Account created! You can now login.';
       form.reset();
+      // Redirect to login screen with success message
+      showLoginForm();
+      const loginError = document.getElementById('login-error');
+      if (loginError) {
+        loginError.style.color = '#00ff00';
+        loginError.textContent = 'Account created! Please wait for admin approval before logging in.';
+      }
     } else {
       if (errorEl) errorEl.textContent = data.message || 'Registration failed';
     }
@@ -233,7 +345,8 @@ async function updateNavigation(): Promise<void> {
       }
       
       const roles: string[] = data.roles || [];
-      const isDeveloper = roles.includes('developer') || roles.includes('admin');
+      const isAdmin = roles.includes('admin');
+      const isDeveloper = roles.includes('developer') || isAdmin;
       
       // Show/hide Developer menu based on roles
       const developerMenu = document.getElementById('developer-menu');
@@ -242,7 +355,13 @@ async function updateNavigation(): Promise<void> {
         developerMenu.style.display = isDeveloper ? 'block' : 'none';
       }
       if (menuDivider) {
-        menuDivider.style.display = isDeveloper ? 'block' : 'none';
+        menuDivider.style.display = (isDeveloper || isAdmin) ? 'block' : 'none';
+      }
+      
+      // Show/hide Admin menu based on roles
+      const adminMenu = document.getElementById('admin-menu');
+      if (adminMenu) {
+        adminMenu.style.display = isAdmin ? 'block' : 'none';
       }
     }
   } catch (error) {

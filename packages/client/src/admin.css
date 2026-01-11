@@ -1,0 +1,256 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  background-color: #0a0a0a;
+  color: #00ff00;
+  font-family: "Courier New", monospace;
+  min-height: 100vh;
+}
+
+#admin-app {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Navigation Menu */
+#main-nav {
+  display: flex;
+  align-items: center;
+  padding: 0.5rem 1rem;
+  background-color: #111;
+  border-bottom: 1px solid #00ff00;
+  flex-shrink: 0;
+}
+
+.nav-brand {
+  font-size: 1.2rem;
+  font-weight: bold;
+  text-shadow: 0 0 10px #00ff00;
+  color: #00ff00;
+}
+
+.nav-spacer {
+  flex: 1;
+}
+
+/* Dropdown Menu System */
+.nav-user-menu {
+  position: relative;
+}
+
+.nav-user-btn {
+  background: transparent;
+  border: 1px solid #00ff00;
+  color: #00ff00;
+  padding: 0.5rem 1rem;
+  font-family: inherit;
+  font-size: 0.9rem;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.nav-user-btn:hover {
+  background-color: rgba(0, 255, 0, 0.1);
+}
+
+.dropdown-menu {
+  display: none;
+  position: absolute;
+  top: 100%;
+  right: 0;
+  min-width: 180px;
+  background-color: #1a1a1a;
+  border: 1px solid #00ff00;
+  border-radius: 4px;
+  margin-top: 4px;
+  z-index: 1000;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+}
+
+.nav-user-menu.open .dropdown-menu {
+  display: block;
+}
+
+.dropdown-item {
+  display: block;
+  width: 100%;
+  padding: 0.6rem 1rem;
+  background: transparent;
+  border: none;
+  color: #ccc;
+  text-align: left;
+  font-family: inherit;
+  font-size: 0.9rem;
+  cursor: pointer;
+  text-decoration: none;
+  transition: all 0.15s;
+}
+
+.dropdown-item:hover {
+  background-color: rgba(0, 255, 0, 0.15);
+  color: #00ff00;
+}
+
+.dropdown-item.active {
+  color: #00ff00;
+  background-color: rgba(0, 255, 0, 0.1);
+}
+
+.dropdown-divider {
+  height: 1px;
+  background-color: #333;
+  margin: 0.25rem 0;
+}
+
+.dropdown-section {
+  padding: 0;
+}
+
+.dropdown-header {
+  padding: 0.5rem 1rem;
+  font-size: 0.75rem;
+  font-weight: bold;
+  color: #00ff00;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.dropdown-item.indent {
+  padding-left: 1.5rem;
+}
+
+#logout-btn {
+  color: #ff4444 !important;
+}
+
+#logout-btn:hover {
+  background-color: rgba(255, 68, 68, 0.15) !important;
+  color: #ff4444 !important;
+}
+
+/* Admin Content */
+#admin-content {
+  flex: 1;
+  padding: 2rem;
+  max-width: 800px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+#admin-content h1 {
+  font-size: 1.8rem;
+  margin-bottom: 2rem;
+  text-shadow: 0 0 10px #00ff00;
+  border-bottom: 1px solid #00ff00;
+  padding-bottom: 0.5rem;
+}
+
+#admin-content h2 {
+  font-size: 1.3rem;
+  margin-bottom: 0.5rem;
+  color: #00ff00;
+}
+
+.section-desc {
+  color: #888;
+  margin-bottom: 1rem;
+  font-size: 0.9rem;
+}
+
+/* Access Denied */
+#access-denied {
+  text-align: center;
+  padding: 4rem 2rem;
+}
+
+#access-denied h1 {
+  color: #ff4444;
+  text-shadow: 0 0 10px #ff4444;
+  border-bottom: none;
+}
+
+#access-denied p {
+  margin-bottom: 2rem;
+  color: #ccc;
+}
+
+#access-denied a {
+  color: #00ff00;
+  text-decoration: underline;
+}
+
+/* Pending Users List */
+#pending-users-list {
+  background-color: #111;
+  border: 1px solid #333;
+  border-radius: 4px;
+  padding: 1rem;
+}
+
+.loading {
+  color: #888;
+  font-style: italic;
+}
+
+.no-users {
+  color: #888;
+  font-style: italic;
+}
+
+.user-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem;
+  border-bottom: 1px solid #333;
+}
+
+.user-item:last-child {
+  border-bottom: none;
+}
+
+.user-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.user-name {
+  font-weight: bold;
+  color: #00ff00;
+}
+
+.user-id {
+  font-size: 0.8rem;
+  color: #666;
+}
+
+.btn-approve {
+  background-color: #00ff00;
+  color: #000;
+  border: none;
+  padding: 0.5rem 1rem;
+  font-family: inherit;
+  font-size: 0.9rem;
+  font-weight: bold;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.btn-approve:hover {
+  background-color: #00cc00;
+  box-shadow: 0 0 10px #00ff00;
+}
+
+.btn-approve:disabled {
+  background-color: #333;
+  color: #666;
+  cursor: not-allowed;
+  box-shadow: none;
+}

@@ -76,6 +76,9 @@ export const colors = {
   // Semantic helpers for game output
   roomName: (text: string) => applyStyle(text, 'bold', 'cyan'),
   roomDesc: (text: string) => applyStyle(text, 'white'),
+  alsoHereLabel: (text: string) => applyStyle(text, 'brightMagenta'),
+  playerInRoom: (text: string) => applyStyle(text, 'bold', 'brightMagenta'),
+  hostileInRoom: (text: string) => applyStyle(text, 'bold', 'red'),
   exits: (text: string) => applyStyle(text, 'yellow'),
   exitLabel: (text: string) => applyStyle(text, 'bold', 'yellow'),
   error: (text: string) => applyStyle(text, 'red'),

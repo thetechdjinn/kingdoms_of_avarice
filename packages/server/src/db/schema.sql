@@ -7,7 +7,9 @@ CREATE TABLE IF NOT EXISTS players (
     password_hash VARCHAR(255) NOT NULL,
     email VARCHAR(255) UNIQUE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    last_login TIMESTAMP
+    last_login TIMESTAMP,
+    brief_mode BOOLEAN DEFAULT FALSE,
+    current_room_id INTEGER DEFAULT 1
 );
 
 -- Characters table (one player can have multiple characters)
