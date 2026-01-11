@@ -636,3 +636,50 @@ body {
   font-size: 1rem;
   text-decoration: none;
 }
+
+/* Map header with toggle */
+.map-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.map-header h2 {
+  margin: 0;
+}
+
+.map-view-toggle {
+  display: flex;
+  gap: 0;
+}
+
+.toggle-btn {
+  background: #1a1a2e;
+  border: 1px solid #333;
+  color: #666;
+  padding: 0.25rem 0.75rem;
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: all 0.2s;
+}
+
+.toggle-btn:first-child {
+  border-radius: 4px 0 0 4px;
+}
+
+.toggle-btn:last-child {
+  border-radius: 0 4px 4px 0;
+  border-left: none;
+}
+
+.toggle-btn:hover {
+  background: #252540;
+  color: #aaa;
+}
+
+.toggle-btn.active {
+  background: #0e4429;
+  border-color: #00aa00;
+  color: #00ff00;
+}

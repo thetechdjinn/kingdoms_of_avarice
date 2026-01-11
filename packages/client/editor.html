@@ -99,6 +99,9 @@
                   <option value="southeast">Southeast</option>
                   <option value="southwest">Southwest</option>
                 </select>
+                <select id="exit-area-filter">
+                  <option value="">All Areas</option>
+                </select>
                 <select id="exit-target">
                   <option value="">Select target room...</option>
                 </select>
@@ -118,7 +121,13 @@
         </main>
         
         <aside id="map-panel">
-          <h2>Map Preview</h2>
+          <div class="map-header">
+            <h2>Map Preview</h2>
+            <div class="map-view-toggle">
+              <button id="view-room-btn" class="toggle-btn active" title="Show selected room and neighbors">Room</button>
+              <button id="view-area-btn" class="toggle-btn" title="Show full area map">Area</button>
+            </div>
+          </div>
           <div id="map-container">
             <canvas id="room-map"></canvas>
           </div>

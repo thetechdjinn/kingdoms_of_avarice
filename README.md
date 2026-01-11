@@ -52,10 +52,13 @@ packages/
 ## Commands (In-Game)
 
 - `look` (l) - Look around the current room
-- `go <direction>` - Move in a direction (n, s, e, w)
-- `say <message>` - Say something
+- `<direction>` - Move in a direction (n, s, e, w, ne, nw, se, sw, u, d)
+- `brief` - Toggle brief mode (hide room descriptions)
 - `who` - See who is online
+- `x` - Exit the game (meditate to leave)
 - `help` - Show available commands
+
+See [Documentation](Documentation/README.md) for full command reference.
 
 ## License
 

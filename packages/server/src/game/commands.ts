@@ -78,8 +78,8 @@ export async function processCommand(
     return await handleBrief(socket);
   }
 
-  if (command === 'go' || DIRECTION_ALIASES[command] || isDirection(command)) {
-    const direction = command === 'go' ? args[0] : (DIRECTION_ALIASES[command] || command);
+  if (DIRECTION_ALIASES[command] || isDirection(command)) {
+    const direction = DIRECTION_ALIASES[command] || command;
     return await handleMove(socket, currentRoomId, direction, world, _connectedPlayers);
   }
 
@@ -299,7 +299,7 @@ function handleHelp(userRoles: Role[]): CommandResponse {
   const lines = [
     colors.boldYellow('Player Commands:'),
     `  ${colors.boldCyan('look')} (l)           - Look around the current room`,
-    `  ${colors.boldCyan('go <direction>')}    - Move in a direction (n, s, e, w, etc.)`,
+    `  ${colors.boldCyan('<direction>')}       - Move in a direction (n, s, e, w, etc.)`,
     `  ${colors.boldCyan('brief')}             - Toggle brief mode (hide room descriptions)`,
     `  ${colors.boldCyan('who')}               - See who is online`,
     `  ${colors.boldCyan('x')}                 - Meditate and leave the realm`,
