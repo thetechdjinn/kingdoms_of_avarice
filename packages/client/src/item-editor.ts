@@ -1,3 +1,5 @@
+(function() {
+
 interface ItemTemplate {
   id: number;
   name: string;
@@ -107,14 +109,16 @@ async function checkAuth(): Promise<boolean> {
   try {
     const response = await fetch('/api/auth/me');
     if (!response.ok) {
-      showLoginRequired();
+      // Redirect to login
+      window.location.href = '/';
       return false;
     }
     const data: AuthInfo = await response.json();
     currentUser = data;
     
     if (!data.authenticated) {
-      showLoginRequired();
+      // Redirect to login
+      window.location.href = '/';
       return false;
     }
 
@@ -122,7 +126,8 @@ async function checkAuth(): Promise<boolean> {
     const hasDeveloperAccess = roles.includes('developer') || roles.includes('admin');
     
     if (!hasDeveloperAccess) {
-      showAccessDenied();
+      // Redirect to game - no access
+      window.location.href = '/';
       return false;
     }
 
@@ -134,7 +139,8 @@ async function checkAuth(): Promise<boolean> {
     return true;
   } catch (error) {
     console.error('Failed to check auth:', error);
-    showLoginRequired();
+    // Redirect to login on error
+    window.location.href = '/';
     return false;
   }
 }
@@ -948,3 +954,5 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   }
 });
+
+})();

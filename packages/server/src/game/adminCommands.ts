@@ -3,6 +3,7 @@ import { GameWorld, Room } from './world.js';
 import { AuthenticatedSocket } from './socket.js';
 import { colors } from '../utils/colors.js';
 import * as itemRepo from '../db/repositories/itemRepository.js';
+import { isProgressionCommand, processProgressionCommand, getProgressionHelpText } from './progressionCommands.js';
 
 interface CommandResponse {
   type: MessageType;
@@ -51,6 +52,11 @@ export async function processAdminCommand(
     if (!hasAnyRole(userRoles, [Role.MODERATOR, Role.SYSOP, Role.DEVELOPER, Role.ADMIN])) {
       return { type: MessageType.ERROR, message: 'You do not have permission to use admin commands.' };
     }
+  }
+
+  // Check if it's a progression command first
+  if (isProgressionCommand(command)) {
+    return processProgressionCommand(command, args, socket);
   }
 
   switch (command) {
@@ -711,6 +717,9 @@ function handleAdminHelp(userRoles: Role[]): CommandResponse {
     lines.push('');
     lines.push(colors.boldYellow('Developer Commands (System):'));
     lines.push(`  ${colors.boldCyan('@reload [rooms|all]')}     - Reload data from database`);
+    
+    // Add progression commands help
+    lines.push(getProgressionHelpText());
   }
 
   return { type: MessageType.OUTPUT, message: lines.join('\r\n') };

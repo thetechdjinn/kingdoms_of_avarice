@@ -29,6 +29,11 @@ export async function runMigrations(): Promise<void> {
     
     await getPool().query(schema);
     
+    // Run progression schema
+    const progressionSchemaPath = join(sqlDir, 'schema_progression.sql');
+    const progressionSchema = readFileSync(progressionSchemaPath, 'utf-8');
+    await getPool().query(progressionSchema);
+    
     // Add brief_mode column if it doesn't exist (for existing databases)
     await getPool().query(`
       ALTER TABLE players ADD COLUMN IF NOT EXISTS brief_mode BOOLEAN DEFAULT FALSE

@@ -105,3 +105,6 @@ export * from "./roles.js";
 
 // Re-export items
 export * from "./items.js";
+
+// Re-export progression system
+export * from "./progression.js";

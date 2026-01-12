@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Documentation - Kingdoms of Avarice</title>
+    <link rel="stylesheet" href="/src/docs.css" />
+  </head>
+  <body>
+    <div id="docs-app">
+      <nav id="docs-nav">
+        <a href="/" class="nav-brand">Kingdoms of Avarice</a>
+        <span class="nav-title">Documentation</span>
+        <div class="nav-spacer"></div>
+        <a href="/" class="nav-link">Back to Game</a>
+      </nav>
+      
+      <div id="docs-layout">
+        <aside id="docs-sidebar">
+          <h3>Guides</h3>
+          <ul id="docs-list">
+            <li><a href="/docs.html?file=README.md" class="doc-link">Documentation Index</a></li>
+            <li><a href="/docs.html?file=architecture.md" class="doc-link">Architecture</a></li>
+            <li><a href="/docs.html?file=Room_Creation_Guide.md" class="doc-link">Room Creation</a></li>
+            <li><a href="/docs.html?file=Item_Editor_Guide.md" class="doc-link">Item Editor</a></li>
+            <li><a href="/docs.html?file=Progression_System_Guide.md" class="doc-link">Progression System</a></li>
+            <li><a href="/docs.html?file=RBAC_Guide.md" class="doc-link">RBAC Guide</a></li>
+          </ul>
+        </aside>
+        
+        <main id="docs-content">
+          <div id="loading">Loading documentation...</div>
+          <article id="markdown-content"></article>
+        </main>
+      </div>
+    </div>
+    <script type="module" src="/src/docs.ts"></script>
+  </body>
+</html>

@@ -1,0 +1,122 @@
+[
+  {
+    "ability_id": "power_strike",
+    "display_name": "Power Strike",
+    "ability_type": "skill",
+    "description": "A powerful melee attack that deals increased damage.",
+    "resource_type": "stamina",
+    "resource_cost": 10,
+    "cooldown": 5,
+    "emitted_tags": ["melee"]
+  },
+  {
+    "ability_id": "shield_bash",
+    "display_name": "Shield Bash",
+    "ability_type": "skill",
+    "description": "Bash an enemy with your shield, stunning them briefly.",
+    "resource_type": "stamina",
+    "resource_cost": 15,
+    "cooldown": 8,
+    "emitted_tags": ["melee", "protection"]
+  },
+  {
+    "ability_id": "fireball",
+    "display_name": "Fireball",
+    "ability_type": "spell",
+    "description": "Hurl a ball of fire at your enemies, dealing area damage.",
+    "resource_type": "mana",
+    "resource_cost": 25,
+    "cooldown": 6,
+    "emitted_tags": ["arcane", "fire"]
+  },
+  {
+    "ability_id": "heal",
+    "display_name": "Heal",
+    "ability_type": "spell",
+    "description": "Restore health to yourself or an ally.",
+    "resource_type": "mana",
+    "resource_cost": 20,
+    "cooldown": 4,
+    "emitted_tags": ["holy"]
+  },
+  {
+    "ability_id": "smite",
+    "display_name": "Smite",
+    "ability_type": "spell",
+    "description": "Call down holy wrath upon an enemy.",
+    "resource_type": "mana",
+    "resource_cost": 30,
+    "cooldown": 10,
+    "emitted_tags": ["holy", "melee"]
+  },
+  {
+    "ability_id": "backstab",
+    "display_name": "Backstab",
+    "ability_type": "technique",
+    "description": "Strike from the shadows for massive damage.",
+    "resource_type": "stamina",
+    "resource_cost": 20,
+    "cooldown": 12,
+    "emitted_tags": ["stealth", "melee"]
+  },
+  {
+    "ability_id": "stealth",
+    "display_name": "Stealth",
+    "ability_type": "skill",
+    "description": "Become invisible to enemies.",
+    "resource_type": "stamina",
+    "resource_cost": 15,
+    "cooldown": 30,
+    "emitted_tags": ["stealth"]
+  },
+  {
+    "ability_id": "aimed_shot",
+    "display_name": "Aimed Shot",
+    "ability_type": "skill",
+    "description": "Take careful aim for a powerful ranged attack.",
+    "resource_type": "stamina",
+    "resource_cost": 15,
+    "cooldown": 8,
+    "emitted_tags": ["ranged"]
+  },
+  {
+    "ability_id": "multi_shot",
+    "display_name": "Multi-Shot",
+    "ability_type": "skill",
+    "description": "Fire multiple arrows at once, hitting several targets.",
+    "resource_type": "stamina",
+    "resource_cost": 25,
+    "cooldown": 12,
+    "emitted_tags": ["ranged"]
+  },
+  {
+    "ability_id": "nature_call",
+    "display_name": "Nature's Call",
+    "ability_type": "spell",
+    "description": "Summon the power of nature to aid you.",
+    "resource_type": "mana",
+    "resource_cost": 35,
+    "cooldown": 20,
+    "emitted_tags": ["nature"]
+  },
+  {
+    "ability_id": "defensive_stance",
+    "display_name": "Defensive Stance",
+    "ability_type": "passive",
+    "description": "Increases armor and reduces incoming damage.",
+    "resource_type": null,
+    "resource_cost": 0,
+    "cooldown": 0,
+    "emitted_tags": ["protection"]
+  },
+  {
+    "ability_id": "arcane_intellect",
+    "display_name": "Arcane Intellect",
+    "ability_type": "passive",
+    "description": "Increases maximum mana and spell power.",
+    "resource_type": null,
+    "resource_cost": 0,
+    "cooldown": 0,
+    "emitted_tags": ["arcane"]
+  }
+]

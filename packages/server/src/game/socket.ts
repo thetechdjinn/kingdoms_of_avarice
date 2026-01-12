@@ -7,6 +7,7 @@ import { GameWorld } from './world.js';
 import { processCommand } from './commands.js';
 import { getPlayerLocation, setPlayerLocation } from './adminCommands.js';
 import * as playerRepo from '../db/repositories/playerRepository.js';
+import { initializeProgressionData } from './progressionLoader.js';
 
 interface AuthenticatedSocket extends WebSocket {
   playerId: number;
@@ -25,6 +26,14 @@ let worldInitialized = false;
 export async function initializeGameWorld(): Promise<void> {
   if (worldInitialized) return;
   await gameWorld.initialize();
+  
+  // Initialize progression system from JSON data files
+  try {
+    await initializeProgressionData();
+  } catch (error) {
+    console.warn('[Progression] Failed to load progression data:', error);
+  }
+  
   worldInitialized = true;
 }
 

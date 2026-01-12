@@ -1,13 +1,17 @@
+(function() {
+
 interface PendingUser {
   id: number;
   username: string;
 }
 
-async function checkAuth(): Promise<boolean> {
+async function checkAdminAuth(): Promise<boolean> {
   try {
     const response = await fetch('/api/auth/me', { credentials: 'include' });
     
     if (!response.ok) {
+      // Redirect to login
+      window.location.href = '/';
       return false;
     }
     
@@ -35,11 +39,21 @@ async function checkAuth(): Promise<boolean> {
         adminMenu.style.display = isAdmin ? 'block' : 'none';
       }
       
+      if (!isAdmin) {
+        // Redirect - no admin access
+        window.location.href = '/';
+        return false;
+      }
+      
       return isAdmin;
     }
+    // Redirect to login
+    window.location.href = '/';
     return false;
   } catch (error) {
     console.error('Auth check failed:', error);
+    // Redirect to login on error
+    window.location.href = '/';
     return false;
   }
 }
@@ -158,7 +172,7 @@ async function handleLogout(): Promise<void> {
 
 
 document.addEventListener('DOMContentLoaded', async () => {
-  const isAdmin = await checkAuth();
+  const isAdmin = await checkAdminAuth();
   
   const accessDenied = document.getElementById('access-denied');
   const adminPanel = document.getElementById('admin-panel');
@@ -191,3 +205,5 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   }
 });
+
+})();

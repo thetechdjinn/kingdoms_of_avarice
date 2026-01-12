@@ -1,0 +1,396 @@
+/* Progression Editor Specific Styles */
+
+/* Main Tab Navigation in Nav Bar */
+.main-tabs {
+  display: flex;
+  gap: 0;
+  margin-left: 2rem;
+}
+
+.main-tab {
+  background: transparent;
+  border: none;
+  border-bottom: 3px solid transparent;
+  color: #888;
+  padding: 0.75rem 1.25rem;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.main-tab:hover {
+  color: #00ff00;
+  background: rgba(0, 255, 0, 0.05);
+}
+
+.main-tab.active {
+  color: #00ff00;
+  border-bottom-color: #00ff00;
+}
+
+/* Help link in nav */
+.nav-help {
+  margin-right: 1rem;
+}
+
+/* Tab Pages */
+.tab-page {
+  display: none;
+  height: calc(100vh - 45px);
+}
+
+.tab-page.active {
+  display: block;
+}
+
+/* Override editor-layout for tab pages */
+.tab-page #editor-layout {
+  display: flex;
+  height: 100%;
+}
+
+/* List Panel */
+.list-panel {
+  width: 300px;
+  min-width: 300px;
+  background: #16213e;
+  border-right: 1px solid #333;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.list-panel .panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  border-bottom: 1px solid #333;
+  flex-shrink: 0;
+}
+
+.list-panel .panel-header h2 {
+  font-size: 1.1rem;
+  color: #00ff00;
+  margin: 0;
+}
+
+.list-panel .filter-row {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid #333;
+  flex-shrink: 0;
+}
+
+.list-panel .filter-row select {
+  width: 100%;
+  padding: 0.5rem;
+  background: #1a1a2e;
+  border: 1px solid #333;
+  color: #eee;
+  border-radius: 4px;
+}
+
+/* Entity List */
+.entity-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.entity-list li {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid #222;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.entity-list li:hover {
+  background: rgba(0, 255, 0, 0.1);
+}
+
+.entity-list li.selected {
+  background: rgba(0, 255, 0, 0.2);
+  border-left: 3px solid #00ff00;
+}
+
+.entity-list li .entity-name {
+  font-weight: 500;
+  color: #eee;
+}
+
+.entity-list li .entity-id {
+  font-size: 0.8rem;
+  color: #888;
+  margin-top: 0.25rem;
+}
+
+.entity-list li .entity-type {
+  font-size: 0.75rem;
+  color: #00ff00;
+  background: rgba(0, 255, 0, 0.1);
+  padding: 0.1rem 0.4rem;
+  border-radius: 3px;
+  margin-left: 0.5rem;
+}
+
+/* Editor Panel */
+.editor-panel {
+  flex: 1;
+  padding: 1.5rem;
+  overflow-y: auto;
+  background: #1a1a2e;
+}
+
+.no-selection {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: #666;
+  font-size: 1.1rem;
+}
+
+/* Entity Form */
+.entity-form {
+  max-width: 800px;
+}
+
+.entity-form .form-header {
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #333;
+}
+
+.entity-form .form-header h2 {
+  color: #00ff00;
+  margin: 0;
+}
+
+.entity-form .form-row {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.entity-form .form-row .form-group {
+  flex: 1;
+}
+
+.entity-form .form-group {
+  margin-bottom: 1rem;
+}
+
+.entity-form .form-group label {
+  display: block;
+  margin-bottom: 0.4rem;
+  color: #aaa;
+  font-size: 0.9rem;
+}
+
+.entity-form .form-group input,
+.entity-form .form-group select,
+.entity-form .form-group textarea {
+  width: 100%;
+  padding: 0.6rem;
+  background: #16213e;
+  border: 1px solid #333;
+  color: #eee;
+  border-radius: 4px;
+  font-size: 0.95rem;
+}
+
+.entity-form .form-group input:focus,
+.entity-form .form-group select:focus,
+.entity-form .form-group textarea:focus {
+  outline: none;
+  border-color: #00ff00;
+}
+
+.entity-form .checkbox-group {
+  display: flex;
+  align-items: center;
+}
+
+.entity-form .checkbox-group label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  margin-bottom: 0;
+}
+
+.entity-form .checkbox-group input[type="checkbox"] {
+  width: auto;
+}
+
+/* Stats Row */
+.stats-row .form-group {
+  flex: 0 0 auto;
+  width: 80px;
+  text-align: center;
+}
+
+.stats-row .form-group label {
+  text-align: center;
+  font-weight: bold;
+  color: #00ff00;
+}
+
+.stats-row .form-group input {
+  text-align: center;
+}
+
+/* Form Section */
+.form-section {
+  margin: 1.5rem 0;
+  padding: 1rem;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 6px;
+}
+
+.form-section h3 {
+  color: #00ff00;
+  margin: 0 0 1rem 0;
+  font-size: 1rem;
+}
+
+/* Add Ability Row */
+.add-ability-row {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid #333;
+}
+
+.add-ability-row select {
+  flex: 1;
+  padding: 0.5rem;
+  background: #16213e;
+  border: 1px solid #333;
+  color: #eee;
+  border-radius: 4px;
+}
+
+.add-ability-row input[type="number"] {
+  width: 60px;
+  padding: 0.5rem;
+  background: #16213e;
+  border: 1px solid #333;
+  color: #eee;
+  border-radius: 4px;
+  text-align: center;
+}
+
+.add-ability-row label {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  color: #aaa;
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+
+/* Form Actions */
+.form-actions {
+  display: flex;
+  gap: 1rem;
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid #333;
+}
+
+/* Buttons */
+.btn-primary {
+  background: #00ff00;
+  color: #1a1a2e;
+  border: none;
+  padding: 0.6rem 1.2rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: background 0.2s;
+}
+
+.btn-primary:hover {
+  background: #00cc00;
+}
+
+.btn-secondary {
+  background: #333;
+  color: #eee;
+  border: 1px solid #555;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-secondary:hover {
+  background: #444;
+}
+
+.btn-danger {
+  background: transparent;
+  color: #ff4444;
+  border: 1px solid #ff4444;
+  padding: 0.6rem 1.2rem;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-danger:hover {
+  background: #ff4444;
+  color: #fff;
+}
+
+/* Class Abilities List */
+#class-abilities-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.class-ability-item {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.5rem 0.75rem;
+  background: #16213e;
+  border-radius: 4px;
+}
+
+.class-ability-item .ability-name {
+  flex: 1;
+  color: #eee;
+}
+
+.class-ability-item .ability-level {
+  color: #888;
+  font-size: 0.85rem;
+}
+
+.class-ability-item .ability-auto {
+  color: #00ff00;
+  font-size: 0.75rem;
+  background: rgba(0, 255, 0, 0.1);
+  padding: 0.1rem 0.4rem;
+  border-radius: 3px;
+}
+
+.class-ability-item .remove-btn {
+  background: transparent;
+  border: none;
+  color: #ff4444;
+  cursor: pointer;
+  padding: 0.25rem 0.5rem;
+  font-size: 1rem;
+}
+
+.class-ability-item .remove-btn:hover {
+  color: #ff6666;
+}

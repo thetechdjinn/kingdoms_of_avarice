@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Progression Editor - Kingdoms of Avarice</title>
+    <link rel="stylesheet" href="/src/editor.css" />
+    <link rel="stylesheet" href="/src/progression-editor.css" />
+  </head>
+  <body>
+    <div id="editor-app">
+      <nav id="main-nav">
+        <div class="nav-brand">Kingdoms of Avarice</div>
+        
+        <!-- Main Tab Navigation -->
+        <div class="main-tabs">
+          <button class="main-tab active" data-tab="classes">Classes</button>
+          <button class="main-tab" data-tab="races">Races</button>
+          <button class="main-tab" data-tab="abilities">Abilities</button>
+          <button class="main-tab" data-tab="talents">Talents</button>
+          <button class="main-tab" data-tab="events">Events</button>
+        </div>
+        
+        <div class="nav-spacer"></div>
+        <a href="/docs.html?file=Progression_System_Guide.md" target="_blank" class="help-link nav-help" title="View Documentation">?</a>
+        <div class="nav-user-menu">
+          <button class="nav-user-btn" id="nav-username">User</button>
+          <div class="dropdown-menu" id="user-dropdown">
+            <a href="/" class="dropdown-item">Game</a>
+            <div class="dropdown-section" id="developer-menu">
+              <div class="dropdown-header">Developer</div>
+              <a href="/editor.html" class="dropdown-item indent">Room Editor</a>
+              <a href="/item-editor.html" class="dropdown-item indent">Item Editor</a>
+              <a href="/progression-editor.html" class="dropdown-item indent active">Progression Editor</a>
+            </div>
+            <div class="dropdown-divider"></div>
+            <button class="dropdown-item" id="logout-btn">Logout</button>
+          </div>
+        </div>
+      </nav>
+      
+      <!-- ================================================================ -->
+      <!-- CLASSES TAB -->
+      <!-- ================================================================ -->
+      <div class="tab-page active" id="page-classes">
+        <div id="editor-layout">
+          <aside class="list-panel">
+            <div class="panel-header">
+              <h2>Classes</h2>
+              <button id="new-class-btn" class="btn-primary">+ New</button>
+            </div>
+            <ul id="class-list" class="entity-list"></ul>
+          </aside>
+          
+          <main class="editor-panel">
+            <div class="no-selection" id="class-no-selection">
+              <p>Select a class from the list or create a new one.</p>
+            </div>
+            
+            <form id="class-form" class="entity-form" style="display: none;">
+              <div class="form-header">
+                <h2 id="class-form-title">Edit Class</h2>
+              </div>
+              
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="class-id">Class ID</label>
+                  <input type="text" id="class-id" required placeholder="e.g., warrior_01" />
+                </div>
+                <div class="form-group">
+                  <label for="class-name">Display Name</label>
+                  <input type="text" id="class-name" required placeholder="e.g., Warrior" />
+                </div>
+              </div>
+              
+              <div class="form-group">
+                <label for="class-description">Description</label>
+                <textarea id="class-description" rows="3" placeholder="Class description..."></textarea>
+              </div>
+              
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="class-multiplier">Essence Multiplier</label>
+                  <input type="number" id="class-multiplier" step="0.1" min="0.1" value="1.0" />
+                </div>
+                <div class="form-group">
+                  <label for="class-resource">Resource Type</label>
+                  <select id="class-resource">
+                    <option value="">None</option>
+                    <option value="mana">Mana</option>
+                    <option value="kai">Kai</option>
+                    <option value="rage">Rage</option>
+                    <option value="focus">Focus</option>
+                  </select>
+                </div>
+                <div class="form-group checkbox-group">
+                  <label><input type="checkbox" id="class-playable" checked /> Playable</label>
+                </div>
+              </div>
+              
+              <div class="form-group">
+                <label for="class-tags">Subscribed Tags (comma-separated)</label>
+                <input type="text" id="class-tags" placeholder="melee, protection, holy" />
+              </div>
+              
+              <div class="form-section">
+                <h3>Base Stats</h3>
+                <div class="form-row stats-row">
+                  <div class="form-group"><label>STR</label><input type="number" id="class-str" value="10" min="1" max="20" /></div>
+                  <div class="form-group"><label>DEX</label><input type="number" id="class-dex" value="10" min="1" max="20" /></div>
+                  <div class="form-group"><label>INT</label><input type="number" id="class-int" value="10" min="1" max="20" /></div>
+                  <div class="form-group"><label>WIS</label><input type="number" id="class-wis" value="10" min="1" max="20" /></div>
+                  <div class="form-group"><label>CON</label><input type="number" id="class-con" value="10" min="1" max="20" /></div>
+                  <div class="form-group"><label>CHA</label><input type="number" id="class-cha" value="10" min="1" max="20" /></div>
+                </div>
+              </div>
+              
+              <div class="form-section">
+                <h3>Class Abilities</h3>
+                <div id="class-abilities-list"></div>
+                <div class="add-ability-row">
+                  <select id="add-class-ability-select"><option value="">Select ability...</option></select>
+                  <input type="number" id="add-class-ability-level" value="1" min="1" placeholder="Lvl" />
+                  <label><input type="checkbox" id="add-class-ability-auto" /> Auto</label>
+                  <button type="button" id="add-class-ability-btn" class="btn-secondary">Add</button>
+                </div>
+              </div>
+              
+              <div class="form-actions">
+                <button type="submit" class="btn-primary">Save Class</button>
+                <button type="button" id="delete-class-btn" class="btn-danger">Delete</button>
+              </div>
+            </form>
+          </main>
+        </div>
+      </div>
+      
+      <!-- ================================================================ -->
+      <!-- RACES TAB -->
+      <!-- ================================================================ -->
+      <div class="tab-page" id="page-races">
+        <div id="editor-layout">
+          <aside class="list-panel">
+            <div class="panel-header">
+              <h2>Races</h2>
+              <button id="new-race-btn" class="btn-primary">+ New</button>
+            </div>
+            <ul id="race-list" class="entity-list"></ul>
+          </aside>
+          
+          <main class="editor-panel">
+            <div class="no-selection" id="race-no-selection">
+              <p>Select a race from the list or create a new one.</p>
+            </div>
+            
+            <form id="race-form" class="entity-form" style="display: none;">
+              <div class="form-header">
+                <h2 id="race-form-title">Edit Race</h2>
+              </div>
+              
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="race-id">Race ID</label>
+                  <input type="text" id="race-id" required placeholder="e.g., human_01" />
+                </div>
+                <div class="form-group">
+                  <label for="race-name">Display Name</label>
+                  <input type="text" id="race-name" required placeholder="e.g., Human" />
+                </div>
+              </div>
+              
+              <div class="form-group">
+                <label for="race-description">Description</label>
+                <textarea id="race-description" rows="3" placeholder="Race description..."></textarea>
+              </div>
+              
+              <div class="form-group checkbox-group">
+                <label><input type="checkbox" id="race-playable" checked /> Playable</label>
+              </div>
+              
+              <div class="form-section">
+                <h3>Stat Modifiers</h3>
+                <div class="form-row stats-row">
+                  <div class="form-group"><label>STR</label><input type="number" id="race-str" value="0" min="-5" max="5" /></div>
+                  <div class="form-group"><label>DEX</label><input type="number" id="race-dex" value="0" min="-5" max="5" /></div>
+                  <div class="form-group"><label>INT</label><input type="number" id="race-int" value="0" min="-5" max="5" /></div>
+                  <div class="form-group"><label>WIS</label><input type="number" id="race-wis" value="0" min="-5" max="5" /></div>
+                  <div class="form-group"><label>CON</label><input type="number" id="race-con" value="0" min="-5" max="5" /></div>
+                  <div class="form-group"><label>CHA</label><input type="number" id="race-cha" value="0" min="-5" max="5" /></div>
+                </div>
+              </div>
+              
+              <div class="form-group">
+                <label for="race-traits">Traits (comma-separated)</label>
+                <input type="text" id="race-traits" placeholder="darkvision, poison_resist" />
+              </div>
+              
+              <div class="form-group">
+                <label for="race-allowed-classes">Allowed Classes (comma-separated, empty = all)</label>
+                <input type="text" id="race-allowed-classes" placeholder="warrior_01, mage_01" />
+              </div>
+              
+              <div class="form-actions">
+                <button type="submit" class="btn-primary">Save Race</button>
+                <button type="button" id="delete-race-btn" class="btn-danger">Delete</button>
+              </div>
+            </form>
+          </main>
+        </div>
+      </div>
+      
+      <!-- ================================================================ -->
+      <!-- ABILITIES TAB -->
+      <!-- ================================================================ -->
+      <div class="tab-page" id="page-abilities">
+        <div id="editor-layout">
+          <aside class="list-panel">
+            <div class="panel-header">
+              <h2>Abilities</h2>
+              <button id="new-ability-btn" class="btn-primary">+ New</button>
+            </div>
+            <div class="filter-row">
+              <select id="ability-type-filter">
+                <option value="">All Types</option>
+                <option value="skill">Skills</option>
+                <option value="spell">Spells</option>
+                <option value="technique">Techniques</option>
+                <option value="passive">Passives</option>
+              </select>
+            </div>
+            <ul id="ability-list" class="entity-list"></ul>
+          </aside>
+          
+          <main class="editor-panel">
+            <div class="no-selection" id="ability-no-selection">
+              <p>Select an ability from the list or create a new one.</p>
+            </div>
+            
+            <form id="ability-form" class="entity-form" style="display: none;">
+              <div class="form-header">
+                <h2 id="ability-form-title">Edit Ability</h2>
+              </div>
+              
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="ability-id">Ability ID</label>
+                  <input type="text" id="ability-id" required placeholder="e.g., fireball_01" />
+                </div>
+                <div class="form-group">
+                  <label for="ability-name">Display Name</label>
+                  <input type="text" id="ability-name" required placeholder="e.g., Fireball" />
+                </div>
+              </div>
+              
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="ability-type">Type</label>
+                  <select id="ability-type" required>
+                    <option value="skill">Skill</option>
+                    <option value="spell">Spell</option>
+                    <option value="technique">Technique</option>
+                    <option value="passive">Passive</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="ability-resource-type">Resource Type</label>
+                  <select id="ability-resource-type">
+                    <option value="">None</option>
+                    <option value="mana">Mana</option>
+                    <option value="kai">Kai</option>
+                    <option value="health">Health</option>
+                    <option value="stamina">Stamina</option>
+                  </select>
+                </div>
+              </div>
+              
+              <div class="form-group">
+                <label for="ability-description">Description</label>
+                <textarea id="ability-description" rows="3" placeholder="Ability description..."></textarea>
+              </div>
+              
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="ability-cost">Resource Cost</label>
+                  <input type="number" id="ability-cost" value="0" min="0" />
+                </div>
+                <div class="form-group">
+                  <label for="ability-cooldown">Cooldown (seconds)</label>
+                  <input type="number" id="ability-cooldown" value="0" min="0" />
+                </div>
+              </div>
+              
+              <div class="form-group">
+                <label for="ability-tags">Emitted Tags (comma-separated)</label>
+                <input type="text" id="ability-tags" placeholder="arcane, fire, damage" />
+              </div>
+              
+              <div class="form-actions">
+                <button type="submit" class="btn-primary">Save Ability</button>
+                <button type="button" id="delete-ability-btn" class="btn-danger">Delete</button>
+              </div>
+            </form>
+          </main>
+        </div>
+      </div>
+      
+      <!-- ================================================================ -->
+      <!-- TALENTS TAB -->
+      <!-- ================================================================ -->
+      <div class="tab-page" id="page-talents">
+        <div id="editor-layout">
+          <aside class="list-panel">
+            <div class="panel-header">
+              <h2>Talents</h2>
+              <button id="new-talent-btn" class="btn-primary">+ New</button>
+            </div>
+            <div class="filter-row">
+              <select id="talent-class-filter">
+                <option value="">All Classes</option>
+              </select>
+            </div>
+            <ul id="talent-list" class="entity-list"></ul>
+          </aside>
+          
+          <main class="editor-panel">
+            <div class="no-selection" id="talent-no-selection">
+              <p>Select a talent from the list or create a new one.</p>
+            </div>
+            
+            <form id="talent-form" class="entity-form" style="display: none;">
+              <div class="form-header">
+                <h2 id="talent-form-title">Edit Talent</h2>
+              </div>
+              
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="talent-id">Talent ID</label>
+                  <input type="text" id="talent-id" required placeholder="e.g., power_strike_01" />
+                </div>
+                <div class="form-group">
+                  <label for="talent-name">Display Name</label>
+                  <input type="text" id="talent-name" required placeholder="e.g., Power Strike" />
+                </div>
+              </div>
+              
+              <div class="form-group">
+                <label for="talent-description">Description</label>
+                <textarea id="talent-description" rows="3" placeholder="Talent description..."></textarea>
+              </div>
+              
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="talent-class">Class Restriction</label>
+                  <select id="talent-class">
+                    <option value="">General (All Classes)</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="talent-cost">Essence Cost</label>
+                  <input type="number" id="talent-cost" value="100" min="1" required />
+                </div>
+                <div class="form-group">
+                  <label for="talent-level">Required Level</label>
+                  <input type="number" id="talent-level" value="1" min="1" />
+                </div>
+              </div>
+              
+              <div class="form-group">
+                <label for="talent-prereqs">Prerequisite Talents (comma-separated)</label>
+                <input type="text" id="talent-prereqs" placeholder="basic_combat_01" />
+              </div>
+              
+              <div class="form-group">
+                <label for="talent-grants">Grants Ability</label>
+                <select id="talent-grants">
+                  <option value="">None</option>
+                </select>
+              </div>
+              
+              <div class="form-actions">
+                <button type="submit" class="btn-primary">Save Talent</button>
+                <button type="button" id="delete-talent-btn" class="btn-danger">Delete</button>
+              </div>
+            </form>
+          </main>
+        </div>
+      </div>
+      
+      <!-- ================================================================ -->
+      <!-- EVENTS TAB -->
+      <!-- ================================================================ -->
+      <div class="tab-page" id="page-events">
+        <div id="editor-layout">
+          <aside class="list-panel">
+            <div class="panel-header">
+              <h2>Essence Events</h2>
+              <button id="new-event-btn" class="btn-primary">+ New</button>
+            </div>
+            <ul id="event-list" class="entity-list"></ul>
+          </aside>
+          
+          <main class="editor-panel">
+            <div class="no-selection" id="event-no-selection">
+              <p>Select an event from the list or create a new one.</p>
+            </div>
+            
+            <form id="event-form" class="entity-form" style="display: none;">
+              <div class="form-header">
+                <h2 id="event-form-title">Edit Essence Event</h2>
+              </div>
+              
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="event-id">Event ID</label>
+                  <input type="text" id="event-id" required placeholder="e.g., kill_goblin" />
+                </div>
+                <div class="form-group">
+                  <label for="event-name">Display Name</label>
+                  <input type="text" id="event-name" placeholder="e.g., Defeat Goblin" />
+                </div>
+              </div>
+              
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="event-essence">Base Essence Value</label>
+                  <input type="number" id="event-essence" value="10" min="0" required />
+                </div>
+                <div class="form-group">
+                  <label for="event-xp">Base XP Value</label>
+                  <input type="number" id="event-xp" value="0" min="0" />
+                </div>
+              </div>
+              
+              <div class="form-group">
+                <label for="event-tags">Emitted Tags (comma-separated)</label>
+                <input type="text" id="event-tags" required placeholder="melee, combat" />
+              </div>
+              
+              <div class="form-actions">
+                <button type="submit" class="btn-primary">Save Event</button>
+                <button type="button" id="delete-event-btn" class="btn-danger">Delete</button>
+              </div>
+            </form>
+          </main>
+        </div>
+      </div>
+    </div>
+    <script type="module" src="/src/progression-editor.ts"></script>
+  </body>
+</html>
