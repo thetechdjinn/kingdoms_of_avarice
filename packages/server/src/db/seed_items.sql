@@ -359,7 +359,7 @@ SELECT id, 'room', 1, 1, 'pristine' FROM item_templates WHERE name = 'Crumpled N
 -- CRAFTING MATERIALS
 -- ============================================================================
 
-INSERT INTO item_templates (name, short_desc, long_desc, room_desc, keywords, weight, size, base_value, item_type, flags)
+INSERT INTO item_templates (name, short_desc, long_desc, room_desc, keywords, weight, size, base_value, item_type, flags, max_stack)
 VALUES 
 (
     'Iron Ore',
@@ -369,7 +369,8 @@ VALUES
     ARRAY['ore', 'iron', 'iron ore', 'metal'],
     3, 1, 5,
     'misc',
-    '{"takeable": true, "stackable": true}'
+    '{"takeable": true, "stackable": true}',
+    99
 ),
 (
     'Iron Ingot',
@@ -379,7 +380,8 @@ VALUES
     ARRAY['ingot', 'iron', 'iron ingot', 'metal', 'bar'],
     2, 1, 15,
     'misc',
-    '{"takeable": true, "stackable": true}'
+    '{"takeable": true, "stackable": true}',
+    99
 ),
 (
     'Leather Scraps',
@@ -389,7 +391,8 @@ VALUES
     ARRAY['leather', 'scraps', 'hide'],
     1, 1, 3,
     'misc',
-    '{"takeable": true, "stackable": true}'
+    '{"takeable": true, "stackable": true}',
+    99
 ),
 (
     'Wooden Handle',
@@ -399,7 +402,8 @@ VALUES
     ARRAY['handle', 'wood', 'wooden handle'],
     1, 1, 2,
     'misc',
-    '{"takeable": true, "stackable": true}'
+    '{"takeable": true, "stackable": true}',
+    99
 ),
 (
     'Magic Dust',
@@ -409,7 +413,8 @@ VALUES
     ARRAY['dust', 'magic', 'magic dust', 'reagent'],
     0, 1, 25,
     'misc',
-    '{"takeable": true, "stackable": true}'
+    '{"takeable": true, "stackable": true}',
+    99
 ),
 (
     'Fire Essence',
@@ -419,7 +424,8 @@ VALUES
     ARRAY['essence', 'fire', 'fire essence', 'reagent', 'vial'],
     0, 1, 50,
     'misc',
-    '{"takeable": true, "stackable": true}'
+    '{"takeable": true, "stackable": true}',
+    99
 ),
 (
     'Smithing Hammer',
@@ -429,7 +435,8 @@ VALUES
     ARRAY['hammer', 'smithing hammer', 'tool'],
     5, 2, 30,
     'misc',
-    '{"takeable": true}'
+    '{"takeable": true}',
+    1
 );
 
 -- ============================================================================

@@ -74,6 +74,10 @@ let currentUser: AuthInfo | null = null;
 async function checkAuth(): Promise<boolean> {
   try {
     const response = await fetch('/api/auth/me');
+    if (!response.ok) {
+      showLoginRequired();
+      return false;
+    }
     const data: AuthInfo = await response.json();
     currentUser = data;
     
@@ -142,6 +146,10 @@ function showAccessDenied(): void {
 async function fetchTemplates(): Promise<void> {
   try {
     const response = await fetch('/api/items/templates');
+    if (!response.ok) {
+      console.error('Failed to fetch templates: HTTP', response.status);
+      return;
+    }
     const data = await response.json();
     if (data.success) {
       templates = data.templates;
@@ -359,7 +367,7 @@ function updatePreview(template: ItemTemplate): void {
     html += `
       <div class="preview-section">
         <div class="preview-section-title">Weapon</div>
-        <div>Damage: ${template.weapon_data.damage_dice} ${template.weapon_data.damage_type}</div>
+        <div>Damage: ${escapeHtml(template.weapon_data.damage_dice)} ${escapeHtml(template.weapon_data.damage_type)}</div>
         <div>Speed: ${template.weapon_data.attack_speed || 10}</div>
       </div>
     `;
@@ -370,7 +378,7 @@ function updatePreview(template: ItemTemplate): void {
       <div class="preview-section">
         <div class="preview-section-title">Armor</div>
         <div>AC: ${template.armor_data.armor_class}</div>
-        <div>Class: ${template.armor_data.weight_class || 'light'}</div>
+        <div>Class: ${escapeHtml(template.armor_data.weight_class || 'light')}</div>
       </div>
     `;
   }
@@ -379,7 +387,7 @@ function updatePreview(template: ItemTemplate): void {
     html += `
       <div class="preview-section">
         <div class="preview-section-title">Effect</div>
-        <div>${template.consumable_data.effect_type}: ${template.consumable_data.effect_value}</div>
+        <div>${escapeHtml(template.consumable_data.effect_type)}: ${template.consumable_data.effect_value}</div>
       </div>
     `;
   }
@@ -444,6 +452,10 @@ async function createTemplate(): Promise<void> {
       }),
     });
 
+    if (!response.ok) {
+      alert(`Failed to create template: HTTP ${response.status}`);
+      return;
+    }
     const data = await response.json();
     if (data.success) {
       templates.push(data.template);

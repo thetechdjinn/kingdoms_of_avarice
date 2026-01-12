@@ -288,8 +288,8 @@ export async function getAllInstances(): Promise<ItemInstance[]> {
   );
   
   return result.rows.map(row => {
-    const template = dbToTemplate(row as unknown as DbItemTemplate);
-    return dbToInstance(row, template);
+    const template = dbToTemplate(row as DbItemTemplate);
+    return dbToInstance(row as DbItemInstance, template);
   });
 }
 
@@ -313,8 +313,8 @@ export async function getInstanceById(id: number): Promise<ItemInstance | null> 
   if (!result.rows[0]) return null;
   
   const row = result.rows[0];
-  const template = dbToTemplate(row as unknown as DbItemTemplate);
-  return dbToInstance(row, template);
+  const template = dbToTemplate(row as DbItemTemplate);
+  return dbToInstance(row as DbItemInstance, template);
 }
 
 export async function getInstancesInRoom(roomId: number): Promise<ItemInstance[]> {
@@ -332,8 +332,8 @@ export async function getInstancesInRoom(roomId: number): Promise<ItemInstance[]
   );
   
   return result.rows.map(row => {
-    const template = dbToTemplate(row as unknown as DbItemTemplate);
-    return dbToInstance(row, template);
+    const template = dbToTemplate(row as DbItemTemplate);
+    return dbToInstance(row as DbItemInstance, template);
   });
 }
 
@@ -352,8 +352,8 @@ export async function getPlayerInventory(playerId: number): Promise<ItemInstance
   );
   
   return result.rows.map(row => {
-    const template = dbToTemplate(row as unknown as DbItemTemplate);
-    return dbToInstance(row, template);
+    const template = dbToTemplate(row as DbItemTemplate);
+    return dbToInstance(row as DbItemInstance, template);
   });
 }
 
@@ -442,6 +442,50 @@ export async function updateInstanceQuantity(
   return (result.rowCount ?? 0) > 0;
 }
 
+// Find an existing stackable item instance at a location
+export async function findStackableInstance(
+  templateId: number,
+  locationType: ItemLocationType,
+  locationId: number
+): Promise<ItemInstance | null> {
+  const result = await query<DbItemInstance & DbItemTemplate>(
+    `SELECT ii.*, it.name, it.short_desc, it.long_desc, it.room_desc, it.keywords,
+            it.weight, it.size, it.base_value, it.item_type, it.equipment_slot,
+            it.flags, it.max_stack, it.container_capacity, it.container_weight_limit,
+            it.weapon_data, it.armor_data, it.consumable_data, it.light_data,
+            it.requirements, it.stat_modifiers, it.effect_slots, it.base_effects
+     FROM item_instances ii
+     JOIN item_templates it ON ii.template_id = it.id
+     WHERE ii.template_id = $1 
+       AND ii.location_type = $2 
+       AND ii.location_id = $3
+       AND (it.flags->>'stackable')::boolean = true
+     ORDER BY ii.id
+     LIMIT 1`,
+    [templateId, locationType, locationId]
+  );
+  
+  if (!result.rows[0]) return null;
+  
+  const row = result.rows[0];
+  const template = dbToTemplate(row as DbItemTemplate);
+  return dbToInstance(row as DbItemInstance, template);
+}
+
+// Add quantity to an existing instance (for stacking)
+export async function addToInstanceQuantity(
+  instanceId: number,
+  addQuantity: number
+): Promise<boolean> {
+  const result = await query(
+    `UPDATE item_instances 
+     SET quantity = quantity + $1, updated_at = CURRENT_TIMESTAMP
+     WHERE id = $2`,
+    [addQuantity, instanceId]
+  );
+  return (result.rowCount ?? 0) > 0;
+}
+
 export async function deleteInstance(id: number): Promise<boolean> {
   const result = await query('DELETE FROM item_instances WHERE id = $1', [id]);
   return (result.rowCount ?? 0) > 0;
@@ -475,8 +519,8 @@ export async function findItemsInRoomByKeyword(
   );
   
   return result.rows.map(row => {
-    const template = dbToTemplate(row as unknown as DbItemTemplate);
-    return dbToInstance(row, template);
+    const template = dbToTemplate(row as DbItemTemplate);
+    return dbToInstance(row as DbItemInstance, template);
   });
 }
 
@@ -504,8 +548,8 @@ export async function findItemsInInventoryByKeyword(
   );
   
   return result.rows.map(row => {
-    const template = dbToTemplate(row as unknown as DbItemTemplate);
-    return dbToInstance(row, template);
+    const template = dbToTemplate(row as DbItemTemplate);
+    return dbToInstance(row as DbItemInstance, template);
   });
 }
 
@@ -561,8 +605,8 @@ export async function getItemsInContainer(containerId: number): Promise<ItemInst
   );
   
   return result.rows.map(row => {
-    const template = dbToTemplate(row as unknown as DbItemTemplate);
-    return dbToInstance(row, template);
+    const template = dbToTemplate(row as DbItemTemplate);
+    return dbToInstance(row as DbItemInstance, template);
   });
 }
 
@@ -586,12 +630,12 @@ export async function findItemsInContainerByKeyword(
          OR EXISTS (SELECT 1 FROM unnest(it.keywords) kw WHERE LOWER(kw) LIKE $2)
        )
      ORDER BY ii.id`,
-    [containerId, `%${searchTerm}%`]
+    [containerId, `${searchTerm}%`]
   );
   
   return result.rows.map(row => {
-    const template = dbToTemplate(row as unknown as DbItemTemplate);
-    return dbToInstance(row, template);
+    const template = dbToTemplate(row as DbItemTemplate);
+    return dbToInstance(row as DbItemInstance, template);
   });
 }
 

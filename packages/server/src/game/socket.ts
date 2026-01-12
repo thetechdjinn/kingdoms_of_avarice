@@ -91,7 +91,9 @@ export function setupGameSocket(wss: WebSocketServer): void {
           otherPlayers.push(socket.username);
         }
       }
-      sendMessage(authWs, MessageType.OUTPUT, gameWorld.formatRoomDescription(room, otherPlayers));
+      const { getRoomItemsDescription } = await import('./itemCommands.js');
+      const itemDescriptions = await getRoomItemsDescription(startRoomId);
+      sendMessage(authWs, MessageType.OUTPUT, gameWorld.formatRoomDescription(room, otherPlayers, authWs.briefMode, itemDescriptions));
     }
 
     // Send initial vitals

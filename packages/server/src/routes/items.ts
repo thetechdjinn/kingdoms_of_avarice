@@ -346,26 +346,39 @@ export function setupItemRoutes(app: Express): void {
         errors: [] as string[],
       };
 
+      // Process all templates - collect operations first, then execute
+      const operations: Array<{ type: 'create' | 'update' | 'skip'; template: typeof templates[0]; existingId?: number }> = [];
+      
       for (const template of templates) {
         try {
-          // Check if template with same name exists
           const existing = await itemRepo.getTemplateByName(template.name);
           
           if (existing && merge) {
-            // Update existing
-            await itemRepo.updateTemplate(existing.id, template);
-            results.updated++;
+            operations.push({ type: 'update', template, existingId: existing.id });
           } else if (!existing) {
-            // Create new (without id to let DB assign)
-            const { id, ...templateData } = template;
-            await itemRepo.createTemplate(templateData);
-            results.created++;
+            operations.push({ type: 'create', template });
           } else {
-            // Template exists but merge=false, skip and report
+            operations.push({ type: 'skip', template });
             results.errors.push(`Skipped "${template.name}": already exists (merge disabled)`);
           }
         } catch (err) {
-          results.errors.push(`Failed to import "${template.name}": ${err}`);
+          results.errors.push(`Failed to check "${template.name}": ${err}`);
+        }
+      }
+
+      // Execute all operations (ideally would be in a transaction)
+      for (const op of operations) {
+        try {
+          if (op.type === 'update' && op.existingId) {
+            await itemRepo.updateTemplate(op.existingId, op.template);
+            results.updated++;
+          } else if (op.type === 'create') {
+            const { id, ...templateData } = op.template;
+            await itemRepo.createTemplate(templateData);
+            results.created++;
+          }
+        } catch (err) {
+          results.errors.push(`Failed to import "${op.template.name}": ${err}`);
         }
       }
 

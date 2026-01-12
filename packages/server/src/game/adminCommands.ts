@@ -217,9 +217,11 @@ async function handleEdit(
   try {
     const updatedRoom = await world.updateRoom(currentRoomId, updates);
     if (updatedRoom) {
+      const { getRoomItemsDescription } = await import('./itemCommands.js');
+      const itemDescriptions = await getRoomItemsDescription(currentRoomId);
       return {
         type: MessageType.SYSTEM,
-        message: `${colors.boldGreen('Room updated!')}\r\n${world.formatRoomDescription(updatedRoom)}`,
+        message: `${colors.boldGreen('Room updated!')}\r\n${world.formatRoomDescription(updatedRoom, [], false, itemDescriptions)}`,
       };
     } else {
       return { type: MessageType.ERROR, message: 'Failed to update room' };
@@ -285,9 +287,11 @@ async function handleGoto(
   }
 
   setPlayerLocation(socket.playerId, roomId);
+  const { getRoomItemsDescription } = await import('./itemCommands.js');
+  const itemDescriptions = await getRoomItemsDescription(roomId);
   return {
     type: MessageType.OUTPUT,
-    message: `${colors.system('You teleport...')}\r\n\r\n${world.formatRoomDescription(room)}`,
+    message: `${colors.system('You teleport...')}\r\n\r\n${world.formatRoomDescription(room, [], false, itemDescriptions)}`,
   };
 }
 
@@ -417,15 +421,29 @@ async function handleSpawn(
     return { type: MessageType.ERROR, message: 'Usage: @spawn <template_id|name> [quantity]' };
   }
 
-  const templateIdOrName = args[0];
-  const parsedQty = parseInt(args[1]);
-  const quantity = (!isNaN(parsedQty) && parsedQty > 0) ? parsedQty : 1;
   const currentRoomId = getPlayerLocation(socket.playerId);
+
+  // Check if last arg is a number (quantity), rest is template name
+  let quantity = 1;
+  let templateIdOrName: string;
+  
+  const lastArg = args[args.length - 1];
+  const parsedLastArg = parseInt(lastArg);
+  
+  if (args.length > 1 && !isNaN(parsedLastArg) && parsedLastArg > 0) {
+    // Last arg is quantity, rest is template name
+    quantity = parsedLastArg;
+    templateIdOrName = args.slice(0, -1).join(' ');
+  } else {
+    // No quantity specified, all args are template name
+    templateIdOrName = args.join(' ');
+  }
 
   let template;
   const templateId = parseInt(templateIdOrName);
   
-  if (!isNaN(templateId)) {
+  if (!isNaN(templateId) && templateIdOrName === String(templateId)) {
+    // Only treat as ID if it's purely numeric
     template = await itemRepo.getTemplateById(templateId);
   } else {
     template = await itemRepo.getTemplateByName(templateIdOrName);
@@ -611,14 +629,27 @@ async function handleGive(
     return { type: MessageType.ERROR, message: 'Usage: @give <template_id|name> [quantity]' };
   }
 
-  const templateIdOrName = args[0];
-  const parsedQty = parseInt(args[1]);
-  const quantity = (!isNaN(parsedQty) && parsedQty > 0) ? parsedQty : 1;
+  // Check if last arg is a number (quantity), rest is template name
+  let quantity = 1;
+  let templateIdOrName: string;
+  
+  const lastArg = args[args.length - 1];
+  const parsedLastArg = parseInt(lastArg);
+  
+  if (args.length > 1 && !isNaN(parsedLastArg) && parsedLastArg > 0) {
+    // Last arg is quantity, rest is template name
+    quantity = parsedLastArg;
+    templateIdOrName = args.slice(0, -1).join(' ');
+  } else {
+    // No quantity specified, all args are template name
+    templateIdOrName = args.join(' ');
+  }
 
   let template;
   const templateId = parseInt(templateIdOrName);
   
-  if (!isNaN(templateId)) {
+  if (!isNaN(templateId) && templateIdOrName === String(templateId)) {
+    // Only treat as ID if it's purely numeric
     template = await itemRepo.getTemplateById(templateId);
   } else {
     template = await itemRepo.getTemplateByName(templateIdOrName);
@@ -658,7 +689,7 @@ function handleAdminHelp(userRoles: Role[]): CommandResponse {
   lines.push(`  ${colors.boldCyan('@goto <id>')}              - Teleport to a room`);
   lines.push(`  ${colors.boldCyan('@rooms')}                  - List all rooms`);
   lines.push(`  ${colors.boldCyan('@roominfo [id]')}          - Show room details`);
-  lines.push(`  ${colors.boldCyan('@give <item> [qty]')}      - Give yourself an item`);
+  lines.push(`  ${colors.boldCyan('@give <item> [quantity]')} - Give yourself an item`);
   lines.push(`  ${colors.boldCyan('@help')}                   - Show this help`);
 
   // Developer commands

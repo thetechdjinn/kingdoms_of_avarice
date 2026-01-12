@@ -40,7 +40,7 @@ function formatDisambiguation(matches: ItemInstance[]): string {
   return `Be more specific. You see: ${itemList}`;
 }
 
-// Handle "get <item>" command
+// Handle "get <item>" or "get <quantity> <item>" command
 export async function handleGet(
   socket: AuthenticatedSocket,
   args: string[],
@@ -50,11 +50,21 @@ export async function handleGet(
     return { type: MessageType.ERROR, message: 'Get what?' };
   }
 
-  const keyword = args.join(' ');
-
   // Handle "get all"
-  if (keyword.toLowerCase() === 'all') {
+  if (args[0].toLowerCase() === 'all') {
     return handleGetAll(socket, currentRoomId);
+  }
+
+  // Check if first arg is a quantity (e.g., "get 5 coins")
+  let quantity = 1;
+  let keyword: string;
+  
+  const firstArgNum = parseInt(args[0]);
+  if (!isNaN(firstArgNum) && firstArgNum > 0 && args.length > 1) {
+    quantity = firstArgNum;
+    keyword = args.slice(1).join(' ');
+  } else {
+    keyword = args.join(' ');
   }
 
   // Find matching items in the room
@@ -69,8 +79,19 @@ export async function handleGet(
     return { type: MessageType.ERROR, message: formatDisambiguation(matches) };
   }
 
-  // All same type or single match - pick up the first one
+  // If quantity > 1 requested, we may need to pick up from multiple instances
+  if (quantity > 1) {
+    return pickUpMultipleItems(socket, matches, currentRoomId, quantity);
+  }
+  
   const item = matches[0];
+  
+  // Handle stacked items (pick up 1 from stack)
+  if (item.quantity > 1) {
+    return pickUpItemQuantity(socket, item, currentRoomId, 1);
+  }
+
+  // Non-stacked item with no quantity specified - pick up the whole thing
   return pickUpItem(socket, item, currentRoomId);
 }
 
@@ -85,12 +106,25 @@ async function pickUpItem(
     return { type: MessageType.ERROR, message: `You can't pick that up.` };
   }
 
-  // Move item to player inventory
-  await itemRepo.updateInstanceLocation(
-    item.id,
+  // Check if we can stack with existing item in inventory
+  const existingStack = await itemRepo.findStackableInstance(
+    item.template_id,
     ItemLocationType.PLAYER,
     socket.playerId
   );
+  
+  if (existingStack) {
+    // Add to existing stack and delete room instance
+    await itemRepo.addToInstanceQuantity(existingStack.id, item.quantity);
+    await itemRepo.deleteInstance(item.id);
+  } else {
+    // Move item to player inventory
+    await itemRepo.updateInstanceLocation(
+      item.id,
+      ItemLocationType.PLAYER,
+      socket.playerId
+    );
+  }
 
   const itemName = getItemName(item);
   
@@ -98,6 +132,153 @@ async function pickUpItem(
   broadcastToRoom(currentRoomId, `${socket.username} picks up ${withArticle(itemName)}.`, socket.playerId);
 
   return { type: MessageType.OUTPUT, message: `You pick up ${colors.item(withArticle(itemName))}.` };
+}
+
+// Pick up from multiple instances to reach requested quantity
+async function pickUpMultipleItems(
+  socket: AuthenticatedSocket,
+  items: ItemInstance[],
+  currentRoomId: number,
+  requestedQuantity: number
+): Promise<CommandResponse> {
+  // Check if items are takeable
+  if (items[0].template?.flags?.takeable === false) {
+    return { type: MessageType.ERROR, message: `You can't pick that up.` };
+  }
+
+  const itemName = getItemName(items[0]);
+  
+  // Calculate total available
+  const totalAvailable = items.reduce((sum, item) => sum + item.quantity, 0);
+  const actualQuantity = Math.min(requestedQuantity, totalAvailable);
+  
+  let remaining = actualQuantity;
+  
+  for (const item of items) {
+    if (remaining <= 0) break;
+    
+    const takeFromThis = Math.min(remaining, item.quantity);
+    
+    if (takeFromThis >= item.quantity) {
+      // Taking all from this instance - check if we can stack with existing in inventory
+      const existingStack = await itemRepo.findStackableInstance(
+        item.template_id,
+        ItemLocationType.PLAYER,
+        socket.playerId
+      );
+      
+      if (existingStack) {
+        await itemRepo.addToInstanceQuantity(existingStack.id, item.quantity);
+        await itemRepo.deleteInstance(item.id);
+      } else {
+        await itemRepo.updateInstanceLocation(
+          item.id,
+          ItemLocationType.PLAYER,
+          socket.playerId
+        );
+      }
+    } else {
+      // Taking partial from this instance
+      await itemRepo.updateInstanceQuantity(item.id, item.quantity - takeFromThis);
+      
+      const existingStack = await itemRepo.findStackableInstance(
+        item.template_id,
+        ItemLocationType.PLAYER,
+        socket.playerId
+      );
+      
+      if (existingStack) {
+        await itemRepo.addToInstanceQuantity(existingStack.id, takeFromThis);
+      } else {
+        await itemRepo.createInstance({
+          template_id: item.template_id,
+          location_type: ItemLocationType.PLAYER,
+          location_id: socket.playerId,
+          quantity: takeFromThis,
+          condition: item.condition,
+        });
+      }
+    }
+    
+    remaining -= takeFromThis;
+  }
+
+  const displayName = actualQuantity > 1 ? `${actualQuantity} ${itemName}` : withArticle(itemName);
+
+  // Broadcast to room
+  broadcastToRoom(currentRoomId, `${socket.username} picks up ${displayName}.`, socket.playerId);
+
+  return { type: MessageType.OUTPUT, message: `You pick up ${colors.item(displayName)}.` };
+}
+
+// Pick up a specific quantity from a stacked item
+async function pickUpItemQuantity(
+  socket: AuthenticatedSocket,
+  item: ItemInstance,
+  currentRoomId: number,
+  quantity: number
+): Promise<CommandResponse> {
+  // Check if item is takeable
+  if (item.template?.flags?.takeable === false) {
+    return { type: MessageType.ERROR, message: `You can't pick that up.` };
+  }
+
+  // Clamp quantity to available amount
+  const actualQuantity = Math.min(quantity, item.quantity);
+  const itemName = getItemName(item);
+
+  if (actualQuantity >= item.quantity) {
+    // Picking up all - check if we can stack with existing item in inventory
+    const existingStack = await itemRepo.findStackableInstance(
+      item.template_id,
+      ItemLocationType.PLAYER,
+      socket.playerId
+    );
+    
+    if (existingStack) {
+      // Add to existing stack and delete room instance
+      await itemRepo.addToInstanceQuantity(existingStack.id, item.quantity);
+      await itemRepo.deleteInstance(item.id);
+    } else {
+      // Just move the whole stack to inventory
+      await itemRepo.updateInstanceLocation(
+        item.id,
+        ItemLocationType.PLAYER,
+        socket.playerId
+      );
+    }
+  } else {
+    // Picking up partial - reduce room stack
+    await itemRepo.updateInstanceQuantity(item.id, item.quantity - actualQuantity);
+    
+    // Check if we can stack with existing item in inventory
+    const existingStack = await itemRepo.findStackableInstance(
+      item.template_id,
+      ItemLocationType.PLAYER,
+      socket.playerId
+    );
+    
+    if (existingStack) {
+      // Add to existing stack
+      await itemRepo.addToInstanceQuantity(existingStack.id, actualQuantity);
+    } else {
+      // Create new instance in player inventory
+      await itemRepo.createInstance({
+        template_id: item.template_id,
+        location_type: ItemLocationType.PLAYER,
+        location_id: socket.playerId,
+        quantity: actualQuantity,
+        condition: item.condition,
+      });
+    }
+  }
+
+  const displayName = actualQuantity > 1 ? `${actualQuantity} ${itemName}` : withArticle(itemName);
+
+  // Broadcast to room
+  broadcastToRoom(currentRoomId, `${socket.username} picks up ${displayName}.`, socket.playerId);
+
+  return { type: MessageType.OUTPUT, message: `You pick up ${colors.item(displayName)}.` };
 }
 
 // Handle "get all" command
@@ -134,7 +315,7 @@ async function handleGetAll(
   };
 }
 
-// Handle "drop <item>" command
+// Handle "drop <item>" or "drop <quantity> <item>" command
 export async function handleDrop(
   socket: AuthenticatedSocket,
   args: string[],
@@ -144,11 +325,21 @@ export async function handleDrop(
     return { type: MessageType.ERROR, message: 'Drop what?' };
   }
 
-  const keyword = args.join(' ');
-
   // Handle "drop all"
-  if (keyword.toLowerCase() === 'all') {
+  if (args[0].toLowerCase() === 'all') {
     return handleDropAll(socket, currentRoomId);
+  }
+
+  // Check if first arg is a quantity (e.g., "drop 5 coins")
+  let quantity = 1;
+  let keyword: string;
+  
+  const firstArgNum = parseInt(args[0]);
+  if (!isNaN(firstArgNum) && firstArgNum > 0 && args.length > 1) {
+    quantity = firstArgNum;
+    keyword = args.slice(1).join(' ');
+  } else {
+    keyword = args.join(' ');
   }
 
   // Find matching items in inventory
@@ -163,9 +354,97 @@ export async function handleDrop(
     return { type: MessageType.ERROR, message: formatDisambiguation(matches) };
   }
 
-  // All same type or single match - drop the first one
+  // If quantity > 1 requested, we may need to drop from multiple instances
+  if (quantity > 1) {
+    return dropMultipleItems(socket, matches, currentRoomId, quantity);
+  }
+  
   const item = matches[0];
+  
+  // Handle stacked items (drop 1 from stack)
+  if (item.quantity > 1) {
+    return dropItemQuantity(socket, item, currentRoomId, 1);
+  }
+
+  // Non-stacked item with no quantity specified - drop the whole thing
   return dropItem(socket, item, currentRoomId);
+}
+
+// Drop from multiple instances to reach requested quantity
+async function dropMultipleItems(
+  socket: AuthenticatedSocket,
+  items: ItemInstance[],
+  currentRoomId: number,
+  requestedQuantity: number
+): Promise<CommandResponse> {
+  // Check if items have no_drop flag
+  if (items[0].template?.flags?.no_drop) {
+    return { type: MessageType.ERROR, message: `You can't drop that.` };
+  }
+
+  const itemName = getItemName(items[0]);
+  
+  // Calculate total available
+  const totalAvailable = items.reduce((sum, item) => sum + item.quantity, 0);
+  const actualQuantity = Math.min(requestedQuantity, totalAvailable);
+  
+  let remaining = actualQuantity;
+  
+  for (const item of items) {
+    if (remaining <= 0) break;
+    
+    const dropFromThis = Math.min(remaining, item.quantity);
+    
+    if (dropFromThis >= item.quantity) {
+      // Dropping all from this instance - check if we can stack with existing in room
+      const existingStack = await itemRepo.findStackableInstance(
+        item.template_id,
+        ItemLocationType.ROOM,
+        currentRoomId
+      );
+      
+      if (existingStack) {
+        await itemRepo.addToInstanceQuantity(existingStack.id, item.quantity);
+        await itemRepo.deleteInstance(item.id);
+      } else {
+        await itemRepo.updateInstanceLocation(
+          item.id,
+          ItemLocationType.ROOM,
+          currentRoomId
+        );
+      }
+    } else {
+      // Dropping partial from this instance
+      await itemRepo.updateInstanceQuantity(item.id, item.quantity - dropFromThis);
+      
+      const existingStack = await itemRepo.findStackableInstance(
+        item.template_id,
+        ItemLocationType.ROOM,
+        currentRoomId
+      );
+      
+      if (existingStack) {
+        await itemRepo.addToInstanceQuantity(existingStack.id, dropFromThis);
+      } else {
+        await itemRepo.createInstance({
+          template_id: item.template_id,
+          location_type: ItemLocationType.ROOM,
+          location_id: currentRoomId,
+          quantity: dropFromThis,
+          condition: item.condition,
+        });
+      }
+    }
+    
+    remaining -= dropFromThis;
+  }
+
+  const displayName = actualQuantity > 1 ? `${actualQuantity} ${itemName}` : withArticle(itemName);
+
+  // Broadcast to room
+  broadcastToRoom(currentRoomId, `${socket.username} drops ${displayName}.`, socket.playerId);
+
+  return { type: MessageType.OUTPUT, message: `You drop ${colors.item(displayName)}.` };
 }
 
 // Actually drop an item
@@ -179,12 +458,25 @@ async function dropItem(
     return { type: MessageType.ERROR, message: `You can't drop that.` };
   }
 
-  // Move item to room
-  await itemRepo.updateInstanceLocation(
-    item.id,
+  // Check if we can stack with existing item in room
+  const existingStack = await itemRepo.findStackableInstance(
+    item.template_id,
     ItemLocationType.ROOM,
     currentRoomId
   );
+  
+  if (existingStack) {
+    // Add to existing stack and delete inventory instance
+    await itemRepo.addToInstanceQuantity(existingStack.id, item.quantity);
+    await itemRepo.deleteInstance(item.id);
+  } else {
+    // Move item to room
+    await itemRepo.updateInstanceLocation(
+      item.id,
+      ItemLocationType.ROOM,
+      currentRoomId
+    );
+  }
 
   const itemName = getItemName(item);
 
@@ -192,6 +484,76 @@ async function dropItem(
   broadcastToRoom(currentRoomId, `${socket.username} drops ${withArticle(itemName)}.`, socket.playerId);
 
   return { type: MessageType.OUTPUT, message: `You drop ${colors.item(withArticle(itemName))}.` };
+}
+
+// Drop a specific quantity from a stacked item
+async function dropItemQuantity(
+  socket: AuthenticatedSocket,
+  item: ItemInstance,
+  currentRoomId: number,
+  quantity: number
+): Promise<CommandResponse> {
+  // Check if item has no_drop flag
+  if (item.template?.flags?.no_drop) {
+    return { type: MessageType.ERROR, message: `You can't drop that.` };
+  }
+
+  // Clamp quantity to available amount
+  const actualQuantity = Math.min(quantity, item.quantity);
+  const itemName = getItemName(item);
+
+  if (actualQuantity >= item.quantity) {
+    // Dropping all - check if we can stack with existing item in room
+    const existingStack = await itemRepo.findStackableInstance(
+      item.template_id,
+      ItemLocationType.ROOM,
+      currentRoomId
+    );
+    
+    if (existingStack) {
+      // Add to existing stack and delete our instance
+      await itemRepo.addToInstanceQuantity(existingStack.id, item.quantity);
+      await itemRepo.deleteInstance(item.id);
+    } else {
+      // Just move the whole stack to room
+      await itemRepo.updateInstanceLocation(
+        item.id,
+        ItemLocationType.ROOM,
+        currentRoomId
+      );
+    }
+  } else {
+    // Dropping partial - reduce inventory stack
+    await itemRepo.updateInstanceQuantity(item.id, item.quantity - actualQuantity);
+    
+    // Check if we can stack with existing item in room
+    const existingStack = await itemRepo.findStackableInstance(
+      item.template_id,
+      ItemLocationType.ROOM,
+      currentRoomId
+    );
+    
+    if (existingStack) {
+      // Add to existing stack
+      await itemRepo.addToInstanceQuantity(existingStack.id, actualQuantity);
+    } else {
+      // Create new instance in room
+      await itemRepo.createInstance({
+        template_id: item.template_id,
+        location_type: ItemLocationType.ROOM,
+        location_id: currentRoomId,
+        quantity: actualQuantity,
+        condition: item.condition,
+      });
+    }
+  }
+
+  const displayName = actualQuantity > 1 ? `${actualQuantity} ${itemName}` : withArticle(itemName);
+
+  // Broadcast to room
+  broadcastToRoom(currentRoomId, `${socket.username} drops ${displayName}.`, socket.playerId);
+
+  return { type: MessageType.OUTPUT, message: `You drop ${colors.item(displayName)}.` };
 }
 
 // Handle "drop all" command
@@ -292,10 +654,22 @@ export async function handleExamine(
 
   const keyword = args.join(' ');
 
-  // First check inventory
+  // First check inventory (includes equipped items)
   let matches = await itemRepo.findItemsInInventoryByKeyword(socket.playerId, keyword);
 
-  // If not in inventory, check room
+  // Also check equipped items
+  if (matches.length === 0) {
+    const equipped = await itemRepo.getPlayerEquipped(socket.playerId);
+    matches = equipped.filter(item => {
+      const template = item.template;
+      if (!template) return false;
+      const kw = keyword.toLowerCase();
+      return template.name.toLowerCase().includes(kw) ||
+             template.keywords.some(k => k.toLowerCase().includes(kw));
+    });
+  }
+
+  // If not in inventory or equipped, check room
   if (matches.length === 0) {
     matches = await itemRepo.findItemsInRoomByKeyword(currentRoomId, keyword);
   }
@@ -587,7 +961,7 @@ export async function handleRemove(
     if (!template) return false;
     const searchTerm = keyword.toLowerCase();
     if (template.name.toLowerCase().includes(searchTerm)) return true;
-    if (template.keywords.some(kw => kw.toLowerCase().includes(searchTerm))) return true;
+    if (template.keywords?.some(kw => kw.toLowerCase().includes(searchTerm))) return true;
     return false;
   });
 
