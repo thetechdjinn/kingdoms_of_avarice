@@ -689,7 +689,7 @@ export async function handleExamine(
       if (!template) return false;
       const kw = keyword.toLowerCase();
       return template.name.toLowerCase().includes(kw) ||
-             template.keywords.some(k => k.toLowerCase().includes(kw));
+             template.keywords?.some(k => k.toLowerCase().includes(kw));
     });
   }
 

@@ -105,7 +105,6 @@ export function setupItemRoutes(app: Express): void {
         return;
       }
 
-      // Update template using raw SQL since we don't have an update function
       const template = await itemRepo.updateTemplate(id, req.body);
       res.json({ success: true, template });
     } catch (error) {

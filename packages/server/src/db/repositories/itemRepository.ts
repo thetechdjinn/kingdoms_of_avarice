@@ -90,6 +90,35 @@ function dbToTemplate(row: DbItemTemplate): ItemTemplate {
   };
 }
 
+// Convert joined row to ItemTemplate (uses template_id from instance as the template's id)
+function dbJoinedToTemplate(row: DbItemInstance & DbItemTemplate): ItemTemplate {
+  return {
+    id: row.template_id, // Use template_id since row.id is the instance id
+    name: row.name,
+    short_desc: row.short_desc,
+    long_desc: row.long_desc ?? undefined,
+    room_desc: row.room_desc ?? undefined,
+    keywords: row.keywords,
+    weight: row.weight,
+    size: row.size,
+    base_value: row.base_value,
+    item_type: row.item_type as ItemType,
+    equipment_slot: row.equipment_slot as EquipmentSlot | undefined,
+    flags: row.flags,
+    max_stack: row.max_stack,
+    container_capacity: row.container_capacity ?? undefined,
+    container_weight_limit: row.container_weight_limit ?? undefined,
+    weapon_data: row.weapon_data ?? undefined,
+    armor_data: row.armor_data ?? undefined,
+    consumable_data: row.consumable_data ?? undefined,
+    light_data: row.light_data ?? undefined,
+    requirements: row.requirements ?? undefined,
+    stat_modifiers: row.stat_modifiers ?? undefined,
+    effect_slots: row.effect_slots,
+    base_effects: row.base_effects ?? undefined,
+  };
+}
+
 // Convert database row to ItemInstance
 function dbToInstance(row: DbItemInstance, template?: ItemTemplate): ItemInstance {
   return {
@@ -288,7 +317,7 @@ export async function getAllInstances(): Promise<ItemInstance[]> {
   );
   
   return result.rows.map(row => {
-    const template = dbToTemplate(row as DbItemTemplate);
+    const template = dbJoinedToTemplate(row);
     return dbToInstance(row as DbItemInstance, template);
   });
 }
@@ -313,7 +342,7 @@ export async function getInstanceById(id: number): Promise<ItemInstance | null> 
   if (!result.rows[0]) return null;
   
   const row = result.rows[0];
-  const template = dbToTemplate(row as DbItemTemplate);
+  const template = dbJoinedToTemplate(row);
   return dbToInstance(row as DbItemInstance, template);
 }
 
@@ -332,7 +361,7 @@ export async function getInstancesInRoom(roomId: number): Promise<ItemInstance[]
   );
   
   return result.rows.map(row => {
-    const template = dbToTemplate(row as DbItemTemplate);
+    const template = dbJoinedToTemplate(row);
     return dbToInstance(row as DbItemInstance, template);
   });
 }
@@ -352,7 +381,7 @@ export async function getPlayerInventory(playerId: number): Promise<ItemInstance
   );
   
   return result.rows.map(row => {
-    const template = dbToTemplate(row as DbItemTemplate);
+    const template = dbJoinedToTemplate(row);
     return dbToInstance(row as DbItemInstance, template);
   });
 }
@@ -372,7 +401,7 @@ export async function getPlayerEquipped(playerId: number): Promise<ItemInstance[
   );
   
   return result.rows.map(row => {
-    const template = dbToTemplate(row as DbItemTemplate);
+    const template = dbJoinedToTemplate(row);
     return dbToInstance(row as DbItemInstance, template);
   });
 }
@@ -468,7 +497,7 @@ export async function findStackableInstance(
   if (!result.rows[0]) return null;
   
   const row = result.rows[0];
-  const template = dbToTemplate(row as DbItemTemplate);
+  const template = dbJoinedToTemplate(row);
   return dbToInstance(row as DbItemInstance, template);
 }
 
@@ -519,7 +548,7 @@ export async function findItemsInRoomByKeyword(
   );
   
   return result.rows.map(row => {
-    const template = dbToTemplate(row as DbItemTemplate);
+    const template = dbJoinedToTemplate(row);
     return dbToInstance(row as DbItemInstance, template);
   });
 }
@@ -548,7 +577,7 @@ export async function findItemsInInventoryByKeyword(
   );
   
   return result.rows.map(row => {
-    const template = dbToTemplate(row as DbItemTemplate);
+    const template = dbJoinedToTemplate(row);
     return dbToInstance(row as DbItemInstance, template);
   });
 }
@@ -605,7 +634,7 @@ export async function getItemsInContainer(containerId: number): Promise<ItemInst
   );
   
   return result.rows.map(row => {
-    const template = dbToTemplate(row as DbItemTemplate);
+    const template = dbJoinedToTemplate(row);
     return dbToInstance(row as DbItemInstance, template);
   });
 }
@@ -634,7 +663,7 @@ export async function findItemsInContainerByKeyword(
   );
   
   return result.rows.map(row => {
-    const template = dbToTemplate(row as DbItemTemplate);
+    const template = dbJoinedToTemplate(row);
     return dbToInstance(row as DbItemInstance, template);
   });
 }
@@ -691,34 +720,35 @@ export async function updateInstanceCondition(
   return (result.rowCount ?? 0) > 0;
 }
 
+// Condition order from best to worst
+const CONDITION_ORDER: ItemCondition[] = [
+  ItemCondition.PRISTINE,
+  ItemCondition.GOOD,
+  ItemCondition.WORN,
+  ItemCondition.DAMAGED,
+  ItemCondition.BROKEN,
+];
+
 // Get next worse condition
 export function getWorseCondition(current: ItemCondition): ItemCondition | null {
-  const order: ItemCondition[] = [
-    ItemCondition.PRISTINE,
-    ItemCondition.GOOD,
-    ItemCondition.WORN,
-    ItemCondition.DAMAGED,
-    ItemCondition.BROKEN,
-  ];
-  const currentIndex = order.indexOf(current);
-  if (currentIndex < order.length - 1) {
-    return order[currentIndex + 1];
+  const currentIndex = CONDITION_ORDER.indexOf(current);
+  if (currentIndex === -1) {
+    return null; // Invalid condition
+  }
+  if (currentIndex < CONDITION_ORDER.length - 1) {
+    return CONDITION_ORDER[currentIndex + 1];
   }
   return null; // Already broken
 }
 
 // Get next better condition (for repair)
 export function getBetterCondition(current: ItemCondition): ItemCondition | null {
-  const order: ItemCondition[] = [
-    ItemCondition.PRISTINE,
-    ItemCondition.GOOD,
-    ItemCondition.WORN,
-    ItemCondition.DAMAGED,
-    ItemCondition.BROKEN,
-  ];
-  const currentIndex = order.indexOf(current);
+  const currentIndex = CONDITION_ORDER.indexOf(current);
+  if (currentIndex === -1) {
+    return null; // Invalid condition
+  }
   if (currentIndex > 0) {
-    return order[currentIndex - 1];
+    return CONDITION_ORDER[currentIndex - 1];
   }
   return null; // Already pristine
 }
@@ -741,8 +771,8 @@ export async function findHiddenItemsInRoom(roomId: number): Promise<ItemInstanc
   );
   
   return result.rows.map(row => {
-    const template = dbToTemplate(row as unknown as DbItemTemplate);
-    return dbToInstance(row, template);
+    const template = dbJoinedToTemplate(row);
+    return dbToInstance(row as DbItemInstance, template);
   });
 }
 

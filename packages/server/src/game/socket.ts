@@ -92,7 +92,12 @@ export function setupGameSocket(wss: WebSocketServer): void {
         }
       }
       const { getRoomItemsDescription } = await import('./itemCommands.js');
-      const itemDescriptions = await getRoomItemsDescription(startRoomId);
+      let itemDescriptions: string | null = null;
+      try {
+        itemDescriptions = await getRoomItemsDescription(startRoomId);
+      } catch (err) {
+        console.error('Failed to get room items:', err);
+      }
       sendMessage(authWs, MessageType.OUTPUT, gameWorld.formatRoomDescription(room, otherPlayers, authWs.briefMode, itemDescriptions));
     }
 

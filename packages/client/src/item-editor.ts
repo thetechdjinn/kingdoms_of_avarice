@@ -77,6 +77,12 @@ function showError(message: string): void {
   }
 }
 
+// Helper to parse numbers with proper zero handling
+function parseNumberOrDefault(value: string, defaultValue: number): number {
+  const parsed = Number(value);
+  return isNaN(parsed) ? defaultValue : parsed;
+}
+
 // ============================================================================
 // Authentication
 // ============================================================================
@@ -604,8 +610,8 @@ function gatherFormData(): Partial<ItemTemplate> {
     data.weapon_data = {
       damage_dice: (document.getElementById('weapon-damage-dice') as HTMLInputElement).value,
       damage_type: (document.getElementById('weapon-damage-type') as HTMLSelectElement).value,
-      attack_speed: parseInt((document.getElementById('weapon-attack-speed') as HTMLInputElement).value) || 10,
-      crit_modifier: parseFloat((document.getElementById('weapon-crit-modifier') as HTMLInputElement).value) || 2,
+      attack_speed: parseNumberOrDefault((document.getElementById('weapon-attack-speed') as HTMLInputElement).value, 10),
+      crit_modifier: parseNumberOrDefault((document.getElementById('weapon-crit-modifier') as HTMLInputElement).value, 2),
       range: (document.getElementById('weapon-range') as HTMLSelectElement).value,
     };
   }
@@ -737,8 +743,8 @@ async function doImport(): Promise<void> {
 async function spawnItem(): Promise<void> {
   if (!selectedTemplateId) return;
 
-  const roomId = parseInt((document.getElementById('spawn-room') as HTMLInputElement).value);
-  const quantity = parseInt((document.getElementById('spawn-quantity') as HTMLInputElement).value);
+  const roomId = parseInt((document.getElementById('spawn-room') as HTMLInputElement).value, 10);
+  const quantity = parseInt((document.getElementById('spawn-quantity') as HTMLInputElement).value, 10);
 
   if (isNaN(roomId) || roomId < 1) {
     alert('Invalid room ID');
