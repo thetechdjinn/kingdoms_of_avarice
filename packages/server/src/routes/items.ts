@@ -59,6 +59,22 @@ export function setupItemRoutes(app: Express): void {
         return;
       }
 
+      // Validate item_type is a valid enum value
+      const validItemTypes = Object.values(ItemType);
+      if (!validItemTypes.includes(item_type)) {
+        res.status(400).json({ success: false, message: `Invalid item_type: must be one of ${validItemTypes.join(', ')}` });
+        return;
+      }
+
+      // Validate equipment_slot if provided
+      if (equipment_slot) {
+        const validSlots = Object.values(EquipmentSlot);
+        if (!validSlots.includes(equipment_slot)) {
+          res.status(400).json({ success: false, message: `Invalid equipment_slot: must be one of ${validSlots.join(', ')}` });
+          return;
+        }
+      }
+
       const template = await itemRepo.createTemplate({
         name,
         short_desc,
@@ -208,17 +224,40 @@ export function setupItemRoutes(app: Express): void {
         return;
       }
       
-      // Ensure location_id is a number
-      const locationIdNum = typeof location_id === 'number' ? location_id : parseInt(location_id, 10);
-      if (isNaN(locationIdNum)) {
-        res.status(400).json({ success: false, message: 'location_id must be a valid number' });
+      // Validate template_id is a positive integer
+      const templateIdNum = typeof template_id === 'number' ? template_id : parseInt(String(template_id), 10);
+      if (isNaN(templateIdNum) || templateIdNum < 1) {
+        res.status(400).json({ success: false, message: 'Invalid template_id: must be a positive integer' });
         return;
       }
 
+      // Ensure location_id is a positive integer
+      const locationIdNum = typeof location_id === 'number' ? location_id : parseInt(String(location_id), 10);
+      if (isNaN(locationIdNum) || locationIdNum < 1) {
+        res.status(400).json({ success: false, message: 'Invalid location_id: must be a positive integer' });
+        return;
+      }
+
+      // Validate location_type is a valid enum value
+      const validLocationTypes = Object.values(ItemLocationType);
+      if (!validLocationTypes.includes(location_type)) {
+        res.status(400).json({ success: false, message: `Invalid location_type: must be one of ${validLocationTypes.join(', ')}` });
+        return;
+      }
+
+      // Validate condition if provided
+      if (condition) {
+        const validConditions = Object.values(ItemCondition);
+        if (!validConditions.includes(condition)) {
+          res.status(400).json({ success: false, message: `Invalid condition: must be one of ${validConditions.join(', ')}` });
+          return;
+        }
+      }
+
       const instance = await itemRepo.createInstance({
-        template_id,
+        template_id: templateIdNum,
         location_type,
-        location_id,
+        location_id: locationIdNum,
         equipped_slot,
         quantity: quantity ?? 1,
         condition: condition ?? ItemCondition.PRISTINE,
@@ -365,6 +404,19 @@ export function setupItemRoutes(app: Express): void {
       if (!templates || !Array.isArray(templates)) {
         res.status(400).json({ success: false, message: 'templates array is required' });
         return;
+      }
+
+      // Validate each template has required fields
+      for (let i = 0; i < templates.length; i++) {
+        const t = templates[i];
+        if (!t || typeof t !== 'object') {
+          res.status(400).json({ success: false, message: `Template at index ${i} is invalid` });
+          return;
+        }
+        if (!t.name || typeof t.name !== 'string' || t.name.trim() === '') {
+          res.status(400).json({ success: false, message: `Template at index ${i} missing required 'name' field` });
+          return;
+        }
       }
 
       const results = {

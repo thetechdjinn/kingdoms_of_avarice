@@ -689,7 +689,7 @@ function handleAdminHelp(userRoles: Role[]): CommandResponse {
   lines.push(`  ${colors.boldCyan('@goto <id>')}              - Teleport to a room`);
   lines.push(`  ${colors.boldCyan('@rooms')}                  - List all rooms`);
   lines.push(`  ${colors.boldCyan('@roominfo [id]')}          - Show room details`);
-  lines.push(`  ${colors.boldCyan('@give <item> [quantity]')} - Give yourself an item`);
+  lines.push(`  ${colors.boldCyan('@give <id|name> [quantity]')} - Give yourself an item`);
   lines.push(`  ${colors.boldCyan('@help')}                   - Show this help`);
 
   // Developer commands

@@ -79,7 +79,9 @@ function showError(message: string): void {
 
 // Helper to parse numbers with proper zero handling
 function parseNumberOrDefault(value: string, defaultValue: number): number {
-  const parsed = Number(value);
+  const trimmed = value.trim();
+  if (trimmed === '') return defaultValue;
+  const parsed = Number(trimmed);
   return isNaN(parsed) ? defaultValue : parsed;
 }
 
@@ -334,11 +336,17 @@ function selectTemplate(id: number): void {
 
 function loadWeaponData(template: ItemTemplate): void {
   const data = template.weapon_data;
-  (document.getElementById('weapon-damage-dice') as HTMLInputElement).value = data?.damage_dice || '1d6';
-  (document.getElementById('weapon-damage-type') as HTMLSelectElement).value = data?.damage_type || 'slashing';
-  (document.getElementById('weapon-attack-speed') as HTMLInputElement).value = String(data?.attack_speed || 10);
-  (document.getElementById('weapon-crit-modifier') as HTMLInputElement).value = String(data?.crit_modifier || 2);
-  (document.getElementById('weapon-range') as HTMLSelectElement).value = data?.range || 'melee';
+  const damageDice = getElement<HTMLInputElement>('weapon-damage-dice');
+  const damageType = getElement<HTMLSelectElement>('weapon-damage-type');
+  const attackSpeed = getElement<HTMLInputElement>('weapon-attack-speed');
+  const critModifier = getElement<HTMLInputElement>('weapon-crit-modifier');
+  const range = getElement<HTMLSelectElement>('weapon-range');
+  
+  if (damageDice) damageDice.value = data?.damage_dice || '1d6';
+  if (damageType) damageType.value = data?.damage_type || 'slashing';
+  if (attackSpeed) attackSpeed.value = String(data?.attack_speed || 10);
+  if (critModifier) critModifier.value = String(data?.crit_modifier || 2);
+  if (range) range.value = data?.range || 'melee';
 }
 
 function loadArmorData(template: ItemTemplate): void {
@@ -734,6 +742,7 @@ function gatherFormData(): Partial<ItemTemplate> {
 async function exportItems(): Promise<void> {
   try {
     const response = await fetch('/api/items/export');
+    if (!response.ok) throw new Error('Failed to fetch items');
     const blob = await response.blob();
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -774,6 +783,9 @@ async function doImport(): Promise<void> {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ templates: data.templates, merge }),
     });
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
 
     const result = await response.json();
     if (result.success) {
@@ -822,6 +834,9 @@ async function spawnItem(): Promise<void> {
         quantity,
       }),
     });
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
 
     const data = await response.json();
     if (data.success) {
@@ -852,7 +867,8 @@ function escapeHtml(text: string): string {
 function setupTabs(): void {
   document.querySelectorAll('.tab-btn').forEach(btn => {
     btn.addEventListener('click', () => {
-      const tabName = (btn as HTMLElement).dataset.tab!;
+      const tabName = (btn as HTMLElement).dataset.tab;
+      if (!tabName) return;
       
       // Update button states
       document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
@@ -862,7 +878,8 @@ function setupTabs(): void {
       document.querySelectorAll('.tab-content').forEach(content => {
         content.classList.remove('active');
       });
-      document.getElementById(`tab-${tabName}`)!.classList.add('active');
+      const tabContent = document.getElementById(`tab-${tabName}`);
+      if (tabContent) tabContent.classList.add('active');
     });
   });
 }
@@ -878,38 +895,45 @@ document.addEventListener('DOMContentLoaded', async () => {
   await fetchTemplates();
   setupTabs();
 
+  // Helper to safely add event listeners
+  const addListener = (id: string, event: string, handler: EventListener) => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener(event, handler);
+    else console.warn(`Element #${id} not found for event listener`);
+  };
+
   // Event listeners
-  document.getElementById('new-item-btn')!.addEventListener('click', createTemplate);
-  document.getElementById('item-form')!.addEventListener('submit', (e) => {
+  addListener('new-item-btn', 'click', createTemplate);
+  addListener('item-form', 'submit', (e) => {
     e.preventDefault();
     saveTemplate();
   });
-  document.getElementById('delete-item-btn')!.addEventListener('click', deleteTemplate);
-  document.getElementById('duplicate-item-btn')!.addEventListener('click', duplicateTemplate);
+  addListener('delete-item-btn', 'click', deleteTemplate);
+  addListener('duplicate-item-btn', 'click', duplicateTemplate);
   
   // Filters
-  document.getElementById('type-select')!.addEventListener('change', renderTemplateList);
-  document.getElementById('search-input')!.addEventListener('input', renderTemplateList);
+  addListener('type-select', 'change', renderTemplateList);
+  addListener('search-input', 'input', renderTemplateList);
   
   // Type change handler
-  document.getElementById('item-type')!.addEventListener('change', (e) => {
+  addListener('item-type', 'change', (e) => {
     updateTypeSections((e.target as HTMLSelectElement).value);
   });
 
   // Import/Export
-  document.getElementById('import-btn')!.addEventListener('click', showImportModal);
-  document.getElementById('export-btn')!.addEventListener('click', exportItems);
-  document.getElementById('close-import-modal')!.addEventListener('click', hideImportModal);
-  document.getElementById('do-import-btn')!.addEventListener('click', doImport);
-  document.getElementById('import-modal')!.addEventListener('click', (e) => {
+  addListener('import-btn', 'click', showImportModal);
+  addListener('export-btn', 'click', exportItems);
+  addListener('close-import-modal', 'click', hideImportModal);
+  addListener('do-import-btn', 'click', doImport);
+  addListener('import-modal', 'click', (e) => {
     if (e.target === e.currentTarget) hideImportModal();
   });
 
   // Spawn
-  document.getElementById('spawn-btn')!.addEventListener('click', spawnItem);
+  addListener('spawn-btn', 'click', spawnItem);
 
   // Logout
-  document.getElementById('logout-btn')!.addEventListener('click', handleLogout);
+  addListener('logout-btn', 'click', handleLogout);
 
   // User menu dropdown toggle
   const userMenuBtn = document.getElementById('nav-username');
