@@ -4,6 +4,7 @@ import { AuthenticatedSocket, broadcastToRoom } from './socket.js';
 import { colors } from '../utils/colors.js';
 import { processAdminCommand, getPlayerLocation, setPlayerLocation } from './adminCommands.js';
 import * as playerRepo from '../db/repositories/playerRepository.js';
+import { handleGet, handleDrop, handleInventory, handleExamine, getRoomItemsDescription, handleWield, handleWear, handleRemove, handleEquipment, handlePut, handleGetFrom, handleLookIn, handleUse, handleLight, handleExtinguish, handleRepair, handleSearch, handleRecipes, handleCraft, handleEnchantments, handleEnchant } from './itemCommands.js';
 
 export interface CommandResponse {
   type: MessageType;
@@ -61,17 +62,103 @@ export async function processCommand(
   const currentRoomId = getPlayerLocation(socket.playerId);
 
   if (command === 'look' || command === 'l') {
-    // Check if looking in a direction
+    // Check if looking at an item or in a container
     if (args.length > 0) {
+      // Check for "look in <container>"
+      if (args[0].toLowerCase() === 'in' && args.length > 1) {
+        return handleLookIn(socket, args.slice(1), currentRoomId);
+      }
       const direction = DIRECTION_ALIASES[args[0]] || args[0];
-      return handleLookDirection(socket, currentRoomId, direction, world, _connectedPlayers);
+      // If it's a direction, look in that direction
+      if (isDirection(direction)) {
+        return await handleLookDirection(socket, currentRoomId, direction, world, _connectedPlayers);
+      }
+      // Otherwise, examine an item
+      return handleExamine(socket, args, currentRoomId);
     }
-    return handleLook(socket, currentRoomId, world, _connectedPlayers, false);
+    return await handleLook(socket, currentRoomId, world, _connectedPlayers, false);
+  }
+
+  if (command === 'examine' || command === 'exa') {
+    return handleExamine(socket, args, currentRoomId);
+  }
+
+  if (command === 'get' || command === 'take' || command === 'g') {
+    // Check for "get <item> from <container>"
+    const fullArgs = args.join(' ');
+    if (fullArgs.toLowerCase().includes(' from ')) {
+      return handleGetFrom(socket, args, currentRoomId);
+    }
+    return handleGet(socket, args, currentRoomId);
+  }
+
+  if (command === 'put') {
+    return handlePut(socket, args, currentRoomId);
+  }
+
+  if (command === 'drop') {
+    return handleDrop(socket, args, currentRoomId);
+  }
+
+  if (command === 'inventory' || command === 'inv' || command === 'i') {
+    return handleInventory(socket);
+  }
+
+  if (command === 'wield') {
+    return handleWield(socket, args, currentRoomId);
+  }
+
+  if (command === 'wear') {
+    return handleWear(socket, args, currentRoomId);
+  }
+
+  if (command === 'remove' || command === 'rem') {
+    return handleRemove(socket, args, currentRoomId);
+  }
+
+  if (command === 'equipment' || command === 'eq') {
+    return handleEquipment(socket);
+  }
+
+  if (command === 'use' || command === 'eat' || command === 'drink' || command === 'quaff') {
+    return handleUse(socket, args, currentRoomId);
+  }
+
+  if (command === 'light') {
+    return handleLight(socket, args, currentRoomId);
+  }
+
+  if (command === 'extinguish' || command === 'douse') {
+    return handleExtinguish(socket, args, currentRoomId);
+  }
+
+  if (command === 'repair') {
+    return handleRepair(socket, args, currentRoomId);
+  }
+
+  if (command === 'search') {
+    return handleSearch(socket, currentRoomId);
+  }
+
+  if (command === 'recipes') {
+    return handleRecipes(socket);
+  }
+
+  if (command === 'craft') {
+    return handleCraft(socket, args, currentRoomId);
+  }
+
+  if (command === 'enchantments') {
+    return handleEnchantments(socket);
+  }
+
+  if (command === 'enchant') {
+    return handleEnchant(socket, args, currentRoomId);
   }
 
   if (command === 'glance') {
     // Internal command for empty enter - respects brief mode
-    return handleLook(socket, currentRoomId, world, _connectedPlayers, socket.briefMode);
+    return await handleLook(socket, currentRoomId, world, _connectedPlayers, socket.briefMode);
   }
 
   if (command === 'brief') {
@@ -137,28 +224,29 @@ function getPlayersInRoom(
   return players;
 }
 
-function handleLook(
+async function handleLook(
   socket: AuthenticatedSocket,
   roomId: number,
   world: GameWorld,
   connectedPlayers: Map<number, AuthenticatedSocket>,
   useBriefMode: boolean
-): CommandResponse {
+): Promise<CommandResponse> {
   const room = world.getRoom(roomId);
   if (!room) {
     return { type: MessageType.ERROR, message: 'You are in an unknown location.' };
   }
   const otherPlayers = getOtherPlayersInRoom(roomId, socket.playerId, connectedPlayers);
-  return { type: MessageType.OUTPUT, message: world.formatRoomDescription(room, otherPlayers, useBriefMode) };
+  const itemDescriptions = await getRoomItemsDescription(roomId);
+  return { type: MessageType.OUTPUT, message: world.formatRoomDescription(room, otherPlayers, useBriefMode, itemDescriptions) };
 }
 
-function handleLookDirection(
+async function handleLookDirection(
   socket: AuthenticatedSocket,
   currentRoomId: number,
   direction: string,
   world: GameWorld,
   connectedPlayers: Map<number, AuthenticatedSocket>
-): CommandResponse {
+): Promise<CommandResponse> {
   // Check if it's a valid direction
   if (!isDirection(direction)) {
     return { type: MessageType.ERROR, message: `You can't look that way.` };
@@ -175,7 +263,8 @@ function handleLookDirection(
 
   // Show the full room including players and exits
   const playersInRoom = getPlayersInRoom(targetRoom.id, connectedPlayers);
-  return { type: MessageType.OUTPUT, message: world.formatRoomDescription(targetRoom, playersInRoom, false) };
+  const itemDescriptions = await getRoomItemsDescription(targetRoom.id);
+  return { type: MessageType.OUTPUT, message: world.formatRoomDescription(targetRoom, playersInRoom, false, itemDescriptions) };
 }
 
 async function handleBrief(socket: AuthenticatedSocket): Promise<CommandResponse> {
@@ -263,7 +352,8 @@ async function handleMove(
   broadcastToRoom(newRoom.id, `${socket.username} walks in from the ${oppositeDir}.`, socket.playerId);
 
   const otherPlayers = getOtherPlayersInRoom(newRoom.id, socket.playerId, connectedPlayers);
-  return { type: MessageType.OUTPUT, message: world.formatRoomDescription(newRoom, otherPlayers, socket.briefMode) };
+  const itemDescriptions = await getRoomItemsDescription(newRoom.id);
+  return { type: MessageType.OUTPUT, message: world.formatRoomDescription(newRoom, otherPlayers, socket.briefMode, itemDescriptions) };
 }
 
 function handleSay(
@@ -299,6 +389,27 @@ function handleHelp(userRoles: Role[]): CommandResponse {
   const lines = [
     colors.boldYellow('Player Commands:'),
     `  ${colors.boldCyan('look')} (l)           - Look around the current room`,
+    `  ${colors.boldCyan('look <item>')}        - Examine an item`,
+    `  ${colors.boldCyan('look in <container>')} - View container contents`,
+    `  ${colors.boldCyan('get <item>')}         - Pick up an item`,
+    `  ${colors.boldCyan('get <item> from <container>')} - Get from container`,
+    `  ${colors.boldCyan('drop <item>')}        - Drop an item`,
+    `  ${colors.boldCyan('put <item> in <container>')} - Put in container`,
+    `  ${colors.boldCyan('inventory')} (i)      - List items you are carrying`,
+    `  ${colors.boldCyan('wield <item>')}       - Wield a weapon`,
+    `  ${colors.boldCyan('wear <item>')}        - Wear armor or accessories`,
+    `  ${colors.boldCyan('remove <item>')}      - Remove equipped item`,
+    `  ${colors.boldCyan('equipment')} (eq)     - List equipped items`,
+    `  ${colors.boldCyan('use <item>')}        - Use a consumable item`,
+    `  ${colors.boldCyan('eat/drink/quaff')}   - Consume food/drink/potion`,
+    `  ${colors.boldCyan('light <item>')}      - Light a torch or lantern`,
+    `  ${colors.boldCyan('extinguish <item>')} - Put out a light source`,
+    `  ${colors.boldCyan('repair <item>')}     - Repair a damaged item`,
+    `  ${colors.boldCyan('search')}            - Search for hidden items`,
+    `  ${colors.boldCyan('recipes')}           - List known crafting recipes`,
+    `  ${colors.boldCyan('craft <recipe>')}    - Craft an item`,
+    `  ${colors.boldCyan('enchantments')}      - List known enchantments`,
+    `  ${colors.boldCyan('enchant <item> with <enchantment>')} - Enchant an item`,
     `  ${colors.boldCyan('<direction>')}       - Move in a direction (n, s, e, w, etc.)`,
     `  ${colors.boldCyan('brief')}             - Toggle brief mode (hide room descriptions)`,
     `  ${colors.boldCyan('who')}               - See who is online`,

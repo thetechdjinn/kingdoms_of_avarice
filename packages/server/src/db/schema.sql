@@ -51,27 +51,126 @@ CREATE TABLE IF NOT EXISTS room_exits (
     UNIQUE(from_room_id, direction)
 );
 
--- Items table (item templates)
-CREATE TABLE IF NOT EXISTS items (
+-- Item templates (blueprints for items)
+CREATE TABLE IF NOT EXISTS item_templates (
     id SERIAL PRIMARY KEY,
+    
+    -- Identity & Description
     name VARCHAR(100) NOT NULL,
-    description TEXT,
-    item_type VARCHAR(50),
-    weight INTEGER DEFAULT 0,
-    value INTEGER DEFAULT 0,
-    damage_min INTEGER,
-    damage_max INTEGER,
-    armor INTEGER,
-    stat_bonuses JSONB
+    short_desc VARCHAR(255) NOT NULL,
+    long_desc TEXT,
+    room_desc VARCHAR(255),
+    keywords TEXT[] NOT NULL DEFAULT '{}',
+    
+    -- Physical Properties
+    weight INTEGER NOT NULL DEFAULT 0,
+    size INTEGER NOT NULL DEFAULT 1,
+    base_value INTEGER NOT NULL DEFAULT 0,
+    
+    -- Classification
+    item_type VARCHAR(50) NOT NULL,
+    equipment_slot VARCHAR(50),
+    
+    -- Flags
+    flags JSONB NOT NULL DEFAULT '{}',
+    
+    -- Stacking
+    max_stack INTEGER DEFAULT 1,
+    
+    -- Container Properties
+    container_capacity INTEGER,
+    container_weight_limit INTEGER,
+    
+    -- Type-specific data (JSONB for flexibility)
+    weapon_data JSONB,
+    armor_data JSONB,
+    consumable_data JSONB,
+    light_data JSONB,
+    
+    -- Requirements & Modifiers
+    requirements JSONB,
+    stat_modifiers JSONB,
+    
+    -- Future extensibility
+    effect_slots INTEGER DEFAULT 0,
+    base_effects JSONB,
+    
+    -- Metadata
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Character inventory
-CREATE TABLE IF NOT EXISTS character_inventory (
+-- Crafting recipes
+CREATE TABLE IF NOT EXISTS crafting_recipes (
     id SERIAL PRIMARY KEY,
-    character_id INTEGER REFERENCES characters(id) ON DELETE CASCADE,
-    item_id INTEGER REFERENCES items(id),
-    quantity INTEGER DEFAULT 1,
-    equipped BOOLEAN DEFAULT FALSE
+    
+    -- Result
+    result_template_id INTEGER NOT NULL REFERENCES item_templates(id) ON DELETE CASCADE,
+    result_quantity INTEGER NOT NULL DEFAULT 1,
+    
+    -- Recipe info
+    name VARCHAR(100) NOT NULL,
+    description TEXT,
+    skill_type VARCHAR(50), -- blacksmithing, alchemy, tailoring, etc.
+    skill_level INTEGER DEFAULT 0, -- minimum skill required
+    
+    -- Crafting requirements
+    ingredients JSONB NOT NULL, -- Array of {template_id, quantity}
+    tools_required JSONB, -- Array of template_ids that must be in inventory (not consumed)
+    
+    -- Metadata
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Enchantment definitions
+CREATE TABLE IF NOT EXISTS enchantments (
+    id SERIAL PRIMARY KEY,
+    
+    -- Identity
+    name VARCHAR(100) NOT NULL,
+    description TEXT,
+    
+    -- Requirements
+    skill_type VARCHAR(50) DEFAULT 'enchanting',
+    skill_level INTEGER DEFAULT 0,
+    applicable_types TEXT[] DEFAULT '{}', -- item types this can be applied to
+    
+    -- Effects
+    stat_modifiers JSONB, -- stat bonuses when equipped
+    special_effects JSONB, -- special abilities/procs
+    
+    -- Cost
+    mana_cost INTEGER DEFAULT 0,
+    reagents JSONB, -- Array of {template_id, quantity} consumed
+    
+    -- Metadata
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Item instances (actual items in the game world)
+CREATE TABLE IF NOT EXISTS item_instances (
+    id SERIAL PRIMARY KEY,
+    template_id INTEGER NOT NULL REFERENCES item_templates(id) ON DELETE CASCADE,
+    
+    -- Location (polymorphic)
+    location_type VARCHAR(50) NOT NULL,
+    location_id INTEGER NOT NULL,
+    equipped_slot VARCHAR(50),
+    
+    -- Instance-specific state
+    quantity INTEGER NOT NULL DEFAULT 1,
+    condition VARCHAR(50) DEFAULT 'pristine',
+    
+    -- Consumable state
+    charges_remaining INTEGER,
+    fuel_remaining INTEGER,
+    
+    -- Custom modifications
+    custom_data JSONB DEFAULT '{}',
+    
+    -- Metadata
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 -- NPCs table (NPC templates)
@@ -121,7 +220,11 @@ CREATE TABLE IF NOT EXISTS player_roles (
 CREATE INDEX IF NOT EXISTS idx_characters_player_id ON characters(player_id);
 CREATE INDEX IF NOT EXISTS idx_characters_current_room ON characters(current_room_id);
 CREATE INDEX IF NOT EXISTS idx_room_exits_from_room ON room_exits(from_room_id);
-CREATE INDEX IF NOT EXISTS idx_character_inventory_character ON character_inventory(character_id);
+CREATE INDEX IF NOT EXISTS idx_item_templates_type ON item_templates(item_type);
+CREATE INDEX IF NOT EXISTS idx_item_templates_slot ON item_templates(equipment_slot);
+CREATE INDEX IF NOT EXISTS idx_item_templates_keywords ON item_templates USING GIN(keywords);
+CREATE INDEX IF NOT EXISTS idx_item_instances_template ON item_instances(template_id);
+CREATE INDEX IF NOT EXISTS idx_item_instances_location ON item_instances(location_type, location_id);
 CREATE INDEX IF NOT EXISTS idx_npc_instances_room ON npc_instances(current_room_id);
 CREATE INDEX IF NOT EXISTS idx_player_roles_player ON player_roles(player_id);
 CREATE INDEX IF NOT EXISTS idx_player_roles_role ON player_roles(role_id);

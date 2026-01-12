@@ -1,7 +1,8 @@
-import { MessageType, Role, hasAnyRole } from '@koa/shared';
+import { MessageType, Role, hasAnyRole, ItemLocationType, ItemCondition } from '@koa/shared';
 import { GameWorld, Room } from './world.js';
 import { AuthenticatedSocket } from './socket.js';
 import { colors } from '../utils/colors.js';
+import * as itemRepo from '../db/repositories/itemRepository.js';
 
 interface CommandResponse {
   type: MessageType;
@@ -19,10 +20,10 @@ export function setPlayerLocation(playerId: number, roomId: number): void {
 }
 
 // Commands that require Developer role
-const developerCommands = ['create', 'link', 'unlink', 'edit', 'delete', 'reload'];
+const developerCommands = ['create', 'link', 'unlink', 'edit', 'delete', 'reload', 'spawn', 'purge', 'items', 'iteminfo'];
 
 // Commands that any staff can use (Moderator+)
-const staffCommands = ['goto', 'rooms', 'roominfo', 'help'];
+const staffCommands = ['goto', 'rooms', 'roominfo', 'help', 'give'];
 
 export async function processAdminCommand(
   input: string,
@@ -71,6 +72,16 @@ export async function processAdminCommand(
       return handleRoomInfo(args, socket, world);
     case 'reload':
       return handleReload(args, world);
+    case 'spawn':
+      return handleSpawn(args, socket);
+    case 'purge':
+      return handlePurge(args, socket);
+    case 'items':
+      return handleListItems(socket);
+    case 'iteminfo':
+      return handleItemInfo(args);
+    case 'give':
+      return handleGive(args, socket);
     case 'help':
       return handleAdminHelp(userRoles);
     default:
@@ -372,8 +383,10 @@ async function handleReload(
     }
 
     if (target === 'items' || target === 'all') {
-      // TODO: Implement item reload when items are added
-      results.push(`${colors.yellow('○')} Items reload not yet implemented`);
+      // Items are loaded from DB on-demand, so just clear any caches
+      // For now, just confirm items are available
+      const templates = await itemRepo.getAllTemplates();
+      results.push(`${colors.green('✓')} Reloaded ${templates.length} item templates`);
     }
 
     if (target === 'mobs' || target === 'all') {
@@ -391,6 +404,237 @@ async function handleReload(
   }
 }
 
+// ============================================================================
+// ITEM ADMIN COMMANDS
+// ============================================================================
+
+async function handleSpawn(
+  args: string[],
+  socket: AuthenticatedSocket
+): Promise<CommandResponse> {
+  // @spawn <template_id|name> [quantity]
+  if (args.length < 1) {
+    return { type: MessageType.ERROR, message: 'Usage: @spawn <template_id|name> [quantity]' };
+  }
+
+  const templateIdOrName = args[0];
+  const quantity = parseInt(args[1]) || 1;
+  const currentRoomId = getPlayerLocation(socket.playerId);
+
+  let template;
+  const templateId = parseInt(templateIdOrName);
+  
+  if (!isNaN(templateId)) {
+    template = await itemRepo.getTemplateById(templateId);
+  } else {
+    template = await itemRepo.getTemplateByName(templateIdOrName);
+  }
+
+  if (!template) {
+    return { type: MessageType.ERROR, message: `Item template not found: ${templateIdOrName}` };
+  }
+
+  try {
+    await itemRepo.createInstance({
+      template_id: template.id,
+      location_type: ItemLocationType.ROOM,
+      location_id: currentRoomId,
+      quantity,
+      condition: ItemCondition.PRISTINE,
+    });
+
+    return {
+      type: MessageType.SYSTEM,
+      message: `${colors.boldGreen('Spawned:')} ${quantity}x ${colors.item(template.short_desc)} in room ${currentRoomId}`,
+    };
+  } catch (error) {
+    return { type: MessageType.ERROR, message: `Failed to spawn item: ${error}` };
+  }
+}
+
+async function handlePurge(
+  args: string[],
+  socket: AuthenticatedSocket
+): Promise<CommandResponse> {
+  // @purge items - Remove all items from current room
+  // @purge item <instance_id> - Remove specific item
+  if (args.length < 1) {
+    return { type: MessageType.ERROR, message: 'Usage: @purge items | @purge item <instance_id>' };
+  }
+
+  const currentRoomId = getPlayerLocation(socket.playerId);
+
+  if (args[0] === 'items') {
+    const items = await itemRepo.getInstancesInRoom(currentRoomId);
+    let count = 0;
+    
+    for (const item of items) {
+      await itemRepo.deleteInstance(item.id);
+      count++;
+    }
+
+    return {
+      type: MessageType.SYSTEM,
+      message: `${colors.boldYellow('Purged:')} ${count} items from room ${currentRoomId}`,
+    };
+  } else if (args[0] === 'item' && args[1]) {
+    const instanceId = parseInt(args[1]);
+    if (isNaN(instanceId)) {
+      return { type: MessageType.ERROR, message: 'Invalid instance ID' };
+    }
+
+    const instance = await itemRepo.getInstanceById(instanceId);
+    if (!instance) {
+      return { type: MessageType.ERROR, message: `Item instance ${instanceId} not found` };
+    }
+
+    await itemRepo.deleteInstance(instanceId);
+    const itemName = instance.template?.short_desc || 'item';
+    
+    return {
+      type: MessageType.SYSTEM,
+      message: `${colors.boldYellow('Purged:')} ${colors.item(itemName)} (instance #${instanceId})`,
+    };
+  }
+
+  return { type: MessageType.ERROR, message: 'Usage: @purge items | @purge item <instance_id>' };
+}
+
+async function handleListItems(
+  socket: AuthenticatedSocket
+): Promise<CommandResponse> {
+  // @items - List all item templates
+  const templates = await itemRepo.getAllTemplates();
+
+  if (templates.length === 0) {
+    return { type: MessageType.SYSTEM, message: 'No item templates exist.' };
+  }
+
+  const lines = [
+    colors.boldYellow(`Item Templates (${templates.length} total):`),
+    '',
+  ];
+
+  // Group by type
+  const byType = new Map<string, typeof templates>();
+  for (const template of templates) {
+    const type = template.item_type;
+    if (!byType.has(type)) {
+      byType.set(type, []);
+    }
+    byType.get(type)!.push(template);
+  }
+
+  for (const [type, typeTemplates] of byType) {
+    lines.push(colors.boldCyan(`  ${type.charAt(0).toUpperCase() + type.slice(1)}:`));
+    for (const template of typeTemplates.slice(0, 10)) { // Limit to 10 per type
+      lines.push(`    ${colors.white(`[${template.id}]`)} ${colors.item(template.name)}`);
+    }
+    if (typeTemplates.length > 10) {
+      lines.push(`    ... and ${typeTemplates.length - 10} more`);
+    }
+  }
+
+  return { type: MessageType.OUTPUT, message: lines.join('\r\n') };
+}
+
+async function handleItemInfo(
+  args: string[]
+): Promise<CommandResponse> {
+  // @iteminfo <template_id|name>
+  if (args.length < 1) {
+    return { type: MessageType.ERROR, message: 'Usage: @iteminfo <template_id|name>' };
+  }
+
+  const templateIdOrName = args.join(' ');
+  let template;
+  const templateId = parseInt(templateIdOrName);
+  
+  if (!isNaN(templateId)) {
+    template = await itemRepo.getTemplateById(templateId);
+  } else {
+    template = await itemRepo.getTemplateByName(templateIdOrName);
+  }
+
+  if (!template) {
+    return { type: MessageType.ERROR, message: `Item template not found: ${templateIdOrName}` };
+  }
+
+  const lines = [
+    colors.boldYellow('Item Template Info:'),
+    `  ${colors.boldCyan('ID:')} ${template.id}`,
+    `  ${colors.boldCyan('Name:')} ${template.name}`,
+    `  ${colors.boldCyan('Short:')} ${template.short_desc}`,
+    `  ${colors.boldCyan('Type:')} ${template.item_type}`,
+    `  ${colors.boldCyan('Slot:')} ${template.equipment_slot || 'none'}`,
+    `  ${colors.boldCyan('Weight:')} ${template.weight}`,
+    `  ${colors.boldCyan('Value:')} ${template.base_value}`,
+    `  ${colors.boldCyan('Keywords:')} ${template.keywords.join(', ')}`,
+  ];
+
+  if (template.weapon_data) {
+    lines.push(`  ${colors.boldCyan('Damage:')} ${template.weapon_data.damage_dice} ${template.weapon_data.damage_type}`);
+  }
+  if (template.armor_data) {
+    lines.push(`  ${colors.boldCyan('AC:')} ${template.armor_data.armor_class}`);
+  }
+  if (template.consumable_data) {
+    lines.push(`  ${colors.boldCyan('Effect:')} ${template.consumable_data.effect_type} ${template.consumable_data.effect_value}`);
+  }
+
+  const flags = Object.entries(template.flags || {})
+    .filter(([_, v]) => v)
+    .map(([k]) => k);
+  if (flags.length > 0) {
+    lines.push(`  ${colors.boldCyan('Flags:')} ${flags.join(', ')}`);
+  }
+
+  return { type: MessageType.OUTPUT, message: lines.join('\r\n') };
+}
+
+async function handleGive(
+  args: string[],
+  socket: AuthenticatedSocket
+): Promise<CommandResponse> {
+  // @give <template_id|name> [quantity] - Give item to yourself
+  if (args.length < 1) {
+    return { type: MessageType.ERROR, message: 'Usage: @give <template_id|name> [quantity]' };
+  }
+
+  const templateIdOrName = args[0];
+  const quantity = parseInt(args[1]) || 1;
+
+  let template;
+  const templateId = parseInt(templateIdOrName);
+  
+  if (!isNaN(templateId)) {
+    template = await itemRepo.getTemplateById(templateId);
+  } else {
+    template = await itemRepo.getTemplateByName(templateIdOrName);
+  }
+
+  if (!template) {
+    return { type: MessageType.ERROR, message: `Item template not found: ${templateIdOrName}` };
+  }
+
+  try {
+    await itemRepo.createInstance({
+      template_id: template.id,
+      location_type: ItemLocationType.PLAYER,
+      location_id: socket.playerId,
+      quantity,
+      condition: ItemCondition.PRISTINE,
+    });
+
+    return {
+      type: MessageType.SYSTEM,
+      message: `${colors.boldGreen('Received:')} ${quantity}x ${colors.item(template.short_desc)}`,
+    };
+  } catch (error) {
+    return { type: MessageType.ERROR, message: `Failed to give item: ${error}` };
+  }
+}
+
 function handleAdminHelp(userRoles: Role[]): CommandResponse {
   const isDeveloper = hasAnyRole(userRoles, [Role.DEVELOPER, Role.ADMIN]);
   
@@ -403,17 +647,27 @@ function handleAdminHelp(userRoles: Role[]): CommandResponse {
   lines.push(`  ${colors.boldCyan('@goto <id>')}              - Teleport to a room`);
   lines.push(`  ${colors.boldCyan('@rooms')}                  - List all rooms`);
   lines.push(`  ${colors.boldCyan('@roominfo [id]')}          - Show room details`);
+  lines.push(`  ${colors.boldCyan('@give <item> [qty]')}      - Give yourself an item`);
   lines.push(`  ${colors.boldCyan('@help')}                   - Show this help`);
 
   // Developer commands
   if (isDeveloper) {
     lines.push('');
-    lines.push(colors.boldYellow('Developer Commands:'));
+    lines.push(colors.boldYellow('Developer Commands (Rooms):'));
     lines.push(`  ${colors.boldCyan('@create room <name>')}     - Create a new room`);
     lines.push(`  ${colors.boldCyan('@link <dir> <id> [oneway]')} - Link current room to another`);
     lines.push(`  ${colors.boldCyan('@unlink <dir> [oneway]')}  - Remove an exit`);
     lines.push(`  ${colors.boldCyan('@edit <field> <value>')}   - Edit current room (name/desc/area)`);
     lines.push(`  ${colors.boldCyan('@delete room <id>')}       - Delete a room`);
+    lines.push('');
+    lines.push(colors.boldYellow('Developer Commands (Items):'));
+    lines.push(`  ${colors.boldCyan('@items')}                  - List all item templates`);
+    lines.push(`  ${colors.boldCyan('@iteminfo <id|name>')}     - Show item template details`);
+    lines.push(`  ${colors.boldCyan('@spawn <id|name> [qty]')}  - Spawn item in current room`);
+    lines.push(`  ${colors.boldCyan('@purge items')}            - Remove all items from room`);
+    lines.push(`  ${colors.boldCyan('@purge item <id>')}        - Remove specific item instance`);
+    lines.push('');
+    lines.push(colors.boldYellow('Developer Commands (System):'));
     lines.push(`  ${colors.boldCyan('@reload [rooms|all]')}     - Reload data from database`);
   }
 

@@ -1,0 +1,302 @@
+// Item system types for Kingdoms of Avarice
+
+// Equipment slot enum
+export enum EquipmentSlot {
+  // Armor slots
+  HEAD = 'head',
+  FACE = 'face',
+  NECK = 'neck',
+  BACK = 'back',
+  BODY = 'body',
+  ARMS = 'arms',
+  HANDS = 'hands',
+  WRIST_LEFT = 'wrist_left',
+  WRIST_RIGHT = 'wrist_right',
+  FINGER_LEFT = 'finger_left',
+  FINGER_RIGHT = 'finger_right',
+  WAIST = 'waist',
+  LEGS = 'legs',
+  FEET = 'feet',
+  // Combat slots
+  MAIN_HAND = 'main_hand',
+  OFF_HAND = 'off_hand',
+  SHIELD = 'shield',
+  HELD = 'held',
+}
+
+// Item type classification
+export enum ItemType {
+  WEAPON = 'weapon',
+  ARMOR = 'armor',
+  CONTAINER = 'container',
+  CONSUMABLE = 'consumable',
+  KEY = 'key',
+  LIGHT = 'light',
+  MISC = 'misc',
+}
+
+// Location types for item instances
+export enum ItemLocationType {
+  ROOM = 'room',
+  PLAYER = 'player',
+  EQUIPPED = 'equipped',
+  CONTAINER = 'container',
+  NPC = 'npc',
+}
+
+// Item condition
+export enum ItemCondition {
+  PRISTINE = 'pristine',
+  GOOD = 'good',
+  WORN = 'worn',
+  DAMAGED = 'damaged',
+  BROKEN = 'broken',
+}
+
+// Damage types
+export enum DamageType {
+  SLASHING = 'slashing',
+  PIERCING = 'piercing',
+  BLUDGEONING = 'bludgeoning',
+  FIRE = 'fire',
+  ICE = 'ice',
+  LIGHTNING = 'lightning',
+  POISON = 'poison',
+  HOLY = 'holy',
+  UNHOLY = 'unholy',
+}
+
+// Item flags
+export interface ItemFlags {
+  takeable?: boolean;
+  hidden?: boolean;
+  no_drop?: boolean;
+  stackable?: boolean;
+  cursed?: boolean;
+  two_handed?: boolean;
+  throwable?: boolean;
+}
+
+// Weapon data
+export interface WeaponData {
+  damage_dice: string;
+  damage_type: DamageType;
+  attack_speed?: number;
+  crit_modifier?: number;
+  range?: 'melee' | 'ranged' | 'thrown';
+  skill_type?: string;
+}
+
+// Armor data
+export interface ArmorData {
+  armor_class: number;
+  weight_class?: 'light' | 'medium' | 'heavy';
+  resistances?: Partial<Record<DamageType, number>>;
+}
+
+// Consumable data
+export interface ConsumableData {
+  charges?: number;
+  effect_type: string;
+  effect_value: number;
+  duration?: number;
+}
+
+// Light source data
+export interface LightData {
+  radius: number;
+  fuel_max?: number;
+  fuel_rate?: number;
+}
+
+// Requirements to use/equip
+export interface ItemRequirements {
+  level?: number;
+  strength?: number;
+  dexterity?: number;
+  intelligence?: number;
+  constitution?: number;
+  class?: string[];
+  race?: string[];
+}
+
+// Stat modifiers when equipped
+export interface StatModifiers {
+  strength?: number;
+  dexterity?: number;
+  constitution?: number;
+  intelligence?: number;
+  max_health?: number;
+  max_mana?: number;
+}
+
+// Custom data for item instances (future extensibility)
+export interface ItemCustomData {
+  enchantments?: unknown[];
+  glyphs?: unknown[];
+  enhancements?: unknown[];
+  custom_name?: string;
+  creator?: string;
+  bound_to?: number;
+  revealed?: boolean; // For hidden items that have been found via search
+}
+
+// Item template (blueprint)
+export interface ItemTemplate {
+  id: number;
+  name: string;              // The item name (e.g., "sparkling ruby", "iron sword")
+  short_desc?: string;       // DEPRECATED - use name instead
+  long_desc?: string;        // Detailed description shown when examining
+  room_desc?: string;        // DEPRECATED - use name instead
+  keywords: string[];
+  weight: number;
+  size: number;
+  base_value: number;
+  item_type: ItemType;
+  equipment_slot?: EquipmentSlot;
+  flags: ItemFlags;
+  max_stack: number;
+  container_capacity?: number;
+  container_weight_limit?: number;
+  weapon_data?: WeaponData;
+  armor_data?: ArmorData;
+  consumable_data?: ConsumableData;
+  light_data?: LightData;
+  requirements?: ItemRequirements;
+  stat_modifiers?: StatModifiers;
+  effect_slots: number;
+  base_effects?: unknown;
+}
+
+// Item instance (actual object in game)
+export interface ItemInstance {
+  id: number;
+  template_id: number;
+  template?: ItemTemplate;
+  location_type: ItemLocationType;
+  location_id: number;
+  equipped_slot?: EquipmentSlot;
+  quantity: number;
+  condition: ItemCondition;
+  charges_remaining?: number;
+  fuel_remaining?: number;
+  custom_data: ItemCustomData;
+}
+
+// Simplified item for room/inventory display
+export interface ItemDisplay {
+  instance_id: number;
+  name: string;
+  short_desc: string;
+  room_desc?: string;
+  quantity: number;
+  condition: ItemCondition;
+}
+
+// Helper to get display name with quantity
+export function getItemDisplayName(item: ItemDisplay): string {
+  if (item.quantity > 1) {
+    return `${item.short_desc} (x${item.quantity})`;
+  }
+  return item.short_desc;
+}
+
+// Helper to check if a slot is a paired slot (wrists, fingers)
+export function isPairedSlot(slot: EquipmentSlot): boolean {
+  return [
+    EquipmentSlot.WRIST_LEFT,
+    EquipmentSlot.WRIST_RIGHT,
+    EquipmentSlot.FINGER_LEFT,
+    EquipmentSlot.FINGER_RIGHT,
+  ].includes(slot);
+}
+
+// Helper to get the alternate paired slot
+export function getAlternatePairedSlot(slot: EquipmentSlot): EquipmentSlot | null {
+  switch (slot) {
+    case EquipmentSlot.WRIST_LEFT:
+      return EquipmentSlot.WRIST_RIGHT;
+    case EquipmentSlot.WRIST_RIGHT:
+      return EquipmentSlot.WRIST_LEFT;
+    case EquipmentSlot.FINGER_LEFT:
+      return EquipmentSlot.FINGER_RIGHT;
+    case EquipmentSlot.FINGER_RIGHT:
+      return EquipmentSlot.FINGER_LEFT;
+    default:
+      return null;
+  }
+}
+
+// Slots blocked by two-handed weapons
+export const TWO_HANDED_BLOCKED_SLOTS = [
+  EquipmentSlot.OFF_HAND,
+  EquipmentSlot.SHIELD,
+  EquipmentSlot.HELD,
+];
+
+// ============================================================================
+// CRAFTING SYSTEM
+// ============================================================================
+
+// Crafting skill types
+export enum CraftingSkill {
+  BLACKSMITHING = 'blacksmithing',
+  ALCHEMY = 'alchemy',
+  TAILORING = 'tailoring',
+  LEATHERWORKING = 'leatherworking',
+  WOODWORKING = 'woodworking',
+  JEWELCRAFTING = 'jewelcrafting',
+}
+
+// Ingredient for a recipe
+export interface RecipeIngredient {
+  template_id: number;
+  quantity: number;
+}
+
+// Crafting recipe
+export interface CraftingRecipe {
+  id: number;
+  result_template_id: number;
+  result_quantity: number;
+  name: string;
+  description?: string;
+  skill_type?: CraftingSkill;
+  skill_level: number;
+  ingredients: RecipeIngredient[];
+  tools_required?: number[]; // template_ids
+}
+
+// ============================================================================
+// ENCHANTING SYSTEM
+// ============================================================================
+
+// Enchantment definition
+export interface Enchantment {
+  id: number;
+  name: string;
+  description?: string;
+  skill_type: string;
+  skill_level: number;
+  applicable_types: ItemType[];
+  stat_modifiers?: StatModifiers;
+  special_effects?: EnchantmentEffect[];
+  mana_cost: number;
+  reagents?: RecipeIngredient[];
+}
+
+// Special enchantment effects
+export interface EnchantmentEffect {
+  type: string; // 'fire_damage', 'lifesteal', 'speed', etc.
+  value: number;
+  chance?: number; // proc chance (0-100)
+  duration?: number; // for timed effects
+}
+
+// Applied enchantment on an item instance
+export interface AppliedEnchantment {
+  enchantment_id: number;
+  name: string;
+  stat_modifiers?: StatModifiers;
+  special_effects?: EnchantmentEffect[];
+}

@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Item Editor - Kingdoms of Avarice</title>
+    <link rel="stylesheet" href="/src/editor.css" />
+    <link rel="stylesheet" href="/src/item-editor.css" />
+  </head>
+  <body>
+    <div id="editor-app">
+      <nav id="main-nav">
+        <div class="nav-brand">Kingdoms of Avarice</div>
+        <div class="nav-spacer"></div>
+        <div class="nav-user-menu">
+          <button class="nav-user-btn" id="nav-username">User</button>
+          <div class="dropdown-menu" id="user-dropdown">
+            <a href="/" class="dropdown-item">Game</a>
+            <div class="dropdown-section" id="developer-menu">
+              <div class="dropdown-header">Developer</div>
+              <a href="/editor.html" class="dropdown-item indent">Room Editor</a>
+              <a href="/item-editor.html" class="dropdown-item indent active">Item Editor</a>
+            </div>
+            <div class="dropdown-divider"></div>
+            <button class="dropdown-item" id="logout-btn">Logout</button>
+          </div>
+        </div>
+      </nav>
+      
+      <div id="editor-layout">
+        <aside id="item-list-panel">
+          <div class="panel-header">
+            <h2>Item Templates</h2>
+            <button id="new-item-btn" class="btn-primary">+ New Item</button>
+          </div>
+          <div id="item-filter">
+            <label for="type-select">Filter by Type:</label>
+            <select id="type-select">
+              <option value="">All Types</option>
+              <option value="weapon">Weapons</option>
+              <option value="armor">Armor</option>
+              <option value="container">Containers</option>
+              <option value="consumable">Consumables</option>
+              <option value="light">Light Sources</option>
+              <option value="key">Keys</option>
+              <option value="misc">Miscellaneous</option>
+            </select>
+          </div>
+          <div id="item-search">
+            <input type="text" id="search-input" placeholder="Search items..." />
+          </div>
+          <ul id="item-list"></ul>
+          
+          <div class="panel-footer">
+            <button id="import-btn" class="btn-small">Import</button>
+            <button id="export-btn" class="btn-small">Export</button>
+          </div>
+        </aside>
+        
+        <main id="item-editor-panel">
+          <div id="no-item-selected">
+            <p>Select an item template from the list or create a new one.</p>
+          </div>
+          
+          <form id="item-form" style="display: none;">
+            <div class="form-header">
+              <h2 id="item-form-title">Edit Item</h2>
+              <span id="item-id-display"></span>
+            </div>
+            
+            <!-- Basic Info Tab -->
+            <div class="form-tabs">
+              <button type="button" class="tab-btn active" data-tab="basic">Basic</button>
+              <button type="button" class="tab-btn" data-tab="type-specific">Type Data</button>
+              <button type="button" class="tab-btn" data-tab="requirements">Requirements</button>
+              <button type="button" class="tab-btn" data-tab="modifiers">Modifiers</button>
+              <button type="button" class="tab-btn" data-tab="flags">Flags</button>
+            </div>
+            
+            <!-- Basic Tab Content -->
+            <div class="tab-content active" id="tab-basic">
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="item-name">Name</label>
+                  <input type="text" id="item-name" required />
+                </div>
+                <div class="form-group">
+                  <label for="item-type">Type</label>
+                  <select id="item-type" required>
+                    <option value="weapon">Weapon</option>
+                    <option value="armor">Armor</option>
+                    <option value="container">Container</option>
+                    <option value="consumable">Consumable</option>
+                    <option value="light">Light Source</option>
+                    <option value="key">Key</option>
+                    <option value="misc">Miscellaneous</option>
+                  </select>
+                </div>
+              </div>
+              
+              <div class="form-group">
+                <label for="item-short-desc">Short Description</label>
+                <input type="text" id="item-short-desc" required placeholder="a rusty sword" />
+              </div>
+              
+              <div class="form-group">
+                <label for="item-long-desc">Long Description</label>
+                <textarea id="item-long-desc" rows="3" placeholder="Detailed description shown when examining..."></textarea>
+              </div>
+              
+              <div class="form-group">
+                <label for="item-room-desc">Room Description <span class="hint-inline">(shown in room)</span></label>
+                <input type="text" id="item-room-desc" placeholder="A rusty sword lies here." />
+              </div>
+              
+              <div class="form-group">
+                <label for="item-keywords">Keywords <span class="hint-inline">(comma-separated)</span></label>
+                <input type="text" id="item-keywords" placeholder="sword, rusty, weapon" />
+              </div>
+              
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="item-weight">Weight</label>
+                  <input type="number" id="item-weight" min="0" value="0" />
+                </div>
+                <div class="form-group">
+                  <label for="item-size">Size</label>
+                  <input type="number" id="item-size" min="1" value="1" />
+                </div>
+                <div class="form-group">
+                  <label for="item-value">Base Value</label>
+                  <input type="number" id="item-value" min="0" value="0" />
+                </div>
+              </div>
+              
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="item-equipment-slot">Equipment Slot</label>
+                  <select id="item-equipment-slot">
+                    <option value="">None</option>
+                    <option value="head">Head</option>
+                    <option value="face">Face</option>
+                    <option value="neck">Neck</option>
+                    <option value="back">Back</option>
+                    <option value="body">Body</option>
+                    <option value="arms">Arms</option>
+                    <option value="hands">Hands</option>
+                    <option value="wrist_left">Left Wrist</option>
+                    <option value="wrist_right">Right Wrist</option>
+                    <option value="finger_left">Left Finger</option>
+                    <option value="finger_right">Right Finger</option>
+                    <option value="waist">Waist</option>
+                    <option value="legs">Legs</option>
+                    <option value="feet">Feet</option>
+                    <option value="main_hand">Main Hand</option>
+                    <option value="off_hand">Off Hand</option>
+                    <option value="shield">Shield</option>
+                    <option value="held">Held</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="item-max-stack">Max Stack</label>
+                  <input type="number" id="item-max-stack" min="1" value="1" />
+                </div>
+                <div class="form-group">
+                  <label for="item-effect-slots">Effect Slots</label>
+                  <input type="number" id="item-effect-slots" min="0" value="0" />
+                </div>
+              </div>
+            </div>
+            
+            <!-- Type-Specific Tab Content -->
+            <div class="tab-content" id="tab-type-specific">
+              <!-- Weapon Data -->
+              <div id="weapon-data-section" class="type-section" style="display: none;">
+                <h3>Weapon Data</h3>
+                <div class="form-row">
+                  <div class="form-group">
+                    <label for="weapon-damage-dice">Damage Dice</label>
+                    <input type="text" id="weapon-damage-dice" placeholder="1d8" />
+                  </div>
+                  <div class="form-group">
+                    <label for="weapon-damage-type">Damage Type</label>
+                    <select id="weapon-damage-type">
+                      <option value="slashing">Slashing</option>
+                      <option value="piercing">Piercing</option>
+                      <option value="bludgeoning">Bludgeoning</option>
+                      <option value="fire">Fire</option>
+                      <option value="ice">Ice</option>
+                      <option value="lightning">Lightning</option>
+                      <option value="poison">Poison</option>
+                      <option value="holy">Holy</option>
+                      <option value="unholy">Unholy</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="form-row">
+                  <div class="form-group">
+                    <label for="weapon-attack-speed">Attack Speed</label>
+                    <input type="number" id="weapon-attack-speed" min="1" value="10" />
+                  </div>
+                  <div class="form-group">
+                    <label for="weapon-crit-modifier">Crit Modifier</label>
+                    <input type="number" id="weapon-crit-modifier" min="1" step="0.1" value="2" />
+                  </div>
+                  <div class="form-group">
+                    <label for="weapon-range">Range</label>
+                    <select id="weapon-range">
+                      <option value="melee">Melee</option>
+                      <option value="ranged">Ranged</option>
+                      <option value="thrown">Thrown</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- Armor Data -->
+              <div id="armor-data-section" class="type-section" style="display: none;">
+                <h3>Armor Data</h3>
+                <div class="form-row">
+                  <div class="form-group">
+                    <label for="armor-class">Armor Class</label>
+                    <input type="number" id="armor-class" min="0" value="0" />
+                  </div>
+                  <div class="form-group">
+                    <label for="armor-weight-class">Weight Class</label>
+                    <select id="armor-weight-class">
+                      <option value="light">Light</option>
+                      <option value="medium">Medium</option>
+                      <option value="heavy">Heavy</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- Container Data -->
+              <div id="container-data-section" class="type-section" style="display: none;">
+                <h3>Container Data</h3>
+                <div class="form-row">
+                  <div class="form-group">
+                    <label for="container-capacity">Capacity (items)</label>
+                    <input type="number" id="container-capacity" min="1" value="10" />
+                  </div>
+                  <div class="form-group">
+                    <label for="container-weight-limit">Weight Limit</label>
+                    <input type="number" id="container-weight-limit" min="0" value="100" />
+                  </div>
+                </div>
+              </div>
+              
+              <!-- Consumable Data -->
+              <div id="consumable-data-section" class="type-section" style="display: none;">
+                <h3>Consumable Data</h3>
+                <div class="form-row">
+                  <div class="form-group">
+                    <label for="consumable-effect-type">Effect Type</label>
+                    <select id="consumable-effect-type">
+                      <option value="heal">Heal</option>
+                      <option value="mana">Restore Mana</option>
+                      <option value="damage">Damage</option>
+                      <option value="food">Food</option>
+                      <option value="drink">Drink</option>
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label for="consumable-effect-value">Effect Value</label>
+                    <input type="number" id="consumable-effect-value" min="0" value="10" />
+                  </div>
+                </div>
+                <div class="form-row">
+                  <div class="form-group">
+                    <label for="consumable-charges">Charges <span class="hint-inline">(0 = single use)</span></label>
+                    <input type="number" id="consumable-charges" min="0" value="0" />
+                  </div>
+                  <div class="form-group">
+                    <label for="consumable-duration">Duration (seconds)</label>
+                    <input type="number" id="consumable-duration" min="0" value="0" />
+                  </div>
+                </div>
+              </div>
+              
+              <!-- Light Data -->
+              <div id="light-data-section" class="type-section" style="display: none;">
+                <h3>Light Source Data</h3>
+                <div class="form-row">
+                  <div class="form-group">
+                    <label for="light-radius">Light Radius</label>
+                    <input type="number" id="light-radius" min="1" value="2" />
+                  </div>
+                  <div class="form-group">
+                    <label for="light-fuel-max">Max Fuel <span class="hint-inline">(0 = permanent)</span></label>
+                    <input type="number" id="light-fuel-max" min="0" value="60" />
+                  </div>
+                  <div class="form-group">
+                    <label for="light-fuel-rate">Fuel Rate (per min)</label>
+                    <input type="number" id="light-fuel-rate" min="0" value="1" />
+                  </div>
+                </div>
+              </div>
+              
+              <div id="no-type-data" class="type-section">
+                <p class="hint">This item type has no additional data fields.</p>
+              </div>
+            </div>
+            
+            <!-- Requirements Tab Content -->
+            <div class="tab-content" id="tab-requirements">
+              <h3>Requirements to Use/Equip</h3>
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="req-level">Level</label>
+                  <input type="number" id="req-level" min="0" value="0" />
+                </div>
+                <div class="form-group">
+                  <label for="req-strength">Strength</label>
+                  <input type="number" id="req-strength" min="0" value="0" />
+                </div>
+                <div class="form-group">
+                  <label for="req-dexterity">Dexterity</label>
+                  <input type="number" id="req-dexterity" min="0" value="0" />
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="req-intelligence">Intelligence</label>
+                  <input type="number" id="req-intelligence" min="0" value="0" />
+                </div>
+                <div class="form-group">
+                  <label for="req-constitution">Constitution</label>
+                  <input type="number" id="req-constitution" min="0" value="0" />
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="req-class">Classes <span class="hint-inline">(comma-separated, empty = all)</span></label>
+                  <input type="text" id="req-class" placeholder="warrior, paladin" />
+                </div>
+                <div class="form-group">
+                  <label for="req-race">Races <span class="hint-inline">(comma-separated, empty = all)</span></label>
+                  <input type="text" id="req-race" placeholder="human, elf" />
+                </div>
+              </div>
+            </div>
+            
+            <!-- Modifiers Tab Content -->
+            <div class="tab-content" id="tab-modifiers">
+              <h3>Stat Modifiers (when equipped)</h3>
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="mod-strength">Strength</label>
+                  <input type="number" id="mod-strength" value="0" />
+                </div>
+                <div class="form-group">
+                  <label for="mod-dexterity">Dexterity</label>
+                  <input type="number" id="mod-dexterity" value="0" />
+                </div>
+                <div class="form-group">
+                  <label for="mod-constitution">Constitution</label>
+                  <input type="number" id="mod-constitution" value="0" />
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="mod-intelligence">Intelligence</label>
+                  <input type="number" id="mod-intelligence" value="0" />
+                </div>
+                <div class="form-group">
+                  <label for="mod-max-health">Max Health</label>
+                  <input type="number" id="mod-max-health" value="0" />
+                </div>
+                <div class="form-group">
+                  <label for="mod-max-mana">Max Mana</label>
+                  <input type="number" id="mod-max-mana" value="0" />
+                </div>
+              </div>
+            </div>
+            
+            <!-- Flags Tab Content -->
+            <div class="tab-content" id="tab-flags">
+              <h3>Item Flags</h3>
+              <div class="flags-grid">
+                <label class="checkbox-label">
+                  <input type="checkbox" id="flag-takeable" checked />
+                  Takeable
+                </label>
+                <label class="checkbox-label">
+                  <input type="checkbox" id="flag-hidden" />
+                  Hidden (requires search)
+                </label>
+                <label class="checkbox-label">
+                  <input type="checkbox" id="flag-no-drop" />
+                  No Drop (quest item)
+                </label>
+                <label class="checkbox-label">
+                  <input type="checkbox" id="flag-stackable" />
+                  Stackable
+                </label>
+                <label class="checkbox-label">
+                  <input type="checkbox" id="flag-cursed" />
+                  Cursed (can't remove)
+                </label>
+                <label class="checkbox-label">
+                  <input type="checkbox" id="flag-two-handed" />
+                  Two-Handed
+                </label>
+                <label class="checkbox-label">
+                  <input type="checkbox" id="flag-throwable" />
+                  Throwable
+                </label>
+              </div>
+            </div>
+            
+            <div class="form-actions">
+              <button type="submit" class="btn-primary">Save Item</button>
+              <button type="button" id="duplicate-item-btn" class="btn-secondary">Duplicate</button>
+              <button type="button" id="delete-item-btn" class="btn-danger">Delete Item</button>
+            </div>
+          </form>
+        </main>
+        
+        <aside id="preview-panel">
+          <div class="panel-header">
+            <h2>Preview</h2>
+          </div>
+          <div id="item-preview">
+            <div id="preview-content">
+              <p class="hint">Select an item to see preview</p>
+            </div>
+          </div>
+          
+          <div class="panel-section">
+            <h3>Spawn Item</h3>
+            <div class="form-row">
+              <div class="form-group">
+                <label for="spawn-room">Room ID</label>
+                <input type="number" id="spawn-room" min="1" value="1" />
+              </div>
+              <div class="form-group">
+                <label for="spawn-quantity">Quantity</label>
+                <input type="number" id="spawn-quantity" min="1" value="1" />
+              </div>
+            </div>
+            <button id="spawn-btn" class="btn-secondary" disabled>Spawn in Room</button>
+          </div>
+        </aside>
+      </div>
+    </div>
+    
+    <!-- Import Modal -->
+    <div id="import-modal" class="modal" style="display: none;">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>Import Items</h3>
+          <button id="close-import-modal" class="close-btn">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label for="import-file">Select JSON file:</label>
+            <input type="file" id="import-file" accept=".json" />
+          </div>
+          <label class="checkbox-label">
+            <input type="checkbox" id="import-merge" checked />
+            Merge with existing (update if name matches)
+          </label>
+        </div>
+        <div class="modal-footer">
+          <button id="do-import-btn" class="btn-primary">Import</button>
+        </div>
+      </div>
+    </div>
+    
+    <script type="module" src="/src/item-editor.ts"></script>
+  </body>
+</html>

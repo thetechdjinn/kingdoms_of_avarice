@@ -151,7 +151,7 @@ export class GameWorld {
     return this.rooms.get(targetId);
   }
 
-  formatRoomDescription(room: Room, otherPlayers: string[] = [], briefMode: boolean = false): string {
+  formatRoomDescription(room: Room, otherPlayers: string[] = [], briefMode: boolean = false, itemDescriptions: string | null = null): string {
     const exits = Array.from(room.exits.keys());
     const exitStr = exits.length > 0 ? exits.join(', ') : 'none';
 
@@ -161,6 +161,11 @@ export class GameWorld {
     if (!briefMode) {
       const wrappedDesc = this.wordWrap(room.description, 80);
       output += `${colors.roomDesc(wrappedDesc)}\r\n`;
+    }
+    
+    // Show items on the ground
+    if (itemDescriptions) {
+      output += `${itemDescriptions}\r\n`;
     }
     
     // Add "Also here:" line if there are other players
