@@ -372,8 +372,8 @@ export async function getPlayerEquipped(playerId: number): Promise<ItemInstance[
   );
   
   return result.rows.map(row => {
-    const template = dbToTemplate(row as unknown as DbItemTemplate);
-    return dbToInstance(row, template);
+    const template = dbToTemplate(row as DbItemTemplate);
+    return dbToInstance(row as DbItemInstance, template);
   });
 }
 
@@ -750,7 +750,7 @@ export async function findHiddenItemsInRoom(roomId: number): Promise<ItemInstanc
 export async function revealItem(instanceId: number): Promise<boolean> {
   const result = await query(
     `UPDATE item_instances 
-     SET custom_data = custom_data || '{"revealed": true}'::jsonb, updated_at = CURRENT_TIMESTAMP
+     SET custom_data = COALESCE(custom_data, '{}'::jsonb) || '{"revealed": true}'::jsonb, updated_at = CURRENT_TIMESTAMP
      WHERE id = $1`,
     [instanceId]
   );

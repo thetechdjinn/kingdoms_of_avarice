@@ -67,6 +67,16 @@ let templates: ItemTemplate[] = [];
 let selectedTemplateId: number | null = null;
 let currentUser: AuthInfo | null = null;
 
+// Helper to show error messages to the user
+function showError(message: string): void {
+  const list = document.getElementById('item-list');
+  if (list) {
+    list.innerHTML = `<div class="error-message" style="color: #ff6b6b; padding: 1rem;">${escapeHtml(message)}</div>`;
+  } else {
+    alert(message);
+  }
+}
+
 // ============================================================================
 // Authentication
 // ============================================================================
@@ -148,15 +158,19 @@ async function fetchTemplates(): Promise<void> {
     const response = await fetch('/api/items/templates');
     if (!response.ok) {
       console.error('Failed to fetch templates: HTTP', response.status);
+      showError('Failed to load item templates. Please refresh the page.');
       return;
     }
     const data = await response.json();
     if (data.success) {
       templates = data.templates;
       renderTemplateList();
+    } else {
+      showError('Failed to load item templates: ' + (data.message || 'Unknown error'));
     }
   } catch (error) {
     console.error('Failed to fetch templates:', error);
+    showError('Failed to connect to server. Please check your connection.');
   }
 }
 
@@ -709,7 +723,10 @@ async function doImport(): Promise<void> {
     }
   } catch (error) {
     console.error('Failed to import:', error);
-    alert('Failed to import: Invalid JSON file');
+    const errorMessage = error instanceof SyntaxError 
+      ? 'Failed to import: Invalid JSON file format'
+      : 'Failed to import: ' + (error instanceof Error ? error.message : 'Unknown error');
+    alert(errorMessage);
   }
 }
 

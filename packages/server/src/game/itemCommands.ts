@@ -298,11 +298,23 @@ async function handleGetAll(
   const pickedUp: string[] = [];
 
   for (const item of takeableItems) {
-    await itemRepo.updateInstanceLocation(
-      item.id,
+    // Check if we can stack with existing item in inventory
+    const existingStack = await itemRepo.findStackableInstance(
+      item.template_id,
       ItemLocationType.PLAYER,
       socket.playerId
     );
+    
+    if (existingStack) {
+      await itemRepo.addToInstanceQuantity(existingStack.id, item.quantity);
+      await itemRepo.deleteInstance(item.id);
+    } else {
+      await itemRepo.updateInstanceLocation(
+        item.id,
+        ItemLocationType.PLAYER,
+        socket.playerId
+      );
+    }
     pickedUp.push(getItemName(item));
   }
 
@@ -573,11 +585,23 @@ async function handleDropAll(
   const dropped: string[] = [];
 
   for (const item of droppableItems) {
-    await itemRepo.updateInstanceLocation(
-      item.id,
+    // Check if we can stack with existing item in room
+    const existingStack = await itemRepo.findStackableInstance(
+      item.template_id,
       ItemLocationType.ROOM,
       currentRoomId
     );
+    
+    if (existingStack) {
+      await itemRepo.addToInstanceQuantity(existingStack.id, item.quantity);
+      await itemRepo.deleteInstance(item.id);
+    } else {
+      await itemRepo.updateInstanceLocation(
+        item.id,
+        ItemLocationType.ROOM,
+        currentRoomId
+      );
+    }
     dropped.push(getItemName(item));
   }
 
@@ -1162,7 +1186,7 @@ export async function handleGetFrom(
   const input = args.join(' ');
   
   // Parse "get <item> from <container>" format
-  const fromMatch = input.match(/^(.+?)\s+from\s+(.+)$/i);
+  const fromMatch = input.match(/^(.+?)\s+\bfrom\b\s+(.+)$/i);
   if (!fromMatch) {
     return { type: MessageType.ERROR, message: 'Usage: get <item> from <container>' };
   }

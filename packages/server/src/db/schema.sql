@@ -115,11 +115,14 @@ CREATE TABLE IF NOT EXISTS crafting_recipes (
     skill_level INTEGER DEFAULT 0, -- minimum skill required
     
     -- Crafting requirements
-    ingredients JSONB NOT NULL, -- Array of {template_id, quantity}
-    tools_required JSONB, -- Array of template_ids that must be in inventory (not consumed)
+    ingredients JSONB NOT NULL DEFAULT '[]', -- Array of {template_id, quantity}
+    tools_required JSONB DEFAULT '[]', -- Array of template_ids that must be in inventory (not consumed)
     
     -- Metadata
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    
+    -- Validation constraint for ingredients structure
+    CONSTRAINT valid_ingredients CHECK (jsonb_typeof(ingredients) = 'array')
 );
 
 -- Enchantment definitions

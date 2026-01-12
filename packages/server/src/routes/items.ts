@@ -143,7 +143,7 @@ export function setupItemRoutes(app: Express): void {
   // Get all item instances (with optional filters)
   app.get('/api/items/instances', requireDeveloper, async (req: Request, res: Response) => {
     try {
-      const { location_type, location_id, template_id } = req.query;
+      const { location_type, location_id } = req.query;
       
       let instances;
       if (location_type === 'room' && location_id) {
@@ -366,7 +366,9 @@ export function setupItemRoutes(app: Express): void {
         }
       }
 
-      // Execute all operations (ideally would be in a transaction)
+      // Execute all operations
+      // Note: For full atomicity, these should be wrapped in a database transaction
+      // Currently, partial failures are tracked in results.errors
       for (const op of operations) {
         try {
           if (op.type === 'update' && op.existingId) {
@@ -378,7 +380,8 @@ export function setupItemRoutes(app: Express): void {
             results.created++;
           }
         } catch (err) {
-          results.errors.push(`Failed to import "${op.template.name}": ${err}`);
+          const errorMessage = err instanceof Error ? err.message : String(err);
+          results.errors.push(`Failed to import "${op.template.name}": ${errorMessage}`);
         }
       }
 
