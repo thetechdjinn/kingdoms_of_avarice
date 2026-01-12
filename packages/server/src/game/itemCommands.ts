@@ -106,11 +106,12 @@ async function pickUpItem(
     return { type: MessageType.ERROR, message: `You can't pick that up.` };
   }
 
-  // Check if we can stack with existing item in inventory
+  // Check if we can stack with existing item in inventory (same condition only)
   const existingStack = await itemRepo.findStackableInstance(
     item.template_id,
     ItemLocationType.PLAYER,
-    socket.playerId
+    socket.playerId,
+    item.condition
   );
   
   if (existingStack) {
@@ -164,7 +165,8 @@ async function pickUpMultipleItems(
       const existingStack = await itemRepo.findStackableInstance(
         item.template_id,
         ItemLocationType.PLAYER,
-        socket.playerId
+        socket.playerId,
+        item.condition
       );
       
       if (existingStack) {
@@ -184,7 +186,8 @@ async function pickUpMultipleItems(
       const existingStack = await itemRepo.findStackableInstance(
         item.template_id,
         ItemLocationType.PLAYER,
-        socket.playerId
+        socket.playerId,
+        item.condition
       );
       
       if (existingStack) {
@@ -232,7 +235,8 @@ async function pickUpItemQuantity(
     const existingStack = await itemRepo.findStackableInstance(
       item.template_id,
       ItemLocationType.PLAYER,
-      socket.playerId
+      socket.playerId,
+      item.condition
     );
     
     if (existingStack) {
@@ -255,7 +259,8 @@ async function pickUpItemQuantity(
     const existingStack = await itemRepo.findStackableInstance(
       item.template_id,
       ItemLocationType.PLAYER,
-      socket.playerId
+      socket.playerId,
+      item.condition
     );
     
     if (existingStack) {
@@ -302,7 +307,8 @@ async function handleGetAll(
     const existingStack = await itemRepo.findStackableInstance(
       item.template_id,
       ItemLocationType.PLAYER,
-      socket.playerId
+      socket.playerId,
+      item.condition
     );
     
     if (existingStack) {
@@ -412,7 +418,8 @@ async function dropMultipleItems(
       const existingStack = await itemRepo.findStackableInstance(
         item.template_id,
         ItemLocationType.ROOM,
-        currentRoomId
+        currentRoomId,
+        item.condition
       );
       
       if (existingStack) {
@@ -432,7 +439,8 @@ async function dropMultipleItems(
       const existingStack = await itemRepo.findStackableInstance(
         item.template_id,
         ItemLocationType.ROOM,
-        currentRoomId
+        currentRoomId,
+        item.condition
       );
       
       if (existingStack) {
@@ -470,11 +478,12 @@ async function dropItem(
     return { type: MessageType.ERROR, message: `You can't drop that.` };
   }
 
-  // Check if we can stack with existing item in room
+  // Check if we can stack with existing item in room (same condition only)
   const existingStack = await itemRepo.findStackableInstance(
     item.template_id,
     ItemLocationType.ROOM,
-    currentRoomId
+    currentRoomId,
+    item.condition
   );
   
   if (existingStack) {
@@ -519,7 +528,8 @@ async function dropItemQuantity(
     const existingStack = await itemRepo.findStackableInstance(
       item.template_id,
       ItemLocationType.ROOM,
-      currentRoomId
+      currentRoomId,
+      item.condition
     );
     
     if (existingStack) {
@@ -542,7 +552,8 @@ async function dropItemQuantity(
     const existingStack = await itemRepo.findStackableInstance(
       item.template_id,
       ItemLocationType.ROOM,
-      currentRoomId
+      currentRoomId,
+      item.condition
     );
     
     if (existingStack) {
@@ -589,7 +600,8 @@ async function handleDropAll(
     const existingStack = await itemRepo.findStackableInstance(
       item.template_id,
       ItemLocationType.ROOM,
-      currentRoomId
+      currentRoomId,
+      item.condition
     );
     
     if (existingStack) {

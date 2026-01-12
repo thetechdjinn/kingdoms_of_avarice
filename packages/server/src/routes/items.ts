@@ -203,8 +203,15 @@ export function setupItemRoutes(app: Express): void {
         charges_remaining, fuel_remaining, custom_data
       } = req.body;
 
-      if (!template_id || !location_type || location_id == null) {
+      if (!template_id || !location_type || location_id === undefined || location_id === null) {
         res.status(400).json({ success: false, message: 'template_id, location_type, and location_id are required' });
+        return;
+      }
+      
+      // Ensure location_id is a number
+      const locationIdNum = typeof location_id === 'number' ? location_id : parseInt(location_id, 10);
+      if (isNaN(locationIdNum)) {
+        res.status(400).json({ success: false, message: 'location_id must be a valid number' });
         return;
       }
 
@@ -418,12 +425,20 @@ export function setupItemRoutes(app: Express): void {
       }
 
       // Validate numeric inputs
-      const templateIdNum = parseInt(template_id);
-      const roomIdNum = parseInt(room_id);
-      const quantityNum = parseInt(quantity);
+      const templateIdNum = parseInt(template_id, 10);
+      const roomIdNum = parseInt(room_id, 10);
+      const quantityNum = parseInt(quantity, 10);
 
-      if (isNaN(templateIdNum) || isNaN(roomIdNum) || isNaN(quantityNum) || quantityNum < 1) {
-        res.status(400).json({ success: false, message: 'Invalid template_id, room_id, or quantity' });
+      if (isNaN(templateIdNum) || templateIdNum < 1) {
+        res.status(400).json({ success: false, message: 'Invalid template_id: must be a positive integer' });
+        return;
+      }
+      if (isNaN(roomIdNum) || roomIdNum < 1) {
+        res.status(400).json({ success: false, message: 'Invalid room_id: must be a positive integer' });
+        return;
+      }
+      if (isNaN(quantityNum) || quantityNum < 1) {
+        res.status(400).json({ success: false, message: 'Invalid quantity: must be a positive integer' });
         return;
       }
 

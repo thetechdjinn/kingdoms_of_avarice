@@ -116,8 +116,7 @@ async function seedItems(): Promise<void> {
     await getPool().query(seedSql);
     console.log('Item seed data inserted successfully');
     
-    // Ensure all item names are lowercase
-    await normalizeItemNames();
+    // Note: normalizeItemNames is called in the main execution chain after seeding
   } catch (error) {
     console.error('Failed to seed items:', error);
     // Don't throw - items are optional, game can run without them

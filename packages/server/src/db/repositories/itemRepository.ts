@@ -17,6 +17,13 @@ import {
   ItemCustomData,
 } from '@koa/shared';
 
+// Common SELECT clause for template columns when joining with instances
+const TEMPLATE_COLUMNS = `it.name, it.short_desc, it.long_desc, it.room_desc, it.keywords,
+        it.weight, it.size, it.base_value, it.item_type, it.equipment_slot,
+        it.flags, it.max_stack, it.container_capacity, it.container_weight_limit,
+        it.weapon_data, it.armor_data, it.consumable_data, it.light_data,
+        it.requirements, it.stat_modifiers, it.effect_slots, it.base_effects`;
+
 // Database row types
 interface DbItemTemplate {
   id: number;
@@ -306,11 +313,7 @@ export async function updateTemplate(id: number, updates: Partial<CreateTemplate
 
 export async function getAllInstances(): Promise<ItemInstance[]> {
   const result = await query<DbItemInstance & DbItemTemplate>(
-    `SELECT ii.*, it.name, it.short_desc, it.long_desc, it.room_desc, it.keywords,
-            it.weight, it.size, it.base_value, it.item_type, it.equipment_slot,
-            it.flags, it.max_stack, it.container_capacity, it.container_weight_limit,
-            it.weapon_data, it.armor_data, it.consumable_data, it.light_data,
-            it.requirements, it.stat_modifiers, it.effect_slots, it.base_effects
+    `SELECT ii.*, ${TEMPLATE_COLUMNS}
      FROM item_instances ii
      JOIN item_templates it ON ii.template_id = it.id
      ORDER BY ii.id`
@@ -328,11 +331,7 @@ export async function getAllInstances(): Promise<ItemInstance[]> {
 
 export async function getInstanceById(id: number): Promise<ItemInstance | null> {
   const result = await query<DbItemInstance & DbItemTemplate>(
-    `SELECT ii.*, it.name, it.short_desc, it.long_desc, it.room_desc, it.keywords,
-            it.weight, it.size, it.base_value, it.item_type, it.equipment_slot,
-            it.flags, it.max_stack, it.container_capacity, it.container_weight_limit,
-            it.weapon_data, it.armor_data, it.consumable_data, it.light_data,
-            it.requirements, it.stat_modifiers, it.effect_slots, it.base_effects
+    `SELECT ii.*, ${TEMPLATE_COLUMNS}
      FROM item_instances ii
      JOIN item_templates it ON ii.template_id = it.id
      WHERE ii.id = $1`,
@@ -348,11 +347,7 @@ export async function getInstanceById(id: number): Promise<ItemInstance | null> 
 
 export async function getInstancesInRoom(roomId: number): Promise<ItemInstance[]> {
   const result = await query<DbItemInstance & DbItemTemplate>(
-    `SELECT ii.*, it.name, it.short_desc, it.long_desc, it.room_desc, it.keywords,
-            it.weight, it.size, it.base_value, it.item_type, it.equipment_slot,
-            it.flags, it.max_stack, it.container_capacity, it.container_weight_limit,
-            it.weapon_data, it.armor_data, it.consumable_data, it.light_data,
-            it.requirements, it.stat_modifiers, it.effect_slots, it.base_effects
+    `SELECT ii.*, ${TEMPLATE_COLUMNS}
      FROM item_instances ii
      JOIN item_templates it ON ii.template_id = it.id
      WHERE ii.location_type = 'room' AND ii.location_id = $1
@@ -368,11 +363,7 @@ export async function getInstancesInRoom(roomId: number): Promise<ItemInstance[]
 
 export async function getPlayerInventory(playerId: number): Promise<ItemInstance[]> {
   const result = await query<DbItemInstance & DbItemTemplate>(
-    `SELECT ii.*, it.name, it.short_desc, it.long_desc, it.room_desc, it.keywords,
-            it.weight, it.size, it.base_value, it.item_type, it.equipment_slot,
-            it.flags, it.max_stack, it.container_capacity, it.container_weight_limit,
-            it.weapon_data, it.armor_data, it.consumable_data, it.light_data,
-            it.requirements, it.stat_modifiers, it.effect_slots, it.base_effects
+    `SELECT ii.*, ${TEMPLATE_COLUMNS}
      FROM item_instances ii
      JOIN item_templates it ON ii.template_id = it.id
      WHERE ii.location_type = 'player' AND ii.location_id = $1
@@ -388,11 +379,7 @@ export async function getPlayerInventory(playerId: number): Promise<ItemInstance
 
 export async function getPlayerEquipped(playerId: number): Promise<ItemInstance[]> {
   const result = await query<DbItemInstance & DbItemTemplate>(
-    `SELECT ii.*, it.name, it.short_desc, it.long_desc, it.room_desc, it.keywords,
-            it.weight, it.size, it.base_value, it.item_type, it.equipment_slot,
-            it.flags, it.max_stack, it.container_capacity, it.container_weight_limit,
-            it.weapon_data, it.armor_data, it.consumable_data, it.light_data,
-            it.requirements, it.stat_modifiers, it.effect_slots, it.base_effects
+    `SELECT ii.*, ${TEMPLATE_COLUMNS}
      FROM item_instances ii
      JOIN item_templates it ON ii.template_id = it.id
      WHERE ii.location_type = 'equipped' AND ii.location_id = $1
@@ -475,23 +462,29 @@ export async function updateInstanceQuantity(
 export async function findStackableInstance(
   templateId: number,
   locationType: ItemLocationType,
-  locationId: number
+  locationId: number,
+  condition?: ItemCondition
 ): Promise<ItemInstance | null> {
+  const params: (number | string)[] = [templateId, locationType, locationId];
+  let conditionClause = '';
+  
+  if (condition) {
+    conditionClause = 'AND ii.condition = $4';
+    params.push(condition);
+  }
+  
   const result = await query<DbItemInstance & DbItemTemplate>(
-    `SELECT ii.*, it.name, it.short_desc, it.long_desc, it.room_desc, it.keywords,
-            it.weight, it.size, it.base_value, it.item_type, it.equipment_slot,
-            it.flags, it.max_stack, it.container_capacity, it.container_weight_limit,
-            it.weapon_data, it.armor_data, it.consumable_data, it.light_data,
-            it.requirements, it.stat_modifiers, it.effect_slots, it.base_effects
+    `SELECT ii.*, ${TEMPLATE_COLUMNS}
      FROM item_instances ii
      JOIN item_templates it ON ii.template_id = it.id
      WHERE ii.template_id = $1 
        AND ii.location_type = $2 
        AND ii.location_id = $3
        AND (it.flags->>'stackable')::boolean = true
+       ${conditionClause}
      ORDER BY ii.id
      LIMIT 1`,
-    [templateId, locationType, locationId]
+    params
   );
   
   if (!result.rows[0]) return null;
@@ -530,11 +523,7 @@ export async function findItemsInRoomByKeyword(
 ): Promise<ItemInstance[]> {
   const searchTerm = keyword.toLowerCase();
   const result = await query<DbItemInstance & DbItemTemplate>(
-    `SELECT ii.*, it.name, it.short_desc, it.long_desc, it.room_desc, it.keywords,
-            it.weight, it.size, it.base_value, it.item_type, it.equipment_slot,
-            it.flags, it.max_stack, it.container_capacity, it.container_weight_limit,
-            it.weapon_data, it.armor_data, it.consumable_data, it.light_data,
-            it.requirements, it.stat_modifiers, it.effect_slots, it.base_effects
+    `SELECT ii.*, ${TEMPLATE_COLUMNS}
      FROM item_instances ii
      JOIN item_templates it ON ii.template_id = it.id
      WHERE ii.location_type = 'room' 
@@ -559,11 +548,7 @@ export async function findItemsInInventoryByKeyword(
 ): Promise<ItemInstance[]> {
   const searchTerm = keyword.toLowerCase();
   const result = await query<DbItemInstance & DbItemTemplate>(
-    `SELECT ii.*, it.name, it.short_desc, it.long_desc, it.room_desc, it.keywords,
-            it.weight, it.size, it.base_value, it.item_type, it.equipment_slot,
-            it.flags, it.max_stack, it.container_capacity, it.container_weight_limit,
-            it.weapon_data, it.armor_data, it.consumable_data, it.light_data,
-            it.requirements, it.stat_modifiers, it.effect_slots, it.base_effects
+    `SELECT ii.*, ${TEMPLATE_COLUMNS}
      FROM item_instances ii
      JOIN item_templates it ON ii.template_id = it.id
      WHERE ii.location_type = 'player' 
@@ -621,11 +606,7 @@ export async function getInventoryDisplays(playerId: number): Promise<ItemDispla
 
 export async function getItemsInContainer(containerId: number): Promise<ItemInstance[]> {
   const result = await query<DbItemInstance & DbItemTemplate>(
-    `SELECT ii.*, it.name, it.short_desc, it.long_desc, it.room_desc, it.keywords,
-            it.weight, it.size, it.base_value, it.item_type, it.equipment_slot,
-            it.flags, it.max_stack, it.container_capacity, it.container_weight_limit,
-            it.weapon_data, it.armor_data, it.consumable_data, it.light_data,
-            it.requirements, it.stat_modifiers, it.effect_slots, it.base_effects
+    `SELECT ii.*, ${TEMPLATE_COLUMNS}
      FROM item_instances ii
      JOIN item_templates it ON ii.template_id = it.id
      WHERE ii.location_type = 'container' AND ii.location_id = $1
@@ -645,11 +626,7 @@ export async function findItemsInContainerByKeyword(
 ): Promise<ItemInstance[]> {
   const searchTerm = keyword.toLowerCase();
   const result = await query<DbItemInstance & DbItemTemplate>(
-    `SELECT ii.*, it.name, it.short_desc, it.long_desc, it.room_desc, it.keywords,
-            it.weight, it.size, it.base_value, it.item_type, it.equipment_slot,
-            it.flags, it.max_stack, it.container_capacity, it.container_weight_limit,
-            it.weapon_data, it.armor_data, it.consumable_data, it.light_data,
-            it.requirements, it.stat_modifiers, it.effect_slots, it.base_effects
+    `SELECT ii.*, ${TEMPLATE_COLUMNS}
      FROM item_instances ii
      JOIN item_templates it ON ii.template_id = it.id
      WHERE ii.location_type = 'container' 
@@ -756,11 +733,7 @@ export function getBetterCondition(current: ItemCondition): ItemCondition | null
 // Find hidden items in room
 export async function findHiddenItemsInRoom(roomId: number): Promise<ItemInstance[]> {
   const result = await query<DbItemInstance & DbItemTemplate>(
-    `SELECT ii.*, it.name, it.short_desc, it.long_desc, it.room_desc, it.keywords,
-            it.weight, it.size, it.base_value, it.item_type, it.equipment_slot,
-            it.flags, it.max_stack, it.container_capacity, it.container_weight_limit,
-            it.weapon_data, it.armor_data, it.consumable_data, it.light_data,
-            it.requirements, it.stat_modifiers, it.effect_slots, it.base_effects
+    `SELECT ii.*, ${TEMPLATE_COLUMNS}
      FROM item_instances ii
      JOIN item_templates it ON ii.template_id = it.id
      WHERE ii.location_type = 'room' 

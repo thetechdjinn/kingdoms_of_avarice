@@ -203,9 +203,12 @@ async function fetchTemplates(): Promise<void> {
 // ============================================================================
 
 function renderTemplateList(): void {
-  const list = document.getElementById('item-list')!;
-  const filterType = (document.getElementById('type-select') as HTMLSelectElement).value;
-  const searchTerm = (document.getElementById('search-input') as HTMLInputElement).value.toLowerCase();
+  const list = getElement<HTMLElement>('item-list');
+  if (!list) return;
+  const filterTypeEl = getElement<HTMLSelectElement>('type-select');
+  const searchInputEl = getElement<HTMLInputElement>('search-input');
+  const filterType = filterTypeEl?.value ?? '';
+  const searchTerm = (searchInputEl?.value ?? '').toLowerCase();
 
   let filteredTemplates = templates;
   
@@ -455,6 +458,16 @@ function updatePreview(template: ItemTemplate): void {
     `;
   }
 
+  if (template.item_type === 'light' && template.light_data) {
+    html += `
+      <div class="preview-section">
+        <div class="preview-section-title">Light</div>
+        <div>Radius: ${template.light_data.radius}</div>
+        ${template.light_data.fuel_max ? `<div>Fuel: ${template.light_data.fuel_max}</div>` : ''}
+      </div>
+    `;
+  }
+
   // Modifiers
   const mods = template.stat_modifiers;
   if (mods) {
@@ -697,8 +710,8 @@ function gatherFormData(): Partial<ItemTemplate> {
     dexterity: parseInt((document.getElementById('req-dexterity') as HTMLInputElement).value) || undefined,
     intelligence: parseInt((document.getElementById('req-intelligence') as HTMLInputElement).value) || undefined,
     constitution: parseInt((document.getElementById('req-constitution') as HTMLInputElement).value) || undefined,
-    class: reqClass ? reqClass.split(',').map(c => c.trim()) : undefined,
-    race: reqRace ? reqRace.split(',').map(r => r.trim()) : undefined,
+    class: reqClass ? reqClass.split(',').map(c => c.trim()).filter(c => c) : undefined,
+    race: reqRace ? reqRace.split(',').map(r => r.trim()).filter(r => r) : undefined,
   };
 
   // Modifiers
