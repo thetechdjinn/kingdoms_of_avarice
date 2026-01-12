@@ -3,6 +3,7 @@ import * as itemRepo from '../db/repositories/itemRepository.js';
 import * as craftingRepo from '../db/repositories/craftingRepository.js';
 import { requireDeveloper } from '../middleware/auth.js';
 import { ItemType, ItemLocationType, ItemCondition, EquipmentSlot } from '@koa/shared';
+import { withTransaction } from '../db/index.js';
 
 export function setupItemRoutes(app: Express): void {
   // ============================================================================
@@ -365,23 +366,23 @@ export function setupItemRoutes(app: Express): void {
         }
       }
 
-      // Execute all operations
-      // Note: For full atomicity, these should be wrapped in a database transaction
-      // Currently, partial failures are tracked in results.errors
-      for (const op of operations) {
-        try {
-          if (op.type === 'update' && op.existingId) {
-            await itemRepo.updateTemplate(op.existingId, op.template);
-            results.updated++;
-          } else if (op.type === 'create') {
-            const { id, ...templateData } = op.template;
-            await itemRepo.createTemplate(templateData);
-            results.created++;
+      // Execute all operations atomically within a transaction
+      try {
+        await withTransaction(async () => {
+          for (const op of operations) {
+            if (op.type === 'update' && op.existingId) {
+              await itemRepo.updateTemplate(op.existingId, op.template);
+              results.updated++;
+            } else if (op.type === 'create') {
+              const { id, ...templateData } = op.template;
+              await itemRepo.createTemplate(templateData);
+              results.created++;
+            }
           }
-        } catch (err) {
-          const errorMessage = err instanceof Error ? err.message : String(err);
-          results.errors.push(`Failed to import "${op.template.name}": ${errorMessage}`);
-        }
+        });
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : String(err);
+        results.errors.push(`Transaction failed, all changes rolled back: ${errorMessage}`);
       }
 
       res.json({ success: true, results });

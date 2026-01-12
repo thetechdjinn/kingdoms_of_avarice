@@ -1146,7 +1146,7 @@ export async function handlePut(
 
   // Check container capacity (item count)
   const containerTemplate = container.template;
-  if (containerTemplate?.container_capacity) {
+  if (containerTemplate?.container_capacity !== undefined && containerTemplate.container_capacity !== null) {
     const currentCount = await itemRepo.getContainerItemCount(container.id);
     if (currentCount >= containerTemplate.container_capacity) {
       return { type: MessageType.ERROR, message: `The ${containerTemplate.name} is full.` };
@@ -1224,9 +1224,9 @@ export async function handleGetFrom(
   const itemName = getItemName(item);
   const containerName = container.template?.name ?? 'something';
 
-  broadcastToRoom(currentRoomId, `${socket.username} gets ${itemName} from ${containerName}.`, socket.playerId);
+  broadcastToRoom(currentRoomId, `${socket.username} gets ${withArticle(itemName)} from ${withArticle(containerName)}.`, socket.playerId);
 
-  return { type: MessageType.OUTPUT, message: `You get ${colors.item(itemName)} from ${colors.item(containerName)}.` };
+  return { type: MessageType.OUTPUT, message: `You get ${colors.item(withArticle(itemName))} from ${colors.item(withArticle(containerName))}.` };
 }
 
 // Handle "get all from <container>"
@@ -1245,15 +1245,15 @@ async function handleGetAllFromContainer(
 
   for (const item of items) {
     await itemRepo.updateInstanceLocation(item.id, ItemLocationType.PLAYER, socket.playerId);
-    pickedUp.push(getItemName(item));
+    pickedUp.push(withArticle(getItemName(item)));
   }
 
   const containerName = container.template?.name ?? 'something';
-  broadcastToRoom(currentRoomId, `${socket.username} empties ${containerName}.`, socket.playerId);
+  broadcastToRoom(currentRoomId, `${socket.username} empties ${withArticle(containerName)}.`, socket.playerId);
 
   return {
     type: MessageType.OUTPUT,
-    message: `You get from ${colors.item(containerName)}: ${pickedUp.map(n => colors.item(n)).join(', ')}.`,
+    message: `You get from ${colors.item(withArticle(containerName))}: ${pickedUp.map(n => colors.item(n)).join(', ')}.`,
   };
 }
 

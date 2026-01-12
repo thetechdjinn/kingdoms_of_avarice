@@ -83,6 +83,20 @@ function parseNumberOrDefault(value: string, defaultValue: number): number {
   return isNaN(parsed) ? defaultValue : parsed;
 }
 
+// Helper to safely get DOM element by ID
+function getElement<T extends HTMLElement>(id: string): T | null {
+  return document.getElementById(id) as T | null;
+}
+
+// Helper to safely get required DOM element (logs error if missing)
+function requireElement<T extends HTMLElement>(id: string): T | null {
+  const el = document.getElementById(id) as T | null;
+  if (!el) {
+    console.error(`Required element #${id} not found`);
+  }
+  return el;
+}
+
 // ============================================================================
 // Authentication
 // ============================================================================
@@ -169,8 +183,12 @@ async function fetchTemplates(): Promise<void> {
     }
     const data = await response.json();
     if (data.success) {
-      templates = data.templates;
-      renderTemplateList();
+      if (Array.isArray(data.templates)) {
+        templates = data.templates;
+        renderTemplateList();
+      } else {
+        showError('Invalid template data received from server.');
+      }
     } else {
       showError('Failed to load item templates: ' + (data.message || 'Unknown error'));
     }
@@ -226,40 +244,65 @@ function selectTemplate(id: number): void {
   selectedTemplateId = id;
   const template = templates.find(t => t.id === id);
 
+  const noItemSelected = getElement<HTMLElement>('no-item-selected');
+  const itemForm = getElement<HTMLElement>('item-form');
+
   if (!template) {
-    document.getElementById('no-item-selected')!.style.display = 'flex';
-    document.getElementById('item-form')!.style.display = 'none';
+    if (noItemSelected) noItemSelected.style.display = 'flex';
+    if (itemForm) itemForm.style.display = 'none';
     return;
   }
 
-  document.getElementById('no-item-selected')!.style.display = 'none';
-  document.getElementById('item-form')!.style.display = 'block';
+  if (noItemSelected) noItemSelected.style.display = 'none';
+  if (itemForm) itemForm.style.display = 'block';
 
-  document.getElementById('item-form-title')!.textContent = 'Edit Item';
-  document.getElementById('item-id-display')!.textContent = `ID: ${template.id}`;
+  const formTitle = getElement<HTMLElement>('item-form-title');
+  const idDisplay = getElement<HTMLElement>('item-id-display');
+  if (formTitle) formTitle.textContent = 'Edit Item';
+  if (idDisplay) idDisplay.textContent = `ID: ${template.id}`;
 
   // Basic fields
-  (document.getElementById('item-name') as HTMLInputElement).value = template.name;
-  (document.getElementById('item-type') as HTMLSelectElement).value = template.item_type;
-  (document.getElementById('item-short-desc') as HTMLInputElement).value = template.short_desc;
-  (document.getElementById('item-long-desc') as HTMLTextAreaElement).value = template.long_desc || '';
-  (document.getElementById('item-room-desc') as HTMLInputElement).value = template.room_desc || '';
-  (document.getElementById('item-keywords') as HTMLInputElement).value = template.keywords.join(', ');
-  (document.getElementById('item-weight') as HTMLInputElement).value = String(template.weight);
-  (document.getElementById('item-size') as HTMLInputElement).value = String(template.size);
-  (document.getElementById('item-value') as HTMLInputElement).value = String(template.base_value);
-  (document.getElementById('item-equipment-slot') as HTMLSelectElement).value = template.equipment_slot || '';
-  (document.getElementById('item-max-stack') as HTMLInputElement).value = String(template.max_stack);
-  (document.getElementById('item-effect-slots') as HTMLInputElement).value = String(template.effect_slots);
+  const nameInput = getElement<HTMLInputElement>('item-name');
+  const typeSelect = getElement<HTMLSelectElement>('item-type');
+  const shortDescInput = getElement<HTMLInputElement>('item-short-desc');
+  const longDescInput = getElement<HTMLTextAreaElement>('item-long-desc');
+  const roomDescInput = getElement<HTMLInputElement>('item-room-desc');
+  const keywordsInput = getElement<HTMLInputElement>('item-keywords');
+  const weightInput = getElement<HTMLInputElement>('item-weight');
+  const sizeInput = getElement<HTMLInputElement>('item-size');
+  const valueInput = getElement<HTMLInputElement>('item-value');
+  const equipSlotSelect = getElement<HTMLSelectElement>('item-equipment-slot');
+  const maxStackInput = getElement<HTMLInputElement>('item-max-stack');
+  const effectSlotsInput = getElement<HTMLInputElement>('item-effect-slots');
+
+  if (nameInput) nameInput.value = template.name;
+  if (typeSelect) typeSelect.value = template.item_type;
+  if (shortDescInput) shortDescInput.value = template.short_desc;
+  if (longDescInput) longDescInput.value = template.long_desc || '';
+  if (roomDescInput) roomDescInput.value = template.room_desc || '';
+  if (keywordsInput) keywordsInput.value = template.keywords.join(', ');
+  if (weightInput) weightInput.value = String(template.weight);
+  if (sizeInput) sizeInput.value = String(template.size);
+  if (valueInput) valueInput.value = String(template.base_value);
+  if (equipSlotSelect) equipSlotSelect.value = template.equipment_slot || '';
+  if (maxStackInput) maxStackInput.value = String(template.max_stack);
+  if (effectSlotsInput) effectSlotsInput.value = String(template.effect_slots);
 
   // Flags
-  (document.getElementById('flag-takeable') as HTMLInputElement).checked = template.flags?.takeable !== false;
-  (document.getElementById('flag-hidden') as HTMLInputElement).checked = template.flags?.hidden === true;
-  (document.getElementById('flag-no-drop') as HTMLInputElement).checked = template.flags?.no_drop === true;
-  (document.getElementById('flag-stackable') as HTMLInputElement).checked = template.flags?.stackable === true;
-  (document.getElementById('flag-cursed') as HTMLInputElement).checked = template.flags?.cursed === true;
-  (document.getElementById('flag-two-handed') as HTMLInputElement).checked = template.flags?.two_handed === true;
-  (document.getElementById('flag-throwable') as HTMLInputElement).checked = template.flags?.throwable === true;
+  const flagTakeable = getElement<HTMLInputElement>('flag-takeable');
+  const flagHidden = getElement<HTMLInputElement>('flag-hidden');
+  const flagNoDrop = getElement<HTMLInputElement>('flag-no-drop');
+  if (flagTakeable) flagTakeable.checked = template.flags?.takeable !== false;
+  if (flagHidden) flagHidden.checked = template.flags?.hidden === true;
+  if (flagNoDrop) flagNoDrop.checked = template.flags?.no_drop === true;
+  const flagStackable = getElement<HTMLInputElement>('flag-stackable');
+  const flagCursed = getElement<HTMLInputElement>('flag-cursed');
+  const flagTwoHanded = getElement<HTMLInputElement>('flag-two-handed');
+  const flagThrowable = getElement<HTMLInputElement>('flag-throwable');
+  if (flagStackable) flagStackable.checked = template.flags?.stackable === true;
+  if (flagCursed) flagCursed.checked = template.flags?.cursed === true;
+  if (flagTwoHanded) flagTwoHanded.checked = template.flags?.two_handed === true;
+  if (flagThrowable) flagThrowable.checked = template.flags?.throwable === true;
 
   // Type-specific data
   loadWeaponData(template);

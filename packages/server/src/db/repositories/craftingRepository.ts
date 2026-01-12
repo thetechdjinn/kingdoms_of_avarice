@@ -103,8 +103,8 @@ export async function getRecipesBySkill(skillType: CraftingSkill): Promise<Craft
 
 export async function getRecipeByName(name: string): Promise<CraftingRecipe | null> {
   const result = await query<DbCraftingRecipe>(
-    'SELECT * FROM crafting_recipes WHERE LOWER(name) LIKE $1',
-    [`%${name.toLowerCase()}%`]
+    'SELECT * FROM crafting_recipes WHERE LOWER(name) = LOWER($1)',
+    [name]
   );
   return result.rows[0] ? dbToRecipe(result.rows[0]) : null;
 }
@@ -140,8 +140,8 @@ export async function getAllEnchantments(): Promise<Enchantment[]> {
 
 export async function getEnchantmentByName(name: string): Promise<Enchantment | null> {
   const result = await query<DbEnchantment>(
-    'SELECT * FROM enchantments WHERE LOWER(name) LIKE $1',
-    [`%${name.toLowerCase()}%`]
+    'SELECT * FROM enchantments WHERE LOWER(name) = LOWER($1)',
+    [name]
   );
   return result.rows[0] ? dbToEnchantment(result.rows[0]) : null;
 }
