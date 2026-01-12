@@ -102,3 +102,6 @@ export type CharacterClass = (typeof CLASSES)[number];
 
 // Re-export roles
 export * from "./roles.js";
+
+// Re-export items
+export * from "./items.js";

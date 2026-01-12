@@ -61,4 +61,26 @@ export async function closePool(): Promise<void> {
   }
 }
 
+// Execute a function within a transaction
+export async function withTransaction<T>(
+  fn: (client: pg.PoolClient) => Promise<T>
+): Promise<T> {
+  const client = await getClient();
+  try {
+    await client.query('BEGIN');
+    const result = await fn(client);
+    await client.query('COMMIT');
+    return result;
+  } catch (error) {
+    try {
+      await client.query('ROLLBACK');
+    } catch {
+      // Ignore rollback errors to avoid masking the original error
+    }
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
 export { getPool as pool };

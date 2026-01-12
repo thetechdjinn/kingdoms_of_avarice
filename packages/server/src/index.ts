@@ -17,6 +17,7 @@ import { WebSocketServer } from 'ws';
 import cookieParser from 'cookie-parser';
 import { setupAuthRoutes, setDatabaseMode } from './routes/auth.js';
 import { setupRoomRoutes } from './routes/rooms.js';
+import { setupItemRoutes } from './routes/items.js';
 import { setupGameSocket, initializeGameWorld } from './game/socket.js';
 import { testConnection } from './db/index.js';
 import { runMigrations, seedInitialData } from './db/migrate.js';
@@ -29,6 +30,7 @@ app.use(cookieParser());
 
 setupAuthRoutes(app);
 setupRoomRoutes(app);
+setupItemRoutes(app);
 
 const server = createServer(app);
 

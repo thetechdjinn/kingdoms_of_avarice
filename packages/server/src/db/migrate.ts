@@ -1,11 +1,20 @@
+import dotenv from 'dotenv';
 import { readFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
-import { pool as getPool, testConnection } from './index.js';
-import * as roleRepo from './repositories/roleRepository.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
+
+// Load .env from project root when running standalone
+const envPath = join(__dirname, '..', '..', '..', '..', '.env');
+dotenv.config({ path: envPath });
+
+// SQL files are in src/db, not dist/db
+const sqlDir = __dirname.replace(/dist[\\\/]db$/, 'src/db');
+
+import { pool as getPool, testConnection } from './index.js';
+import * as roleRepo from './repositories/roleRepository.js';
 
 export async function runMigrations(): Promise<void> {
   const connected = await testConnection();
@@ -15,7 +24,7 @@ export async function runMigrations(): Promise<void> {
   }
 
   try {
-    const schemaPath = join(__dirname, 'schema.sql');
+    const schemaPath = join(sqlDir, 'schema.sql');
     const schema = readFileSync(schemaPath, 'utf-8');
     
     await getPool().query(schema);
@@ -43,10 +52,26 @@ export async function runMigrations(): Promise<void> {
 export async function seedInitialData(): Promise<void> {
   // Check if rooms already exist
   const roomCheck = await getPool().query('SELECT COUNT(*) FROM rooms');
-  if (parseInt(roomCheck.rows[0].count) > 0) {
-    console.log('Seed data already exists, skipping...');
-    return;
+  const roomsExist = parseInt(roomCheck.rows[0].count) > 0;
+  
+  if (roomsExist) {
+    console.log('Room seed data already exists, skipping rooms...');
+  } else {
+    await seedRooms();
   }
+
+  // Check if item templates already exist
+  const itemCheck = await getPool().query('SELECT COUNT(*) FROM item_templates');
+  const itemsExist = parseInt(itemCheck.rows[0].count) > 0;
+  
+  if (itemsExist) {
+    console.log('Item seed data already exists, skipping items...');
+  } else {
+    await seedItems();
+  }
+}
+
+async function seedRooms(): Promise<void> {
 
   console.log('Seeding initial room data...');
 
@@ -79,13 +104,37 @@ export async function seedInitialData(): Promise<void> {
     (6, 2, 'south')
   `);
 
-  console.log('Seed data inserted successfully');
+  console.log('Room seed data inserted successfully');
+}
+
+async function seedItems(): Promise<void> {
+  console.log('Seeding initial item data...');
+
+  try {
+    const seedPath = join(sqlDir, 'seed_items.sql');
+    const seedSql = readFileSync(seedPath, 'utf-8');
+    await getPool().query(seedSql);
+    console.log('Item seed data inserted successfully');
+    
+    // Note: normalizeItemNames is called in the main execution chain after seeding
+  } catch (error) {
+    console.error('Failed to seed items:', error);
+    // Don't throw - items are optional, game can run without them
+  }
+}
+
+async function normalizeItemNames(): Promise<void> {
+  // Convert all item names to lowercase for consistency
+  await getPool().query(`UPDATE item_templates SET name = LOWER(name)`);
+  await getPool().query(`UPDATE item_templates SET short_desc = LOWER(short_desc)`);
+  console.log('Item names normalized to lowercase');
 }
 
 // Run if called directly
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   runMigrations()
     .then(() => seedInitialData())
+    .then(() => normalizeItemNames())
     .then(() => process.exit(0))
     .catch(() => process.exit(1));
 }
