@@ -147,11 +147,21 @@ export function setupItemRoutes(app: Express): void {
       
       let instances;
       if (location_type === 'room' && location_id) {
-        instances = await itemRepo.getInstancesInRoom(parseInt(location_id as string));
+        const roomId = parseInt(location_id as string);
+        if (isNaN(roomId)) {
+          res.status(400).json({ success: false, message: 'Invalid room ID' });
+          return;
+        }
+        instances = await itemRepo.getInstancesInRoom(roomId);
       } else if (location_type === 'player' && location_id) {
-        instances = await itemRepo.getPlayerInventory(parseInt(location_id as string));
+        const playerId = parseInt(location_id as string);
+        if (isNaN(playerId)) {
+          res.status(400).json({ success: false, message: 'Invalid player ID' });
+          return;
+        }
+        instances = await itemRepo.getPlayerInventory(playerId);
       } else {
-        // Get all instances (need to add this function)
+        // Get all instances
         instances = await itemRepo.getAllInstances();
       }
 
@@ -193,7 +203,7 @@ export function setupItemRoutes(app: Express): void {
         charges_remaining, fuel_remaining, custom_data
       } = req.body;
 
-      if (!template_id || !location_type || location_id === undefined) {
+      if (!template_id || !location_type || location_id == null) {
         res.status(400).json({ success: false, message: 'template_id, location_type, and location_id are required' });
         return;
       }
@@ -228,24 +238,38 @@ export function setupItemRoutes(app: Express): void {
 
       const { location_type, location_id, equipped_slot, quantity, condition, custom_data } = req.body;
 
-      // Update location if provided
-      if (location_type && location_id !== undefined) {
-        await itemRepo.updateInstanceLocation(id, location_type, location_id, equipped_slot);
+      // Verify instance exists first
+      const existing = await itemRepo.getInstanceById(id);
+      if (!existing) {
+        res.status(404).json({ success: false, message: 'Instance not found' });
+        return;
       }
 
-      // Update quantity if provided
-      if (quantity !== undefined) {
-        await itemRepo.updateInstanceQuantity(id, quantity);
-      }
+      // Perform all updates atomically (wrap in try-catch)
+      try {
+        // Update location if provided
+        if (location_type && location_id !== undefined) {
+          await itemRepo.updateInstanceLocation(id, location_type, location_id, equipped_slot);
+        }
 
-      // Update condition if provided
-      if (condition) {
-        await itemRepo.updateInstanceCondition(id, condition);
-      }
+        // Update quantity if provided
+        if (quantity !== undefined) {
+          await itemRepo.updateInstanceQuantity(id, quantity);
+        }
 
-      // Update custom_data if provided
-      if (custom_data) {
-        await itemRepo.updateInstanceCustomData(id, custom_data);
+        // Update condition if provided
+        if (condition) {
+          await itemRepo.updateInstanceCondition(id, condition);
+        }
+
+        // Update custom_data if provided
+        if (custom_data) {
+          await itemRepo.updateInstanceCustomData(id, custom_data);
+        }
+      } catch (updateError) {
+        console.error('Failed during instance update:', updateError);
+        res.status(500).json({ success: false, message: 'Update failed, some changes may have been applied' });
+        return;
       }
 
       const instance = await itemRepo.getInstanceById(id);
@@ -336,6 +360,9 @@ export function setupItemRoutes(app: Express): void {
             const { id, ...templateData } = template;
             await itemRepo.createTemplate(templateData);
             results.created++;
+          } else {
+            // Template exists but merge=false, skip and report
+            results.errors.push(`Skipped "${template.name}": already exists (merge disabled)`);
           }
         } catch (err) {
           results.errors.push(`Failed to import "${template.name}": ${err}`);
@@ -374,20 +401,30 @@ export function setupItemRoutes(app: Express): void {
         return;
       }
 
-      const template = await itemRepo.getTemplateById(template_id);
+      // Validate numeric inputs
+      const templateIdNum = parseInt(template_id);
+      const roomIdNum = parseInt(room_id);
+      const quantityNum = parseInt(quantity);
+
+      if (isNaN(templateIdNum) || isNaN(roomIdNum) || isNaN(quantityNum) || quantityNum < 1) {
+        res.status(400).json({ success: false, message: 'Invalid template_id, room_id, or quantity' });
+        return;
+      }
+
+      const template = await itemRepo.getTemplateById(templateIdNum);
       if (!template) {
         res.status(404).json({ success: false, message: 'Template not found' });
         return;
       }
 
       const instance = await itemRepo.createInstance({
-        template_id,
+        template_id: templateIdNum,
         location_type: ItemLocationType.ROOM,
-        location_id: room_id,
-        quantity,
+        location_id: roomIdNum,
+        quantity: quantityNum,
       });
 
-      res.json({ success: true, instance, message: `Spawned ${template.short_desc} in room ${room_id}` });
+      res.json({ success: true, instance, message: `Spawned ${template.name} in room ${roomIdNum}` });
     } catch (error) {
       console.error('Failed to spawn item:', error);
       res.status(500).json({ success: false, message: 'Failed to spawn item' });

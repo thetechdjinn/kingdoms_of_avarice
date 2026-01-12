@@ -716,6 +716,11 @@ async function spawnItem(): Promise<void> {
     return;
   }
 
+  if (isNaN(quantity) || quantity < 1) {
+    alert('Invalid quantity - must be a positive number');
+    return;
+  }
+
   try {
     const response = await fetch('/api/items/spawn', {
       method: 'POST',

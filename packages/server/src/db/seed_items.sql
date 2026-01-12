@@ -183,7 +183,7 @@ VALUES
 );
 
 -- Misc Items
-INSERT INTO item_templates (name, short_desc, long_desc, room_desc, keywords, weight, size, base_value, item_type, flags)
+INSERT INTO item_templates (name, short_desc, long_desc, room_desc, keywords, weight, size, base_value, item_type, flags, max_stack)
 VALUES 
 (
     'Gold Coin',
@@ -193,7 +193,8 @@ VALUES
     ARRAY['coin', 'gold', 'gold coin', 'money'],
     0, 1, 1,
     'misc',
-    '{"takeable": true, "stackable": true}'
+    '{"takeable": true, "stackable": true}',
+    100
 ),
 (
     'Old Key',
@@ -203,7 +204,8 @@ VALUES
     ARRAY['key', 'brass key', 'old key'],
     0, 1, 0,
     'key',
-    '{"takeable": true, "no_drop": false}'
+    '{"takeable": true, "no_drop": false}',
+    1
 ),
 (
     'Stone Statue',
@@ -213,7 +215,8 @@ VALUES
     ARRAY['statue', 'stone statue'],
     500, 5, 0,
     'misc',
-    '{"takeable": false}'
+    '{"takeable": false}',
+    1
 );
 
 -- Consumables

@@ -418,7 +418,8 @@ async function handleSpawn(
   }
 
   const templateIdOrName = args[0];
-  const quantity = parseInt(args[1]) || 1;
+  const parsedQty = parseInt(args[1]);
+  const quantity = (!isNaN(parsedQty) && parsedQty > 0) ? parsedQty : 1;
   const currentRoomId = getPlayerLocation(socket.playerId);
 
   let template;
@@ -445,7 +446,7 @@ async function handleSpawn(
 
     return {
       type: MessageType.SYSTEM,
-      message: `${colors.boldGreen('Spawned:')} ${quantity}x ${colors.item(template.short_desc)} in room ${currentRoomId}`,
+      message: `${colors.boldGreen('Spawned:')} ${quantity}x ${colors.item(template.name ?? 'item')} in room ${currentRoomId}`,
     };
   } catch (error) {
     return { type: MessageType.ERROR, message: `Failed to spawn item: ${error}` };
@@ -469,8 +470,12 @@ async function handlePurge(
     let count = 0;
     
     for (const item of items) {
-      await itemRepo.deleteInstance(item.id);
-      count++;
+      try {
+        await itemRepo.deleteInstance(item.id);
+        count++;
+      } catch (err) {
+        console.error(`Failed to delete item ${item.id}:`, err);
+      }
     }
 
     return {
@@ -488,8 +493,13 @@ async function handlePurge(
       return { type: MessageType.ERROR, message: `Item instance ${instanceId} not found` };
     }
 
-    await itemRepo.deleteInstance(instanceId);
-    const itemName = instance.template?.short_desc || 'item';
+    try {
+      await itemRepo.deleteInstance(instanceId);
+    } catch (err) {
+      console.error(`Failed to delete item ${instanceId}:`, err);
+      return { type: MessageType.ERROR, message: `Failed to delete item instance ${instanceId}` };
+    }
+    const itemName = instance.template?.name || 'item';
     
     return {
       type: MessageType.SYSTEM,
@@ -602,7 +612,8 @@ async function handleGive(
   }
 
   const templateIdOrName = args[0];
-  const quantity = parseInt(args[1]) || 1;
+  const parsedQty = parseInt(args[1]);
+  const quantity = (!isNaN(parsedQty) && parsedQty > 0) ? parsedQty : 1;
 
   let template;
   const templateId = parseInt(templateIdOrName);
@@ -628,7 +639,7 @@ async function handleGive(
 
     return {
       type: MessageType.SYSTEM,
-      message: `${colors.boldGreen('Received:')} ${quantity}x ${colors.item(template.short_desc)}`,
+      message: `${colors.boldGreen('Received:')} ${quantity}x ${colors.item(template.name ?? 'item')}`,
     };
   } catch (error) {
     return { type: MessageType.ERROR, message: `Failed to give item: ${error}` };

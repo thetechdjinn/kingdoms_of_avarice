@@ -325,11 +325,9 @@ function formatItemExamine(item: ItemInstance): CommandResponse {
   // Name
   lines.push(colors.boldYellow(template.name));
 
-  // Long description or short description (word wrapped)
+  // Long description (word wrapped)
   if (template.long_desc) {
     lines.push(wordWrap(template.long_desc, 80));
-  } else {
-    lines.push(template.name);
   }
 
   // Condition (if not pristine)
@@ -449,9 +447,12 @@ export async function handleWield(
 
   // Check for two-handed weapon conflicts
   if (isTwoHanded) {
-    // Unequip anything in off_hand, shield, or held slots
+    // Unequip anything in off_hand, shield, or held slots (unless cursed)
     for (const equippedItem of equipped) {
       if (equippedItem.equipped_slot && TWO_HANDED_BLOCKED_SLOTS.includes(equippedItem.equipped_slot as EquipmentSlot)) {
+        if (equippedItem.template?.flags?.cursed) {
+          return { type: MessageType.ERROR, message: `You can't wield that - a cursed item is blocking the slot.` };
+        }
         await itemRepo.updateInstanceLocation(equippedItem.id, ItemLocationType.PLAYER, socket.playerId);
         const unequippedName = getItemName(equippedItem);
         broadcastToRoom(currentRoomId, `${socket.username} stops using ${unequippedName}.`, socket.playerId);
@@ -461,12 +462,10 @@ export async function handleWield(
 
   // Check if wielding with a two-handed weapon already equipped
   const mainHandItem = equipped.find(e => e.equipped_slot === EquipmentSlot.MAIN_HAND);
-  if (mainHandItem?.template?.flags?.two_handed) {
-    // Unequip the two-handed weapon first
-    await itemRepo.updateInstanceLocation(mainHandItem.id, ItemLocationType.PLAYER, socket.playerId);
-    const unequippedName = getItemName(mainHandItem);
-    broadcastToRoom(currentRoomId, `${socket.username} stops wielding ${unequippedName}.`, socket.playerId);
-  } else if (mainHandItem) {
+  if (mainHandItem) {
+    if (mainHandItem.template?.flags?.cursed) {
+      return { type: MessageType.ERROR, message: `You can't remove your current weapon - it's cursed!` };
+    }
     // Unequip current main hand weapon
     await itemRepo.updateInstanceLocation(mainHandItem.id, ItemLocationType.PLAYER, socket.playerId);
     const unequippedName = getItemName(mainHandItem);
@@ -537,13 +536,21 @@ export async function handleWear(
       if (!inAlternate) {
         targetSlot = alternateSlot;
       } else {
-        // Both slots full - unequip from primary slot
+        // Both slots full - check if primary slot item is cursed
+        if (currentlyInSlot.template?.flags?.cursed) {
+          return { type: MessageType.ERROR, message: `You can't remove that - it's cursed!` };
+        }
+        // Unequip from primary slot
         await itemRepo.updateInstanceLocation(currentlyInSlot.id, ItemLocationType.PLAYER, socket.playerId);
         const unequippedName = getItemName(currentlyInSlot);
         broadcastToRoom(currentRoomId, `${socket.username} removes ${unequippedName}.`, socket.playerId);
       }
     } else {
-      // Not a paired slot - unequip current item
+      // Not a paired slot - check if current item is cursed
+      if (currentlyInSlot.template?.flags?.cursed) {
+        return { type: MessageType.ERROR, message: `You can't remove that - it's cursed!` };
+      }
+      // Unequip current item
       await itemRepo.updateInstanceLocation(currentlyInSlot.id, ItemLocationType.PLAYER, socket.playerId);
       const unequippedName = getItemName(currentlyInSlot);
       broadcastToRoom(currentRoomId, `${socket.username} removes ${unequippedName}.`, socket.playerId);
@@ -701,7 +708,8 @@ export async function handlePut(
   const input = args.join(' ');
   
   // Parse "put <item> in <container>" format
-  const inMatch = input.match(/^(.+?)\s+in\s+(.+)$/i);
+  // Use word boundary to avoid matching "in" within words like "ring"
+  const inMatch = input.match(/^(.+?)\s+\bin\b\s+(.+)$/i);
   if (!inMatch) {
     return { type: MessageType.ERROR, message: 'Usage: put <item> in <container>' };
   }
@@ -948,21 +956,23 @@ function applyConsumableEffect(socket: AuthenticatedSocket, data: { effect_type:
 
   switch (effect_type.toLowerCase()) {
     case 'heal':
-    case 'health':
+    case 'health': {
       // Heal the player
       const oldHp = socket.vitals.hp;
       socket.vitals.hp = Math.min(socket.vitals.hp + effect_value, socket.vitals.maxHp);
       const healed = socket.vitals.hp - oldHp;
       return colors.green(`You feel better! (+${healed} HP)`);
+    }
 
     case 'mana':
-    case 'restore_mana':
+    case 'restore_mana': {
       // Restore mana
       const oldMana = socket.vitals.resource ?? 0;
       const maxResource = socket.vitals.maxResource ?? 0;
       socket.vitals.resource = Math.min(oldMana + effect_value, maxResource);
       const restored = (socket.vitals.resource ?? 0) - oldMana;
       return colors.blue(`Your magical energy is restored! (+${restored} Mana)`);
+    }
 
     case 'damage':
       // Damage the player (poison, etc.)
@@ -1020,8 +1030,8 @@ export async function handleLight(
     return { type: MessageType.ERROR, message: `You can't light that.` };
   }
 
-  // Check if already lit (has fuel remaining set)
-  if (item.fuel_remaining !== undefined && item.fuel_remaining > 0) {
+  // Check if already lit (fuel_remaining > 0 for consumable lights, -1 for permanent lights)
+  if (item.fuel_remaining !== undefined && item.fuel_remaining !== 0) {
     return { type: MessageType.ERROR, message: `It's already lit.` };
   }
 
@@ -1409,8 +1419,11 @@ export async function handleEnchant(
     return { type: MessageType.ERROR, message: `This enchantment cannot be applied to ${template.item_type} items.` };
   }
 
-  // Check effect slots
-  const currentEnchantments = (item.custom_data?.enchantments as AppliedEnchantment[] | undefined) ?? [];
+  // Check effect slots - safely handle potentially malformed data
+  const rawEnchantments = item.custom_data?.enchantments;
+  const currentEnchantments: AppliedEnchantment[] = Array.isArray(rawEnchantments) 
+    ? (rawEnchantments as AppliedEnchantment[]) 
+    : [];
   if (currentEnchantments.length >= template.effect_slots) {
     return { type: MessageType.ERROR, message: `This item has no more enchantment slots available.` };
   }
@@ -1426,7 +1439,7 @@ export async function handleEnchant(
     return { type: MessageType.ERROR, message: `You need ${enchantment.mana_cost} mana to cast this enchantment.` };
   }
 
-  // Check reagents
+  // Check reagents first (before consuming anything)
   if (enchantment.reagents && enchantment.reagents.length > 0) {
     const inventory = await itemRepo.getPlayerInventory(socket.playerId);
     
@@ -1440,30 +1453,9 @@ export async function handleEnchant(
         return { type: MessageType.ERROR, message: `You need ${reagent.quantity}x ${name} for this enchantment.` };
       }
     }
-
-    // Consume reagents
-    for (const reagent of enchantment.reagents) {
-      let remaining = reagent.quantity;
-      const matching = inventory.filter(i => i.template_id === reagent.template_id);
-      
-      for (const reagentItem of matching) {
-        if (remaining <= 0) break;
-        
-        if (reagentItem.quantity <= remaining) {
-          remaining -= reagentItem.quantity;
-          await itemRepo.deleteInstance(reagentItem.id);
-        } else {
-          await itemRepo.updateInstanceQuantity(reagentItem.id, reagentItem.quantity - remaining);
-          remaining = 0;
-        }
-      }
-    }
   }
 
-  // Consume mana
-  socket.vitals.resource = currentMana - enchantment.mana_cost;
-
-  // Apply enchantment
+  // Apply enchantment first (the main operation)
   const appliedEnchantment = craftingRepo.createAppliedEnchantment(enchantment);
   const newEnchantments = [...currentEnchantments, appliedEnchantment];
   
@@ -1473,7 +1465,42 @@ export async function handleEnchant(
     enchantments: newEnchantments,
   };
 
-  await itemRepo.updateInstanceCustomData(item.id, newCustomData);
+  try {
+    await itemRepo.updateInstanceCustomData(item.id, newCustomData);
+  } catch (err) {
+    console.error('Failed to apply enchantment:', err);
+    return { type: MessageType.ERROR, message: 'Failed to apply enchantment.' };
+  }
+
+  // Only consume resources after successful enchantment
+  // Consume mana
+  socket.vitals.resource = currentMana - enchantment.mana_cost;
+
+  // Consume reagents
+  if (enchantment.reagents && enchantment.reagents.length > 0) {
+    const inventory = await itemRepo.getPlayerInventory(socket.playerId);
+    
+    for (const reagent of enchantment.reagents) {
+      let remaining = reagent.quantity;
+      const matching = inventory.filter(i => i.template_id === reagent.template_id);
+      
+      for (const reagentItem of matching) {
+        if (remaining <= 0) break;
+        
+        try {
+          if (reagentItem.quantity <= remaining) {
+            remaining -= reagentItem.quantity;
+            await itemRepo.deleteInstance(reagentItem.id);
+          } else {
+            await itemRepo.updateInstanceQuantity(reagentItem.id, reagentItem.quantity - remaining);
+            remaining = 0;
+          }
+        } catch (err) {
+          console.error('Failed to consume reagent:', err);
+        }
+      }
+    }
+  }
 
   const itemName = template.name;
   broadcastToRoom(currentRoomId, `${socket.username} enchants ${itemName} with magical energy!`, socket.playerId);

@@ -70,16 +70,22 @@ export function formatItemName(name: string): string {
  * @returns Noun with appropriate article
  */
 export function withArticle(noun: string): string {
-  const lower = noun.toLowerCase().trim();
+  // Handle empty or whitespace-only input
+  const trimmed = noun.trim();
+  if (!trimmed) {
+    return '';
+  }
+  
+  const lower = trimmed.toLowerCase();
   
   // Already has an article
   if (lower.startsWith('a ') || lower.startsWith('an ') || 
       lower.startsWith('the ') || lower.startsWith('some ')) {
-    return noun;
+    return trimmed;
   }
   
   // Use "an" for vowel sounds
   const vowels = ['a', 'e', 'i', 'o', 'u'];
   const article = vowels.includes(lower[0]) ? 'an' : 'a';
-  return `${article} ${noun}`;
+  return `${article} ${trimmed}`;
 }
