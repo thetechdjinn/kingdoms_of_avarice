@@ -1,4 +1,4 @@
-import { MessageType, ItemLocationType, ItemInstance, getItemDisplayName, EquipmentSlot, ItemType, TWO_HANDED_BLOCKED_SLOTS, getAlternatePairedSlot, ItemCondition, CraftingRecipe, Enchantment, AppliedEnchantment } from '@koa/shared';
+import { MessageType, ItemLocationType, ItemInstance, getItemDisplayName, EquipmentSlot, ItemType, TWO_HANDED_BLOCKED_SLOTS, getAlternatePairedSlot, ItemCondition, CraftingRecipe, AppliedEnchantment } from '@koa/shared';
 import { CommandResponse } from './commands.js';
 import { AuthenticatedSocket, broadcastToRoom } from './socket.js';
 import { getPlayerLocation } from './adminCommands.js';
@@ -6,6 +6,7 @@ import { colors } from '../utils/colors.js';
 import { wordWrap } from '../utils/textFormat.js';
 import * as itemRepo from '../db/repositories/itemRepository.js';
 import * as craftingRepo from '../db/repositories/craftingRepository.js';
+import { withTransaction } from '../db/index.js';
 
 // Get the display name for an item (uses name, falls back to short_desc for legacy)
 // Returns name as stored in database (should be lowercase)
@@ -15,6 +16,9 @@ function getItemName(item: ItemInstance): string {
 
 // Add article (a/an) to item name
 function withArticle(name: string): string {
+  if (!name || name.length === 0) {
+    return 'something';
+  }
   const lower = name.toLowerCase();
   // Check if already has an article
   if (lower.startsWith('a ') || lower.startsWith('an ') || lower.startsWith('the ') || lower.startsWith('some ')) {
@@ -22,7 +26,8 @@ function withArticle(name: string): string {
   }
   // Use "an" for vowel sounds
   const vowels = ['a', 'e', 'i', 'o', 'u'];
-  const article = vowels.includes(lower[0]) ? 'an' : 'a';
+  const firstChar = lower[0];
+  const article = firstChar && vowels.includes(firstChar) ? 'an' : 'a';
   return `${article} ${name}`;
 }
 
@@ -1020,7 +1025,7 @@ export async function handleRemove(
   // Move to inventory
   await itemRepo.updateInstanceLocation(item.id, ItemLocationType.PLAYER, socket.playerId);
 
-  const itemName = template?.name ?? 'something';
+  const itemName = getItemName(item);
   broadcastToRoom(currentRoomId, `${socket.username} removes ${itemName}.`, socket.playerId);
 
   return { type: MessageType.OUTPUT, message: `You remove ${colors.item(itemName)}.` };
@@ -1158,9 +1163,9 @@ export async function handlePut(
 
   // Check container capacity (item count)
   const containerTemplate = container.template;
-  if (containerTemplate?.container_capacity !== undefined && containerTemplate.container_capacity !== null) {
+  if (containerTemplate?.container_capacity != null && containerTemplate.container_capacity > 0) {
     const currentCount = await itemRepo.getContainerItemCount(container.id);
-    if (currentCount >= containerTemplate.container_capacity) {
+    if (currentCount + item.quantity > containerTemplate.container_capacity) {
       return { type: MessageType.ERROR, message: `The ${containerTemplate.name} is full.` };
     }
   }
@@ -1712,34 +1717,38 @@ export async function handleCraft(
     };
   }
 
-  // Consume ingredients
-  for (const ingredient of recipe.ingredients) {
-    let remaining = ingredient.quantity;
-    const matching = inventory.filter(i => i.template_id === ingredient.template_id);
-    
-    for (const item of matching) {
-      if (remaining <= 0) break;
+  // Consume ingredients and create result atomically
+  let resultName = 'something';
+  await withTransaction(async () => {
+    // Consume ingredients
+    for (const ingredient of recipe.ingredients) {
+      let remaining = ingredient.quantity;
+      const matching = inventory.filter(i => i.template_id === ingredient.template_id);
       
-      if (item.quantity <= remaining) {
-        remaining -= item.quantity;
-        await itemRepo.deleteInstance(item.id);
-      } else {
-        await itemRepo.updateInstanceQuantity(item.id, item.quantity - remaining);
-        remaining = 0;
+      for (const item of matching) {
+        if (remaining <= 0) break;
+        
+        if (item.quantity <= remaining) {
+          remaining -= item.quantity;
+          await itemRepo.deleteInstance(item.id);
+        } else {
+          await itemRepo.updateInstanceQuantity(item.id, item.quantity - remaining);
+          remaining = 0;
+        }
       }
     }
-  }
 
-  // Create the result item
-  const resultItem = await itemRepo.createInstance({
-    template_id: recipe.result_template_id,
-    location_type: ItemLocationType.PLAYER,
-    location_id: socket.playerId,
-    quantity: recipe.result_quantity,
+    // Create the result item
+    await itemRepo.createInstance({
+      template_id: recipe.result_template_id,
+      location_type: ItemLocationType.PLAYER,
+      location_id: socket.playerId,
+      quantity: recipe.result_quantity,
+    });
+
+    const resultTemplate = await itemRepo.getTemplateById(recipe.result_template_id);
+    resultName = resultTemplate?.name ?? 'something';
   });
-
-  const resultTemplate = await itemRepo.getTemplateById(recipe.result_template_id);
-  const resultName = resultTemplate?.name ?? 'something';
 
   broadcastToRoom(currentRoomId, `${socket.username} crafts ${resultName}.`, socket.playerId);
 

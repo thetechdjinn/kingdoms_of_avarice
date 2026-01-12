@@ -155,8 +155,12 @@ CREATE TABLE IF NOT EXISTS item_instances (
     id SERIAL PRIMARY KEY,
     template_id INTEGER NOT NULL REFERENCES item_templates(id) ON DELETE CASCADE,
     
-    -- Location (polymorphic)
-    location_type VARCHAR(50) NOT NULL,
+    -- Location (polymorphic - references different tables based on location_type)
+    -- Note: Traditional FK constraints cannot be used with polymorphic associations.
+    -- Valid location_types: 'room' -> rooms.id, 'player' -> players.id, 
+    --                       'equipped' -> players.id, 'container' -> item_instances.id
+    -- Referential integrity is enforced at the application layer.
+    location_type VARCHAR(50) NOT NULL CHECK (location_type IN ('room', 'player', 'equipped', 'container')),
     location_id INTEGER NOT NULL,
     equipped_slot VARCHAR(50),
     

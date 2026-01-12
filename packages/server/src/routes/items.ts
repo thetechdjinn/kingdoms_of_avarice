@@ -245,6 +245,30 @@ export function setupItemRoutes(app: Express): void {
 
       const { location_type, location_id, equipped_slot, quantity, condition, custom_data } = req.body;
 
+      // Validate inputs before any database operations
+      if (location_type !== undefined && typeof location_type !== 'string') {
+        res.status(400).json({ success: false, message: 'Invalid location_type: must be a string' });
+        return;
+      }
+      if (location_id !== undefined) {
+        const locationIdNum = typeof location_id === 'number' ? location_id : parseInt(String(location_id), 10);
+        if (isNaN(locationIdNum) || locationIdNum < 1) {
+          res.status(400).json({ success: false, message: 'Invalid location_id: must be a positive integer' });
+          return;
+        }
+      }
+      if (quantity !== undefined) {
+        const quantityNum = typeof quantity === 'number' ? quantity : parseInt(String(quantity), 10);
+        if (isNaN(quantityNum) || quantityNum < 1) {
+          res.status(400).json({ success: false, message: 'Invalid quantity: must be a positive integer' });
+          return;
+        }
+      }
+      if (condition !== undefined && typeof condition !== 'string') {
+        res.status(400).json({ success: false, message: 'Invalid condition: must be a string' });
+        return;
+      }
+
       // Verify instance exists first
       const existing = await itemRepo.getInstanceById(id);
       if (!existing) {
@@ -252,8 +276,8 @@ export function setupItemRoutes(app: Express): void {
         return;
       }
 
-      // Perform all updates atomically (wrap in try-catch)
-      try {
+      // Perform all updates atomically within a transaction
+      await withTransaction(async () => {
         // Update location if provided
         if (location_type && location_id !== undefined) {
           await itemRepo.updateInstanceLocation(id, location_type, location_id, equipped_slot);
@@ -273,11 +297,7 @@ export function setupItemRoutes(app: Express): void {
         if (custom_data) {
           await itemRepo.updateInstanceCustomData(id, custom_data);
         }
-      } catch (updateError) {
-        console.error('Failed during instance update:', updateError);
-        res.status(500).json({ success: false, message: 'Update failed, some changes may have been applied' });
-        return;
-      }
+      });
 
       const instance = await itemRepo.getInstanceById(id);
       res.json({ success: true, instance });
@@ -353,37 +373,22 @@ export function setupItemRoutes(app: Express): void {
         errors: [] as string[],
       };
 
-      // Process all templates - collect operations first, then execute
-      const operations: Array<{ type: 'create' | 'update' | 'skip'; template: typeof templates[0]; existingId?: number }> = [];
-      
-      for (const template of templates) {
-        try {
-          const existing = await itemRepo.getTemplateByName(template.name);
-          
-          if (existing && merge) {
-            operations.push({ type: 'update', template, existingId: existing.id });
-          } else if (!existing) {
-            operations.push({ type: 'create', template });
-          } else {
-            operations.push({ type: 'skip', template });
-            results.errors.push(`Skipped "${template.name}": already exists (merge disabled)`);
-          }
-        } catch (err) {
-          results.errors.push(`Failed to check "${template.name}": ${err}`);
-        }
-      }
-
-      // Execute all operations atomically within a transaction
+      // Execute all operations atomically within a single transaction
+      // This ensures consistency between existence checks and mutations
       try {
         await withTransaction(async () => {
-          for (const op of operations) {
-            if (op.type === 'update' && op.existingId) {
-              await itemRepo.updateTemplate(op.existingId, op.template);
+          for (const template of templates) {
+            const existing = await itemRepo.getTemplateByName(template.name);
+            
+            if (existing && merge) {
+              await itemRepo.updateTemplate(existing.id, template);
               results.updated++;
-            } else if (op.type === 'create') {
-              const { id, ...templateData } = op.template;
+            } else if (!existing) {
+              const { id, ...templateData } = template;
               await itemRepo.createTemplate(templateData);
               results.created++;
+            } else {
+              results.errors.push(`Skipped "${template.name}": already exists (merge disabled)`);
             }
           }
         });
