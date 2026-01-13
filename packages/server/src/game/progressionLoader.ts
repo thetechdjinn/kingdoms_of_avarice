@@ -81,6 +81,7 @@ export function loadTalents(): TalentDefinition[] {
 
 /**
  * Force reseed classes and races with updated stat data
+ * Uses update instead of delete+create to preserve any custom data
  */
 async function forceReseedClassesAndRaces(): Promise<void> {
   try {
@@ -90,15 +91,17 @@ async function forceReseedClassesAndRaces(): Promise<void> {
       const firstClass = existingClasses[0];
       if (firstClass.base_stats && !('wisdom' in firstClass.base_stats)) {
         console.log('[Progression] Updating classes with new stat format...');
-        // Delete and reseed classes
+        const seedClasses = loadJsonFile<ClassDefinition[]>('classes.json');
+        const seedMap = new Map(seedClasses.map(c => [c.class_id, c]));
+        
+        // Update existing classes with new stats from seed data
         for (const cls of existingClasses) {
-          await progressionRepo.deleteClass(cls.class_id);
+          const seedData = seedMap.get(cls.class_id);
+          if (seedData?.base_stats) {
+            await progressionRepo.updateClass(cls.class_id, { base_stats: seedData.base_stats });
+          }
         }
-        const classes = loadJsonFile<ClassDefinition[]>('classes.json');
-        for (const cls of classes) {
-          await progressionRepo.createClass(cls);
-        }
-        console.log(`[Progression] Reseeded ${classes.length} classes with 6-stat format`);
+        console.log(`[Progression] Updated ${existingClasses.length} classes with 6-stat format`);
       }
     }
 
@@ -108,15 +111,17 @@ async function forceReseedClassesAndRaces(): Promise<void> {
       const firstRace = existingRaces[0];
       if (firstRace.stat_modifiers && !('wisdom' in firstRace.stat_modifiers)) {
         console.log('[Progression] Updating races with new stat format...');
-        // Delete and reseed races
+        const seedRaces = loadJsonFile<RaceDefinition[]>('races.json');
+        const seedMap = new Map(seedRaces.map(r => [r.race_id, r]));
+        
+        // Update existing races with new stats from seed data
         for (const race of existingRaces) {
-          await progressionRepo.deleteRace(race.race_id);
+          const seedData = seedMap.get(race.race_id);
+          if (seedData?.stat_modifiers) {
+            await progressionRepo.updateRace(race.race_id, { stat_modifiers: seedData.stat_modifiers });
+          }
         }
-        const races = loadJsonFile<RaceDefinition[]>('races.json');
-        for (const race of races) {
-          await progressionRepo.createRace(race);
-        }
-        console.log(`[Progression] Reseeded ${races.length} races with 6-stat format`);
+        console.log(`[Progression] Updated ${existingRaces.length} races with 6-stat format`);
       }
     }
   } catch (error) {

@@ -142,7 +142,7 @@ async function handleLogout(): Promise<void> {
 }
 
 function showLoginRequired(): void {
-  const main = document.getElementById('room-editor-panel');
+  const main = document.getElementById('editor-app');
   if (main) {
     main.innerHTML = `
       <div class="auth-message">
@@ -154,7 +154,7 @@ function showLoginRequired(): void {
 }
 
 function showAccessDenied(): void {
-  const main = document.getElementById('room-editor-panel');
+  const main = document.getElementById('editor-app');
   if (main) {
     main.innerHTML = `
       <div class="auth-message">

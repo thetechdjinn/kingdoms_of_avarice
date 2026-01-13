@@ -159,7 +159,7 @@ function dbToAbilityDefinition(row: DbAbilityDefinition): AbilityDefinition {
     resource_type: row.resource_type ?? undefined,
     cooldown: row.cooldown,
     effect_data: row.effect_data ?? undefined,
-    requirements: row.requirements as AbilityDefinition['requirements'],
+    requirements: row.requirements as AbilityDefinition['requirements'] ?? undefined,
   };
 }
 
@@ -364,15 +364,15 @@ export async function updateRace(raceId: string, updates: Partial<RaceDefinition
   }
   if (updates.stat_modifiers !== undefined) {
     setClauses.push(`stat_modifiers = $${paramIndex++}`);
-    values.push(updates.stat_modifiers);
+    values.push(JSON.stringify(updates.stat_modifiers));
   }
   if (updates.traits !== undefined) {
     setClauses.push(`traits = $${paramIndex++}`);
-    values.push(updates.traits);
+    values.push(JSON.stringify(updates.traits));
   }
   if (updates.allowed_classes !== undefined) {
     setClauses.push(`allowed_classes = $${paramIndex++}`);
-    values.push(updates.allowed_classes);
+    values.push(JSON.stringify(updates.allowed_classes));
   }
   if (updates.playable !== undefined) {
     setClauses.push(`playable = $${paramIndex++}`);

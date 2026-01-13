@@ -217,9 +217,14 @@ async function handleEditClass(args: string[]): Promise<CommandResponse> {
       case 'description':
         updates = { description: value };
         break;
-      case 'multiplier':
-        updates = { essence_multiplier: parseFloat(value) };
+      case 'multiplier': {
+        const multiplierVal = parseFloat(value);
+        if (isNaN(multiplierVal)) {
+          return { type: MessageType.ERROR, message: 'Invalid multiplier value. Must be a number.' };
+        }
+        updates = { essence_multiplier: multiplierVal };
         break;
+      }
       case 'tags':
         updates = { subscribed_tags: value.split(',').map(t => t.trim()) };
         break;
@@ -366,9 +371,14 @@ async function handleEditRace(args: string[]): Promise<CommandResponse> {
       case 'playable':
         updates = { playable: value.toLowerCase() === 'true' || value === '1' };
         break;
-      case 'stats':
-        updates = { stat_modifiers: JSON.parse(value) };
+      case 'stats': {
+        try {
+          updates = { stat_modifiers: JSON.parse(value) };
+        } catch {
+          return { type: MessageType.ERROR, message: 'Invalid JSON for stats. Example: {"strength":1,"dexterity":-1}' };
+        }
         break;
+      }
       case 'traits':
         updates = { traits: value.split(',').map(t => t.trim()) };
         break;
@@ -539,15 +549,25 @@ async function handleEditAbility(args: string[]): Promise<CommandResponse> {
       case 'type':
         updates = { ability_type: value };
         break;
-      case 'cost':
-        updates = { resource_cost: parseInt(value) };
+      case 'cost': {
+        const costVal = parseInt(value);
+        if (isNaN(costVal)) {
+          return { type: MessageType.ERROR, message: 'Invalid cost value. Must be a number.' };
+        }
+        updates = { resource_cost: costVal };
         break;
+      }
       case 'resource':
         updates = { resource_type: value };
         break;
-      case 'cooldown':
-        updates = { cooldown: parseInt(value) };
+      case 'cooldown': {
+        const cooldownVal = parseInt(value);
+        if (isNaN(cooldownVal)) {
+          return { type: MessageType.ERROR, message: 'Invalid cooldown value. Must be a number.' };
+        }
+        updates = { cooldown: cooldownVal };
         break;
+      }
       case 'tags':
         updates = { emitted_tags: value.split(',').map(t => t.trim()) };
         break;

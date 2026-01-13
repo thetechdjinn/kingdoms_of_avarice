@@ -14,8 +14,13 @@
       return { html: '', endIndex: startIndex };
     }
     
-    // Parse header
-    const headerCells = tableLines[0].split('|').map(c => c.trim()).filter(c => c);
+    // Parse header - split by | but handle leading/trailing pipes
+    const headerParts = tableLines[0].split('|');
+    // Remove empty first/last elements from leading/trailing pipes
+    const headerCells = headerParts.slice(
+      headerParts[0].trim() === '' ? 1 : 0,
+      headerParts[headerParts.length - 1].trim() === '' ? -1 : undefined
+    ).map(c => c.trim());
     
     // Skip separator line (index 1)
     const bodyRows = tableLines.slice(2);
@@ -30,7 +35,12 @@
     html += '</tr></thead><tbody>';
     
     for (const row of bodyRows) {
-      const cells = row.split('|').map(c => c.trim()).filter(c => c);
+      const rowParts = row.split('|');
+      // Remove empty first/last elements from leading/trailing pipes, preserve middle empties
+      const cells = rowParts.slice(
+        rowParts[0].trim() === '' ? 1 : 0,
+        rowParts[rowParts.length - 1].trim() === '' ? -1 : undefined
+      ).map(c => c.trim());
       html += '<tr>';
       for (const cell of cells) {
         // Escape HTML in cell content and apply inline formatting
