@@ -53,11 +53,11 @@ export interface LevelRequirement {
 }
 
 // ============================================================================
-// EVENT SCHEMA
-// Maps world actions to thematic tags for essence generation
+// GAME EVENT SCHEMA
+// Maps world actions to thematic tags for XP and essence generation
 // ============================================================================
 
-export interface EssenceEvent {
+export interface GameEvent {
   event_id: string;
   display_name?: string;
   emitted_tags: ThematicTag[];

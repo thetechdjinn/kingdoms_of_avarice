@@ -794,14 +794,14 @@ async function handleDeleteTalent(args: string[]): Promise<CommandResponse> {
 
 async function handleListEvents(): Promise<CommandResponse> {
   try {
-    const events = await progressionRepo.getAllEssenceEvents();
+    const events = await progressionRepo.getAllGameEvents();
 
     if (events.length === 0) {
-      return { type: MessageType.SYSTEM, message: 'No essence events defined.' };
+      return { type: MessageType.SYSTEM, message: 'No game events defined.' };
     }
 
     const lines = [
-      colors.boldYellow(`Essence Events (${events.length} total):`),
+      colors.boldYellow(`Game Events (${events.length} total):`),
       '',
     ];
 
@@ -822,13 +822,13 @@ async function handleEventInfo(args: string[]): Promise<CommandResponse> {
   }
 
   try {
-    const event = await progressionRepo.getEssenceEventById(args[0]);
+    const event = await progressionRepo.getGameEventById(args[0]);
     if (!event) {
       return { type: MessageType.ERROR, message: `Event not found: ${args[0]}` };
     }
 
     const lines = [
-      colors.boldYellow('Essence Event Info:'),
+      colors.boldYellow('Game Event Info:'),
       `  ${colors.boldCyan('ID:')} ${event.event_id}`,
       `  ${colors.boldCyan('Name:')} ${event.display_name || event.event_id}`,
       `  ${colors.boldCyan('Base Essence:')} ${event.base_essence_value}`,
@@ -857,7 +857,7 @@ async function handleCreateEvent(args: string[]): Promise<CommandResponse> {
   }
 
   try {
-    const event = await progressionRepo.createEssenceEvent({
+    const event = await progressionRepo.createGameEvent({
       event_id: eventId,
       base_essence_value: baseEssence,
       emitted_tags: tags,
@@ -902,7 +902,7 @@ async function handleEditEvent(args: string[]): Promise<CommandResponse> {
         return { type: MessageType.ERROR, message: `Unknown field: ${field}` };
     }
 
-    const event = await progressionRepo.updateEssenceEvent(eventId, updates);
+    const event = await progressionRepo.updateGameEvent(eventId, updates);
     if (!event) {
       return { type: MessageType.ERROR, message: `Event not found: ${eventId}` };
     }
@@ -922,7 +922,7 @@ async function handleDeleteEvent(args: string[]): Promise<CommandResponse> {
   }
 
   try {
-    const deleted = await progressionRepo.deleteEssenceEvent(args[0]);
+    const deleted = await progressionRepo.deleteGameEvent(args[0]);
     if (!deleted) {
       return { type: MessageType.ERROR, message: `Event not found: ${args[0]}` };
     }

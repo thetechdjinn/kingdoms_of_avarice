@@ -396,30 +396,30 @@ export function setupProgressionRoutes(app: Express): void {
   });
 
   // ============================================================================
-  // ESSENCE EVENTS
+  // GAME EVENTS
   // ============================================================================
 
   app.get('/api/progression/events', requireDeveloper, async (_req: Request, res: Response) => {
     try {
-      const events = await progressionRepo.getAllEssenceEvents();
+      const events = await progressionRepo.getAllGameEvents();
       res.json({ success: true, events });
     } catch (error) {
-      console.error('Failed to get essence events:', error);
-      res.status(500).json({ success: false, message: 'Failed to get essence events' });
+      console.error('Failed to get game events:', error);
+      res.status(500).json({ success: false, message: 'Failed to get game events' });
     }
   });
 
   app.get('/api/progression/events/:eventId', requireDeveloper, async (req: Request, res: Response) => {
     try {
-      const event = await progressionRepo.getEssenceEventById(req.params.eventId);
+      const event = await progressionRepo.getGameEventById(req.params.eventId);
       if (!event) {
         res.status(404).json({ success: false, message: 'Event not found' });
         return;
       }
       res.json({ success: true, event });
     } catch (error) {
-      console.error('Failed to get essence event:', error);
-      res.status(500).json({ success: false, message: 'Failed to get essence event' });
+      console.error('Failed to get game event:', error);
+      res.status(500).json({ success: false, message: 'Failed to get game event' });
     }
   });
 
@@ -432,7 +432,7 @@ export function setupProgressionRoutes(app: Express): void {
         return;
       }
 
-      const event = await progressionRepo.createEssenceEvent({
+      const event = await progressionRepo.createGameEvent({
         event_id,
         display_name,
         emitted_tags,
@@ -442,36 +442,36 @@ export function setupProgressionRoutes(app: Express): void {
 
       res.json({ success: true, event });
     } catch (error) {
-      console.error('Failed to create essence event:', error);
-      res.status(500).json({ success: false, message: 'Failed to create essence event' });
+      console.error('Failed to create game event:', error);
+      res.status(500).json({ success: false, message: 'Failed to create game event' });
     }
   });
 
   app.put('/api/progression/events/:eventId', requireDeveloper, async (req: Request, res: Response) => {
     try {
-      const event = await progressionRepo.updateEssenceEvent(req.params.eventId, req.body);
+      const event = await progressionRepo.updateGameEvent(req.params.eventId, req.body);
       if (!event) {
         res.status(404).json({ success: false, message: 'Event not found' });
         return;
       }
       res.json({ success: true, event });
     } catch (error) {
-      console.error('Failed to update essence event:', error);
-      res.status(500).json({ success: false, message: 'Failed to update essence event' });
+      console.error('Failed to update game event:', error);
+      res.status(500).json({ success: false, message: 'Failed to update game event' });
     }
   });
 
   app.delete('/api/progression/events/:eventId', requireDeveloper, async (req: Request, res: Response) => {
     try {
-      const deleted = await progressionRepo.deleteEssenceEvent(req.params.eventId);
+      const deleted = await progressionRepo.deleteGameEvent(req.params.eventId);
       if (!deleted) {
         res.status(404).json({ success: false, message: 'Event not found' });
         return;
       }
       res.json({ success: true });
     } catch (error) {
-      console.error('Failed to delete essence event:', error);
-      res.status(500).json({ success: false, message: 'Failed to delete essence event' });
+      console.error('Failed to delete game event:', error);
+      res.status(500).json({ success: false, message: 'Failed to delete game event' });
     }
   });
 

@@ -75,10 +75,10 @@ CREATE TABLE IF NOT EXISTS progression_table (
 );
 
 -- ============================================================================
--- ESSENCE EVENTS (Actions that generate essence)
+-- GAME EVENTS (Actions that generate XP and essence)
 -- ============================================================================
 
-CREATE TABLE IF NOT EXISTS essence_events (
+CREATE TABLE IF NOT EXISTS game_events (
     id SERIAL PRIMARY KEY,
     event_id VARCHAR(50) UNIQUE NOT NULL,
     display_name VARCHAR(100),
@@ -235,8 +235,8 @@ CREATE INDEX IF NOT EXISTS idx_class_definitions_class_id ON class_definitions(c
 CREATE INDEX IF NOT EXISTS idx_class_definitions_playable ON class_definitions(playable);
 CREATE INDEX IF NOT EXISTS idx_race_definitions_race_id ON race_definitions(race_id);
 CREATE INDEX IF NOT EXISTS idx_race_definitions_playable ON race_definitions(playable);
-CREATE INDEX IF NOT EXISTS idx_essence_events_event_id ON essence_events(event_id);
-CREATE INDEX IF NOT EXISTS idx_essence_events_tags ON essence_events USING GIN(emitted_tags);
+CREATE INDEX IF NOT EXISTS idx_game_events_event_id ON game_events(event_id);
+CREATE INDEX IF NOT EXISTS idx_game_events_tags ON game_events USING GIN(emitted_tags);
 CREATE INDEX IF NOT EXISTS idx_ability_definitions_ability_id ON ability_definitions(ability_id);
 CREATE INDEX IF NOT EXISTS idx_ability_definitions_type ON ability_definitions(ability_type);
 CREATE INDEX IF NOT EXISTS idx_talent_definitions_talent_id ON talent_definitions(talent_id);

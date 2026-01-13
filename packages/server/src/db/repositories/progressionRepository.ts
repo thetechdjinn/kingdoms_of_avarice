@@ -4,7 +4,7 @@ import {
   RaceDefinition,
   AbilityDefinition,
   TalentDefinition,
-  EssenceEvent,
+  GameEvent,
   LevelRequirement,
   ClassAbilityMapping,
   CharacterProgression,
@@ -77,7 +77,7 @@ interface DbTalentDefinition {
   updated_at: Date;
 }
 
-interface DbEssenceEvent {
+interface DbGameEvent {
   id: number;
   event_id: string;
   display_name: string | null;
@@ -177,7 +177,7 @@ function dbToTalentDefinition(row: DbTalentDefinition): TalentDefinition {
   };
 }
 
-function dbToEssenceEvent(row: DbEssenceEvent): EssenceEvent {
+function dbToGameEvent(row: DbGameEvent): GameEvent {
   return {
     event_id: row.event_id,
     display_name: row.display_name ?? undefined,
@@ -614,27 +614,27 @@ export async function deleteTalent(talentId: string): Promise<boolean> {
 }
 
 // ============================================================================
-// ESSENCE EVENTS
+// GAME EVENTS
 // ============================================================================
 
-export async function getAllEssenceEvents(): Promise<EssenceEvent[]> {
-  const result = await query<DbEssenceEvent>(
-    'SELECT * FROM essence_events ORDER BY event_id'
+export async function getAllGameEvents(): Promise<GameEvent[]> {
+  const result = await query<DbGameEvent>(
+    'SELECT * FROM game_events ORDER BY event_id'
   );
-  return result.rows.map(dbToEssenceEvent);
+  return result.rows.map(dbToGameEvent);
 }
 
-export async function getEssenceEventById(eventId: string): Promise<EssenceEvent | null> {
-  const result = await query<DbEssenceEvent>(
-    'SELECT * FROM essence_events WHERE event_id = $1',
+export async function getGameEventById(eventId: string): Promise<GameEvent | null> {
+  const result = await query<DbGameEvent>(
+    'SELECT * FROM game_events WHERE event_id = $1',
     [eventId]
   );
-  return result.rows[0] ? dbToEssenceEvent(result.rows[0]) : null;
+  return result.rows[0] ? dbToGameEvent(result.rows[0]) : null;
 }
 
-export async function createEssenceEvent(event: EssenceEvent): Promise<EssenceEvent> {
-  const result = await query<DbEssenceEvent>(
-    `INSERT INTO essence_events (
+export async function createGameEvent(event: GameEvent): Promise<GameEvent> {
+  const result = await query<DbGameEvent>(
+    `INSERT INTO game_events (
       event_id, display_name, emitted_tags, base_essence_value, base_xp_value
     ) VALUES ($1, $2, $3, $4, $5)
     RETURNING *`,
@@ -646,10 +646,10 @@ export async function createEssenceEvent(event: EssenceEvent): Promise<EssenceEv
       event.base_xp_value ?? 0,
     ]
   );
-  return dbToEssenceEvent(result.rows[0]);
+  return dbToGameEvent(result.rows[0]);
 }
 
-export async function updateEssenceEvent(eventId: string, updates: Partial<EssenceEvent>): Promise<EssenceEvent | null> {
+export async function updateGameEvent(eventId: string, updates: Partial<GameEvent>): Promise<GameEvent | null> {
   const setClauses: string[] = [];
   const values: unknown[] = [];
   let paramIndex = 1;
@@ -671,20 +671,20 @@ export async function updateEssenceEvent(eventId: string, updates: Partial<Essen
     values.push(updates.base_xp_value);
   }
 
-  if (setClauses.length === 0) return getEssenceEventById(eventId);
+  if (setClauses.length === 0) return getGameEventById(eventId);
 
   setClauses.push(`updated_at = CURRENT_TIMESTAMP`);
   values.push(eventId);
 
-  const result = await query<DbEssenceEvent>(
-    `UPDATE essence_events SET ${setClauses.join(', ')} WHERE event_id = $${paramIndex} RETURNING *`,
+  const result = await query<DbGameEvent>(
+    `UPDATE game_events SET ${setClauses.join(', ')} WHERE event_id = $${paramIndex} RETURNING *`,
     values
   );
-  return result.rows[0] ? dbToEssenceEvent(result.rows[0]) : null;
+  return result.rows[0] ? dbToGameEvent(result.rows[0]) : null;
 }
 
-export async function deleteEssenceEvent(eventId: string): Promise<boolean> {
-  const result = await query('DELETE FROM essence_events WHERE event_id = $1', [eventId]);
+export async function deleteGameEvent(eventId: string): Promise<boolean> {
+  const result = await query('DELETE FROM game_events WHERE event_id = $1', [eventId]);
   return (result.rowCount ?? 0) > 0;
 }
 

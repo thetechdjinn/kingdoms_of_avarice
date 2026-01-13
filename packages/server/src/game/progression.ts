@@ -5,7 +5,7 @@
 import {
   ClassDefinition,
   LevelRequirement,
-  EssenceEvent,
+  GameEvent,
   CharacterProgression,
   CharacterActivityTracker,
   ActivityCount,
@@ -25,7 +25,7 @@ import {
 
 const classDefinitions: Map<string, ClassDefinition> = new Map();
 const progressionTable: LevelRequirement[] = [];
-const essenceEvents: Map<string, EssenceEvent> = new Map();
+const gameEvents: Map<string, GameEvent> = new Map();
 const characterProgressions: Map<number, CharacterProgression> = new Map();
 const activityTrackers: Map<number, CharacterActivityTracker> = new Map();
 
@@ -70,24 +70,24 @@ export function getLevelRequirements(level: number): LevelRequirement | undefine
 }
 
 /**
- * Register an essence event
+ * Register a game event
  */
-export function registerEssenceEvent(event: EssenceEvent): void {
-  essenceEvents.set(event.event_id, event);
+export function registerGameEvent(event: GameEvent): void {
+  gameEvents.set(event.event_id, event);
 }
 
 /**
- * Get an essence event by ID
+ * Get a game event by ID
  */
-export function getEssenceEvent(eventId: string): EssenceEvent | undefined {
-  return essenceEvents.get(eventId);
+export function getGameEvent(eventId: string): GameEvent | undefined {
+  return gameEvents.get(eventId);
 }
 
 /**
- * Get all registered essence events
+ * Get all registered game events
  */
-export function getAllEssenceEvents(): EssenceEvent[] {
-  return Array.from(essenceEvents.values());
+export function getAllGameEvents(): GameEvent[] {
+  return Array.from(gameEvents.values());
 }
 
 // ============================================================================
@@ -144,10 +144,10 @@ export function getActivityTracker(characterId: number): CharacterActivityTracke
 // ============================================================================
 
 /**
- * Process an essence event for a character
- * This is the core "Event Listener" function
+ * Process a game event for a character, awarding XP and essence
+ * XP is always awarded; essence is awarded only if class tags match event tags
  */
-export function processEssenceEvent(
+export function processGameEvent(
   characterId: number,
   eventId: string,
   yieldCurve: YieldTier[] = DEFAULT_YIELD_CURVE
@@ -162,7 +162,7 @@ export function processEssenceEvent(
     return null;
   }
 
-  const event = essenceEvents.get(eventId);
+  const event = gameEvents.get(eventId);
   if (!event) {
     return null;
   }
@@ -417,7 +417,7 @@ export function getProgressionDebugInfo(characterId: number): {
 export function clearAllProgressionData(): void {
   classDefinitions.clear();
   progressionTable.length = 0;
-  essenceEvents.clear();
+  gameEvents.clear();
   characterProgressions.clear();
   activityTrackers.clear();
 }

@@ -1,6 +1,6 @@
 // ============================================================================
 // PROGRESSION EDITOR
-// Editor UI for classes, races, abilities, talents, and essence events
+// Editor UI for classes, races, abilities, talents, and game events
 // ============================================================================
 
 (function() {
@@ -58,7 +58,7 @@ interface TalentDefinition {
   grants_ability?: string;
 }
 
-interface EssenceEvent {
+interface GameEvent {
   event_id: string;
   display_name?: string;
   emitted_tags: string[];
@@ -81,7 +81,7 @@ let classes: ClassDefinition[] = [];
 let races: RaceDefinition[] = [];
 let abilities: AbilityDefinition[] = [];
 let talents: TalentDefinition[] = [];
-let events: EssenceEvent[] = [];
+let events: GameEvent[] = [];
 let selectedId: string | null = null;
 let selectedType: string | null = null;
 let classAbilities: ClassAbilityMapping[] = [];
@@ -648,7 +648,7 @@ function selectEvent(eventId: string): void {
   const form = document.getElementById('event-form') as HTMLFormElement;
   form.style.display = 'block';
 
-  (document.getElementById('event-form-title') as HTMLElement).textContent = 'Edit Essence Event';
+  (document.getElementById('event-form-title') as HTMLElement).textContent = 'Edit Game Event';
   (document.getElementById('event-id') as HTMLInputElement).value = event.event_id;
   (document.getElementById('event-id') as HTMLInputElement).readOnly = true;
   (document.getElementById('event-name') as HTMLInputElement).value = event.display_name || '';
@@ -872,7 +872,7 @@ async function handleEventSubmit(e: Event): Promise<void> {
   e.preventDefault();
 
   const eventId = (document.getElementById('event-id') as HTMLInputElement).value;
-  const data: Partial<EssenceEvent> = {
+  const data: Partial<GameEvent> = {
     event_id: eventId,
     display_name: (document.getElementById('event-name') as HTMLInputElement).value || undefined,
     base_essence_value: parseInt((document.getElementById('event-essence') as HTMLInputElement).value) || 10,

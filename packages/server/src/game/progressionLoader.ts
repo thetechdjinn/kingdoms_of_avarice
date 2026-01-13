@@ -12,13 +12,13 @@ import {
   RaceDefinition,
   AbilityDefinition,
   LevelRequirement,
-  EssenceEvent,
+  GameEvent,
   TalentDefinition,
 } from '@koa/shared';
 import {
   registerClass,
   setProgressionTable,
-  registerEssenceEvent,
+  registerGameEvent,
 } from './progression.js';
 import * as progressionRepo from '../db/repositories/progressionRepository.js';
 
@@ -59,14 +59,14 @@ export function loadProgressionTable(): LevelRequirement[] {
 }
 
 /**
- * Load all essence events
+ * Load all game events
  */
-export function loadEssenceEvents(): EssenceEvent[] {
-  const events = loadJsonFile<EssenceEvent[]>('essence_events.json');
+export function loadGameEvents(): GameEvent[] {
+  const events = loadJsonFile<GameEvent[]>('game_events.json');
   for (const event of events) {
-    registerEssenceEvent(event);
+    registerGameEvent(event);
   }
-  console.log(`[Progression] Loaded ${events.length} essence events`);
+  console.log(`[Progression] Loaded ${events.length} game events`);
   return events;
 }
 
@@ -179,14 +179,14 @@ async function seedDatabaseIfEmpty(): Promise<void> {
     }
     
     // Seed events if empty
-    const existingEvents = await progressionRepo.getAllEssenceEvents();
+    const existingEvents = await progressionRepo.getAllGameEvents();
     console.log(`[Progression] Found ${existingEvents.length} existing events`);
     if (existingEvents.length === 0) {
-      const events = loadJsonFile<EssenceEvent[]>('essence_events.json');
+      const events = loadJsonFile<GameEvent[]>('game_events.json');
       for (const event of events) {
-        await progressionRepo.createEssenceEvent(event);
+        await progressionRepo.createGameEvent(event);
       }
-      console.log(`[Progression] Seeded ${events.length} essence events`);
+      console.log(`[Progression] Seeded ${events.length} game events`);
     }
     
     // Seed progression table if empty
@@ -213,7 +213,7 @@ export async function initializeProgressionData(): Promise<void> {
   // Load into in-memory service
   loadClasses();
   loadProgressionTable();
-  loadEssenceEvents();
+  loadGameEvents();
   loadTalents();
   
   // Force reseed if stats are outdated
