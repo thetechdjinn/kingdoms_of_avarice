@@ -546,9 +546,14 @@ async function handleEditAbility(args: string[]): Promise<CommandResponse> {
       case 'description':
         updates = { description: value };
         break;
-      case 'type':
-        updates = { ability_type: value };
+      case 'type': {
+        const validTypes = ['skill', 'spell', 'technique', 'passive'];
+        if (!validTypes.includes(value.toLowerCase())) {
+          return { type: MessageType.ERROR, message: `Invalid ability type. Must be one of: ${validTypes.join(', ')}` };
+        }
+        updates = { ability_type: value.toLowerCase() };
         break;
+      }
       case 'cost': {
         const costVal = parseInt(value);
         if (isNaN(costVal)) {

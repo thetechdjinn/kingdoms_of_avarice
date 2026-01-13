@@ -708,12 +708,12 @@ async function handleClassSubmit(e: Event): Promise<void> {
     playable: (document.getElementById('class-playable') as HTMLInputElement).checked,
     subscribed_tags: (document.getElementById('class-tags') as HTMLInputElement).value.split(',').map(t => t.trim()).filter(Boolean),
     base_stats: {
-      strength: parseInt((document.getElementById('class-str') as HTMLInputElement).value) || 10,
-      dexterity: parseInt((document.getElementById('class-dex') as HTMLInputElement).value) || 10,
-      intelligence: parseInt((document.getElementById('class-int') as HTMLInputElement).value) || 10,
-      wisdom: parseInt((document.getElementById('class-wis') as HTMLInputElement).value) || 10,
-      constitution: parseInt((document.getElementById('class-con') as HTMLInputElement).value) || 10,
-      charm: parseInt((document.getElementById('class-cha') as HTMLInputElement).value) || 10,
+      strength: Number((document.getElementById('class-str') as HTMLInputElement).value) || 0,
+      dexterity: Number((document.getElementById('class-dex') as HTMLInputElement).value) || 0,
+      intelligence: Number((document.getElementById('class-int') as HTMLInputElement).value) || 0,
+      wisdom: Number((document.getElementById('class-wis') as HTMLInputElement).value) || 0,
+      constitution: Number((document.getElementById('class-con') as HTMLInputElement).value) || 0,
+      charm: Number((document.getElementById('class-cha') as HTMLInputElement).value) || 0,
     },
   };
 
@@ -836,7 +836,7 @@ async function handleTalentSubmit(e: Event): Promise<void> {
     display_name: (document.getElementById('talent-name') as HTMLInputElement).value,
     description: (document.getElementById('talent-description') as HTMLTextAreaElement).value || undefined,
     class_restriction: (document.getElementById('talent-class') as HTMLSelectElement).value || undefined,
-    essence_cost: parseInt((document.getElementById('talent-cost') as HTMLInputElement).value) || 100,
+    essence_cost: Number((document.getElementById('talent-cost') as HTMLInputElement).value) || 100,
     prerequisite_level: parseInt((document.getElementById('talent-level') as HTMLInputElement).value) || 1,
     prerequisite_talents: (document.getElementById('talent-prereqs') as HTMLInputElement).value.split(',').map(t => t.trim()).filter(Boolean),
     grants_ability: (document.getElementById('talent-grants') as HTMLSelectElement).value || undefined,
@@ -875,8 +875,8 @@ async function handleEventSubmit(e: Event): Promise<void> {
   const data: Partial<GameEvent> = {
     event_id: eventId,
     display_name: (document.getElementById('event-name') as HTMLInputElement).value || undefined,
-    base_essence_value: parseInt((document.getElementById('event-essence') as HTMLInputElement).value) || 10,
-    base_xp_value: parseInt((document.getElementById('event-xp') as HTMLInputElement).value) || 0,
+    base_essence_value: Number((document.getElementById('event-essence') as HTMLInputElement).value) || 0,
+    base_xp_value: Number((document.getElementById('event-xp') as HTMLInputElement).value) || 0,
     emitted_tags: (document.getElementById('event-tags') as HTMLInputElement).value.split(',').map(t => t.trim()).filter(Boolean),
   };
 

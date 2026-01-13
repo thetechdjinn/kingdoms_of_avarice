@@ -169,8 +169,8 @@ CREATE TABLE IF NOT EXISTS talent_definitions (
 
 CREATE TABLE IF NOT EXISTS class_abilities (
     id SERIAL PRIMARY KEY,
-    class_id VARCHAR(50) NOT NULL,
-    ability_id VARCHAR(50) NOT NULL,
+    class_id VARCHAR(50) NOT NULL REFERENCES class_definitions(class_id) ON DELETE CASCADE,
+    ability_id VARCHAR(50) NOT NULL REFERENCES ability_definitions(ability_id) ON DELETE CASCADE,
     
     -- When this ability becomes available
     required_level INTEGER DEFAULT 1,
@@ -191,7 +191,7 @@ CREATE TABLE IF NOT EXISTS class_abilities (
 CREATE TABLE IF NOT EXISTS character_progression (
     id SERIAL PRIMARY KEY,
     character_id INTEGER UNIQUE NOT NULL REFERENCES characters(id) ON DELETE CASCADE,
-    class_id VARCHAR(50) NOT NULL,
+    class_id VARCHAR(50) NOT NULL REFERENCES class_definitions(class_id),
     
     -- XP tracking
     std_xp INTEGER DEFAULT 0,
