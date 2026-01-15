@@ -38,9 +38,13 @@ function getClientIp(req: Request): string {
   // Check for forwarded IP (if behind a proxy)
   const forwarded = req.headers['x-forwarded-for'];
   if (forwarded) {
-    // x-forwarded-for can contain multiple IPs, take the first one
-    const ips = Array.isArray(forwarded) ? forwarded[0] : forwarded.split(',')[0];
-    return ips.trim();
+    // x-forwarded-for can contain multiple IPs, take the first one (client IP)
+    // Handle both array format and comma-separated string
+    const forwardedValue = Array.isArray(forwarded) ? forwarded[0] : forwarded;
+    const firstIp = forwardedValue?.split(',')[0]?.trim();
+    if (firstIp) {
+      return firstIp;
+    }
   }
 
   // Direct connection

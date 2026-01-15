@@ -14,6 +14,20 @@ interface DbSetting {
 }
 
 /**
+ * Parse a JSONB value, handling both pre-parsed objects and JSON strings
+ */
+function parseJsonbValue<T>(value: unknown): T {
+  if (typeof value === 'string') {
+    try {
+      return JSON.parse(value) as T;
+    } catch {
+      return value as T;
+    }
+  }
+  return value as T;
+}
+
+/**
  * Get a single setting value by key
  */
 export async function getSetting<T>(key: string): Promise<T | null> {
@@ -26,7 +40,7 @@ export async function getSetting<T>(key: string): Promise<T | null> {
     return null;
   }
 
-  return result.rows[0].value as T;
+  return parseJsonbValue<T>(result.rows[0].value);
 }
 
 /**
@@ -51,9 +65,9 @@ export async function getAllSettings(): Promise<GameSettings> {
 
   for (const row of result.rows) {
     if (row.key === 'max_characters_per_player') {
-      settings.max_characters_per_player = row.value as number;
+      settings.max_characters_per_player = parseJsonbValue<number>(row.value);
     } else if (row.key === 'ip_access_mode') {
-      settings.ip_access_mode = row.value as IpAccessMode;
+      settings.ip_access_mode = parseJsonbValue<IpAccessMode>(row.value);
     }
   }
 

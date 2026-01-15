@@ -66,9 +66,15 @@ export function setupGameSocket(wss: WebSocketServer): void {
     }
 
     // Parse characterId from query string
-    const url = new URL(req.url || '', `http://${req.headers.host}`);
-    const characterIdParam = url.searchParams.get('characterId');
-    const characterId = characterIdParam ? parseInt(characterIdParam) : null;
+    let characterId: number | null = null;
+    try {
+      const url = new URL(req.url || '', `http://${req.headers.host || 'localhost'}`);
+      const characterIdParam = url.searchParams.get('characterId');
+      characterId = characterIdParam ? parseInt(characterIdParam, 10) : null;
+    } catch {
+      ws.close(1008, 'Invalid request URL');
+      return;
+    }
 
     if (!characterId || isNaN(characterId)) {
       ws.close(1008, 'Character selection required');
@@ -174,6 +180,14 @@ export function setupGameSocket(wss: WebSocketServer): void {
 
     // Use character's room location (default to room 1 if invalid)
     const startRoomId = character.current_room_id || 1;
+
+    // Persist the room if we had to default
+    if (!character.current_room_id) {
+      characterRepo.updateCharacterRoom(characterId, startRoomId).catch((err) => {
+        console.error('Failed to persist default room:', err);
+      });
+    }
+
     setPlayerLocation(payload.playerId, startRoomId);
 
     // Broadcast to all players that someone entered the realm (using character name)

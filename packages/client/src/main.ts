@@ -826,12 +826,12 @@ function updateStatPreview(): void {
   const modifiers = race.stat_modifiers || {};
 
   const stats = {
-    strength: (baseStats.strength || 10) + (modifiers.strength || 0),
-    intelligence: (baseStats.intelligence || 10) + (modifiers.intelligence || 0),
-    dexterity: (baseStats.dexterity || 10) + (modifiers.dexterity || 0),
-    constitution: (baseStats.constitution || 10) + (modifiers.constitution || 0),
-    wisdom: (baseStats.wisdom || 10) + (modifiers.wisdom || 0),
-    charisma: (baseStats.charisma || 10) + (modifiers.charisma || 0),
+    strength: (baseStats.strength ?? 10) + (modifiers.strength ?? 0),
+    intelligence: (baseStats.intelligence ?? 10) + (modifiers.intelligence ?? 0),
+    dexterity: (baseStats.dexterity ?? 10) + (modifiers.dexterity ?? 0),
+    constitution: (baseStats.constitution ?? 10) + (modifiers.constitution ?? 0),
+    wisdom: (baseStats.wisdom ?? 10) + (modifiers.wisdom ?? 0),
+    charisma: (baseStats.charisma ?? 10) + (modifiers.charisma ?? 0),
   };
 
   document.getElementById('preview-str')!.textContent = String(stats.strength);
