@@ -135,7 +135,8 @@ body {
   color: #ff4444 !important;
 }
 
-#editor-layout {
+#editor-layout,
+.editor-layout {
   display: flex;
   flex: 1;
   overflow: hidden;

@@ -44,7 +44,7 @@
 }
 
 /* Override editor-layout for tab pages */
-.tab-page #editor-layout {
+.tab-page .editor-layout {
   display: flex;
   height: 100%;
 }

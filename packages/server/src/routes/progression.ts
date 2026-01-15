@@ -699,12 +699,28 @@ export function setupProgressionRoutes(app: Express): void {
         return;
       }
 
+      // Validate numeric fields
+      if (required_level !== undefined) {
+        const level = Number(required_level);
+        if (!Number.isInteger(level) || level < 1) {
+          res.status(400).json({ success: false, message: 'required_level must be a positive integer' });
+          return;
+        }
+      }
+      if (training_cost !== undefined) {
+        const cost = Number(training_cost);
+        if (!Number.isInteger(cost) || cost < 0) {
+          res.status(400).json({ success: false, message: 'training_cost must be a non-negative integer' });
+          return;
+        }
+      }
+
       const mapping = await progressionRepo.addClassAbility({
         class_id: req.params.classId,
         ability_id,
-        required_level: required_level ?? 1,
+        required_level: required_level !== undefined ? Number(required_level) : 1,
         auto_learn: auto_learn ?? false,
-        training_cost,
+        training_cost: training_cost !== undefined ? Number(training_cost) : undefined,
       });
 
       res.json({ success: true, mapping });

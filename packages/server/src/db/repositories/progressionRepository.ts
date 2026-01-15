@@ -133,6 +133,8 @@ function dbToClassDefinition(row: DbClassDefinition): ClassDefinition {
     subscribed_tags: row.subscribed_tags as ThematicTag[],
     base_stats: row.base_stats ?? undefined,
     talent_tree_id: row.talent_tree_id ?? undefined,
+    resource_type: row.resource_type ?? undefined,
+    playable: row.playable,
   };
 }
 
@@ -276,11 +278,11 @@ export async function updateClass(classId: string, updates: Partial<ClassDefinit
   }
   if (updates.subscribed_tags !== undefined) {
     setClauses.push(`subscribed_tags = $${paramIndex++}`);
-    values.push(updates.subscribed_tags);
+    values.push(JSON.stringify(updates.subscribed_tags));
   }
   if (updates.base_stats !== undefined) {
     setClauses.push(`base_stats = $${paramIndex++}`);
-    values.push(updates.base_stats);
+    values.push(updates.base_stats ? JSON.stringify(updates.base_stats) : null);
   }
   if (updates.talent_tree_id !== undefined) {
     setClauses.push(`talent_tree_id = $${paramIndex++}`);
@@ -467,7 +469,7 @@ export async function updateAbility(abilityId: string, updates: Partial<AbilityD
   }
   if (updates.emitted_tags !== undefined) {
     setClauses.push(`emitted_tags = $${paramIndex++}`);
-    values.push(updates.emitted_tags);
+    values.push(JSON.stringify(updates.emitted_tags));
   }
   if (updates.resource_cost !== undefined) {
     setClauses.push(`resource_cost = $${paramIndex++}`);
@@ -483,11 +485,11 @@ export async function updateAbility(abilityId: string, updates: Partial<AbilityD
   }
   if (updates.effect_data !== undefined) {
     setClauses.push(`effect_data = $${paramIndex++}`);
-    values.push(updates.effect_data);
+    values.push(updates.effect_data ? JSON.stringify(updates.effect_data) : null);
   }
   if (updates.requirements !== undefined) {
     setClauses.push(`requirements = $${paramIndex++}`);
-    values.push(updates.requirements);
+    values.push(updates.requirements ? JSON.stringify(updates.requirements) : null);
   }
 
   if (setClauses.length === 0) return getAbilityById(abilityId);
@@ -586,11 +588,11 @@ export async function updateTalent(talentId: string, updates: Partial<TalentDefi
   }
   if (updates.prerequisite_talents !== undefined) {
     setClauses.push(`prerequisite_talents = $${paramIndex++}`);
-    values.push(updates.prerequisite_talents);
+    values.push(JSON.stringify(updates.prerequisite_talents));
   }
   if (updates.effect_modifiers !== undefined) {
     setClauses.push(`effect_modifiers = $${paramIndex++}`);
-    values.push(updates.effect_modifiers);
+    values.push(updates.effect_modifiers ? JSON.stringify(updates.effect_modifiers) : null);
   }
   if (updates.grants_ability !== undefined) {
     setClauses.push(`grants_ability = $${paramIndex++}`);

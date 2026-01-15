@@ -894,12 +894,22 @@ async function handleEditEvent(args: string[]): Promise<CommandResponse> {
       case 'name':
         updates = { display_name: value };
         break;
-      case 'essence':
-        updates = { base_essence_value: parseInt(value) };
+      case 'essence': {
+        const essenceValue = Number(value);
+        if (!Number.isInteger(essenceValue) || essenceValue < 0) {
+          return { type: MessageType.ERROR, message: 'Essence value must be a non-negative integer' };
+        }
+        updates = { base_essence_value: essenceValue };
         break;
-      case 'xp':
-        updates = { base_xp_value: parseInt(value) };
+      }
+      case 'xp': {
+        const xpValue = Number(value);
+        if (!Number.isInteger(xpValue) || xpValue < 0) {
+          return { type: MessageType.ERROR, message: 'XP value must be a non-negative integer' };
+        }
+        updates = { base_xp_value: xpValue };
         break;
+      }
       case 'tags':
         updates = { emitted_tags: value.split(',').map(t => t.trim()) };
         break;
