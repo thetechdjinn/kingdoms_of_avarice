@@ -8,6 +8,7 @@ const MAX_DISPLAY_NAME_LENGTH = 100;
 const MAX_ID_LENGTH = 50;
 const MAX_DESCRIPTION_LENGTH = 2000;
 const MAX_ARRAY_LENGTH = 100;
+const VALID_ABILITY_TYPES: AbilityType[] = ['skill', 'spell', 'technique', 'passive'];
 
 export function setupProgressionRoutes(app: Express): void {
   // ============================================================================
@@ -321,7 +322,7 @@ export function setupProgressionRoutes(app: Express): void {
 
   app.get('/api/progression/abilities/type/:type', requireDeveloper, async (req: Request, res: Response) => {
     try {
-      const validTypes: AbilityType[] = ['skill', 'spell', 'technique', 'passive'];
+      const validTypes = VALID_ABILITY_TYPES;
       const abilityType = req.params.type as AbilityType;
       
       if (!validTypes.includes(abilityType)) {
@@ -378,7 +379,7 @@ export function setupProgressionRoutes(app: Express): void {
         return;
       }
 
-      const validTypes: AbilityType[] = ['skill', 'spell', 'technique', 'passive'];
+      const validTypes = VALID_ABILITY_TYPES;
       if (!validTypes.includes(ability_type)) {
         res.status(400).json({ success: false, message: `Invalid ability_type. Must be one of: ${validTypes.join(', ')}` });
         return;
@@ -423,7 +424,7 @@ export function setupProgressionRoutes(app: Express): void {
   app.put('/api/progression/abilities/:abilityId', requireDeveloper, async (req: Request, res: Response) => {
     try {
       const { display_name, description, ability_type, emitted_tags, resource_cost, cooldown } = req.body;
-      const validTypes: AbilityType[] = ['skill', 'spell', 'technique', 'passive'];
+      const validTypes = VALID_ABILITY_TYPES;
 
       // Validate display_name if provided
       if (display_name !== undefined && (typeof display_name !== 'string' || display_name.length === 0 || display_name.length > MAX_DISPLAY_NAME_LENGTH)) {

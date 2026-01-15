@@ -119,8 +119,10 @@
                 <h3>Class Abilities</h3>
                 <div id="class-abilities-list"></div>
                 <div class="add-ability-row">
-                  <select id="add-class-ability-select"><option value="">Select ability...</option></select>
-                  <input type="number" id="add-class-ability-level" value="1" min="1" placeholder="Lvl" />
+                  <label for="add-class-ability-select" class="sr-only">Select Ability</label>
+                  <select id="add-class-ability-select" aria-label="Select ability to add"><option value="">Select ability...</option></select>
+                  <label for="add-class-ability-level" class="sr-only">Required Level</label>
+                  <input type="number" id="add-class-ability-level" value="1" min="1" placeholder="Lvl" aria-label="Required level" />
                   <label><input type="checkbox" id="add-class-ability-auto" /> Auto</label>
                   <button type="button" id="add-class-ability-btn" class="btn-secondary">Add</button>
                 </div>
@@ -220,7 +222,8 @@
               <button id="new-ability-btn" class="btn-primary">+ New</button>
             </div>
             <div class="filter-row">
-              <select id="ability-type-filter">
+              <label for="ability-type-filter" class="sr-only">Filter by ability type</label>
+              <select id="ability-type-filter" aria-label="Filter by ability type">
                 <option value="">All Types</option>
                 <option value="skill">Skills</option>
                 <option value="spell">Spells</option>

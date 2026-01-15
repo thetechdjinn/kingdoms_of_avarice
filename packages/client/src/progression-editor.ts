@@ -193,7 +193,7 @@ async function loadClasses(): Promise<void> {
   try {
     const response = await fetch('/api/progression/classes');
     const data = await response.json();
-    if (data.success) {
+    if (data.success && Array.isArray(data.classes)) {
       classes = data.classes;
       renderClassList();
       populateClassDropdowns();
@@ -207,7 +207,7 @@ async function loadRaces(): Promise<void> {
   try {
     const response = await fetch('/api/progression/races');
     const data = await response.json();
-    if (data.success) {
+    if (data.success && Array.isArray(data.races)) {
       races = data.races;
       renderRaceList();
     }
@@ -220,7 +220,7 @@ async function loadAbilities(): Promise<void> {
   try {
     const response = await fetch('/api/progression/abilities');
     const data = await response.json();
-    if (data.success) {
+    if (data.success && Array.isArray(data.abilities)) {
       abilities = data.abilities;
       renderAbilityList();
       populateAbilityDropdowns();
@@ -234,7 +234,7 @@ async function loadTalents(): Promise<void> {
   try {
     const response = await fetch('/api/progression/talents');
     const data = await response.json();
-    if (data.success) {
+    if (data.success && Array.isArray(data.talents)) {
       talents = data.talents;
       renderTalentList();
     }
@@ -247,7 +247,7 @@ async function loadEvents(): Promise<void> {
   try {
     const response = await fetch('/api/progression/events');
     const data = await response.json();
-    if (data.success) {
+    if (data.success && Array.isArray(data.events)) {
       events = data.events;
       renderEventList();
     }
@@ -260,7 +260,7 @@ async function loadClassAbilities(classId: string): Promise<void> {
   try {
     const response = await fetch(`/api/progression/classes/${classId}/abilities`);
     const data = await response.json();
-    if (data.success) {
+    if (data.success && Array.isArray(data.abilities)) {
       classAbilities = data.abilities;
       renderClassAbilities();
     }
@@ -776,7 +776,12 @@ async function handleAbilitySubmit(e: Event): Promise<void> {
     return;
   }
 
-  const abilityId = abilityIdEl.value;
+  const abilityId = abilityIdEl.value.trim();
+  if (!abilityId) {
+    alert('Ability ID is required');
+    return;
+  }
+
   const data: Partial<AbilityDefinition> = {
     ability_id: abilityId,
     display_name: abilityNameEl.value,
@@ -987,7 +992,8 @@ async function handleAddClassAbility(): Promise<void> {
   }
 
   const abilityId = abilitySelectEl.value;
-  const level = Number(levelEl?.value) || 1;
+  const levelValue = Number(levelEl?.value);
+  const level = isNaN(levelValue) || levelValue < 1 ? 1 : levelValue;
   const autoLearn = autoLearnEl?.checked ?? false;
 
   if (!abilityId) {

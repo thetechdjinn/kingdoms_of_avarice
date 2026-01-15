@@ -906,16 +906,16 @@ async function handleEditEvent(args: string[]): Promise<CommandResponse> {
         break;
       case 'essence': {
         const essenceValue = Number(value);
-        if (!Number.isInteger(essenceValue) || essenceValue < 0) {
-          return { type: MessageType.ERROR, message: 'Essence value must be a non-negative integer' };
+        if (isNaN(essenceValue) || essenceValue < 0) {
+          return { type: MessageType.ERROR, message: 'Essence value must be a non-negative number' };
         }
         updates = { base_essence_value: essenceValue };
         break;
       }
       case 'xp': {
         const xpValue = Number(value);
-        if (!Number.isInteger(xpValue) || xpValue < 0) {
-          return { type: MessageType.ERROR, message: 'XP value must be a non-negative integer' };
+        if (isNaN(xpValue) || xpValue < 0) {
+          return { type: MessageType.ERROR, message: 'XP value must be a non-negative number' };
         }
         updates = { base_xp_value: xpValue };
         break;
