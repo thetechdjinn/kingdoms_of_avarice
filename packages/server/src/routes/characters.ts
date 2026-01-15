@@ -134,28 +134,7 @@ export function setupCharacterRoutes(app: Express): void {
     }
 
     try {
-      // Check character limit
-      const playerMaxChars = await playerRepo.getMaxCharacters(payload.playerId);
-      const globalMaxChars = await settingsRepo.getMaxCharactersPerPlayer();
-      const maxCharacters = playerMaxChars ?? globalMaxChars;
-      const currentCount = await characterRepo.getCharacterCount(payload.playerId);
-
-      if (currentCount >= maxCharacters) {
-        res.status(400).json({
-          success: false,
-          message: `Character limit reached (${maxCharacters} maximum)`,
-        });
-        return;
-      }
-
-      // Check if name is already taken
-      const nameExists = await characterRepo.characterNameExists(trimmedName);
-      if (nameExists) {
-        res.status(400).json({ success: false, message: 'Character name is already taken' });
-        return;
-      }
-
-      // Get race and class definitions
+      // Get race and class definitions first (outside transaction, read-only)
       const race = await progressionRepo.getRaceById(raceId);
       if (!race || !race.playable) {
         res.status(400).json({ success: false, message: 'Invalid or unavailable race' });
@@ -184,16 +163,32 @@ export function setupCharacterRoutes(app: Express): void {
       const raceModifiers = race.stat_modifiers || {};
 
       const finalStats: CharacterStats = {
-        strength: (baseStats.strength || 10) + (raceModifiers.strength || 0),
-        intelligence: (baseStats.intelligence || 10) + (raceModifiers.intelligence || 0),
-        dexterity: (baseStats.dexterity || 10) + (raceModifiers.dexterity || 0),
-        constitution: (baseStats.constitution || 10) + (raceModifiers.constitution || 0),
-        wisdom: (baseStats.wisdom || 10) + (raceModifiers.wisdom || 0),
-        charisma: (baseStats.charisma || 10) + (raceModifiers.charisma || 0),
+        strength: (baseStats.strength ?? 10) + (raceModifiers.strength ?? 0),
+        intelligence: (baseStats.intelligence ?? 10) + (raceModifiers.intelligence ?? 0),
+        dexterity: (baseStats.dexterity ?? 10) + (raceModifiers.dexterity ?? 0),
+        constitution: (baseStats.constitution ?? 10) + (raceModifiers.constitution ?? 0),
+        wisdom: (baseStats.wisdom ?? 10) + (raceModifiers.wisdom ?? 0),
+        charisma: (baseStats.charisma ?? 10) + (raceModifiers.charisma ?? 0),
       };
 
-      // Create character and progression record atomically
+      // Create character atomically with all checks inside transaction to prevent race conditions
       const character = await withTransaction(async (client) => {
+        // Check character limit inside transaction
+        const playerMaxChars = await playerRepo.getMaxCharacters(payload.playerId, client);
+        const globalMaxChars = await settingsRepo.getMaxCharactersPerPlayer();
+        const maxCharacters = playerMaxChars ?? globalMaxChars;
+        const currentCount = await characterRepo.getCharacterCount(payload.playerId, client);
+
+        if (currentCount >= maxCharacters) {
+          throw new Error(`CHARACTER_LIMIT:Character limit reached (${maxCharacters} maximum)`);
+        }
+
+        // Check if name is already taken inside transaction
+        const nameExists = await characterRepo.characterNameExists(trimmedName, client);
+        if (nameExists) {
+          throw new Error('NAME_TAKEN:Character name is already taken');
+        }
+
         const newCharacter = await characterRepo.createCharacter({
           playerId: payload.playerId,
           name: trimmedName,
@@ -212,6 +207,17 @@ export function setupCharacterRoutes(app: Express): void {
         character: characterRepo.toSharedCharacter(character),
       });
     } catch (error) {
+      // Handle specific validation errors from transaction
+      if (error instanceof Error) {
+        if (error.message.startsWith('CHARACTER_LIMIT:')) {
+          res.status(400).json({ success: false, message: error.message.substring(16) });
+          return;
+        }
+        if (error.message.startsWith('NAME_TAKEN:')) {
+          res.status(400).json({ success: false, message: error.message.substring(11) });
+          return;
+        }
+      }
       console.error('Failed to create character:', error);
       res.status(500).json({ success: false, message: 'Failed to create character' });
     }

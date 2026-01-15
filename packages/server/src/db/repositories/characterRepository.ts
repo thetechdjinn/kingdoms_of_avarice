@@ -121,12 +121,13 @@ export async function findCharacterByName(name: string): Promise<DbCharacter | n
   return result.rows[0] || null;
 }
 
-export async function characterNameExists(name: string): Promise<boolean> {
+export async function characterNameExists(name: string, client?: pg.PoolClient): Promise<boolean> {
   const result = await query<{ exists: boolean }>(
     'SELECT EXISTS(SELECT 1 FROM characters WHERE LOWER(name) = LOWER($1)) as exists',
-    [name]
+    [name],
+    client
   );
-  
+
   return result.rows[0].exists;
 }
 
@@ -170,12 +171,13 @@ export async function deleteCharacter(characterId: number): Promise<boolean> {
   return (result.rowCount ?? 0) > 0;
 }
 
-export async function getCharacterCount(playerId: number): Promise<number> {
+export async function getCharacterCount(playerId: number, client?: pg.PoolClient): Promise<number> {
   const result = await query<{ count: string }>(
     'SELECT COUNT(*) FROM characters WHERE player_id = $1',
-    [playerId]
+    [playerId],
+    client
   );
-  return parseInt(result.rows[0].count);
+  return parseInt(result.rows[0].count, 10);
 }
 
 export function toSharedCharacter(dbChar: DbCharacter): Character {

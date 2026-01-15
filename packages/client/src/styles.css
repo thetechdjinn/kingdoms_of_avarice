@@ -406,63 +406,8 @@ button:hover {
 }
 
 /* ============================================================================
-   LANDING PAGE
-   ============================================================================ */
-
-#landing-container {
-  text-align: center;
-  padding: 2rem;
-  border: 2px solid #00ff00;
-  background-color: #111;
-  max-width: 500px;
-  width: 100%;
-}
-
-#landing-container h1 {
-  margin-bottom: 1rem;
-  font-size: 2rem;
-  text-shadow: 0 0 10px #00ff00;
-}
-
-.welcome-message {
-  font-size: 1.2rem;
-  margin-bottom: 2rem;
-  color: #aaa;
-}
-
-.welcome-message span {
-  color: #00ff00;
-  font-weight: bold;
-}
-
-.landing-menu {
-  margin: 2rem 0;
-}
-
-.landing-hint {
-  margin-top: 1rem;
-  font-size: 0.9rem;
-  color: #666;
-}
-
-/* ============================================================================
    CHARACTER SELECTION
    ============================================================================ */
-
-#character-select-container {
-  text-align: center;
-  padding: 2rem;
-  border: 2px solid #00ff00;
-  background-color: #111;
-  max-width: 600px;
-  width: 100%;
-}
-
-#character-select-container h1 {
-  margin-bottom: 1.5rem;
-  font-size: 1.8rem;
-  text-shadow: 0 0 10px #00ff00;
-}
 
 #character-list {
   margin-bottom: 1.5rem;

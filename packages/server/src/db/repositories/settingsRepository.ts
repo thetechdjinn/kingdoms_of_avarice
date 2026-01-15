@@ -7,12 +7,6 @@ export interface GameSettings {
   ip_access_mode: IpAccessMode;
 }
 
-interface DbSetting {
-  key: string;
-  value: unknown;
-  updated_at: Date;
-}
-
 /**
  * Parse a JSONB value, handling both pre-parsed objects and JSON strings
  */
@@ -21,17 +15,31 @@ function parseJsonbValue<T>(value: unknown): T {
     try {
       return JSON.parse(value) as T;
     } catch {
-      return value as T;
+      throw new Error(`Failed to parse JSON value: ${value}`);
     }
   }
   return value as T;
 }
 
 /**
+ * Validate that a value is a valid positive integer for character limit
+ */
+function isValidCharacterLimit(value: unknown): value is number {
+  return typeof value === 'number' && Number.isInteger(value) && value > 0;
+}
+
+/**
+ * Validate that a value is a valid IP access mode
+ */
+function isValidIpAccessMode(value: unknown): value is IpAccessMode {
+  return value === 'allowlist' || value === 'blocklist';
+}
+
+/**
  * Get a single setting value by key
  */
 export async function getSetting<T>(key: string): Promise<T | null> {
-  const result = await query<DbSetting>(
+  const result = await query<{ value: unknown }>(
     'SELECT value FROM game_settings WHERE key = $1',
     [key]
   );
@@ -59,19 +67,25 @@ export async function setSetting<T>(key: string, value: T): Promise<void> {
  * Get all settings as a typed object
  */
 export async function getAllSettings(): Promise<GameSettings> {
-  const result = await query<DbSetting>('SELECT key, value FROM game_settings');
+  const result = await query<{ key: string; value: unknown }>('SELECT key, value FROM game_settings');
 
   const settings: Partial<GameSettings> = {};
 
   for (const row of result.rows) {
     if (row.key === 'max_characters_per_player') {
-      settings.max_characters_per_player = parseJsonbValue<number>(row.value);
+      const parsed = parseJsonbValue<number>(row.value);
+      if (isValidCharacterLimit(parsed)) {
+        settings.max_characters_per_player = parsed;
+      }
     } else if (row.key === 'ip_access_mode') {
-      settings.ip_access_mode = parseJsonbValue<IpAccessMode>(row.value);
+      const parsed = parseJsonbValue<IpAccessMode>(row.value);
+      if (isValidIpAccessMode(parsed)) {
+        settings.ip_access_mode = parsed;
+      }
     }
   }
 
-  // Return with defaults for any missing values
+  // Return with defaults for any missing or invalid values
   return {
     max_characters_per_player: settings.max_characters_per_player ?? 3,
     ip_access_mode: settings.ip_access_mode ?? 'blocklist',
@@ -83,7 +97,10 @@ export async function getAllSettings(): Promise<GameSettings> {
  */
 export async function getMaxCharactersPerPlayer(): Promise<number> {
   const value = await getSetting<number>('max_characters_per_player');
-  return value ?? 3;
+  if (isValidCharacterLimit(value)) {
+    return value;
+  }
+  return 3;
 }
 
 /**
@@ -91,5 +108,8 @@ export async function getMaxCharactersPerPlayer(): Promise<number> {
  */
 export async function getIpAccessMode(): Promise<IpAccessMode> {
   const value = await getSetting<IpAccessMode>('ip_access_mode');
-  return value ?? 'blocklist';
+  if (isValidIpAccessMode(value)) {
+    return value;
+  }
+  return 'blocklist';
 }

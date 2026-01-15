@@ -26,7 +26,10 @@ function hasEmergencyAccess(req: Request): boolean {
   if (!emergencyToken) return false;
 
   // Check header first, then query param as fallback
-  const providedToken = req.headers['x-emergency-token'] || req.query.emergencyToken;
+  // Handle array format (multiple query params with same name)
+  const headerToken = req.headers['x-emergency-token'];
+  const queryToken = req.query.emergencyToken;
+  const providedToken = headerToken || (Array.isArray(queryToken) ? queryToken[0] : queryToken);
   return providedToken === emergencyToken;
 }
 

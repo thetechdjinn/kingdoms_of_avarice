@@ -1,3 +1,4 @@
+import pg from 'pg';
 import { query } from '../index.js';
 import bcrypt from 'bcrypt';
 
@@ -115,10 +116,11 @@ export async function updatePassword(playerId: number, newPassword: string): Pro
   );
 }
 
-export async function getMaxCharacters(playerId: number): Promise<number | null> {
+export async function getMaxCharacters(playerId: number, client?: pg.PoolClient): Promise<number | null> {
   const result = await query<{ max_characters: number | null }>(
     'SELECT max_characters FROM players WHERE id = $1',
-    [playerId]
+    [playerId],
+    client
   );
   return result.rows[0]?.max_characters ?? null;
 }

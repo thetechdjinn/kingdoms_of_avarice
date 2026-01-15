@@ -13,6 +13,7 @@ import * as progressionRepo from '../db/repositories/progressionRepository.js';
 import { initializeProgressionData } from './progressionLoader.js';
 import { initializeDefaultRegenConfigs, startRegenLoops } from './regeneration.js';
 import { colors } from '../utils/colors.js';
+import { checkWebSocketIp } from '../middleware/ipAccess.js';
 
 interface AuthenticatedSocket extends WebSocket {
   playerId: number;
@@ -29,6 +30,34 @@ interface AuthenticatedSocket extends WebSocket {
 const connectedPlayers = new Map<number, AuthenticatedSocket>();
 const gameWorld = new GameWorld();
 let worldInitialized = false;
+
+/**
+ * Get the client IP address from a WebSocket request
+ */
+function getWebSocketClientIp(req: IncomingMessage): string {
+  // Check for forwarded IP (if behind a proxy)
+  const forwarded = req.headers['x-forwarded-for'];
+  if (forwarded) {
+    const forwardedValue = Array.isArray(forwarded) ? forwarded[0] : forwarded;
+    const firstIp = forwardedValue?.split(',')[0]?.trim();
+    if (firstIp) {
+      return firstIp;
+    }
+  }
+  return req.socket.remoteAddress || '127.0.0.1';
+}
+
+/**
+ * Get the emergency token from WebSocket request query string
+ */
+function getWebSocketEmergencyToken(req: IncomingMessage): string | undefined {
+  try {
+    const url = new URL(req.url || '', `http://${req.headers.host || 'localhost'}`);
+    return url.searchParams.get('emergencyToken') || undefined;
+  } catch {
+    return undefined;
+  }
+}
 
 export async function initializeGameWorld(): Promise<void> {
   if (worldInitialized) return;
@@ -51,6 +80,15 @@ export async function initializeGameWorld(): Promise<void> {
 
 export function setupGameSocket(wss: WebSocketServer): void {
   wss.on('connection', async (ws: WebSocket, req: IncomingMessage) => {
+    // Check IP access before processing connection
+    const clientIp = getWebSocketClientIp(req);
+    const emergencyToken = getWebSocketEmergencyToken(req);
+    const ipCheck = await checkWebSocketIp(clientIp, emergencyToken);
+    if (!ipCheck.allowed) {
+      ws.close(1008, ipCheck.message || 'Access denied');
+      return;
+    }
+
     const cookies = parseCookie(req.headers.cookie || '');
     const token = cookies[COOKIE_NAME];
 

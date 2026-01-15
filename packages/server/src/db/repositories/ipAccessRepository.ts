@@ -119,7 +119,7 @@ export async function createEntry(
 ): Promise<IpAccessEntry> {
   const result = await query<DbIpAccess>(
     `INSERT INTO ip_access (entry, entry_type, list_type, reason, created_by, resolved_ips, resolved_at)
-     VALUES ($1, $2, $3, $4, $5, $6, ${resolvedIps ? 'NOW()' : 'NULL'})
+     VALUES ($1, $2, $3, $4, $5, $6, CASE WHEN $6 IS NOT NULL THEN NOW() ELSE NULL END)
      RETURNING *`,
     [
       entry,
