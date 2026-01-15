@@ -95,6 +95,32 @@ export function setupGameSocket(wss: WebSocketServer): void {
       return;
     }
 
+    // Check if this player already has a connected character - kick the old one
+    const existingSocket = connectedPlayers.get(payload.playerId);
+    if (existingSocket) {
+      console.log(`Player ${payload.playerId} already connected as ${existingSocket.username}, kicking old connection`);
+
+      // Notify the old connection they're being replaced
+      const kickMessage: GameMessage = {
+        type: MessageType.SYSTEM,
+        payload: 'You have been disconnected because you logged in from another location.',
+        timestamp: Date.now(),
+      };
+      existingSocket.send(JSON.stringify(kickMessage));
+
+      // Mark as properly exited so we don't broadcast "hung up"
+      existingSocket.properlyExited = true;
+
+      // Clear any exit timer
+      if (existingSocket.exitTimer) {
+        clearTimeout(existingSocket.exitTimer);
+        existingSocket.exitTimer = undefined;
+      }
+
+      // Close the old connection
+      existingSocket.close(1000, 'Logged in from another location');
+    }
+
     // Determine resource type based on class
     let resourceType = ResourceType.NONE;
     try {

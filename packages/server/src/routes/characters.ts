@@ -3,6 +3,8 @@ import { verifyToken, COOKIE_NAME } from './auth.js';
 import { withTransaction } from '../db/index.js';
 import * as characterRepo from '../db/repositories/characterRepository.js';
 import * as progressionRepo from '../db/repositories/progressionRepository.js';
+import * as playerRepo from '../db/repositories/playerRepository.js';
+import * as settingsRepo from '../db/repositories/settingsRepository.js';
 import { CharacterStats } from '@koa/shared';
 
 // Validation constants
@@ -132,6 +134,20 @@ export function setupCharacterRoutes(app: Express): void {
     }
 
     try {
+      // Check character limit
+      const playerMaxChars = await playerRepo.getMaxCharacters(payload.playerId);
+      const globalMaxChars = await settingsRepo.getMaxCharactersPerPlayer();
+      const maxCharacters = playerMaxChars ?? globalMaxChars;
+      const currentCount = await characterRepo.getCharacterCount(payload.playerId);
+
+      if (currentCount >= maxCharacters) {
+        res.status(400).json({
+          success: false,
+          message: `Character limit reached (${maxCharacters} maximum)`,
+        });
+        return;
+      }
+
       // Check if name is already taken
       const nameExists = await characterRepo.characterNameExists(trimmedName);
       if (nameExists) {

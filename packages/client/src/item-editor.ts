@@ -136,6 +136,13 @@ async function checkAuth(): Promise<boolean> {
       usernameEl.textContent = data.username;
     }
 
+    // Show Admin link if user is admin
+    const isAdmin = roles.includes('admin');
+    const adminLink = document.getElementById('nav-admin-link');
+    if (adminLink) {
+      adminLink.style.display = isAdmin ? 'block' : 'none';
+    }
+
     return true;
   } catch (error) {
     console.error('Failed to check auth:', error);

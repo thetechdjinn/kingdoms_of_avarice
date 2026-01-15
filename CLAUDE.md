@@ -106,9 +106,81 @@ DB_PASSWORD=<password>
 DB_HOST=localhost
 DB_PORT=5432
 JWT_SECRET=<secret>
+EMERGENCY_ACCESS_TOKEN=<optional-secret>  # For emergency IP bypass
 ```
 
-**Key tables:** `players`, `rooms`, `room_exits`, `item_templates`, `item_instances`, `character_progression`, `talent_unlocks`
+**Key tables:** `players`, `rooms`, `room_exits`, `item_templates`, `item_instances`, `character_progression`, `talent_unlocks`, `game_settings`, `ip_access`
+
+## Page Flow
+
+After login, users land on the **Hub** page with role-based navigation:
+
+```
+Login → Hub Landing Page
+         ├── Enter Game → Character Select/Create → Play
+         ├── Profile → Change email/password
+         ├── Developer Tools (DEVELOPER+) → Room/Item/Progression editors
+         └── Admin Tools (ADMIN) → Player management, IP control, settings
+```
+
+### Profile Page
+Players can manage their account:
+- View username and character count
+- Update email address
+- Change password (requires current password)
+
+### Character Limits
+- **Global default**: Set in Admin > Settings (default: 3)
+- **Per-player override**: Set in Admin > Users tab for individual players
+- Players cannot create characters beyond their limit
+- Per-player setting of `null` uses global default
+
+## Admin Panel
+
+Access via Hub > Admin Tools (requires ADMIN role). Three tabs:
+
+### Users Tab
+- **Pending Approval**: Approve new player registrations
+- **All Players**: View/edit per-player character limits
+
+### IP Access Tab
+- Add/remove IP access entries
+- Supports two entry types:
+  - **IP Address**: Direct IP matching (e.g., `192.168.1.100`)
+  - **Hostname**: DNS-resolved matching (e.g., `badactor.example.com`)
+- Hostnames are resolved via DNS every 5 minutes
+- Each entry can be set to **allow** or **block**
+
+### Settings Tab
+- **Max Characters Per Player**: Global default character limit
+- **IP Access Mode**: Blocklist (allow all, block specific) or Allowlist (block all, allow specific)
+
+## IP Access Control
+
+The server supports allowlist/blocklist modes for IP access control:
+- **Blocklist mode** (default): Allow all IPs except those explicitly blocked
+- **Allowlist mode**: Block all IPs except those explicitly allowed
+
+**Hostname DNS Resolution:**
+- Hostnames are resolved on creation and every 5 minutes thereafter
+- Both IPv4 (A records) and IPv6 (AAAA records) are resolved
+- Resolved IPs are cached in the `resolved_ips` column
+
+**Always allowed:**
+- Localhost IPs are always bypassed regardless of mode:
+  - `127.0.0.1`, `::1`, `::ffff:127.0.0.1`
+  - Any IP starting with `127.`
+
+**Emergency access:** If locked out, set `EMERGENCY_ACCESS_TOKEN` in .env and pass it via:
+- HTTP Header: `X-Emergency-Token: <token>`
+- Query parameter: `?emergencyToken=<token>`
+- Works for both HTTP requests and WebSocket connections
+
+**Key files:**
+- `packages/server/src/middleware/ipAccess.ts` - IP check middleware
+- `packages/server/src/services/dnsResolver.ts` - DNS resolution service
+- `packages/server/src/db/repositories/ipAccessRepository.ts` - IP access queries
+- `packages/server/src/db/repositories/settingsRepository.ts` - Settings queries
 
 ## Role System
 Six levels: PENDING, PLAYER, MODERATOR, DEVELOPER, SYSOP, ADMIN. JWT tokens in httpOnly cookies.

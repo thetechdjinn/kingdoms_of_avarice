@@ -11,18 +11,22 @@
     <div id="editor-app">
       <nav id="main-nav">
         <div class="nav-brand">Kingdoms of Avarice</div>
+        <div class="nav-links">
+          <a href="/" class="nav-link">Game</a>
+          <div class="nav-dropdown" id="nav-dev-dropdown">
+            <button class="nav-link nav-dropdown-btn active">Developer</button>
+            <div class="nav-dropdown-menu">
+              <a href="/editor.html" class="nav-dropdown-item">Room Editor</a>
+              <a href="/item-editor.html" class="nav-dropdown-item active">Item Editor</a>
+              <a href="/progression-editor.html" class="nav-dropdown-item">Progression Editor</a>
+            </div>
+          </div>
+          <a href="/admin.html" class="nav-link" id="nav-admin-link" style="display: none;">Admin</a>
+        </div>
         <div class="nav-spacer"></div>
         <div class="nav-user-menu">
           <button class="nav-user-btn" id="nav-username">User</button>
           <div class="dropdown-menu" id="user-dropdown">
-            <a href="/" class="dropdown-item">Game</a>
-            <div class="dropdown-section" id="developer-menu">
-              <div class="dropdown-header">Developer</div>
-              <a href="/editor.html" class="dropdown-item indent">Room Editor</a>
-              <a href="/item-editor.html" class="dropdown-item indent active">Item Editor</a>
-              <a href="/progression-editor.html" class="dropdown-item indent">Progression Editor</a>
-            </div>
-            <div class="dropdown-divider"></div>
             <button class="dropdown-item" id="logout-btn">Logout</button>
           </div>
         </div>

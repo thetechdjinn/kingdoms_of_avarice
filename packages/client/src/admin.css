@@ -28,6 +28,9 @@ body {
 }
 
 .nav-brand {
+  display: flex;
+  align-items: center;
+  height: 32px;
   font-size: 1.2rem;
   font-weight: bold;
   text-shadow: 0 0 10px #00ff00;
@@ -38,25 +41,135 @@ body {
   flex: 1;
 }
 
+/* Nav Links */
+.nav-links {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  margin-left: 1.5rem;
+}
+
+/* Reset button and anchor differences within nav */
+.nav-links > * {
+  margin: 0;
+}
+
+.nav-link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 32px;
+  margin: 0;
+  padding: 0 0.75rem;
+  color: #00ff00;
+  text-decoration: none;
+  font-size: 0.9rem;
+  border-radius: 4px;
+  transition: all 0.2s;
+  background: transparent;
+  border: none;
+  font-family: inherit;
+  font-weight: inherit;
+  line-height: 32px;
+  cursor: pointer;
+  box-sizing: border-box;
+}
+
+.nav-link:hover {
+  color: #00ff00;
+  background-color: rgba(0, 255, 0, 0.15);
+}
+
+.nav-link.active {
+  color: #00ff00;
+  background-color: rgba(0, 255, 0, 0.15);
+}
+
+/* Nav Dropdown */
+.nav-dropdown {
+  position: relative;
+  display: flex;
+  align-items: center;
+  height: 32px;
+  margin: 0;
+}
+
+.nav-dropdown-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.nav-dropdown-btn::after {
+  content: '▾';
+  font-size: 0.7rem;
+}
+
+.nav-dropdown-menu {
+  display: none;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  min-width: 160px;
+  background-color: #1a1a1a;
+  border: 1px solid #00ff00;
+  border-radius: 4px;
+  margin-top: 4px;
+  z-index: 1000;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+}
+
+.nav-dropdown:hover .nav-dropdown-menu {
+  display: block;
+}
+
+.nav-dropdown-item {
+  display: block;
+  padding: 0.6rem 1rem;
+  color: #ccc;
+  text-decoration: none;
+  font-size: 0.9rem;
+  transition: all 0.15s;
+}
+
+.nav-dropdown-item:hover {
+  background-color: rgba(0, 255, 0, 0.15);
+  color: #00ff00;
+}
+
+.nav-dropdown-item.active {
+  color: #00ff00;
+  background-color: rgba(0, 255, 0, 0.1);
+}
+
 /* Dropdown Menu System */
 .nav-user-menu {
   position: relative;
+  display: flex;
+  align-items: center;
+  align-self: center;
 }
 
 .nav-user-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 32px;
   background: transparent;
-  border: 1px solid #00ff00;
+  border: none;
   color: #00ff00;
-  padding: 0.5rem 1rem;
+  padding: 0 0.75rem;
   font-family: inherit;
   font-size: 0.9rem;
+  line-height: 32px;
   cursor: pointer;
   border-radius: 4px;
   transition: all 0.2s;
+  box-sizing: border-box;
 }
 
 .nav-user-btn:hover {
-  background-color: rgba(0, 255, 0, 0.1);
+  background-color: rgba(0, 255, 0, 0.15);
 }
 
 .dropdown-menu {
@@ -253,4 +366,291 @@ body {
   color: #666;
   cursor: not-allowed;
   box-shadow: none;
+}
+
+/* ============================================================================
+   TABS
+   ============================================================================ */
+
+.admin-tabs {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 2rem;
+  border-bottom: 1px solid #333;
+  padding-bottom: 1rem;
+}
+
+.admin-tab {
+  background-color: transparent;
+  color: #888;
+  border: 1px solid #333;
+  padding: 0.75rem 1.5rem;
+  font-family: inherit;
+  font-size: 0.9rem;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.admin-tab:hover {
+  border-color: #00ff00;
+  color: #00ff00;
+}
+
+.admin-tab.active {
+  background-color: rgba(0, 255, 0, 0.1);
+  border-color: #00ff00;
+  color: #00ff00;
+}
+
+.tab-content {
+  display: none;
+}
+
+.tab-content.active {
+  display: block;
+}
+
+/* ============================================================================
+   ADMIN TABLES
+   ============================================================================ */
+
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  background-color: #111;
+  margin-bottom: 1rem;
+}
+
+.admin-table th,
+.admin-table td {
+  padding: 0.75rem;
+  text-align: left;
+  border-bottom: 1px solid #333;
+}
+
+.admin-table th {
+  background-color: #1a1a1a;
+  color: #00ff00;
+  font-weight: bold;
+  font-size: 0.9rem;
+}
+
+.admin-table td {
+  color: #ccc;
+}
+
+.admin-table tr:hover td {
+  background-color: #1a1a1a;
+}
+
+.admin-table input[type="number"] {
+  background-color: #000;
+  border: 1px solid #333;
+  color: #00ff00;
+  padding: 0.4rem;
+  font-family: inherit;
+  font-size: 0.9rem;
+}
+
+.admin-table input[type="number"]:focus {
+  outline: none;
+  border-color: #00ff00;
+  box-shadow: 0 0 5px rgba(0, 255, 0, 0.3);
+}
+
+.muted {
+  color: #555;
+  font-style: italic;
+}
+
+/* ============================================================================
+   BADGES
+   ============================================================================ */
+
+.badge {
+  display: inline-block;
+  padding: 0.2rem 0.5rem;
+  font-size: 0.8rem;
+  border-radius: 3px;
+  font-weight: bold;
+}
+
+.badge-ip {
+  background-color: rgba(0, 150, 255, 0.2);
+  color: #00aaff;
+  border: 1px solid #00aaff;
+}
+
+.badge-hostname {
+  background-color: rgba(150, 0, 255, 0.2);
+  color: #aa55ff;
+  border: 1px solid #aa55ff;
+}
+
+.badge-allow {
+  background-color: rgba(0, 255, 0, 0.2);
+  color: #00ff00;
+  border: 1px solid #00ff00;
+}
+
+.badge-block {
+  background-color: rgba(255, 68, 68, 0.2);
+  color: #ff4444;
+  border: 1px solid #ff4444;
+}
+
+/* ============================================================================
+   BUTTONS
+   ============================================================================ */
+
+.btn-primary {
+  background-color: #00ff00;
+  color: #000;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  font-family: inherit;
+  font-size: 0.9rem;
+  font-weight: bold;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.btn-primary:hover {
+  background-color: #00cc00;
+  box-shadow: 0 0 10px #00ff00;
+}
+
+.btn-small {
+  background-color: transparent;
+  color: #00ff00;
+  border: 1px solid #00ff00;
+  padding: 0.4rem 0.75rem;
+  font-family: inherit;
+  font-size: 0.8rem;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.btn-small:hover {
+  background-color: rgba(0, 255, 0, 0.1);
+}
+
+.btn-delete {
+  background-color: transparent;
+  color: #ff4444;
+  border: 1px solid #ff4444;
+  padding: 0.4rem 0.75rem;
+  font-family: inherit;
+  font-size: 0.8rem;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.btn-delete:hover {
+  background-color: rgba(255, 68, 68, 0.1);
+}
+
+/* ============================================================================
+   FORMS
+   ============================================================================ */
+
+.ip-access-form,
+.settings-form {
+  background-color: #111;
+  border: 1px solid #333;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+  border-radius: 4px;
+}
+
+.ip-access-form h3,
+.settings-form h3 {
+  font-size: 1.1rem;
+  color: #00ff00;
+  margin-bottom: 1rem;
+}
+
+.form-row {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.form-group {
+  flex: 1;
+  margin-bottom: 1rem;
+}
+
+.form-group label {
+  display: block;
+  color: #888;
+  font-size: 0.85rem;
+  margin-bottom: 0.4rem;
+}
+
+.form-group input,
+.form-group select {
+  width: 100%;
+  background-color: #000;
+  border: 1px solid #333;
+  color: #00ff00;
+  padding: 0.5rem;
+  font-family: inherit;
+  font-size: 0.9rem;
+}
+
+.form-group input:focus,
+.form-group select:focus {
+  outline: none;
+  border-color: #00ff00;
+  box-shadow: 0 0 5px rgba(0, 255, 0, 0.3);
+}
+
+.form-group select option {
+  background-color: #111;
+  color: #00ff00;
+}
+
+.setting-row {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.setting-row input,
+.setting-row select {
+  flex: 1;
+}
+
+.setting-desc {
+  font-size: 0.8rem;
+  color: #666;
+  margin-top: 0.4rem;
+}
+
+.message {
+  margin-top: 1rem;
+  font-size: 0.9rem;
+}
+
+.message.success {
+  color: #00ff00;
+}
+
+.message.error {
+  color: #ff4444;
+}
+
+/* Make the admin content wider for tables */
+#admin-content {
+  max-width: 1000px;
+}
+
+/* Section spacing */
+#admin-panel section {
+  margin-bottom: 2rem;
 }

@@ -170,6 +170,14 @@ export async function deleteCharacter(characterId: number): Promise<boolean> {
   return (result.rowCount ?? 0) > 0;
 }
 
+export async function getCharacterCount(playerId: number): Promise<number> {
+  const result = await query<{ count: string }>(
+    'SELECT COUNT(*) FROM characters WHERE player_id = $1',
+    [playerId]
+  );
+  return parseInt(result.rows[0].count);
+}
+
 export function toSharedCharacter(dbChar: DbCharacter): Character {
   return {
     id: dbChar.id,

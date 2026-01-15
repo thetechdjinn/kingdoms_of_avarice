@@ -6,6 +6,7 @@ export interface Player {
   username: string;
   password_hash: string;
   email: string | null;
+  max_characters: number | null;  // NULL = use global default
   created_at: Date;
   last_login: Date | null;
   brief_mode: boolean;
@@ -97,4 +98,50 @@ export async function setCurrentRoomId(playerId: number, roomId: number): Promis
     'UPDATE players SET current_room_id = $1 WHERE id = $2',
     [roomId, playerId]
   );
+}
+
+export async function updateEmail(playerId: number, email: string | null): Promise<void> {
+  await query(
+    'UPDATE players SET email = $1 WHERE id = $2',
+    [email, playerId]
+  );
+}
+
+export async function updatePassword(playerId: number, newPassword: string): Promise<void> {
+  const passwordHash = await bcrypt.hash(newPassword, 10);
+  await query(
+    'UPDATE players SET password_hash = $1 WHERE id = $2',
+    [passwordHash, playerId]
+  );
+}
+
+export async function getMaxCharacters(playerId: number): Promise<number | null> {
+  const result = await query<{ max_characters: number | null }>(
+    'SELECT max_characters FROM players WHERE id = $1',
+    [playerId]
+  );
+  return result.rows[0]?.max_characters ?? null;
+}
+
+export async function setMaxCharacters(playerId: number, maxCharacters: number | null): Promise<void> {
+  await query(
+    'UPDATE players SET max_characters = $1 WHERE id = $2',
+    [maxCharacters, playerId]
+  );
+}
+
+export interface PlayerSummary {
+  id: number;
+  username: string;
+  email: string | null;
+  max_characters: number | null;
+  created_at: Date;
+  last_login: Date | null;
+}
+
+export async function getAllPlayers(): Promise<PlayerSummary[]> {
+  const result = await query<PlayerSummary>(
+    'SELECT id, username, email, max_characters, created_at, last_login FROM players ORDER BY username'
+  );
+  return result.rows;
 }

@@ -20,9 +20,13 @@ import { setupRoomRoutes } from './routes/rooms.js';
 import { setupItemRoutes } from './routes/items.js';
 import { setupProgressionRoutes } from './routes/progression.js';
 import { setupCharacterRoutes } from './routes/characters.js';
+import { setupProfileRoutes } from './routes/profile.js';
+import { setupAdminRoutes } from './routes/admin.js';
 import { setupGameSocket, initializeGameWorld } from './game/socket.js';
 import { testConnection } from './db/index.js';
 import { runMigrations, seedInitialData } from './db/migrate.js';
+import { ipAccessMiddleware } from './middleware/ipAccess.js';
+import { startDnsResolver } from './services/dnsResolver.js';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -30,6 +34,9 @@ const PORT = process.env.PORT || 3001;
 // Limit JSON payload size to prevent DOS attacks
 app.use(express.json({ limit: '100kb' }));
 app.use(cookieParser());
+
+// IP access control middleware (runs on all API requests)
+app.use('/api', ipAccessMiddleware);
 
 // Serve documentation files
 const docsPath = join(__dirname, '..', '..', '..', 'Documentation');
@@ -40,6 +47,8 @@ setupRoomRoutes(app);
 setupItemRoutes(app);
 setupProgressionRoutes(app);
 setupCharacterRoutes(app);
+setupProfileRoutes(app);
+setupAdminRoutes(app);
 
 const server = createServer(app);
 
@@ -54,6 +63,8 @@ async function start() {
     await seedInitialData();
     setDatabaseMode(true);
     await initializeGameWorld();
+    // Start DNS resolver for hostname-based IP access rules
+    startDnsResolver();
   } else {
     console.warn('Running without database - using in-memory storage');
     setDatabaseMode(false);
