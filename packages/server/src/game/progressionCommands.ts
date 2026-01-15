@@ -743,12 +743,22 @@ async function handleEditTalent(args: string[]): Promise<CommandResponse> {
       case 'class':
         updates = { class_restriction: value === 'none' ? null : value };
         break;
-      case 'cost':
-        updates = { essence_cost: parseInt(value) };
+      case 'cost': {
+        const costValue = Number(value);
+        if (!Number.isInteger(costValue) || costValue < 0) {
+          return { type: MessageType.ERROR, message: 'Essence cost must be a non-negative integer' };
+        }
+        updates = { essence_cost: costValue };
         break;
-      case 'level':
-        updates = { prerequisite_level: parseInt(value) };
+      }
+      case 'level': {
+        const levelValue = Number(value);
+        if (!Number.isInteger(levelValue) || levelValue < 1) {
+          return { type: MessageType.ERROR, message: 'Prerequisite level must be a positive integer' };
+        }
+        updates = { prerequisite_level: levelValue };
         break;
+      }
       case 'prereqs':
         updates = { prerequisite_talents: value.split(',').map(t => t.trim()) };
         break;

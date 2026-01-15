@@ -745,16 +745,30 @@ async function handleRaceSubmit(e: Event): Promise<void> {
 async function handleAbilitySubmit(e: Event): Promise<void> {
   e.preventDefault();
 
-  const abilityId = (document.getElementById('ability-id') as HTMLInputElement).value;
+  const abilityIdEl = document.getElementById('ability-id') as HTMLInputElement | null;
+  const abilityNameEl = document.getElementById('ability-name') as HTMLInputElement | null;
+  const abilityTypeEl = document.getElementById('ability-type') as HTMLSelectElement | null;
+  const abilityDescEl = document.getElementById('ability-description') as HTMLTextAreaElement | null;
+  const abilityResourceTypeEl = document.getElementById('ability-resource-type') as HTMLSelectElement | null;
+  const abilityCostEl = document.getElementById('ability-cost') as HTMLInputElement | null;
+  const abilityCooldownEl = document.getElementById('ability-cooldown') as HTMLInputElement | null;
+  const abilityTagsEl = document.getElementById('ability-tags') as HTMLInputElement | null;
+
+  if (!abilityIdEl || !abilityNameEl || !abilityTypeEl) {
+    alert('Required form elements are missing');
+    return;
+  }
+
+  const abilityId = abilityIdEl.value;
   const data: Partial<AbilityDefinition> = {
     ability_id: abilityId,
-    display_name: (document.getElementById('ability-name') as HTMLInputElement).value,
-    ability_type: (document.getElementById('ability-type') as HTMLSelectElement).value as AbilityDefinition['ability_type'],
-    description: (document.getElementById('ability-description') as HTMLTextAreaElement).value || undefined,
-    resource_type: (document.getElementById('ability-resource-type') as HTMLSelectElement).value || undefined,
-    resource_cost: Number((document.getElementById('ability-cost') as HTMLInputElement).value) || 0,
-    cooldown: Number((document.getElementById('ability-cooldown') as HTMLInputElement).value) || 0,
-    emitted_tags: (document.getElementById('ability-tags') as HTMLInputElement).value.split(',').map(t => t.trim()).filter(Boolean),
+    display_name: abilityNameEl.value,
+    ability_type: abilityTypeEl.value as AbilityDefinition['ability_type'],
+    description: abilityDescEl?.value || undefined,
+    resource_type: abilityResourceTypeEl?.value || undefined,
+    resource_cost: Number(abilityCostEl?.value) || 0,
+    cooldown: Number(abilityCooldownEl?.value) || 0,
+    emitted_tags: abilityTagsEl?.value.split(',').map(t => t.trim()).filter(Boolean) ?? [],
   };
 
   try {
@@ -784,16 +798,30 @@ async function handleAbilitySubmit(e: Event): Promise<void> {
 async function handleTalentSubmit(e: Event): Promise<void> {
   e.preventDefault();
 
-  const talentId = (document.getElementById('talent-id') as HTMLInputElement).value;
+  const talentIdEl = document.getElementById('talent-id') as HTMLInputElement | null;
+  const talentNameEl = document.getElementById('talent-name') as HTMLInputElement | null;
+  const talentDescEl = document.getElementById('talent-description') as HTMLTextAreaElement | null;
+  const talentClassEl = document.getElementById('talent-class') as HTMLSelectElement | null;
+  const talentCostEl = document.getElementById('talent-cost') as HTMLInputElement | null;
+  const talentLevelEl = document.getElementById('talent-level') as HTMLInputElement | null;
+  const talentPrereqsEl = document.getElementById('talent-prereqs') as HTMLInputElement | null;
+  const talentGrantsEl = document.getElementById('talent-grants') as HTMLSelectElement | null;
+
+  if (!talentIdEl || !talentNameEl) {
+    alert('Required form elements are missing');
+    return;
+  }
+
+  const talentId = talentIdEl.value;
   const data: Partial<TalentDefinition> = {
     talent_id: talentId,
-    display_name: (document.getElementById('talent-name') as HTMLInputElement).value,
-    description: (document.getElementById('talent-description') as HTMLTextAreaElement).value || undefined,
-    class_restriction: (document.getElementById('talent-class') as HTMLSelectElement).value || undefined,
-    essence_cost: Number((document.getElementById('talent-cost') as HTMLInputElement).value) || 100,
-    prerequisite_level: Number((document.getElementById('talent-level') as HTMLInputElement).value) || 1,
-    prerequisite_talents: (document.getElementById('talent-prereqs') as HTMLInputElement).value.split(',').map(t => t.trim()).filter(Boolean),
-    grants_ability: (document.getElementById('talent-grants') as HTMLSelectElement).value || undefined,
+    display_name: talentNameEl.value,
+    description: talentDescEl?.value || undefined,
+    class_restriction: talentClassEl?.value || undefined,
+    essence_cost: Number(talentCostEl?.value) || 100,
+    prerequisite_level: Number(talentLevelEl?.value) || 1,
+    prerequisite_talents: talentPrereqsEl?.value.split(',').map(t => t.trim()).filter(Boolean) ?? [],
+    grants_ability: talentGrantsEl?.value || undefined,
   };
 
   if (data.prerequisite_talents?.length === 0) delete data.prerequisite_talents;
@@ -825,13 +853,24 @@ async function handleTalentSubmit(e: Event): Promise<void> {
 async function handleEventSubmit(e: Event): Promise<void> {
   e.preventDefault();
 
-  const eventId = (document.getElementById('event-id') as HTMLInputElement).value;
+  const eventIdEl = document.getElementById('event-id') as HTMLInputElement | null;
+  const eventNameEl = document.getElementById('event-name') as HTMLInputElement | null;
+  const eventEssenceEl = document.getElementById('event-essence') as HTMLInputElement | null;
+  const eventXpEl = document.getElementById('event-xp') as HTMLInputElement | null;
+  const eventTagsEl = document.getElementById('event-tags') as HTMLInputElement | null;
+
+  if (!eventIdEl) {
+    alert('Required form elements are missing');
+    return;
+  }
+
+  const eventId = eventIdEl.value;
   const data: Partial<GameEvent> = {
     event_id: eventId,
-    display_name: (document.getElementById('event-name') as HTMLInputElement).value || undefined,
-    base_essence_value: Number((document.getElementById('event-essence') as HTMLInputElement).value) || 0,
-    base_xp_value: Number((document.getElementById('event-xp') as HTMLInputElement).value) || 0,
-    emitted_tags: (document.getElementById('event-tags') as HTMLInputElement).value.split(',').map(t => t.trim()).filter(Boolean),
+    display_name: eventNameEl?.value || undefined,
+    base_essence_value: Number(eventEssenceEl?.value) || 0,
+    base_xp_value: Number(eventXpEl?.value) || 0,
+    emitted_tags: eventTagsEl?.value.split(',').map(t => t.trim()).filter(Boolean) ?? [],
   };
 
   try {
@@ -903,9 +942,18 @@ async function handleDelete(type: string): Promise<void> {
 async function handleAddClassAbility(): Promise<void> {
   if (!selectedId || selectedType !== 'class') return;
 
-  const abilityId = (document.getElementById('add-class-ability-select') as HTMLSelectElement).value;
-  const level = Number((document.getElementById('add-class-ability-level') as HTMLInputElement).value) || 1;
-  const autoLearn = (document.getElementById('add-class-ability-auto') as HTMLInputElement).checked;
+  const abilitySelectEl = document.getElementById('add-class-ability-select') as HTMLSelectElement | null;
+  const levelEl = document.getElementById('add-class-ability-level') as HTMLInputElement | null;
+  const autoLearnEl = document.getElementById('add-class-ability-auto') as HTMLInputElement | null;
+
+  if (!abilitySelectEl) {
+    alert('Required form elements are missing');
+    return;
+  }
+
+  const abilityId = abilitySelectEl.value;
+  const level = Number(levelEl?.value) || 1;
+  const autoLearn = autoLearnEl?.checked ?? false;
 
   if (!abilityId) {
     alert('Please select an ability');

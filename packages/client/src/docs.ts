@@ -110,36 +110,58 @@
     html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
     html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
     
-    // Blockquotes
-    html = html.replace(/^&gt; (.+)$/gm, '<blockquote>$1</blockquote>');
-    
     // Horizontal rules
     html = html.replace(/^---$/gm, '<hr>');
-    
+
     // Links - escape quotes in href to prevent attribute injection
     html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_, text, url) => {
       const safeUrl = url.replace(/"/g, '&quot;');
       return '<a href="' + safeUrl + '">' + text + '</a>';
     });
-    
-    // Process lines for lists
+
+    // Process lines for blockquotes and lists
     const htmlLines = html.split('\n');
     let inList = false;
+    let inBlockquote = false;
     const finalLines: string[] = [];
-    
+
     for (let i = 0; i < htmlLines.length; i++) {
       const line = htmlLines[i];
-      
+
+      // Check for blockquote lines (escaped > from HTML escaping)
+      const blockquoteMatch = line.match(/^&gt; (.*)$/);
+
       // Check for list items
       const listMatch = line.match(/^[-*] (.+)$/);
-      
-      if (listMatch) {
+
+      if (blockquoteMatch) {
+        // Close list if open
+        if (inList) {
+          finalLines.push('</ul>');
+          inList = false;
+        }
+        if (!inBlockquote) {
+          finalLines.push('<blockquote>');
+          inBlockquote = true;
+        }
+        finalLines.push(blockquoteMatch[1] || '');
+      } else if (listMatch) {
+        // Close blockquote if open
+        if (inBlockquote) {
+          finalLines.push('</blockquote>');
+          inBlockquote = false;
+        }
         if (!inList) {
           finalLines.push('<ul>');
           inList = true;
         }
         finalLines.push('<li>' + listMatch[1] + '</li>');
       } else {
+        // Close any open blocks
+        if (inBlockquote) {
+          finalLines.push('</blockquote>');
+          inBlockquote = false;
+        }
         if (inList) {
           finalLines.push('</ul>');
           inList = false;
@@ -147,6 +169,8 @@
         finalLines.push(line);
       }
     }
+    // Close any remaining open blocks
+    if (inBlockquote) finalLines.push('</blockquote>');
     if (inList) finalLines.push('</ul>');
     html = finalLines.join('\n');
     

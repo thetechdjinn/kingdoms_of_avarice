@@ -17,16 +17,20 @@ CREATE TABLE IF NOT EXISTS race_definitions (
     
     -- Special traits/abilities granted by race
     traits JSONB DEFAULT '[]',
-    
+
     -- Restrictions
     allowed_classes JSONB DEFAULT '[]',  -- Empty = all classes allowed
-    
+
     -- Display
     playable BOOLEAN DEFAULT TRUE,
-    
+
     -- Metadata
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+    -- Ensure JSONB arrays are actually arrays
+    CONSTRAINT traits_is_array CHECK (jsonb_typeof(traits) = 'array'),
+    CONSTRAINT allowed_classes_is_array CHECK (jsonb_typeof(allowed_classes) = 'array')
 );
 
 -- ============================================================================
@@ -152,15 +156,18 @@ CREATE TABLE IF NOT EXISTS talent_definitions (
     
     -- Effects
     effect_modifiers JSONB DEFAULT '{}',
-    grants_ability VARCHAR(50),  -- ability_id if this talent grants an ability
-    
+    grants_ability VARCHAR(50) REFERENCES ability_definitions(ability_id) ON DELETE SET NULL,
+
     -- Tree positioning (for UI)
     tree_tier INTEGER DEFAULT 1,
     tree_position INTEGER DEFAULT 0,
-    
+
     -- Metadata
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+    -- Ensure JSONB arrays are actually arrays
+    CONSTRAINT prerequisite_talents_is_array CHECK (jsonb_typeof(prerequisite_talents) = 'array')
 );
 
 -- ============================================================================
@@ -219,11 +226,11 @@ CREATE TABLE IF NOT EXISTS character_progression (
 CREATE TABLE IF NOT EXISTS character_activity_tracker (
     id SERIAL PRIMARY KEY,
     character_id INTEGER NOT NULL REFERENCES characters(id) ON DELETE CASCADE,
-    event_id VARCHAR(50) NOT NULL,
+    event_id VARCHAR(50) NOT NULL REFERENCES game_events(event_id) ON DELETE CASCADE,
     count INTEGER DEFAULT 0,
     last_reset_level INTEGER DEFAULT 1,
     last_reset_region VARCHAR(50),
-    
+
     UNIQUE(character_id, event_id)
 );
 

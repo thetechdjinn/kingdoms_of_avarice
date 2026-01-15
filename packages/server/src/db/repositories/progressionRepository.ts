@@ -439,7 +439,7 @@ export async function createAbility(abilityDef: AbilityDefinition): Promise<Abil
       abilityDef.display_name,
       abilityDef.description ?? null,
       abilityDef.ability_type,
-      JSON.stringify(abilityDef.emitted_tags ?? []),
+      abilityDef.emitted_tags ?? [],
       abilityDef.resource_cost ?? 0,
       abilityDef.resource_type ?? null,
       abilityDef.cooldown ?? 0,
@@ -469,7 +469,7 @@ export async function updateAbility(abilityId: string, updates: Partial<AbilityD
   }
   if (updates.emitted_tags !== undefined) {
     setClauses.push(`emitted_tags = $${paramIndex++}`);
-    values.push(JSON.stringify(updates.emitted_tags));
+    values.push(updates.emitted_tags);
   }
   if (updates.resource_cost !== undefined) {
     setClauses.push(`resource_cost = $${paramIndex++}`);
