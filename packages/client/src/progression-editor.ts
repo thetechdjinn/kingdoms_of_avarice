@@ -88,7 +88,7 @@ async function checkAuth(): Promise<boolean> {
 
 async function handleLogout(): Promise<void> {
   try {
-    await fetch('/api/auth/logout', { method: 'POST' });
+    await fetch('/api/logout', { method: 'POST' });
     window.location.href = '/';
   } catch (error) {
     console.error('Logout failed:', error);
@@ -1049,7 +1049,8 @@ async function handleRemoveClassAbility(abilityId: string): Promise<void> {
 // UTILITIES
 // ============================================================================
 
-function escapeHtml(text: string): string {
+function escapeHtml(text: string | null | undefined): string {
+  if (text == null) return '';
   const div = document.createElement('div');
   div.textContent = text;
   return div.innerHTML;

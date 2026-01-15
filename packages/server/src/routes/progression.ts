@@ -666,8 +666,8 @@ export function setupProgressionRoutes(app: Express): void {
     try {
       const { event_id, display_name, emitted_tags, base_essence_value, base_xp_value } = req.body;
 
-      if (!event_id || !emitted_tags || base_essence_value === undefined) {
-        res.status(400).json({ success: false, message: 'event_id, emitted_tags, and base_essence_value are required' });
+      if (!event_id || !Array.isArray(emitted_tags) || emitted_tags.length === 0 || base_essence_value === undefined) {
+        res.status(400).json({ success: false, message: 'event_id, emitted_tags (non-empty array), and base_essence_value are required' });
         return;
       }
 
@@ -724,9 +724,9 @@ export function setupProgressionRoutes(app: Express): void {
         return;
       }
 
-      // Validate emitted_tags if provided
-      if (emitted_tags !== undefined && (!Array.isArray(emitted_tags) || emitted_tags.length > MAX_ARRAY_LENGTH)) {
-        res.status(400).json({ success: false, message: `emitted_tags must be an array with at most ${MAX_ARRAY_LENGTH} items` });
+      // Validate emitted_tags if provided (must be non-empty since events require tags)
+      if (emitted_tags !== undefined && (!Array.isArray(emitted_tags) || emitted_tags.length === 0 || emitted_tags.length > MAX_ARRAY_LENGTH)) {
+        res.status(400).json({ success: false, message: `emitted_tags must be a non-empty array with at most ${MAX_ARRAY_LENGTH} items` });
         return;
       }
 

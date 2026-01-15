@@ -699,13 +699,17 @@ function handleHurt(
   let playerNameArgs: string[] = [];
 
   if (args.length >= 1) {
-    const parsedAmount = parseInt(args[0]);
-    if (!isNaN(parsedAmount) && parsedAmount > 0) {
-      // First arg is a valid amount
-      amount = parsedAmount;
-      playerNameArgs = args.slice(1);
+    // Only treat as amount if the first arg is purely numeric
+    if (/^\d+$/.test(args[0])) {
+      const parsedAmount = parseInt(args[0]);
+      if (parsedAmount > 0) {
+        amount = parsedAmount;
+        playerNameArgs = args.slice(1);
+      } else {
+        playerNameArgs = args;
+      }
     } else {
-      // First arg is not a number, treat all args as player name
+      // First arg is not purely numeric, treat all args as player name
       playerNameArgs = args;
     }
   }
@@ -762,13 +766,17 @@ function handleDrain(
   let playerNameArgs: string[] = [];
 
   if (args.length >= 1) {
-    const parsedAmount = parseInt(args[0]);
-    if (!isNaN(parsedAmount) && parsedAmount > 0) {
-      // First arg is a valid amount
-      amount = parsedAmount;
-      playerNameArgs = args.slice(1);
+    // Only treat as amount if the first arg is purely numeric
+    if (/^\d+$/.test(args[0])) {
+      const parsedAmount = parseInt(args[0]);
+      if (parsedAmount > 0) {
+        amount = parsedAmount;
+        playerNameArgs = args.slice(1);
+      } else {
+        playerNameArgs = args;
+      }
     } else {
-      // First arg is not a number, treat all args as player name
+      // First arg is not purely numeric, treat all args as player name
       playerNameArgs = args;
     }
   }

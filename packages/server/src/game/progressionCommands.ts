@@ -482,7 +482,7 @@ async function handleAbilityInfo(args: string[]): Promise<CommandResponse> {
       `  ${colors.boldCyan('Name:')} ${ability.display_name}`,
       `  ${colors.boldCyan('Type:')} ${ability.ability_type}`,
       `  ${colors.boldCyan('Description:')} ${ability.description || 'none'}`,
-      `  ${colors.boldCyan('Resource Cost:')} ${ability.resource_cost || 0} ${ability.resource_type || ''}`,
+      `  ${colors.boldCyan('Resource Cost:')} ${ability.resource_cost || 0}${ability.resource_type ? ' ' + ability.resource_type : ''}`,
       `  ${colors.boldCyan('Cooldown:')} ${ability.cooldown || 0}s`,
       `  ${colors.boldCyan('Tags:')} ${ability.emitted_tags?.join(', ') || 'none'}`,
       `  ${colors.boldCyan('Effect Data:')} ${ability.effect_data ? JSON.stringify(ability.effect_data) : 'none'}`,
