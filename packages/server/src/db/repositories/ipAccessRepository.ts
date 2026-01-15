@@ -152,11 +152,11 @@ export async function deleteEntry(id: number): Promise<boolean> {
 }
 
 /**
- * Check if an entry already exists
+ * Check if an entry already exists (case-insensitive for hostnames)
  */
 export async function entryExists(entry: string): Promise<boolean> {
   const result = await query<{ exists: boolean }>(
-    'SELECT EXISTS(SELECT 1 FROM ip_access WHERE entry = $1) as exists',
+    'SELECT EXISTS(SELECT 1 FROM ip_access WHERE LOWER(entry) = LOWER($1)) as exists',
     [entry]
   );
   return result.rows[0].exists;

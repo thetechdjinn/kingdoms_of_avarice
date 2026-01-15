@@ -71,8 +71,11 @@ export function setupProfileRoutes(app: Express): void {
         return;
       }
 
-      // Basic email validation
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      // Email validation: local@domain.tld format with reasonable constraints
+      // - Local part: at least 1 char, no spaces or @
+      // - Domain: at least 1 char, no spaces or @
+      // - TLD: at least 2 chars (no single-letter TLDs exist)
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
       if (!emailRegex.test(trimmedEmail)) {
         res.status(400).json({ success: false, message: 'Invalid email format' });
         return;

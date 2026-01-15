@@ -1,4 +1,5 @@
 import { Express, Request, Response } from 'express';
+import net from 'net';
 import { requireAdmin } from '../middleware/auth.js';
 import * as settingsRepo from '../db/repositories/settingsRepository.js';
 import * as ipAccessRepo from '../db/repositories/ipAccessRepository.js';
@@ -71,6 +72,16 @@ export function setupAdminRoutes(app: Express): void {
       return;
     }
 
+    // Normalize entry: trim whitespace, lowercase for hostnames
+    const normalizedEntry = entryType === 'hostname'
+      ? entry.trim().toLowerCase()
+      : entry.trim();
+
+    if (!normalizedEntry) {
+      res.status(400).json({ success: false, message: 'Entry cannot be empty' });
+      return;
+    }
+
     if (entryType !== 'ip' && entryType !== 'hostname') {
       res.status(400).json({ success: false, message: 'Entry type must be "ip" or "hostname"' });
       return;
@@ -81,22 +92,18 @@ export function setupAdminRoutes(app: Express): void {
       return;
     }
 
-    // Validate IP format if entryType is 'ip'
+    // Validate IP format using Node.js net module (handles both IPv4 and IPv6)
     if (entryType === 'ip') {
-      // IPv4 validation with proper octet range checking (0-255)
-      const ipv4Regex = /^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
-      // IPv6 validation (simplified - covers most common formats)
-      const ipv6Regex = /^(?:[0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}$|^::(?:[0-9a-fA-F]{1,4}:){0,6}[0-9a-fA-F]{1,4}$|^(?:[0-9a-fA-F]{1,4}:){1,7}:$|^(?:[0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}$/;
-
-      if (!ipv4Regex.test(entry) && !ipv6Regex.test(entry)) {
+      const ipVersion = net.isIP(normalizedEntry);
+      if (ipVersion === 0) {
         res.status(400).json({ success: false, message: 'Invalid IP address format' });
         return;
       }
     }
 
     try {
-      // Check if entry already exists
-      const exists = await ipAccessRepo.entryExists(entry);
+      // Check if entry already exists (case-insensitive for hostnames)
+      const exists = await ipAccessRepo.entryExists(normalizedEntry);
       if (exists) {
         res.status(400).json({ success: false, message: 'Entry already exists' });
         return;
@@ -105,7 +112,7 @@ export function setupAdminRoutes(app: Express): void {
       // If hostname, resolve it immediately
       let resolvedIps: string[] | undefined;
       if (entryType === 'hostname') {
-        resolvedIps = await resolveHostnameImmediate(entry);
+        resolvedIps = await resolveHostnameImmediate(normalizedEntry);
         if (resolvedIps.length === 0) {
           res.status(400).json({ success: false, message: 'Could not resolve hostname' });
           return;
@@ -113,7 +120,7 @@ export function setupAdminRoutes(app: Express): void {
       }
 
       const newEntry = await ipAccessRepo.createEntry(
-        entry.trim(),
+        normalizedEntry,
         entryType,
         listType,
         reason || undefined,
