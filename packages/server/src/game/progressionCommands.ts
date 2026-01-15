@@ -559,6 +559,9 @@ async function handleEditAbility(args: string[]): Promise<CommandResponse> {
         if (isNaN(costVal)) {
           return { type: MessageType.ERROR, message: 'Invalid cost value. Must be a number.' };
         }
+        if (costVal < 0) {
+          return { type: MessageType.ERROR, message: 'Invalid cost value. Must be non-negative.' };
+        }
         updates = { resource_cost: costVal };
         break;
       }
@@ -569,6 +572,9 @@ async function handleEditAbility(args: string[]): Promise<CommandResponse> {
         const cooldownVal = parseInt(value);
         if (isNaN(cooldownVal)) {
           return { type: MessageType.ERROR, message: 'Invalid cooldown value. Must be a number.' };
+        }
+        if (cooldownVal < 0) {
+          return { type: MessageType.ERROR, message: 'Cooldown value must be non-negative.' };
         }
         updates = { cooldown: cooldownVal };
         break;
@@ -1041,7 +1047,7 @@ async function handleRemoveClassAbility(args: string[]): Promise<CommandResponse
 
     return {
       type: MessageType.SYSTEM,
-      message: `${colors.boldRed('Class ability removed:')} ${args[1]} from ${args[0]}`,
+      message: `${colors.boldGreen('Class ability removed:')} ${args[1]} from ${args[0]}`,
     };
   } catch (error) {
     return { type: MessageType.ERROR, message: `Failed to remove class ability: ${error}` };

@@ -95,30 +95,6 @@ async function handleLogout(): Promise<void> {
   }
 }
 
-function showLoginRequired(): void {
-  const main = document.getElementById('editor-app');
-  if (main) {
-    main.innerHTML = `
-      <div class="auth-message">
-        <h2>Login Required</h2>
-        <p>Please <a href="/">login</a> to access the progression editor.</p>
-      </div>
-    `;
-  }
-}
-
-function showAccessDenied(): void {
-  const main = document.getElementById('editor-app');
-  if (main) {
-    main.innerHTML = `
-      <div class="auth-message">
-        <h2>Access Denied</h2>
-        <p>You need Developer or Admin role to access this editor.</p>
-      </div>
-    `;
-  }
-}
-
 // ============================================================================
 // EVENT LISTENERS
 // ============================================================================
@@ -605,7 +581,7 @@ function selectEvent(eventId: string): void {
   (document.getElementById('event-form-title') as HTMLElement).textContent = 'Edit Game Event';
   (document.getElementById('event-id') as HTMLInputElement).value = event.event_id;
   (document.getElementById('event-id') as HTMLInputElement).readOnly = true;
-  (document.getElementById('event-name') as HTMLInputElement).value = event.display_name || '';
+  (document.getElementById('event-name') as HTMLInputElement).value = event.display_name || event.event_id;
   (document.getElementById('event-essence') as HTMLInputElement).value = String(event.base_essence_value);
   (document.getElementById('event-xp') as HTMLInputElement).value = String(event.base_xp_value || 0);
   (document.getElementById('event-tags') as HTMLInputElement).value = event.emitted_tags.join(', ');

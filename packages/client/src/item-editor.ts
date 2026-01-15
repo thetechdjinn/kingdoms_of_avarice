@@ -154,29 +154,6 @@ async function handleLogout(): Promise<void> {
   window.location.href = '/';
 }
 
-function showLoginRequired(): void {
-  const app = document.getElementById('editor-app')!;
-  app.innerHTML = `
-    <div class="auth-message">
-      <h1>Authentication Required</h1>
-      <p>You must be logged in to access the Item Editor.</p>
-      <a href="/" class="btn-primary">Go to Login</a>
-    </div>
-  `;
-}
-
-function showAccessDenied(): void {
-  const app = document.getElementById('editor-app')!;
-  app.innerHTML = `
-    <div class="auth-message">
-      <h1>Access Denied</h1>
-      <p>You do not have permission to access the Item Editor.</p>
-      <p>Developer or Admin role is required.</p>
-      <a href="/" class="btn-primary">Back to Game</a>
-    </div>
-  `;
-}
-
 // ============================================================================
 // Data Fetching
 // ============================================================================
