@@ -26,7 +26,8 @@ import { runMigrations, seedInitialData } from './db/migrate.js';
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-app.use(express.json());
+// Limit JSON payload size to prevent DOS attacks
+app.use(express.json({ limit: '100kb' }));
 app.use(cookieParser());
 
 // Serve documentation files

@@ -13,6 +13,9 @@ const regenConfigs: Map<string, ResourceRegenConfig> = new Map();
 // Active timers for each resource
 const regenTimers: Map<string, NodeJS.Timeout> = new Map();
 
+// Shutdown flag to prevent race conditions during timer cleanup
+let isShuttingDown = false;
+
 // References to connected players and sendVitals function (set during initialization)
 // Using generic types to allow any socket that implements RegenCapableSocket
 let connectedPlayersRef: Map<number, RegenCapableSocket> | null = null;
@@ -91,11 +94,17 @@ function setResourceValue(vitals: VitalsData, resourceKey: string, value: number
  * Process regeneration tick for a specific resource
  */
 function processRegenTick(config: ResourceRegenConfig): void {
-  if (!connectedPlayersRef || !sendVitalsFn) {
+  // Check shutdown flag to prevent race conditions
+  if (isShuttingDown || !connectedPlayersRef || !sendVitalsFn) {
     return;
   }
 
   for (const [, socket] of connectedPlayersRef) {
+    // Skip sockets without proper regenState (safety check)
+    if (!socket.regenState) {
+      continue;
+    }
+
     const values = getResourceValues(socket.vitals, config.resourceKey);
     if (!values) {
       continue; // Resource not applicable to this player
@@ -143,6 +152,9 @@ export function startRegenLoops<T extends RegenCapableSocket>(
   connectedPlayers: Map<number, T>,
   sendVitals: (socket: T) => void
 ): void {
+  // Clear shutdown flag when starting
+  isShuttingDown = false;
+
   // Store references with type assertions (safe because T extends RegenCapableSocket)
   connectedPlayersRef = connectedPlayers as Map<number, RegenCapableSocket>;
   sendVitalsFn = sendVitals as (socket: RegenCapableSocket) => void;
@@ -169,6 +181,9 @@ export function startRegenLoops<T extends RegenCapableSocket>(
  * Stop all regeneration loops
  */
 export function stopRegenLoops(): void {
+  // Set shutdown flag first to prevent race conditions
+  isShuttingDown = true;
+
   for (const [resourceKey, timer] of regenTimers) {
     clearInterval(timer);
     console.log(`[Regen] Stopped ${resourceKey} regeneration loop`);

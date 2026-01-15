@@ -180,15 +180,17 @@
     if (loading) loading.style.display = 'block';
     if (content) content.innerHTML = '';
 
-    // Validate filename to prevent path traversal
-    const safeFilename = filename.replace(/\.\./g, '').replace(/[\/\\]/g, '');
-    if (!safeFilename || safeFilename !== filename) {
+    // Validate filename using whitelist approach - only allow safe characters
+    // Must be alphanumeric, underscores, hyphens, dots (for extension), and must end in .md
+    const SAFE_FILENAME_PATTERN = /^[a-zA-Z0-9_-]+\.md$/;
+    if (!filename || !SAFE_FILENAME_PATTERN.test(filename)) {
       if (loading) loading.style.display = 'none';
       if (content) {
         content.innerHTML = '<h1>Invalid Request</h1><p>The requested document path is not valid.</p>';
       }
       return;
     }
+    const safeFilename = filename;
 
     try {
       const response = await fetch('/docs/' + safeFilename);

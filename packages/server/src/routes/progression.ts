@@ -3,6 +3,12 @@ import * as progressionRepo from '../db/repositories/progressionRepository.js';
 import { requireDeveloper } from '../middleware/auth.js';
 import { AbilityType } from '@koa/shared';
 
+// Validation constants
+const MAX_DISPLAY_NAME_LENGTH = 100;
+const MAX_ID_LENGTH = 50;
+const MAX_DESCRIPTION_LENGTH = 2000;
+const MAX_ARRAY_LENGTH = 100;
+
 export function setupProgressionRoutes(app: Express): void {
   // ============================================================================
   // CLASS DEFINITIONS
@@ -52,8 +58,20 @@ export function setupProgressionRoutes(app: Express): void {
       }
 
       // Validate class_id format (alphanumeric with underscores, no spaces)
-      if (typeof class_id !== 'string' || !/^[a-z][a-z0-9_]*$/.test(class_id)) {
+      if (typeof class_id !== 'string' || !/^[a-z][a-z0-9_]*$/.test(class_id) || class_id.length > MAX_ID_LENGTH) {
         res.status(400).json({ success: false, message: 'class_id must be lowercase alphanumeric starting with a letter (underscores allowed)' });
+        return;
+      }
+
+      // Validate display_name length
+      if (typeof display_name !== 'string' || display_name.length > MAX_DISPLAY_NAME_LENGTH) {
+        res.status(400).json({ success: false, message: `display_name must not exceed ${MAX_DISPLAY_NAME_LENGTH} characters` });
+        return;
+      }
+
+      // Validate description length if provided
+      if (description !== undefined && (typeof description !== 'string' || description.length > MAX_DESCRIPTION_LENGTH)) {
+        res.status(400).json({ success: false, message: `description must not exceed ${MAX_DESCRIPTION_LENGTH} characters` });
         return;
       }
 
@@ -65,8 +83,8 @@ export function setupProgressionRoutes(app: Express): void {
       }
 
       // Validate subscribed_tags if provided
-      if (subscribed_tags !== undefined && !Array.isArray(subscribed_tags)) {
-        res.status(400).json({ success: false, message: 'subscribed_tags must be an array' });
+      if (subscribed_tags !== undefined && (!Array.isArray(subscribed_tags) || subscribed_tags.length > MAX_ARRAY_LENGTH)) {
+        res.status(400).json({ success: false, message: `subscribed_tags must be an array with at most ${MAX_ARRAY_LENGTH} items` });
         return;
       }
 
@@ -164,19 +182,31 @@ export function setupProgressionRoutes(app: Express): void {
         return;
       }
 
-      // Validate race_id format
-      if (typeof race_id !== 'string' || !/^[a-z][a-z0-9_]*$/.test(race_id)) {
+      // Validate race_id format and length
+      if (typeof race_id !== 'string' || !/^[a-z][a-z0-9_]*$/.test(race_id) || race_id.length > MAX_ID_LENGTH) {
         res.status(400).json({ success: false, message: 'race_id must be lowercase alphanumeric starting with a letter (underscores allowed)' });
         return;
       }
 
-      // Validate arrays if provided
-      if (traits !== undefined && !Array.isArray(traits)) {
-        res.status(400).json({ success: false, message: 'traits must be an array' });
+      // Validate display_name length
+      if (typeof display_name !== 'string' || display_name.length > MAX_DISPLAY_NAME_LENGTH) {
+        res.status(400).json({ success: false, message: `display_name must not exceed ${MAX_DISPLAY_NAME_LENGTH} characters` });
         return;
       }
-      if (allowed_classes !== undefined && !Array.isArray(allowed_classes)) {
-        res.status(400).json({ success: false, message: 'allowed_classes must be an array' });
+
+      // Validate description length if provided
+      if (description !== undefined && (typeof description !== 'string' || description.length > MAX_DESCRIPTION_LENGTH)) {
+        res.status(400).json({ success: false, message: `description must not exceed ${MAX_DESCRIPTION_LENGTH} characters` });
+        return;
+      }
+
+      // Validate arrays if provided
+      if (traits !== undefined && (!Array.isArray(traits) || traits.length > MAX_ARRAY_LENGTH)) {
+        res.status(400).json({ success: false, message: `traits must be an array with at most ${MAX_ARRAY_LENGTH} items` });
+        return;
+      }
+      if (allowed_classes !== undefined && (!Array.isArray(allowed_classes) || allowed_classes.length > MAX_ARRAY_LENGTH)) {
+        res.status(400).json({ success: false, message: `allowed_classes must be an array with at most ${MAX_ARRAY_LENGTH} items` });
         return;
       }
 
@@ -280,9 +310,21 @@ export function setupProgressionRoutes(app: Express): void {
         return;
       }
 
-      // Validate ability_id format
-      if (typeof ability_id !== 'string' || !/^[a-z][a-z0-9_]*$/.test(ability_id)) {
+      // Validate ability_id format and length
+      if (typeof ability_id !== 'string' || !/^[a-z][a-z0-9_]*$/.test(ability_id) || ability_id.length > MAX_ID_LENGTH) {
         res.status(400).json({ success: false, message: 'ability_id must be lowercase alphanumeric starting with a letter (underscores allowed)' });
+        return;
+      }
+
+      // Validate display_name length
+      if (typeof display_name !== 'string' || display_name.length > MAX_DISPLAY_NAME_LENGTH) {
+        res.status(400).json({ success: false, message: `display_name must not exceed ${MAX_DISPLAY_NAME_LENGTH} characters` });
+        return;
+      }
+
+      // Validate description length if provided
+      if (description !== undefined && (typeof description !== 'string' || description.length > MAX_DESCRIPTION_LENGTH)) {
+        res.status(400).json({ success: false, message: `description must not exceed ${MAX_DESCRIPTION_LENGTH} characters` });
         return;
       }
 
@@ -397,9 +439,21 @@ export function setupProgressionRoutes(app: Express): void {
         return;
       }
 
-      // Validate talent_id format
-      if (typeof talent_id !== 'string' || !/^[a-z][a-z0-9_]*$/.test(talent_id)) {
+      // Validate talent_id format and length
+      if (typeof talent_id !== 'string' || !/^[a-z][a-z0-9_]*$/.test(talent_id) || talent_id.length > MAX_ID_LENGTH) {
         res.status(400).json({ success: false, message: 'talent_id must be lowercase alphanumeric starting with a letter (underscores allowed)' });
+        return;
+      }
+
+      // Validate display_name length
+      if (typeof display_name !== 'string' || display_name.length > MAX_DISPLAY_NAME_LENGTH) {
+        res.status(400).json({ success: false, message: `display_name must not exceed ${MAX_DISPLAY_NAME_LENGTH} characters` });
+        return;
+      }
+
+      // Validate description length if provided
+      if (description !== undefined && (typeof description !== 'string' || description.length > MAX_DESCRIPTION_LENGTH)) {
+        res.status(400).json({ success: false, message: `description must not exceed ${MAX_DESCRIPTION_LENGTH} characters` });
         return;
       }
 
@@ -499,15 +553,21 @@ export function setupProgressionRoutes(app: Express): void {
         return;
       }
 
-      // Validate event_id format
-      if (typeof event_id !== 'string' || !/^[a-z][a-z0-9_]*$/.test(event_id)) {
+      // Validate event_id format and length
+      if (typeof event_id !== 'string' || !/^[a-z][a-z0-9_]*$/.test(event_id) || event_id.length > MAX_ID_LENGTH) {
         res.status(400).json({ success: false, message: 'event_id must be lowercase alphanumeric starting with a letter (underscores allowed)' });
         return;
       }
 
-      // Validate emitted_tags is an array
-      if (!Array.isArray(emitted_tags)) {
-        res.status(400).json({ success: false, message: 'emitted_tags must be an array' });
+      // Validate display_name length if provided
+      if (display_name !== undefined && (typeof display_name !== 'string' || display_name.length > MAX_DISPLAY_NAME_LENGTH)) {
+        res.status(400).json({ success: false, message: `display_name must not exceed ${MAX_DISPLAY_NAME_LENGTH} characters` });
+        return;
+      }
+
+      // Validate emitted_tags is an array with length limit
+      if (!Array.isArray(emitted_tags) || emitted_tags.length > MAX_ARRAY_LENGTH) {
+        res.status(400).json({ success: false, message: `emitted_tags must be an array with at most ${MAX_ARRAY_LENGTH} items` });
         return;
       }
 
@@ -584,6 +644,22 @@ export function setupProgressionRoutes(app: Express): void {
 
       if (level === undefined || std_xp_required === undefined || base_essence_required === undefined) {
         res.status(400).json({ success: false, message: 'level, std_xp_required, and base_essence_required are required' });
+        return;
+      }
+
+      // Validate level is a positive integer
+      if (typeof level !== 'number' || !Number.isInteger(level) || level < 1) {
+        res.status(400).json({ success: false, message: 'level must be a positive integer' });
+        return;
+      }
+
+      // Validate XP and essence are non-negative numbers
+      if (typeof std_xp_required !== 'number' || std_xp_required < 0) {
+        res.status(400).json({ success: false, message: 'std_xp_required must be a non-negative number' });
+        return;
+      }
+      if (typeof base_essence_required !== 'number' || base_essence_required < 0) {
+        res.status(400).json({ success: false, message: 'base_essence_required must be a non-negative number' });
         return;
       }
 

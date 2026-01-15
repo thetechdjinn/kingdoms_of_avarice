@@ -11,6 +11,9 @@ export interface CommandResponse {
   message: string;
 }
 
+// Configuration constants
+const EXIT_MEDITATION_TIMEOUT_MS = 10000;
+
 // Filter input to printable ASCII characters only (security)
 function sanitizeInput(input: string): string {
   // Allow printable ASCII characters (space through tilde: 0x20-0x7E)
@@ -278,11 +281,17 @@ async function handleLookDirection(
 }
 
 async function handleBrief(socket: AuthenticatedSocket): Promise<CommandResponse> {
-  socket.briefMode = !socket.briefMode;
-  
-  // Save to database
-  await playerRepo.setBriefMode(socket.playerId, socket.briefMode);
-  
+  const newBriefMode = !socket.briefMode;
+
+  // Save to database first, only update memory if successful
+  try {
+    await playerRepo.setBriefMode(socket.playerId, newBriefMode);
+    socket.briefMode = newBriefMode;
+  } catch (error) {
+    console.error('Failed to save brief mode:', error);
+    return { type: MessageType.ERROR, message: 'Failed to save preference. Please try again.' };
+  }
+
   if (socket.briefMode) {
     return { type: MessageType.SYSTEM, message: 'Brief mode on.' };
   } else {
@@ -312,7 +321,7 @@ function handleExit(socket: AuthenticatedSocket): CommandResponse {
     socket.send(JSON.stringify(logoutMessage));
     // Close the socket after a brief delay to ensure message is sent
     setTimeout(() => socket.close(), 100);
-  }, 10000);
+  }, EXIT_MEDITATION_TIMEOUT_MS);
 
   return { type: MessageType.SYSTEM, message: 'You sit down and meditate...' };
 }
@@ -376,13 +385,17 @@ async function handleMove(
     return { type: MessageType.ERROR, message: `You cannot go ${fullDirection}.` };
   }
 
-  // Broadcast to players in the old room that player left
-  broadcastToRoom(currentRoomId, `${socket.username} left to the ${fullDirection}.`, socket.playerId);
+  // Save room location to database first
+  try {
+    await playerRepo.setCurrentRoomId(socket.playerId, newRoom.id);
+  } catch (error) {
+    console.error('Failed to save room location:', error);
+    return { type: MessageType.ERROR, message: 'Something prevents you from moving.' };
+  }
 
+  // Database succeeded, now update in-memory state and broadcast
+  broadcastToRoom(currentRoomId, `${socket.username} left to the ${fullDirection}.`, socket.playerId);
   setPlayerLocation(socket.playerId, newRoom.id);
-  
-  // Save room location to database
-  await playerRepo.setCurrentRoomId(socket.playerId, newRoom.id);
 
   // Broadcast to players in the new room that player arrived
   const oppositeDir = OPPOSITE_DIRECTIONS[fullDirection] || fullDirection;

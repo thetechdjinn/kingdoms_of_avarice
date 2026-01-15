@@ -33,7 +33,8 @@ export async function initializeGameWorld(): Promise<void> {
   try {
     await initializeProgressionData();
   } catch (error) {
-    console.warn('[Progression] Failed to load progression data:', error);
+    console.error('[Progression] CRITICAL: Failed to load progression data - classes/races may be unavailable:', error);
+    // Server continues but progression features will be degraded
   }
 
   // Initialize resource regeneration system
@@ -127,16 +128,26 @@ export function setupGameSocket(wss: WebSocketServer): void {
     sendVitals(authWs);
 
     ws.on('message', async (data) => {
+      // Parse JSON separately to distinguish parse errors from command errors
+      let message: GameMessage;
       try {
-        const message: GameMessage = JSON.parse(data.toString());
+        message = JSON.parse(data.toString());
+      } catch {
+        sendMessage(authWs, MessageType.ERROR, 'Invalid message format');
+        return;
+      }
+
+      // Process command in separate try/catch
+      try {
         if (message.type === MessageType.COMMAND) {
           const response = await processCommand(message.payload, authWs, gameWorld, connectedPlayers);
           sendMessage(authWs, response.type, response.message);
           // Send vitals after every command
           sendVitals(authWs);
         }
-      } catch {
-        sendMessage(authWs, MessageType.ERROR, 'Invalid message format');
+      } catch (error) {
+        console.error('Command processing error:', error);
+        sendMessage(authWs, MessageType.ERROR, 'An error occurred processing your command');
       }
     });
 

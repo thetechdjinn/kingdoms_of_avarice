@@ -705,12 +705,12 @@ async function handleRaceSubmit(e: Event): Promise<void> {
     description: (document.getElementById('race-description') as HTMLTextAreaElement).value || undefined,
     playable: (document.getElementById('race-playable') as HTMLInputElement).checked,
     stat_modifiers: {
-      strength: parseInt((document.getElementById('race-str') as HTMLInputElement).value) || 0,
-      dexterity: parseInt((document.getElementById('race-dex') as HTMLInputElement).value) || 0,
-      intelligence: parseInt((document.getElementById('race-int') as HTMLInputElement).value) || 0,
-      wisdom: parseInt((document.getElementById('race-wis') as HTMLInputElement).value) || 0,
-      constitution: parseInt((document.getElementById('race-con') as HTMLInputElement).value) || 0,
-      charm: parseInt((document.getElementById('race-cha') as HTMLInputElement).value) || 0,
+      strength: Number((document.getElementById('race-str') as HTMLInputElement).value) || 0,
+      dexterity: Number((document.getElementById('race-dex') as HTMLInputElement).value) || 0,
+      intelligence: Number((document.getElementById('race-int') as HTMLInputElement).value) || 0,
+      wisdom: Number((document.getElementById('race-wis') as HTMLInputElement).value) || 0,
+      constitution: Number((document.getElementById('race-con') as HTMLInputElement).value) || 0,
+      charm: Number((document.getElementById('race-cha') as HTMLInputElement).value) || 0,
     },
     traits: (document.getElementById('race-traits') as HTMLInputElement).value.split(',').map(t => t.trim()).filter(Boolean),
     allowed_classes: (document.getElementById('race-allowed-classes') as HTMLInputElement).value.split(',').map(t => t.trim()).filter(Boolean),
@@ -752,8 +752,8 @@ async function handleAbilitySubmit(e: Event): Promise<void> {
     ability_type: (document.getElementById('ability-type') as HTMLSelectElement).value as AbilityDefinition['ability_type'],
     description: (document.getElementById('ability-description') as HTMLTextAreaElement).value || undefined,
     resource_type: (document.getElementById('ability-resource-type') as HTMLSelectElement).value || undefined,
-    resource_cost: parseInt((document.getElementById('ability-cost') as HTMLInputElement).value) || 0,
-    cooldown: parseInt((document.getElementById('ability-cooldown') as HTMLInputElement).value) || 0,
+    resource_cost: Number((document.getElementById('ability-cost') as HTMLInputElement).value) || 0,
+    cooldown: Number((document.getElementById('ability-cooldown') as HTMLInputElement).value) || 0,
     emitted_tags: (document.getElementById('ability-tags') as HTMLInputElement).value.split(',').map(t => t.trim()).filter(Boolean),
   };
 
@@ -791,7 +791,7 @@ async function handleTalentSubmit(e: Event): Promise<void> {
     description: (document.getElementById('talent-description') as HTMLTextAreaElement).value || undefined,
     class_restriction: (document.getElementById('talent-class') as HTMLSelectElement).value || undefined,
     essence_cost: Number((document.getElementById('talent-cost') as HTMLInputElement).value) || 100,
-    prerequisite_level: parseInt((document.getElementById('talent-level') as HTMLInputElement).value) || 1,
+    prerequisite_level: Number((document.getElementById('talent-level') as HTMLInputElement).value) || 1,
     prerequisite_talents: (document.getElementById('talent-prereqs') as HTMLInputElement).value.split(',').map(t => t.trim()).filter(Boolean),
     grants_ability: (document.getElementById('talent-grants') as HTMLSelectElement).value || undefined,
   };
@@ -904,7 +904,7 @@ async function handleAddClassAbility(): Promise<void> {
   if (!selectedId || selectedType !== 'class') return;
 
   const abilityId = (document.getElementById('add-class-ability-select') as HTMLSelectElement).value;
-  const level = parseInt((document.getElementById('add-class-ability-level') as HTMLInputElement).value) || 1;
+  const level = Number((document.getElementById('add-class-ability-level') as HTMLInputElement).value) || 1;
   const autoLearn = (document.getElementById('add-class-ability-auto') as HTMLInputElement).checked;
 
   if (!abilityId) {
