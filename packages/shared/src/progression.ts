@@ -39,6 +39,8 @@ export interface ClassDefinition {
   subscribed_tags: ThematicTag[];
   base_stats?: Record<string, number>;
   talent_tree_id?: string;
+  resource_type?: string;
+  playable?: boolean;
 }
 
 // ============================================================================
@@ -96,6 +98,7 @@ export interface CharacterProgression {
   essence_wallet: number;
   total_essence_earned: number;
   unlocked_talents: string[];
+  learned_abilities: string[];
 }
 
 // ============================================================================

@@ -1,6 +1,6 @@
 import { MessageType, Role, hasAnyRole, ItemLocationType, ItemCondition } from '@koa/shared';
 import { GameWorld, Room } from './world.js';
-import { AuthenticatedSocket, connectedPlayers, sendVitals } from './socket.js';
+import { AuthenticatedSocket, connectedPlayers, sendVitals, sendMessage } from './socket.js';
 import { colors } from '../utils/colors.js';
 import * as itemRepo from '../db/repositories/itemRepository.js';
 import { isProgressionCommand, processProgressionCommand, getProgressionHelpText } from './progressionCommands.js';
@@ -737,6 +737,8 @@ function handleHurt(
       message: `${colors.boldRed('Ouch!')} You take ${actualDamage} damage. HP: ${newHp}/${targetSocket.vitals.maxHp}`,
     };
   } else {
+    // Notify the target player
+    sendMessage(targetSocket, MessageType.SYSTEM, `${colors.boldRed('Ouch!')} You take ${actualDamage} damage from an unknown force. HP: ${newHp}/${targetSocket.vitals.maxHp}`);
     return {
       type: MessageType.SYSTEM,
       message: `${colors.boldRed('Hurt:')} ${targetName} takes ${actualDamage} damage. HP: ${newHp}/${targetSocket.vitals.maxHp}`,
@@ -799,6 +801,8 @@ function handleDrain(
       message: `${colors.boldCyan('Drained!')} You lose ${actualDrain} mana. Mana: ${newMana}/${targetSocket.vitals.maxResource}`,
     };
   } else {
+    // Notify the target player
+    sendMessage(targetSocket, MessageType.SYSTEM, `${colors.boldCyan('Drained!')} You lose ${actualDrain} mana from an unknown force. Mana: ${newMana}/${targetSocket.vitals.maxResource}`);
     return {
       type: MessageType.SYSTEM,
       message: `${colors.boldCyan('Drain:')} ${targetName} loses ${actualDrain} mana. Mana: ${newMana}/${targetSocket.vitals.maxResource}`,

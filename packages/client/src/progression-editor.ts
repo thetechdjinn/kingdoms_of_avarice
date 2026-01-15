@@ -3,6 +3,14 @@
 // Editor UI for classes, races, abilities, talents, and game events
 // ============================================================================
 
+import {
+  ClassDefinition,
+  RaceDefinition,
+  AbilityDefinition,
+  TalentDefinition,
+  GameEvent,
+} from '@koa/shared';
+
 (function() {
 
 interface AuthInfo {
@@ -10,60 +18,6 @@ interface AuthInfo {
   playerId?: number;
   username?: string;
   roles?: string[];
-}
-
-interface ClassDefinition {
-  class_id: string;
-  display_name: string;
-  description?: string;
-  essence_multiplier: number;
-  subscribed_tags: string[];
-  base_stats?: Record<string, number>;
-  talent_tree_id?: string;
-  resource_type?: string;
-  playable?: boolean;
-}
-
-interface RaceDefinition {
-  race_id: string;
-  display_name: string;
-  description?: string;
-  stat_modifiers?: Record<string, number>;
-  traits?: string[];
-  allowed_classes?: string[];
-  playable?: boolean;
-}
-
-interface AbilityDefinition {
-  ability_id: string;
-  display_name: string;
-  description?: string;
-  ability_type: 'skill' | 'spell' | 'technique' | 'passive';
-  emitted_tags?: string[];
-  resource_cost?: number;
-  resource_type?: string;
-  cooldown?: number;
-  effect_data?: Record<string, unknown>;
-}
-
-interface TalentDefinition {
-  talent_id: string;
-  display_name: string;
-  description?: string;
-  class_restriction?: string;
-  essence_cost: number;
-  prerequisite_level?: number;
-  prerequisite_talents?: string[];
-  effect_modifiers?: Record<string, number>;
-  grants_ability?: string;
-}
-
-interface GameEvent {
-  event_id: string;
-  display_name?: string;
-  emitted_tags: string[];
-  base_essence_value: number;
-  base_xp_value?: number;
 }
 
 interface ClassAbilityMapping {

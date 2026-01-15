@@ -193,4 +193,4 @@ export function broadcastToRoom(roomId: number, text: string, excludePlayerId?: 
   }
 }
 
-export { connectedPlayers, AuthenticatedSocket, sendVitals };
+export { connectedPlayers, AuthenticatedSocket, sendVitals, sendMessage };

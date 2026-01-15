@@ -51,11 +51,30 @@ export function setupProgressionRoutes(app: Express): void {
         return;
       }
 
+      // Validate class_id format (alphanumeric with underscores, no spaces)
+      if (typeof class_id !== 'string' || !/^[a-z][a-z0-9_]*$/.test(class_id)) {
+        res.status(400).json({ success: false, message: 'class_id must be lowercase alphanumeric starting with a letter (underscores allowed)' });
+        return;
+      }
+
+      // Validate essence_multiplier if provided
+      const multiplier = essence_multiplier ?? 1.0;
+      if (typeof multiplier !== 'number' || multiplier <= 0 || !isFinite(multiplier)) {
+        res.status(400).json({ success: false, message: 'essence_multiplier must be a positive number' });
+        return;
+      }
+
+      // Validate subscribed_tags if provided
+      if (subscribed_tags !== undefined && !Array.isArray(subscribed_tags)) {
+        res.status(400).json({ success: false, message: 'subscribed_tags must be an array' });
+        return;
+      }
+
       const classDef = await progressionRepo.createClass({
         class_id,
         display_name,
         description,
-        essence_multiplier: essence_multiplier ?? 1.0,
+        essence_multiplier: multiplier,
         subscribed_tags: subscribed_tags ?? [],
         base_stats,
         talent_tree_id,
@@ -142,6 +161,22 @@ export function setupProgressionRoutes(app: Express): void {
 
       if (!race_id || !display_name) {
         res.status(400).json({ success: false, message: 'race_id and display_name are required' });
+        return;
+      }
+
+      // Validate race_id format
+      if (typeof race_id !== 'string' || !/^[a-z][a-z0-9_]*$/.test(race_id)) {
+        res.status(400).json({ success: false, message: 'race_id must be lowercase alphanumeric starting with a letter (underscores allowed)' });
+        return;
+      }
+
+      // Validate arrays if provided
+      if (traits !== undefined && !Array.isArray(traits)) {
+        res.status(400).json({ success: false, message: 'traits must be an array' });
+        return;
+      }
+      if (allowed_classes !== undefined && !Array.isArray(allowed_classes)) {
+        res.status(400).json({ success: false, message: 'allowed_classes must be an array' });
         return;
       }
 
@@ -245,9 +280,25 @@ export function setupProgressionRoutes(app: Express): void {
         return;
       }
 
+      // Validate ability_id format
+      if (typeof ability_id !== 'string' || !/^[a-z][a-z0-9_]*$/.test(ability_id)) {
+        res.status(400).json({ success: false, message: 'ability_id must be lowercase alphanumeric starting with a letter (underscores allowed)' });
+        return;
+      }
+
       const validTypes: AbilityType[] = ['skill', 'spell', 'technique', 'passive'];
       if (!validTypes.includes(ability_type)) {
         res.status(400).json({ success: false, message: `Invalid ability_type. Must be one of: ${validTypes.join(', ')}` });
+        return;
+      }
+
+      // Validate numeric fields if provided
+      if (resource_cost !== undefined && (typeof resource_cost !== 'number' || resource_cost < 0)) {
+        res.status(400).json({ success: false, message: 'resource_cost must be a non-negative number' });
+        return;
+      }
+      if (cooldown !== undefined && (typeof cooldown !== 'number' || cooldown < 0)) {
+        res.status(400).json({ success: false, message: 'cooldown must be a non-negative number' });
         return;
       }
 
@@ -346,6 +397,22 @@ export function setupProgressionRoutes(app: Express): void {
         return;
       }
 
+      // Validate talent_id format
+      if (typeof talent_id !== 'string' || !/^[a-z][a-z0-9_]*$/.test(talent_id)) {
+        res.status(400).json({ success: false, message: 'talent_id must be lowercase alphanumeric starting with a letter (underscores allowed)' });
+        return;
+      }
+
+      // Validate numeric fields
+      if (typeof essence_cost !== 'number' || essence_cost < 0) {
+        res.status(400).json({ success: false, message: 'essence_cost must be a non-negative number' });
+        return;
+      }
+      if (prerequisite_level !== undefined && (typeof prerequisite_level !== 'number' || prerequisite_level < 1)) {
+        res.status(400).json({ success: false, message: 'prerequisite_level must be a positive number' });
+        return;
+      }
+
       const talent = await progressionRepo.createTalent({
         talent_id,
         display_name,
@@ -429,6 +496,28 @@ export function setupProgressionRoutes(app: Express): void {
 
       if (!event_id || !emitted_tags || base_essence_value === undefined) {
         res.status(400).json({ success: false, message: 'event_id, emitted_tags, and base_essence_value are required' });
+        return;
+      }
+
+      // Validate event_id format
+      if (typeof event_id !== 'string' || !/^[a-z][a-z0-9_]*$/.test(event_id)) {
+        res.status(400).json({ success: false, message: 'event_id must be lowercase alphanumeric starting with a letter (underscores allowed)' });
+        return;
+      }
+
+      // Validate emitted_tags is an array
+      if (!Array.isArray(emitted_tags)) {
+        res.status(400).json({ success: false, message: 'emitted_tags must be an array' });
+        return;
+      }
+
+      // Validate numeric fields
+      if (typeof base_essence_value !== 'number' || base_essence_value < 0) {
+        res.status(400).json({ success: false, message: 'base_essence_value must be a non-negative number' });
+        return;
+      }
+      if (base_xp_value !== undefined && (typeof base_xp_value !== 'number' || base_xp_value < 0)) {
+        res.status(400).json({ success: false, message: 'base_xp_value must be a non-negative number' });
         return;
       }
 

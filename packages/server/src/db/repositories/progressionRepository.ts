@@ -195,16 +195,17 @@ function dbToLevelRequirement(row: DbLevelRequirement): LevelRequirement {
   };
 }
 
-function dbToCharacterProgression(row: DbCharacterProgression): CharacterProgression {
+function dbToCharacterProgressionWithLevel(row: DbCharacterProgression & { calculated_level?: number }): CharacterProgression {
   return {
     character_id: row.character_id,
     class_id: row.class_id,
-    level: 1, // Will be calculated from progression table
+    level: row.calculated_level ?? 1,
     std_xp: row.std_xp,
     essence_earned_this_level: row.essence_earned_this_level,
     essence_wallet: row.essence_wallet,
     total_essence_earned: row.total_essence_earned,
     unlocked_talents: row.unlocked_talents,
+    learned_abilities: row.learned_abilities,
   };
 }
 
@@ -777,24 +778,38 @@ export async function removeClassAbility(classId: string, abilityId: string): Pr
 // ============================================================================
 
 export async function getCharacterProgression(characterId: number): Promise<CharacterProgression | null> {
-  const result = await query<DbCharacterProgression>(
-    'SELECT * FROM character_progression WHERE character_id = $1',
+  const result = await query<DbCharacterProgression & { calculated_level: number }>(
+    `SELECT cp.*,
+      COALESCE(
+        (SELECT MAX(level) FROM progression_table WHERE std_xp_required <= cp.std_xp),
+        1
+      ) as calculated_level
+     FROM character_progression cp
+     WHERE cp.character_id = $1`,
     [characterId]
   );
-  return result.rows[0] ? dbToCharacterProgression(result.rows[0]) : null;
+  return result.rows[0] ? dbToCharacterProgressionWithLevel(result.rows[0]) : null;
 }
 
 export async function createCharacterProgression(
   characterId: number,
   classId: string
 ): Promise<CharacterProgression> {
-  const result = await query<DbCharacterProgression>(
-    `INSERT INTO character_progression (character_id, class_id)
-     VALUES ($1, $2)
-     RETURNING *`,
+  const result = await query<DbCharacterProgression & { calculated_level: number }>(
+    `WITH inserted AS (
+      INSERT INTO character_progression (character_id, class_id)
+      VALUES ($1, $2)
+      RETURNING *
+    )
+    SELECT inserted.*,
+      COALESCE(
+        (SELECT MAX(level) FROM progression_table WHERE std_xp_required <= inserted.std_xp),
+        1
+      ) as calculated_level
+    FROM inserted`,
     [characterId, classId]
   );
-  return dbToCharacterProgression(result.rows[0]);
+  return dbToCharacterProgressionWithLevel(result.rows[0]);
 }
 
 export async function updateCharacterProgression(
@@ -829,15 +844,27 @@ export async function updateCharacterProgression(
     setClauses.push(`unlocked_talents = $${paramIndex++}`);
     values.push(JSON.stringify(updates.unlocked_talents));
   }
+  if (updates.learned_abilities !== undefined) {
+    setClauses.push(`learned_abilities = $${paramIndex++}`);
+    values.push(JSON.stringify(updates.learned_abilities));
+  }
 
   if (setClauses.length === 0) return getCharacterProgression(characterId);
 
   setClauses.push(`updated_at = CURRENT_TIMESTAMP`);
   values.push(characterId);
 
-  const result = await query<DbCharacterProgression>(
-    `UPDATE character_progression SET ${setClauses.join(', ')} WHERE character_id = $${paramIndex} RETURNING *`,
+  const result = await query<DbCharacterProgression & { calculated_level: number }>(
+    `WITH updated AS (
+      UPDATE character_progression SET ${setClauses.join(', ')} WHERE character_id = $${paramIndex} RETURNING *
+    )
+    SELECT updated.*,
+      COALESCE(
+        (SELECT MAX(level) FROM progression_table WHERE std_xp_required <= updated.std_xp),
+        1
+      ) as calculated_level
+    FROM updated`,
     values
   );
-  return result.rows[0] ? dbToCharacterProgression(result.rows[0]) : null;
+  return result.rows[0] ? dbToCharacterProgressionWithLevel(result.rows[0]) : null;
 }

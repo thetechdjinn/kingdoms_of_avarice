@@ -32,8 +32,13 @@ const DATA_DIR = join(__dirname, 'data');
  */
 function loadJsonFile<T>(filename: string): T {
   const filePath = join(DATA_DIR, filename);
-  const content = readFileSync(filePath, 'utf-8');
-  return JSON.parse(content) as T;
+  try {
+    const content = readFileSync(filePath, 'utf-8');
+    return JSON.parse(content) as T;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    throw new Error(`Failed to load progression data from ${filename}: ${message}`);
+  }
 }
 
 /**
@@ -214,7 +219,7 @@ export async function initializeProgressionData(): Promise<void> {
   loadClasses();
   loadProgressionTable();
   loadGameEvents();
-  loadTalents();
+  // Note: Talents are DB-only for now, no in-memory registration needed
   
   // Force reseed if stats are outdated
   await forceReseedClassesAndRaces();

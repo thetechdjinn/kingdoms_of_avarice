@@ -108,6 +108,11 @@ function processRegenTick(config: ResourceRegenConfig): void {
       continue;
     }
 
+    // No regeneration while poisoned
+    if (socket.regenState.isPoisoned) {
+      continue;
+    }
+
     // Check if regen applies in combat
     if (socket.regenState.inCombat && !config.regenInCombat) {
       continue;

@@ -65,7 +65,7 @@
         .replace(/&/g, '&amp;')
         .replace(/</g, '&lt;')
         .replace(/>/g, '&gt;');
-      const langTrimmed = lang.trim();
+      const langTrimmed = lang.trim().replace(/"/g, '&quot;');
       const langClass = langTrimmed ? ' class="language-' + langTrimmed + '"' : '';
       codeBlocks.push('<pre><code' + langClass + '>' + escapedCode + '</code></pre>');
       return '\n%%CODEBLOCK' + index + '%%\n';
@@ -116,8 +116,11 @@
     // Horizontal rules
     html = html.replace(/^---$/gm, '<hr>');
     
-    // Links
-    html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>');
+    // Links - escape quotes in href to prevent attribute injection
+    html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_, text, url) => {
+      const safeUrl = url.replace(/"/g, '&quot;');
+      return '<a href="' + safeUrl + '">' + text + '</a>';
+    });
     
     // Process lines for lists
     const htmlLines = html.split('\n');
@@ -173,12 +176,22 @@
   async function loadDocument(filename: string): Promise<void> {
     const loading = document.getElementById('loading');
     const content = document.getElementById('markdown-content');
-    
+
     if (loading) loading.style.display = 'block';
     if (content) content.innerHTML = '';
-    
+
+    // Validate filename to prevent path traversal
+    const safeFilename = filename.replace(/\.\./g, '').replace(/[\/\\]/g, '');
+    if (!safeFilename || safeFilename !== filename) {
+      if (loading) loading.style.display = 'none';
+      if (content) {
+        content.innerHTML = '<h1>Invalid Request</h1><p>The requested document path is not valid.</p>';
+      }
+      return;
+    }
+
     try {
-      const response = await fetch('/docs/' + filename);
+      const response = await fetch('/docs/' + safeFilename);
       if (!response.ok) {
         throw new Error('Document not found');
       }

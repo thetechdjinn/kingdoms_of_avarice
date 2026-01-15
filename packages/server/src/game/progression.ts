@@ -111,6 +111,7 @@ export function initializeProgression(
     essence_wallet: 0,
     total_essence_earned: 0,
     unlocked_talents: [],
+    learned_abilities: [],
   };
   characterProgressions.set(characterId, progression);
 
@@ -324,6 +325,11 @@ export function performLevelUp(characterId: number): boolean {
  * Spend essence from wallet (does NOT affect level progress)
  */
 export function spendEssence(characterId: number, amount: number): boolean {
+  // Validate amount is a positive finite number
+  if (typeof amount !== 'number' || !isFinite(amount) || amount <= 0) {
+    return false;
+  }
+
   const progression = characterProgressions.get(characterId);
   if (!progression) {
     return false;
