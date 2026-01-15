@@ -1,6 +1,6 @@
 import { MessageType, Role, hasAnyRole, ItemLocationType, ItemCondition } from '@koa/shared';
 import { GameWorld, Room } from './world.js';
-import { AuthenticatedSocket } from './socket.js';
+import { AuthenticatedSocket, connectedPlayers, sendVitals } from './socket.js';
 import { colors } from '../utils/colors.js';
 import * as itemRepo from '../db/repositories/itemRepository.js';
 import { isProgressionCommand, processProgressionCommand, getProgressionHelpText } from './progressionCommands.js';
@@ -24,7 +24,7 @@ export function setPlayerLocation(playerId: number, roomId: number): void {
 const developerCommands = ['create', 'link', 'unlink', 'edit', 'delete', 'reload', 'spawn', 'purge', 'items', 'iteminfo'];
 
 // Commands that any staff can use (Moderator+)
-const staffCommands = ['goto', 'rooms', 'roominfo', 'help', 'give'];
+const staffCommands = ['goto', 'rooms', 'roominfo', 'help', 'give', 'hurt', 'drain'];
 
 export async function processAdminCommand(
   input: string,
@@ -88,6 +88,10 @@ export async function processAdminCommand(
       return handleItemInfo(args);
     case 'give':
       return handleGive(args, socket);
+    case 'hurt':
+      return handleHurt(args, socket);
+    case 'drain':
+      return handleDrain(args, socket);
     case 'help':
       return handleAdminHelp(userRoles);
     default:
@@ -683,6 +687,125 @@ async function handleGive(
   }
 }
 
+function handleHurt(
+  args: string[],
+  socket: AuthenticatedSocket
+): CommandResponse {
+  // @hurt [amount] [player] - Reduce HP for testing regen
+  // Default: hurt self by 10
+  let amount = 10;
+  let targetSocket: AuthenticatedSocket = socket;
+  let targetName = socket.username;
+
+  if (args.length >= 1) {
+    const parsedAmount = parseInt(args[0]);
+    if (!isNaN(parsedAmount) && parsedAmount > 0) {
+      amount = parsedAmount;
+    } else {
+      return { type: MessageType.ERROR, message: 'Usage: @hurt [amount] [player]' };
+    }
+  }
+
+  if (args.length >= 2) {
+    const playerName = args.slice(1).join(' ').toLowerCase();
+    let found = false;
+    for (const [, playerSocket] of connectedPlayers) {
+      if (playerSocket.username.toLowerCase() === playerName) {
+        targetSocket = playerSocket;
+        targetName = playerSocket.username;
+        found = true;
+        break;
+      }
+    }
+    if (!found) {
+      return { type: MessageType.ERROR, message: `Player not found: ${args.slice(1).join(' ')}` };
+    }
+  }
+
+  // Apply damage
+  const oldHp = targetSocket.vitals.hp;
+  targetSocket.vitals.hp = Math.max(0, targetSocket.vitals.hp - amount);
+  const newHp = targetSocket.vitals.hp;
+  const actualDamage = oldHp - newHp;
+
+  // Send updated vitals to target
+  sendVitals(targetSocket);
+
+  if (targetSocket === socket) {
+    return {
+      type: MessageType.SYSTEM,
+      message: `${colors.boldRed('Ouch!')} You take ${actualDamage} damage. HP: ${newHp}/${targetSocket.vitals.maxHp}`,
+    };
+  } else {
+    return {
+      type: MessageType.SYSTEM,
+      message: `${colors.boldRed('Hurt:')} ${targetName} takes ${actualDamage} damage. HP: ${newHp}/${targetSocket.vitals.maxHp}`,
+    };
+  }
+}
+
+function handleDrain(
+  args: string[],
+  socket: AuthenticatedSocket
+): CommandResponse {
+  // @drain [amount] [player] - Reduce mana for testing regen
+  // Default: drain self by 10
+  let amount = 10;
+  let targetSocket: AuthenticatedSocket = socket;
+  let targetName = socket.username;
+
+  if (args.length >= 1) {
+    const parsedAmount = parseInt(args[0]);
+    if (!isNaN(parsedAmount) && parsedAmount > 0) {
+      amount = parsedAmount;
+    } else {
+      return { type: MessageType.ERROR, message: 'Usage: @drain [amount] [player]' };
+    }
+  }
+
+  if (args.length >= 2) {
+    const playerName = args.slice(1).join(' ').toLowerCase();
+    let found = false;
+    for (const [, playerSocket] of connectedPlayers) {
+      if (playerSocket.username.toLowerCase() === playerName) {
+        targetSocket = playerSocket;
+        targetName = playerSocket.username;
+        found = true;
+        break;
+      }
+    }
+    if (!found) {
+      return { type: MessageType.ERROR, message: `Player not found: ${args.slice(1).join(' ')}` };
+    }
+  }
+
+  // Check if target has mana
+  if (targetSocket.vitals.resource === undefined || targetSocket.vitals.maxResource === undefined) {
+    return { type: MessageType.ERROR, message: `${targetName} has no mana resource.` };
+  }
+
+  // Apply drain
+  const oldMana = targetSocket.vitals.resource;
+  targetSocket.vitals.resource = Math.max(0, targetSocket.vitals.resource - amount);
+  const newMana = targetSocket.vitals.resource;
+  const actualDrain = oldMana - newMana;
+
+  // Send updated vitals to target
+  sendVitals(targetSocket);
+
+  if (targetSocket === socket) {
+    return {
+      type: MessageType.SYSTEM,
+      message: `${colors.boldCyan('Drained!')} You lose ${actualDrain} mana. Mana: ${newMana}/${targetSocket.vitals.maxResource}`,
+    };
+  } else {
+    return {
+      type: MessageType.SYSTEM,
+      message: `${colors.boldCyan('Drain:')} ${targetName} loses ${actualDrain} mana. Mana: ${newMana}/${targetSocket.vitals.maxResource}`,
+    };
+  }
+}
+
 function handleAdminHelp(userRoles: Role[]): CommandResponse {
   const isDeveloper = hasAnyRole(userRoles, [Role.DEVELOPER, Role.ADMIN]);
   
@@ -696,6 +819,8 @@ function handleAdminHelp(userRoles: Role[]): CommandResponse {
   lines.push(`  ${colors.boldCyan('@rooms')}                  - List all rooms`);
   lines.push(`  ${colors.boldCyan('@roominfo [id]')}          - Show room details`);
   lines.push(`  ${colors.boldCyan('@give <id|name> [quantity]')} - Give yourself an item`);
+  lines.push(`  ${colors.boldCyan('@hurt [amount] [player]')} - Damage HP (for testing regen)`);
+  lines.push(`  ${colors.boldCyan('@drain [amount] [player]')} - Drain mana (for testing regen)`);
   lines.push(`  ${colors.boldCyan('@help')}                   - Show this help`);
 
   // Developer commands

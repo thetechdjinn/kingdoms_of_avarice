@@ -59,6 +59,12 @@ export async function processCommand(
   const command = parts[0];
   const args = parts.slice(1);
 
+  // Clear enhanced regen state when any command other than 'rest' is entered
+  // This breaks the resting/meditating state when the player takes any action
+  if (command !== 'rest' && command !== 're' && socket.regenState.enhancedRegen.size > 0) {
+    socket.regenState.enhancedRegen.clear();
+  }
+
   const currentRoomId = getPlayerLocation(socket.playerId);
 
   if (command === 'look' || command === 'l') {
@@ -186,6 +192,10 @@ export async function processCommand(
     return handleExit(socket);
   }
 
+  if (command === 'rest' || command === 're') {
+    return handleRest(socket);
+  }
+
   // Default: treat as speech
   return handleSay(socket, trimmed, _connectedPlayers);
 }
@@ -305,6 +315,33 @@ function handleExit(socket: AuthenticatedSocket): CommandResponse {
   }, 10000);
 
   return { type: MessageType.SYSTEM, message: 'You sit down and meditate...' };
+}
+
+function handleRest(socket: AuthenticatedSocket): CommandResponse {
+  // Check if already resting
+  if (socket.regenState.enhancedRegen.has('mana') && socket.regenState.enhancedRegen.has('health')) {
+    return { type: MessageType.SYSTEM, message: 'You are already resting.' };
+  }
+
+  // Check if in combat
+  if (socket.regenState.inCombat) {
+    return { type: MessageType.ERROR, message: 'You cannot rest while in combat!' };
+  }
+
+  // Check if poisoned
+  if (socket.regenState.isPoisoned) {
+    return { type: MessageType.ERROR, message: 'You cannot rest while poisoned!' };
+  }
+
+  // Enable enhanced regeneration for mana and health
+  socket.regenState.enhancedRegen.add('mana');
+  socket.regenState.enhancedRegen.add('health');
+
+  // Broadcast to others in the room
+  const currentRoomId = getPlayerLocation(socket.playerId);
+  broadcastToRoom(currentRoomId, `${socket.username} sits down to rest.`, socket.playerId);
+
+  return { type: MessageType.SYSTEM, message: 'You sit down and rest. (Type any command to stand up)' };
 }
 
 // Map direction to opposite direction for "walks in from" messages
@@ -455,6 +492,7 @@ function handleHelp(userRoles: Role[], category?: string): CommandResponse {
     `    ${colors.white('enchant <item> with <enchantment>')} - Enchant an item`,
     '',
     colors.boldCyan('  Communication & System:'),
+    `    ${colors.white('rest')} (re)             - Rest to regenerate faster`,
     `    ${colors.white('who')}                   - See who is online`,
     `    ${colors.white('x')}                     - Meditate and leave the realm`,
     `    ${colors.white('help')} (?)              - Show this help message`,
