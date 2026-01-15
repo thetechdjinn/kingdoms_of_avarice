@@ -72,10 +72,8 @@ export function setupAdminRoutes(app: Express): void {
       return;
     }
 
-    // Normalize entry: trim whitespace, lowercase for hostnames
-    const normalizedEntry = entryType === 'hostname'
-      ? entry.trim().toLowerCase()
-      : entry.trim();
+    // Normalize entry: trim whitespace, lowercase (IPs and hostnames are case-insensitive)
+    const normalizedEntry = entry.trim().toLowerCase();
 
     if (!normalizedEntry) {
       res.status(400).json({ success: false, message: 'Entry cannot be empty' });
@@ -137,8 +135,8 @@ export function setupAdminRoutes(app: Express): void {
 
   // DELETE /api/admin/ip-access/:id - Delete IP access rule
   app.delete('/api/admin/ip-access/:id', requireAdmin, async (req: Request, res: Response) => {
-    const id = parseInt(req.params.id);
-    if (isNaN(id) || id <= 0) {
+    const id = Number(req.params.id);
+    if (!Number.isInteger(id) || id <= 0) {
       res.status(400).json({ success: false, message: 'Invalid entry ID' });
       return;
     }
@@ -170,8 +168,8 @@ export function setupAdminRoutes(app: Express): void {
 
   // PUT /api/admin/players/:id/max-characters - Set player's character limit override
   app.put('/api/admin/players/:id/max-characters', requireAdmin, async (req: Request, res: Response) => {
-    const playerId = parseInt(req.params.id);
-    if (isNaN(playerId) || playerId <= 0) {
+    const playerId = Number(req.params.id);
+    if (!Number.isInteger(playerId) || playerId <= 0) {
       res.status(400).json({ success: false, message: 'Invalid player ID' });
       return;
     }
