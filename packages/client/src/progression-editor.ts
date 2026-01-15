@@ -634,7 +634,7 @@ async function handleClassSubmit(e: Event): Promise<void> {
     display_name: (document.getElementById('class-name') as HTMLInputElement).value,
     description: (document.getElementById('class-description') as HTMLTextAreaElement).value || undefined,
     essence_multiplier: parseFloat((document.getElementById('class-multiplier') as HTMLInputElement).value) || 1.0,
-    resource_type: (document.getElementById('class-resource') as HTMLSelectElement).value || undefined,
+    resource_type: (document.getElementById('class-resource') as HTMLSelectElement).value || 'none',
     playable: (document.getElementById('class-playable') as HTMLInputElement).checked,
     subscribed_tags: (document.getElementById('class-tags') as HTMLInputElement).value.split(',').map(t => t.trim()).filter(Boolean),
     base_stats: {

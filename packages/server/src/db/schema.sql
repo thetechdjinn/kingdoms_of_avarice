@@ -29,6 +29,8 @@ CREATE TABLE IF NOT EXISTS characters (
     intelligence INTEGER NOT NULL,
     dexterity INTEGER NOT NULL,
     constitution INTEGER NOT NULL,
+    wisdom INTEGER NOT NULL DEFAULT 10,
+    charisma INTEGER NOT NULL DEFAULT 10,
     current_room_id INTEGER DEFAULT 1,
     gold INTEGER DEFAULT 0,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP

@@ -60,6 +60,71 @@
           <p class="form-link"><a href="#" id="show-login">Back to login</a></p>
         </form>
       </div>
+
+      <!-- Landing Page -->
+      <div id="landing-container" style="display: none">
+        <h1>Kingdoms of Avarice</h1>
+        <p class="welcome-message">Welcome, <span id="landing-username">Adventurer</span>!</p>
+        <div class="landing-menu">
+          <button id="enter-game-btn" class="btn-primary btn-large">Enter Game</button>
+          <p class="landing-hint">Select or create a character to begin your adventure.</p>
+        </div>
+        <button id="landing-logout-btn" class="btn-link">Logout</button>
+      </div>
+
+      <!-- Character Selection -->
+      <div id="character-select-container" style="display: none">
+        <h1>Select Character</h1>
+        <div id="character-list"></div>
+        <button id="create-character-btn" class="btn-secondary">Create New Character</button>
+        <button id="back-to-landing-btn" class="btn-link">Back</button>
+      </div>
+
+      <!-- Character Creation -->
+      <div id="character-create-container" style="display: none">
+        <h1>Create Character</h1>
+        <form id="character-create-form">
+          <div class="form-group">
+            <label for="char-name">Character Name</label>
+            <input type="text" id="char-name" required minlength="3" maxlength="20"
+                   pattern="[a-zA-Z][a-zA-Z0-9 ]*"
+                   title="Must start with a letter, can contain letters, numbers, and spaces" />
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="char-race">Race</label>
+              <select id="char-race" required>
+                <option value="">Select a race...</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="char-class">Class</label>
+              <select id="char-class" required>
+                <option value="">Select a class...</option>
+              </select>
+            </div>
+          </div>
+          <div id="race-description" class="info-box"></div>
+          <div id="class-description" class="info-box"></div>
+          <div id="stat-preview" class="stat-preview">
+            <h3>Stats Preview</h3>
+            <div class="stat-grid">
+              <div class="stat-item"><span class="stat-label">STR</span><span id="preview-str" class="stat-value">-</span></div>
+              <div class="stat-item"><span class="stat-label">INT</span><span id="preview-int" class="stat-value">-</span></div>
+              <div class="stat-item"><span class="stat-label">DEX</span><span id="preview-dex" class="stat-value">-</span></div>
+              <div class="stat-item"><span class="stat-label">CON</span><span id="preview-con" class="stat-value">-</span></div>
+              <div class="stat-item"><span class="stat-label">WIS</span><span id="preview-wis" class="stat-value">-</span></div>
+              <div class="stat-item"><span class="stat-label">CHA</span><span id="preview-cha" class="stat-value">-</span></div>
+            </div>
+          </div>
+          <p id="create-error" class="error"></p>
+          <div class="form-buttons">
+            <button type="submit" class="btn-primary">Create Character</button>
+            <button type="button" id="back-to-select-btn" class="btn-secondary">Cancel</button>
+          </div>
+        </form>
+      </div>
+
       <div id="terminal-container">
         <nav id="main-nav">
           <div class="nav-brand">Kingdoms of Avarice</div>

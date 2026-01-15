@@ -71,12 +71,14 @@ export interface RoomData {
   items: string[];
 }
 
-// Character stats
+// Character stats (6 primary attributes)
 export interface CharacterStats {
   strength: number;
   intelligence: number;
   dexterity: number;
   constitution: number;
+  wisdom: number;
+  charisma: number;
 }
 
 // Character data
@@ -103,7 +105,7 @@ export interface AuthResponse {
 }
 
 // Available races
-export const RACES = ["Human", "Elf", "Dwarf", "Halfling", "Gnome"] as const;
+export const RACES = ["Human", "Elf", "Dwarf", "Halfling", "Orc", "Gnome"] as const;
 export type Race = (typeof RACES)[number];
 
 // Available classes
@@ -113,6 +115,7 @@ export const CLASSES = [
   "Rogue",
   "Cleric",
   "Ranger",
+  "Paladin",
 ] as const;
 export type CharacterClass = (typeof CLASSES)[number];
 

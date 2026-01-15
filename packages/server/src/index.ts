@@ -19,6 +19,7 @@ import { setupAuthRoutes, setDatabaseMode } from './routes/auth.js';
 import { setupRoomRoutes } from './routes/rooms.js';
 import { setupItemRoutes } from './routes/items.js';
 import { setupProgressionRoutes } from './routes/progression.js';
+import { setupCharacterRoutes } from './routes/characters.js';
 import { setupGameSocket, initializeGameWorld } from './game/socket.js';
 import { testConnection } from './db/index.js';
 import { runMigrations, seedInitialData } from './db/migrate.js';
@@ -38,6 +39,7 @@ setupAuthRoutes(app);
 setupRoomRoutes(app);
 setupItemRoutes(app);
 setupProgressionRoutes(app);
+setupCharacterRoutes(app);
 
 const server = createServer(app);
 

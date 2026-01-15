@@ -44,6 +44,14 @@ export async function runMigrations(): Promise<void> {
       await client.query(`
         ALTER TABLE players ADD COLUMN IF NOT EXISTS current_room_id INTEGER DEFAULT 1
       `);
+
+      // Add wisdom and charisma columns to characters table (for existing databases)
+      await client.query(`
+        ALTER TABLE characters ADD COLUMN IF NOT EXISTS wisdom INTEGER NOT NULL DEFAULT 10
+      `);
+      await client.query(`
+        ALTER TABLE characters ADD COLUMN IF NOT EXISTS charisma INTEGER NOT NULL DEFAULT 10
+      `);
     });
 
     console.log('Database migrations completed successfully');

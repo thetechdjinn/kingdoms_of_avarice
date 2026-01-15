@@ -1,5 +1,6 @@
 import { WebSocketServer, WebSocket } from 'ws';
 import { IncomingMessage } from 'http';
+import { URL } from 'url';
 import { parse as parseCookie } from 'cookie';
 import { MessageType, GameMessage, Role, VitalsData, ResourceType, PlayerRegenState } from '@koa/shared';
 import { verifyToken, COOKIE_NAME } from '../routes/auth.js';
@@ -7,8 +8,11 @@ import { GameWorld } from './world.js';
 import { processCommand } from './commands.js';
 import { getPlayerLocation, setPlayerLocation } from './adminCommands.js';
 import * as playerRepo from '../db/repositories/playerRepository.js';
+import * as characterRepo from '../db/repositories/characterRepository.js';
+import * as progressionRepo from '../db/repositories/progressionRepository.js';
 import { initializeProgressionData } from './progressionLoader.js';
 import { initializeDefaultRegenConfigs, startRegenLoops } from './regeneration.js';
+import { colors } from '../utils/colors.js';
 
 interface AuthenticatedSocket extends WebSocket {
   playerId: number;
@@ -19,6 +23,7 @@ interface AuthenticatedSocket extends WebSocket {
   regenState: PlayerRegenState;
   briefMode: boolean;
   exitTimer?: NodeJS.Timeout;
+  properlyExited?: boolean; // True if player exited via 'x' command
 }
 
 const connectedPlayers = new Map<number, AuthenticatedSocket>();
@@ -60,18 +65,68 @@ export function setupGameSocket(wss: WebSocketServer): void {
       return;
     }
 
+    // Parse characterId from query string
+    const url = new URL(req.url || '', `http://${req.headers.host}`);
+    const characterIdParam = url.searchParams.get('characterId');
+    const characterId = characterIdParam ? parseInt(characterIdParam) : null;
+
+    if (!characterId || isNaN(characterId)) {
+      ws.close(1008, 'Character selection required');
+      return;
+    }
+
+    // Verify character exists and belongs to this player
+    let character: characterRepo.DbCharacter | null = null;
+    try {
+      character = await characterRepo.findCharacterById(characterId);
+    } catch (error) {
+      console.error('Failed to load character:', error);
+      ws.close(1008, 'Failed to load character');
+      return;
+    }
+
+    if (!character) {
+      ws.close(1008, 'Character not found');
+      return;
+    }
+
+    if (character.player_id !== payload.playerId) {
+      ws.close(1008, 'Invalid character');
+      return;
+    }
+
+    // Determine resource type based on class
+    let resourceType = ResourceType.NONE;
+    try {
+      const classDef = await progressionRepo.getClassById(character.class);
+      if (classDef?.resource_type) {
+        if (classDef.resource_type === 'mana') {
+          resourceType = ResourceType.MANA;
+        } else if (classDef.resource_type === 'kai') {
+          resourceType = ResourceType.KAI;
+        }
+      }
+    } catch (error) {
+      console.error('Failed to load class definition:', error);
+      // Default to MANA for spell casters based on class name
+      if (['Mage', 'Cleric', 'Paladin'].includes(character.class)) {
+        resourceType = ResourceType.MANA;
+      }
+    }
+
     const authWs = ws as AuthenticatedSocket;
     authWs.playerId = payload.playerId;
-    authWs.username = payload.username;
+    authWs.username = character.name; // Use character name instead of account username
+    authWs.characterId = character.id;
     authWs.roles = payload.roles || [];
 
-    // Initialize default vitals (will be replaced when character system is complete)
+    // Initialize vitals from character data
     authWs.vitals = {
-      hp: 100,
-      maxHp: 100,
-      resource: 50,
-      maxResource: 50,
-      resourceType: ResourceType.MANA,
+      hp: character.health,
+      maxHp: character.max_health,
+      resource: character.mana,
+      maxResource: character.max_mana,
+      resourceType: resourceType,
     };
 
     // Initialize regeneration state
@@ -80,7 +135,7 @@ export function setupGameSocket(wss: WebSocketServer): void {
       inCombat: false,
       isPoisoned: false,
     };
-    
+
     // Load brief mode from database (default to false on error)
     try {
       authWs.briefMode = await playerRepo.getBriefMode(payload.playerId);
@@ -90,18 +145,13 @@ export function setupGameSocket(wss: WebSocketServer): void {
     }
 
     connectedPlayers.set(payload.playerId, authWs);
-    
-    // Load player's saved room location from database (default to room 1 on error)
-    let startRoomId = 1;
-    try {
-      startRoomId = await playerRepo.getCurrentRoomId(payload.playerId);
-    } catch (error) {
-      console.error('Failed to load player room:', error);
-    }
+
+    // Use character's room location (default to room 1 if invalid)
+    const startRoomId = character.current_room_id || 1;
     setPlayerLocation(payload.playerId, startRoomId);
 
-    // Broadcast to all players that someone entered the realm
-    broadcastToAll(`${payload.username} entered the realm.`, authWs.playerId);
+    // Broadcast to all players that someone entered the realm (using character name)
+    broadcastToAll(`${character.name} entered the realm.`, authWs.playerId);
 
     sendMessage(authWs, MessageType.SYSTEM, '\r\n=== Welcome to Kingdoms of Avarice ===\r\n');
     
@@ -152,13 +202,25 @@ export function setupGameSocket(wss: WebSocketServer): void {
     });
 
     ws.on('close', () => {
-      // Broadcast to all players that someone left the realm
-      broadcastToAll(`${payload.username} left the realm.`, payload.playerId);
+      // Clear any pending exit timer
+      if (authWs.exitTimer) {
+        clearTimeout(authWs.exitTimer);
+        authWs.exitTimer = undefined;
+      }
+
+      // Broadcast appropriate message based on how they disconnected
+      if (authWs.properlyExited) {
+        broadcastToAll(`${authWs.username} left the realm.`, payload.playerId);
+      } else {
+        // Player closed browser/tab without proper exit - potential cheating
+        broadcastToAll(colors.boldWhite(`** ${authWs.username} just hung up! **`), payload.playerId);
+      }
+
       connectedPlayers.delete(payload.playerId);
-      console.log(`Player ${payload.username} disconnected`);
+      console.log(`Character ${authWs.username} (Player ${payload.playerId}) disconnected${authWs.properlyExited ? '' : ' (hung up)'}`);
     });
 
-    console.log(`Player ${payload.username} connected`);
+    console.log(`Character ${authWs.username} (Player ${payload.playerId}) connected`);
   });
 }
 

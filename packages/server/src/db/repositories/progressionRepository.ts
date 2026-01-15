@@ -288,6 +288,14 @@ export async function updateClass(classId: string, updates: Partial<ClassDefinit
     setClauses.push(`talent_tree_id = $${paramIndex++}`);
     values.push(updates.talent_tree_id);
   }
+  if (updates.resource_type !== undefined) {
+    setClauses.push(`resource_type = $${paramIndex++}`);
+    values.push(updates.resource_type);
+  }
+  if (updates.playable !== undefined) {
+    setClauses.push(`playable = $${paramIndex++}`);
+    values.push(updates.playable);
+  }
 
   if (setClauses.length === 0) return getClassById(classId);
 

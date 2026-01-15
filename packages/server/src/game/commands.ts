@@ -312,6 +312,8 @@ function handleExit(socket: AuthenticatedSocket): CommandResponse {
   // Start the 10 second countdown
   socket.exitTimer = setTimeout(() => {
     socket.exitTimer = undefined;
+    // Mark as properly exited so disconnect message is friendly
+    socket.properlyExited = true;
     // Send logout message to trigger client-side logout
     const logoutMessage: GameMessage = {
       type: MessageType.LOGOUT,

@@ -1,11 +1,37 @@
 import { Terminal } from 'xterm';
-import { MessageType, GameMessage, VitalsData, ResourceType } from '@koa/shared';
+import { MessageType, GameMessage, VitalsData, ResourceType, Character } from '@koa/shared';
 import 'xterm/css/xterm.css';
 
 let terminal: Terminal | null = null;
 let socket: WebSocket | null = null;
 let currentVitals: VitalsData | null = null;
 let statlineDisplayed = false;
+let currentUsername: string = '';
+let selectedCharacterId: number | null = null;
+let isInGame: boolean = false;
+let canBypassExitTimer: boolean = false;
+
+// Types for API responses
+interface ClassDefinition {
+  class_id: string;
+  display_name: string;
+  description: string | null;
+  base_stats: Record<string, number> | null;
+  playable: boolean;
+}
+
+interface RaceDefinition {
+  race_id: string;
+  display_name: string;
+  description: string | null;
+  stat_modifiers: Record<string, number> | null;
+  allowed_classes: string[] | null;
+  playable: boolean;
+}
+
+// Cache for race and class data
+let cachedRaces: RaceDefinition[] = [];
+let cachedClasses: ClassDefinition[] = [];
 
 // Fixed terminal dimensions (classic MUD style)
 const TERMINAL_COLS = 80;
@@ -125,36 +151,6 @@ function sendCommand(command: string): void {
   socket.send(JSON.stringify(message));
 }
 
-function connectWebSocket(): void {
-  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-  const wsUrl = `${protocol}//${window.location.host}/game`;
-
-  socket = new WebSocket(wsUrl);
-
-  socket.onopen = () => {
-    console.log('Connected to game server');
-  };
-
-  socket.onmessage = (event) => {
-    try {
-      const message: GameMessage = JSON.parse(event.data);
-      handleServerMessage(message);
-    } catch {
-      console.error('Failed to parse server message');
-    }
-  };
-
-  socket.onclose = () => {
-    if (terminal) {
-      terminal.write('\r\n\x1b[31m*** Connection lost ***\x1b[0m\r\n');
-    }
-  };
-
-  socket.onerror = (error) => {
-    console.error('WebSocket error:', error);
-  };
-}
-
 function handleServerMessage(message: GameMessage): void {
   if (!terminal) return;
 
@@ -187,8 +183,8 @@ function handleServerMessage(message: GameMessage): void {
       }
       break;
     case MessageType.LOGOUT:
-      // Server requested logout - call the logout API and redirect to login
-      handleLogout();
+      // Server requested game exit (via 'x' command) - return to landing page
+      handleGameExit();
       break;
   }
 }
@@ -255,15 +251,8 @@ async function handleLogin(event: Event): Promise<void> {
     const data = await response.json();
 
     if (data.success) {
-      document.getElementById('app')!.classList.remove('login-view');
-      document.getElementById('app')!.classList.add('game-view');
-      document.getElementById('login-container')!.style.display = 'none';
-      document.getElementById('terminal-container')!.classList.add('active');
-      initTerminal();
-      connectWebSocket();
-      
-      // Fetch user info and update nav
-      updateNavigation();
+      currentUsername = username;
+      showLandingPage();
     } else {
       if (errorEl) errorEl.textContent = data.message || 'Login failed';
     }
@@ -272,7 +261,38 @@ async function handleLogin(event: Event): Promise<void> {
   }
 }
 
+// Handle exiting the game (via 'x' command) - returns to landing page, stays logged in
+function handleGameExit(): void {
+  if (socket) {
+    socket.close();
+    socket = null;
+  }
+
+  if (terminal) {
+    terminal.dispose();
+    terminal = null;
+  }
+
+  // Reset game state but NOT login state
+  selectedCharacterId = null;
+
+  // Clear in-game state
+  isInGame = false;
+  removeExitProtection();
+
+  // Return to landing page (not login)
+  showLandingPage();
+}
+
 async function handleLogout(): Promise<void> {
+  // Block regular players from logging out while in-game
+  if (isInGame && !canBypassExitTimer) {
+    if (terminal) {
+      terminal.write('\r\n\x1b[33mYou must use the "x" command to exit the game.\x1b[0m\r\n');
+    }
+    return;
+  }
+
   try {
     await fetch('/api/logout', {
       method: 'POST',
@@ -292,9 +312,23 @@ async function handleLogout(): Promise<void> {
     terminal = null;
   }
 
+  // Reset state
+  currentUsername = '';
+  selectedCharacterId = null;
+  cachedRaces = [];
+  cachedClasses = [];
+
+  // Clear in-game state
+  isInGame = false;
+  removeExitProtection();
+
+  // Hide all containers
   document.getElementById('app')!.classList.remove('game-view');
   document.getElementById('app')!.classList.add('login-view');
   document.getElementById('terminal-container')!.classList.remove('active');
+  document.getElementById('landing-container')!.style.display = 'none';
+  document.getElementById('character-select-container')!.style.display = 'none';
+  document.getElementById('character-create-container')!.style.display = 'none';
   document.getElementById('login-container')!.style.display = 'block';
   (document.getElementById('username') as HTMLInputElement).value = '';
   (document.getElementById('password') as HTMLInputElement).value = '';
@@ -364,7 +398,10 @@ async function updateNavigation(): Promise<void> {
       const roles: string[] = data.roles || [];
       const isAdmin = roles.includes('admin');
       const isDeveloper = roles.includes('developer') || isAdmin;
-      
+
+      // Track if user can bypass the 10-second exit timer
+      canBypassExitTimer = isDeveloper || isAdmin;
+
       // Show/hide Developer menu based on roles
       const developerMenu = document.getElementById('developer-menu');
       const menuDivider = document.getElementById('menu-divider');
@@ -390,20 +427,393 @@ async function checkExistingAuth(): Promise<void> {
   try {
     const response = await fetch('/api/auth/me', { credentials: 'include' });
     const data = await response.json();
-    
+
     if (data.authenticated) {
-      // User is already logged in, show game view
-      document.getElementById('app')!.classList.remove('login-view');
-      document.getElementById('app')!.classList.add('game-view');
-      document.getElementById('login-container')!.style.display = 'none';
-      document.getElementById('terminal-container')!.classList.add('active');
-      initTerminal();
-      connectWebSocket();
-      updateNavigation();
+      currentUsername = data.username;
+      showLandingPage();
     }
   } catch (error) {
     console.error('Failed to check auth:', error);
   }
+}
+
+// ============================================================================
+// LANDING PAGE & CHARACTER FLOW
+// ============================================================================
+
+function hideAllContainers(): void {
+  document.getElementById('login-container')!.style.display = 'none';
+  document.getElementById('register-container')!.style.display = 'none';
+  document.getElementById('landing-container')!.style.display = 'none';
+  document.getElementById('character-select-container')!.style.display = 'none';
+  document.getElementById('character-create-container')!.style.display = 'none';
+  document.getElementById('terminal-container')!.classList.remove('active');
+}
+
+function showLandingPage(): void {
+  hideAllContainers();
+  document.getElementById('app')!.classList.remove('login-view');
+  document.getElementById('app')!.classList.add('game-view');
+
+  const landingUsername = document.getElementById('landing-username');
+  if (landingUsername) {
+    landingUsername.textContent = currentUsername;
+  }
+
+  document.getElementById('landing-container')!.style.display = 'block';
+}
+
+async function showCharacterSelect(): Promise<void> {
+  hideAllContainers();
+
+  const characterList = document.getElementById('character-list')!;
+  characterList.innerHTML = '<p class="loading">Loading characters...</p>';
+  document.getElementById('character-select-container')!.style.display = 'block';
+
+  try {
+    const response = await fetch('/api/characters', { credentials: 'include' });
+    const data = await response.json();
+
+    if (!data.success) {
+      characterList.innerHTML = '<p class="error">Failed to load characters</p>';
+      return;
+    }
+
+    const characters: Character[] = data.characters;
+
+    if (characters.length === 0) {
+      characterList.innerHTML = '<p class="no-characters">No characters yet. Create one to begin!</p>';
+    } else {
+      characterList.innerHTML = characters.map(char => `
+        <div class="character-card" data-id="${char.id}">
+          <div class="character-card-content">
+            <div class="character-name">${escapeHtml(char.name)}</div>
+            <div class="character-info">Level ${char.level} ${escapeHtml(char.race)} ${escapeHtml(char.class)}</div>
+          </div>
+          <button class="character-delete-btn" data-id="${char.id}" data-name="${escapeHtml(char.name)}" title="Delete character">X</button>
+        </div>
+      `).join('');
+
+      // Add click handlers for selecting characters
+      characterList.querySelectorAll('.character-card-content').forEach(content => {
+        content.addEventListener('click', () => {
+          const card = content.closest('.character-card');
+          const charId = parseInt(card?.getAttribute('data-id') || '0');
+          if (charId) {
+            selectCharacter(charId);
+          }
+        });
+      });
+
+      // Add click handlers for delete buttons
+      characterList.querySelectorAll('.character-delete-btn').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+          e.stopPropagation(); // Prevent card selection
+          const charId = parseInt(btn.getAttribute('data-id') || '0');
+          const charName = btn.getAttribute('data-name') || 'this character';
+          if (charId && confirm(`Are you sure you want to delete ${charName}? This cannot be undone.`)) {
+            await deleteCharacter(charId);
+          }
+        });
+      });
+    }
+  } catch (error) {
+    console.error('Failed to fetch characters:', error);
+    characterList.innerHTML = '<p class="error">Connection error</p>';
+  }
+}
+
+async function showCharacterCreate(): Promise<void> {
+  hideAllContainers();
+  document.getElementById('character-create-container')!.style.display = 'block';
+
+  // Clear form
+  (document.getElementById('char-name') as HTMLInputElement).value = '';
+  (document.getElementById('char-race') as HTMLSelectElement).value = '';
+  (document.getElementById('char-class') as HTMLSelectElement).value = '';
+  document.getElementById('create-error')!.textContent = '';
+  document.getElementById('race-description')!.textContent = '';
+  document.getElementById('class-description')!.textContent = '';
+  clearStatPreview();
+
+  // Load races and classes if not cached
+  await loadRacesAndClasses();
+
+  // Populate dropdowns
+  const raceSelect = document.getElementById('char-race') as HTMLSelectElement;
+  const classSelect = document.getElementById('char-class') as HTMLSelectElement;
+
+  raceSelect.innerHTML = '<option value="">Select a race...</option>' +
+    cachedRaces.map(r => `<option value="${r.race_id}">${escapeHtml(r.display_name)}</option>`).join('');
+
+  classSelect.innerHTML = '<option value="">Select a class...</option>' +
+    cachedClasses.map(c => `<option value="${c.class_id}">${escapeHtml(c.display_name)}</option>`).join('');
+}
+
+async function loadRacesAndClasses(): Promise<void> {
+  if (cachedRaces.length > 0 && cachedClasses.length > 0) {
+    return; // Already loaded
+  }
+
+  try {
+    const [racesRes, classesRes] = await Promise.all([
+      fetch('/api/progression/races/playable', { credentials: 'include' }),
+      fetch('/api/progression/classes/playable', { credentials: 'include' }),
+    ]);
+
+    const racesData = await racesRes.json();
+    const classesData = await classesRes.json();
+
+    if (racesData.success) {
+      cachedRaces = racesData.races;
+    }
+    if (classesData.success) {
+      cachedClasses = classesData.classes;
+    }
+  } catch (error) {
+    console.error('Failed to load races/classes:', error);
+  }
+}
+
+function updateRaceDescription(): void {
+  const raceSelect = document.getElementById('char-race') as HTMLSelectElement;
+  const descEl = document.getElementById('race-description')!;
+  const raceId = raceSelect.value;
+
+  const race = cachedRaces.find(r => r.race_id === raceId);
+  if (race && race.description) {
+    descEl.textContent = race.description;
+  } else {
+    descEl.textContent = '';
+  }
+
+  updateStatPreview();
+}
+
+function updateClassDescription(): void {
+  const classSelect = document.getElementById('char-class') as HTMLSelectElement;
+  const descEl = document.getElementById('class-description')!;
+  const classId = classSelect.value;
+
+  const classDef = cachedClasses.find(c => c.class_id === classId);
+  if (classDef && classDef.description) {
+    descEl.textContent = classDef.description;
+  } else {
+    descEl.textContent = '';
+  }
+
+  updateStatPreview();
+}
+
+function clearStatPreview(): void {
+  document.getElementById('preview-str')!.textContent = '-';
+  document.getElementById('preview-int')!.textContent = '-';
+  document.getElementById('preview-dex')!.textContent = '-';
+  document.getElementById('preview-con')!.textContent = '-';
+  document.getElementById('preview-wis')!.textContent = '-';
+  document.getElementById('preview-cha')!.textContent = '-';
+}
+
+function updateStatPreview(): void {
+  const raceSelect = document.getElementById('char-race') as HTMLSelectElement;
+  const classSelect = document.getElementById('char-class') as HTMLSelectElement;
+
+  const raceId = raceSelect.value;
+  const classId = classSelect.value;
+
+  if (!raceId || !classId) {
+    clearStatPreview();
+    return;
+  }
+
+  const race = cachedRaces.find(r => r.race_id === raceId);
+  const classDef = cachedClasses.find(c => c.class_id === classId);
+
+  if (!race || !classDef) {
+    clearStatPreview();
+    return;
+  }
+
+  const baseStats = classDef.base_stats || {};
+  const modifiers = race.stat_modifiers || {};
+
+  const stats = {
+    strength: (baseStats.strength || 10) + (modifiers.strength || 0),
+    intelligence: (baseStats.intelligence || 10) + (modifiers.intelligence || 0),
+    dexterity: (baseStats.dexterity || 10) + (modifiers.dexterity || 0),
+    constitution: (baseStats.constitution || 10) + (modifiers.constitution || 0),
+    wisdom: (baseStats.wisdom || 10) + (modifiers.wisdom || 0),
+    charisma: (baseStats.charisma || 10) + (modifiers.charisma || 0),
+  };
+
+  document.getElementById('preview-str')!.textContent = String(stats.strength);
+  document.getElementById('preview-int')!.textContent = String(stats.intelligence);
+  document.getElementById('preview-dex')!.textContent = String(stats.dexterity);
+  document.getElementById('preview-con')!.textContent = String(stats.constitution);
+  document.getElementById('preview-wis')!.textContent = String(stats.wisdom);
+  document.getElementById('preview-cha')!.textContent = String(stats.charisma);
+}
+
+async function deleteCharacter(characterId: number): Promise<void> {
+  try {
+    const response = await fetch(`/api/characters/${characterId}`, {
+      method: 'DELETE',
+      credentials: 'include',
+    });
+
+    const data = await response.json();
+
+    if (data.success) {
+      // Refresh the character list
+      showCharacterSelect();
+    } else {
+      alert(data.message || 'Failed to delete character');
+    }
+  } catch {
+    alert('Connection error');
+  }
+}
+
+async function handleCharacterCreate(event: Event): Promise<void> {
+  event.preventDefault();
+
+  const name = (document.getElementById('char-name') as HTMLInputElement).value.trim();
+  const raceId = (document.getElementById('char-race') as HTMLSelectElement).value;
+  const classId = (document.getElementById('char-class') as HTMLSelectElement).value;
+  const errorEl = document.getElementById('create-error')!;
+
+  errorEl.textContent = '';
+
+  if (!name || !raceId || !classId) {
+    errorEl.textContent = 'Please fill in all fields';
+    return;
+  }
+
+  try {
+    const response = await fetch('/api/characters', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, raceId, classId }),
+      credentials: 'include',
+    });
+
+    const data = await response.json();
+
+    if (data.success) {
+      // Character created, select it and enter game
+      selectCharacter(data.character.id);
+    } else {
+      errorEl.textContent = data.message || 'Failed to create character';
+    }
+  } catch {
+    errorEl.textContent = 'Connection error';
+  }
+}
+
+// ============================================================================
+// EXIT PROTECTION (Anti-cheat)
+// ============================================================================
+
+// Handler for beforeunload - prevents accidental/intentional tab closing
+function beforeUnloadHandler(e: BeforeUnloadEvent): void {
+  if (isInGame && !canBypassExitTimer) {
+    e.preventDefault();
+    // Most browsers will show a generic message regardless of returnValue
+    return;
+  }
+}
+
+// Handler for navigation link clicks - prevents instant game exit
+function navigationClickHandler(e: Event): void {
+  if (!isInGame) return; // Not in game, allow navigation
+  if (canBypassExitTimer) return; // Developer/Admin, allow navigation
+
+  // Block navigation for regular players while in-game
+  e.preventDefault();
+  if (terminal) {
+    terminal.write('\r\n\x1b[33mYou must use the "x" command to exit the game.\x1b[0m\r\n');
+  }
+}
+
+function setupExitProtection(): void {
+  // Only set up protection for regular players
+  if (!canBypassExitTimer) {
+    window.addEventListener('beforeunload', beforeUnloadHandler);
+  }
+
+  // Add click handlers to navigation links in the dropdown
+  const editorLinks = document.querySelectorAll('#user-dropdown a.dropdown-item');
+  editorLinks.forEach((link) => {
+    link.addEventListener('click', navigationClickHandler);
+  });
+}
+
+function removeExitProtection(): void {
+  window.removeEventListener('beforeunload', beforeUnloadHandler);
+
+  // Remove click handlers from navigation links
+  const editorLinks = document.querySelectorAll('#user-dropdown a.dropdown-item');
+  editorLinks.forEach((link) => {
+    link.removeEventListener('click', navigationClickHandler);
+  });
+}
+
+function selectCharacter(characterId: number): void {
+  selectedCharacterId = characterId;
+  enterGame();
+}
+
+function enterGame(): void {
+  if (!selectedCharacterId) {
+    console.error('No character selected');
+    return;
+  }
+
+  hideAllContainers();
+  document.getElementById('terminal-container')!.classList.add('active');
+  isInGame = true;
+  setupExitProtection();
+  initTerminal();
+  connectWebSocketWithCharacter(selectedCharacterId);
+  updateNavigation();
+}
+
+function connectWebSocketWithCharacter(characterId: number): void {
+  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  const wsUrl = `${protocol}//${window.location.host}/game?characterId=${characterId}`;
+
+  socket = new WebSocket(wsUrl);
+
+  socket.onopen = () => {
+    console.log('Connected to game server');
+  };
+
+  socket.onmessage = (event) => {
+    try {
+      const message: GameMessage = JSON.parse(event.data);
+      handleServerMessage(message);
+    } catch {
+      console.error('Failed to parse server message');
+    }
+  };
+
+  socket.onclose = () => {
+    isInGame = false;
+    removeExitProtection();
+    if (terminal) {
+      terminal.write('\r\n\x1b[31m*** Connection lost ***\x1b[0m\r\n');
+    }
+  };
+
+  socket.onerror = (error) => {
+    console.error('WebSocket error:', error);
+  };
+}
+
+function escapeHtml(text: string): string {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -444,6 +854,50 @@ document.addEventListener('DOMContentLoaded', () => {
   const logoutBtn = document.getElementById('logout-btn');
   if (logoutBtn) {
     logoutBtn.addEventListener('click', handleLogout);
+  }
+
+  // Landing page buttons
+  const enterGameBtn = document.getElementById('enter-game-btn');
+  if (enterGameBtn) {
+    enterGameBtn.addEventListener('click', showCharacterSelect);
+  }
+
+  const landingLogoutBtn = document.getElementById('landing-logout-btn');
+  if (landingLogoutBtn) {
+    landingLogoutBtn.addEventListener('click', handleLogout);
+  }
+
+  // Character select buttons
+  const createCharacterBtn = document.getElementById('create-character-btn');
+  if (createCharacterBtn) {
+    createCharacterBtn.addEventListener('click', showCharacterCreate);
+  }
+
+  const backToLandingBtn = document.getElementById('back-to-landing-btn');
+  if (backToLandingBtn) {
+    backToLandingBtn.addEventListener('click', showLandingPage);
+  }
+
+  // Character create form
+  const charCreateForm = document.getElementById('character-create-form');
+  if (charCreateForm) {
+    charCreateForm.addEventListener('submit', handleCharacterCreate);
+  }
+
+  const backToSelectBtn = document.getElementById('back-to-select-btn');
+  if (backToSelectBtn) {
+    backToSelectBtn.addEventListener('click', showCharacterSelect);
+  }
+
+  // Race/class selection change handlers
+  const raceSelect = document.getElementById('char-race');
+  if (raceSelect) {
+    raceSelect.addEventListener('change', updateRaceDescription);
+  }
+
+  const classSelect = document.getElementById('char-class');
+  if (classSelect) {
+    classSelect.addEventListener('change', updateClassDescription);
   }
 
   // User menu dropdown toggle
