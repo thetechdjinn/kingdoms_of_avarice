@@ -13,7 +13,7 @@ dotenv.config({ path: envPath });
 // SQL files are in src/db, not dist/db
 const sqlDir = __dirname.replace(/dist[\\\/]db$/, 'src/db');
 
-import { pool as getPool, testConnection } from './index.js';
+import { pool as getPool, testConnection, withTransaction } from './index.js';
 import * as roleRepo from './repositories/roleRepository.js';
 
 export async function runMigrations(): Promise<void> {
@@ -24,21 +24,28 @@ export async function runMigrations(): Promise<void> {
   }
 
   try {
-    const schemaPath = join(sqlDir, 'schema.sql');
-    const schema = readFileSync(schemaPath, 'utf-8');
-    
-    await getPool().query(schema);
-    
-    // Add brief_mode column if it doesn't exist (for existing databases)
-    await getPool().query(`
-      ALTER TABLE players ADD COLUMN IF NOT EXISTS brief_mode BOOLEAN DEFAULT FALSE
-    `);
-    
-    // Add current_room_id column if it doesn't exist (for existing databases)
-    await getPool().query(`
-      ALTER TABLE players ADD COLUMN IF NOT EXISTS current_room_id INTEGER DEFAULT 1
-    `);
-    
+    await withTransaction(async (client) => {
+      const schemaPath = join(sqlDir, 'schema.sql');
+      const schema = readFileSync(schemaPath, 'utf-8');
+
+      await client.query(schema);
+
+      // Run progression schema
+      const progressionSchemaPath = join(sqlDir, 'schema_progression.sql');
+      const progressionSchema = readFileSync(progressionSchemaPath, 'utf-8');
+      await client.query(progressionSchema);
+
+      // Add brief_mode column if it doesn't exist (for existing databases)
+      await client.query(`
+        ALTER TABLE players ADD COLUMN IF NOT EXISTS brief_mode BOOLEAN DEFAULT FALSE
+      `);
+
+      // Add current_room_id column if it doesn't exist (for existing databases)
+      await client.query(`
+        ALTER TABLE players ADD COLUMN IF NOT EXISTS current_room_id INTEGER DEFAULT 1
+      `);
+    });
+
     console.log('Database migrations completed successfully');
 
     // Initialize roles

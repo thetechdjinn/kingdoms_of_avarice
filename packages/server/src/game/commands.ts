@@ -11,6 +11,9 @@ export interface CommandResponse {
   message: string;
 }
 
+// Configuration constants
+const EXIT_MEDITATION_TIMEOUT_MS = 10000;
+
 // Filter input to printable ASCII characters only (security)
 function sanitizeInput(input: string): string {
   // Allow printable ASCII characters (space through tilde: 0x20-0x7E)
@@ -58,6 +61,12 @@ export async function processCommand(
   const parts = lowerTrimmed.split(/\s+/);
   const command = parts[0];
   const args = parts.slice(1);
+
+  // Clear enhanced regen state when any command other than 'rest' is entered
+  // This breaks the resting/meditating state when the player takes any action
+  if (command !== 'rest' && command !== 're' && socket.regenState.enhancedRegen.size > 0) {
+    socket.regenState.enhancedRegen.clear();
+  }
 
   const currentRoomId = getPlayerLocation(socket.playerId);
 
@@ -171,7 +180,7 @@ export async function processCommand(
   }
 
   if (command === 'help' || command === '?') {
-    return handleHelp(socket.roles);
+    return handleHelp(socket.roles, args[0]);
   }
 
   if (command === 'who') {
@@ -184,6 +193,10 @@ export async function processCommand(
 
   if (command === 'x' && args.length === 0) {
     return handleExit(socket);
+  }
+
+  if (command === 'rest' || command === 're') {
+    return handleRest(socket);
   }
 
   // Default: treat as speech
@@ -268,11 +281,17 @@ async function handleLookDirection(
 }
 
 async function handleBrief(socket: AuthenticatedSocket): Promise<CommandResponse> {
-  socket.briefMode = !socket.briefMode;
-  
-  // Save to database
-  await playerRepo.setBriefMode(socket.playerId, socket.briefMode);
-  
+  const newBriefMode = !socket.briefMode;
+
+  // Save to database first, only update memory if successful
+  try {
+    await playerRepo.setBriefMode(socket.playerId, newBriefMode);
+    socket.briefMode = newBriefMode;
+  } catch (error) {
+    console.error('Failed to save brief mode:', error);
+    return { type: MessageType.ERROR, message: 'Failed to save preference. Please try again.' };
+  }
+
   if (socket.briefMode) {
     return { type: MessageType.SYSTEM, message: 'Brief mode on.' };
   } else {
@@ -302,9 +321,36 @@ function handleExit(socket: AuthenticatedSocket): CommandResponse {
     socket.send(JSON.stringify(logoutMessage));
     // Close the socket after a brief delay to ensure message is sent
     setTimeout(() => socket.close(), 100);
-  }, 10000);
+  }, EXIT_MEDITATION_TIMEOUT_MS);
 
   return { type: MessageType.SYSTEM, message: 'You sit down and meditate...' };
+}
+
+function handleRest(socket: AuthenticatedSocket): CommandResponse {
+  // Check if already resting
+  if (socket.regenState.enhancedRegen.has('mana') && socket.regenState.enhancedRegen.has('health')) {
+    return { type: MessageType.SYSTEM, message: 'You are already resting.' };
+  }
+
+  // Check if in combat
+  if (socket.regenState.inCombat) {
+    return { type: MessageType.ERROR, message: 'You cannot rest while in combat!' };
+  }
+
+  // Check if poisoned
+  if (socket.regenState.isPoisoned) {
+    return { type: MessageType.ERROR, message: 'You cannot rest while poisoned!' };
+  }
+
+  // Enable enhanced regeneration for mana and health
+  socket.regenState.enhancedRegen.add('mana');
+  socket.regenState.enhancedRegen.add('health');
+
+  // Broadcast to others in the room
+  const currentRoomId = getPlayerLocation(socket.playerId);
+  broadcastToRoom(currentRoomId, `${socket.username} sits down to rest.`, socket.playerId);
+
+  return { type: MessageType.SYSTEM, message: 'You sit down and rest. (Type any command to stand up)' };
 }
 
 // Map direction to opposite direction for "walks in from" messages
@@ -339,13 +385,17 @@ async function handleMove(
     return { type: MessageType.ERROR, message: `You cannot go ${fullDirection}.` };
   }
 
-  // Broadcast to players in the old room that player left
-  broadcastToRoom(currentRoomId, `${socket.username} left to the ${fullDirection}.`, socket.playerId);
+  // Save room location to database first
+  try {
+    await playerRepo.setCurrentRoomId(socket.playerId, newRoom.id);
+  } catch (error) {
+    console.error('Failed to save room location:', error);
+    return { type: MessageType.ERROR, message: 'Something prevents you from moving.' };
+  }
 
+  // Database succeeded, now update in-memory state and broadcast
+  broadcastToRoom(currentRoomId, `${socket.username} left to the ${fullDirection}.`, socket.playerId);
   setPlayerLocation(socket.playerId, newRoom.id);
-  
-  // Save room location to database
-  await playerRepo.setCurrentRoomId(socket.playerId, newRoom.id);
 
   // Broadcast to players in the new room that player arrived
   const oppositeDir = OPPOSITE_DIRECTIONS[fullDirection] || fullDirection;
@@ -385,64 +435,143 @@ function handleSay(
   return { type: MessageType.OUTPUT, message: `${colors.sayName('You say:')} ${colors.say('"' + message + '"')}` };
 }
 
-function handleHelp(userRoles: Role[]): CommandResponse {
+function handleHelp(userRoles: Role[], category?: string): CommandResponse {
+  const isStaff = hasAnyRole(userRoles, [Role.MODERATOR, Role.SYSOP, Role.DEVELOPER, Role.ADMIN]);
+  const isDeveloper = hasAnyRole(userRoles, [Role.DEVELOPER, Role.ADMIN]);
+  
+  // Handle specific category requests
+  if (category) {
+    const cat = category.toLowerCase();
+    
+    if (cat === 'staff') {
+      if (!isStaff) {
+        return { type: MessageType.ERROR, message: 'You do not have access to staff commands.' };
+      }
+      return getStaffHelp();
+    }
+    
+    if (cat === 'developer' || cat === 'dev') {
+      if (!isDeveloper) {
+        return { type: MessageType.ERROR, message: 'You do not have access to developer commands.' };
+      }
+      return getDeveloperHelp();
+    }
+    
+    if (cat === 'admin') {
+      return { type: MessageType.SYSTEM, message: 'Admin commands are not yet implemented.' };
+    }
+    
+    // Unknown category - show player help with note
+    return { type: MessageType.ERROR, message: `Unknown help category: ${category}. Try: help, help staff, help developer` };
+  }
+  
+  // Default: show player commands
   const lines = [
     colors.boldYellow('Player Commands:'),
-    `  ${colors.boldCyan('look')} (l)           - Look around the current room`,
-    `  ${colors.boldCyan('look <item>')}        - Examine an item`,
-    `  ${colors.boldCyan('look in <container>')} - View container contents`,
-    `  ${colors.boldCyan('get <item>')}         - Pick up an item`,
-    `  ${colors.boldCyan('get <item> from <container>')} - Get from container`,
-    `  ${colors.boldCyan('drop <item>')}        - Drop an item`,
-    `  ${colors.boldCyan('put <item> in <container>')} - Put in container`,
-    `  ${colors.boldCyan('inventory')} (i)      - List items you are carrying`,
-    `  ${colors.boldCyan('wield <item>')}       - Wield a weapon`,
-    `  ${colors.boldCyan('wear <item>')}        - Wear armor or accessories`,
-    `  ${colors.boldCyan('remove <item>')}      - Remove equipped item`,
-    `  ${colors.boldCyan('equipment')} (eq)     - List equipped items`,
-    `  ${colors.boldCyan('use <item>')}        - Use a consumable item`,
-    `  ${colors.boldCyan('eat/drink/quaff')}   - Consume food/drink/potion`,
-    `  ${colors.boldCyan('light <item>')}      - Light a torch or lantern`,
-    `  ${colors.boldCyan('extinguish <item>')} - Put out a light source`,
-    `  ${colors.boldCyan('repair <item>')}     - Repair a damaged item`,
-    `  ${colors.boldCyan('search')}            - Search for hidden items`,
-    `  ${colors.boldCyan('recipes')}           - List known crafting recipes`,
-    `  ${colors.boldCyan('craft <recipe>')}    - Craft an item`,
-    `  ${colors.boldCyan('enchantments')}      - List known enchantments`,
-    `  ${colors.boldCyan('enchant <item> with <enchantment>')} - Enchant an item`,
-    `  ${colors.boldCyan('<direction>')}       - Move in a direction (n, s, e, w, etc.)`,
-    `  ${colors.boldCyan('brief')}             - Toggle brief mode (hide room descriptions)`,
-    `  ${colors.boldCyan('who')}               - See who is online`,
-    `  ${colors.boldCyan('x')}                 - Meditate and leave the realm`,
-    `  ${colors.boldCyan('help')} (?)          - Show this help message`,
     '',
-    `${colors.boldYellow('Directions:')} n, s, e, w, ne, nw, se, sw, u, d`,
-    '  (or full names: north, south, east, west, etc.)',
+    colors.boldCyan('  Movement & Looking:'),
+    `    ${colors.white('look')} (l)              - Look around the current room`,
+    `    ${colors.white('look <direction>')}      - Look in a direction`,
+    `    ${colors.white('look <item>')}           - Examine an item`,
+    `    ${colors.white('look in <container>')}   - View container contents`,
+    `    ${colors.white('<direction>')}           - Move (n, s, e, w, ne, nw, se, sw, u, d)`,
+    `    ${colors.white('brief')}                 - Toggle brief mode`,
+    '',
+    colors.boldCyan('  Items & Inventory:'),
+    `    ${colors.white('get <item>')}            - Pick up an item`,
+    `    ${colors.white('get <item> from <container>')} - Get from container`,
+    `    ${colors.white('drop <item>')}           - Drop an item`,
+    `    ${colors.white('put <item> in <container>')} - Put in container`,
+    `    ${colors.white('inventory')} (i)         - List items you are carrying`,
+    `    ${colors.white('search')}                - Search for hidden items`,
+    '',
+    colors.boldCyan('  Equipment:'),
+    `    ${colors.white('wield <item>')}          - Wield a weapon`,
+    `    ${colors.white('wear <item>')}           - Wear armor or accessories`,
+    `    ${colors.white('remove <item>')}         - Remove equipped item`,
+    `    ${colors.white('equipment')} (eq)        - List equipped items`,
+    '',
+    colors.boldCyan('  Using Items:'),
+    `    ${colors.white('use <item>')}            - Use a consumable item`,
+    `    ${colors.white('eat/drink/quaff <item>')} - Consume food/drink/potion`,
+    `    ${colors.white('light <item>')}          - Light a torch or lantern`,
+    `    ${colors.white('extinguish <item>')}     - Put out a light source`,
+    `    ${colors.white('repair <item>')}         - Repair a damaged item`,
+    '',
+    colors.boldCyan('  Crafting:'),
+    `    ${colors.white('recipes')}               - List known crafting recipes`,
+    `    ${colors.white('craft <recipe>')}        - Craft an item`,
+    `    ${colors.white('enchantments')}          - List known enchantments`,
+    `    ${colors.white('enchant <item> with <enchantment>')} - Enchant an item`,
+    '',
+    colors.boldCyan('  Communication & System:'),
+    `    ${colors.white('rest')} (re)             - Rest to regenerate faster`,
+    `    ${colors.white('who')}                   - See who is online`,
+    `    ${colors.white('x')}                     - Meditate and leave the realm`,
+    `    ${colors.white('help')} (?)              - Show this help message`,
   ];
 
-  // Staff commands (Moderator+)
-  const isStaff = hasAnyRole(userRoles, [Role.MODERATOR, Role.SYSOP, Role.DEVELOPER, Role.ADMIN]);
-  if (isStaff) {
+  // Add note about additional help categories for staff/developers
+  if (isStaff || isDeveloper) {
     lines.push('');
-    lines.push(colors.boldYellow('Staff Commands:'));
-    lines.push(`  ${colors.boldCyan('@goto <id>')}        - Teleport to a room`);
-    lines.push(`  ${colors.boldCyan('@rooms')}            - List all rooms`);
-    lines.push(`  ${colors.boldCyan('@roominfo [id]')}    - Show room details`);
-    lines.push(`  ${colors.boldCyan('@help')}             - Show admin command help`);
+    lines.push(colors.boldYellow('Additional Help:'));
+    if (isStaff) {
+      lines.push(`  ${colors.white('help staff')}           - View staff commands`);
+    }
+    if (isDeveloper) {
+      lines.push(`  ${colors.white('help developer')}       - View developer commands`);
+    }
   }
 
-  // Developer commands
-  const isDeveloper = hasAnyRole(userRoles, [Role.DEVELOPER, Role.ADMIN]);
-  if (isDeveloper) {
-    lines.push('');
-    lines.push(colors.boldYellow('Developer Commands:'));
-    lines.push(`  ${colors.boldCyan('@create room <name>')} - Create a new room`);
-    lines.push(`  ${colors.boldCyan('@link <dir> <id>')}  - Link current room to another`);
-    lines.push(`  ${colors.boldCyan('@unlink <dir>')}     - Remove an exit`);
-    lines.push(`  ${colors.boldCyan('@edit <field> <value>')} - Edit room (name/desc/area)`);
-    lines.push(`  ${colors.boldCyan('@delete room <id>')} - Delete a room`);
-    lines.push(`  ${colors.boldCyan('@reload')}           - Reload data from database`);
-  }
+  return { type: MessageType.OUTPUT, message: lines.join('\r\n') };
+}
+
+function getStaffHelp(): CommandResponse {
+  const lines = [
+    colors.boldYellow('Staff Commands:'),
+    '',
+    `  ${colors.boldCyan('@goto <id>')}              - Teleport to a room`,
+    `  ${colors.boldCyan('@rooms')}                  - List all rooms`,
+    `  ${colors.boldCyan('@roominfo [id]')}          - Show room details`,
+    `  ${colors.boldCyan('@give <id|name> [qty]')}   - Give yourself an item`,
+    `  ${colors.boldCyan('@help')}                   - Show full admin command reference`,
+  ];
+
+  return { type: MessageType.OUTPUT, message: lines.join('\r\n') };
+}
+
+function getDeveloperHelp(): CommandResponse {
+  const lines = [
+    colors.boldYellow('Developer Commands:'),
+    '',
+    colors.boldCyan('  Room Building:'),
+    `    ${colors.white('@create room <name>')}     - Create a new room`,
+    `    ${colors.white('@link <dir> <id> [oneway]')} - Link current room to another`,
+    `    ${colors.white('@unlink <dir> [oneway]')}  - Remove an exit`,
+    `    ${colors.white('@edit <field> <value>')}   - Edit current room (name/desc/area)`,
+    `    ${colors.white('@delete room <id>')}       - Delete a room`,
+    '',
+    colors.boldCyan('  Item Management:'),
+    `    ${colors.white('@items')}                  - List all item templates`,
+    `    ${colors.white('@iteminfo <id|name>')}     - Show item template details`,
+    `    ${colors.white('@spawn <id|name> [qty]')}  - Spawn item in current room`,
+    `    ${colors.white('@purge items')}            - Remove all items from room`,
+    `    ${colors.white('@purge item <id>')}        - Remove specific item instance`,
+    '',
+    colors.boldCyan('  Progression System:'),
+    `    ${colors.white('@classes')}                - List all classes`,
+    `    ${colors.white('@classinfo <id>')}         - Show class details`,
+    `    ${colors.white('@races')}                  - List all races`,
+    `    ${colors.white('@raceinfo <id>')}          - Show race details`,
+    `    ${colors.white('@abilities [type]')}       - List abilities`,
+    `    ${colors.white('@talents [class]')}        - List talents`,
+    `    ${colors.white('@events')}                 - List essence events`,
+    '',
+    colors.boldCyan('  System:'),
+    `    ${colors.white('@reload [rooms|all]')}     - Reload data from database`,
+    '',
+    `Type ${colors.boldCyan('@help')} for the full admin command reference.`,
+  ];
 
   return { type: MessageType.OUTPUT, message: lines.join('\r\n') };
 }

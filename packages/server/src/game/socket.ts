@@ -1,12 +1,14 @@
 import { WebSocketServer, WebSocket } from 'ws';
 import { IncomingMessage } from 'http';
 import { parse as parseCookie } from 'cookie';
-import { MessageType, GameMessage, Role, VitalsData, ResourceType } from '@koa/shared';
+import { MessageType, GameMessage, Role, VitalsData, ResourceType, PlayerRegenState } from '@koa/shared';
 import { verifyToken, COOKIE_NAME } from '../routes/auth.js';
 import { GameWorld } from './world.js';
 import { processCommand } from './commands.js';
 import { getPlayerLocation, setPlayerLocation } from './adminCommands.js';
 import * as playerRepo from '../db/repositories/playerRepository.js';
+import { initializeProgressionData } from './progressionLoader.js';
+import { initializeDefaultRegenConfigs, startRegenLoops } from './regeneration.js';
 
 interface AuthenticatedSocket extends WebSocket {
   playerId: number;
@@ -14,6 +16,7 @@ interface AuthenticatedSocket extends WebSocket {
   characterId?: number;
   roles: Role[];
   vitals: VitalsData;
+  regenState: PlayerRegenState;
   briefMode: boolean;
   exitTimer?: NodeJS.Timeout;
 }
@@ -25,6 +28,19 @@ let worldInitialized = false;
 export async function initializeGameWorld(): Promise<void> {
   if (worldInitialized) return;
   await gameWorld.initialize();
+
+  // Initialize progression system from JSON data files
+  try {
+    await initializeProgressionData();
+  } catch (error) {
+    console.error('[Progression] CRITICAL: Failed to load progression data - classes/races may be unavailable:', error);
+    // Server continues but progression features will be degraded
+  }
+
+  // Initialize resource regeneration system
+  initializeDefaultRegenConfigs();
+  startRegenLoops(connectedPlayers, sendVitals);
+
   worldInitialized = true;
 }
 
@@ -56,6 +72,13 @@ export function setupGameSocket(wss: WebSocketServer): void {
       resource: 50,
       maxResource: 50,
       resourceType: ResourceType.MANA,
+    };
+
+    // Initialize regeneration state
+    authWs.regenState = {
+      enhancedRegen: new Set<string>(),
+      inCombat: false,
+      isPoisoned: false,
     };
     
     // Load brief mode from database (default to false on error)
@@ -105,16 +128,26 @@ export function setupGameSocket(wss: WebSocketServer): void {
     sendVitals(authWs);
 
     ws.on('message', async (data) => {
+      // Parse JSON separately to distinguish parse errors from command errors
+      let message: GameMessage;
       try {
-        const message: GameMessage = JSON.parse(data.toString());
+        message = JSON.parse(data.toString());
+      } catch {
+        sendMessage(authWs, MessageType.ERROR, 'Invalid message format');
+        return;
+      }
+
+      // Process command in separate try/catch
+      try {
         if (message.type === MessageType.COMMAND) {
           const response = await processCommand(message.payload, authWs, gameWorld, connectedPlayers);
           sendMessage(authWs, response.type, response.message);
           // Send vitals after every command
           sendVitals(authWs);
         }
-      } catch {
-        sendMessage(authWs, MessageType.ERROR, 'Invalid message format');
+      } catch (error) {
+        console.error('Command processing error:', error);
+        sendMessage(authWs, MessageType.ERROR, 'An error occurred processing your command');
       }
     });
 
@@ -171,4 +204,4 @@ export function broadcastToRoom(roomId: number, text: string, excludePlayerId?: 
   }
 }
 
-export { connectedPlayers, AuthenticatedSocket };
+export { connectedPlayers, AuthenticatedSocket, sendVitals, sendMessage };

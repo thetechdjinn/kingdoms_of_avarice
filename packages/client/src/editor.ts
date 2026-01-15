@@ -1,3 +1,5 @@
+(function() {
+
 interface Room {
   id: number;
   name: string;
@@ -26,7 +28,8 @@ async function checkAuth(): Promise<boolean> {
     currentUser = data;
     
     if (!data.authenticated) {
-      showLoginRequired();
+      // Redirect to login
+      window.location.href = '/';
       return false;
     }
 
@@ -35,7 +38,8 @@ async function checkAuth(): Promise<boolean> {
     const hasDeveloperAccess = roles.includes('developer') || roles.includes('admin');
     
     if (!hasDeveloperAccess) {
-      showAccessDenied();
+      // Redirect to game - no access
+      window.location.href = '/';
       return false;
     }
 
@@ -48,7 +52,8 @@ async function checkAuth(): Promise<boolean> {
     return true;
   } catch (error) {
     console.error('Failed to check auth:', error);
-    showLoginRequired();
+    // Redirect to login on error
+    window.location.href = '/';
     return false;
   }
 }
@@ -60,29 +65,6 @@ async function handleLogout(): Promise<void> {
     // Ignore errors
   }
   window.location.href = '/';
-}
-
-function showLoginRequired(): void {
-  const app = document.getElementById('editor-app')!;
-  app.innerHTML = `
-    <div class="auth-message">
-      <h1>Authentication Required</h1>
-      <p>You must be logged in to access the Room Editor.</p>
-      <a href="/" class="btn-primary">Go to Login</a>
-    </div>
-  `;
-}
-
-function showAccessDenied(): void {
-  const app = document.getElementById('editor-app')!;
-  app.innerHTML = `
-    <div class="auth-message">
-      <h1>Access Denied</h1>
-      <p>You do not have permission to access the Room Editor.</p>
-      <p>Developer or Admin role is required.</p>
-      <a href="/" class="btn-primary">Back to Game</a>
-    </div>
-  `;
 }
 
 async function fetchRooms(): Promise<void> {
@@ -962,3 +944,5 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Redraw map on resize
   window.addEventListener('resize', drawMap);
 });
+
+})();

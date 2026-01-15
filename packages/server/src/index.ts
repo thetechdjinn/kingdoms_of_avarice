@@ -18,6 +18,7 @@ import cookieParser from 'cookie-parser';
 import { setupAuthRoutes, setDatabaseMode } from './routes/auth.js';
 import { setupRoomRoutes } from './routes/rooms.js';
 import { setupItemRoutes } from './routes/items.js';
+import { setupProgressionRoutes } from './routes/progression.js';
 import { setupGameSocket, initializeGameWorld } from './game/socket.js';
 import { testConnection } from './db/index.js';
 import { runMigrations, seedInitialData } from './db/migrate.js';
@@ -25,12 +26,18 @@ import { runMigrations, seedInitialData } from './db/migrate.js';
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-app.use(express.json());
+// Limit JSON payload size to prevent DOS attacks
+app.use(express.json({ limit: '100kb' }));
 app.use(cookieParser());
+
+// Serve documentation files
+const docsPath = join(__dirname, '..', '..', '..', 'Documentation');
+app.use('/docs', express.static(docsPath));
 
 setupAuthRoutes(app);
 setupRoomRoutes(app);
 setupItemRoutes(app);
+setupProgressionRoutes(app);
 
 const server = createServer(app);
 

@@ -135,7 +135,8 @@ body {
   color: #ff4444 !important;
 }
 
-#editor-layout {
+#editor-layout,
+.editor-layout {
   display: flex;
   flex: 1;
   overflow: hidden;
@@ -161,6 +162,32 @@ body {
 .panel-header h2 {
   font-size: 1.1rem;
   color: #00ff00;
+}
+
+.help-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #333;
+  color: #00ff00;
+  text-decoration: none;
+  font-weight: bold;
+  font-size: 14px;
+  margin-left: 0.5rem;
+  transition: background 0.2s;
+}
+
+.help-link:hover {
+  background: #00ff00;
+  color: #1a1a2e;
+}
+
+.help-link:focus {
+  outline: 2px solid #00ff00;
+  outline-offset: 2px;
 }
 
 #area-filter {

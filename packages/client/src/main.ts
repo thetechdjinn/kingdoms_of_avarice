@@ -94,6 +94,11 @@ function handleCommandInput(event: KeyboardEvent): void {
   const input = event.target as HTMLInputElement;
   const command = sanitizeInput(input.value.trim());
 
+  // Scroll to bottom when user presses enter (in case they scrolled up)
+  if (terminal) {
+    terminal.scrollToBottom();
+  }
+
   if (command) {
     if (terminal) {
       clearStatline();

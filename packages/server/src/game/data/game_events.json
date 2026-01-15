@@ -1,0 +1,114 @@
+[
+  {
+    "event_id": "kill_monster",
+    "display_name": "Defeat Monster",
+    "emitted_tags": ["melee", "ranged"],
+    "base_essence_value": 5,
+    "base_xp_value": 100
+  },
+  {
+    "event_id": "kill_undead",
+    "display_name": "Defeat Undead",
+    "emitted_tags": ["melee", "ranged", "holy"],
+    "base_essence_value": 8,
+    "base_xp_value": 120
+  },
+  {
+    "event_id": "cast_heal",
+    "display_name": "Cast Healing Spell",
+    "emitted_tags": ["holy"],
+    "base_essence_value": 20,
+    "base_xp_value": 0
+  },
+  {
+    "event_id": "cast_offensive_spell",
+    "display_name": "Cast Offensive Spell",
+    "emitted_tags": ["arcane"],
+    "base_essence_value": 15,
+    "base_xp_value": 0
+  },
+  {
+    "event_id": "successful_pickpocket",
+    "display_name": "Successful Pickpocket",
+    "emitted_tags": ["stealth", "subterfuge"],
+    "base_essence_value": 25,
+    "base_xp_value": 50
+  },
+  {
+    "event_id": "successful_lockpick",
+    "display_name": "Pick Lock",
+    "emitted_tags": ["subterfuge"],
+    "base_essence_value": 15,
+    "base_xp_value": 30
+  },
+  {
+    "event_id": "sneak_attack",
+    "display_name": "Sneak Attack",
+    "emitted_tags": ["stealth", "melee"],
+    "base_essence_value": 30,
+    "base_xp_value": 75
+  },
+  {
+    "event_id": "block_attack",
+    "display_name": "Block Attack",
+    "emitted_tags": ["protection"],
+    "base_essence_value": 10,
+    "base_xp_value": 0
+  },
+  {
+    "event_id": "parry_attack",
+    "display_name": "Parry Attack",
+    "emitted_tags": ["melee", "protection"],
+    "base_essence_value": 12,
+    "base_xp_value": 0
+  },
+  {
+    "event_id": "track_creature",
+    "display_name": "Track Creature",
+    "emitted_tags": ["nature", "exploration"],
+    "base_essence_value": 20,
+    "base_xp_value": 40
+  },
+  {
+    "event_id": "forage_herbs",
+    "display_name": "Forage Herbs",
+    "emitted_tags": ["nature"],
+    "base_essence_value": 10,
+    "base_xp_value": 20
+  },
+  {
+    "event_id": "discover_location",
+    "display_name": "Discover New Location",
+    "emitted_tags": ["exploration"],
+    "base_essence_value": 50,
+    "base_xp_value": 200
+  },
+  {
+    "event_id": "complete_class_quest",
+    "display_name": "Complete Class Quest",
+    "emitted_tags": ["melee", "ranged", "arcane", "holy", "stealth", "subterfuge", "protection", "nature", "exploration"],
+    "base_essence_value": 150,
+    "base_xp_value": 500
+  },
+  {
+    "event_id": "craft_item",
+    "display_name": "Craft Item",
+    "emitted_tags": ["crafting"],
+    "base_essence_value": 15,
+    "base_xp_value": 25
+  },
+  {
+    "event_id": "successful_persuade",
+    "display_name": "Successful Persuasion",
+    "emitted_tags": ["social"],
+    "base_essence_value": 20,
+    "base_xp_value": 50
+  },
+  {
+    "event_id": "ranged_kill",
+    "display_name": "Ranged Kill",
+    "emitted_tags": ["ranged"],
+    "base_essence_value": 12,
+    "base_xp_value": 100
+  }
+]

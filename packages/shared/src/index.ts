@@ -36,6 +36,22 @@ export interface VitalsData {
   resourceType: ResourceType;
 }
 
+// Generic resource regeneration configuration
+export interface ResourceRegenConfig {
+  resourceKey: string;           // Identifier (e.g., 'mana', 'health', 'stamina')
+  tickIntervalMs: number;        // How often this resource ticks
+  baseRegenPercent: number;      // Base % of max per tick
+  enhancedRegenPercent: number;  // Enhanced % when resting/meditating
+  regenInCombat: boolean;        // Whether base regen applies in combat
+}
+
+// Player's regeneration state (server-side only, not sent to client)
+export interface PlayerRegenState {
+  enhancedRegen: Set<string>;    // Which resources have enhanced regen active
+  inCombat: boolean;
+  isPoisoned: boolean;           // Blocks resting/enhanced regen
+}
+
 // Player state shared between client and server
 export interface PlayerState {
   id: number;
@@ -105,3 +121,6 @@ export * from "./roles.js";
 
 // Re-export items
 export * from "./items.js";
+
+// Re-export progression system
+export * from "./progression.js";

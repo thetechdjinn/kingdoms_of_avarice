@@ -1,0 +1,98 @@
+[
+  {
+    "race_id": "human",
+    "display_name": "Human",
+    "description": "Versatile and adaptable, humans excel in any profession through determination and ambition.",
+    "playable": true,
+    "stat_modifiers": {
+      "strength": 0,
+      "dexterity": 0,
+      "intelligence": 0,
+      "wisdom": 0,
+      "constitution": 0,
+      "charm": 1
+    },
+    "traits": ["adaptable", "ambitious"],
+    "allowed_classes": []
+  },
+  {
+    "race_id": "elf",
+    "display_name": "Elf",
+    "description": "Ancient and graceful, elves possess natural affinity for magic and keen senses.",
+    "playable": true,
+    "stat_modifiers": {
+      "strength": -1,
+      "dexterity": 2,
+      "intelligence": 1,
+      "wisdom": 1,
+      "constitution": -2,
+      "charm": 0
+    },
+    "traits": ["darkvision", "magic_affinity", "keen_senses"],
+    "allowed_classes": []
+  },
+  {
+    "race_id": "dwarf",
+    "display_name": "Dwarf",
+    "description": "Stout and resilient, dwarves are master craftsmen with unmatched endurance.",
+    "playable": true,
+    "stat_modifiers": {
+      "strength": 1,
+      "dexterity": -1,
+      "intelligence": 0,
+      "wisdom": 1,
+      "constitution": 2,
+      "charm": -1
+    },
+    "traits": ["darkvision", "poison_resist", "stonecunning"],
+    "allowed_classes": []
+  },
+  {
+    "race_id": "halfling",
+    "display_name": "Halfling",
+    "description": "Small but nimble, halflings are naturally lucky and excel at avoiding danger.",
+    "playable": true,
+    "stat_modifiers": {
+      "strength": -2,
+      "dexterity": 2,
+      "intelligence": 0,
+      "wisdom": 0,
+      "constitution": 0,
+      "charm": 1
+    },
+    "traits": ["lucky", "nimble", "brave"],
+    "allowed_classes": []
+  },
+  {
+    "race_id": "orc",
+    "display_name": "Orc",
+    "description": "Powerful and fierce, orcs are born warriors with incredible physical strength.",
+    "playable": true,
+    "stat_modifiers": {
+      "strength": 3,
+      "dexterity": 0,
+      "intelligence": -2,
+      "wisdom": -1,
+      "constitution": 2,
+      "charm": -2
+    },
+    "traits": ["darkvision", "savage_attacks", "relentless"],
+    "allowed_classes": []
+  },
+  {
+    "race_id": "gnome",
+    "display_name": "Gnome",
+    "description": "Curious and inventive, gnomes have a natural talent for illusion and tinkering.",
+    "playable": true,
+    "stat_modifiers": {
+      "strength": -2,
+      "dexterity": 1,
+      "intelligence": 2,
+      "wisdom": 0,
+      "constitution": -1,
+      "charm": 1
+    },
+    "traits": ["darkvision", "gnome_cunning", "tinker"],
+    "allowed_classes": []
+  }
+]

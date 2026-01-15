@@ -1,8 +1,9 @@
 import { MessageType, Role, hasAnyRole, ItemLocationType, ItemCondition } from '@koa/shared';
 import { GameWorld, Room } from './world.js';
-import { AuthenticatedSocket } from './socket.js';
+import { AuthenticatedSocket, connectedPlayers, sendVitals, sendMessage } from './socket.js';
 import { colors } from '../utils/colors.js';
 import * as itemRepo from '../db/repositories/itemRepository.js';
+import { isProgressionCommand, processProgressionCommand, getProgressionHelpText } from './progressionCommands.js';
 
 interface CommandResponse {
   type: MessageType;
@@ -23,7 +24,7 @@ export function setPlayerLocation(playerId: number, roomId: number): void {
 const developerCommands = ['create', 'link', 'unlink', 'edit', 'delete', 'reload', 'spawn', 'purge', 'items', 'iteminfo'];
 
 // Commands that any staff can use (Moderator+)
-const staffCommands = ['goto', 'rooms', 'roominfo', 'help', 'give'];
+const staffCommands = ['goto', 'rooms', 'roominfo', 'help', 'give', 'hurt', 'drain'];
 
 export async function processAdminCommand(
   input: string,
@@ -51,6 +52,11 @@ export async function processAdminCommand(
     if (!hasAnyRole(userRoles, [Role.MODERATOR, Role.SYSOP, Role.DEVELOPER, Role.ADMIN])) {
       return { type: MessageType.ERROR, message: 'You do not have permission to use admin commands.' };
     }
+  }
+
+  // Check if it's a progression command first
+  if (isProgressionCommand(command)) {
+    return processProgressionCommand(command, args, socket);
   }
 
   switch (command) {
@@ -82,6 +88,10 @@ export async function processAdminCommand(
       return handleItemInfo(args);
     case 'give':
       return handleGive(args, socket);
+    case 'hurt':
+      return handleHurt(args, socket);
+    case 'drain':
+      return handleDrain(args, socket);
     case 'help':
       return handleAdminHelp(userRoles);
     default:
@@ -677,6 +687,145 @@ async function handleGive(
   }
 }
 
+function handleHurt(
+  args: string[],
+  socket: AuthenticatedSocket
+): CommandResponse {
+  // @hurt [amount] [player] OR @hurt [player] - Reduce HP for testing regen
+  // Default: hurt self by 10
+  let amount = 10;
+  let targetSocket: AuthenticatedSocket = socket;
+  let targetName = socket.username;
+  let playerNameArgs: string[] = [];
+
+  if (args.length >= 1) {
+    // Only treat as amount if the first arg is purely numeric
+    if (/^\d+$/.test(args[0])) {
+      const parsedAmount = parseInt(args[0]);
+      if (parsedAmount > 0) {
+        amount = parsedAmount;
+        playerNameArgs = args.slice(1);
+      } else {
+        playerNameArgs = args;
+      }
+    } else {
+      // First arg is not purely numeric, treat all args as player name
+      playerNameArgs = args;
+    }
+  }
+
+  if (playerNameArgs.length > 0) {
+    const playerName = playerNameArgs.join(' ').toLowerCase();
+    let found = false;
+    for (const [, playerSocket] of connectedPlayers) {
+      if (playerSocket.username.toLowerCase() === playerName) {
+        targetSocket = playerSocket;
+        targetName = playerSocket.username;
+        found = true;
+        break;
+      }
+    }
+    if (!found) {
+      return { type: MessageType.ERROR, message: `Player not found: ${playerNameArgs.join(' ')}` };
+    }
+  }
+
+  // Apply damage
+  const oldHp = targetSocket.vitals.hp;
+  targetSocket.vitals.hp = Math.max(0, targetSocket.vitals.hp - amount);
+  const newHp = targetSocket.vitals.hp;
+  const actualDamage = oldHp - newHp;
+
+  // Send updated vitals to target
+  sendVitals(targetSocket);
+
+  if (targetSocket === socket) {
+    return {
+      type: MessageType.SYSTEM,
+      message: `${colors.boldRed('Ouch!')} You take ${actualDamage} damage. HP: ${newHp}/${targetSocket.vitals.maxHp}`,
+    };
+  } else {
+    // Notify the target player
+    sendMessage(targetSocket, MessageType.SYSTEM, `${colors.boldRed('Ouch!')} You take ${actualDamage} damage from an unknown force. HP: ${newHp}/${targetSocket.vitals.maxHp}`);
+    return {
+      type: MessageType.SYSTEM,
+      message: `${colors.boldRed('Hurt:')} ${targetName} takes ${actualDamage} damage. HP: ${newHp}/${targetSocket.vitals.maxHp}`,
+    };
+  }
+}
+
+function handleDrain(
+  args: string[],
+  socket: AuthenticatedSocket
+): CommandResponse {
+  // @drain [amount] [player] OR @drain [player] - Reduce mana for testing regen
+  // Default: drain self by 10
+  let amount = 10;
+  let targetSocket: AuthenticatedSocket = socket;
+  let targetName = socket.username;
+  let playerNameArgs: string[] = [];
+
+  if (args.length >= 1) {
+    // Only treat as amount if the first arg is purely numeric
+    if (/^\d+$/.test(args[0])) {
+      const parsedAmount = parseInt(args[0]);
+      if (parsedAmount > 0) {
+        amount = parsedAmount;
+        playerNameArgs = args.slice(1);
+      } else {
+        playerNameArgs = args;
+      }
+    } else {
+      // First arg is not purely numeric, treat all args as player name
+      playerNameArgs = args;
+    }
+  }
+
+  if (playerNameArgs.length > 0) {
+    const playerName = playerNameArgs.join(' ').toLowerCase();
+    let found = false;
+    for (const [, playerSocket] of connectedPlayers) {
+      if (playerSocket.username.toLowerCase() === playerName) {
+        targetSocket = playerSocket;
+        targetName = playerSocket.username;
+        found = true;
+        break;
+      }
+    }
+    if (!found) {
+      return { type: MessageType.ERROR, message: `Player not found: ${playerNameArgs.join(' ')}` };
+    }
+  }
+
+  // Check if target has mana
+  if (targetSocket.vitals.resource === undefined || targetSocket.vitals.maxResource === undefined) {
+    return { type: MessageType.ERROR, message: `${targetName} has no mana resource.` };
+  }
+
+  // Apply drain
+  const oldMana = targetSocket.vitals.resource;
+  targetSocket.vitals.resource = Math.max(0, targetSocket.vitals.resource - amount);
+  const newMana = targetSocket.vitals.resource;
+  const actualDrain = oldMana - newMana;
+
+  // Send updated vitals to target
+  sendVitals(targetSocket);
+
+  if (targetSocket === socket) {
+    return {
+      type: MessageType.SYSTEM,
+      message: `${colors.boldCyan('Drained!')} You lose ${actualDrain} mana. Mana: ${newMana}/${targetSocket.vitals.maxResource}`,
+    };
+  } else {
+    // Notify the target player
+    sendMessage(targetSocket, MessageType.SYSTEM, `${colors.boldCyan('Drained!')} You lose ${actualDrain} mana from an unknown force. Mana: ${newMana}/${targetSocket.vitals.maxResource}`);
+    return {
+      type: MessageType.SYSTEM,
+      message: `${colors.boldCyan('Drain:')} ${targetName} loses ${actualDrain} mana. Mana: ${newMana}/${targetSocket.vitals.maxResource}`,
+    };
+  }
+}
+
 function handleAdminHelp(userRoles: Role[]): CommandResponse {
   const isDeveloper = hasAnyRole(userRoles, [Role.DEVELOPER, Role.ADMIN]);
   
@@ -690,6 +839,8 @@ function handleAdminHelp(userRoles: Role[]): CommandResponse {
   lines.push(`  ${colors.boldCyan('@rooms')}                  - List all rooms`);
   lines.push(`  ${colors.boldCyan('@roominfo [id]')}          - Show room details`);
   lines.push(`  ${colors.boldCyan('@give <id|name> [quantity]')} - Give yourself an item`);
+  lines.push(`  ${colors.boldCyan('@hurt [amount] [player]')} - Damage HP (for testing regen)`);
+  lines.push(`  ${colors.boldCyan('@drain [amount] [player]')} - Drain mana (for testing regen)`);
   lines.push(`  ${colors.boldCyan('@help')}                   - Show this help`);
 
   // Developer commands
@@ -711,6 +862,9 @@ function handleAdminHelp(userRoles: Role[]): CommandResponse {
     lines.push('');
     lines.push(colors.boldYellow('Developer Commands (System):'));
     lines.push(`  ${colors.boldCyan('@reload [rooms|all]')}     - Reload data from database`);
+    
+    // Add progression commands help
+    lines.push(getProgressionHelpText());
   }
 
   return { type: MessageType.OUTPUT, message: lines.join('\r\n') };
