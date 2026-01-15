@@ -490,7 +490,7 @@ async function showCharacterSelect(): Promise<void> {
             <div class="character-name">${escapeHtml(char.name)}</div>
             <div class="character-info">Level ${char.level} ${escapeHtml(char.race)} ${escapeHtml(char.class)}</div>
           </div>
-          <button class="character-delete-btn" data-id="${char.id}" data-name="${escapeHtml(char.name)}" title="Delete character">X</button>
+          <button class="character-delete-btn" data-id="${char.id}" data-name="${char.name}" title="Delete character">X</button>
         </div>
       `).join('');
 
@@ -779,6 +779,12 @@ function enterGame(): void {
 }
 
 function connectWebSocketWithCharacter(characterId: number): void {
+  // Close any existing socket before creating a new one
+  if (socket) {
+    socket.close();
+    socket = null;
+  }
+
   const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
   const wsUrl = `${protocol}//${window.location.host}/game?characterId=${characterId}`;
 

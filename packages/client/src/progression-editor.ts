@@ -643,7 +643,7 @@ async function handleClassSubmit(e: Event): Promise<void> {
       intelligence: Number((document.getElementById('class-int') as HTMLInputElement).value) || 0,
       wisdom: Number((document.getElementById('class-wis') as HTMLInputElement).value) || 0,
       constitution: Number((document.getElementById('class-con') as HTMLInputElement).value) || 0,
-      charm: Number((document.getElementById('class-cha') as HTMLInputElement).value) || 0,
+      charisma: Number((document.getElementById('class-cha') as HTMLInputElement).value) || 0,
     },
   };
 

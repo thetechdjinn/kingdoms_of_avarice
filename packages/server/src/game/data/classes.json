@@ -5,7 +5,7 @@
     "description": "A master of martial combat, excelling in melee and protection.",
     "essence_multiplier": 1.0,
     "subscribed_tags": ["melee", "protection"],
-    "base_stats": { "strength": 14, "dexterity": 10, "intelligence": 8, "wisdom": 8, "constitution": 12, "charm": 8 },
+    "base_stats": { "strength": 14, "dexterity": 10, "intelligence": 8, "wisdom": 8, "constitution": 12, "charisma": 8 },
     "talent_tree_id": "tree_warrior_01"
   },
   {
@@ -14,7 +14,7 @@
     "description": "A wielder of arcane forces, bending reality through study and power.",
     "essence_multiplier": 1.5,
     "subscribed_tags": ["arcane"],
-    "base_stats": { "strength": 6, "dexterity": 10, "intelligence": 16, "wisdom": 12, "constitution": 8, "charm": 10 },
+    "base_stats": { "strength": 6, "dexterity": 10, "intelligence": 16, "wisdom": 12, "constitution": 8, "charisma": 10 },
     "talent_tree_id": "tree_mage_01"
   },
   {
@@ -23,7 +23,7 @@
     "description": "A cunning operative skilled in stealth, subterfuge, and precision strikes.",
     "essence_multiplier": 1.2,
     "subscribed_tags": ["stealth", "subterfuge", "melee"],
-    "base_stats": { "strength": 10, "dexterity": 16, "intelligence": 10, "wisdom": 8, "constitution": 8, "charm": 12 },
+    "base_stats": { "strength": 10, "dexterity": 16, "intelligence": 10, "wisdom": 8, "constitution": 8, "charisma": 12 },
     "talent_tree_id": "tree_rogue_01"
   },
   {
@@ -32,7 +32,7 @@
     "description": "A divine servant channeling holy power to heal and protect.",
     "essence_multiplier": 1.8,
     "subscribed_tags": ["holy", "protection"],
-    "base_stats": { "strength": 10, "dexterity": 8, "intelligence": 10, "wisdom": 16, "constitution": 12, "charm": 12 },
+    "base_stats": { "strength": 10, "dexterity": 8, "intelligence": 10, "wisdom": 16, "constitution": 12, "charisma": 12 },
     "talent_tree_id": "tree_cleric_01"
   },
   {
@@ -41,7 +41,7 @@
     "description": "A wilderness expert combining ranged combat with nature affinity.",
     "essence_multiplier": 1.3,
     "subscribed_tags": ["ranged", "nature", "exploration"],
-    "base_stats": { "strength": 10, "dexterity": 14, "intelligence": 10, "wisdom": 12, "constitution": 10, "charm": 8 },
+    "base_stats": { "strength": 10, "dexterity": 14, "intelligence": 10, "wisdom": 12, "constitution": 10, "charisma": 8 },
     "talent_tree_id": "tree_ranger_01"
   },
   {
@@ -50,7 +50,7 @@
     "description": "A holy warrior combining martial prowess with divine blessing.",
     "essence_multiplier": 2.2,
     "subscribed_tags": ["melee", "holy", "protection"],
-    "base_stats": { "strength": 12, "dexterity": 8, "intelligence": 8, "wisdom": 14, "constitution": 10, "charm": 14 },
+    "base_stats": { "strength": 12, "dexterity": 8, "intelligence": 8, "wisdom": 14, "constitution": 10, "charisma": 14 },
     "talent_tree_id": "tree_paladin_01"
   }
 ]

@@ -1,3 +1,4 @@
+import pg from 'pg';
 import { query } from '../index.js';
 import {
   ClassDefinition,
@@ -803,7 +804,8 @@ export async function getCharacterProgression(characterId: number): Promise<Char
 
 export async function createCharacterProgression(
   characterId: number,
-  classId: string
+  classId: string,
+  client?: pg.PoolClient
 ): Promise<CharacterProgression> {
   const result = await query<DbCharacterProgression & { calculated_level: number }>(
     `WITH inserted AS (
@@ -817,7 +819,8 @@ export async function createCharacterProgression(
         1
       ) as calculated_level
     FROM inserted`,
-    [characterId, classId]
+    [characterId, classId],
+    client
   );
   return dbToCharacterProgressionWithLevel(result.rows[0]);
 }

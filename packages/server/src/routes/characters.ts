@@ -1,5 +1,6 @@
 import { Express, Request, Response } from 'express';
 import { verifyToken, COOKIE_NAME } from './auth.js';
+import { withTransaction } from '../db/index.js';
 import * as characterRepo from '../db/repositories/characterRepository.js';
 import * as progressionRepo from '../db/repositories/progressionRepository.js';
 import { CharacterStats } from '@koa/shared';
@@ -175,17 +176,20 @@ export function setupCharacterRoutes(app: Express): void {
         charisma: (baseStats.charisma || 10) + (raceModifiers.charisma || 0),
       };
 
-      // Create the character
-      const character = await characterRepo.createCharacter({
-        playerId: payload.playerId,
-        name: trimmedName,
-        race: raceId,
-        characterClass: classId,
-        stats: finalStats,
-      });
+      // Create character and progression record atomically
+      const character = await withTransaction(async (client) => {
+        const newCharacter = await characterRepo.createCharacter({
+          playerId: payload.playerId,
+          name: trimmedName,
+          race: raceId,
+          characterClass: classId,
+          stats: finalStats,
+        }, client);
 
-      // Create character progression record
-      await progressionRepo.createCharacterProgression(character.id, classId);
+        await progressionRepo.createCharacterProgression(newCharacter.id, classId, client);
+
+        return newCharacter;
+      });
 
       res.json({
         success: true,

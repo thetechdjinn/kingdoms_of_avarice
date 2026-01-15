@@ -1,3 +1,4 @@
+import pg from 'pg';
 import { query } from '../index.js';
 import { Character, CharacterStats } from '@koa/shared';
 
@@ -61,7 +62,7 @@ function calculateInitialMana(intelligence: number, wisdom: number, characterCla
   return base + intelligence;
 }
 
-export async function createCharacter(input: CreateCharacterInput): Promise<DbCharacter> {
+export async function createCharacter(input: CreateCharacterInput, client?: pg.PoolClient): Promise<DbCharacter> {
   const maxHealth = calculateInitialHealth(input.stats.constitution, input.characterClass);
   const maxMana = calculateInitialMana(input.stats.intelligence, input.stats.wisdom, input.characterClass);
 
@@ -86,7 +87,8 @@ export async function createCharacter(input: CreateCharacterInput): Promise<DbCh
       input.stats.constitution,
       input.stats.wisdom,
       input.stats.charisma,
-    ]
+    ],
+    client
   );
 
   return result.rows[0];
