@@ -109,6 +109,32 @@ export function setupProgressionRoutes(app: Express): void {
 
   app.put('/api/progression/classes/:classId', requireDeveloper, async (req: Request, res: Response) => {
     try {
+      const { display_name, description, essence_multiplier, subscribed_tags } = req.body;
+
+      // Validate display_name if provided
+      if (display_name !== undefined && (typeof display_name !== 'string' || display_name.length === 0 || display_name.length > MAX_DISPLAY_NAME_LENGTH)) {
+        res.status(400).json({ success: false, message: `display_name must be a non-empty string not exceeding ${MAX_DISPLAY_NAME_LENGTH} characters` });
+        return;
+      }
+
+      // Validate description if provided
+      if (description !== undefined && (typeof description !== 'string' || description.length > MAX_DESCRIPTION_LENGTH)) {
+        res.status(400).json({ success: false, message: `description must not exceed ${MAX_DESCRIPTION_LENGTH} characters` });
+        return;
+      }
+
+      // Validate essence_multiplier if provided
+      if (essence_multiplier !== undefined && (typeof essence_multiplier !== 'number' || essence_multiplier <= 0 || !isFinite(essence_multiplier))) {
+        res.status(400).json({ success: false, message: 'essence_multiplier must be a positive number' });
+        return;
+      }
+
+      // Validate subscribed_tags if provided
+      if (subscribed_tags !== undefined && (!Array.isArray(subscribed_tags) || subscribed_tags.length > MAX_ARRAY_LENGTH)) {
+        res.status(400).json({ success: false, message: `subscribed_tags must be an array with at most ${MAX_ARRAY_LENGTH} items` });
+        return;
+      }
+
       const classDef = await progressionRepo.updateClass(req.params.classId, req.body);
       if (!classDef) {
         res.status(404).json({ success: false, message: 'Class not found' });
@@ -229,6 +255,30 @@ export function setupProgressionRoutes(app: Express): void {
 
   app.put('/api/progression/races/:raceId', requireDeveloper, async (req: Request, res: Response) => {
     try {
+      const { display_name, description, traits, allowed_classes } = req.body;
+
+      // Validate display_name if provided
+      if (display_name !== undefined && (typeof display_name !== 'string' || display_name.length === 0 || display_name.length > MAX_DISPLAY_NAME_LENGTH)) {
+        res.status(400).json({ success: false, message: `display_name must be a non-empty string not exceeding ${MAX_DISPLAY_NAME_LENGTH} characters` });
+        return;
+      }
+
+      // Validate description if provided
+      if (description !== undefined && (typeof description !== 'string' || description.length > MAX_DESCRIPTION_LENGTH)) {
+        res.status(400).json({ success: false, message: `description must not exceed ${MAX_DESCRIPTION_LENGTH} characters` });
+        return;
+      }
+
+      // Validate arrays if provided
+      if (traits !== undefined && (!Array.isArray(traits) || traits.length > MAX_ARRAY_LENGTH)) {
+        res.status(400).json({ success: false, message: `traits must be an array with at most ${MAX_ARRAY_LENGTH} items` });
+        return;
+      }
+      if (allowed_classes !== undefined && (!Array.isArray(allowed_classes) || allowed_classes.length > MAX_ARRAY_LENGTH)) {
+        res.status(400).json({ success: false, message: `allowed_classes must be an array with at most ${MAX_ARRAY_LENGTH} items` });
+        return;
+      }
+
       const raceDef = await progressionRepo.updateRace(req.params.raceId, req.body);
       if (!raceDef) {
         res.status(404).json({ success: false, message: 'Race not found' });
@@ -344,6 +394,12 @@ export function setupProgressionRoutes(app: Express): void {
         return;
       }
 
+      // Validate emitted_tags if provided
+      if (emitted_tags !== undefined && (!Array.isArray(emitted_tags) || emitted_tags.length > MAX_ARRAY_LENGTH)) {
+        res.status(400).json({ success: false, message: `emitted_tags must be an array with at most ${MAX_ARRAY_LENGTH} items` });
+        return;
+      }
+
       const ability = await progressionRepo.createAbility({
         ability_id,
         display_name,
@@ -366,6 +422,43 @@ export function setupProgressionRoutes(app: Express): void {
 
   app.put('/api/progression/abilities/:abilityId', requireDeveloper, async (req: Request, res: Response) => {
     try {
+      const { display_name, description, ability_type, emitted_tags, resource_cost, cooldown } = req.body;
+      const validTypes: AbilityType[] = ['skill', 'spell', 'technique', 'passive'];
+
+      // Validate display_name if provided
+      if (display_name !== undefined && (typeof display_name !== 'string' || display_name.length === 0 || display_name.length > MAX_DISPLAY_NAME_LENGTH)) {
+        res.status(400).json({ success: false, message: `display_name must be a non-empty string not exceeding ${MAX_DISPLAY_NAME_LENGTH} characters` });
+        return;
+      }
+
+      // Validate description if provided
+      if (description !== undefined && (typeof description !== 'string' || description.length > MAX_DESCRIPTION_LENGTH)) {
+        res.status(400).json({ success: false, message: `description must not exceed ${MAX_DESCRIPTION_LENGTH} characters` });
+        return;
+      }
+
+      // Validate ability_type if provided
+      if (ability_type !== undefined && !validTypes.includes(ability_type)) {
+        res.status(400).json({ success: false, message: `Invalid ability_type. Must be one of: ${validTypes.join(', ')}` });
+        return;
+      }
+
+      // Validate numeric fields if provided
+      if (resource_cost !== undefined && (typeof resource_cost !== 'number' || resource_cost < 0)) {
+        res.status(400).json({ success: false, message: 'resource_cost must be a non-negative number' });
+        return;
+      }
+      if (cooldown !== undefined && (typeof cooldown !== 'number' || cooldown < 0)) {
+        res.status(400).json({ success: false, message: 'cooldown must be a non-negative number' });
+        return;
+      }
+
+      // Validate emitted_tags if provided
+      if (emitted_tags !== undefined && (!Array.isArray(emitted_tags) || emitted_tags.length > MAX_ARRAY_LENGTH)) {
+        res.status(400).json({ success: false, message: `emitted_tags must be an array with at most ${MAX_ARRAY_LENGTH} items` });
+        return;
+      }
+
       const ability = await progressionRepo.updateAbility(req.params.abilityId, req.body);
       if (!ability) {
         res.status(404).json({ success: false, message: 'Ability not found' });

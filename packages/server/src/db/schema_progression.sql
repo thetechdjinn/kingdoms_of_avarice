@@ -209,11 +209,13 @@ CREATE TABLE IF NOT EXISTS character_progression (
     total_essence_earned INTEGER DEFAULT 0,
     
     -- Unlocked talents (array of talent_ids)
-    unlocked_talents JSONB DEFAULT '[]',
-    
+    unlocked_talents JSONB DEFAULT '[]'
+        CHECK (jsonb_typeof(unlocked_talents) = 'array'),
+
     -- Learned abilities (array of ability_ids)
-    learned_abilities JSONB DEFAULT '[]',
-    
+    learned_abilities JSONB DEFAULT '[]'
+        CHECK (jsonb_typeof(learned_abilities) = 'array'),
+
     -- Metadata
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP

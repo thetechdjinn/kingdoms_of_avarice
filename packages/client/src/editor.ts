@@ -52,8 +52,8 @@ async function checkAuth(): Promise<boolean> {
     return true;
   } catch (error) {
     console.error('Failed to check auth:', error);
-    // Show error message before redirecting
-    showLoginRequired();
+    // Redirect to login on error
+    window.location.href = '/';
     return false;
   }
 }
