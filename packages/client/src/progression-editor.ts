@@ -698,22 +698,39 @@ async function handleClassSubmit(e: Event): Promise<void> {
 async function handleRaceSubmit(e: Event): Promise<void> {
   e.preventDefault();
 
-  const raceId = (document.getElementById('race-id') as HTMLInputElement).value;
+  const raceIdEl = document.getElementById('race-id') as HTMLInputElement | null;
+  const raceNameEl = document.getElementById('race-name') as HTMLInputElement | null;
+  const raceDescEl = document.getElementById('race-description') as HTMLTextAreaElement | null;
+  const racePlayableEl = document.getElementById('race-playable') as HTMLInputElement | null;
+  const raceTraitsEl = document.getElementById('race-traits') as HTMLInputElement | null;
+  const raceAllowedEl = document.getElementById('race-allowed-classes') as HTMLInputElement | null;
+
+  if (!raceIdEl || !raceNameEl) {
+    alert('Required form elements are missing');
+    return;
+  }
+
+  const raceId = raceIdEl.value.trim();
+  if (!raceId) {
+    alert('Race ID is required');
+    return;
+  }
+
   const data: Partial<RaceDefinition> = {
     race_id: raceId,
-    display_name: (document.getElementById('race-name') as HTMLInputElement).value,
-    description: (document.getElementById('race-description') as HTMLTextAreaElement).value || undefined,
-    playable: (document.getElementById('race-playable') as HTMLInputElement).checked,
+    display_name: raceNameEl.value,
+    description: raceDescEl?.value || undefined,
+    playable: racePlayableEl?.checked ?? false,
     stat_modifiers: {
-      strength: Number((document.getElementById('race-str') as HTMLInputElement).value) || 0,
-      dexterity: Number((document.getElementById('race-dex') as HTMLInputElement).value) || 0,
-      intelligence: Number((document.getElementById('race-int') as HTMLInputElement).value) || 0,
-      wisdom: Number((document.getElementById('race-wis') as HTMLInputElement).value) || 0,
-      constitution: Number((document.getElementById('race-con') as HTMLInputElement).value) || 0,
-      charm: Number((document.getElementById('race-cha') as HTMLInputElement).value) || 0,
+      strength: Number((document.getElementById('race-str') as HTMLInputElement | null)?.value) || 0,
+      dexterity: Number((document.getElementById('race-dex') as HTMLInputElement | null)?.value) || 0,
+      intelligence: Number((document.getElementById('race-int') as HTMLInputElement | null)?.value) || 0,
+      wisdom: Number((document.getElementById('race-wis') as HTMLInputElement | null)?.value) || 0,
+      constitution: Number((document.getElementById('race-con') as HTMLInputElement | null)?.value) || 0,
+      charm: Number((document.getElementById('race-cha') as HTMLInputElement | null)?.value) || 0,
     },
-    traits: (document.getElementById('race-traits') as HTMLInputElement).value.split(',').map(t => t.trim()).filter(Boolean),
-    allowed_classes: (document.getElementById('race-allowed-classes') as HTMLInputElement).value.split(',').map(t => t.trim()).filter(Boolean),
+    traits: raceTraitsEl?.value.split(',').map(t => t.trim()).filter(Boolean) ?? [],
+    allowed_classes: raceAllowedEl?.value.split(',').map(t => t.trim()).filter(Boolean) ?? [],
   };
 
   if (data.allowed_classes?.length === 0) delete data.allowed_classes;
@@ -812,7 +829,11 @@ async function handleTalentSubmit(e: Event): Promise<void> {
     return;
   }
 
-  const talentId = talentIdEl.value;
+  const talentId = talentIdEl.value.trim();
+  if (!talentId) {
+    alert('Talent ID is required');
+    return;
+  }
   const data: Partial<TalentDefinition> = {
     talent_id: talentId,
     display_name: talentNameEl.value,
@@ -859,12 +880,16 @@ async function handleEventSubmit(e: Event): Promise<void> {
   const eventXpEl = document.getElementById('event-xp') as HTMLInputElement | null;
   const eventTagsEl = document.getElementById('event-tags') as HTMLInputElement | null;
 
-  if (!eventIdEl) {
+  if (!eventIdEl || !eventTagsEl) {
     alert('Required form elements are missing');
     return;
   }
 
-  const eventId = eventIdEl.value;
+  const eventId = eventIdEl.value.trim();
+  if (!eventId) {
+    alert('Event ID is required');
+    return;
+  }
   const data: Partial<GameEvent> = {
     event_id: eventId,
     display_name: eventNameEl?.value || undefined,

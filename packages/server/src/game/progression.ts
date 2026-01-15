@@ -387,10 +387,11 @@ export function switchClass(
   progression.essence_wallet = 0;
   // Note: std_xp and level are preserved
 
-  // Reset activity tracker
+  // Reset activity tracker (consistent with performLevelUp)
   const tracker = activityTrackers.get(characterId);
   if (tracker) {
     tracker.activity_counts = [];
+    tracker.last_reset_level = progression.level;
   }
 
   return progression;
