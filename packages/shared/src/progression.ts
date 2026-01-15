@@ -41,6 +41,7 @@ export interface ClassDefinition {
   talent_tree_id?: string;
   resource_type?: string;
   playable?: boolean;
+  combat_level?: number; // 1-5, defaults to 1. Higher = better melee combat
 }
 
 // ============================================================================

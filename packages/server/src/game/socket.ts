@@ -12,8 +12,26 @@ import * as characterRepo from '../db/repositories/characterRepository.js';
 import * as progressionRepo from '../db/repositories/progressionRepository.js';
 import { initializeProgressionData } from './progressionLoader.js';
 import { initializeDefaultRegenConfigs, startRegenLoops } from './regeneration.js';
+import { startCombatLoop } from './combat.js';
 import { colors } from '../utils/colors.js';
 import { checkWebSocketIp } from '../middleware/ipAccess.js';
+
+// Cached character stats for combat calculations (avoid DB lookups during combat)
+interface CharacterStats {
+  strength: number;
+  dexterity: number;
+  intelligence: number;
+  constitution: number;
+  wisdom: number;
+  charisma: number;
+}
+
+// Combat state tracked per-player in memory
+interface CombatState {
+  targets: Set<number>;    // playerIds this player is attacking
+  energy: number;          // Current energy pool for this round
+  carriedEnergy: number;   // Leftover energy from last round
+}
 
 interface AuthenticatedSocket extends WebSocket {
   playerId: number;
@@ -25,6 +43,11 @@ interface AuthenticatedSocket extends WebSocket {
   briefMode: boolean;
   exitTimer?: NodeJS.Timeout;
   properlyExited?: boolean; // True if player exited via 'x' command
+  // Combat-related properties
+  combatState: CombatState;
+  characterLevel: number;
+  characterStats: CharacterStats;
+  combatLevel: number;
 }
 
 const connectedPlayers = new Map<number, AuthenticatedSocket>();
@@ -74,6 +97,9 @@ export async function initializeGameWorld(): Promise<void> {
   // Initialize resource regeneration system
   initializeDefaultRegenConfigs();
   startRegenLoops(connectedPlayers, sendVitals);
+
+  // Start combat loop
+  startCombatLoop(connectedPlayers);
 
   worldInitialized = true;
 }
@@ -205,6 +231,36 @@ export function setupGameSocket(wss: WebSocketServer): void {
       inCombat: false,
       isPoisoned: false,
     };
+
+    // Initialize combat state
+    authWs.combatState = {
+      targets: new Set(),
+      energy: 0,
+      carriedEnergy: 0,
+    };
+
+    // Cache character stats for combat (avoid DB lookups during combat rounds)
+    authWs.characterLevel = character.level;
+    authWs.characterStats = {
+      strength: character.strength,
+      dexterity: character.dexterity,
+      intelligence: character.intelligence,
+      constitution: character.constitution,
+      wisdom: character.wisdom,
+      charisma: character.charisma,
+    };
+
+    // Get combat level from class definition (default to 1 if not found)
+    let combatLevel = 1;
+    try {
+      const classDef = await progressionRepo.getClassById(character.class);
+      if (classDef?.combat_level) {
+        combatLevel = classDef.combat_level;
+      }
+    } catch (error) {
+      console.error('Failed to load class combat level:', error);
+    }
+    authWs.combatLevel = combatLevel;
 
     // Load brief mode from database (default to false on error)
     try {
@@ -344,4 +400,4 @@ export function broadcastToRoom(roomId: number, text: string, excludePlayerId?: 
   }
 }
 
-export { connectedPlayers, AuthenticatedSocket, sendVitals, sendMessage };
+export { connectedPlayers, AuthenticatedSocket, sendVitals, sendMessage, CombatState, CharacterStats };
