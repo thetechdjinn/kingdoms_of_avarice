@@ -74,10 +74,16 @@ export function startDnsResolver(): void {
   }
 
   // Run immediately on startup
-  resolveAllHostnames();
+  resolveAllHostnames().catch((error) => {
+    console.error('[DNS] Initial resolution failed:', error);
+  });
 
   // Then run periodically
-  resolverInterval = setInterval(resolveAllHostnames, DNS_RESOLVE_INTERVAL_MS);
+  resolverInterval = setInterval(() => {
+    resolveAllHostnames().catch((error) => {
+      console.error('[DNS] Periodic resolution failed:', error);
+    });
+  }, DNS_RESOLVE_INTERVAL_MS);
   console.log(`[DNS] Started DNS resolver (every ${DNS_RESOLVE_INTERVAL_MS / 1000}s)`);
 }
 

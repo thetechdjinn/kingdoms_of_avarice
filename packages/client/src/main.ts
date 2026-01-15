@@ -570,7 +570,7 @@ async function showEnterGame(): Promise<void> {
             <div class="character-name">${escapeHtml(char.name)}</div>
             <div class="character-info">Level ${char.level} ${escapeHtml(char.race)} ${escapeHtml(char.class)}</div>
           </div>
-          <button class="character-delete-btn" data-id="${char.id}" data-name="${escapeHtml(char.name)}" title="Delete character">X</button>
+          <button class="character-delete-btn" data-id="${char.id}" data-name="${escapeHtmlAttr(char.name)}" title="Delete character">X</button>
         </div>
       `).join('');
 
@@ -1011,6 +1011,18 @@ function escapeHtml(text: string): string {
   const div = document.createElement('div');
   div.textContent = text;
   return div.innerHTML;
+}
+
+/**
+ * Escape text for use in HTML attributes (also escapes quotes)
+ */
+function escapeHtmlAttr(text: string): string {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
 }
 
 document.addEventListener('DOMContentLoaded', () => {

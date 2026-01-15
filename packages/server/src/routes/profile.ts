@@ -62,23 +62,25 @@ export function setupProfileRoutes(app: Express): void {
 
     const { email } = req.body;
 
-    // Validate email format if provided
-    if (email !== null && email !== undefined && email !== '') {
-      if (typeof email !== 'string') {
+    // Trim and validate email format if provided
+    const trimmedEmail = typeof email === 'string' ? email.trim() : email;
+
+    if (trimmedEmail !== null && trimmedEmail !== undefined && trimmedEmail !== '') {
+      if (typeof trimmedEmail !== 'string') {
         res.status(400).json({ success: false, message: 'Invalid email format' });
         return;
       }
 
       // Basic email validation
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(email)) {
+      if (!emailRegex.test(trimmedEmail)) {
         res.status(400).json({ success: false, message: 'Invalid email format' });
         return;
       }
     }
 
     try {
-      await playerRepo.updateEmail(payload.playerId, email || null);
+      await playerRepo.updateEmail(payload.playerId, trimmedEmail || null);
       res.json({ success: true, message: 'Email updated' });
     } catch (error) {
       console.error('Failed to update email:', error);

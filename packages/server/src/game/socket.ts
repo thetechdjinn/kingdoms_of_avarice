@@ -178,8 +178,8 @@ export function setupGameSocket(wss: WebSocketServer): void {
       }
     } catch (error) {
       console.error('Failed to load class definition:', error);
-      // Default to MANA for spell casters based on class name
-      if (['Mage', 'Cleric', 'Paladin'].includes(character.class)) {
+      // Default to MANA for spell casters based on class ID
+      if (['mage', 'cleric', 'paladin'].includes(character.class)) {
         resourceType = ResourceType.MANA;
       }
     }

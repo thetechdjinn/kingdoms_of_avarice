@@ -53,8 +53,8 @@ export function setupCharacterRoutes(app: Express): void {
       return;
     }
 
-    const characterId = parseInt(req.params.id);
-    if (isNaN(characterId) || characterId <= 0) {
+    const characterId = Number(req.params.id);
+    if (!Number.isInteger(characterId) || characterId <= 0) {
       res.status(400).json({ success: false, message: 'Invalid character ID' });
       return;
     }
@@ -171,11 +171,13 @@ export function setupCharacterRoutes(app: Express): void {
         charisma: (baseStats.charisma ?? 10) + (raceModifiers.charisma ?? 0),
       };
 
+      // Get global settings outside transaction (read-only, no lock needed)
+      const globalMaxChars = await settingsRepo.getMaxCharactersPerPlayer();
+
       // Create character atomically with all checks inside transaction to prevent race conditions
       const character = await withTransaction(async (client) => {
         // Check character limit inside transaction
         const playerMaxChars = await playerRepo.getMaxCharacters(payload.playerId, client);
-        const globalMaxChars = await settingsRepo.getMaxCharactersPerPlayer();
         const maxCharacters = playerMaxChars ?? globalMaxChars;
         const currentCount = await characterRepo.getCharacterCount(payload.playerId, client);
 
@@ -237,8 +239,8 @@ export function setupCharacterRoutes(app: Express): void {
       return;
     }
 
-    const characterId = parseInt(req.params.id);
-    if (isNaN(characterId) || characterId <= 0) {
+    const characterId = Number(req.params.id);
+    if (!Number.isInteger(characterId) || characterId <= 0) {
       res.status(400).json({ success: false, message: 'Invalid character ID' });
       return;
     }
