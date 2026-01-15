@@ -696,11 +696,11 @@ async function handleCreateTalent(args: string[]): Promise<CommandResponse> {
   }
 
   const talentId = args[0];
-  const essenceCost = parseInt(args[1]);
+  const essenceCost = Number(args[1]);
   const displayName = args.slice(2).join(' ');
 
-  if (isNaN(essenceCost) || essenceCost < 0) {
-    return { type: MessageType.ERROR, message: 'essence_cost must be a non-negative number' };
+  if (isNaN(essenceCost) || essenceCost < 0 || !Number.isInteger(essenceCost)) {
+    return { type: MessageType.ERROR, message: 'essence_cost must be a non-negative integer' };
   }
 
   try {
@@ -864,11 +864,11 @@ async function handleCreateEvent(args: string[]): Promise<CommandResponse> {
   }
 
   const eventId = args[0];
-  const baseEssence = parseInt(args[1]);
+  const baseEssence = Number(args[1]);
   const tags = args.slice(2);
 
-  if (isNaN(baseEssence) || baseEssence < 0) {
-    return { type: MessageType.ERROR, message: 'base_essence must be a non-negative number' };
+  if (isNaN(baseEssence) || baseEssence < 0 || !Number.isInteger(baseEssence)) {
+    return { type: MessageType.ERROR, message: 'base_essence must be a non-negative integer' };
   }
 
   try {

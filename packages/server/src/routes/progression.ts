@@ -64,9 +64,9 @@ export function setupProgressionRoutes(app: Express): void {
         return;
       }
 
-      // Validate display_name length
-      if (typeof display_name !== 'string' || display_name.length > MAX_DISPLAY_NAME_LENGTH) {
-        res.status(400).json({ success: false, message: `display_name must not exceed ${MAX_DISPLAY_NAME_LENGTH} characters` });
+      // Validate display_name (non-empty and length limit)
+      if (typeof display_name !== 'string' || display_name.length === 0 || display_name.length > MAX_DISPLAY_NAME_LENGTH) {
+        res.status(400).json({ success: false, message: `display_name must be a non-empty string not exceeding ${MAX_DISPLAY_NAME_LENGTH} characters` });
         return;
       }
 
@@ -215,9 +215,9 @@ export function setupProgressionRoutes(app: Express): void {
         return;
       }
 
-      // Validate display_name length
-      if (typeof display_name !== 'string' || display_name.length > MAX_DISPLAY_NAME_LENGTH) {
-        res.status(400).json({ success: false, message: `display_name must not exceed ${MAX_DISPLAY_NAME_LENGTH} characters` });
+      // Validate display_name (non-empty and length limit)
+      if (typeof display_name !== 'string' || display_name.length === 0 || display_name.length > MAX_DISPLAY_NAME_LENGTH) {
+        res.status(400).json({ success: false, message: `display_name must be a non-empty string not exceeding ${MAX_DISPLAY_NAME_LENGTH} characters` });
         return;
       }
 
@@ -367,9 +367,9 @@ export function setupProgressionRoutes(app: Express): void {
         return;
       }
 
-      // Validate display_name length
-      if (typeof display_name !== 'string' || display_name.length > MAX_DISPLAY_NAME_LENGTH) {
-        res.status(400).json({ success: false, message: `display_name must not exceed ${MAX_DISPLAY_NAME_LENGTH} characters` });
+      // Validate display_name (non-empty and length limit)
+      if (typeof display_name !== 'string' || display_name.length === 0 || display_name.length > MAX_DISPLAY_NAME_LENGTH) {
+        res.status(400).json({ success: false, message: `display_name must be a non-empty string not exceeding ${MAX_DISPLAY_NAME_LENGTH} characters` });
         return;
       }
 
@@ -539,9 +539,9 @@ export function setupProgressionRoutes(app: Express): void {
         return;
       }
 
-      // Validate display_name length
-      if (typeof display_name !== 'string' || display_name.length > MAX_DISPLAY_NAME_LENGTH) {
-        res.status(400).json({ success: false, message: `display_name must not exceed ${MAX_DISPLAY_NAME_LENGTH} characters` });
+      // Validate display_name (non-empty and length limit)
+      if (typeof display_name !== 'string' || display_name.length === 0 || display_name.length > MAX_DISPLAY_NAME_LENGTH) {
+        res.status(400).json({ success: false, message: `display_name must be a non-empty string not exceeding ${MAX_DISPLAY_NAME_LENGTH} characters` });
         return;
       }
 

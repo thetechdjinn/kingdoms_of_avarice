@@ -174,18 +174,16 @@ async function handleLogout(): Promise<void> {
 
 document.addEventListener('DOMContentLoaded', async () => {
   const isAdmin = await checkAdminAuth();
-  
+
+  // Non-admins are redirected in checkAdminAuth, so we only reach here if admin
+  if (!isAdmin) return;
+
   const accessDenied = document.getElementById('access-denied');
   const adminPanel = document.getElementById('admin-panel');
-  
-  if (isAdmin) {
-    if (accessDenied) accessDenied.style.display = 'none';
-    if (adminPanel) adminPanel.style.display = 'block';
-    await loadPendingUsers();
-  } else {
-    if (accessDenied) accessDenied.style.display = 'block';
-    if (adminPanel) adminPanel.style.display = 'none';
-  }
+
+  if (accessDenied) accessDenied.style.display = 'none';
+  if (adminPanel) adminPanel.style.display = 'block';
+  await loadPendingUsers();
 
   // Logout button
   const logoutBtn = document.getElementById('logout-btn');

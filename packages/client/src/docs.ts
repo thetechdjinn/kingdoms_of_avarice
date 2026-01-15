@@ -113,8 +113,8 @@
     // Horizontal rules
     html = html.replace(/^---$/gm, '<hr>');
 
-    // Links - escape quotes in href to prevent attribute injection
-    html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_, text, url) => {
+    // Links - handle URLs with balanced parentheses, escape quotes to prevent attribute injection
+    html = html.replace(/\[([^\]]+)\]\(([^)\s]+(?:\([^)]*\)[^)\s]*)*)\)/g, (_, text, url) => {
       const safeUrl = url.replace(/"/g, '&quot;');
       return '<a href="' + safeUrl + '">' + text + '</a>';
     });
