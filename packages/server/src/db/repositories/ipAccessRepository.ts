@@ -63,32 +63,36 @@ export async function getHostnameEntries(): Promise<IpAccessEntry[]> {
  * Check if an IP is in the allow list (either directly or via resolved hostname)
  */
 export async function isIpAllowed(ip: string): Promise<boolean> {
-  const result = await query<{ count: string }>(
-    `SELECT COUNT(*) FROM ip_access
-     WHERE list_type = 'allow'
-     AND (
-       (entry_type = 'ip' AND entry = $1)
-       OR (entry_type = 'hostname' AND $1 = ANY(resolved_ips))
-     )`,
+  const result = await query<{ exists: boolean }>(
+    `SELECT EXISTS(
+       SELECT 1 FROM ip_access
+       WHERE list_type = 'allow'
+       AND (
+         (entry_type = 'ip' AND entry = $1)
+         OR (entry_type = 'hostname' AND $1 = ANY(resolved_ips))
+       )
+     ) as exists`,
     [ip]
   );
-  return parseInt(result.rows[0].count) > 0;
+  return result.rows[0].exists;
 }
 
 /**
  * Check if an IP is in the block list (either directly or via resolved hostname)
  */
 export async function isIpBlocked(ip: string): Promise<boolean> {
-  const result = await query<{ count: string }>(
-    `SELECT COUNT(*) FROM ip_access
-     WHERE list_type = 'block'
-     AND (
-       (entry_type = 'ip' AND entry = $1)
-       OR (entry_type = 'hostname' AND $1 = ANY(resolved_ips))
-     )`,
+  const result = await query<{ exists: boolean }>(
+    `SELECT EXISTS(
+       SELECT 1 FROM ip_access
+       WHERE list_type = 'block'
+       AND (
+         (entry_type = 'ip' AND entry = $1)
+         OR (entry_type = 'hostname' AND $1 = ANY(resolved_ips))
+       )
+     ) as exists`,
     [ip]
   );
-  return parseInt(result.rows[0].count) > 0;
+  return result.rows[0].exists;
 }
 
 /**
@@ -115,7 +119,7 @@ export async function createEntry(
 ): Promise<IpAccessEntry> {
   const result = await query<DbIpAccess>(
     `INSERT INTO ip_access (entry, entry_type, list_type, reason, created_by, resolved_ips, resolved_at)
-     VALUES ($1, $2, $3, $4, $5, $6, $7)
+     VALUES ($1, $2, $3, $4, $5, $6, ${resolvedIps ? 'NOW()' : 'NULL'})
      RETURNING *`,
     [
       entry,
@@ -124,7 +128,6 @@ export async function createEntry(
       reason || null,
       createdBy || null,
       resolvedIps || null,
-      resolvedIps ? new Date() : null,
     ]
   );
   return toIpAccessEntry(result.rows[0]);
@@ -152,11 +155,11 @@ export async function deleteEntry(id: number): Promise<boolean> {
  * Check if an entry already exists
  */
 export async function entryExists(entry: string): Promise<boolean> {
-  const result = await query<{ count: string }>(
-    'SELECT COUNT(*) FROM ip_access WHERE entry = $1',
+  const result = await query<{ exists: boolean }>(
+    'SELECT EXISTS(SELECT 1 FROM ip_access WHERE entry = $1) as exists',
     [entry]
   );
-  return parseInt(result.rows[0].count) > 0;
+  return result.rows[0].exists;
 }
 
 function toIpAccessEntry(row: DbIpAccess): IpAccessEntry {

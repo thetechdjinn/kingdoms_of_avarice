@@ -83,9 +83,10 @@ export function setupAdminRoutes(app: Express): void {
 
     // Validate IP format if entryType is 'ip'
     if (entryType === 'ip') {
-      // Basic IP validation (IPv4 or IPv6)
-      const ipv4Regex = /^(\d{1,3}\.){3}\d{1,3}$/;
-      const ipv6Regex = /^([0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}$|^::$|^([0-9a-fA-F]{1,4}:)*:([0-9a-fA-F]{1,4}:)*[0-9a-fA-F]{1,4}$/;
+      // IPv4 validation with proper octet range checking (0-255)
+      const ipv4Regex = /^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
+      // IPv6 validation (simplified - covers most common formats)
+      const ipv6Regex = /^(?:[0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}$|^::(?:[0-9a-fA-F]{1,4}:){0,6}[0-9a-fA-F]{1,4}$|^(?:[0-9a-fA-F]{1,4}:){1,7}:$|^(?:[0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}$/;
 
       if (!ipv4Regex.test(entry) && !ipv6Regex.test(entry)) {
         res.status(400).json({ success: false, message: 'Invalid IP address format' });

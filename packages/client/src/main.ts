@@ -570,7 +570,7 @@ async function showEnterGame(): Promise<void> {
             <div class="character-name">${escapeHtml(char.name)}</div>
             <div class="character-info">Level ${char.level} ${escapeHtml(char.race)} ${escapeHtml(char.class)}</div>
           </div>
-          <button class="character-delete-btn" data-id="${char.id}" data-name="${char.name}" title="Delete character">X</button>
+          <button class="character-delete-btn" data-id="${char.id}" data-name="${escapeHtml(char.name)}" title="Delete character">X</button>
         </div>
       `).join('');
 
@@ -1159,6 +1159,13 @@ document.addEventListener('DOMContentLoaded', () => {
       userMenu.classList.toggle('open');
     });
   }
+
+  // Prevent dropdown menus from closing when clicking inside them
+  document.querySelectorAll('.dropdown-menu').forEach((menu) => {
+    menu.addEventListener('click', (e) => {
+      e.stopPropagation();
+    });
+  });
 
   // Close all nav user dropdowns when clicking outside
   document.addEventListener('click', () => {

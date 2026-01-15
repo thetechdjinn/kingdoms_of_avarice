@@ -298,7 +298,16 @@ async function loadAllPlayers(): Promise<void> {
         const input = row?.querySelector('.player-max-chars') as HTMLInputElement;
         const value = input?.value.trim();
 
-        await savePlayerCharacterLimit(playerId, value === '' ? null : parseInt(value));
+        // Validate input
+        if (value !== '') {
+          const numValue = parseInt(value, 10);
+          if (isNaN(numValue) || numValue < 1) {
+            alert('Please enter a valid positive number or leave empty for default');
+            return;
+          }
+        }
+
+        await savePlayerCharacterLimit(playerId, value === '' ? null : parseInt(value, 10));
       });
     });
   } catch (error) {
