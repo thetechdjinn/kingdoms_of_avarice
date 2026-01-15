@@ -367,15 +367,15 @@ export async function updateRace(raceId: string, updates: Partial<RaceDefinition
   }
   if (updates.stat_modifiers !== undefined) {
     setClauses.push(`stat_modifiers = $${paramIndex++}`);
-    values.push(JSON.stringify(updates.stat_modifiers));
+    values.push(updates.stat_modifiers ? JSON.stringify(updates.stat_modifiers) : null);
   }
   if (updates.traits !== undefined) {
     setClauses.push(`traits = $${paramIndex++}`);
-    values.push(JSON.stringify(updates.traits));
+    values.push(updates.traits ? JSON.stringify(updates.traits) : null);
   }
   if (updates.allowed_classes !== undefined) {
     setClauses.push(`allowed_classes = $${paramIndex++}`);
-    values.push(JSON.stringify(updates.allowed_classes));
+    values.push(updates.allowed_classes ? JSON.stringify(updates.allowed_classes) : null);
   }
   if (updates.playable !== undefined) {
     setClauses.push(`playable = $${paramIndex++}`);
@@ -588,7 +588,7 @@ export async function updateTalent(talentId: string, updates: Partial<TalentDefi
   }
   if (updates.prerequisite_talents !== undefined) {
     setClauses.push(`prerequisite_talents = $${paramIndex++}`);
-    values.push(JSON.stringify(updates.prerequisite_talents));
+    values.push(updates.prerequisite_talents ? JSON.stringify(updates.prerequisite_talents) : null);
   }
   if (updates.effect_modifiers !== undefined) {
     setClauses.push(`effect_modifiers = $${paramIndex++}`);
@@ -844,11 +844,11 @@ export async function updateCharacterProgression(
   }
   if (updates.unlocked_talents !== undefined) {
     setClauses.push(`unlocked_talents = $${paramIndex++}`);
-    values.push(JSON.stringify(updates.unlocked_talents));
+    values.push(JSON.stringify(updates.unlocked_talents ?? []));
   }
   if (updates.learned_abilities !== undefined) {
     setClauses.push(`learned_abilities = $${paramIndex++}`);
-    values.push(JSON.stringify(updates.learned_abilities));
+    values.push(JSON.stringify(updates.learned_abilities ?? []));
   }
 
   if (setClauses.length === 0) return getCharacterProgression(characterId);

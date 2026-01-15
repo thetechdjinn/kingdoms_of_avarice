@@ -907,8 +907,18 @@ async function handleDelete(type: string): Promise<void> {
   const confirmed = confirm(`Are you sure you want to delete this ${type}?`);
   if (!confirmed) return;
 
+  // Map singular type to correct API plural endpoint
+  const pluralMap: Record<string, string> = {
+    'class': 'classes',
+    'race': 'races',
+    'ability': 'abilities',
+    'talent': 'talents',
+    'event': 'events',
+  };
+  const endpoint = pluralMap[type] || `${type}s`;
+
   try {
-    const response = await fetch(`/api/progression/${type}s/${selectedId}`, {
+    const response = await fetch(`/api/progression/${endpoint}/${selectedId}`, {
       method: 'DELETE',
     });
 

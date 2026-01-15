@@ -583,6 +583,30 @@ export function setupProgressionRoutes(app: Express): void {
 
   app.put('/api/progression/talents/:talentId', requireDeveloper, async (req: Request, res: Response) => {
     try {
+      const { display_name, description, essence_cost, prerequisite_level } = req.body;
+
+      // Validate display_name if provided
+      if (display_name !== undefined && (typeof display_name !== 'string' || display_name.length === 0 || display_name.length > MAX_DISPLAY_NAME_LENGTH)) {
+        res.status(400).json({ success: false, message: `display_name must be a non-empty string not exceeding ${MAX_DISPLAY_NAME_LENGTH} characters` });
+        return;
+      }
+
+      // Validate description if provided
+      if (description !== undefined && (typeof description !== 'string' || description.length > MAX_DESCRIPTION_LENGTH)) {
+        res.status(400).json({ success: false, message: `description must not exceed ${MAX_DESCRIPTION_LENGTH} characters` });
+        return;
+      }
+
+      // Validate numeric fields if provided
+      if (essence_cost !== undefined && (typeof essence_cost !== 'number' || essence_cost < 0)) {
+        res.status(400).json({ success: false, message: 'essence_cost must be a non-negative number' });
+        return;
+      }
+      if (prerequisite_level !== undefined && (typeof prerequisite_level !== 'number' || prerequisite_level < 1)) {
+        res.status(400).json({ success: false, message: 'prerequisite_level must be a positive number' });
+        return;
+      }
+
       const talent = await progressionRepo.updateTalent(req.params.talentId, req.body);
       if (!talent) {
         res.status(404).json({ success: false, message: 'Talent not found' });
@@ -691,6 +715,30 @@ export function setupProgressionRoutes(app: Express): void {
 
   app.put('/api/progression/events/:eventId', requireDeveloper, async (req: Request, res: Response) => {
     try {
+      const { display_name, emitted_tags, base_essence_value, base_xp_value } = req.body;
+
+      // Validate display_name if provided
+      if (display_name !== undefined && (typeof display_name !== 'string' || display_name.length > MAX_DISPLAY_NAME_LENGTH)) {
+        res.status(400).json({ success: false, message: `display_name must not exceed ${MAX_DISPLAY_NAME_LENGTH} characters` });
+        return;
+      }
+
+      // Validate emitted_tags if provided
+      if (emitted_tags !== undefined && (!Array.isArray(emitted_tags) || emitted_tags.length > MAX_ARRAY_LENGTH)) {
+        res.status(400).json({ success: false, message: `emitted_tags must be an array with at most ${MAX_ARRAY_LENGTH} items` });
+        return;
+      }
+
+      // Validate numeric fields if provided
+      if (base_essence_value !== undefined && (typeof base_essence_value !== 'number' || base_essence_value < 0)) {
+        res.status(400).json({ success: false, message: 'base_essence_value must be a non-negative number' });
+        return;
+      }
+      if (base_xp_value !== undefined && (typeof base_xp_value !== 'number' || base_xp_value < 0)) {
+        res.status(400).json({ success: false, message: 'base_xp_value must be a non-negative number' });
+        return;
+      }
+
       const event = await progressionRepo.updateGameEvent(req.params.eventId, req.body);
       if (!event) {
         res.status(404).json({ success: false, message: 'Event not found' });

@@ -140,7 +140,11 @@ function processRegenTick(config: ResourceRegenConfig): void {
     // Only update and send vitals if value changed
     if (newValue !== current) {
       setResourceValue(socket.vitals, config.resourceKey, newValue);
-      sendVitalsFn(socket);
+      try {
+        sendVitalsFn(socket);
+      } catch (error) {
+        // Ignore send errors (e.g., closed WebSocket connection)
+      }
     }
   }
 }
@@ -198,19 +202,24 @@ export function stopRegenLoops(): void {
  * Called on server startup
  */
 export function initializeDefaultRegenConfigs(): void {
+  // Minimum tick interval to prevent invalid setInterval values
+  const MIN_TICK_INTERVAL = 100;
+
   // Mana regeneration
+  const manaTickInterval = Number(process.env.MANA_TICK_INTERVAL_MS) || 5000;
   registerRegenResource({
     resourceKey: 'mana',
-    tickIntervalMs: Number(process.env.MANA_TICK_INTERVAL_MS) || 5000,
+    tickIntervalMs: Math.max(MIN_TICK_INTERVAL, manaTickInterval),
     baseRegenPercent: Number(process.env.MANA_REGEN_BASE_PERCENT) || 2,
     enhancedRegenPercent: Number(process.env.MANA_REGEN_ENHANCED_PERCENT) || 5,
     regenInCombat: true,
   });
 
   // Health regeneration
+  const healthTickInterval = Number(process.env.HEALTH_TICK_INTERVAL_MS) || 5000;
   registerRegenResource({
     resourceKey: 'health',
-    tickIntervalMs: Number(process.env.HEALTH_TICK_INTERVAL_MS) || 5000,
+    tickIntervalMs: Math.max(MIN_TICK_INTERVAL, healthTickInterval),
     baseRegenPercent: Number(process.env.HEALTH_REGEN_BASE_PERCENT) || 1,
     enhancedRegenPercent: Number(process.env.HEALTH_REGEN_ENHANCED_PERCENT) || 3,
     regenInCombat: true,

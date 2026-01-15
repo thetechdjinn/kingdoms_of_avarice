@@ -699,8 +699,8 @@ async function handleCreateTalent(args: string[]): Promise<CommandResponse> {
   const essenceCost = parseInt(args[1]);
   const displayName = args.slice(2).join(' ');
 
-  if (isNaN(essenceCost)) {
-    return { type: MessageType.ERROR, message: 'essence_cost must be a number' };
+  if (isNaN(essenceCost) || essenceCost < 0) {
+    return { type: MessageType.ERROR, message: 'essence_cost must be a non-negative number' };
   }
 
   try {
@@ -867,8 +867,8 @@ async function handleCreateEvent(args: string[]): Promise<CommandResponse> {
   const baseEssence = parseInt(args[1]);
   const tags = args.slice(2);
 
-  if (isNaN(baseEssence)) {
-    return { type: MessageType.ERROR, message: 'base_essence must be a number' };
+  if (isNaN(baseEssence) || baseEssence < 0) {
+    return { type: MessageType.ERROR, message: 'base_essence must be a non-negative number' };
   }
 
   try {
@@ -1002,14 +1002,19 @@ async function handleAddClassAbility(args: string[]): Promise<CommandResponse> {
 
   const classId = args[0];
   const abilityId = args[1];
-  const level = args.length > 2 ? parseInt(args[2]) : 1;
+  const levelArg = args.length > 2 && args[2] !== 'auto' ? parseInt(args[2]) : 1;
   const autoLearn = args.includes('auto');
+
+  // Validate level if explicitly provided
+  if (args.length > 2 && args[2] !== 'auto' && (isNaN(levelArg) || levelArg < 1)) {
+    return { type: MessageType.ERROR, message: 'level must be a positive number' };
+  }
 
   try {
     const mapping = await progressionRepo.addClassAbility({
       class_id: classId,
       ability_id: abilityId,
-      required_level: isNaN(level) ? 1 : level,
+      required_level: levelArg,
       auto_learn: autoLearn,
     });
 

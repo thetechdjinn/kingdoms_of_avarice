@@ -18,33 +18,34 @@ async function checkAdminAuth(): Promise<boolean> {
     const data = await response.json();
     
     if (data.authenticated) {
+      const roles: string[] = data.roles || [];
+      const isAdmin = roles.includes('admin');
+
+      // Check admin access first before modifying UI
+      if (!isAdmin) {
+        window.location.href = '/';
+        return false;
+      }
+
       const usernameEl = document.getElementById('nav-username');
       if (usernameEl) {
         usernameEl.textContent = data.username;
       }
-      
-      const roles: string[] = data.roles || [];
-      const isAdmin = roles.includes('admin');
+
       const isDeveloper = roles.includes('developer') || isAdmin;
-      
+
       // Show/hide Developer menu based on roles
       const developerMenu = document.getElementById('developer-menu');
       if (developerMenu) {
         developerMenu.style.display = isDeveloper ? 'block' : 'none';
       }
-      
+
       // Show/hide Admin menu based on roles
       const adminMenu = document.getElementById('admin-menu');
       if (adminMenu) {
         adminMenu.style.display = isAdmin ? 'block' : 'none';
       }
-      
-      if (!isAdmin) {
-        // Redirect - no admin access
-        window.location.href = '/';
-        return false;
-      }
-      
+
       return isAdmin;
     }
     // Redirect to login
