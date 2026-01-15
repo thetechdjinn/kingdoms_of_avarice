@@ -60,36 +60,183 @@
           <p class="form-link"><a href="#" id="show-login">Back to login</a></p>
         </form>
       </div>
+
+      <!-- Hub Landing Page -->
+      <div id="hub-container" style="display: none">
+        <nav id="hub-nav" class="main-nav">
+          <div class="nav-brand">Kingdoms of Avarice</div>
+          <div class="nav-links">
+            <button class="nav-link" id="hub-profile-btn">Profile</button>
+            <div class="nav-dropdown" id="hub-dev-dropdown" style="display: none;">
+              <button class="nav-link nav-dropdown-btn">Developer</button>
+              <div class="nav-dropdown-menu">
+                <a href="/editor.html" class="nav-dropdown-item">Room Editor</a>
+                <a href="/item-editor.html" class="nav-dropdown-item">Item Editor</a>
+                <a href="/progression-editor.html" class="nav-dropdown-item">Progression Editor</a>
+              </div>
+            </div>
+            <a href="/admin.html" class="nav-link" id="hub-admin-link" style="display: none;">Admin</a>
+          </div>
+          <div class="nav-spacer"></div>
+          <div class="nav-user-menu">
+            <button class="nav-user-btn" id="hub-nav-username">User</button>
+            <div class="dropdown-menu" id="hub-user-dropdown">
+              <button class="dropdown-item" id="hub-logout-btn">Logout</button>
+            </div>
+          </div>
+        </nav>
+        <div class="hub-content">
+          <h1>Welcome to Kingdoms of Avarice</h1>
+          <p class="welcome-message">Greetings, <span id="hub-username">Adventurer</span>!</p>
+          <button id="hub-enter-game-btn" class="hub-btn hub-btn-large">
+            <span class="hub-btn-icon">&#9876;</span>
+            <span class="hub-btn-text">Enter the Game</span>
+            <span class="hub-btn-desc">Select or create a character</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Profile Page (NEW) -->
+      <div id="profile-container" style="display: none">
+        <h1>My Profile</h1>
+        <div class="profile-section">
+          <div class="profile-field">
+            <label>Username</label>
+            <span id="profile-username" class="profile-value">-</span>
+          </div>
+          <div class="profile-field">
+            <label for="profile-email">Email</label>
+            <div class="profile-edit-row">
+              <input type="email" id="profile-email" placeholder="Enter email..." />
+              <button id="save-email-btn" class="btn-small">Save</button>
+            </div>
+          </div>
+          <p id="email-message" class="message"></p>
+        </div>
+        <div class="profile-section">
+          <h2>Change Password</h2>
+          <form id="change-password-form">
+            <div class="form-group">
+              <label for="current-password">Current Password</label>
+              <input type="password" id="current-password" required />
+            </div>
+            <div class="form-group">
+              <label for="new-password">New Password</label>
+              <input type="password" id="new-password" required minlength="6" />
+            </div>
+            <div class="form-group">
+              <label for="confirm-password">Confirm New Password</label>
+              <input type="password" id="confirm-password" required minlength="6" />
+            </div>
+            <p id="password-message" class="message"></p>
+            <button type="submit" class="btn-primary">Change Password</button>
+          </form>
+        </div>
+        <div class="profile-section">
+          <div class="profile-field">
+            <label>Character Slots</label>
+            <span id="profile-char-slots" class="profile-value">0/3</span>
+          </div>
+        </div>
+        <button id="back-to-hub-btn" class="btn-link">&larr; Back to Hub</button>
+      </div>
+
+      <!-- Developer Tools Page (NEW) -->
+      <div id="dev-tools-container" style="display: none">
+        <h1>Developer Tools</h1>
+        <div class="dev-tools-menu">
+          <a href="/editor.html" class="dev-tool-link">
+            <span class="dev-tool-icon">&#9634;</span>
+            <span class="dev-tool-text">Room Editor</span>
+            <span class="dev-tool-desc">Create and edit game rooms</span>
+          </a>
+          <a href="/item-editor.html" class="dev-tool-link">
+            <span class="dev-tool-icon">&#9876;</span>
+            <span class="dev-tool-text">Item Editor</span>
+            <span class="dev-tool-desc">Create and edit items</span>
+          </a>
+          <a href="/progression-editor.html" class="dev-tool-link">
+            <span class="dev-tool-icon">&#9733;</span>
+            <span class="dev-tool-text">Progression Editor</span>
+            <span class="dev-tool-desc">Manage classes, races, and abilities</span>
+          </a>
+        </div>
+        <button id="dev-tools-back-btn" class="btn-link">&larr; Back to Hub</button>
+      </div>
+
+      <!-- Enter Game / Character Selection (renamed from landing-container) -->
+      <div id="enter-game-container" style="display: none">
+        <h1>Select Character</h1>
+        <div id="character-list"></div>
+        <div id="character-limit-info" class="limit-info"></div>
+        <button id="create-character-btn" class="btn-secondary">Create New Character</button>
+        <button id="enter-game-back-btn" class="btn-link">&larr; Back to Hub</button>
+      </div>
+
+      <!-- Character Creation -->
+      <div id="character-create-container" style="display: none">
+        <h1>Create Character</h1>
+        <form id="character-create-form">
+          <div class="form-group">
+            <label for="char-name">Character Name</label>
+            <input type="text" id="char-name" required minlength="3" maxlength="20"
+                   pattern="[a-zA-Z][a-zA-Z0-9 ]*"
+                   title="Must start with a letter, can contain letters, numbers, and spaces" />
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="char-race">Race</label>
+              <select id="char-race" required>
+                <option value="">Select a race...</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="char-class">Class</label>
+              <select id="char-class" required>
+                <option value="">Select a class...</option>
+              </select>
+            </div>
+          </div>
+          <div id="race-description" class="info-box"></div>
+          <div id="class-description" class="info-box"></div>
+          <div id="stat-preview" class="stat-preview">
+            <h3>Stats Preview</h3>
+            <div class="stat-grid">
+              <div class="stat-item"><span class="stat-label">STR</span><span id="preview-str" class="stat-value">-</span></div>
+              <div class="stat-item"><span class="stat-label">INT</span><span id="preview-int" class="stat-value">-</span></div>
+              <div class="stat-item"><span class="stat-label">DEX</span><span id="preview-dex" class="stat-value">-</span></div>
+              <div class="stat-item"><span class="stat-label">CON</span><span id="preview-con" class="stat-value">-</span></div>
+              <div class="stat-item"><span class="stat-label">WIS</span><span id="preview-wis" class="stat-value">-</span></div>
+              <div class="stat-item"><span class="stat-label">CHA</span><span id="preview-cha" class="stat-value">-</span></div>
+            </div>
+          </div>
+          <p id="create-error" class="error"></p>
+          <div class="form-buttons">
+            <button type="submit" class="btn-primary">Create Character</button>
+            <button type="button" id="back-to-enter-game-btn" class="btn-secondary">Cancel</button>
+          </div>
+        </form>
+      </div>
+
       <div id="terminal-container">
         <nav id="main-nav">
           <div class="nav-brand">Kingdoms of Avarice</div>
+          <div class="nav-links">
+            <a href="#" class="nav-link" id="nav-hub-link">Hub</a>
+            <div class="nav-dropdown" id="nav-dev-dropdown" style="display: none;">
+              <button class="nav-link nav-dropdown-btn">Developer</button>
+              <div class="nav-dropdown-menu">
+                <a href="/editor.html" class="nav-dropdown-item">Room Editor</a>
+                <a href="/item-editor.html" class="nav-dropdown-item">Item Editor</a>
+                <a href="/progression-editor.html" class="nav-dropdown-item">Progression Editor</a>
+              </div>
+            </div>
+            <a href="/admin.html" class="nav-link" id="nav-admin-link" style="display: none;">Admin</a>
+          </div>
           <div class="nav-spacer"></div>
           <div class="nav-user-menu">
             <button class="nav-user-btn" id="nav-username">User</button>
             <div class="dropdown-menu" id="user-dropdown">
-              <div
-                class="dropdown-section"
-                id="developer-menu"
-                style="display: none"
-              >
-                <div class="dropdown-header">Developer</div>
-                <a href="/editor.html" class="dropdown-item indent">Room Editor</a>
-                <a href="/item-editor.html" class="dropdown-item indent">Item Editor</a>
-                <a href="/progression-editor.html" class="dropdown-item indent">Progression Editor</a>
-              </div>
-              <div
-                class="dropdown-section"
-                id="admin-menu"
-                style="display: none"
-              >
-                <div class="dropdown-header">Admin</div>
-                <a href="/admin.html" class="dropdown-item indent">User Management</a>
-              </div>
-              <div
-                class="dropdown-divider"
-                id="menu-divider"
-                style="display: none"
-              ></div>
               <button class="dropdown-item" id="logout-btn">Logout</button>
             </div>
           </div>

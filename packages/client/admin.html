@@ -10,20 +10,22 @@
     <div id="admin-app">
       <nav id="main-nav">
         <div class="nav-brand">Kingdoms of Avarice</div>
+        <div class="nav-links">
+          <a href="/" class="nav-link">Game</a>
+          <div class="nav-dropdown" id="nav-dev-dropdown" style="display: none;">
+            <button class="nav-link nav-dropdown-btn">Developer</button>
+            <div class="nav-dropdown-menu">
+              <a href="/editor.html" class="nav-dropdown-item">Room Editor</a>
+              <a href="/item-editor.html" class="nav-dropdown-item">Item Editor</a>
+              <a href="/progression-editor.html" class="nav-dropdown-item">Progression Editor</a>
+            </div>
+          </div>
+          <a href="/admin.html" class="nav-link active" id="nav-admin-link" style="display: none;">Admin</a>
+        </div>
         <div class="nav-spacer"></div>
         <div class="nav-user-menu">
           <button class="nav-user-btn" id="nav-username">User</button>
           <div class="dropdown-menu" id="user-dropdown">
-            <a href="/" class="dropdown-item">Game</a>
-            <div class="dropdown-section" id="developer-menu">
-              <div class="dropdown-header">Developer</div>
-              <a href="/editor.html" class="dropdown-item indent">Room Editor</a>
-            </div>
-            <div class="dropdown-section" id="admin-menu">
-              <div class="dropdown-header">Admin</div>
-              <a href="/admin.html" class="dropdown-item indent active">User Management</a>
-            </div>
-            <div class="dropdown-divider"></div>
             <button class="dropdown-item" id="logout-btn">Logout</button>
           </div>
         </div>
@@ -37,13 +39,99 @@
         </div>
         
         <div id="admin-panel" style="display: none;">
-          <h1>User Management</h1>
-          
-          <section id="pending-users-section">
+          <h1>Admin Panel</h1>
+
+          <!-- Tab Navigation -->
+          <div class="admin-tabs">
+            <button class="admin-tab active" data-tab="users">Users</button>
+            <button class="admin-tab" data-tab="ip-access">IP Access</button>
+            <button class="admin-tab" data-tab="settings">Settings</button>
+          </div>
+
+          <!-- Users Tab -->
+          <section id="users-tab" class="tab-content active">
             <h2>Pending Approval</h2>
             <p class="section-desc">Users waiting for approval to play the game.</p>
             <div id="pending-users-list">
               <p class="loading">Loading...</p>
+            </div>
+
+            <h2>All Players</h2>
+            <p class="section-desc">Manage player character limits.</p>
+            <div id="all-players-list">
+              <p class="loading">Loading...</p>
+            </div>
+          </section>
+
+          <!-- IP Access Tab -->
+          <section id="ip-access-tab" class="tab-content" style="display: none;">
+            <h2>IP Access Control</h2>
+            <p class="section-desc">Manage IP addresses and hostnames that are allowed or blocked.</p>
+
+            <div class="ip-access-form">
+              <h3>Add Entry</h3>
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="ip-entry">IP Address or Hostname</label>
+                  <input type="text" id="ip-entry" placeholder="192.168.1.1 or example.com" />
+                </div>
+                <div class="form-group">
+                  <label for="ip-entry-type">Type</label>
+                  <select id="ip-entry-type">
+                    <option value="ip">IP Address</option>
+                    <option value="hostname">Hostname (DNS)</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="ip-list-type">List</label>
+                  <select id="ip-list-type">
+                    <option value="allow">Allow</option>
+                    <option value="block">Block</option>
+                  </select>
+                </div>
+              </div>
+              <div class="form-group">
+                <label for="ip-reason">Reason (optional)</label>
+                <input type="text" id="ip-reason" placeholder="e.g., Trusted admin, Known spammer" />
+              </div>
+              <button id="add-ip-entry-btn" class="btn-primary">Add Entry</button>
+              <p id="ip-entry-message" class="message"></p>
+            </div>
+
+            <h3>Current Entries</h3>
+            <div id="ip-access-list">
+              <p class="loading">Loading...</p>
+            </div>
+          </section>
+
+          <!-- Settings Tab -->
+          <section id="settings-tab" class="tab-content" style="display: none;">
+            <h2>Game Settings</h2>
+            <p class="section-desc">Configure global game settings.</p>
+
+            <div class="settings-form">
+              <div class="form-group">
+                <label for="setting-max-chars">Max Characters Per Player</label>
+                <div class="setting-row">
+                  <input type="number" id="setting-max-chars" min="1" max="100" />
+                  <button id="save-max-chars-btn" class="btn-small">Save</button>
+                </div>
+                <p class="setting-desc">Default number of characters each player can create. Can be overridden per-player.</p>
+              </div>
+
+              <div class="form-group">
+                <label for="setting-ip-mode">IP Access Mode</label>
+                <div class="setting-row">
+                  <select id="setting-ip-mode">
+                    <option value="blocklist">Blocklist (allow all, block specific)</option>
+                    <option value="allowlist">Allowlist (block all, allow specific)</option>
+                  </select>
+                  <button id="save-ip-mode-btn" class="btn-small">Save</button>
+                </div>
+                <p class="setting-desc">In blocklist mode, all IPs are allowed unless blocked. In allowlist mode, only specified IPs can access.</p>
+              </div>
+
+              <p id="settings-message" class="message"></p>
             </div>
           </section>
         </div>

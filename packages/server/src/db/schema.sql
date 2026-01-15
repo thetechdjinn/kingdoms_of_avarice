@@ -5,7 +5,8 @@ CREATE TABLE IF NOT EXISTS players (
     id SERIAL PRIMARY KEY,
     username VARCHAR(50) UNIQUE NOT NULL,
     password_hash VARCHAR(255) NOT NULL,
-    email VARCHAR(255) UNIQUE,
+    email VARCHAR(255),
+    max_characters INTEGER,  -- NULL = use global default from game_settings
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     last_login TIMESTAMP,
     brief_mode BOOLEAN DEFAULT FALSE,
@@ -29,6 +30,8 @@ CREATE TABLE IF NOT EXISTS characters (
     intelligence INTEGER NOT NULL,
     dexterity INTEGER NOT NULL,
     constitution INTEGER NOT NULL,
+    wisdom INTEGER NOT NULL DEFAULT 10,
+    charisma INTEGER NOT NULL DEFAULT 10,
     current_room_id INTEGER DEFAULT 1,
     gold INTEGER DEFAULT 0,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -223,6 +226,26 @@ CREATE TABLE IF NOT EXISTS player_roles (
     UNIQUE(player_id, role_id)
 );
 
+-- Game settings (key-value store for global configuration)
+CREATE TABLE IF NOT EXISTS game_settings (
+    key TEXT PRIMARY KEY,
+    value JSONB NOT NULL,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- IP access control (allowlist/blocklist)
+CREATE TABLE IF NOT EXISTS ip_access (
+    id SERIAL PRIMARY KEY,
+    entry TEXT NOT NULL UNIQUE,           -- IP address OR hostname
+    entry_type TEXT NOT NULL CHECK (entry_type IN ('ip', 'hostname')),
+    resolved_ips TEXT[],                   -- Cached resolved IPs for hostnames
+    resolved_at TIMESTAMP WITH TIME ZONE,  -- When DNS was last resolved
+    list_type TEXT NOT NULL CHECK (list_type IN ('allow', 'block')),
+    reason TEXT,
+    created_by INTEGER REFERENCES players(id),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
 -- Indexes for performance
 CREATE INDEX IF NOT EXISTS idx_characters_player_id ON characters(player_id);
 CREATE INDEX IF NOT EXISTS idx_characters_current_room ON characters(current_room_id);
@@ -235,3 +258,5 @@ CREATE INDEX IF NOT EXISTS idx_item_instances_location ON item_instances(locatio
 CREATE INDEX IF NOT EXISTS idx_npc_instances_room ON npc_instances(current_room_id);
 CREATE INDEX IF NOT EXISTS idx_player_roles_player ON player_roles(player_id);
 CREATE INDEX IF NOT EXISTS idx_player_roles_role ON player_roles(role_id);
+CREATE INDEX IF NOT EXISTS idx_ip_access_list_type ON ip_access(list_type);
+CREATE INDEX IF NOT EXISTS idx_ip_access_entry_type ON ip_access(entry_type);

@@ -28,6 +28,9 @@ body {
 }
 
 .nav-brand {
+  display: flex;
+  align-items: center;
+  height: 32px;
   font-size: 1.2rem;
   font-weight: bold;
   color: #00ff00;
@@ -38,25 +41,135 @@ body {
   flex: 1;
 }
 
+/* Nav Links */
+.nav-links {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  margin-left: 1.5rem;
+}
+
+/* Reset button and anchor differences within nav */
+.nav-links > * {
+  margin: 0;
+}
+
+.nav-link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 32px;
+  margin: 0;
+  padding: 0 0.75rem;
+  color: #00ff00;
+  text-decoration: none;
+  font-size: 0.9rem;
+  border-radius: 4px;
+  transition: all 0.2s;
+  background: transparent;
+  border: none;
+  font-family: inherit;
+  font-weight: inherit;
+  line-height: 32px;
+  cursor: pointer;
+  box-sizing: border-box;
+}
+
+.nav-link:hover {
+  color: #00ff00;
+  background-color: rgba(0, 255, 0, 0.15);
+}
+
+.nav-link.active {
+  color: #00ff00;
+  background-color: rgba(0, 255, 0, 0.15);
+}
+
+/* Nav Dropdown */
+.nav-dropdown {
+  position: relative;
+  display: flex;
+  align-items: center;
+  height: 32px;
+  margin: 0;
+}
+
+.nav-dropdown-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.nav-dropdown-btn::after {
+  content: '▾';
+  font-size: 0.7rem;
+}
+
+.nav-dropdown-menu {
+  display: none;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  min-width: 160px;
+  background-color: #16213e;
+  border: 1px solid #00ff00;
+  border-radius: 4px;
+  margin-top: 4px;
+  z-index: 1000;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+}
+
+.nav-dropdown:hover .nav-dropdown-menu {
+  display: block;
+}
+
+.nav-dropdown-item {
+  display: block;
+  padding: 0.6rem 1rem;
+  color: #ccc;
+  text-decoration: none;
+  font-size: 0.9rem;
+  transition: all 0.15s;
+}
+
+.nav-dropdown-item:hover {
+  background-color: rgba(0, 255, 0, 0.15);
+  color: #00ff00;
+}
+
+.nav-dropdown-item.active {
+  color: #00ff00;
+  background-color: rgba(0, 255, 0, 0.1);
+}
+
 /* Dropdown Menu System */
 .nav-user-menu {
   position: relative;
+  display: flex;
+  align-items: center;
+  align-self: center;
 }
 
 .nav-user-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 32px;
   background: transparent;
-  border: 1px solid #00ff00;
+  border: none;
   color: #00ff00;
-  padding: 0.5rem 1rem;
+  padding: 0 0.75rem;
   font-family: inherit;
   font-size: 0.9rem;
+  line-height: 32px;
   cursor: pointer;
   border-radius: 4px;
   transition: all 0.2s;
+  box-sizing: border-box;
 }
 
 .nav-user-btn:hover {
-  background-color: rgba(0, 255, 0, 0.1);
+  background-color: rgba(0, 255, 0, 0.15);
 }
 
 .dropdown-menu {

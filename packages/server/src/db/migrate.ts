@@ -44,6 +44,32 @@ export async function runMigrations(): Promise<void> {
       await client.query(`
         ALTER TABLE players ADD COLUMN IF NOT EXISTS current_room_id INTEGER DEFAULT 1
       `);
+
+      // Add wisdom and charisma columns to characters table (for existing databases)
+      await client.query(`
+        ALTER TABLE characters ADD COLUMN IF NOT EXISTS wisdom INTEGER NOT NULL DEFAULT 10
+      `);
+      await client.query(`
+        ALTER TABLE characters ADD COLUMN IF NOT EXISTS charisma INTEGER NOT NULL DEFAULT 10
+      `);
+
+      // Add max_characters column to players table (for existing databases)
+      await client.query(`
+        ALTER TABLE players ADD COLUMN IF NOT EXISTS max_characters INTEGER
+      `);
+
+      // Remove UNIQUE constraint from email if it exists (allow NULL and duplicates for now)
+      await client.query(`
+        ALTER TABLE players DROP CONSTRAINT IF EXISTS players_email_key
+      `);
+
+      // Seed default game settings
+      await client.query(`
+        INSERT INTO game_settings (key, value) VALUES
+          ('max_characters_per_player', '3'),
+          ('ip_access_mode', '"blocklist"')
+        ON CONFLICT (key) DO NOTHING
+      `);
     });
 
     console.log('Database migrations completed successfully');

@@ -1,5 +1,9 @@
 (function() {
 
+// Role constants (mirrors @koa/shared Role enum)
+const ROLE_ADMIN = 'admin';
+const ROLE_DEVELOPER = 'developer';
+
 interface Room {
   id: number;
   name: string;
@@ -35,8 +39,8 @@ async function checkAuth(): Promise<boolean> {
 
     // Check if user has Developer or Admin role
     const roles = data.roles || [];
-    const hasDeveloperAccess = roles.includes('developer') || roles.includes('admin');
-    
+    const hasDeveloperAccess = roles.includes(ROLE_DEVELOPER) || roles.includes(ROLE_ADMIN);
+
     if (!hasDeveloperAccess) {
       // Redirect to game - no access
       window.location.href = '/';
@@ -47,6 +51,13 @@ async function checkAuth(): Promise<boolean> {
     const usernameEl = document.getElementById('nav-username');
     if (usernameEl && data.username) {
       usernameEl.textContent = data.username;
+    }
+
+    // Show Admin link if user is admin
+    const isAdmin = roles.includes(ROLE_ADMIN);
+    const adminLink = document.getElementById('nav-admin-link');
+    if (adminLink) {
+      adminLink.style.display = isAdmin ? 'block' : 'none';
     }
 
     return true;

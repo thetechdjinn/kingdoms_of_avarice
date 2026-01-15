@@ -1,11 +1,37 @@
 import { Terminal } from 'xterm';
-import { MessageType, GameMessage, VitalsData, ResourceType } from '@koa/shared';
+import { MessageType, GameMessage, VitalsData, ResourceType, Character } from '@koa/shared';
 import 'xterm/css/xterm.css';
 
 let terminal: Terminal | null = null;
 let socket: WebSocket | null = null;
 let currentVitals: VitalsData | null = null;
 let statlineDisplayed = false;
+let currentUsername: string = '';
+let selectedCharacterId: number | null = null;
+let isInGame: boolean = false;
+let canBypassExitTimer: boolean = false;
+
+// Types for API responses
+interface ClassDefinition {
+  class_id: string;
+  display_name: string;
+  description: string | null;
+  base_stats: Record<string, number> | null;
+  playable: boolean;
+}
+
+interface RaceDefinition {
+  race_id: string;
+  display_name: string;
+  description: string | null;
+  stat_modifiers: Record<string, number> | null;
+  allowed_classes: string[] | null;
+  playable: boolean;
+}
+
+// Cache for race and class data
+let cachedRaces: RaceDefinition[] = [];
+let cachedClasses: ClassDefinition[] = [];
 
 // Fixed terminal dimensions (classic MUD style)
 const TERMINAL_COLS = 80;
@@ -125,36 +151,6 @@ function sendCommand(command: string): void {
   socket.send(JSON.stringify(message));
 }
 
-function connectWebSocket(): void {
-  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-  const wsUrl = `${protocol}//${window.location.host}/game`;
-
-  socket = new WebSocket(wsUrl);
-
-  socket.onopen = () => {
-    console.log('Connected to game server');
-  };
-
-  socket.onmessage = (event) => {
-    try {
-      const message: GameMessage = JSON.parse(event.data);
-      handleServerMessage(message);
-    } catch {
-      console.error('Failed to parse server message');
-    }
-  };
-
-  socket.onclose = () => {
-    if (terminal) {
-      terminal.write('\r\n\x1b[31m*** Connection lost ***\x1b[0m\r\n');
-    }
-  };
-
-  socket.onerror = (error) => {
-    console.error('WebSocket error:', error);
-  };
-}
-
 function handleServerMessage(message: GameMessage): void {
   if (!terminal) return;
 
@@ -187,8 +183,8 @@ function handleServerMessage(message: GameMessage): void {
       }
       break;
     case MessageType.LOGOUT:
-      // Server requested logout - call the logout API and redirect to login
-      handleLogout();
+      // Server requested game exit (via 'x' command) - return to landing page
+      handleGameExit();
       break;
   }
 }
@@ -255,15 +251,8 @@ async function handleLogin(event: Event): Promise<void> {
     const data = await response.json();
 
     if (data.success) {
-      document.getElementById('app')!.classList.remove('login-view');
-      document.getElementById('app')!.classList.add('game-view');
-      document.getElementById('login-container')!.style.display = 'none';
-      document.getElementById('terminal-container')!.classList.add('active');
-      initTerminal();
-      connectWebSocket();
-      
-      // Fetch user info and update nav
-      updateNavigation();
+      currentUsername = username;
+      showLandingPage();
     } else {
       if (errorEl) errorEl.textContent = data.message || 'Login failed';
     }
@@ -272,7 +261,39 @@ async function handleLogin(event: Event): Promise<void> {
   }
 }
 
+// Handle exiting the game (via 'x' command) - returns to landing page, stays logged in
+function handleGameExit(): void {
+  if (socket) {
+    socket.close();
+    socket = null;
+  }
+
+  if (terminal) {
+    terminal.dispose();
+    terminal = null;
+  }
+
+  // Reset game state but NOT login state
+  selectedCharacterId = null;
+  sessionStorage.removeItem('activeCharacterId');
+
+  // Clear in-game state
+  isInGame = false;
+  removeExitProtection();
+
+  // Return to hub (not login)
+  showHub();
+}
+
 async function handleLogout(): Promise<void> {
+  // Block regular players from logging out while in-game
+  if (isInGame && !canBypassExitTimer) {
+    if (terminal) {
+      terminal.write('\r\n\x1b[33mYou must use the "x" command to exit the game.\x1b[0m\r\n');
+    }
+    return;
+  }
+
   try {
     await fetch('/api/logout', {
       method: 'POST',
@@ -292,9 +313,21 @@ async function handleLogout(): Promise<void> {
     terminal = null;
   }
 
+  // Reset state
+  currentUsername = '';
+  selectedCharacterId = null;
+  sessionStorage.removeItem('activeCharacterId');
+  cachedRaces = [];
+  cachedClasses = [];
+
+  // Clear in-game state
+  isInGame = false;
+  removeExitProtection();
+
+  // Hide all containers
   document.getElementById('app')!.classList.remove('game-view');
   document.getElementById('app')!.classList.add('login-view');
-  document.getElementById('terminal-container')!.classList.remove('active');
+  hideAllContainers();
   document.getElementById('login-container')!.style.display = 'block';
   (document.getElementById('username') as HTMLInputElement).value = '';
   (document.getElementById('password') as HTMLInputElement).value = '';
@@ -364,21 +397,20 @@ async function updateNavigation(): Promise<void> {
       const roles: string[] = data.roles || [];
       const isAdmin = roles.includes('admin');
       const isDeveloper = roles.includes('developer') || isAdmin;
-      
-      // Show/hide Developer menu based on roles
-      const developerMenu = document.getElementById('developer-menu');
-      const menuDivider = document.getElementById('menu-divider');
-      if (developerMenu) {
-        developerMenu.style.display = isDeveloper ? 'block' : 'none';
+
+      // Track if user can bypass the 10-second exit timer
+      canBypassExitTimer = isDeveloper || isAdmin;
+
+      // Show/hide Developer nav dropdown based on roles
+      const devDropdown = document.getElementById('nav-dev-dropdown');
+      if (devDropdown) {
+        devDropdown.style.display = isDeveloper ? 'block' : 'none';
       }
-      if (menuDivider) {
-        menuDivider.style.display = (isDeveloper || isAdmin) ? 'block' : 'none';
-      }
-      
-      // Show/hide Admin menu based on roles
-      const adminMenu = document.getElementById('admin-menu');
-      if (adminMenu) {
-        adminMenu.style.display = isAdmin ? 'block' : 'none';
+
+      // Show/hide Admin nav link based on roles
+      const adminLink = document.getElementById('nav-admin-link');
+      if (adminLink) {
+        adminLink.style.display = isAdmin ? 'block' : 'none';
       }
     }
   } catch (error) {
@@ -390,20 +422,607 @@ async function checkExistingAuth(): Promise<void> {
   try {
     const response = await fetch('/api/auth/me', { credentials: 'include' });
     const data = await response.json();
-    
+
     if (data.authenticated) {
-      // User is already logged in, show game view
-      document.getElementById('app')!.classList.remove('login-view');
-      document.getElementById('app')!.classList.add('game-view');
-      document.getElementById('login-container')!.style.display = 'none';
-      document.getElementById('terminal-container')!.classList.add('active');
-      initTerminal();
-      connectWebSocket();
-      updateNavigation();
+      currentUsername = data.username;
+
+      // Check if we were in-game before refresh
+      const storedCharacterId = sessionStorage.getItem('activeCharacterId');
+      if (storedCharacterId) {
+        const characterId = parseInt(storedCharacterId);
+        // Verify this character still belongs to the user
+        try {
+          const charResponse = await fetch('/api/characters', { credentials: 'include' });
+          const charData = await charResponse.json();
+          if (charData.success && charData.characters.some((c: { id: number }) => c.id === characterId)) {
+            selectedCharacterId = characterId;
+            enterGame();
+            return;
+          }
+        } catch {
+          // If verification fails, fall through to hub
+        }
+        // Clear invalid stored character
+        sessionStorage.removeItem('activeCharacterId');
+      }
+
+      showLandingPage();
     }
   } catch (error) {
     console.error('Failed to check auth:', error);
   }
+}
+
+// ============================================================================
+// LANDING PAGE & CHARACTER FLOW
+// ============================================================================
+
+function hideAllContainers(): void {
+  document.getElementById('login-container')!.style.display = 'none';
+  document.getElementById('register-container')!.style.display = 'none';
+  document.getElementById('hub-container')!.style.display = 'none';
+  document.getElementById('profile-container')!.style.display = 'none';
+  document.getElementById('dev-tools-container')!.style.display = 'none';
+  document.getElementById('enter-game-container')!.style.display = 'none';
+  document.getElementById('character-create-container')!.style.display = 'none';
+  document.getElementById('terminal-container')!.classList.remove('active');
+}
+
+async function showHub(): Promise<void> {
+  hideAllContainers();
+  document.getElementById('app')!.classList.remove('login-view');
+  document.getElementById('app')!.classList.add('game-view');
+
+  // Update hub content username
+  const hubUsername = document.getElementById('hub-username');
+  if (hubUsername) {
+    hubUsername.textContent = currentUsername;
+  }
+
+  // Update hub nav username
+  const hubNavUsername = document.getElementById('hub-nav-username');
+  if (hubNavUsername) {
+    hubNavUsername.textContent = currentUsername;
+  }
+
+  // Update hub nav based on roles
+  try {
+    const response = await fetch('/api/auth/me', { credentials: 'include' });
+    const data = await response.json();
+
+    if (data.authenticated) {
+      const roles: string[] = data.roles || [];
+      const isAdmin = roles.includes('admin');
+      const isDeveloper = roles.includes('developer') || isAdmin;
+
+      // Track if user can bypass the 10-second exit timer
+      canBypassExitTimer = isDeveloper || isAdmin;
+
+      // Show/hide hub nav items based on roles
+      const devDropdown = document.getElementById('hub-dev-dropdown');
+      const adminLink = document.getElementById('hub-admin-link');
+
+      if (devDropdown) {
+        devDropdown.style.display = isDeveloper ? 'block' : 'none';
+      }
+      if (adminLink) {
+        adminLink.style.display = isAdmin ? 'block' : 'none';
+      }
+    }
+  } catch (error) {
+    console.error('Failed to fetch user info:', error);
+  }
+
+  document.getElementById('hub-container')!.style.display = 'flex';
+}
+
+// Backwards compatibility alias
+function showLandingPage(): void {
+  showHub();
+}
+
+async function showEnterGame(): Promise<void> {
+  hideAllContainers();
+
+  const characterList = document.getElementById('character-list')!;
+  characterList.innerHTML = '<p class="loading">Loading characters...</p>';
+  document.getElementById('enter-game-container')!.style.display = 'block';
+
+  try {
+    // Fetch both characters and profile (for character limit)
+    const [charResponse, profileResponse] = await Promise.all([
+      fetch('/api/characters', { credentials: 'include' }),
+      fetch('/api/profile', { credentials: 'include' }),
+    ]);
+    const data = await charResponse.json();
+    const profileData = await profileResponse.json();
+
+    if (!data.success) {
+      characterList.innerHTML = '<p class="error">Failed to load characters</p>';
+      return;
+    }
+
+    const characters: Character[] = data.characters;
+
+    // Update character limit info
+    const limitInfo = document.getElementById('character-limit-info')!;
+    const createBtn = document.getElementById('create-character-btn') as HTMLButtonElement;
+    if (profileData.success) {
+      const { characterCount, maxCharacters } = profileData.profile;
+      limitInfo.textContent = `Characters: ${characterCount}/${maxCharacters}`;
+
+      // Hide create button if at limit
+      if (createBtn) {
+        if (characterCount >= maxCharacters) {
+          createBtn.style.display = 'none';
+        } else {
+          createBtn.style.display = 'block';
+        }
+      }
+    }
+
+    if (characters.length === 0) {
+      characterList.innerHTML = '<p class="no-characters">No characters yet. Create one to begin!</p>';
+    } else {
+      characterList.innerHTML = characters.map(char => `
+        <div class="character-card" data-id="${char.id}">
+          <div class="character-card-content">
+            <div class="character-name">${escapeHtml(char.name)}</div>
+            <div class="character-info">Level ${char.level} ${escapeHtml(char.race)} ${escapeHtml(char.class)}</div>
+          </div>
+          <button class="character-delete-btn" data-id="${char.id}" data-name="${escapeHtmlAttr(char.name)}" title="Delete character">X</button>
+        </div>
+      `).join('');
+
+      // Add click handlers for selecting characters
+      characterList.querySelectorAll('.character-card-content').forEach(content => {
+        content.addEventListener('click', () => {
+          const card = content.closest('.character-card');
+          const charId = parseInt(card?.getAttribute('data-id') || '0');
+          if (charId) {
+            selectCharacter(charId);
+          }
+        });
+      });
+
+      // Add click handlers for delete buttons
+      characterList.querySelectorAll('.character-delete-btn').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+          e.stopPropagation(); // Prevent card selection
+          const charId = parseInt(btn.getAttribute('data-id') || '0');
+          const charName = btn.getAttribute('data-name') || 'this character';
+          if (charId && confirm(`Are you sure you want to delete ${charName}? This cannot be undone.`)) {
+            await deleteCharacter(charId);
+          }
+        });
+      });
+    }
+  } catch (error) {
+    console.error('Failed to fetch characters:', error);
+    characterList.innerHTML = '<p class="error">Connection error</p>';
+  }
+}
+
+// Backwards compatibility alias
+async function showCharacterSelect(): Promise<void> {
+  await showEnterGame();
+}
+
+async function showCharacterCreate(): Promise<void> {
+  hideAllContainers();
+  document.getElementById('character-create-container')!.style.display = 'block';
+
+  // Clear form
+  (document.getElementById('char-name') as HTMLInputElement).value = '';
+  (document.getElementById('char-race') as HTMLSelectElement).value = '';
+  (document.getElementById('char-class') as HTMLSelectElement).value = '';
+  document.getElementById('create-error')!.textContent = '';
+  document.getElementById('race-description')!.textContent = '';
+  document.getElementById('class-description')!.textContent = '';
+  clearStatPreview();
+
+  // Load races and classes if not cached
+  await loadRacesAndClasses();
+
+  // Populate dropdowns
+  const raceSelect = document.getElementById('char-race') as HTMLSelectElement;
+  const classSelect = document.getElementById('char-class') as HTMLSelectElement;
+
+  raceSelect.innerHTML = '<option value="">Select a race...</option>' +
+    cachedRaces.map(r => `<option value="${r.race_id}">${escapeHtml(r.display_name)}</option>`).join('');
+
+  classSelect.innerHTML = '<option value="">Select a class...</option>' +
+    cachedClasses.map(c => `<option value="${c.class_id}">${escapeHtml(c.display_name)}</option>`).join('');
+}
+
+async function showProfile(): Promise<void> {
+  hideAllContainers();
+  document.getElementById('profile-container')!.style.display = 'block';
+
+  // Clear messages
+  document.getElementById('email-message')!.textContent = '';
+  document.getElementById('email-message')!.className = 'message';
+  document.getElementById('password-message')!.textContent = '';
+  document.getElementById('password-message')!.className = 'message';
+
+  // Clear password form
+  (document.getElementById('current-password') as HTMLInputElement).value = '';
+  (document.getElementById('new-password') as HTMLInputElement).value = '';
+  (document.getElementById('confirm-password') as HTMLInputElement).value = '';
+
+  try {
+    const response = await fetch('/api/profile', { credentials: 'include' });
+    const data = await response.json();
+
+    if (data.success) {
+      document.getElementById('profile-username')!.textContent = data.profile.username;
+      (document.getElementById('profile-email') as HTMLInputElement).value = data.profile.email || '';
+      document.getElementById('profile-char-slots')!.textContent =
+        `${data.profile.characterCount}/${data.profile.maxCharacters}`;
+    }
+  } catch (error) {
+    console.error('Failed to load profile:', error);
+  }
+}
+
+async function handleSaveEmail(): Promise<void> {
+  const email = (document.getElementById('profile-email') as HTMLInputElement).value.trim();
+  const messageEl = document.getElementById('email-message')!;
+
+  try {
+    const response = await fetch('/api/profile/email', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: email || null }),
+      credentials: 'include',
+    });
+
+    const data = await response.json();
+
+    if (data.success) {
+      messageEl.textContent = 'Email updated successfully';
+      messageEl.className = 'message success';
+    } else {
+      messageEl.textContent = data.message || 'Failed to update email';
+      messageEl.className = 'message error';
+    }
+  } catch {
+    messageEl.textContent = 'Connection error';
+    messageEl.className = 'message error';
+  }
+}
+
+async function handleChangePassword(event: Event): Promise<void> {
+  event.preventDefault();
+
+  const currentPassword = (document.getElementById('current-password') as HTMLInputElement).value;
+  const newPassword = (document.getElementById('new-password') as HTMLInputElement).value;
+  const confirmPassword = (document.getElementById('confirm-password') as HTMLInputElement).value;
+  const messageEl = document.getElementById('password-message')!;
+
+  if (newPassword !== confirmPassword) {
+    messageEl.textContent = 'New passwords do not match';
+    messageEl.className = 'message error';
+    return;
+  }
+
+  try {
+    const response = await fetch('/api/profile/password', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ currentPassword, newPassword }),
+      credentials: 'include',
+    });
+
+    const data = await response.json();
+
+    if (data.success) {
+      messageEl.textContent = 'Password updated successfully';
+      messageEl.className = 'message success';
+      // Clear the form
+      (document.getElementById('current-password') as HTMLInputElement).value = '';
+      (document.getElementById('new-password') as HTMLInputElement).value = '';
+      (document.getElementById('confirm-password') as HTMLInputElement).value = '';
+    } else {
+      messageEl.textContent = data.message || 'Failed to update password';
+      messageEl.className = 'message error';
+    }
+  } catch {
+    messageEl.textContent = 'Connection error';
+    messageEl.className = 'message error';
+  }
+}
+
+function showDevTools(): void {
+  hideAllContainers();
+  document.getElementById('dev-tools-container')!.style.display = 'block';
+}
+
+async function loadRacesAndClasses(): Promise<void> {
+  if (cachedRaces.length > 0 && cachedClasses.length > 0) {
+    return; // Already loaded
+  }
+
+  try {
+    const [racesRes, classesRes] = await Promise.all([
+      fetch('/api/progression/races/playable', { credentials: 'include' }),
+      fetch('/api/progression/classes/playable', { credentials: 'include' }),
+    ]);
+
+    const racesData = await racesRes.json();
+    const classesData = await classesRes.json();
+
+    if (racesData.success) {
+      cachedRaces = racesData.races;
+    }
+    if (classesData.success) {
+      cachedClasses = classesData.classes;
+    }
+  } catch (error) {
+    console.error('Failed to load races/classes:', error);
+  }
+}
+
+function updateRaceDescription(): void {
+  const raceSelect = document.getElementById('char-race') as HTMLSelectElement;
+  const descEl = document.getElementById('race-description')!;
+  const raceId = raceSelect.value;
+
+  const race = cachedRaces.find(r => r.race_id === raceId);
+  if (race && race.description) {
+    descEl.textContent = race.description;
+  } else {
+    descEl.textContent = '';
+  }
+
+  updateStatPreview();
+}
+
+function updateClassDescription(): void {
+  const classSelect = document.getElementById('char-class') as HTMLSelectElement;
+  const descEl = document.getElementById('class-description')!;
+  const classId = classSelect.value;
+
+  const classDef = cachedClasses.find(c => c.class_id === classId);
+  if (classDef && classDef.description) {
+    descEl.textContent = classDef.description;
+  } else {
+    descEl.textContent = '';
+  }
+
+  updateStatPreview();
+}
+
+function clearStatPreview(): void {
+  document.getElementById('preview-str')!.textContent = '-';
+  document.getElementById('preview-int')!.textContent = '-';
+  document.getElementById('preview-dex')!.textContent = '-';
+  document.getElementById('preview-con')!.textContent = '-';
+  document.getElementById('preview-wis')!.textContent = '-';
+  document.getElementById('preview-cha')!.textContent = '-';
+}
+
+function updateStatPreview(): void {
+  const raceSelect = document.getElementById('char-race') as HTMLSelectElement;
+  const classSelect = document.getElementById('char-class') as HTMLSelectElement;
+
+  const raceId = raceSelect.value;
+  const classId = classSelect.value;
+
+  if (!raceId || !classId) {
+    clearStatPreview();
+    return;
+  }
+
+  const race = cachedRaces.find(r => r.race_id === raceId);
+  const classDef = cachedClasses.find(c => c.class_id === classId);
+
+  if (!race || !classDef) {
+    clearStatPreview();
+    return;
+  }
+
+  const baseStats = classDef.base_stats || {};
+  const modifiers = race.stat_modifiers || {};
+
+  const stats = {
+    strength: (baseStats.strength ?? 10) + (modifiers.strength ?? 0),
+    intelligence: (baseStats.intelligence ?? 10) + (modifiers.intelligence ?? 0),
+    dexterity: (baseStats.dexterity ?? 10) + (modifiers.dexterity ?? 0),
+    constitution: (baseStats.constitution ?? 10) + (modifiers.constitution ?? 0),
+    wisdom: (baseStats.wisdom ?? 10) + (modifiers.wisdom ?? 0),
+    charisma: (baseStats.charisma ?? 10) + (modifiers.charisma ?? 0),
+  };
+
+  document.getElementById('preview-str')!.textContent = String(stats.strength);
+  document.getElementById('preview-int')!.textContent = String(stats.intelligence);
+  document.getElementById('preview-dex')!.textContent = String(stats.dexterity);
+  document.getElementById('preview-con')!.textContent = String(stats.constitution);
+  document.getElementById('preview-wis')!.textContent = String(stats.wisdom);
+  document.getElementById('preview-cha')!.textContent = String(stats.charisma);
+}
+
+async function deleteCharacter(characterId: number): Promise<void> {
+  try {
+    const response = await fetch(`/api/characters/${characterId}`, {
+      method: 'DELETE',
+      credentials: 'include',
+    });
+
+    const data = await response.json();
+
+    if (data.success) {
+      // Refresh the character list
+      showCharacterSelect();
+    } else {
+      alert(data.message || 'Failed to delete character');
+    }
+  } catch {
+    alert('Connection error');
+  }
+}
+
+async function handleCharacterCreate(event: Event): Promise<void> {
+  event.preventDefault();
+
+  const name = (document.getElementById('char-name') as HTMLInputElement).value.trim();
+  const raceId = (document.getElementById('char-race') as HTMLSelectElement).value;
+  const classId = (document.getElementById('char-class') as HTMLSelectElement).value;
+  const errorEl = document.getElementById('create-error')!;
+
+  errorEl.textContent = '';
+
+  if (!name || !raceId || !classId) {
+    errorEl.textContent = 'Please fill in all fields';
+    return;
+  }
+
+  try {
+    const response = await fetch('/api/characters', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, raceId, classId }),
+      credentials: 'include',
+    });
+
+    const data = await response.json();
+
+    if (data.success) {
+      // Character created, select it and enter game
+      selectCharacter(data.character.id);
+    } else {
+      errorEl.textContent = data.message || 'Failed to create character';
+    }
+  } catch {
+    errorEl.textContent = 'Connection error';
+  }
+}
+
+// ============================================================================
+// EXIT PROTECTION (Anti-cheat)
+// ============================================================================
+
+// Handler for beforeunload - prevents accidental/intentional tab closing
+function beforeUnloadHandler(e: BeforeUnloadEvent): void {
+  if (isInGame && !canBypassExitTimer) {
+    e.preventDefault();
+    // Most browsers will show a generic message regardless of returnValue
+    return;
+  }
+}
+
+// Handler for navigation link clicks - prevents instant game exit
+function navigationClickHandler(e: Event): void {
+  if (!isInGame) return; // Not in game, allow navigation
+  if (canBypassExitTimer) return; // Developer/Admin, allow navigation
+
+  // Block navigation for regular players while in-game
+  e.preventDefault();
+  if (terminal) {
+    terminal.write('\r\n\x1b[33mYou must use the "x" command to exit the game.\x1b[0m\r\n');
+  }
+}
+
+function setupExitProtection(): void {
+  // Only set up protection for regular players
+  if (!canBypassExitTimer) {
+    window.addEventListener('beforeunload', beforeUnloadHandler);
+  }
+
+  // Add click handlers to navigation links in the dropdown
+  const editorLinks = document.querySelectorAll('#user-dropdown a.dropdown-item');
+  editorLinks.forEach((link) => {
+    link.addEventListener('click', navigationClickHandler);
+  });
+}
+
+function removeExitProtection(): void {
+  window.removeEventListener('beforeunload', beforeUnloadHandler);
+
+  // Remove click handlers from navigation links
+  const editorLinks = document.querySelectorAll('#user-dropdown a.dropdown-item');
+  editorLinks.forEach((link) => {
+    link.removeEventListener('click', navigationClickHandler);
+  });
+}
+
+function selectCharacter(characterId: number): void {
+  selectedCharacterId = characterId;
+  enterGame();
+}
+
+function enterGame(): void {
+  if (!selectedCharacterId) {
+    console.error('No character selected');
+    return;
+  }
+
+  // Store character ID for session persistence (survives refresh)
+  sessionStorage.setItem('activeCharacterId', String(selectedCharacterId));
+
+  hideAllContainers();
+  document.getElementById('terminal-container')!.classList.add('active');
+  isInGame = true;
+  setupExitProtection();
+  initTerminal();
+  connectWebSocketWithCharacter(selectedCharacterId);
+  updateNavigation();
+}
+
+function connectWebSocketWithCharacter(characterId: number): void {
+  // Close any existing socket before creating a new one
+  if (socket) {
+    socket.close();
+    socket = null;
+  }
+
+  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  const wsUrl = `${protocol}//${window.location.host}/game?characterId=${characterId}`;
+
+  socket = new WebSocket(wsUrl);
+
+  socket.onopen = () => {
+    console.log('Connected to game server');
+  };
+
+  socket.onmessage = (event) => {
+    try {
+      const message: GameMessage = JSON.parse(event.data);
+      handleServerMessage(message);
+    } catch {
+      console.error('Failed to parse server message');
+    }
+  };
+
+  socket.onclose = () => {
+    isInGame = false;
+    removeExitProtection();
+    if (terminal) {
+      terminal.write('\r\n\x1b[31m*** Connection lost ***\x1b[0m\r\n');
+    }
+  };
+
+  socket.onerror = (error) => {
+    console.error('WebSocket error:', error);
+  };
+}
+
+function escapeHtml(text: string): string {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+/**
+ * Escape text for use in HTML attributes (also escapes quotes)
+ */
+function escapeHtmlAttr(text: string): string {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -446,7 +1065,104 @@ document.addEventListener('DOMContentLoaded', () => {
     logoutBtn.addEventListener('click', handleLogout);
   }
 
-  // User menu dropdown toggle
+  // Hub link in terminal nav (exits game and goes back to hub)
+  const navHubLink = document.getElementById('nav-hub-link');
+  if (navHubLink) {
+    navHubLink.addEventListener('click', (e) => {
+      e.preventDefault();
+      // If in game, properly exit first
+      if (isInGame) {
+        handleGameExit();
+      } else {
+        showHub();
+      }
+    });
+  }
+
+  // Hub page buttons
+  const hubEnterGameBtn = document.getElementById('hub-enter-game-btn');
+  if (hubEnterGameBtn) {
+    hubEnterGameBtn.addEventListener('click', showEnterGame);
+  }
+
+  // Hub nav profile button
+  const hubProfileBtn = document.getElementById('hub-profile-btn');
+  if (hubProfileBtn) {
+    hubProfileBtn.addEventListener('click', showProfile);
+  }
+
+  // Hub nav logout button
+  const hubLogoutBtn = document.getElementById('hub-logout-btn');
+  if (hubLogoutBtn) {
+    hubLogoutBtn.addEventListener('click', handleLogout);
+  }
+
+  // Hub nav user dropdown toggle
+  const hubUserMenuBtn = document.getElementById('hub-nav-username');
+  const hubUserMenu = hubUserMenuBtn?.closest('.nav-user-menu');
+  if (hubUserMenuBtn && hubUserMenu) {
+    hubUserMenuBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      hubUserMenu.classList.toggle('open');
+    });
+  }
+
+  // Profile page buttons
+  const saveEmailBtn = document.getElementById('save-email-btn');
+  if (saveEmailBtn) {
+    saveEmailBtn.addEventListener('click', handleSaveEmail);
+  }
+
+  const changePasswordForm = document.getElementById('change-password-form');
+  if (changePasswordForm) {
+    changePasswordForm.addEventListener('submit', handleChangePassword);
+  }
+
+  const backToHubBtn = document.getElementById('back-to-hub-btn');
+  if (backToHubBtn) {
+    backToHubBtn.addEventListener('click', () => showHub());
+  }
+
+  // Dev tools page buttons
+  const devToolsBackBtn = document.getElementById('dev-tools-back-btn');
+  if (devToolsBackBtn) {
+    devToolsBackBtn.addEventListener('click', () => showHub());
+  }
+
+  // Enter game / Character select buttons
+  const createCharacterBtn = document.getElementById('create-character-btn');
+  if (createCharacterBtn) {
+    createCharacterBtn.addEventListener('click', showCharacterCreate);
+  }
+
+  const enterGameBackBtn = document.getElementById('enter-game-back-btn');
+  if (enterGameBackBtn) {
+    enterGameBackBtn.addEventListener('click', () => showHub());
+  }
+
+  // Character create form
+  const charCreateForm = document.getElementById('character-create-form');
+  if (charCreateForm) {
+    charCreateForm.addEventListener('submit', handleCharacterCreate);
+  }
+
+  const backToEnterGameBtn = document.getElementById('back-to-enter-game-btn');
+  if (backToEnterGameBtn) {
+    backToEnterGameBtn.addEventListener('click', showEnterGame);
+  }
+
+  // Race/class selection change handlers
+  const raceSelect = document.getElementById('char-race');
+  if (raceSelect) {
+    raceSelect.addEventListener('change', updateRaceDescription);
+  }
+
+  const classSelect = document.getElementById('char-class');
+  if (classSelect) {
+    classSelect.addEventListener('change', updateClassDescription);
+  }
+
+  // User menu dropdown toggle (terminal nav)
   const userMenuBtn = document.getElementById('nav-username');
   const userMenu = userMenuBtn?.closest('.nav-user-menu');
   if (userMenuBtn && userMenu) {
@@ -454,8 +1170,19 @@ document.addEventListener('DOMContentLoaded', () => {
       e.stopPropagation();
       userMenu.classList.toggle('open');
     });
-    document.addEventListener('click', () => {
-      userMenu.classList.remove('open');
-    });
   }
+
+  // Prevent dropdown menus from closing when clicking inside them
+  document.querySelectorAll('.dropdown-menu').forEach((menu) => {
+    menu.addEventListener('click', (e) => {
+      e.stopPropagation();
+    });
+  });
+
+  // Close all nav user dropdowns when clicking outside
+  document.addEventListener('click', () => {
+    document.querySelectorAll('.nav-user-menu.open').forEach((menu) => {
+      menu.classList.remove('open');
+    });
+  });
 });

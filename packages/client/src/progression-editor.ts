@@ -41,6 +41,18 @@ let selectedType: string | null = null;
 let classAbilities: ClassAbilityMapping[] = [];
 
 // ============================================================================
+// HELPER FUNCTIONS
+// ============================================================================
+
+/**
+ * Parse a stat value from form input, defaulting to 0 for empty or invalid values
+ */
+function parseStatValue(value: string): number {
+  const parsed = Number(value);
+  return Number.isNaN(parsed) ? 0 : parsed;
+}
+
+// ============================================================================
 // INITIALIZATION
 // ============================================================================
 
@@ -75,6 +87,13 @@ async function checkAuth(): Promise<boolean> {
     const navUsername = document.getElementById('nav-username');
     if (navUsername) {
       navUsername.textContent = data.username || 'User';
+    }
+
+    // Show Admin link if user is admin
+    const isAdmin = roles.includes('admin');
+    const adminLink = document.getElementById('nav-admin-link');
+    if (adminLink) {
+      adminLink.style.display = isAdmin ? 'block' : 'none';
     }
 
     return true;
@@ -634,16 +653,16 @@ async function handleClassSubmit(e: Event): Promise<void> {
     display_name: (document.getElementById('class-name') as HTMLInputElement).value,
     description: (document.getElementById('class-description') as HTMLTextAreaElement).value || undefined,
     essence_multiplier: parseFloat((document.getElementById('class-multiplier') as HTMLInputElement).value) || 1.0,
-    resource_type: (document.getElementById('class-resource') as HTMLSelectElement).value || undefined,
+    resource_type: (document.getElementById('class-resource') as HTMLSelectElement).value || 'none',
     playable: (document.getElementById('class-playable') as HTMLInputElement).checked,
     subscribed_tags: (document.getElementById('class-tags') as HTMLInputElement).value.split(',').map(t => t.trim()).filter(Boolean),
     base_stats: {
-      strength: Number((document.getElementById('class-str') as HTMLInputElement).value) || 0,
-      dexterity: Number((document.getElementById('class-dex') as HTMLInputElement).value) || 0,
-      intelligence: Number((document.getElementById('class-int') as HTMLInputElement).value) || 0,
-      wisdom: Number((document.getElementById('class-wis') as HTMLInputElement).value) || 0,
-      constitution: Number((document.getElementById('class-con') as HTMLInputElement).value) || 0,
-      charm: Number((document.getElementById('class-cha') as HTMLInputElement).value) || 0,
+      strength: parseStatValue((document.getElementById('class-str') as HTMLInputElement).value),
+      dexterity: parseStatValue((document.getElementById('class-dex') as HTMLInputElement).value),
+      intelligence: parseStatValue((document.getElementById('class-int') as HTMLInputElement).value),
+      wisdom: parseStatValue((document.getElementById('class-wis') as HTMLInputElement).value),
+      constitution: parseStatValue((document.getElementById('class-con') as HTMLInputElement).value),
+      charisma: parseStatValue((document.getElementById('class-cha') as HTMLInputElement).value),
     },
   };
 

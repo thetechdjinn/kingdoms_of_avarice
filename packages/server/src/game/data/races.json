@@ -10,7 +10,7 @@
       "intelligence": 0,
       "wisdom": 0,
       "constitution": 0,
-      "charm": 1
+      "charisma": 1
     },
     "traits": ["adaptable", "ambitious"],
     "allowed_classes": []
@@ -26,7 +26,7 @@
       "intelligence": 1,
       "wisdom": 1,
       "constitution": -2,
-      "charm": 0
+      "charisma": 0
     },
     "traits": ["darkvision", "magic_affinity", "keen_senses"],
     "allowed_classes": []
@@ -42,7 +42,7 @@
       "intelligence": 0,
       "wisdom": 1,
       "constitution": 2,
-      "charm": -1
+      "charisma": -1
     },
     "traits": ["darkvision", "poison_resist", "stonecunning"],
     "allowed_classes": []
@@ -58,7 +58,7 @@
       "intelligence": 0,
       "wisdom": 0,
       "constitution": 0,
-      "charm": 1
+      "charisma": 1
     },
     "traits": ["lucky", "nimble", "brave"],
     "allowed_classes": []
@@ -74,7 +74,7 @@
       "intelligence": -2,
       "wisdom": -1,
       "constitution": 2,
-      "charm": -2
+      "charisma": -2
     },
     "traits": ["darkvision", "savage_attacks", "relentless"],
     "allowed_classes": []
@@ -90,7 +90,7 @@
       "intelligence": 2,
       "wisdom": 0,
       "constitution": -1,
-      "charm": 1
+      "charisma": 1
     },
     "traits": ["darkvision", "gnome_cunning", "tinker"],
     "allowed_classes": []

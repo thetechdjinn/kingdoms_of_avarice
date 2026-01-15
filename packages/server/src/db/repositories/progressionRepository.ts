@@ -1,3 +1,4 @@
+import pg from 'pg';
 import { query } from '../index.js';
 import {
   ClassDefinition,
@@ -287,6 +288,14 @@ export async function updateClass(classId: string, updates: Partial<ClassDefinit
   if (updates.talent_tree_id !== undefined) {
     setClauses.push(`talent_tree_id = $${paramIndex++}`);
     values.push(updates.talent_tree_id);
+  }
+  if (updates.resource_type !== undefined) {
+    setClauses.push(`resource_type = $${paramIndex++}`);
+    values.push(updates.resource_type);
+  }
+  if (updates.playable !== undefined) {
+    setClauses.push(`playable = $${paramIndex++}`);
+    values.push(updates.playable);
   }
 
   if (setClauses.length === 0) return getClassById(classId);
@@ -795,7 +804,8 @@ export async function getCharacterProgression(characterId: number): Promise<Char
 
 export async function createCharacterProgression(
   characterId: number,
-  classId: string
+  classId: string,
+  client?: pg.PoolClient
 ): Promise<CharacterProgression> {
   const result = await query<DbCharacterProgression & { calculated_level: number }>(
     `WITH inserted AS (
@@ -809,7 +819,8 @@ export async function createCharacterProgression(
         1
       ) as calculated_level
     FROM inserted`,
-    [characterId, classId]
+    [characterId, classId],
+    client
   );
   return dbToCharacterProgressionWithLevel(result.rows[0]);
 }

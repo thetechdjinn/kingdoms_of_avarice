@@ -5,6 +5,30 @@ interface PendingUser {
   username: string;
 }
 
+interface PlayerSummary {
+  id: number;
+  username: string;
+  email: string | null;
+  max_characters: number | null;
+  created_at: string;
+  last_login: string | null;
+}
+
+interface IpAccessEntry {
+  id: number;
+  entry: string;
+  entry_type: 'ip' | 'hostname';
+  resolved_ips: string[] | null;
+  list_type: 'allow' | 'block';
+  reason: string | null;
+  created_at: string;
+}
+
+interface GameSettings {
+  max_characters_per_player: number;
+  ip_access_mode: 'allowlist' | 'blocklist';
+}
+
 async function checkAdminAuth(): Promise<boolean> {
   try {
     const response = await fetch('/api/auth/me', { credentials: 'include' });
@@ -34,16 +58,16 @@ async function checkAdminAuth(): Promise<boolean> {
 
       const isDeveloper = roles.includes('developer') || isAdmin;
 
-      // Show/hide Developer menu based on roles
-      const developerMenu = document.getElementById('developer-menu');
-      if (developerMenu) {
-        developerMenu.style.display = isDeveloper ? 'block' : 'none';
+      // Show/hide Developer nav dropdown based on roles
+      const devDropdown = document.getElementById('nav-dev-dropdown');
+      if (devDropdown) {
+        devDropdown.style.display = isDeveloper ? 'block' : 'none';
       }
 
-      // Show/hide Admin menu based on roles
-      const adminMenu = document.getElementById('admin-menu');
-      if (adminMenu) {
-        adminMenu.style.display = isAdmin ? 'block' : 'none';
+      // Show/hide Admin nav link based on roles (always visible on admin page)
+      const adminLink = document.getElementById('nav-admin-link');
+      if (adminLink) {
+        adminLink.style.display = isAdmin ? 'block' : 'none';
       }
 
       return isAdmin;
@@ -171,6 +195,366 @@ async function handleLogout(): Promise<void> {
   window.location.href = '/';
 }
 
+// ============================================================================
+// TAB SWITCHING
+// ============================================================================
+
+function setupTabs(): void {
+  const tabs = document.querySelectorAll('.admin-tab');
+  tabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      const tabName = tab.getAttribute('data-tab');
+      if (!tabName) return;
+
+      // Update active tab button
+      tabs.forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+
+      // Show/hide tab content
+      document.querySelectorAll('.tab-content').forEach(content => {
+        content.classList.remove('active');
+        (content as HTMLElement).style.display = 'none';
+      });
+
+      const targetContent = document.getElementById(`${tabName}-tab`);
+      if (targetContent) {
+        targetContent.classList.add('active');
+        targetContent.style.display = 'block';
+      }
+
+      // Load data for the tab
+      if (tabName === 'ip-access') {
+        loadIpAccessEntries();
+      } else if (tabName === 'settings') {
+        loadSettings();
+      }
+    });
+  });
+}
+
+// ============================================================================
+// ALL PLAYERS MANAGEMENT
+// ============================================================================
+
+async function loadAllPlayers(): Promise<void> {
+  const listEl = document.getElementById('all-players-list');
+  if (!listEl) return;
+
+  try {
+    const [playersRes, settingsRes] = await Promise.all([
+      fetch('/api/admin/players', { credentials: 'include' }),
+      fetch('/api/admin/settings', { credentials: 'include' }),
+    ]);
+
+    const playersData = await playersRes.json();
+    const settingsData = await settingsRes.json();
+
+    if (!playersData.success) {
+      listEl.innerHTML = '<p class="no-users">Error loading players</p>';
+      return;
+    }
+
+    const players: PlayerSummary[] = playersData.players || [];
+    const globalMax = settingsData.settings?.max_characters_per_player || 3;
+
+    if (players.length === 0) {
+      listEl.innerHTML = '<p class="no-users">No players found</p>';
+      return;
+    }
+
+    listEl.innerHTML = `
+      <table class="admin-table">
+        <thead>
+          <tr>
+            <th>Username</th>
+            <th>Email</th>
+            <th>Max Characters</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${players.map(p => `
+            <tr data-player-id="${p.id}">
+              <td>${escapeHtml(p.username)}</td>
+              <td>${p.email ? escapeHtml(p.email) : '<span class="muted">-</span>'}</td>
+              <td>
+                <input type="number" class="player-max-chars" value="${p.max_characters ?? ''}"
+                       placeholder="${globalMax}" min="1" max="100" style="width: 80px" />
+              </td>
+              <td>
+                <button class="btn-small save-player-limit-btn">Save</button>
+              </td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    `;
+
+    // Add event listeners for save buttons
+    listEl.querySelectorAll('.save-player-limit-btn').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        const row = (e.target as HTMLElement).closest('tr');
+        const playerId = parseInt(row?.getAttribute('data-player-id') || '0');
+        const input = row?.querySelector('.player-max-chars') as HTMLInputElement;
+        const value = input?.value.trim();
+
+        // Validate input
+        if (value !== '') {
+          const numValue = parseInt(value, 10);
+          if (isNaN(numValue) || numValue < 1) {
+            alert('Please enter a valid positive number or leave empty for default');
+            return;
+          }
+        }
+
+        await savePlayerCharacterLimit(playerId, value === '' ? null : parseInt(value, 10));
+      });
+    });
+  } catch (error) {
+    console.error('Failed to load players:', error);
+    listEl.innerHTML = '<p class="no-users">Error loading players</p>';
+  }
+}
+
+async function savePlayerCharacterLimit(playerId: number, maxCharacters: number | null): Promise<void> {
+  try {
+    const response = await fetch(`/api/admin/players/${playerId}/max-characters`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ maxCharacters }),
+      credentials: 'include',
+    });
+
+    const data = await response.json();
+    if (!data.success) {
+      alert('Failed to save: ' + (data.message || 'Unknown error'));
+    }
+  } catch (error) {
+    console.error('Failed to save player limit:', error);
+    alert('Failed to save player limit');
+  }
+}
+
+// ============================================================================
+// IP ACCESS MANAGEMENT
+// ============================================================================
+
+async function loadIpAccessEntries(): Promise<void> {
+  const listEl = document.getElementById('ip-access-list');
+  if (!listEl) return;
+
+  try {
+    const response = await fetch('/api/admin/ip-access', { credentials: 'include' });
+    const data = await response.json();
+
+    if (!data.success) {
+      listEl.innerHTML = '<p class="no-users">Error loading IP entries</p>';
+      return;
+    }
+
+    const entries: IpAccessEntry[] = data.entries || [];
+
+    if (entries.length === 0) {
+      listEl.innerHTML = '<p class="no-users">No IP access entries</p>';
+      return;
+    }
+
+    listEl.innerHTML = `
+      <table class="admin-table">
+        <thead>
+          <tr>
+            <th>Entry</th>
+            <th>Type</th>
+            <th>List</th>
+            <th>Resolved IPs</th>
+            <th>Reason</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${entries.map(e => `
+            <tr data-entry-id="${e.id}">
+              <td>${escapeHtml(e.entry)}</td>
+              <td><span class="badge badge-${e.entry_type}">${e.entry_type}</span></td>
+              <td><span class="badge badge-${e.list_type}">${e.list_type}</span></td>
+              <td>${e.resolved_ips ? escapeHtml(e.resolved_ips.join(', ')) : '<span class="muted">-</span>'}</td>
+              <td>${e.reason ? escapeHtml(e.reason) : '<span class="muted">-</span>'}</td>
+              <td>
+                <button class="btn-delete delete-ip-entry-btn">Delete</button>
+              </td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    `;
+
+    // Add event listeners for delete buttons
+    listEl.querySelectorAll('.delete-ip-entry-btn').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        const row = (e.target as HTMLElement).closest('tr');
+        const entryId = parseInt(row?.getAttribute('data-entry-id') || '0');
+        if (confirm('Are you sure you want to delete this entry?')) {
+          await deleteIpEntry(entryId);
+        }
+      });
+    });
+  } catch (error) {
+    console.error('Failed to load IP entries:', error);
+    listEl.innerHTML = '<p class="no-users">Error loading IP entries</p>';
+  }
+}
+
+async function addIpEntry(): Promise<void> {
+  const entry = (document.getElementById('ip-entry') as HTMLInputElement).value.trim();
+  const entryType = (document.getElementById('ip-entry-type') as HTMLSelectElement).value;
+  const listType = (document.getElementById('ip-list-type') as HTMLSelectElement).value;
+  const reason = (document.getElementById('ip-reason') as HTMLInputElement).value.trim();
+  const messageEl = document.getElementById('ip-entry-message')!;
+
+  if (!entry) {
+    messageEl.textContent = 'Please enter an IP address or hostname';
+    messageEl.className = 'message error';
+    return;
+  }
+
+  try {
+    const response = await fetch('/api/admin/ip-access', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ entry, entryType, listType, reason: reason || undefined }),
+      credentials: 'include',
+    });
+
+    const data = await response.json();
+
+    if (data.success) {
+      messageEl.textContent = 'Entry added successfully';
+      messageEl.className = 'message success';
+      // Clear form
+      (document.getElementById('ip-entry') as HTMLInputElement).value = '';
+      (document.getElementById('ip-reason') as HTMLInputElement).value = '';
+      // Reload list
+      await loadIpAccessEntries();
+    } else {
+      messageEl.textContent = data.message || 'Failed to add entry';
+      messageEl.className = 'message error';
+    }
+  } catch (error) {
+    console.error('Failed to add IP entry:', error);
+    messageEl.textContent = 'Connection error';
+    messageEl.className = 'message error';
+  }
+}
+
+async function deleteIpEntry(entryId: number): Promise<void> {
+  try {
+    const response = await fetch(`/api/admin/ip-access/${entryId}`, {
+      method: 'DELETE',
+      credentials: 'include',
+    });
+
+    const data = await response.json();
+
+    if (data.success) {
+      await loadIpAccessEntries();
+    } else {
+      alert('Failed to delete: ' + (data.message || 'Unknown error'));
+    }
+  } catch (error) {
+    console.error('Failed to delete IP entry:', error);
+    alert('Failed to delete entry');
+  }
+}
+
+// ============================================================================
+// SETTINGS MANAGEMENT
+// ============================================================================
+
+async function loadSettings(): Promise<void> {
+  try {
+    const response = await fetch('/api/admin/settings', { credentials: 'include' });
+    const data = await response.json();
+
+    if (data.success) {
+      const settings: GameSettings = data.settings;
+
+      (document.getElementById('setting-max-chars') as HTMLInputElement).value =
+        String(settings.max_characters_per_player);
+      (document.getElementById('setting-ip-mode') as HTMLSelectElement).value =
+        settings.ip_access_mode;
+    }
+  } catch (error) {
+    console.error('Failed to load settings:', error);
+  }
+}
+
+async function saveMaxCharactersSetting(): Promise<void> {
+  const value = parseInt((document.getElementById('setting-max-chars') as HTMLInputElement).value);
+  const messageEl = document.getElementById('settings-message')!;
+
+  if (isNaN(value) || value < 1 || value > 100) {
+    messageEl.textContent = 'Please enter a value between 1 and 100';
+    messageEl.className = 'message error';
+    return;
+  }
+
+  try {
+    const response = await fetch('/api/admin/settings/max_characters_per_player', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ value }),
+      credentials: 'include',
+    });
+
+    const data = await response.json();
+
+    if (data.success) {
+      messageEl.textContent = 'Setting saved successfully';
+      messageEl.className = 'message success';
+    } else {
+      messageEl.textContent = data.message || 'Failed to save';
+      messageEl.className = 'message error';
+    }
+  } catch (error) {
+    console.error('Failed to save setting:', error);
+    messageEl.textContent = 'Connection error';
+    messageEl.className = 'message error';
+  }
+}
+
+async function saveIpModeSetting(): Promise<void> {
+  const value = (document.getElementById('setting-ip-mode') as HTMLSelectElement).value;
+  const messageEl = document.getElementById('settings-message')!;
+
+  try {
+    const response = await fetch('/api/admin/settings/ip_access_mode', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ value }),
+      credentials: 'include',
+    });
+
+    const data = await response.json();
+
+    if (data.success) {
+      messageEl.textContent = 'Setting saved successfully';
+      messageEl.className = 'message success';
+    } else {
+      messageEl.textContent = data.message || 'Failed to save';
+      messageEl.className = 'message error';
+    }
+  } catch (error) {
+    console.error('Failed to save setting:', error);
+    messageEl.textContent = 'Connection error';
+    messageEl.className = 'message error';
+  }
+}
+
+function escapeHtml(text: string): string {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
 
 document.addEventListener('DOMContentLoaded', async () => {
   const isAdmin = await checkAdminAuth();
@@ -183,12 +567,35 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   if (accessDenied) accessDenied.style.display = 'none';
   if (adminPanel) adminPanel.style.display = 'block';
+
+  // Setup tabs
+  setupTabs();
+
+  // Load initial data
   await loadPendingUsers();
+  await loadAllPlayers();
 
   // Logout button
   const logoutBtn = document.getElementById('logout-btn');
   if (logoutBtn) {
     logoutBtn.addEventListener('click', handleLogout);
+  }
+
+  // IP Access buttons
+  const addIpEntryBtn = document.getElementById('add-ip-entry-btn');
+  if (addIpEntryBtn) {
+    addIpEntryBtn.addEventListener('click', addIpEntry);
+  }
+
+  // Settings buttons
+  const saveMaxCharsBtn = document.getElementById('save-max-chars-btn');
+  if (saveMaxCharsBtn) {
+    saveMaxCharsBtn.addEventListener('click', saveMaxCharactersSetting);
+  }
+
+  const saveIpModeBtn = document.getElementById('save-ip-mode-btn');
+  if (saveIpModeBtn) {
+    saveIpModeBtn.addEventListener('click', saveIpModeSetting);
   }
 
   // User menu dropdown toggle

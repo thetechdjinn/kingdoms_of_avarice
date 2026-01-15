@@ -26,17 +26,18 @@ function getPool(): pg.Pool {
 
 export async function query<T extends pg.QueryResultRow = pg.QueryResultRow>(
   text: string,
-  params?: unknown[]
+  params?: unknown[],
+  client?: pg.PoolClient
 ): Promise<pg.QueryResult<T>> {
-  const p = getPool();
+  const executor = client || getPool();
   const start = Date.now();
-  const result = await p.query<T>(text, params);
+  const result = await executor.query<T>(text, params);
   const duration = Date.now() - start;
-  
+
   if (process.env.NODE_ENV === 'development') {
     console.log('Executed query', { text: text.substring(0, 50), duration, rows: result.rowCount });
   }
-  
+
   return result;
 }
 
