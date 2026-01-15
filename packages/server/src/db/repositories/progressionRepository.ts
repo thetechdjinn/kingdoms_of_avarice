@@ -278,7 +278,7 @@ export async function updateClass(classId: string, updates: Partial<ClassDefinit
   }
   if (updates.subscribed_tags !== undefined) {
     setClauses.push(`subscribed_tags = $${paramIndex++}`);
-    values.push(JSON.stringify(updates.subscribed_tags));
+    values.push(updates.subscribed_tags);
   }
   if (updates.base_stats !== undefined) {
     setClauses.push(`base_stats = $${paramIndex++}`);

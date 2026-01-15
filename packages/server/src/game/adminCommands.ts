@@ -691,23 +691,27 @@ function handleHurt(
   args: string[],
   socket: AuthenticatedSocket
 ): CommandResponse {
-  // @hurt [amount] [player] - Reduce HP for testing regen
+  // @hurt [amount] [player] OR @hurt [player] - Reduce HP for testing regen
   // Default: hurt self by 10
   let amount = 10;
   let targetSocket: AuthenticatedSocket = socket;
   let targetName = socket.username;
+  let playerNameArgs: string[] = [];
 
   if (args.length >= 1) {
     const parsedAmount = parseInt(args[0]);
     if (!isNaN(parsedAmount) && parsedAmount > 0) {
+      // First arg is a valid amount
       amount = parsedAmount;
+      playerNameArgs = args.slice(1);
     } else {
-      return { type: MessageType.ERROR, message: 'Usage: @hurt [amount] [player]' };
+      // First arg is not a number, treat all args as player name
+      playerNameArgs = args;
     }
   }
 
-  if (args.length >= 2) {
-    const playerName = args.slice(1).join(' ').toLowerCase();
+  if (playerNameArgs.length > 0) {
+    const playerName = playerNameArgs.join(' ').toLowerCase();
     let found = false;
     for (const [, playerSocket] of connectedPlayers) {
       if (playerSocket.username.toLowerCase() === playerName) {
@@ -718,7 +722,7 @@ function handleHurt(
       }
     }
     if (!found) {
-      return { type: MessageType.ERROR, message: `Player not found: ${args.slice(1).join(' ')}` };
+      return { type: MessageType.ERROR, message: `Player not found: ${playerNameArgs.join(' ')}` };
     }
   }
 
@@ -750,23 +754,27 @@ function handleDrain(
   args: string[],
   socket: AuthenticatedSocket
 ): CommandResponse {
-  // @drain [amount] [player] - Reduce mana for testing regen
+  // @drain [amount] [player] OR @drain [player] - Reduce mana for testing regen
   // Default: drain self by 10
   let amount = 10;
   let targetSocket: AuthenticatedSocket = socket;
   let targetName = socket.username;
+  let playerNameArgs: string[] = [];
 
   if (args.length >= 1) {
     const parsedAmount = parseInt(args[0]);
     if (!isNaN(parsedAmount) && parsedAmount > 0) {
+      // First arg is a valid amount
       amount = parsedAmount;
+      playerNameArgs = args.slice(1);
     } else {
-      return { type: MessageType.ERROR, message: 'Usage: @drain [amount] [player]' };
+      // First arg is not a number, treat all args as player name
+      playerNameArgs = args;
     }
   }
 
-  if (args.length >= 2) {
-    const playerName = args.slice(1).join(' ').toLowerCase();
+  if (playerNameArgs.length > 0) {
+    const playerName = playerNameArgs.join(' ').toLowerCase();
     let found = false;
     for (const [, playerSocket] of connectedPlayers) {
       if (playerSocket.username.toLowerCase() === playerName) {
@@ -777,7 +785,7 @@ function handleDrain(
       }
     }
     if (!found) {
-      return { type: MessageType.ERROR, message: `Player not found: ${args.slice(1).join(' ')}` };
+      return { type: MessageType.ERROR, message: `Player not found: ${playerNameArgs.join(' ')}` };
     }
   }
 
