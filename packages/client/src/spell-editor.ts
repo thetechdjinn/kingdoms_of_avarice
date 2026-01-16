@@ -1,21 +1,6 @@
-(function() {
+import { Spell, SpellType, SpellTargetType } from '@koa/shared';
 
-interface Spell {
-  id: number;
-  name: string;
-  mnemonic: string;
-  description: string;
-  spellType: string;
-  targetType: string;
-  manaCost: number;
-  damageDice: string | null;
-  healingDice: string | null;
-  statusEffect: string | null;
-  effectDuration: number | null;
-  levelRequired: number;
-  classRestrictions: string[];
-  isAttackSpell: boolean;
-}
+(function() {
 
 interface AuthInfo {
   authenticated: boolean;
@@ -510,8 +495,8 @@ function gatherFormData(): Partial<Spell> {
     name: (document.getElementById('spell-name') as HTMLInputElement).value,
     mnemonic: (document.getElementById('spell-mnemonic') as HTMLInputElement).value.toLowerCase(),
     description: (document.getElementById('spell-description') as HTMLTextAreaElement).value || '',
-    spellType: (document.getElementById('spell-type') as HTMLSelectElement).value,
-    targetType: (document.getElementById('spell-target-type') as HTMLSelectElement).value,
+    spellType: (document.getElementById('spell-type') as HTMLSelectElement).value as SpellType,
+    targetType: (document.getElementById('spell-target-type') as HTMLSelectElement).value as SpellTargetType,
     manaCost: parseInt((document.getElementById('spell-mana-cost') as HTMLInputElement).value) || 0,
     isAttackSpell: (document.getElementById('spell-is-attack') as HTMLInputElement).checked,
     damageDice: (document.getElementById('spell-damage-dice') as HTMLInputElement).value || null,
@@ -718,6 +703,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     userMenuBtn.addEventListener('click', (e) => {
       e.stopPropagation();
       userMenu.classList.toggle('open');
+    });
+    // Prevent clicks inside the dropdown from closing it
+    userMenu.addEventListener('click', (e) => {
+      e.stopPropagation();
     });
     document.addEventListener('click', () => {
       userMenu.classList.remove('open');

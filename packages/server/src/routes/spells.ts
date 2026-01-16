@@ -4,6 +4,26 @@ import { requireDeveloper } from '../middleware/auth.js';
 import { SpellType, SpellTargetType } from '@koa/shared';
 import { initializeSpellMnemonics } from '../game/spellCommands.js';
 
+// Validate spell object structure and field values
+function validateSpellInput(spell: Record<string, unknown>): string | null {
+  const validSpellTypes = Object.values(SpellType);
+  const validTargetTypes = Object.values(SpellTargetType);
+
+  if (!spell.name || typeof spell.name !== 'string') {
+    return 'name is required and must be a string';
+  }
+  if (!spell.mnemonic || typeof spell.mnemonic !== 'string') {
+    return 'mnemonic is required and must be a string';
+  }
+  if (!spell.spellType || !validSpellTypes.includes(spell.spellType as SpellType)) {
+    return `spellType is required and must be one of: ${validSpellTypes.join(', ')}`;
+  }
+  if (!spell.targetType || !validTargetTypes.includes(spell.targetType as SpellTargetType)) {
+    return `targetType is required and must be one of: ${validTargetTypes.join(', ')}`;
+  }
+  return null;
+}
+
 export function setupSpellRoutes(app: Express): void {
   // ============================================================================
   // SPELL DEFINITIONS
@@ -222,6 +242,13 @@ export function setupSpellRoutes(app: Express): void {
 
       for (const spell of spells) {
         try {
+          // Validate spell structure
+          const validationError = validateSpellInput(spell);
+          if (validationError) {
+            results.errors.push(`Invalid spell "${spell.name || 'unknown'}": ${validationError}`);
+            continue;
+          }
+
           const existing = await spellRepo.getSpellByMnemonic(spell.mnemonic);
 
           if (existing && merge) {

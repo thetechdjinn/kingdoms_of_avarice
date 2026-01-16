@@ -192,18 +192,14 @@ export async function hasSpellByMnemonic(characterId: number, mnemonic: string):
  * Learn a spell for a character
  */
 export async function learnSpell(characterId: number, spellId: number): Promise<CharacterSpell | null> {
-  try {
-    const result = await query<DbCharacterSpell>(
-      `INSERT INTO character_spells (character_id, spell_id)
-       VALUES ($1, $2)
-       ON CONFLICT (character_id, spell_id) DO NOTHING
-       RETURNING *`,
-      [characterId, spellId]
-    );
-    return result.rows[0] ? dbToCharacterSpell(result.rows[0]) : null;
-  } catch {
-    return null;
-  }
+  const result = await query<DbCharacterSpell>(
+    `INSERT INTO character_spells (character_id, spell_id)
+     VALUES ($1, $2)
+     ON CONFLICT (character_id, spell_id) DO NOTHING
+     RETURNING *`,
+    [characterId, spellId]
+  );
+  return result.rows[0] ? dbToCharacterSpell(result.rows[0]) : null;
 }
 
 /**

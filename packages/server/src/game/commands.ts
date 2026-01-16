@@ -652,8 +652,8 @@ async function handleStatus(socket: AuthenticatedSocket): Promise<CommandRespons
   // Calculate experience needed for next level
   const nextLevel = await progressionRepo.getLevelRequirement(character.level + 1);
   const currentLevel = await progressionRepo.getLevelRequirement(character.level);
-  const expForNext = nextLevel?.experience_required ?? 0;
-  const expForCurrent = currentLevel?.experience_required ?? 0;
+  const expForNext = nextLevel?.std_xp_required ?? 0;
+  const expForCurrent = currentLevel?.std_xp_required ?? 0;
   const expProgress = character.experience - expForCurrent;
   const expNeeded = expForNext - expForCurrent;
 
@@ -669,13 +669,15 @@ async function handleStatus(socket: AuthenticatedSocket): Promise<CommandRespons
 
   // Health and Mana bars
   const hpPercent = Math.round((socket.vitals.hp / socket.vitals.maxHp) * 100);
-  const mpPercent = socket.vitals.maxResource > 0 ? Math.round((socket.vitals.resource / socket.vitals.maxResource) * 100) : 0;
+  const maxResource = socket.vitals.maxResource ?? 0;
+  const resource = socket.vitals.resource ?? 0;
+  const mpPercent = maxResource > 0 ? Math.round((resource / maxResource) * 100) : 0;
 
   const hpColor = hpPercent >= 75 ? colors.green : hpPercent >= 50 ? colors.yellow : hpPercent >= 25 ? colors.orange : colors.red;
   const mpColor = colors.blue;
 
   lines.push(`  ${colors.white('Health:')} ${hpColor(`${socket.vitals.hp}/${socket.vitals.maxHp}`)} ${colors.gray(`(${hpPercent}%)`)}`);
-  lines.push(`  ${colors.white('Mana:')}   ${mpColor(`${socket.vitals.resource}/${socket.vitals.maxResource}`)} ${colors.gray(`(${mpPercent}%)`)}`);
+  lines.push(`  ${colors.white('Mana:')}   ${mpColor(`${resource}/${maxResource}`)} ${colors.gray(`(${mpPercent}%)`)}`);
   lines.push('');
 
   // Experience
