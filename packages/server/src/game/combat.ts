@@ -16,6 +16,11 @@ import {
   parseDiceString,
 } from './combatCalculations.js';
 import { clearCombatState } from './combatCommands.js';
+import {
+  getEquipmentCombatStats,
+  calculateEncumbranceRatio,
+  getEquipmentAccuracyBonus,
+} from './combatStats.js';
 import * as characterRepo from '../db/repositories/characterRepository.js';
 
 const DEFAULT_COMBAT_ROUND_MS = 4000;
@@ -185,38 +190,47 @@ async function processAttackerCombat(
 ): Promise<void> {
   if (!connectedPlayersRef) return;
 
+  // Get attacker's equipment stats
+  const attackerEquipment = await getEquipmentCombatStats(attacker.playerId);
+
+  // Calculate effective stats with equipment modifiers
+  const effectiveDex = attacker.characterStats.dexterity + (attackerEquipment.statModifiers.dexterity || 0);
+  const effectiveInt = attacker.characterStats.intelligence + (attackerEquipment.statModifiers.intelligence || 0);
+  const effectiveStr = attacker.characterStats.strength + (attackerEquipment.statModifiers.strength || 0);
+
+  // Calculate encumbrance from actual inventory weight
+  const encumbranceRatio = calculateEncumbranceRatio(attackerEquipment.totalWeight, effectiveStr);
+
   // Calculate attacker's energy for this round
-  // TODO: Calculate encumbranceRatio from inventory weight in Phase 3
   const energyFactors = {
     combatLevel: attacker.combatLevel,
     characterLevel: attacker.characterLevel,
-    dexterity: attacker.characterStats.dexterity,
-    encumbranceRatio: DEFAULT_ENCUMBRANCE_RATIO,
+    dexterity: effectiveDex,
+    encumbranceRatio,
   };
 
   const roundEnergy = calculateRoundEnergy(energyFactors);
 
-  // Calculate attacker's accuracy
-  // TODO: Get equipmentBonus and spellModifier from equipped items/buffs in Phase 3
+  // Calculate attacker's accuracy with equipment bonuses
+  const equipmentAccuracyBonus = getEquipmentAccuracyBonus(attackerEquipment.statModifiers);
   const accuracyFactors = {
     characterLevel: attacker.characterLevel,
     combatLevel: attacker.combatLevel,
-    dexterity: attacker.characterStats.dexterity,
-    intelligence: attacker.characterStats.intelligence,
-    charisma: attacker.characterStats.charisma,
-    equipmentBonus: DEFAULT_EQUIPMENT_BONUS,
-    spellModifier: DEFAULT_SPELL_MODIFIER,
-    encumbrancePenalty: 0,
+    dexterity: effectiveDex,
+    intelligence: effectiveInt,
+    charisma: attacker.characterStats.charisma + (attackerEquipment.statModifiers.charisma || 0),
+    equipmentBonus: equipmentAccuracyBonus,
+    spellModifier: DEFAULT_SPELL_MODIFIER, // TODO: Get from active buffs
+    encumbrancePenalty: encumbranceRatio > 0.75 ? Math.floor((encumbranceRatio - 0.75) * 40) : 0,
     isBlind: false,
   };
 
   const attackerAccuracy = calculateAccuracy(accuracyFactors);
 
-  // Get weapon data
-  // TODO: Get from equipped weapon in Phase 3
-  const weaponSpeed = DEFAULT_WEAPON_SPEED;
-  const weaponDamage = DEFAULT_UNARMED_DAMAGE;
-  const baseCritChance = DEFAULT_BASE_CRIT_CHANCE;
+  // Get weapon data from equipped weapon
+  const weaponSpeed = attackerEquipment.weapon.attackSpeed;
+  const weaponDamage = attackerEquipment.weapon.damageDice;
+  const baseCritChance = DEFAULT_BASE_CRIT_CHANCE + attackerEquipment.weapon.critModifier;
   const critMultiplier = DEFAULT_CRIT_MULTIPLIER;
 
   const attackerRoomId = getPlayerLocation(attacker.playerId);
@@ -239,13 +253,16 @@ async function processAttackerCombat(
       continue;
     }
 
-    // Calculate defender's defense
-    // TODO: Get armorClass, perception, shadow from equipped armor/stats in Phase 3
+    // Get defender's equipment stats
+    const defenderEquipment = await getEquipmentCombatStats(target.playerId);
+    const defenderEquipmentBonus = getEquipmentAccuracyBonus(defenderEquipment.statModifiers);
+
+    // Calculate defender's defense from equipped armor
     const defenseFactors = {
-      armorClass: DEFAULT_ARMOR_CLASS,
-      perception: DEFAULT_PERCEPTION,
-      shadow: DEFAULT_SHADOW,
-      equipmentBonus: DEFAULT_EQUIPMENT_BONUS,
+      armorClass: defenderEquipment.armor.totalArmorClass,
+      perception: DEFAULT_PERCEPTION,  // TODO: Add perception stat to characters
+      shadow: DEFAULT_SHADOW,          // TODO: Add shadow stat to characters
+      equipmentBonus: defenderEquipmentBonus,
       spellModifier: DEFAULT_SPELL_MODIFIER,
     };
 
@@ -254,8 +271,7 @@ async function processAttackerCombat(
     // Parse weapon damage dice
     const { min: minDamage, max: maxDamage } = parseDiceString(weaponDamage);
 
-    // Execute combat round
-    // TODO: Get damageReduction from armor in Phase 3
+    // Execute combat round with actual equipment stats
     const combatResult = executeCombatRound(
       attacker.username,
       target.username,
@@ -268,7 +284,7 @@ async function processAttackerCombat(
       minDamage,
       maxDamage,
       critMultiplier,
-      DEFAULT_DAMAGE_REDUCTION
+      defenderEquipment.armor.damageReduction
     );
 
     // Update carried energy for next round

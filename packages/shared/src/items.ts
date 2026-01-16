@@ -126,6 +126,8 @@ export interface StatModifiers {
   dexterity?: number;
   constitution?: number;
   intelligence?: number;
+  wisdom?: number;
+  charisma?: number;
   max_health?: number;
   max_mana?: number;
 }
