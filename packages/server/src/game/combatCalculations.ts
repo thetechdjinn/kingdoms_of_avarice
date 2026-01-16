@@ -296,7 +296,7 @@ export function executeCombatRound(
   const totalEnergy = availableEnergy + carriedEnergy;
   const { swings: numSwings, remainingEnergy, bonusCritChance } = calculateSwings(totalEnergy, weaponSpeed);
 
-  const effectiveCritChance = baseCritChance + bonusCritChance;
+  const effectiveCritChance = Math.min(100, baseCritChance + bonusCritChance);
   const swings: SwingResult[] = [];
   let totalDamage = 0;
 

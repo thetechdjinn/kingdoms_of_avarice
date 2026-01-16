@@ -24,6 +24,20 @@ const COMBAT_ROUND_MS = Number.isFinite(parsedRoundMs) && parsedRoundMs > 0
   ? parsedRoundMs
   : DEFAULT_COMBAT_ROUND_MS;
 
+// Default combat values (used when equipment/stats not yet implemented)
+// TODO: Replace these with actual equipment/stat lookups in Phase 3
+const DEFAULT_ENCUMBRANCE_RATIO = 0.5;  // 50% encumbrance baseline
+const DEFAULT_EQUIPMENT_BONUS = 0;
+const DEFAULT_SPELL_MODIFIER = 0;
+const DEFAULT_WEAPON_SPEED = 10;
+const DEFAULT_UNARMED_DAMAGE = '1d6';
+const DEFAULT_BASE_CRIT_CHANCE = 5;     // 5% base crit chance
+const DEFAULT_CRIT_MULTIPLIER = 2.0;
+const DEFAULT_ARMOR_CLASS = 10;
+const DEFAULT_PERCEPTION = 0;
+const DEFAULT_SHADOW = 0;
+const DEFAULT_DAMAGE_REDUCTION = 0;
+
 let combatInterval: NodeJS.Timeout | null = null;
 let connectedPlayersRef: Map<number, AuthenticatedSocket>;
 
@@ -172,35 +186,38 @@ async function processAttackerCombat(
   if (!connectedPlayersRef) return;
 
   // Calculate attacker's energy for this round
+  // TODO: Calculate encumbranceRatio from inventory weight in Phase 3
   const energyFactors = {
     combatLevel: attacker.combatLevel,
     characterLevel: attacker.characterLevel,
     dexterity: attacker.characterStats.dexterity,
-    encumbranceRatio: 0.5, // TODO: Calculate from inventory weight
+    encumbranceRatio: DEFAULT_ENCUMBRANCE_RATIO,
   };
 
   const roundEnergy = calculateRoundEnergy(energyFactors);
 
   // Calculate attacker's accuracy
+  // TODO: Get equipmentBonus and spellModifier from equipped items/buffs in Phase 3
   const accuracyFactors = {
     characterLevel: attacker.characterLevel,
     combatLevel: attacker.combatLevel,
     dexterity: attacker.characterStats.dexterity,
     intelligence: attacker.characterStats.intelligence,
     charisma: attacker.characterStats.charisma,
-    equipmentBonus: 0, // TODO: Get from equipped items
-    spellModifier: 0,  // TODO: Get from active buffs
+    equipmentBonus: DEFAULT_EQUIPMENT_BONUS,
+    spellModifier: DEFAULT_SPELL_MODIFIER,
     encumbrancePenalty: 0,
     isBlind: false,
   };
 
   const attackerAccuracy = calculateAccuracy(accuracyFactors);
 
-  // Get weapon data (TODO: Get from equipped weapon)
-  const weaponSpeed = 10; // Default weapon speed
-  const weaponDamage = '1d6'; // Default unarmed damage
-  const baseCritChance = 5; // 5% base crit chance
-  const critMultiplier = 2.0;
+  // Get weapon data
+  // TODO: Get from equipped weapon in Phase 3
+  const weaponSpeed = DEFAULT_WEAPON_SPEED;
+  const weaponDamage = DEFAULT_UNARMED_DAMAGE;
+  const baseCritChance = DEFAULT_BASE_CRIT_CHANCE;
+  const critMultiplier = DEFAULT_CRIT_MULTIPLIER;
 
   const attackerRoomId = getPlayerLocation(attacker.playerId);
 
@@ -223,12 +240,13 @@ async function processAttackerCombat(
     }
 
     // Calculate defender's defense
+    // TODO: Get armorClass, perception, shadow from equipped armor/stats in Phase 3
     const defenseFactors = {
-      armorClass: 10, // TODO: Get from equipped armor
-      perception: 0,  // TODO: Get from stats
-      shadow: 0,      // TODO: Get from stats
-      equipmentBonus: 0,
-      spellModifier: 0,
+      armorClass: DEFAULT_ARMOR_CLASS,
+      perception: DEFAULT_PERCEPTION,
+      shadow: DEFAULT_SHADOW,
+      equipmentBonus: DEFAULT_EQUIPMENT_BONUS,
+      spellModifier: DEFAULT_SPELL_MODIFIER,
     };
 
     const targetDefense = calculateDefense(defenseFactors);
@@ -237,6 +255,7 @@ async function processAttackerCombat(
     const { min: minDamage, max: maxDamage } = parseDiceString(weaponDamage);
 
     // Execute combat round
+    // TODO: Get damageReduction from armor in Phase 3
     const combatResult = executeCombatRound(
       attacker.username,
       target.username,
@@ -249,7 +268,7 @@ async function processAttackerCombat(
       minDamage,
       maxDamage,
       critMultiplier,
-      0 // damageReduction - TODO: Get from armor
+      DEFAULT_DAMAGE_REDUCTION
     );
 
     // Update carried energy for next round
