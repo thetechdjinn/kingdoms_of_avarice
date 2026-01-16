@@ -5,6 +5,7 @@ import { colors } from '../utils/colors.js';
 import { processAdminCommand, getPlayerLocation, setPlayerLocation } from './adminCommands.js';
 import * as playerRepo from '../db/repositories/playerRepository.js';
 import { handleGet, handleDrop, handleInventory, handleExamine, getRoomItemsDescription, handleWield, handleWear, handleRemove, handleEquipment, handlePut, handleGetFrom, handleLookIn, handleUse, handleLight, handleExtinguish, handleRepair, handleSearch, handleRecipes, handleCraft, handleEnchantments, handleEnchant } from './itemCommands.js';
+import { handleAttack, handleFlee } from './combatCommands.js';
 
 export interface CommandResponse {
   type: MessageType;
@@ -197,6 +198,22 @@ export async function processCommand(
 
   if (command === 'rest' || command === 're') {
     return handleRest(socket);
+  }
+
+  // Combat commands
+  if (command === 'attack' || command === 'att' || command === 'kill' || command === 'k') {
+    return handleAttack(socket, args, _connectedPlayers);
+  }
+
+  if (command === 'flee' || command === 'fl') {
+    const fleeResult = await handleFlee(socket, world, _connectedPlayers);
+    // Check for special flee movement marker
+    if (fleeResult.type === MessageType.SYSTEM && fleeResult.message.startsWith('FLEE:')) {
+      const direction = fleeResult.message.substring(5);
+      broadcastToRoom(currentRoomId, `${socket.username} flees ${direction}!`, socket.playerId);
+      return await handleMove(socket, currentRoomId, direction, world, _connectedPlayers);
+    }
+    return fleeResult;
   }
 
   // Default: treat as speech
@@ -505,6 +522,10 @@ function handleHelp(userRoles: Role[], category?: string): CommandResponse {
     `    ${colors.white('craft <recipe>')}        - Craft an item`,
     `    ${colors.white('enchantments')}          - List known enchantments`,
     `    ${colors.white('enchant <item> with <enchantment>')} - Enchant an item`,
+    '',
+    colors.boldCyan('  Combat:'),
+    `    ${colors.white('attack <player>')} (k)   - Attack another player`,
+    `    ${colors.white('flee')} (fl)             - Attempt to flee from combat`,
     '',
     colors.boldCyan('  Communication & System:'),
     `    ${colors.white('rest')} (re)             - Rest to regenerate faster`,
