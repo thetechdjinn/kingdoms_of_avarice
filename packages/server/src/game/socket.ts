@@ -2,7 +2,7 @@ import { WebSocketServer, WebSocket } from 'ws';
 import { IncomingMessage } from 'http';
 import { URL } from 'url';
 import { parse as parseCookie } from 'cookie';
-import { MessageType, GameMessage, Role, VitalsData, ResourceType, PlayerRegenState } from '@koa/shared';
+import { MessageType, GameMessage, Role, VitalsData, ResourceType, PlayerRegenState, CharacterStats } from '@koa/shared';
 import { verifyToken, COOKIE_NAME } from '../routes/auth.js';
 import { GameWorld } from './world.js';
 import { processCommand } from './commands.js';
@@ -15,16 +15,6 @@ import { initializeDefaultRegenConfigs, startRegenLoops } from './regeneration.j
 import { startCombatLoop } from './combat.js';
 import { colors } from '../utils/colors.js';
 import { checkWebSocketIp } from '../middleware/ipAccess.js';
-
-// Cached character stats for combat calculations (avoid DB lookups during combat)
-interface CharacterStats {
-  strength: number;
-  dexterity: number;
-  intelligence: number;
-  constitution: number;
-  wisdom: number;
-  charisma: number;
-}
 
 // Combat state tracked per-player in memory
 interface CombatState {
