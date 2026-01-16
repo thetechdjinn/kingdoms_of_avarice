@@ -92,7 +92,16 @@ export const colors = {
   health: (text: string) => applyStyle(text, 'brightGreen'),
   mana: (text: string) => applyStyle(text, 'brightBlue'),
   gold: (text: string) => applyStyle(text, 'brightYellow'),
-  
+
+  // Combat-specific colors
+  combatAttacker: (text: string) => applyStyle(text, 'bold', 'brightRed'),
+  combatDefender: (text: string) => applyStyle(text, 'bold', 'brightYellow'),
+  combatHit: (text: string) => applyStyle(text, 'red'),
+  combatCritical: (text: string) => applyStyle(text, 'bold', 'red'),
+  combatMiss: (text: string) => applyStyle(text, 'brightBlack'),
+  combatDodge: (text: string) => applyStyle(text, 'cyan'),
+  combatDamage: (text: string) => applyStyle(text, 'brightRed'),
+
   // Raw style application
   style: applyStyle,
   reset: RESET,

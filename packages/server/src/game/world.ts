@@ -141,6 +141,12 @@ export class GameWorld {
     return this.rooms.get(id);
   }
 
+  getRoomExits(roomId: number): string[] {
+    const room = this.rooms.get(roomId);
+    if (!room) return [];
+    return Array.from(room.exits.keys());
+  }
+
   getRoomInDirection(fromRoomId: number, direction: string): Room | undefined {
     const room = this.rooms.get(fromRoomId);
     if (!room) return undefined;

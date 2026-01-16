@@ -127,3 +127,6 @@ export * from "./items.js";
 
 // Re-export progression system
 export * from "./progression.js";
+
+// Re-export combat system
+export * from "./combat.js";
