@@ -83,8 +83,7 @@ function calculateArmorStats(equippedItems: ItemInstance[]): ArmorStats {
   for (const item of equippedItems) {
     if (item.template?.item_type === ItemType.ARMOR && item.template.armor_data) {
       const armorData = item.template.armor_data;
-      // Add armor class (replaces base 10 with the sum of armor pieces)
-      // In most systems, armor doesn't stack additively, but for simplicity we add
+      // Add armor class on top of base 10
       totalAC += armorData.armor_class || 0;
 
       // Future: could calculate damage reduction from heavy armor
