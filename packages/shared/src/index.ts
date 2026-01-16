@@ -130,3 +130,6 @@ export * from "./progression.js";
 
 // Re-export combat system
 export * from "./combat.js";
+
+// Re-export spell system
+export * from "./spells.js";

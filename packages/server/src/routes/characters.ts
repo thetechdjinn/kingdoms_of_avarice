@@ -5,6 +5,7 @@ import * as characterRepo from '../db/repositories/characterRepository.js';
 import * as progressionRepo from '../db/repositories/progressionRepository.js';
 import * as playerRepo from '../db/repositories/playerRepository.js';
 import * as settingsRepo from '../db/repositories/settingsRepository.js';
+import * as spellRepo from '../db/repositories/spellRepository.js';
 import { CharacterStats } from '@koa/shared';
 
 // Validation constants
@@ -29,9 +30,12 @@ export function setupCharacterRoutes(app: Express): void {
 
     try {
       const characters = await characterRepo.findCharactersByPlayerId(payload.playerId);
+      const sharedCharacters = await Promise.all(
+        characters.map(characterRepo.toSharedCharacterWithDisplayNames)
+      );
       res.json({
         success: true,
-        characters: characters.map(characterRepo.toSharedCharacter),
+        characters: sharedCharacters,
       });
     } catch (error) {
       console.error('Failed to get characters:', error);
@@ -74,7 +78,7 @@ export function setupCharacterRoutes(app: Express): void {
 
       res.json({
         success: true,
-        character: characterRepo.toSharedCharacter(character),
+        character: await characterRepo.toSharedCharacterWithDisplayNames(character),
       });
     } catch (error) {
       console.error('Failed to get character:', error);
@@ -204,9 +208,26 @@ export function setupCharacterRoutes(app: Express): void {
         return newCharacter;
       });
 
+      // Grant level 1 starter spells for the character's class (outside transaction)
+      try {
+        const starterSpells = await spellRepo.getAvailableSpells(
+          character.id,
+          classDef.display_name,
+          1 // Level 1 spells only
+        );
+        for (const spell of starterSpells) {
+          if (spell.levelRequired === 1) {
+            await spellRepo.learnSpell(character.id, spell.id);
+          }
+        }
+      } catch (spellError) {
+        // Log but don't fail character creation if spell granting fails
+        console.error('Failed to grant starter spells:', spellError);
+      }
+
       res.json({
         success: true,
-        character: characterRepo.toSharedCharacter(character),
+        character: await characterRepo.toSharedCharacterWithDisplayNames(character),
       });
     } catch (error) {
       // Handle specific validation errors from transaction

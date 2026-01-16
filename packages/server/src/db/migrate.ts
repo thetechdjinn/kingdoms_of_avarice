@@ -35,6 +35,11 @@ export async function runMigrations(): Promise<void> {
       const progressionSchema = readFileSync(progressionSchemaPath, 'utf-8');
       await client.query(progressionSchema);
 
+      // Run spells schema
+      const spellsSchemaPath = join(sqlDir, 'schema_spells.sql');
+      const spellsSchema = readFileSync(spellsSchemaPath, 'utf-8');
+      await client.query(spellsSchema);
+
       // Add brief_mode column if it doesn't exist (for existing databases)
       await client.query(`
         ALTER TABLE players ADD COLUMN IF NOT EXISTS brief_mode BOOLEAN DEFAULT FALSE
@@ -96,11 +101,21 @@ export async function seedInitialData(): Promise<void> {
   // Check if item templates already exist
   const itemCheck = await getPool().query('SELECT COUNT(*) FROM item_templates');
   const itemsExist = parseInt(itemCheck.rows[0].count) > 0;
-  
+
   if (itemsExist) {
     console.log('Item seed data already exists, skipping items...');
   } else {
     await seedItems();
+  }
+
+  // Check if spells already exist
+  const spellCheck = await getPool().query('SELECT COUNT(*) FROM spells');
+  const spellsExist = parseInt(spellCheck.rows[0].count) > 0;
+
+  if (spellsExist) {
+    console.log('Spell seed data already exists, skipping spells...');
+  } else {
+    await seedSpells();
   }
 }
 
@@ -153,6 +168,20 @@ async function seedItems(): Promise<void> {
   } catch (error) {
     console.error('Failed to seed items:', error);
     // Don't throw - items are optional, game can run without them
+  }
+}
+
+async function seedSpells(): Promise<void> {
+  console.log('Seeding initial spell data...');
+
+  try {
+    const seedPath = join(sqlDir, 'seed_spells.sql');
+    const seedSql = readFileSync(seedPath, 'utf-8');
+    await getPool().query(seedSql);
+    console.log('Spell seed data inserted successfully');
+  } catch (error) {
+    console.error('Failed to seed spells:', error);
+    // Don't throw - spells are optional, game can run without them
   }
 }
 

@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Spell Editor - Kingdoms of Avarice</title>
+    <link rel="stylesheet" href="/src/editor.css" />
+    <link rel="stylesheet" href="/src/spell-editor.css" />
+  </head>
+  <body>
+    <div id="editor-app">
+      <nav id="main-nav">
+        <div class="nav-brand">Kingdoms of Avarice</div>
+        <div class="nav-links">
+          <a href="/" class="nav-link">Game</a>
+          <div class="nav-dropdown" id="nav-dev-dropdown">
+            <button class="nav-link nav-dropdown-btn active">Developer</button>
+            <div class="nav-dropdown-menu">
+              <a href="/editor.html" class="nav-dropdown-item">Room Editor</a>
+              <a href="/item-editor.html" class="nav-dropdown-item">Item Editor</a>
+              <a href="/spell-editor.html" class="nav-dropdown-item active">Spell Editor</a>
+              <a href="/progression-editor.html" class="nav-dropdown-item">Progression Editor</a>
+            </div>
+          </div>
+          <a href="/admin.html" class="nav-link" id="nav-admin-link" style="display: none;">Admin</a>
+        </div>
+        <div class="nav-spacer"></div>
+        <div class="nav-user-menu">
+          <button class="nav-user-btn" id="nav-username">User</button>
+          <div class="dropdown-menu" id="user-dropdown">
+            <button class="dropdown-item" id="logout-btn">Logout</button>
+          </div>
+        </div>
+      </nav>
+
+      <div id="editor-layout">
+        <aside id="spell-list-panel">
+          <div class="panel-header">
+            <h2>Spells</h2>
+            <button id="new-spell-btn" class="btn-primary">+ New Spell</button>
+          </div>
+          <div id="spell-filter">
+            <label for="type-select">Filter by Type:</label>
+            <select id="type-select">
+              <option value="">All Types</option>
+              <option value="offensive">Offensive</option>
+              <option value="healing">Healing</option>
+              <option value="buff">Buff</option>
+              <option value="debuff">Debuff</option>
+              <option value="utility">Utility</option>
+            </select>
+          </div>
+          <div id="spell-search">
+            <input type="text" id="search-input" placeholder="Search spells..." />
+          </div>
+          <ul id="spell-list"></ul>
+
+          <div class="panel-footer">
+            <button id="import-btn" class="btn-small">Import</button>
+            <button id="export-btn" class="btn-small">Export</button>
+          </div>
+        </aside>
+
+        <main id="spell-editor-panel">
+          <div id="no-spell-selected">
+            <p>Select a spell from the list or create a new one.</p>
+          </div>
+
+          <form id="spell-form" style="display: none;">
+            <div class="form-header">
+              <h2 id="spell-form-title">Edit Spell</h2>
+              <span id="spell-id-display"></span>
+            </div>
+
+            <!-- Tabs -->
+            <div class="form-tabs">
+              <button type="button" class="tab-btn active" data-tab="basic">Basic</button>
+              <button type="button" class="tab-btn" data-tab="effects">Effects</button>
+              <button type="button" class="tab-btn" data-tab="requirements">Requirements</button>
+            </div>
+
+            <!-- Basic Tab Content -->
+            <div class="tab-content active" id="tab-basic">
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="spell-name">Name</label>
+                  <input type="text" id="spell-name" required placeholder="Magic Missile" />
+                </div>
+                <div class="form-group">
+                  <label for="spell-mnemonic">Mnemonic</label>
+                  <input type="text" id="spell-mnemonic" required placeholder="mmis" maxlength="10" />
+                  <span class="hint-inline">Short command (e.g., mmis, heal, fire)</span>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label for="spell-description">Description</label>
+                <textarea id="spell-description" rows="3" placeholder="A bolt of magical energy strikes the target..."></textarea>
+              </div>
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="spell-type">Spell Type</label>
+                  <select id="spell-type" required>
+                    <option value="offensive">Offensive</option>
+                    <option value="healing">Healing</option>
+                    <option value="buff">Buff</option>
+                    <option value="debuff">Debuff</option>
+                    <option value="utility">Utility</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="spell-target-type">Target Type</label>
+                  <select id="spell-target-type" required>
+                    <option value="enemy">Enemy</option>
+                    <option value="self">Self</option>
+                    <option value="ally">Ally</option>
+                    <option value="room">Room (AoE)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="spell-mana-cost">Mana Cost</label>
+                  <input type="number" id="spell-mana-cost" min="0" value="5" />
+                </div>
+                <div class="form-group checkbox-group">
+                  <label class="checkbox-label">
+                    <input type="checkbox" id="spell-is-attack" />
+                    Attack Spell
+                  </label>
+                  <span class="hint-inline">Replaces melee combat when active</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Effects Tab Content -->
+            <div class="tab-content" id="tab-effects">
+              <div id="damage-section" class="effect-section">
+                <h3>Damage (Offensive Spells)</h3>
+                <div class="form-row">
+                  <div class="form-group">
+                    <label for="spell-damage-dice">Damage Dice</label>
+                    <input type="text" id="spell-damage-dice" placeholder="1d6+2" />
+                    <span class="hint-inline">Format: XdY or XdY+Z (e.g., 2d6+3)</span>
+                  </div>
+                </div>
+              </div>
+
+              <div id="healing-section" class="effect-section">
+                <h3>Healing (Healing Spells)</h3>
+                <div class="form-row">
+                  <div class="form-group">
+                    <label for="spell-healing-dice">Healing Dice</label>
+                    <input type="text" id="spell-healing-dice" placeholder="1d8+2" />
+                    <span class="hint-inline">Format: XdY or XdY+Z (e.g., 2d8+4)</span>
+                  </div>
+                </div>
+              </div>
+
+              <div id="status-section" class="effect-section">
+                <h3>Status Effects (Buffs/Debuffs)</h3>
+                <div class="form-row">
+                  <div class="form-group">
+                    <label for="spell-status-effect">Status Effect</label>
+                    <input type="text" id="spell-status-effect" placeholder="blessed, poisoned, hasted..." />
+                  </div>
+                  <div class="form-group">
+                    <label for="spell-effect-duration">Duration (seconds)</label>
+                    <input type="number" id="spell-effect-duration" min="0" value="0" />
+                    <span class="hint-inline">0 = instant/permanent</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Requirements Tab Content -->
+            <div class="tab-content" id="tab-requirements">
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="spell-level-required">Level Required</label>
+                  <input type="number" id="spell-level-required" min="1" value="1" />
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label for="spell-class-restrictions">Class Restrictions</label>
+                <input type="text" id="spell-class-restrictions" placeholder="Mage, Cleric, Paladin" />
+                <span class="hint-inline">Comma-separated. Leave empty for all classes.</span>
+              </div>
+
+              <div class="class-quick-select">
+                <label>Quick Select:</label>
+                <div class="class-buttons">
+                  <button type="button" class="class-btn" data-class="Warrior">Warrior</button>
+                  <button type="button" class="class-btn" data-class="Paladin">Paladin</button>
+                  <button type="button" class="class-btn" data-class="Cleric">Cleric</button>
+                  <button type="button" class="class-btn" data-class="Ranger">Ranger</button>
+                  <button type="button" class="class-btn" data-class="Rogue">Rogue</button>
+                  <button type="button" class="class-btn" data-class="Mage">Mage</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="form-actions">
+              <button type="submit" class="btn-primary">Save Spell</button>
+              <button type="button" id="duplicate-spell-btn" class="btn-secondary">Duplicate</button>
+              <button type="button" id="delete-spell-btn" class="btn-danger">Delete Spell</button>
+            </div>
+          </form>
+        </main>
+
+        <aside id="preview-panel">
+          <div class="panel-header">
+            <h2>Preview</h2>
+          </div>
+          <div id="spell-preview">
+            <div id="preview-content">
+              <p class="hint">Select a spell to see preview</p>
+            </div>
+          </div>
+
+          <div class="panel-section">
+            <h3>Test Spell</h3>
+            <p class="hint">Use <code>@learn &lt;mnemonic&gt;</code> in-game to learn this spell for testing.</p>
+          </div>
+        </aside>
+      </div>
+    </div>
+
+    <!-- Import Modal -->
+    <div id="import-modal" class="modal" style="display: none;">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>Import Spells</h3>
+          <button id="close-import-modal" class="close-btn">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label for="import-file">Select JSON file:</label>
+            <input type="file" id="import-file" accept=".json" />
+          </div>
+          <label class="checkbox-label">
+            <input type="checkbox" id="import-merge" checked />
+            Merge with existing (update if mnemonic matches)
+          </label>
+        </div>
+        <div class="modal-footer">
+          <button id="do-import-btn" class="btn-primary">Import</button>
+        </div>
+      </div>
+    </div>
+
+    <script type="module" src="/src/spell-editor.ts"></script>
+  </body>
+</html>

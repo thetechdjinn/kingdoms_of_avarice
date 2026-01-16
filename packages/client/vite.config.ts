@@ -8,7 +8,7 @@ const __dirname = dirname(__filename);
 
 // Plugin to serve additional HTML files in dev mode
 function multiPagePlugin(): Plugin {
-  const htmlFiles = ['editor.html', 'item-editor.html', 'progression-editor.html', 'admin.html', 'docs.html'];
+  const htmlFiles = ['editor.html', 'item-editor.html', 'spell-editor.html', 'progression-editor.html', 'admin.html', 'docs.html'];
   
   return {
     name: 'multi-page-plugin',
@@ -47,6 +47,7 @@ export default defineConfig({
         main: resolve(__dirname, 'index.html'),
         editor: resolve(__dirname, 'editor.html'),
         itemEditor: resolve(__dirname, 'item-editor.html'),
+        spellEditor: resolve(__dirname, 'spell-editor.html'),
         progressionEditor: resolve(__dirname, 'progression-editor.html'),
         admin: resolve(__dirname, 'admin.html'),
         docs: resolve(__dirname, 'docs.html'),

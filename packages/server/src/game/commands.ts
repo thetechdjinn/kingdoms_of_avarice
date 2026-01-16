@@ -6,6 +6,9 @@ import { processAdminCommand, getPlayerLocation, setPlayerLocation } from './adm
 import * as playerRepo from '../db/repositories/playerRepository.js';
 import { handleGet, handleDrop, handleInventory, handleExamine, getRoomItemsDescription, handleWield, handleWear, handleRemove, handleEquipment, handlePut, handleGetFrom, handleLookIn, handleUse, handleLight, handleExtinguish, handleRepair, handleSearch, handleRecipes, handleCraft, handleEnchantments, handleEnchant } from './itemCommands.js';
 import { handleAttack, handleFlee } from './combatCommands.js';
+import { isSpellMnemonic, handleSpellCommand, handleSpellbook } from './spellCommands.js';
+import * as characterRepo from '../db/repositories/characterRepository.js';
+import * as progressionRepo from '../db/repositories/progressionRepository.js';
 
 export interface CommandResponse {
   type: MessageType;
@@ -214,6 +217,21 @@ export async function processCommand(
       return await handleMove(socket, currentRoomId, direction, world, _connectedPlayers);
     }
     return fleeResult;
+  }
+
+  // Spellbook command
+  if (command === 'spells' || command === 'spellbook' || command === 'sp') {
+    return handleSpellbook(socket);
+  }
+
+  // Status/character sheet command (st, sta, stat, statu, status)
+  if ('status'.startsWith(command) && command.length >= 2) {
+    return handleStatus(socket);
+  }
+
+  // Check for spell mnemonics (e.g., 'mmis goblin' for Magic Missile)
+  if (isSpellMnemonic(command)) {
+    return handleSpellCommand(socket, command, args, _connectedPlayers);
   }
 
   // Default: treat as speech
@@ -527,7 +545,12 @@ function handleHelp(userRoles: Role[], category?: string): CommandResponse {
     `    ${colors.white('attack <player>')} (k)   - Attack another player`,
     `    ${colors.white('flee')} (fl)             - Attempt to flee from combat`,
     '',
-    colors.boldCyan('  Communication & System:'),
+    colors.boldCyan('  Magic:'),
+    `    ${colors.white('spells')} (sp)           - View your spellbook`,
+    `    ${colors.white('<mnemonic> <target>')}   - Cast a spell (e.g., mmis goblin)`,
+    '',
+    colors.boldCyan('  Information & System:'),
+    `    ${colors.white('status')} (st)            - View your character sheet`,
     `    ${colors.white('rest')} (re)             - Rest to regenerate faster`,
     `    ${colors.white('who')}                   - See who is online`,
     `    ${colors.white('x')}                     - Meditate and leave the realm`,
@@ -608,4 +631,92 @@ function handleWho(connectedPlayers: Map<number, AuthenticatedSocket>): CommandR
     type: MessageType.OUTPUT,
     message: `${colors.boldYellow('Players Online (' + count + '):')} ${list}`,
   };
+}
+
+async function handleStatus(socket: AuthenticatedSocket): Promise<CommandResponse> {
+  if (!socket.characterId) {
+    return { type: MessageType.ERROR, message: 'No character selected.' };
+  }
+
+  const character = await characterRepo.findCharacterById(socket.characterId);
+  if (!character) {
+    return { type: MessageType.ERROR, message: 'Character not found.' };
+  }
+
+  // Get display names for class and race
+  const classDef = await progressionRepo.getClassById(character.class);
+  const raceDef = await progressionRepo.getRaceById(character.race);
+  const className = classDef?.display_name || character.class;
+  const raceName = raceDef?.display_name || character.race;
+
+  // Calculate experience needed for next level
+  const nextLevel = await progressionRepo.getLevelRequirement(character.level + 1);
+  const currentLevel = await progressionRepo.getLevelRequirement(character.level);
+  const expForNext = nextLevel?.experience_required ?? 0;
+  const expForCurrent = currentLevel?.experience_required ?? 0;
+  const expProgress = character.experience - expForCurrent;
+  const expNeeded = expForNext - expForCurrent;
+
+  // Build the character sheet
+  const lines: string[] = [];
+  const separator = colors.gray('─'.repeat(50));
+
+  // Header
+  lines.push(separator);
+  lines.push(colors.boldYellow(`  ${character.name}`));
+  lines.push(`  ${colors.white('Level')} ${colors.green(character.level.toString())} ${colors.cyan(raceName)} ${colors.magenta(className)}`);
+  lines.push(separator);
+
+  // Health and Mana bars
+  const hpPercent = Math.round((socket.vitals.hp / socket.vitals.maxHp) * 100);
+  const mpPercent = socket.vitals.maxResource > 0 ? Math.round((socket.vitals.resource / socket.vitals.maxResource) * 100) : 0;
+
+  const hpColor = hpPercent >= 75 ? colors.green : hpPercent >= 50 ? colors.yellow : hpPercent >= 25 ? colors.orange : colors.red;
+  const mpColor = colors.blue;
+
+  lines.push(`  ${colors.white('Health:')} ${hpColor(`${socket.vitals.hp}/${socket.vitals.maxHp}`)} ${colors.gray(`(${hpPercent}%)`)}`);
+  lines.push(`  ${colors.white('Mana:')}   ${mpColor(`${socket.vitals.resource}/${socket.vitals.maxResource}`)} ${colors.gray(`(${mpPercent}%)`)}`);
+  lines.push('');
+
+  // Experience
+  if (nextLevel) {
+    const expPercent = expNeeded > 0 ? Math.round((expProgress / expNeeded) * 100) : 100;
+    lines.push(`  ${colors.white('Experience:')} ${colors.yellow(character.experience.toLocaleString())}`);
+    lines.push(`  ${colors.white('Next Level:')} ${colors.gray(`${expProgress.toLocaleString()} / ${expNeeded.toLocaleString()} (${expPercent}%)`)}`);
+  } else {
+    lines.push(`  ${colors.white('Experience:')} ${colors.yellow(character.experience.toLocaleString())} ${colors.gray('(Max Level)')}`);
+  }
+  lines.push('');
+
+  // Gold
+  lines.push(`  ${colors.white('Gold:')} ${colors.gold(character.gold.toLocaleString())}`);
+  lines.push('');
+
+  // Stats
+  lines.push(separator);
+  lines.push(colors.boldCyan('  Statistics'));
+  lines.push(separator);
+
+  const statLine = (label: string, value: number, color: (s: string) => string = colors.white): string => {
+    const modifier = Math.floor((value - 10) / 2);
+    const modStr = modifier >= 0 ? `+${modifier}` : `${modifier}`;
+    return `  ${colors.gray(label.padEnd(14))} ${color(value.toString().padStart(2))} ${colors.gray(`(${modStr})`)}`;
+  };
+
+  lines.push(statLine('Strength', character.strength, colors.red));
+  lines.push(statLine('Intelligence', character.intelligence, colors.blue));
+  lines.push(statLine('Dexterity', character.dexterity, colors.green));
+  lines.push(statLine('Constitution', character.constitution, colors.orange));
+  lines.push(statLine('Wisdom', character.wisdom, colors.cyan));
+  lines.push(statLine('Charisma', character.charisma, colors.magenta));
+  lines.push(separator);
+
+  // Combat status
+  if (socket.regenState.inCombat) {
+    lines.push(`  ${colors.red('[ IN COMBAT ]')}`);
+  } else if (socket.regenState.enhancedRegen.size > 0) {
+    lines.push(`  ${colors.cyan('[ RESTING ]')}`);
+  }
+
+  return { type: MessageType.OUTPUT, message: lines.join('\r\n') };
 }

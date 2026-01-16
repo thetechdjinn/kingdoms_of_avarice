@@ -182,6 +182,79 @@ function formatSwingMessage(
 }
 
 /**
+ * Process spell combat for a single attacker
+ * Returns true if combat should continue, false if combat was broken
+ */
+async function processSpellCombat(
+  attacker: AuthenticatedSocket,
+  targets: Set<number>
+): Promise<boolean> {
+  if (!connectedPlayersRef) return false;
+  if (!attacker.combatState.activeSpell) return false;
+
+  const spell = attacker.combatState.activeSpell;
+  const attackerRoomId = getPlayerLocation(attacker.playerId);
+
+  // Check if we have enough mana
+  if ((attacker.vitals.resource ?? 0) < spell.manaCost) {
+    // Not enough mana - break combat
+    sendToSocket(attacker, MessageType.SYSTEM, colors.red(`You don't have enough mana to cast ${spell.spellName}!`));
+    sendToSocket(attacker, MessageType.SYSTEM, 'Combat has ended.');
+
+    // Clear combat state
+    clearCombatState(attacker, connectedPlayersRef);
+    return false;
+  }
+
+  // Deduct mana
+  attacker.vitals.resource = (attacker.vitals.resource ?? 0) - spell.manaCost;
+  sendVitals(attacker);
+
+  // Parse spell damage dice
+  const { min: minDamage, max: maxDamage } = parseDiceString(spell.damageDice);
+
+  // Process each target
+  for (const targetId of targets) {
+    const target = connectedPlayersRef.get(targetId);
+    if (!target) {
+      targets.delete(targetId);
+      continue;
+    }
+
+    // Check if target is still in the same room
+    const targetRoomId = getPlayerLocation(targetId);
+    if (targetRoomId !== attackerRoomId) {
+      targets.delete(targetId);
+      sendToSocket(attacker, MessageType.SYSTEM, `${target.username} is no longer here.`);
+      continue;
+    }
+
+    // Roll spell damage (no miss chance for spells - they always hit)
+    const damage = Math.floor(Math.random() * (maxDamage - minDamage + 1)) + minDamage;
+
+    // Send spell messages
+    const attackerMsg = `You cast ${colors.cyan(spell.spellName)} at ${colors.combatDefender(target.username)} for ${colors.combatDamage(damage.toString())} damage!`;
+    const defenderMsg = `${colors.combatAttacker(attacker.username)} casts ${colors.cyan(spell.spellName)} at you for ${colors.combatDamage(damage.toString())} damage!`;
+    const roomMsg = `${attacker.username} casts ${spell.spellName} at ${target.username} for ${damage} damage!`;
+
+    sendToSocket(attacker, MessageType.OUTPUT, attackerMsg);
+    sendToSocket(target, MessageType.OUTPUT, defenderMsg);
+    broadcastToRoomExcept(attackerRoomId, roomMsg, [attacker.playerId, targetId]);
+
+    // Apply damage
+    target.vitals.hp = Math.max(0, target.vitals.hp - damage);
+    sendVitals(target);
+
+    // Check for death
+    if (target.vitals.hp <= 0) {
+      await handlePlayerDeath(target, attacker);
+    }
+  }
+
+  return true;
+}
+
+/**
  * Process combat for a single attacker against their targets
  */
 async function processAttackerCombat(
@@ -189,6 +262,22 @@ async function processAttackerCombat(
   targets: Set<number>
 ): Promise<void> {
   if (!connectedPlayersRef) return;
+
+  // Check if using spell combat
+  if (attacker.combatState.combatAction === 'spell' && attacker.combatState.activeSpell) {
+    const combatContinues = await processSpellCombat(attacker, targets);
+    if (!combatContinues) {
+      return; // Combat was broken due to no mana
+    }
+    // If no targets remain after spell combat, end combat
+    if (attacker.combatState.targets.size === 0) {
+      attacker.regenState.inCombat = false;
+      attacker.combatState.combatAction = 'melee';
+      attacker.combatState.activeSpell = null;
+      sendToSocket(attacker, MessageType.SYSTEM, 'Combat has ended.');
+    }
+    return;
+  }
 
   // Get attacker's equipment stats
   const attackerEquipment = await getEquipmentCombatStats(attacker.playerId);
