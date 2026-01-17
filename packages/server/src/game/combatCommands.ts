@@ -160,6 +160,8 @@ export function clearCombatState(
   socket.combatState.targets.clear();
   socket.combatState.energy = 0;
   socket.combatState.carriedEnergy = 0;
+  socket.combatState.combatAction = 'melee';
+  socket.combatState.activeSpell = null;
 
   // Check if any other players were targeting this player
   // and update their combat state

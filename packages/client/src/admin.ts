@@ -606,6 +606,10 @@ document.addEventListener('DOMContentLoaded', async () => {
       e.stopPropagation();
       userMenu.classList.toggle('open');
     });
+    // Prevent clicks inside the dropdown from closing it
+    userMenu.addEventListener('click', (e) => {
+      e.stopPropagation();
+    });
     document.addEventListener('click', () => {
       userMenu.classList.remove('open');
     });

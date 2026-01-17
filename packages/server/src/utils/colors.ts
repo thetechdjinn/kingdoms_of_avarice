@@ -65,6 +65,11 @@ export const colors = {
   brightBlue: (text: string) => applyStyle(text, 'brightBlue'),
   brightCyan: (text: string) => applyStyle(text, 'brightCyan'),
   brightWhite: (text: string) => applyStyle(text, 'brightWhite'),
+
+  // Alias colors
+  gray: (text: string) => applyStyle(text, 'brightBlack'),
+  grey: (text: string) => applyStyle(text, 'brightBlack'),
+  orange: (text: string) => applyStyle(text, 'yellow'), // ANSI doesn't have orange, use yellow
   
   // Bold variants
   boldCyan: (text: string) => applyStyle(text, 'bold', 'cyan'),

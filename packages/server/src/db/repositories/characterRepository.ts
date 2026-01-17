@@ -203,3 +203,35 @@ export function toSharedCharacter(dbChar: DbCharacter): Character {
     gold: dbChar.gold,
   };
 }
+
+/**
+ * Convert DB character to shared Character with display names for class/race
+ */
+export async function toSharedCharacterWithDisplayNames(dbChar: DbCharacter): Promise<Character> {
+  const { getClassById, getRaceById } = await import('./progressionRepository.js');
+
+  const classDef = await getClassById(dbChar.class);
+  const raceDef = await getRaceById(dbChar.race);
+
+  return {
+    id: dbChar.id,
+    name: dbChar.name,
+    race: raceDef?.display_name || dbChar.race,
+    class: classDef?.display_name || dbChar.class,
+    level: dbChar.level,
+    experience: dbChar.experience,
+    health: dbChar.health,
+    maxHealth: dbChar.max_health,
+    mana: dbChar.mana,
+    maxMana: dbChar.max_mana,
+    stats: {
+      strength: dbChar.strength,
+      intelligence: dbChar.intelligence,
+      dexterity: dbChar.dexterity,
+      constitution: dbChar.constitution,
+      wisdom: dbChar.wisdom,
+      charisma: dbChar.charisma,
+    },
+    gold: dbChar.gold,
+  };
+}

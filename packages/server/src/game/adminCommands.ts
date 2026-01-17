@@ -1,4 +1,6 @@
 import { MessageType, Role, hasAnyRole, ItemLocationType, ItemCondition } from '@koa/shared';
+import * as spellRepo from '../db/repositories/spellRepository.js';
+import * as characterRepo from '../db/repositories/characterRepository.js';
 import { GameWorld, Room } from './world.js';
 import { AuthenticatedSocket, connectedPlayers, sendVitals, sendMessage } from './socket.js';
 import { colors } from '../utils/colors.js';
@@ -24,7 +26,7 @@ export function setPlayerLocation(playerId: number, roomId: number): void {
 const developerCommands = ['create', 'link', 'unlink', 'edit', 'delete', 'reload', 'spawn', 'purge', 'items', 'iteminfo'];
 
 // Commands that any staff can use (Moderator+)
-const staffCommands = ['goto', 'rooms', 'roominfo', 'help', 'give', 'hurt', 'drain'];
+const staffCommands = ['goto', 'rooms', 'roominfo', 'help', 'give', 'hurt', 'drain', 'learn', 'spells'];
 
 export async function processAdminCommand(
   input: string,
@@ -92,6 +94,10 @@ export async function processAdminCommand(
       return handleHurt(args, socket);
     case 'drain':
       return handleDrain(args, socket);
+    case 'learn':
+      return handleLearn(args, socket);
+    case 'spells':
+      return handleListSpells();
     case 'help':
       return handleAdminHelp(userRoles);
     default:
@@ -826,6 +832,102 @@ function handleDrain(
   }
 }
 
+async function handleLearn(
+  args: string[],
+  socket: AuthenticatedSocket
+): Promise<CommandResponse> {
+  // @learn <mnemonic> - Learn a spell for your current character
+  if (args.length < 1) {
+    return { type: MessageType.ERROR, message: 'Usage: @learn <mnemonic>' };
+  }
+
+  if (!socket.characterId) {
+    return { type: MessageType.ERROR, message: 'No character selected.' };
+  }
+
+  const mnemonic = args[0].toLowerCase();
+  const spell = await spellRepo.getSpellByMnemonic(mnemonic);
+
+  if (!spell) {
+    return { type: MessageType.ERROR, message: `Unknown spell mnemonic: ${mnemonic}` };
+  }
+
+  // Check if already learned
+  const hasSpell = await spellRepo.hasSpell(socket.characterId, spell.id);
+  if (hasSpell) {
+    return { type: MessageType.SYSTEM, message: `You already know ${colors.cyan(spell.name)}.` };
+  }
+
+  // Get character info for class check
+  const character = await characterRepo.findCharacterById(socket.characterId);
+  if (!character) {
+    return { type: MessageType.ERROR, message: 'Character not found.' };
+  }
+
+  // Get class display name for restriction check
+  const { getClassById } = await import('../db/repositories/progressionRepository.js');
+  const classDef = await getClassById(character.class);
+  const classDisplayName = classDef?.display_name || character.class;
+
+  // Check class restriction
+  if (spell.classRestrictions.length > 0 && !spell.classRestrictions.includes(classDisplayName)) {
+    return {
+      type: MessageType.ERROR,
+      message: `Only ${spell.classRestrictions.join(', ')} can learn ${spell.name}.`
+    };
+  }
+
+  // Learn the spell
+  const result = await spellRepo.learnSpell(socket.characterId, spell.id);
+  if (!result) {
+    return { type: MessageType.ERROR, message: 'Failed to learn spell.' };
+  }
+
+  return {
+    type: MessageType.SYSTEM,
+    message: `${colors.boldGreen('Learned:')} ${colors.cyan(spell.name)} (${colors.white(spell.mnemonic)}) - ${spell.manaCost} mana`,
+  };
+}
+
+async function handleListSpells(): Promise<CommandResponse> {
+  // @spells - List all available spells
+  const spells = await spellRepo.getAllSpells();
+
+  if (spells.length === 0) {
+    return { type: MessageType.SYSTEM, message: 'No spells exist.' };
+  }
+
+  const lines = [
+    colors.boldYellow(`Spells (${spells.length} total):`),
+    '',
+  ];
+
+  // Group by type
+  const byType = new Map<string, typeof spells>();
+  for (const spell of spells) {
+    const type = spell.spellType;
+    if (!byType.has(type)) {
+      byType.set(type, []);
+    }
+    byType.get(type)!.push(spell);
+  }
+
+  for (const [type, typeSpells] of byType) {
+    lines.push(colors.boldCyan(`  ${type.charAt(0).toUpperCase() + type.slice(1)}:`));
+    for (const spell of typeSpells) {
+      const classes = spell.classRestrictions.length > 0
+        ? spell.classRestrictions.join(', ')
+        : 'All';
+      lines.push(
+        `    ${colors.white(spell.mnemonic.padEnd(6))} ${colors.cyan(spell.name.padEnd(18))} ` +
+        `Lv${spell.levelRequired.toString().padEnd(3)} ${spell.manaCost.toString().padStart(2)} mana  [${classes}]`
+      );
+    }
+  }
+
+  return { type: MessageType.OUTPUT, message: lines.join('\r\n') };
+}
+
 function handleAdminHelp(userRoles: Role[]): CommandResponse {
   const isDeveloper = hasAnyRole(userRoles, [Role.DEVELOPER, Role.ADMIN]);
   
@@ -841,6 +943,8 @@ function handleAdminHelp(userRoles: Role[]): CommandResponse {
   lines.push(`  ${colors.boldCyan('@give <id|name> [quantity]')} - Give yourself an item`);
   lines.push(`  ${colors.boldCyan('@hurt [amount] [player]')} - Damage HP (for testing regen)`);
   lines.push(`  ${colors.boldCyan('@drain [amount] [player]')} - Drain mana (for testing regen)`);
+  lines.push(`  ${colors.boldCyan('@spells')}                 - List all spells in the game`);
+  lines.push(`  ${colors.boldCyan('@learn <mnemonic>')}       - Learn a spell for your character`);
   lines.push(`  ${colors.boldCyan('@help')}                   - Show this help`);
 
   // Developer commands

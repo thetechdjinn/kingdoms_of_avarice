@@ -22,6 +22,7 @@ import { setupProgressionRoutes } from './routes/progression.js';
 import { setupCharacterRoutes } from './routes/characters.js';
 import { setupProfileRoutes } from './routes/profile.js';
 import { setupAdminRoutes } from './routes/admin.js';
+import { setupSpellRoutes } from './routes/spells.js';
 import { setupGameSocket, initializeGameWorld } from './game/socket.js';
 import { testConnection } from './db/index.js';
 import { runMigrations, seedInitialData } from './db/migrate.js';
@@ -49,6 +50,7 @@ setupProgressionRoutes(app);
 setupCharacterRoutes(app);
 setupProfileRoutes(app);
 setupAdminRoutes(app);
+setupSpellRoutes(app);
 
 const server = createServer(app);
 

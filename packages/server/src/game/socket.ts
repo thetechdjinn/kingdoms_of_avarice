@@ -2,7 +2,8 @@ import { WebSocketServer, WebSocket } from 'ws';
 import { IncomingMessage } from 'http';
 import { URL } from 'url';
 import { parse as parseCookie } from 'cookie';
-import { MessageType, GameMessage, Role, VitalsData, ResourceType, PlayerRegenState, CharacterStats } from '@koa/shared';
+import { MessageType, GameMessage, Role, VitalsData, ResourceType, PlayerRegenState } from '@koa/shared';
+import type { CharacterStats, CombatActionType, SpellCastingState } from '@koa/shared';
 import { verifyToken, COOKIE_NAME } from '../routes/auth.js';
 import { GameWorld } from './world.js';
 import { processCommand } from './commands.js';
@@ -13,6 +14,7 @@ import * as progressionRepo from '../db/repositories/progressionRepository.js';
 import { initializeProgressionData } from './progressionLoader.js';
 import { initializeDefaultRegenConfigs, startRegenLoops } from './regeneration.js';
 import { startCombatLoop } from './combat.js';
+import { initializeSpellMnemonics } from './spellCommands.js';
 import { colors } from '../utils/colors.js';
 import { checkWebSocketIp } from '../middleware/ipAccess.js';
 
@@ -21,6 +23,8 @@ interface CombatState {
   targets: Set<number>;    // playerIds this player is attacking
   energy: number;          // Current energy pool for this round
   carriedEnergy: number;   // Leftover energy from last round
+  combatAction: CombatActionType;  // 'melee' or 'spell'
+  activeSpell: SpellCastingState | null;  // If casting, the spell being cast
 }
 
 interface AuthenticatedSocket extends WebSocket {
@@ -90,6 +94,9 @@ export async function initializeGameWorld(): Promise<void> {
 
   // Start combat loop
   startCombatLoop(connectedPlayers);
+
+  // Initialize spell system
+  await initializeSpellMnemonics();
 
   worldInitialized = true;
 }
@@ -227,6 +234,8 @@ export function setupGameSocket(wss: WebSocketServer): void {
       targets: new Set(),
       energy: 0,
       carriedEnergy: 0,
+      combatAction: 'melee',
+      activeSpell: null,
     };
 
     // Cache character stats for combat (avoid DB lookups during combat rounds)
