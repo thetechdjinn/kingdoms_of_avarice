@@ -162,17 +162,19 @@ function renderSpellList(): void {
 }
 
 function selectSpell(id: number): void {
-  selectedSpellId = id;
   const spell = spells.find(s => s.id === id);
 
   const noSpellSelected = getElement<HTMLElement>('no-spell-selected');
   const spellForm = getElement<HTMLElement>('spell-form');
 
   if (!spell) {
+    selectedSpellId = null;
     if (noSpellSelected) noSpellSelected.style.display = 'flex';
     if (spellForm) spellForm.style.display = 'none';
     return;
   }
+
+  selectedSpellId = id;
 
   if (noSpellSelected) noSpellSelected.style.display = 'none';
   if (spellForm) spellForm.style.display = 'block';

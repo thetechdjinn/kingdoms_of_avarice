@@ -40,6 +40,11 @@ export async function runMigrations(): Promise<void> {
       const spellsSchema = readFileSync(spellsSchemaPath, 'utf-8');
       await client.query(spellsSchema);
 
+      // Run status effects schema
+      const statusEffectsSchemaPath = join(sqlDir, 'schema_status_effects.sql');
+      const statusEffectsSchema = readFileSync(statusEffectsSchemaPath, 'utf-8');
+      await client.query(statusEffectsSchema);
+
       // Add brief_mode column if it doesn't exist (for existing databases)
       await client.query(`
         ALTER TABLE players ADD COLUMN IF NOT EXISTS brief_mode BOOLEAN DEFAULT FALSE

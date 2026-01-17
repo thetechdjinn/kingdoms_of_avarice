@@ -12,7 +12,7 @@ CREATE TABLE IF NOT EXISTS spells (
 
     -- Identity
     name VARCHAR(100) NOT NULL,
-    mnemonic VARCHAR(10) NOT NULL UNIQUE,  -- Command shortcut (e.g., 'mmis', 'heal')
+    mnemonic VARCHAR(10) NOT NULL,  -- Command shortcut (e.g., 'mmis', 'heal')
     description TEXT,
 
     -- Classification
@@ -54,8 +54,9 @@ CREATE TABLE IF NOT EXISTS character_spells (
 );
 
 -- Indexes for performance
-CREATE INDEX IF NOT EXISTS idx_spells_mnemonic ON spells(mnemonic);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_spells_mnemonic_lower ON spells(LOWER(mnemonic));  -- Case-insensitive unique
 CREATE INDEX IF NOT EXISTS idx_spells_type ON spells(spell_type);
 CREATE INDEX IF NOT EXISTS idx_spells_class ON spells USING GIN(class_restrictions);
+CREATE INDEX IF NOT EXISTS idx_spells_level_name ON spells(level_required, name);  -- For sorted listings
 CREATE INDEX IF NOT EXISTS idx_character_spells_character ON character_spells(character_id);
 CREATE INDEX IF NOT EXISTS idx_character_spells_spell ON character_spells(spell_id);

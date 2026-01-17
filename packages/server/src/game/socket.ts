@@ -2,7 +2,7 @@ import { WebSocketServer, WebSocket } from 'ws';
 import { IncomingMessage } from 'http';
 import { URL } from 'url';
 import { parse as parseCookie } from 'cookie';
-import { MessageType, GameMessage, Role, VitalsData, ResourceType, PlayerRegenState } from '@koa/shared';
+import { MessageType, GameMessage, Role, VitalsData, ResourceType, PlayerRegenState, ActiveStatusEffect } from '@koa/shared';
 import type { CharacterStats, CombatActionType, SpellCastingState } from '@koa/shared';
 import { verifyToken, COOKIE_NAME } from '../routes/auth.js';
 import { GameWorld } from './world.js';
@@ -15,6 +15,7 @@ import { initializeProgressionData } from './progressionLoader.js';
 import { initializeDefaultRegenConfigs, startRegenLoops } from './regeneration.js';
 import { startCombatLoop } from './combat.js';
 import { initializeSpellMnemonics } from './spellCommands.js';
+import { loadEffectsFromDb, processEffectsTick } from './statusEffects.js';
 import { colors } from '../utils/colors.js';
 import { checkWebSocketIp } from '../middleware/ipAccess.js';
 
@@ -42,6 +43,8 @@ interface AuthenticatedSocket extends WebSocket {
   characterLevel: number;
   characterStats: CharacterStats;
   combatLevel: number;
+  // Status effects
+  activeEffects: Map<string, ActiveStatusEffect>;
 }
 
 const connectedPlayers = new Map<number, AuthenticatedSocket>();
@@ -91,6 +94,9 @@ export async function initializeGameWorld(): Promise<void> {
   // Initialize resource regeneration system
   initializeDefaultRegenConfigs();
   startRegenLoops(connectedPlayers, sendVitals);
+
+  // Start status effect processing loop
+  startStatusEffectLoop();
 
   // Start combat loop
   startCombatLoop(connectedPlayers);
@@ -261,6 +267,14 @@ export function setupGameSocket(wss: WebSocketServer): void {
     }
     authWs.combatLevel = combatLevel;
 
+    // Initialize status effects and load from database
+    authWs.activeEffects = new Map();
+    try {
+      await loadEffectsFromDb(authWs);
+    } catch (error) {
+      console.error('Failed to load status effects:', error);
+    }
+
     // Load brief mode from database (default to false on error)
     try {
       authWs.briefMode = await playerRepo.getBriefMode(payload.playerId);
@@ -334,11 +348,23 @@ export function setupGameSocket(wss: WebSocketServer): void {
       }
     });
 
-    ws.on('close', () => {
+    ws.on('close', async () => {
       // Clear any pending exit timer
       if (authWs.exitTimer) {
         clearTimeout(authWs.exitTimer);
         authWs.exitTimer = undefined;
+      }
+
+      // Save character vitals (HP, mana) on disconnect
+      if (authWs.characterId) {
+        try {
+          await characterRepo.updateCharacterStats(authWs.characterId, {
+            health: authWs.vitals.hp,
+            mana: authWs.vitals.resource ?? 0,
+          });
+        } catch (error) {
+          console.error(`Failed to save vitals for character ${authWs.characterId}:`, error);
+        }
       }
 
       // Broadcast appropriate message based on how they disconnected
@@ -399,4 +425,32 @@ export function broadcastToRoom(roomId: number, text: string, excludePlayerId?: 
   }
 }
 
-export { connectedPlayers, AuthenticatedSocket, sendVitals, sendMessage, CombatState, CharacterStats };
+// Status effect tick interval (matches regen interval)
+const STATUS_EFFECT_TICK_INTERVAL_MS = 5000;
+let statusEffectTimer: NodeJS.Timeout | null = null;
+
+/**
+ * Start the status effect processing loop
+ * Handles DoT damage, HoT healing, and effect expiration
+ */
+function startStatusEffectLoop(): void {
+  if (statusEffectTimer) {
+    clearInterval(statusEffectTimer);
+  }
+
+  statusEffectTimer = setInterval(async () => {
+    for (const [, socket] of connectedPlayers) {
+      if (socket.activeEffects && socket.activeEffects.size > 0) {
+        try {
+          await processEffectsTick(socket, sendMessage, sendVitals);
+        } catch (error) {
+          console.error(`Failed to process status effects for player ${socket.playerId}:`, error);
+        }
+      }
+    }
+  }, STATUS_EFFECT_TICK_INTERVAL_MS);
+
+  console.log(`[StatusEffects] Started status effect processing loop (every ${STATUS_EFFECT_TICK_INTERVAL_MS}ms)`);
+}
+
+export { connectedPlayers, AuthenticatedSocket, sendVitals, sendMessage, CombatState, CharacterStats, startStatusEffectLoop };

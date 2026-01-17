@@ -313,7 +313,7 @@ export async function createSpell(input: CreateSpellInput): Promise<Spell> {
       input.statusEffect || null,
       input.effectDuration || null,
       input.levelRequired,
-      input.classRestrictions && input.classRestrictions.length > 0 ? input.classRestrictions : null,
+      input.classRestrictions ?? [],
       input.isAttackSpell,
     ]
   );
@@ -362,7 +362,7 @@ export async function updateSpell(id: number, input: Partial<CreateSpellInput>):
       updated.statusEffect || null,
       updated.effectDuration || null,
       updated.levelRequired,
-      updated.classRestrictions && updated.classRestrictions.length > 0 ? updated.classRestrictions : null,
+      updated.classRestrictions ?? [],
       updated.isAttackSpell,
       id,
     ]

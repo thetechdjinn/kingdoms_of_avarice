@@ -13,6 +13,7 @@ import { colors } from '../utils/colors.js';
 import * as spellRepo from '../db/repositories/spellRepository.js';
 import * as characterRepo from '../db/repositories/characterRepository.js';
 import { parseDiceString } from './combatCalculations.js';
+import { applyEffect, getEffectDefinition, formatDuration } from './statusEffects.js';
 
 /**
  * Cache of all spell mnemonics for quick lookup
@@ -295,58 +296,83 @@ async function handleHealingSpell(
 }
 
 /**
- * Handle buff spell casting (placeholder)
+ * Handle buff spell casting - applies a beneficial status effect to the caster
  */
 async function handleBuffSpell(
   socket: AuthenticatedSocket,
   spell: Spell
 ): Promise<CommandResponse> {
+  // Check if spell has a status effect defined
+  if (!spell.statusEffect) {
+    return {
+      type: MessageType.ERROR,
+      message: `${spell.name} has no effect defined.`,
+    };
+  }
+
+  // Check if the effect exists in the registry
+  const effectDef = getEffectDefinition(spell.statusEffect);
+  if (!effectDef) {
+    return {
+      type: MessageType.ERROR,
+      message: `Unknown effect: ${spell.statusEffect}`,
+    };
+  }
+
   // Deduct mana
   socket.vitals.resource = (socket.vitals.resource ?? 0) - spell.manaCost;
 
-  // TODO: Implement status effect system
-  // For now, just show a message
+  // Calculate duration in milliseconds (effectDuration is in seconds)
+  const durationMs = (spell.effectDuration ?? 60) * 1000;
+
+  // Apply the status effect
+  const result = await applyEffect(socket, spell.statusEffect, durationMs, spell.id);
+
+  if (!result.success) {
+    return {
+      type: MessageType.ERROR,
+      message: result.message,
+    };
+  }
+
+  // Broadcast to room
   const currentRoomId = getPlayerLocation(socket.playerId);
   broadcastToRoom(
     currentRoomId,
-    `${socket.username} casts ${colors.cyan(spell.name)}.`,
+    `${socket.username} casts ${colors.cyan(spell.name)} and is ${colors.yellow(effectDef.name)}!`,
     socket.playerId
   );
 
+  // Send updated vitals
+  sendVitals(socket);
+
+  const durationStr = formatDuration(durationMs);
   return {
     type: MessageType.OUTPUT,
-    message: `You cast ${colors.cyan(spell.name)}. (Status effects not yet implemented)`,
+    message: `You cast ${colors.cyan(spell.name)}. ${result.message} (${durationStr})`,
   };
 }
 
 /**
- * Handle debuff spell casting (placeholder)
+ * Handle debuff spell casting - requires a valid target (NPC or player)
+ * Currently returns an error as NPCs are not yet implemented.
  */
 async function handleDebuffSpell(
   socket: AuthenticatedSocket,
   spell: Spell,
   args: string[],
-  connectedPlayers: Map<number, AuthenticatedSocket>
+  _connectedPlayers: Map<number, AuthenticatedSocket>
 ): Promise<CommandResponse> {
   // Need a target for debuff spells
   if (spell.targetType === SpellTargetType.ENEMY && args.length === 0) {
     return { type: MessageType.ERROR, message: `Cast ${spell.name} at whom?` };
   }
 
-  // Deduct mana
-  socket.vitals.resource = (socket.vitals.resource ?? 0) - spell.manaCost;
-
-  // TODO: Implement status effect system
-  const currentRoomId = getPlayerLocation(socket.playerId);
-  broadcastToRoom(
-    currentRoomId,
-    `${socket.username} casts ${colors.cyan(spell.name)}.`,
-    socket.playerId
-  );
-
+  // For now, debuff spells require NPCs which aren't implemented yet
+  // Don't deduct mana - spell didn't actually cast
   return {
-    type: MessageType.OUTPUT,
-    message: `You cast ${colors.cyan(spell.name)}. (Status effects not yet implemented)`,
+    type: MessageType.ERROR,
+    message: `There are no valid targets for ${colors.cyan(spell.name)} here.`,
   };
 }
 
