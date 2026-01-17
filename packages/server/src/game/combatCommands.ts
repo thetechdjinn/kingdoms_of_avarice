@@ -78,24 +78,58 @@ export function handleAttack(
   socket.regenState.enhancedRegen.clear();
   target.regenState.enhancedRegen.clear();
 
-  // Broadcast to the room
+  // Broadcast to room (exclude attacker and target - they get personalized messages)
   broadcastToRoom(
     currentRoomId,
-    `${colors.combatAttacker(socket.username)} attacks ${colors.combatDefender(target.username)}!`,
-    socket.playerId
+    `${socket.username} moves to attack ${target.username}.`,
+    [socket.playerId, target.playerId]
   );
 
   // Notify the target
   const targetMessage = {
     type: MessageType.OUTPUT,
-    payload: `${colors.combatAttacker(socket.username)} attacks you!`,
+    payload: `${colors.combatAttacker(socket.username)} moves to attack you!`,
     timestamp: Date.now(),
   };
   target.send(JSON.stringify(targetMessage));
 
   return {
     type: MessageType.OUTPUT,
-    message: `You attack ${colors.combatDefender(target.username)}!`,
+    message: colors.boldRed('*COMBAT ENGAGED*'),
+  };
+}
+
+/**
+ * Handle the break command
+ *
+ * Usage: break (or bre, brea)
+ *
+ * Breaks out of combat, clearing all targets.
+ */
+export function handleBreak(
+  socket: AuthenticatedSocket,
+  connectedPlayers: Map<number, AuthenticatedSocket>
+): CommandResponse {
+  // Check if in combat
+  if (socket.combatState.targets.size === 0) {
+    return { type: MessageType.ERROR, message: 'You are not in combat!' };
+  }
+
+  const currentRoomId = getPlayerLocation(socket.playerId);
+
+  // Clear combat state
+  clearCombatState(socket, connectedPlayers);
+
+  // Broadcast to room
+  broadcastToRoom(
+    currentRoomId,
+    `${socket.username} breaks off combat.`,
+    socket.playerId
+  );
+
+  return {
+    type: MessageType.OUTPUT,
+    message: colors.boldYellow('*COMBAT OFF*'),
   };
 }
 

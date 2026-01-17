@@ -247,27 +247,53 @@
     }
   }
 
+  function handleDocLink(file: string): void {
+    // Update URL without page reload
+    const newUrl = '/docs.html?file=' + encodeURIComponent(file);
+    window.history.pushState({}, '', newUrl);
+    loadDocument(file);
+  }
+
   function init(): void {
     // Get file from URL params
     const params = new URLSearchParams(window.location.search);
     const file = params.get('file') || 'README.md';
-    
+
     loadDocument(file);
-    
-    // Handle link clicks for SPA-style navigation
+
+    // Handle sidebar link clicks with SPA-style navigation
     document.querySelectorAll('.doc-link').forEach(link => {
-      link.addEventListener('click', (e) => {
+      link.addEventListener('click', (e: Event) => {
         e.preventDefault();
-        const href = link.getAttribute('href') || '';
-        const url = new URL(href, window.location.origin);
-        const filename = url.searchParams.get('file') || 'README.md';
-        
-        window.history.pushState({}, '', href);
-        loadDocument(filename);
+        const href = (e.currentTarget as HTMLAnchorElement).getAttribute('href');
+        if (href) {
+          const url = new URL(href, window.location.origin);
+          const newFile = url.searchParams.get('file');
+          if (newFile) {
+            handleDocLink(newFile);
+          }
+        }
       });
     });
-    
-    // Handle browser back/forward
+
+    // Handle clicks on links within the markdown content (relative .md links)
+    const content = document.getElementById('markdown-content');
+    if (content) {
+      content.addEventListener('click', (e: Event) => {
+        // Use closest() to handle clicks on nested elements within links
+        const anchor = (e.target as HTMLElement).closest('a');
+        if (anchor) {
+          const href = anchor.getAttribute('href');
+          if (href && href.endsWith('.md') && !href.startsWith('http')) {
+            e.preventDefault();
+            // Handle relative .md links
+            handleDocLink(href);
+          }
+        }
+      });
+    }
+
+    // Handle browser back/forward buttons
     window.addEventListener('popstate', () => {
       const params = new URLSearchParams(window.location.search);
       const file = params.get('file') || 'README.md';

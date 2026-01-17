@@ -1,11 +1,12 @@
-import { MessageType, GameMessage, Role, hasAnyRole } from '@koa/shared';
+import { MessageType, GameMessage, Role, hasAnyRole, StatusEffectCategory } from '@koa/shared';
+import { getActiveEffectsDisplay, formatDuration } from './statusEffects.js';
 import { GameWorld } from './world.js';
 import { AuthenticatedSocket, broadcastToRoom } from './socket.js';
 import { colors } from '../utils/colors.js';
 import { processAdminCommand, getPlayerLocation, setPlayerLocation } from './adminCommands.js';
 import * as playerRepo from '../db/repositories/playerRepository.js';
 import { handleGet, handleDrop, handleInventory, handleExamine, getRoomItemsDescription, handleWield, handleWear, handleRemove, handleEquipment, handlePut, handleGetFrom, handleLookIn, handleUse, handleLight, handleExtinguish, handleRepair, handleSearch, handleRecipes, handleCraft, handleEnchantments, handleEnchant } from './itemCommands.js';
-import { handleAttack, handleFlee } from './combatCommands.js';
+import { handleAttack, handleFlee, handleBreak } from './combatCommands.js';
 import { isSpellMnemonic, handleSpellCommand, handleSpellbook } from './spellCommands.js';
 import * as characterRepo from '../db/repositories/characterRepository.js';
 import * as progressionRepo from '../db/repositories/progressionRepository.js';
@@ -219,6 +220,11 @@ export async function processCommand(
     return fleeResult;
   }
 
+  // Break combat command (bre, brea, break)
+  if ('break'.startsWith(command) && command.length >= 3) {
+    return handleBreak(socket, _connectedPlayers);
+  }
+
   // Spellbook command
   if (command === 'spells' || command === 'spellbook' || command === 'sp') {
     return handleSpellbook(socket);
@@ -424,7 +430,7 @@ async function handleMove(
 
   // Save room location to database first
   try {
-    await playerRepo.setCurrentRoomId(socket.playerId, newRoom.id);
+    await characterRepo.updateCharacterRoom(socket.characterId!, newRoom.id);
   } catch (error) {
     console.error('Failed to save room location:', error);
     return { type: MessageType.ERROR, message: 'Something prevents you from moving.' };
@@ -718,6 +724,41 @@ async function handleStatus(socket: AuthenticatedSocket): Promise<CommandRespons
     lines.push(`  ${colors.red('[ IN COMBAT ]')}`);
   } else if (socket.regenState.enhancedRegen.size > 0) {
     lines.push(`  ${colors.cyan('[ RESTING ]')}`);
+  }
+
+  // Active effects
+  const activeEffects = getActiveEffectsDisplay(socket);
+  if (activeEffects.length > 0) {
+    lines.push('');
+    lines.push(separator);
+    lines.push(colors.boldCyan('  Active Effects'));
+    lines.push(separator);
+
+    for (const effect of activeEffects) {
+      const timeLeft = formatDuration(effect.remainingMs);
+      const stackInfo = effect.stacks > 1 ? ` (x${effect.stacks})` : '';
+
+      // Color based on effect category
+      let effectColor: (s: string) => string;
+      switch (effect.category) {
+        case StatusEffectCategory.BUFF:
+        case StatusEffectCategory.HOT:
+          effectColor = colors.green;
+          break;
+        case StatusEffectCategory.DEBUFF:
+        case StatusEffectCategory.DOT:
+          effectColor = colors.red;
+          break;
+        case StatusEffectCategory.CONTROL:
+          effectColor = colors.yellow;
+          break;
+        default:
+          effectColor = colors.white;
+      }
+
+      lines.push(`  ${effectColor(effect.name)}${stackInfo} ${colors.gray(`(${timeLeft})`)}`);
+    }
+    lines.push(separator);
   }
 
   return { type: MessageType.OUTPUT, message: lines.join('\r\n') };

@@ -139,11 +139,29 @@ export function setupSpellRoutes(app: Express): void {
       }
 
       // Check for duplicate mnemonic if mnemonic is being changed
-      const { mnemonic } = req.body;
+      const { mnemonic, spellType, targetType } = req.body;
       if (mnemonic && mnemonic.toLowerCase() !== existing.mnemonic.toLowerCase()) {
         const existingMnemonic = await spellRepo.getSpellByMnemonic(mnemonic);
         if (existingMnemonic) {
           res.status(400).json({ success: false, message: `Mnemonic "${mnemonic}" is already in use` });
+          return;
+        }
+      }
+
+      // Validate spell_type if provided
+      if (spellType !== undefined) {
+        const validSpellTypes = Object.values(SpellType);
+        if (!validSpellTypes.includes(spellType)) {
+          res.status(400).json({ success: false, message: `Invalid spellType: must be one of ${validSpellTypes.join(', ')}` });
+          return;
+        }
+      }
+
+      // Validate target_type if provided
+      if (targetType !== undefined) {
+        const validTargetTypes = Object.values(SpellTargetType);
+        if (!validTargetTypes.includes(targetType)) {
+          res.status(400).json({ success: false, message: `Invalid targetType: must be one of ${validTargetTypes.join(', ')}` });
           return;
         }
       }

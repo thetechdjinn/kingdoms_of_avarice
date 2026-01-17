@@ -4,6 +4,7 @@ import {
   CharacterSpell,
   SpellType,
   SpellTargetType,
+  SpellScalingStat,
 } from '@koa/shared';
 
 // Database row type for spells table
@@ -22,6 +23,10 @@ interface DbSpell {
   level_required: number;
   class_restrictions: string[] | null;
   is_attack_spell: boolean;
+  damage_scaling_stat: string | null;
+  damage_scaling_factor: string | null;  // DECIMAL comes as string
+  healing_scaling_stat: string | null;
+  healing_scaling_factor: string | null;  // DECIMAL comes as string
   created_at: Date;
   updated_at: Date;
 }
@@ -51,6 +56,10 @@ function dbToSpell(row: DbSpell): Spell {
     levelRequired: row.level_required,
     classRestrictions: row.class_restrictions ?? [],
     isAttackSpell: row.is_attack_spell,
+    damageScalingStat: row.damage_scaling_stat as SpellScalingStat | null,
+    damageScalingFactor: row.damage_scaling_factor ? (isNaN(parseFloat(row.damage_scaling_factor)) ? null : parseFloat(row.damage_scaling_factor)) : null,
+    healingScalingStat: row.healing_scaling_stat as SpellScalingStat | null,
+    healingScalingFactor: row.healing_scaling_factor ? (isNaN(parseFloat(row.healing_scaling_factor)) ? null : parseFloat(row.healing_scaling_factor)) : null,
   };
 }
 
@@ -288,6 +297,10 @@ export interface CreateSpellInput {
   levelRequired: number;
   classRestrictions?: string[];
   isAttackSpell: boolean;
+  damageScalingStat?: SpellScalingStat;
+  damageScalingFactor?: number;
+  healingScalingStat?: SpellScalingStat;
+  healingScalingFactor?: number;
 }
 
 /**
@@ -298,8 +311,9 @@ export async function createSpell(input: CreateSpellInput): Promise<Spell> {
     `INSERT INTO spells (
       name, mnemonic, description, spell_type, target_type,
       mana_cost, damage_dice, healing_dice, status_effect, effect_duration,
-      level_required, class_restrictions, is_attack_spell
-    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+      level_required, class_restrictions, is_attack_spell,
+      damage_scaling_stat, damage_scaling_factor, healing_scaling_stat, healing_scaling_factor
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
     RETURNING *`,
     [
       input.name,
@@ -313,8 +327,12 @@ export async function createSpell(input: CreateSpellInput): Promise<Spell> {
       input.statusEffect || null,
       input.effectDuration || null,
       input.levelRequired,
-      input.classRestrictions && input.classRestrictions.length > 0 ? input.classRestrictions : null,
+      input.classRestrictions ?? [],
       input.isAttackSpell,
+      input.damageScalingStat || null,
+      input.damageScalingFactor || null,
+      input.healingScalingStat || null,
+      input.healingScalingFactor || null,
     ]
   );
   return dbToSpell(result.rows[0]);
@@ -341,14 +359,20 @@ export async function updateSpell(id: number, input: Partial<CreateSpellInput>):
     levelRequired: input.levelRequired ?? existing.levelRequired,
     classRestrictions: input.classRestrictions !== undefined ? input.classRestrictions : existing.classRestrictions,
     isAttackSpell: input.isAttackSpell ?? existing.isAttackSpell,
+    damageScalingStat: input.damageScalingStat !== undefined ? input.damageScalingStat : existing.damageScalingStat,
+    damageScalingFactor: input.damageScalingFactor !== undefined ? input.damageScalingFactor : existing.damageScalingFactor,
+    healingScalingStat: input.healingScalingStat !== undefined ? input.healingScalingStat : existing.healingScalingStat,
+    healingScalingFactor: input.healingScalingFactor !== undefined ? input.healingScalingFactor : existing.healingScalingFactor,
   };
 
   const result = await query<DbSpell>(
     `UPDATE spells SET
       name = $1, mnemonic = $2, description = $3, spell_type = $4, target_type = $5,
       mana_cost = $6, damage_dice = $7, healing_dice = $8, status_effect = $9, effect_duration = $10,
-      level_required = $11, class_restrictions = $12, is_attack_spell = $13, updated_at = NOW()
-    WHERE id = $14
+      level_required = $11, class_restrictions = $12, is_attack_spell = $13,
+      damage_scaling_stat = $14, damage_scaling_factor = $15, healing_scaling_stat = $16, healing_scaling_factor = $17,
+      updated_at = NOW()
+    WHERE id = $18
     RETURNING *`,
     [
       updated.name,
@@ -362,8 +386,12 @@ export async function updateSpell(id: number, input: Partial<CreateSpellInput>):
       updated.statusEffect || null,
       updated.effectDuration || null,
       updated.levelRequired,
-      updated.classRestrictions && updated.classRestrictions.length > 0 ? updated.classRestrictions : null,
+      updated.classRestrictions ?? [],
       updated.isAttackSpell,
+      updated.damageScalingStat || null,
+      updated.damageScalingFactor || null,
+      updated.healingScalingStat || null,
+      updated.healingScalingFactor || null,
       id,
     ]
   );

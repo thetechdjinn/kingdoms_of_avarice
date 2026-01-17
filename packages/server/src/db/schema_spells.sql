@@ -12,7 +12,7 @@ CREATE TABLE IF NOT EXISTS spells (
 
     -- Identity
     name VARCHAR(100) NOT NULL,
-    mnemonic VARCHAR(10) NOT NULL UNIQUE,  -- Command shortcut (e.g., 'mmis', 'heal')
+    mnemonic VARCHAR(10) NOT NULL,  -- Command shortcut (e.g., 'mmis', 'heal')
     description TEXT,
 
     -- Classification
@@ -37,6 +37,12 @@ CREATE TABLE IF NOT EXISTS spells (
     -- Combat behavior
     is_attack_spell BOOLEAN NOT NULL DEFAULT FALSE,  -- If true, replaces melee combat action
 
+    -- Stat scaling (adds bonus damage/healing based on character stats)
+    damage_scaling_stat VARCHAR(20) CHECK (damage_scaling_stat IN ('none', 'strength', 'agility', 'constitution', 'intellect', 'wisdom', 'charisma')),
+    damage_scaling_factor DECIMAL(4,2),  -- Percentage of stat added (e.g., 0.50 = 50%)
+    healing_scaling_stat VARCHAR(20) CHECK (healing_scaling_stat IN ('none', 'strength', 'agility', 'constitution', 'intellect', 'wisdom', 'charisma')),
+    healing_scaling_factor DECIMAL(4,2),  -- Percentage of stat added (e.g., 0.50 = 50%)
+
     -- Metadata
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -54,8 +60,9 @@ CREATE TABLE IF NOT EXISTS character_spells (
 );
 
 -- Indexes for performance
-CREATE INDEX IF NOT EXISTS idx_spells_mnemonic ON spells(mnemonic);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_spells_mnemonic_lower ON spells(LOWER(mnemonic));  -- Case-insensitive unique
 CREATE INDEX IF NOT EXISTS idx_spells_type ON spells(spell_type);
 CREATE INDEX IF NOT EXISTS idx_spells_class ON spells USING GIN(class_restrictions);
+CREATE INDEX IF NOT EXISTS idx_spells_level_name ON spells(level_required, name);  -- For sorted listings
 CREATE INDEX IF NOT EXISTS idx_character_spells_character ON character_spells(character_id);
 CREATE INDEX IF NOT EXISTS idx_character_spells_spell ON character_spells(spell_id);

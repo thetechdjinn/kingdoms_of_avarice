@@ -1,4 +1,4 @@
-import { Spell, SpellType, SpellTargetType } from '@koa/shared';
+import { Spell, SpellType, SpellTargetType, SpellScalingStat } from '@koa/shared';
 
 (function() {
 
@@ -162,17 +162,19 @@ function renderSpellList(): void {
 }
 
 function selectSpell(id: number): void {
-  selectedSpellId = id;
   const spell = spells.find(s => s.id === id);
 
   const noSpellSelected = getElement<HTMLElement>('no-spell-selected');
   const spellForm = getElement<HTMLElement>('spell-form');
 
   if (!spell) {
+    selectedSpellId = null;
     if (noSpellSelected) noSpellSelected.style.display = 'flex';
     if (spellForm) spellForm.style.display = 'none';
     return;
   }
+
+  selectedSpellId = id;
 
   if (noSpellSelected) noSpellSelected.style.display = 'none';
   if (spellForm) spellForm.style.display = 'block';
@@ -209,6 +211,17 @@ function selectSpell(id: number): void {
   if (healingDiceInput) healingDiceInput.value = spell.healingDice || '';
   if (statusEffectInput) statusEffectInput.value = spell.statusEffect || '';
   if (effectDurationInput) effectDurationInput.value = String(spell.effectDuration || 0);
+
+  // Scaling fields
+  const damageScalingStatSelect = getElement<HTMLSelectElement>('spell-damage-scaling-stat');
+  const damageScalingFactorInput = getElement<HTMLInputElement>('spell-damage-scaling-factor');
+  const healingScalingStatSelect = getElement<HTMLSelectElement>('spell-healing-scaling-stat');
+  const healingScalingFactorInput = getElement<HTMLInputElement>('spell-healing-scaling-factor');
+
+  if (damageScalingStatSelect) damageScalingStatSelect.value = spell.damageScalingStat || '';
+  if (damageScalingFactorInput) damageScalingFactorInput.value = spell.damageScalingFactor ? String(Math.round(spell.damageScalingFactor * 100)) : '0';
+  if (healingScalingStatSelect) healingScalingStatSelect.value = spell.healingScalingStat || '';
+  if (healingScalingFactorInput) healingScalingFactorInput.value = spell.healingScalingFactor ? String(Math.round(spell.healingScalingFactor * 100)) : '0';
 
   // Requirements
   const levelRequiredInput = getElement<HTMLInputElement>('spell-level-required');
@@ -282,21 +295,31 @@ function updatePreview(spell: Spell): void {
     </div>
   `;
 
-  // Damage/Healing
+  // Damage/Healing with scaling
   if (spell.spellType === 'offensive' && spell.damageDice) {
+    let damageInfo = escapeHtml(spell.damageDice);
+    if (spell.damageScalingStat && spell.damageScalingStat !== 'none' && spell.damageScalingFactor) {
+      const pct = Math.round(spell.damageScalingFactor * 100);
+      damageInfo += ` <span style="color: #60a5fa">+${pct}% ${escapeHtml(spell.damageScalingStat.toUpperCase())}</span>`;
+    }
     html += `
       <div class="preview-section">
         <div class="preview-section-title">Damage</div>
-        <div>${escapeHtml(spell.damageDice)}</div>
+        <div>${damageInfo}</div>
       </div>
     `;
   }
 
   if (spell.spellType === 'healing' && spell.healingDice) {
+    let healingInfo = escapeHtml(spell.healingDice);
+    if (spell.healingScalingStat && spell.healingScalingStat !== 'none' && spell.healingScalingFactor) {
+      const pct = Math.round(spell.healingScalingFactor * 100);
+      healingInfo += ` <span style="color: #4ade80">+${pct}% ${escapeHtml(spell.healingScalingStat.toUpperCase())}</span>`;
+    }
     html += `
       <div class="preview-section">
         <div class="preview-section-title">Healing</div>
-        <div>${escapeHtml(spell.healingDice)}</div>
+        <div>${healingInfo}</div>
       </div>
     `;
   }
@@ -491,6 +514,12 @@ function gatherFormData(): Partial<Spell> {
     .map(c => c.trim())
     .filter(c => c);
 
+  // Parse scaling values - convert percentage to decimal (round to handle floating point)
+  const damageScalingStat = getElement<HTMLSelectElement>('spell-damage-scaling-stat')?.value || null;
+  const damageScalingFactorPct = Math.round(parseFloat(getElement<HTMLInputElement>('spell-damage-scaling-factor')?.value || '0')) || 0;
+  const healingScalingStat = getElement<HTMLSelectElement>('spell-healing-scaling-stat')?.value || null;
+  const healingScalingFactorPct = Math.round(parseFloat(getElement<HTMLInputElement>('spell-healing-scaling-factor')?.value || '0')) || 0;
+
   return {
     name: (document.getElementById('spell-name') as HTMLInputElement).value,
     mnemonic: (document.getElementById('spell-mnemonic') as HTMLInputElement).value.toLowerCase(),
@@ -505,6 +534,10 @@ function gatherFormData(): Partial<Spell> {
     effectDuration: parseInt((document.getElementById('spell-effect-duration') as HTMLInputElement).value) || null,
     levelRequired: parseInt((document.getElementById('spell-level-required') as HTMLInputElement).value) || 1,
     classRestrictions,
+    damageScalingStat: damageScalingStat as SpellScalingStat | null,
+    damageScalingFactor: damageScalingFactorPct > 0 ? damageScalingFactorPct / 100 : null,
+    healingScalingStat: healingScalingStat as SpellScalingStat | null,
+    healingScalingFactor: healingScalingFactorPct > 0 ? healingScalingFactorPct / 100 : null,
   };
 }
 

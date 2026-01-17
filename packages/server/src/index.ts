@@ -23,6 +23,7 @@ import { setupCharacterRoutes } from './routes/characters.js';
 import { setupProfileRoutes } from './routes/profile.js';
 import { setupAdminRoutes } from './routes/admin.js';
 import { setupSpellRoutes } from './routes/spells.js';
+import { setupStatusEffectDefinitionRoutes } from './routes/statusEffectDefinitions.js';
 import { setupGameSocket, initializeGameWorld } from './game/socket.js';
 import { testConnection } from './db/index.js';
 import { runMigrations, seedInitialData } from './db/migrate.js';
@@ -51,6 +52,7 @@ setupCharacterRoutes(app);
 setupProfileRoutes(app);
 setupAdminRoutes(app);
 setupSpellRoutes(app);
+setupStatusEffectDefinitionRoutes(app);
 
 const server = createServer(app);
 

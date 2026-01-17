@@ -22,6 +22,20 @@ export enum SpellTargetType {
 }
 
 /**
+ * Character stats that can scale spell effects
+ * Also used for other scaling mechanics (HP gains, resistance, etc.)
+ */
+export enum SpellScalingStat {
+  NONE = 'none',
+  STRENGTH = 'strength',
+  AGILITY = 'agility',
+  CONSTITUTION = 'constitution',  // Health/vitality - affects HP gains, damage resistance
+  INTELLECT = 'intellect',
+  WISDOM = 'wisdom',
+  CHARISMA = 'charisma',
+}
+
+/**
  * Spell definition
  */
 export interface Spell {
@@ -39,6 +53,11 @@ export interface Spell {
   levelRequired: number;
   classRestrictions: string[];
   isAttackSpell: boolean;
+  // Stat scaling - adds bonus damage/healing based on character stats
+  damageScalingStat: SpellScalingStat | null;  // Which stat scales damage
+  damageScalingFactor: number | null;           // % of stat added to damage (e.g., 0.5 = 50%)
+  healingScalingStat: SpellScalingStat | null;  // Which stat scales healing
+  healingScalingFactor: number | null;          // % of stat added to healing
 }
 
 /**
@@ -65,4 +84,7 @@ export interface SpellCastingState {
   mnemonic: string;
   manaCost: number;
   damageDice: string;
+  // Scaling info for combat calculations
+  damageScalingStat: SpellScalingStat | null;
+  damageScalingFactor: number | null;
 }

@@ -4,10 +4,11 @@
  * Manages the global combat timer and processes combat rounds for all players.
  */
 
-import { MessageType, GameMessage, AttackResult } from '@koa/shared';
+import { MessageType, GameMessage, AttackResult, SpellScalingStat } from '@koa/shared';
 import { AuthenticatedSocket } from './socket.js';
 import { getPlayerLocation } from './adminCommands.js';
 import { colors } from '../utils/colors.js';
+import { getEffectModifiers, hasEffect } from './statusEffects.js';
 import {
   calculateRoundEnergy,
   calculateAccuracy,
@@ -22,6 +23,34 @@ import {
   getEquipmentAccuracyBonus,
 } from './combatStats.js';
 import * as characterRepo from '../db/repositories/characterRepository.js';
+
+/**
+ * Get character stat value based on spell scaling stat
+ * Maps spell stat names to character stat property names
+ */
+function getStatValueForScaling(
+  stats: { strength: number; dexterity: number; intelligence: number; constitution: number; wisdom: number; charisma: number },
+  scalingStat: SpellScalingStat | null
+): number {
+  if (!scalingStat || scalingStat === SpellScalingStat.NONE) return 0;
+
+  switch (scalingStat) {
+    case SpellScalingStat.STRENGTH:
+      return stats.strength;
+    case SpellScalingStat.AGILITY:
+      return stats.dexterity;  // Agility maps to dexterity
+    case SpellScalingStat.CONSTITUTION:
+      return stats.constitution;  // Health/vitality
+    case SpellScalingStat.INTELLECT:
+      return stats.intelligence;  // Intellect maps to intelligence
+    case SpellScalingStat.WISDOM:
+      return stats.wisdom;
+    case SpellScalingStat.CHARISMA:
+      return stats.charisma;
+    default:
+      return 0;
+  }
+}
 
 const DEFAULT_COMBAT_ROUND_MS = 4000;
 const parsedRoundMs = parseInt(process.env.COMBAT_ROUND_MS || '', 10);
@@ -213,6 +242,13 @@ async function processSpellCombat(
   // Parse spell damage dice
   const { min: minDamage, max: maxDamage } = parseDiceString(spell.damageDice);
 
+  // Calculate scaling bonus from caster's stats
+  let scalingBonus = 0;
+  if (spell.damageScalingStat && spell.damageScalingFactor) {
+    const statValue = getStatValueForScaling(attacker.characterStats, spell.damageScalingStat);
+    scalingBonus = Math.floor(statValue * spell.damageScalingFactor);
+  }
+
   // Process each target
   for (const targetId of targets) {
     const target = connectedPlayersRef.get(targetId);
@@ -229,8 +265,9 @@ async function processSpellCombat(
       continue;
     }
 
-    // Roll spell damage (no miss chance for spells - they always hit)
-    const damage = Math.floor(Math.random() * (maxDamage - minDamage + 1)) + minDamage;
+    // Roll spell damage (no miss chance for spells - they always hit) + scaling bonus
+    const baseDamage = Math.floor(Math.random() * (maxDamage - minDamage + 1)) + minDamage;
+    const damage = baseDamage + scalingBonus;
 
     // Send spell messages
     const attackerMsg = `You cast ${colors.cyan(spell.spellName)} at ${colors.combatDefender(target.username)} for ${colors.combatDamage(damage.toString())} damage!`;
@@ -298,9 +335,14 @@ async function processAttackerCombat(
     encumbranceRatio,
   };
 
-  const roundEnergy = calculateRoundEnergy(energyFactors);
+  // Get attacker's status effect modifiers
+  const attackerEffectMods = getEffectModifiers(attacker);
 
-  // Calculate attacker's accuracy with equipment bonuses
+  // Apply energy modifier from status effects
+  const energyMultiplier = 1 + (attackerEffectMods.energyModifier / 100);
+  const roundEnergy = Math.floor(calculateRoundEnergy(energyFactors) * energyMultiplier);
+
+  // Calculate attacker's accuracy with equipment and status effect bonuses
   const equipmentAccuracyBonus = getEquipmentAccuracyBonus(attackerEquipment.statModifiers);
   const accuracyFactors = {
     characterLevel: attacker.characterLevel,
@@ -309,9 +351,9 @@ async function processAttackerCombat(
     intelligence: effectiveInt,
     charisma: attacker.characterStats.charisma + (attackerEquipment.statModifiers.charisma || 0),
     equipmentBonus: equipmentAccuracyBonus,
-    spellModifier: DEFAULT_SPELL_MODIFIER, // TODO: Get from active buffs
+    spellModifier: attackerEffectMods.accuracyModifier,
     encumbrancePenalty: encumbranceRatio > 0.75 ? Math.floor((encumbranceRatio - 0.75) * 40) : 0,
-    isBlind: false,
+    isBlind: attackerEffectMods.isBlind,
   };
 
   const attackerAccuracy = calculateAccuracy(accuracyFactors);
@@ -346,19 +388,25 @@ async function processAttackerCombat(
     const defenderEquipment = await getEquipmentCombatStats(target.playerId);
     const defenderEquipmentBonus = getEquipmentAccuracyBonus(defenderEquipment.statModifiers);
 
-    // Calculate defender's defense from equipped armor
+    // Get defender's status effect modifiers
+    const defenderEffectMods = getEffectModifiers(target);
+
+    // Calculate defender's defense from equipped armor and status effects
     const defenseFactors = {
       armorClass: defenderEquipment.armor.totalArmorClass,
       perception: DEFAULT_PERCEPTION,  // TODO: Add perception stat to characters
       shadow: DEFAULT_SHADOW,          // TODO: Add shadow stat to characters
       equipmentBonus: defenderEquipmentBonus,
-      spellModifier: DEFAULT_SPELL_MODIFIER,
+      spellModifier: defenderEffectMods.defenseModifier,
     };
 
     const targetDefense = calculateDefense(defenseFactors);
 
-    // Parse weapon damage dice
-    const { min: minDamage, max: maxDamage } = parseDiceString(weaponDamage);
+    // Parse weapon damage dice and apply damage modifier from status effects
+    const { min: baseMinDamage, max: baseMaxDamage } = parseDiceString(weaponDamage);
+    const damageMultiplier = 1 + (attackerEffectMods.damageModifier / 100);
+    const minDamage = Math.max(1, Math.floor(baseMinDamage * damageMultiplier));
+    const maxDamage = Math.max(1, Math.floor(baseMaxDamage * damageMultiplier));
 
     // Execute combat round with actual equipment stats
     const combatResult = executeCombatRound(

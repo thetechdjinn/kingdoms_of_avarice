@@ -133,3 +133,6 @@ export * from "./combat.js";
 
 // Re-export spell system
 export * from "./spells.js";
+
+// Re-export status effects system
+export * from "./statusEffects.js";

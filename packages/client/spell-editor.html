@@ -19,12 +19,14 @@
               <a href="/editor.html" class="nav-dropdown-item">Room Editor</a>
               <a href="/item-editor.html" class="nav-dropdown-item">Item Editor</a>
               <a href="/spell-editor.html" class="nav-dropdown-item active">Spell Editor</a>
+              <a href="/status-editor.html" class="nav-dropdown-item">Status Effects Editor</a>
               <a href="/progression-editor.html" class="nav-dropdown-item">Progression Editor</a>
             </div>
           </div>
           <a href="/admin.html" class="nav-link" id="nav-admin-link" style="display: none;">Admin</a>
         </div>
         <div class="nav-spacer"></div>
+        <a href="/docs.html?file=Spell_and_Effects_Guide.md" target="_blank" rel="noopener noreferrer" class="help-link nav-help" title="View Documentation">?</a>
         <div class="nav-user-menu">
           <button class="nav-user-btn" id="nav-username">User</button>
           <div class="dropdown-menu" id="user-dropdown">
@@ -146,6 +148,26 @@
                     <span class="hint-inline">Format: XdY or XdY+Z (e.g., 2d6+3)</span>
                   </div>
                 </div>
+                <div class="form-row">
+                  <div class="form-group">
+                    <label for="spell-damage-scaling-stat">Damage Scaling Stat</label>
+                    <select id="spell-damage-scaling-stat">
+                      <option value="none">None</option>
+                      <option value="strength">Strength</option>
+                      <option value="agility">Agility</option>
+                      <option value="constitution">Constitution</option>
+                      <option value="intellect">Intellect</option>
+                      <option value="wisdom">Wisdom</option>
+                      <option value="charisma">Charisma</option>
+                    </select>
+                    <span class="hint-inline">Which stat adds bonus damage</span>
+                  </div>
+                  <div class="form-group">
+                    <label for="spell-damage-scaling-factor">Scaling Factor (%)</label>
+                    <input type="number" id="spell-damage-scaling-factor" min="0" max="200" step="5" value="0" />
+                    <span class="hint-inline">% of stat added (e.g., 50 = +50% of INT)</span>
+                  </div>
+                </div>
               </div>
 
               <div id="healing-section" class="effect-section">
@@ -155,6 +177,26 @@
                     <label for="spell-healing-dice">Healing Dice</label>
                     <input type="text" id="spell-healing-dice" placeholder="1d8+2" />
                     <span class="hint-inline">Format: XdY or XdY+Z (e.g., 2d8+4)</span>
+                  </div>
+                </div>
+                <div class="form-row">
+                  <div class="form-group">
+                    <label for="spell-healing-scaling-stat">Healing Scaling Stat</label>
+                    <select id="spell-healing-scaling-stat">
+                      <option value="none">None</option>
+                      <option value="strength">Strength</option>
+                      <option value="agility">Agility</option>
+                      <option value="constitution">Constitution</option>
+                      <option value="intellect">Intellect</option>
+                      <option value="wisdom">Wisdom</option>
+                      <option value="charisma">Charisma</option>
+                    </select>
+                    <span class="hint-inline">Which stat adds bonus healing</span>
+                  </div>
+                  <div class="form-group">
+                    <label for="spell-healing-scaling-factor">Scaling Factor (%)</label>
+                    <input type="number" id="spell-healing-scaling-factor" min="0" max="200" step="5" value="0" />
+                    <span class="hint-inline">% of stat added (e.g., 50 = +50% of WIS)</span>
                   </div>
                 </div>
               </div>
