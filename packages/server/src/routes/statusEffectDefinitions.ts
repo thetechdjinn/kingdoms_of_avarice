@@ -320,8 +320,8 @@ export function setupStatusEffectDefinitionRoutes(app: Express): void {
   app.post('/api/status-effects/import', requireDeveloper, async (req: Request, res: Response) => {
     try {
       const { definitions, merge: mergeParam } = req.body;
-      // Validate merge parameter - defaults to true if not provided
-      const merge = mergeParam === undefined ? true : mergeParam === true;
+      // Validate merge parameter - defaults to true, only false if explicitly false
+      const merge = mergeParam !== false;
 
       if (!definitions || !Array.isArray(definitions)) {
         res.status(400).json({ success: false, message: 'definitions array is required' });
@@ -380,7 +380,7 @@ export function setupStatusEffectDefinitionRoutes(app: Express): void {
             results.errors.push(`Skipped "${normalizedId}": already exists (merge disabled)`);
           }
         } catch (err) {
-          results.errors.push(`Failed to import "${def.id}": ${err instanceof Error ? err.message : String(err)}`);
+          results.errors.push(`Failed to import "${normalizedId || def.id || 'unknown'}": ${err instanceof Error ? err.message : String(err)}`);
         }
       }
 
