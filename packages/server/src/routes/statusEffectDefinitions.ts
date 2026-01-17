@@ -179,6 +179,41 @@ export function setupStatusEffectDefinitionRoutes(app: Express): void {
         return;
       }
 
+      // Validate numeric fields if provided
+      const numericFields = { maxStacks, accuracyModifier, defenseModifier, energyModifier, damageModifier };
+      for (const [field, value] of Object.entries(numericFields)) {
+        if (value !== undefined && value !== null && typeof value !== 'number') {
+          res.status(400).json({ success: false, message: `${field} must be a number` });
+          return;
+        }
+      }
+
+      // Validate maxStacks is positive if provided
+      if (maxStacks !== undefined && maxStacks !== null) {
+        if (typeof maxStacks === 'number' && (maxStacks < 1 || !Number.isInteger(maxStacks))) {
+          res.status(400).json({ success: false, message: 'maxStacks must be a positive integer' });
+          return;
+        }
+      }
+
+      // Validate string fields if provided
+      const stringFields = { name, description, tickDamage, tickHealing, tickMessage, wearOffMessage };
+      for (const [field, value] of Object.entries(stringFields)) {
+        if (value !== undefined && value !== null && typeof value !== 'string') {
+          res.status(400).json({ success: false, message: `${field} must be a string` });
+          return;
+        }
+      }
+
+      // Validate boolean fields if provided
+      const booleanFields = { silentTick, blocksRegen, blocksMovement, isBlind };
+      for (const [field, value] of Object.entries(booleanFields)) {
+        if (value !== undefined && value !== null && typeof value !== 'boolean') {
+          res.status(400).json({ success: false, message: `${field} must be a boolean` });
+          return;
+        }
+      }
+
       // Build update object with only allowed fields
       const updateData: Record<string, unknown> = {};
       if (name !== undefined) updateData.name = name;
@@ -284,9 +319,9 @@ export function setupStatusEffectDefinitionRoutes(app: Express): void {
   // Import definitions
   app.post('/api/status-effects/import', requireDeveloper, async (req: Request, res: Response) => {
     try {
-      const { definitions } = req.body;
-      // Validate merge parameter - must be explicitly boolean, defaults to true
-      const merge = typeof req.body.merge === 'boolean' ? req.body.merge : true;
+      const { definitions, merge: mergeParam } = req.body;
+      // Validate merge parameter - defaults to true if not provided
+      const merge = mergeParam === undefined ? true : mergeParam === true;
 
       if (!definitions || !Array.isArray(definitions)) {
         res.status(400).json({ success: false, message: 'definitions array is required' });

@@ -298,7 +298,7 @@ function updatePreview(spell: Spell): void {
   // Damage/Healing with scaling
   if (spell.spellType === 'offensive' && spell.damageDice) {
     let damageInfo = escapeHtml(spell.damageDice);
-    if (spell.damageScalingStat && spell.damageScalingFactor) {
+    if (spell.damageScalingStat && spell.damageScalingStat !== 'none' && spell.damageScalingFactor) {
       const pct = Math.round(spell.damageScalingFactor * 100);
       damageInfo += ` <span style="color: #60a5fa">+${pct}% ${escapeHtml(spell.damageScalingStat.toUpperCase())}</span>`;
     }
@@ -312,7 +312,7 @@ function updatePreview(spell: Spell): void {
 
   if (spell.spellType === 'healing' && spell.healingDice) {
     let healingInfo = escapeHtml(spell.healingDice);
-    if (spell.healingScalingStat && spell.healingScalingFactor) {
+    if (spell.healingScalingStat && spell.healingScalingStat !== 'none' && spell.healingScalingFactor) {
       const pct = Math.round(spell.healingScalingFactor * 100);
       healingInfo += ` <span style="color: #4ade80">+${pct}% ${escapeHtml(spell.healingScalingStat.toUpperCase())}</span>`;
     }

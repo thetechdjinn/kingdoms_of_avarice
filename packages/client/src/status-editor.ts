@@ -404,7 +404,13 @@ async function saveEffect(): Promise<void> {
       body: JSON.stringify(effectData),
     });
 
-    const data = await response.json();
+    let data;
+    try {
+      data = await response.json();
+    } catch {
+      alert('Failed to save effect: Invalid server response');
+      return;
+    }
     if (data.success) {
       const index = effects.findIndex(e => e.id === selectedEffectId);
       if (index !== -1) {
@@ -429,7 +435,8 @@ async function deleteEffect(): Promise<void> {
   if (!selectedEffectId) return;
 
   const effect = effects.find(e => e.id === selectedEffectId);
-  if (!confirm(`Are you sure you want to delete "${effect?.name}"?`)) return;
+  if (!effect) return;
+  if (!confirm(`Are you sure you want to delete "${effect.name}"?`)) return;
 
   try {
     const response = await fetch(`/api/status-effects/${selectedEffectId}`, {
@@ -437,7 +444,13 @@ async function deleteEffect(): Promise<void> {
       credentials: 'include',
     });
 
-    const data = await response.json();
+    let data;
+    try {
+      data = await response.json();
+    } catch {
+      alert('Failed to delete effect: Invalid server response');
+      return;
+    }
     if (data.success) {
       effects = effects.filter(e => e.id !== selectedEffectId);
       selectedEffectId = null;
@@ -460,8 +473,10 @@ async function duplicateEffect(): Promise<void> {
   const effect = effects.find(e => e.id === selectedEffectId);
   if (!effect) return;
 
-  const newId = prompt('Enter ID for duplicate:', effect.id + '_copy');
-  if (!newId || !/^[a-z][a-z0-9_]*$/.test(newId)) {
+  let newId = prompt('Enter ID for duplicate:', effect.id + '_copy');
+  if (!newId) return;
+  newId = newId.toLowerCase();
+  if (!/^[a-z][a-z0-9_]*$/.test(newId)) {
     alert('ID must start with a letter and contain only lowercase letters, numbers, and underscores');
     return;
   }
@@ -469,7 +484,7 @@ async function duplicateEffect(): Promise<void> {
   const newName = prompt('Enter name for duplicate:', effect.name + ' (copy)');
   if (!newName) return;
 
-  const duplicateData = { ...gatherFormData(), id: newId.toLowerCase(), name: newName };
+  const duplicateData = { ...gatherFormData(), id: newId, name: newName };
 
   try {
     const response = await fetch('/api/status-effects', {
@@ -479,7 +494,13 @@ async function duplicateEffect(): Promise<void> {
       body: JSON.stringify(duplicateData),
     });
 
-    const data = await response.json();
+    let data;
+    try {
+      data = await response.json();
+    } catch {
+      alert('Failed to duplicate effect: Invalid server response');
+      return;
+    }
     if (data.success) {
       effects.push(data.definition);
       selectEffect(data.definition.id);
@@ -493,12 +514,13 @@ async function duplicateEffect(): Promise<void> {
 }
 
 function gatherFormData(): Partial<StatusEffectDefinition> {
+  const maxStacksValue = parseInt((document.getElementById('effect-max-stacks') as HTMLInputElement).value, 10);
   return {
     name: (document.getElementById('effect-name') as HTMLInputElement).value,
     description: (document.getElementById('effect-description') as HTMLTextAreaElement).value || '',
     category: (document.getElementById('effect-category') as HTMLSelectElement).value as StatusEffectCategory,
     stackingBehavior: (document.getElementById('effect-stacking') as HTMLSelectElement).value as StackingBehavior,
-    maxStacks: parseInt((document.getElementById('effect-max-stacks') as HTMLInputElement).value, 10) || 1,
+    maxStacks: isNaN(maxStacksValue) || maxStacksValue < 1 ? 1 : maxStacksValue,
     accuracyModifier: parseInt((document.getElementById('effect-accuracy') as HTMLInputElement).value, 10) || 0,
     defenseModifier: parseInt((document.getElementById('effect-defense') as HTMLInputElement).value, 10) || 0,
     energyModifier: parseInt((document.getElementById('effect-energy') as HTMLInputElement).value, 10) || 0,
@@ -573,7 +595,10 @@ async function doImport(): Promise<void> {
 
     const result = await response.json();
     if (result.success) {
-      alert(`Import complete!\nCreated: ${result.results.created}\nUpdated: ${result.results.updated}\nErrors: ${result.results.errors.length}`);
+      alert(`Import complete!
+Created: ${result.results.created}
+Updated: ${result.results.updated}
+Errors: ${result.results.errors.length}`);
       hideImportModal();
       await fetchEffects();
     } else {

@@ -201,7 +201,7 @@ async function handleOffensiveSpell(
 
   return {
     type: MessageType.OUTPUT,
-    message: colors.boldRed(`*COMBAT ENGAGED* You begin casting ${spell.name.toLowerCase()} at ${target.username}!`),
+    message: `${colors.boldRed('*COMBAT ENGAGED*')} You begin casting ${colors.cyan(spell.name.toLowerCase())} at ${colors.combatDefender(target.username)}!`,
   };
 }
 
@@ -432,7 +432,7 @@ async function handleDebuffSpell(
   const durationStr = formatDuration(durationMs);
   return {
     type: MessageType.OUTPUT,
-    message: `You cast ${colors.cyan(spell.name.toLowerCase())} on ${colors.combatDefender(target.username)}. ${result.message} (${durationStr})`,
+    message: `You cast ${colors.cyan(spell.name.toLowerCase())} on ${colors.magenta(target.username)}. ${result.message} (${durationStr})`,
   };
 }
 

@@ -435,6 +435,7 @@ export function broadcastToRoom(roomId: number, text: string, excludePlayerIds?:
 // Status effect tick interval (matches regen interval)
 const STATUS_EFFECT_TICK_INTERVAL_MS = 5000;
 let statusEffectTimer: NodeJS.Timeout | null = null;
+let statusEffectTickInProgress = false;
 
 /**
  * Start the status effect processing loop
@@ -445,18 +446,30 @@ function startStatusEffectLoop(): void {
     clearInterval(statusEffectTimer);
   }
 
-  statusEffectTimer = setInterval(async () => {
-    for (const [, socket] of connectedPlayers) {
-      if (socket.activeEffects && socket.activeEffects.size > 0) {
-        try {
-          await processEffectsTick(socket, sendMessage, sendVitals);
-          // Always send vitals after effect ticks to ensure client has latest state
-          sendVitals(socket);
-        } catch (error) {
-          console.error(`Failed to process status effects for player ${socket.playerId}:`, error);
-        }
-      }
+  statusEffectTimer = setInterval(() => {
+    // Prevent overlapping async executions
+    if (statusEffectTickInProgress) {
+      return;
     }
+    statusEffectTickInProgress = true;
+
+    (async () => {
+      try {
+        for (const [, socket] of connectedPlayers) {
+          if (socket.activeEffects && socket.activeEffects.size > 0) {
+            try {
+              await processEffectsTick(socket, sendMessage, sendVitals);
+              // Always send vitals after effect ticks to ensure client has latest state
+              sendVitals(socket);
+            } catch (error) {
+              console.error(`Failed to process status effects for player ${socket.playerId}:`, error);
+            }
+          }
+        }
+      } finally {
+        statusEffectTickInProgress = false;
+      }
+    })();
   }, STATUS_EFFECT_TICK_INTERVAL_MS);
 
   console.log(`[StatusEffects] Started status effect processing loop (every ${STATUS_EFFECT_TICK_INTERVAL_MS}ms)`);
