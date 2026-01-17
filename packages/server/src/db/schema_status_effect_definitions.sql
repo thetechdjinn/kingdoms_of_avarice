@@ -37,3 +37,18 @@ CREATE TABLE IF NOT EXISTS status_effect_definitions (
 );
 
 CREATE INDEX IF NOT EXISTS idx_status_effect_definitions_category ON status_effect_definitions(category);
+
+-- Trigger to auto-update updated_at timestamp on modification
+CREATE OR REPLACE FUNCTION update_status_effect_definitions_timestamp()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = CURRENT_TIMESTAMP;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trigger_update_status_effect_definitions_timestamp ON status_effect_definitions;
+CREATE TRIGGER trigger_update_status_effect_definitions_timestamp
+    BEFORE UPDATE ON status_effect_definitions
+    FOR EACH ROW
+    EXECUTE FUNCTION update_status_effect_definitions_timestamp();

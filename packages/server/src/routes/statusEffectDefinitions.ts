@@ -73,15 +73,18 @@ export function setupStatusEffectDefinitionRoutes(app: Express): void {
         return;
       }
 
+      // Normalize ID to lowercase for consistency
+      const normalizedId = id.toLowerCase();
+
       // Check for duplicate ID
-      const existing = await effectDefRepo.getDefinitionById(id);
+      const existing = await effectDefRepo.getDefinitionById(normalizedId);
       if (existing) {
-        res.status(400).json({ success: false, message: `Effect ID "${id}" already exists` });
+        res.status(400).json({ success: false, message: `Effect ID "${normalizedId}" already exists` });
         return;
       }
 
       const definition = await effectDefRepo.createDefinition({
-        id,
+        id: normalizedId,
         name,
         description,
         category,

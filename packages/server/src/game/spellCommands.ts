@@ -187,7 +187,7 @@ async function handleOffensiveSpell(
   // Broadcast to room (exclude both caster and target - they get personalized messages)
   broadcastToRoom(
     currentRoomId,
-    `${socket.username} moves to attack ${target.username}.`,
+    `${socket.username} begins casting ${spell.name.toLowerCase()} at ${target.username}.`,
     [socket.playerId, target.playerId]
   );
 

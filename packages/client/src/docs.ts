@@ -280,9 +280,10 @@
     const content = document.getElementById('markdown-content');
     if (content) {
       content.addEventListener('click', (e: Event) => {
-        const target = e.target as HTMLElement;
-        if (target.tagName === 'A') {
-          const href = target.getAttribute('href');
+        // Use closest() to handle clicks on nested elements within links
+        const anchor = (e.target as HTMLElement).closest('a');
+        if (anchor) {
+          const href = anchor.getAttribute('href');
           if (href && href.endsWith('.md') && !href.startsWith('http')) {
             e.preventDefault();
             // Handle relative .md links

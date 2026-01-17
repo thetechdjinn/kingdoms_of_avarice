@@ -59,11 +59,12 @@ function dbToDefinition(row: DbStatusEffectDefinition): StatusEffectDefinition {
 
 /**
  * Get a status effect definition by its ID
+ * IDs are normalized to lowercase for case-insensitive lookup
  */
 export async function getDefinitionById(id: string): Promise<StatusEffectDefinition | null> {
   const result = await query<DbStatusEffectDefinition>(
     'SELECT * FROM status_effect_definitions WHERE id = $1',
-    [id]
+    [id.toLowerCase()]
   );
   return result.rows[0] ? dbToDefinition(result.rows[0]) : null;
 }

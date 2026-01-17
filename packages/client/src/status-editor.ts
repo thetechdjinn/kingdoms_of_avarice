@@ -362,6 +362,7 @@ async function createEffect(): Promise<void> {
       body: JSON.stringify({
         id: id.toLowerCase(),
         name,
+        description: '',
         category: 'buff',
         stackingBehavior: 'refresh',
         maxStacks: 1,

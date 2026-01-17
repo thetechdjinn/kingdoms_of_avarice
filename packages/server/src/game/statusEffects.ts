@@ -649,5 +649,13 @@ export function formatDuration(ms: number): string {
 
   const hours = Math.floor(minutes / 60);
   const remainingMinutes = minutes % 60;
-  return remainingMinutes > 0 ? `${hours}h ${remainingMinutes}m` : `${hours}h`;
+  // Include seconds for consistency with shorter duration formatting
+  if (remainingMinutes > 0 && seconds > 0) {
+    return `${hours}h ${remainingMinutes}m ${seconds}s`;
+  } else if (remainingMinutes > 0) {
+    return `${hours}h ${remainingMinutes}m`;
+  } else if (seconds > 0) {
+    return `${hours}h ${seconds}s`;
+  }
+  return `${hours}h`;
 }

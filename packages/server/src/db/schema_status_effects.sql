@@ -6,8 +6,8 @@ CREATE TABLE IF NOT EXISTS character_status_effects (
     id SERIAL PRIMARY KEY,
     character_id INTEGER NOT NULL REFERENCES characters(id) ON DELETE CASCADE,
 
-    -- Effect identification (references code-based effect registry)
-    effect_id VARCHAR(50) NOT NULL,
+    -- Effect identification (references status_effect_definitions table, with code fallback)
+    effect_id VARCHAR(50) NOT NULL REFERENCES status_effect_definitions(id),
 
     -- Stacking (for effects like poison that can stack)
     stacks INTEGER NOT NULL DEFAULT 1,
