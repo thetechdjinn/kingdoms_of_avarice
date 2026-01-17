@@ -373,10 +373,12 @@ export function getEffectModifiers(socket: AuthenticatedSocket): EffectModifiers
   }
 
   const now = Date.now();
+  const expiredIds: string[] = [];
 
-  for (const [, effect] of socket.activeEffects) {
-    // Skip expired effects
+  for (const [effectId, effect] of socket.activeEffects) {
+    // Track expired effects for cleanup
     if (effect.expiresAt <= now) {
+      expiredIds.push(effectId);
       continue;
     }
 
@@ -397,6 +399,11 @@ export function getEffectModifiers(socket: AuthenticatedSocket): EffectModifiers
     if (definition.blocksRegen) modifiers.blocksRegen = true;
     if (definition.blocksMovement) modifiers.blocksMovement = true;
     if (definition.isBlind) modifiers.isBlind = true;
+  }
+
+  // Clean up expired effects to prevent memory bloat
+  for (const id of expiredIds) {
+    socket.activeEffects.delete(id);
   }
 
   return modifiers;

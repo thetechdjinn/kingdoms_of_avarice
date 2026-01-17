@@ -251,7 +251,8 @@ function updateMaxStacksVisibility(stackingBehavior: string): void {
 }
 
 function updatePreview(effect: StatusEffectDefinition): void {
-  const content = document.getElementById('preview-content')!;
+  const content = document.getElementById('preview-content');
+  if (!content) return;
 
   const categoryColors: Record<string, string> = {
     buff: '#4ade80',
@@ -346,8 +347,10 @@ function updatePreview(effect: StatusEffectDefinition): void {
 // ============================================================================
 
 async function createEffect(): Promise<void> {
-  const id = prompt('Enter effect ID (lowercase, no spaces):');
-  if (!id || !/^[a-z_]+$/.test(id)) {
+  let id = prompt('Enter effect ID (lowercase, no spaces):');
+  if (!id) return;
+  id = id.toLowerCase();
+  if (!/^[a-z_]+$/.test(id)) {
     alert('ID must be lowercase letters and underscores only');
     return;
   }

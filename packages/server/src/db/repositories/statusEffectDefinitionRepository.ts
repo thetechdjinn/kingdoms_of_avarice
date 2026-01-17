@@ -214,7 +214,7 @@ export async function updateDefinition(id: string, input: Partial<CreateDefiniti
       updated.blocksRegen,
       updated.blocksMovement,
       updated.isBlind,
-      id,
+      id.toLowerCase(),
     ]
   );
   return result.rows[0] ? dbToDefinition(result.rows[0]) : null;
@@ -226,7 +226,7 @@ export async function updateDefinition(id: string, input: Partial<CreateDefiniti
 export async function deleteDefinition(id: string): Promise<boolean> {
   const result = await query(
     'DELETE FROM status_effect_definitions WHERE id = $1',
-    [id]
+    [id.toLowerCase()]
   );
   return (result.rowCount ?? 0) > 0;
 }
@@ -237,7 +237,7 @@ export async function deleteDefinition(id: string): Promise<boolean> {
 export async function definitionExists(id: string): Promise<boolean> {
   const result = await query<{ count: string }>(
     'SELECT COUNT(*) as count FROM status_effect_definitions WHERE id = $1',
-    [id]
+    [id.toLowerCase()]
   );
   return parseInt(result.rows[0].count) > 0;
 }

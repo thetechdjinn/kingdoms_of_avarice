@@ -118,8 +118,9 @@ export function setupStatusEffectDefinitionRoutes(app: Express): void {
   app.put('/api/status-effects/:id', requireDeveloper, async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
+      const normalizedId = id.toLowerCase();
 
-      const existing = await effectDefRepo.getDefinitionById(id);
+      const existing = await effectDefRepo.getDefinitionById(normalizedId);
       if (!existing) {
         res.status(404).json({ success: false, message: 'Status effect definition not found' });
         return;
@@ -138,7 +139,7 @@ export function setupStatusEffectDefinitionRoutes(app: Express): void {
         return;
       }
 
-      const definition = await effectDefRepo.updateDefinition(id, req.body);
+      const definition = await effectDefRepo.updateDefinition(normalizedId, req.body);
 
       // Reload effect definitions cache
       await reloadEffectDefinitions();
@@ -154,8 +155,9 @@ export function setupStatusEffectDefinitionRoutes(app: Express): void {
   app.delete('/api/status-effects/:id', requireDeveloper, async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
+      const normalizedId = id.toLowerCase();
 
-      const success = await effectDefRepo.deleteDefinition(id);
+      const success = await effectDefRepo.deleteDefinition(normalizedId);
       if (!success) {
         res.status(404).json({ success: false, message: 'Status effect definition not found' });
         return;
@@ -237,6 +239,11 @@ export function setupStatusEffectDefinitionRoutes(app: Express): void {
 
       for (const def of definitions) {
         try {
+          // Normalize ID to lowercase
+          if (def.id) {
+            def.id = def.id.toLowerCase();
+          }
+
           // Validate definition structure
           const validationError = validateDefinitionInput(def);
           if (validationError) {

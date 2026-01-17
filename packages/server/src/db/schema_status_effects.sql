@@ -14,7 +14,7 @@ CREATE TABLE IF NOT EXISTS character_status_effects (
 
     -- Timing
     applied_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    expires_at TIMESTAMPTZ NOT NULL,
+    expires_at TIMESTAMPTZ,  -- NULL for permanent effects
 
     -- Source tracking (optional)
     source_spell_id INTEGER REFERENCES spells(id) ON DELETE SET NULL,

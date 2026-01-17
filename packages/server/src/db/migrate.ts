@@ -40,15 +40,15 @@ export async function runMigrations(): Promise<void> {
       const spellsSchema = readFileSync(spellsSchemaPath, 'utf-8');
       await client.query(spellsSchema);
 
-      // Run status effects schema
-      const statusEffectsSchemaPath = join(sqlDir, 'schema_status_effects.sql');
-      const statusEffectsSchema = readFileSync(statusEffectsSchemaPath, 'utf-8');
-      await client.query(statusEffectsSchema);
-
-      // Run status effect definitions schema
+      // Run status effect definitions schema (must be before status_effects due to FK)
       const statusEffectDefsSchemaPath = join(sqlDir, 'schema_status_effect_definitions.sql');
       const statusEffectDefsSchema = readFileSync(statusEffectDefsSchemaPath, 'utf-8');
       await client.query(statusEffectDefsSchema);
+
+      // Run status effects schema (depends on status_effect_definitions)
+      const statusEffectsSchemaPath = join(sqlDir, 'schema_status_effects.sql');
+      const statusEffectsSchema = readFileSync(statusEffectsSchemaPath, 'utf-8');
+      await client.query(statusEffectsSchema);
 
       // Add brief_mode column if it doesn't exist (for existing databases)
       await client.query(`

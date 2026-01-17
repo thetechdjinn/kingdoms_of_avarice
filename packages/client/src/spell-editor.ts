@@ -219,9 +219,9 @@ function selectSpell(id: number): void {
   const healingScalingFactorInput = getElement<HTMLInputElement>('spell-healing-scaling-factor');
 
   if (damageScalingStatSelect) damageScalingStatSelect.value = spell.damageScalingStat || '';
-  if (damageScalingFactorInput) damageScalingFactorInput.value = spell.damageScalingFactor ? String(spell.damageScalingFactor * 100) : '0';
+  if (damageScalingFactorInput) damageScalingFactorInput.value = spell.damageScalingFactor ? String(Math.round(spell.damageScalingFactor * 100)) : '0';
   if (healingScalingStatSelect) healingScalingStatSelect.value = spell.healingScalingStat || '';
-  if (healingScalingFactorInput) healingScalingFactorInput.value = spell.healingScalingFactor ? String(spell.healingScalingFactor * 100) : '0';
+  if (healingScalingFactorInput) healingScalingFactorInput.value = spell.healingScalingFactor ? String(Math.round(spell.healingScalingFactor * 100)) : '0';
 
   // Requirements
   const levelRequiredInput = getElement<HTMLInputElement>('spell-level-required');
@@ -514,11 +514,11 @@ function gatherFormData(): Partial<Spell> {
     .map(c => c.trim())
     .filter(c => c);
 
-  // Parse scaling values - convert percentage to decimal
+  // Parse scaling values - convert percentage to decimal (round to handle floating point)
   const damageScalingStat = (document.getElementById('spell-damage-scaling-stat') as HTMLSelectElement).value || null;
-  const damageScalingFactorPct = parseInt((document.getElementById('spell-damage-scaling-factor') as HTMLInputElement).value) || 0;
+  const damageScalingFactorPct = Math.round(parseFloat((document.getElementById('spell-damage-scaling-factor') as HTMLInputElement).value)) || 0;
   const healingScalingStat = (document.getElementById('spell-healing-scaling-stat') as HTMLSelectElement).value || null;
-  const healingScalingFactorPct = parseInt((document.getElementById('spell-healing-scaling-factor') as HTMLInputElement).value) || 0;
+  const healingScalingFactorPct = Math.round(parseFloat((document.getElementById('spell-healing-scaling-factor') as HTMLInputElement).value)) || 0;
 
   return {
     name: (document.getElementById('spell-name') as HTMLInputElement).value,
