@@ -450,6 +450,8 @@ function startStatusEffectLoop(): void {
       if (socket.activeEffects && socket.activeEffects.size > 0) {
         try {
           await processEffectsTick(socket, sendMessage, sendVitals);
+          // Always send vitals after effect ticks to ensure client has latest state
+          sendVitals(socket);
         } catch (error) {
           console.error(`Failed to process status effects for player ${socket.playerId}:`, error);
         }

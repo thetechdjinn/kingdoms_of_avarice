@@ -481,19 +481,11 @@ export async function processEffectsTick(
         }
       }
 
-      // Check for death from DoT
-      if (socket.vitals.hp <= 0) {
-        sendMessage(
-          socket,
-          MessageType.SYSTEM,
-          colors.red('You have been slain!')
-        );
-        // Death handling will be done by the caller
-      }
+      // Note: Death from DoT is handled by the caller after all effects are processed
     }
 
-    // Process HoT healing
-    if (definition.tickHealing) {
+    // Process HoT healing (only if player is still alive to prevent unintended revival)
+    if (definition.tickHealing && socket.vitals.hp > 0) {
       const healResult = parseDiceString(definition.tickHealing);
       const totalHealing = healResult.roll * effect.stacks;
 

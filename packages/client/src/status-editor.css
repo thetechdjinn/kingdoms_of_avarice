@@ -362,14 +362,14 @@
   color: #ff4444;
 }
 
-/* Hint text - using #999 for better contrast against dark background */
+/* Hint text */
 .hint {
-  color: #999;
+  color: #666;
   font-size: 0.9rem;
 }
 
 .hint-inline {
-  color: #999;
+  color: #666;
   font-size: 0.8rem;
   font-weight: normal;
   display: block;
@@ -408,5 +408,76 @@
 @media (max-width: 900px) {
   #preview-panel {
     display: none;
+  }
+
+  #effect-editor-panel {
+    padding: 1rem;
+  }
+
+  #effect-form {
+    max-width: 100%;
+  }
+}
+
+@media (max-width: 768px) {
+  /* Stack effect list and editor vertically */
+  #editor-layout {
+    flex-direction: column;
+  }
+
+  #effect-list-panel {
+    width: 100%;
+    max-height: 40vh;
+    border-right: none;
+    border-bottom: 1px solid #333;
+  }
+
+  #effect-editor-panel {
+    flex: 1;
+    min-height: 0;
+  }
+
+  /* Stack form rows vertically */
+  .form-row {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  /* Adjust tabs for mobile */
+  .form-tabs {
+    flex-wrap: wrap;
+  }
+
+  .tab-btn {
+    padding: 6px 12px;
+    font-size: 0.9rem;
+  }
+
+  /* Modal adjustments */
+  .modal-content {
+    width: 95%;
+    max-height: 90vh;
+  }
+}
+
+@media (max-width: 480px) {
+  #effect-list-panel {
+    max-height: 35vh;
+  }
+
+  .panel-footer {
+    flex-direction: column;
+  }
+
+  .panel-footer button {
+    width: 100%;
+  }
+
+  #effect-form .form-actions {
+    flex-direction: column;
+  }
+
+  #effect-form .form-actions button {
+    width: 100%;
   }
 }

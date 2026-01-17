@@ -24,5 +24,5 @@ CREATE TABLE IF NOT EXISTS character_status_effects (
 );
 
 -- Indexes for performance
-CREATE INDEX IF NOT EXISTS idx_character_status_effects_character ON character_status_effects(character_id);
+-- Note: character_id is already indexed via UNIQUE(character_id, effect_id) constraint
 CREATE INDEX IF NOT EXISTS idx_character_status_effects_expires ON character_status_effects(expires_at);

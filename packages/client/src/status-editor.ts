@@ -34,7 +34,7 @@ function getElement<T extends HTMLElement>(id: string): T | null {
 
 async function checkAuth(): Promise<boolean> {
   try {
-    const response = await fetch('/api/auth/me');
+    const response = await fetch('/api/auth/me', { credentials: 'include' });
     if (!response.ok) {
       window.location.href = '/';
       return false;
@@ -90,7 +90,7 @@ async function handleLogout(): Promise<void> {
 
 async function fetchEffects(): Promise<void> {
   try {
-    const response = await fetch('/api/status-effects');
+    const response = await fetch('/api/status-effects', { credentials: 'include' });
     if (!response.ok) {
       console.error('Failed to fetch effects: HTTP', response.status);
       showError('Failed to load status effects. Please refresh the page.');
@@ -350,8 +350,8 @@ async function createEffect(): Promise<void> {
   let id = prompt('Enter effect ID (lowercase, no spaces):');
   if (!id) return;
   id = id.toLowerCase();
-  if (!/^[a-z_]+$/.test(id)) {
-    alert('ID must be lowercase letters and underscores only');
+  if (!/^[a-z][a-z0-9_]*$/.test(id)) {
+    alert('ID must start with a letter and contain only lowercase letters, numbers, and underscores');
     return;
   }
 
@@ -362,6 +362,7 @@ async function createEffect(): Promise<void> {
     const response = await fetch('/api/status-effects', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
       body: JSON.stringify({
         id: id.toLowerCase(),
         name,
@@ -399,6 +400,7 @@ async function saveEffect(): Promise<void> {
     const response = await fetch(`/api/status-effects/${selectedEffectId}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
       body: JSON.stringify(effectData),
     });
 
@@ -407,6 +409,10 @@ async function saveEffect(): Promise<void> {
       const index = effects.findIndex(e => e.id === selectedEffectId);
       if (index !== -1) {
         effects[index] = data.definition;
+      } else {
+        // Effect not found in local array - this shouldn't happen, log warning and add it
+        console.warn(`Effect ${selectedEffectId} not found in local effects array, adding from server response`);
+        effects.push(data.definition);
       }
       selectEffect(selectedEffectId);
       alert('Effect saved successfully!');
@@ -428,6 +434,7 @@ async function deleteEffect(): Promise<void> {
   try {
     const response = await fetch(`/api/status-effects/${selectedEffectId}`, {
       method: 'DELETE',
+      credentials: 'include',
     });
 
     const data = await response.json();
@@ -454,8 +461,8 @@ async function duplicateEffect(): Promise<void> {
   if (!effect) return;
 
   const newId = prompt('Enter ID for duplicate:', effect.id + '_copy');
-  if (!newId || !/^[a-z_]+$/.test(newId)) {
-    alert('ID must be lowercase letters and underscores only');
+  if (!newId || !/^[a-z][a-z0-9_]*$/.test(newId)) {
+    alert('ID must start with a letter and contain only lowercase letters, numbers, and underscores');
     return;
   }
 
@@ -468,6 +475,7 @@ async function duplicateEffect(): Promise<void> {
     const response = await fetch('/api/status-effects', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
       body: JSON.stringify(duplicateData),
     });
 
@@ -490,11 +498,11 @@ function gatherFormData(): Partial<StatusEffectDefinition> {
     description: (document.getElementById('effect-description') as HTMLTextAreaElement).value || '',
     category: (document.getElementById('effect-category') as HTMLSelectElement).value as StatusEffectCategory,
     stackingBehavior: (document.getElementById('effect-stacking') as HTMLSelectElement).value as StackingBehavior,
-    maxStacks: parseInt((document.getElementById('effect-max-stacks') as HTMLInputElement).value) || 1,
-    accuracyModifier: parseInt((document.getElementById('effect-accuracy') as HTMLInputElement).value) || 0,
-    defenseModifier: parseInt((document.getElementById('effect-defense') as HTMLInputElement).value) || 0,
-    energyModifier: parseInt((document.getElementById('effect-energy') as HTMLInputElement).value) || 0,
-    damageModifier: parseInt((document.getElementById('effect-damage') as HTMLInputElement).value) || 0,
+    maxStacks: parseInt((document.getElementById('effect-max-stacks') as HTMLInputElement).value, 10) || 1,
+    accuracyModifier: parseInt((document.getElementById('effect-accuracy') as HTMLInputElement).value, 10) || 0,
+    defenseModifier: parseInt((document.getElementById('effect-defense') as HTMLInputElement).value, 10) || 0,
+    energyModifier: parseInt((document.getElementById('effect-energy') as HTMLInputElement).value, 10) || 0,
+    damageModifier: parseInt((document.getElementById('effect-damage') as HTMLInputElement).value, 10) || 0,
     tickDamage: (document.getElementById('effect-tick-damage') as HTMLInputElement).value || undefined,
     tickHealing: (document.getElementById('effect-tick-healing') as HTMLInputElement).value || undefined,
     tickMessage: (document.getElementById('effect-tick-message') as HTMLInputElement).value || undefined,
@@ -512,7 +520,7 @@ function gatherFormData(): Partial<StatusEffectDefinition> {
 
 async function exportEffects(): Promise<void> {
   try {
-    const response = await fetch('/api/status-effects/export/all');
+    const response = await fetch('/api/status-effects/export/all', { credentials: 'include' });
     if (!response.ok) throw new Error('Failed to fetch effects');
     const blob = await response.blob();
     const url = URL.createObjectURL(blob);
@@ -549,9 +557,14 @@ async function doImport(): Promise<void> {
     const text = await file.text();
     const data = JSON.parse(text);
 
+    if (!data || !Array.isArray(data.definitions)) {
+      throw new Error('Invalid JSON structure: definitions must be an array');
+    }
+
     const response = await fetch('/api/status-effects/import', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
       body: JSON.stringify({ definitions: data.definitions, merge }),
     });
     if (!response.ok) {

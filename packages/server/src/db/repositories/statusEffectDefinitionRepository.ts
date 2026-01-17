@@ -1,4 +1,5 @@
-import { query } from '../index.js';
+import { query, withTransaction } from '../index.js';
+import type pg from 'pg';
 import {
   StatusEffectDefinition,
   StatusEffectCategory,
@@ -254,41 +255,88 @@ export async function exportDefinitions(): Promise<StatusEffectDefinition[]> {
 }
 
 /**
- * Import definitions from JSON (upsert)
+ * Import definitions from JSON (upsert) - wrapped in a transaction for atomicity
  */
 export async function importDefinitions(definitions: StatusEffectDefinition[]): Promise<{ created: number; updated: number }> {
-  let created = 0;
-  let updated = 0;
+  return withTransaction(async (client: pg.PoolClient) => {
+    let created = 0;
+    let updated = 0;
 
-  for (const def of definitions) {
-    const exists = await definitionExists(def.id);
-    if (exists) {
-      await updateDefinition(def.id, def);
-      updated++;
-    } else {
-      await createDefinition({
-        id: def.id,
-        name: def.name,
-        description: def.description,
-        category: def.category,
-        stackingBehavior: def.stackingBehavior,
-        maxStacks: def.maxStacks,
-        accuracyModifier: def.accuracyModifier,
-        defenseModifier: def.defenseModifier,
-        energyModifier: def.energyModifier,
-        damageModifier: def.damageModifier,
-        tickDamage: def.tickDamage,
-        tickHealing: def.tickHealing,
-        tickMessage: def.tickMessage,
-        silentTick: def.silentTick,
-        wearOffMessage: def.wearOffMessage,
-        blocksRegen: def.blocksRegen,
-        blocksMovement: def.blocksMovement,
-        isBlind: def.isBlind,
-      });
-      created++;
+    for (const def of definitions) {
+      const normalizedId = def.id.toLowerCase();
+
+      // Check if exists within transaction
+      const existsResult = await client.query(
+        'SELECT 1 FROM status_effect_definitions WHERE id = $1',
+        [normalizedId]
+      );
+      const exists = existsResult.rows.length > 0;
+
+      if (exists) {
+        // Update within transaction
+        await client.query(
+          `UPDATE status_effect_definitions SET
+            name = $1, description = $2, category = $3, stacking_behavior = $4, max_stacks = $5,
+            accuracy_modifier = $6, defense_modifier = $7, energy_modifier = $8, damage_modifier = $9,
+            tick_damage = $10, tick_healing = $11, tick_message = $12, silent_tick = $13, wear_off_message = $14,
+            blocks_regen = $15, blocks_movement = $16, is_blind = $17, updated_at = NOW()
+          WHERE id = $18`,
+          [
+            def.name,
+            def.description || null,
+            def.category,
+            def.stackingBehavior,
+            def.maxStacks ?? 1,
+            def.accuracyModifier ?? 0,
+            def.defenseModifier ?? 0,
+            def.energyModifier ?? 0,
+            def.damageModifier ?? 0,
+            def.tickDamage || null,
+            def.tickHealing || null,
+            def.tickMessage || null,
+            def.silentTick ?? false,
+            def.wearOffMessage || null,
+            def.blocksRegen ?? false,
+            def.blocksMovement ?? false,
+            def.isBlind ?? false,
+            normalizedId,
+          ]
+        );
+        updated++;
+      } else {
+        // Create within transaction
+        await client.query(
+          `INSERT INTO status_effect_definitions (
+            id, name, description, category, stacking_behavior, max_stacks,
+            accuracy_modifier, defense_modifier, energy_modifier, damage_modifier,
+            tick_damage, tick_healing, tick_message, silent_tick, wear_off_message,
+            blocks_regen, blocks_movement, is_blind
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)`,
+          [
+            normalizedId,
+            def.name,
+            def.description || null,
+            def.category,
+            def.stackingBehavior,
+            def.maxStacks ?? 1,
+            def.accuracyModifier ?? 0,
+            def.defenseModifier ?? 0,
+            def.energyModifier ?? 0,
+            def.damageModifier ?? 0,
+            def.tickDamage || null,
+            def.tickHealing || null,
+            def.tickMessage || null,
+            def.silentTick ?? false,
+            def.wearOffMessage || null,
+            def.blocksRegen ?? false,
+            def.blocksMovement ?? false,
+            def.isBlind ?? false,
+          ]
+        );
+        created++;
+      }
     }
-  }
 
-  return { created, updated };
+    return { created, updated };
+  });
 }

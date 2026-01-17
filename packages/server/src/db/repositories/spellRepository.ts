@@ -57,9 +57,9 @@ function dbToSpell(row: DbSpell): Spell {
     classRestrictions: row.class_restrictions ?? [],
     isAttackSpell: row.is_attack_spell,
     damageScalingStat: row.damage_scaling_stat as SpellScalingStat | null,
-    damageScalingFactor: row.damage_scaling_factor ? parseFloat(row.damage_scaling_factor) : null,
+    damageScalingFactor: row.damage_scaling_factor ? (isNaN(parseFloat(row.damage_scaling_factor)) ? null : parseFloat(row.damage_scaling_factor)) : null,
     healingScalingStat: row.healing_scaling_stat as SpellScalingStat | null,
-    healingScalingFactor: row.healing_scaling_factor ? parseFloat(row.healing_scaling_factor) : null,
+    healingScalingFactor: row.healing_scaling_factor ? (isNaN(parseFloat(row.healing_scaling_factor)) ? null : parseFloat(row.healing_scaling_factor)) : null,
   };
 }
 

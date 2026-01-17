@@ -92,6 +92,28 @@ export async function runMigrations(): Promise<void> {
         ALTER TABLE spells ADD COLUMN IF NOT EXISTS healing_scaling_factor DECIMAL(4,2)
       `);
 
+      // Add case-insensitive unique index on mnemonic (for existing databases)
+      await client.query(`
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_spells_mnemonic_lower ON spells(LOWER(mnemonic))
+      `);
+
+      // Add CHECK constraints for scaling stat columns (for existing databases)
+      // Drop and recreate constraints to ensure they exist
+      await client.query(`
+        ALTER TABLE spells DROP CONSTRAINT IF EXISTS spells_damage_scaling_stat_check
+      `);
+      await client.query(`
+        ALTER TABLE spells ADD CONSTRAINT spells_damage_scaling_stat_check
+        CHECK (damage_scaling_stat IS NULL OR damage_scaling_stat IN ('none', 'strength', 'agility', 'constitution', 'intellect', 'wisdom', 'charisma'))
+      `);
+      await client.query(`
+        ALTER TABLE spells DROP CONSTRAINT IF EXISTS spells_healing_scaling_stat_check
+      `);
+      await client.query(`
+        ALTER TABLE spells ADD CONSTRAINT spells_healing_scaling_stat_check
+        CHECK (healing_scaling_stat IS NULL OR healing_scaling_stat IN ('none', 'strength', 'agility', 'constitution', 'intellect', 'wisdom', 'charisma'))
+      `);
+
       // Seed default game settings
       await client.query(`
         INSERT INTO game_settings (key, value) VALUES
@@ -275,7 +297,25 @@ async function seedStatusEffectDefinitions(): Promise<void> {
        0, -5, 0, 0,
        NULL, NULL, 'The vines tighten around you.', FALSE, 'The vines wither and release you.',
        FALSE, TRUE, FALSE)
-      ON CONFLICT (id) DO NOTHING
+      ON CONFLICT (id) DO UPDATE SET
+        name = EXCLUDED.name,
+        description = EXCLUDED.description,
+        category = EXCLUDED.category,
+        stacking_behavior = EXCLUDED.stacking_behavior,
+        max_stacks = EXCLUDED.max_stacks,
+        accuracy_modifier = EXCLUDED.accuracy_modifier,
+        defense_modifier = EXCLUDED.defense_modifier,
+        energy_modifier = EXCLUDED.energy_modifier,
+        damage_modifier = EXCLUDED.damage_modifier,
+        tick_damage = EXCLUDED.tick_damage,
+        tick_healing = EXCLUDED.tick_healing,
+        tick_message = EXCLUDED.tick_message,
+        silent_tick = EXCLUDED.silent_tick,
+        wear_off_message = EXCLUDED.wear_off_message,
+        blocks_regen = EXCLUDED.blocks_regen,
+        blocks_movement = EXCLUDED.blocks_movement,
+        is_blind = EXCLUDED.is_blind,
+        updated_at = NOW()
     `);
     console.log('Status effect definitions seeded successfully');
   } catch (error) {

@@ -515,10 +515,10 @@ function gatherFormData(): Partial<Spell> {
     .filter(c => c);
 
   // Parse scaling values - convert percentage to decimal (round to handle floating point)
-  const damageScalingStat = (document.getElementById('spell-damage-scaling-stat') as HTMLSelectElement).value || null;
-  const damageScalingFactorPct = Math.round(parseFloat((document.getElementById('spell-damage-scaling-factor') as HTMLInputElement).value)) || 0;
-  const healingScalingStat = (document.getElementById('spell-healing-scaling-stat') as HTMLSelectElement).value || null;
-  const healingScalingFactorPct = Math.round(parseFloat((document.getElementById('spell-healing-scaling-factor') as HTMLInputElement).value)) || 0;
+  const damageScalingStat = getElement<HTMLSelectElement>('spell-damage-scaling-stat')?.value || null;
+  const damageScalingFactorPct = Math.round(parseFloat(getElement<HTMLInputElement>('spell-damage-scaling-factor')?.value || '0')) || 0;
+  const healingScalingStat = getElement<HTMLSelectElement>('spell-healing-scaling-stat')?.value || null;
+  const healingScalingFactorPct = Math.round(parseFloat(getElement<HTMLInputElement>('spell-healing-scaling-factor')?.value || '0')) || 0;
 
   return {
     name: (document.getElementById('spell-name') as HTMLInputElement).value,

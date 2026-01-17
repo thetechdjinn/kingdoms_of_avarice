@@ -9,6 +9,7 @@ const validStackingBehaviors = Object.values(StackingBehavior);
 
 // Validate effect definition input
 function validateDefinitionInput(def: Record<string, unknown>): string | null {
+  // Required string fields
   if (!def.id || typeof def.id !== 'string') {
     return 'id is required and must be a string';
   }
@@ -21,6 +22,38 @@ function validateDefinitionInput(def: Record<string, unknown>): string | null {
   if (!def.stackingBehavior || !validStackingBehaviors.includes(def.stackingBehavior as StackingBehavior)) {
     return `stackingBehavior is required and must be one of: ${validStackingBehaviors.join(', ')}`;
   }
+
+  // Optional numeric fields - validate type if provided
+  const numericFields = ['maxStacks', 'accuracyModifier', 'defenseModifier', 'energyModifier', 'damageModifier'];
+  for (const field of numericFields) {
+    if (def[field] !== undefined && def[field] !== null && typeof def[field] !== 'number') {
+      return `${field} must be a number`;
+    }
+  }
+
+  // Validate maxStacks is positive if provided
+  if (def.maxStacks !== undefined && def.maxStacks !== null) {
+    if (typeof def.maxStacks === 'number' && (def.maxStacks < 1 || !Number.isInteger(def.maxStacks))) {
+      return 'maxStacks must be a positive integer';
+    }
+  }
+
+  // Optional string fields - validate type if provided
+  const stringFields = ['description', 'tickDamage', 'tickHealing', 'tickMessage', 'wearOffMessage'];
+  for (const field of stringFields) {
+    if (def[field] !== undefined && def[field] !== null && typeof def[field] !== 'string') {
+      return `${field} must be a string`;
+    }
+  }
+
+  // Optional boolean fields - validate type if provided
+  const booleanFields = ['silentTick', 'blocksRegen', 'blocksMovement', 'isBlind'];
+  for (const field of booleanFields) {
+    if (def[field] !== undefined && def[field] !== null && typeof def[field] !== 'boolean') {
+      return `${field} must be a boolean`;
+    }
+  }
+
   return null;
 }
 
@@ -126,8 +159,15 @@ export function setupStatusEffectDefinitionRoutes(app: Express): void {
         return;
       }
 
+      // Extract and validate only allowed fields
+      const {
+        name, description, category, stackingBehavior, maxStacks,
+        accuracyModifier, defenseModifier, energyModifier, damageModifier,
+        tickDamage, tickHealing, tickMessage, silentTick, wearOffMessage,
+        blocksRegen, blocksMovement, isBlind
+      } = req.body;
+
       // Validate category if provided
-      const { category, stackingBehavior } = req.body;
       if (category !== undefined && !validCategories.includes(category)) {
         res.status(400).json({ success: false, message: `Invalid category: must be one of ${validCategories.join(', ')}` });
         return;
@@ -139,7 +179,27 @@ export function setupStatusEffectDefinitionRoutes(app: Express): void {
         return;
       }
 
-      const definition = await effectDefRepo.updateDefinition(normalizedId, req.body);
+      // Build update object with only allowed fields
+      const updateData: Record<string, unknown> = {};
+      if (name !== undefined) updateData.name = name;
+      if (description !== undefined) updateData.description = description;
+      if (category !== undefined) updateData.category = category;
+      if (stackingBehavior !== undefined) updateData.stackingBehavior = stackingBehavior;
+      if (maxStacks !== undefined) updateData.maxStacks = maxStacks;
+      if (accuracyModifier !== undefined) updateData.accuracyModifier = accuracyModifier;
+      if (defenseModifier !== undefined) updateData.defenseModifier = defenseModifier;
+      if (energyModifier !== undefined) updateData.energyModifier = energyModifier;
+      if (damageModifier !== undefined) updateData.damageModifier = damageModifier;
+      if (tickDamage !== undefined) updateData.tickDamage = tickDamage;
+      if (tickHealing !== undefined) updateData.tickHealing = tickHealing;
+      if (tickMessage !== undefined) updateData.tickMessage = tickMessage;
+      if (silentTick !== undefined) updateData.silentTick = silentTick;
+      if (wearOffMessage !== undefined) updateData.wearOffMessage = wearOffMessage;
+      if (blocksRegen !== undefined) updateData.blocksRegen = blocksRegen;
+      if (blocksMovement !== undefined) updateData.blocksMovement = blocksMovement;
+      if (isBlind !== undefined) updateData.isBlind = isBlind;
+
+      const definition = await effectDefRepo.updateDefinition(normalizedId, updateData);
 
       // Reload effect definitions cache
       await reloadEffectDefinitions();
@@ -224,7 +284,9 @@ export function setupStatusEffectDefinitionRoutes(app: Express): void {
   // Import definitions
   app.post('/api/status-effects/import', requireDeveloper, async (req: Request, res: Response) => {
     try {
-      const { definitions, merge = true } = req.body;
+      const { definitions } = req.body;
+      // Validate merge parameter - must be explicitly boolean, defaults to true
+      const merge = typeof req.body.merge === 'boolean' ? req.body.merge : true;
 
       if (!definitions || !Array.isArray(definitions)) {
         res.status(400).json({ success: false, message: 'definitions array is required' });
@@ -239,28 +301,48 @@ export function setupStatusEffectDefinitionRoutes(app: Express): void {
 
       for (const def of definitions) {
         try {
-          // Normalize ID to lowercase
-          if (def.id) {
-            def.id = def.id.toLowerCase();
-          }
+          // Create a normalized copy to avoid mutating input
+          const normalizedId = def.id ? def.id.toLowerCase() : undefined;
 
-          // Validate definition structure
-          const validationError = validateDefinitionInput(def);
+          // Validate definition structure (using original def for error messages)
+          const validationError = validateDefinitionInput({ ...def, id: normalizedId });
           if (validationError) {
             results.errors.push(`Invalid definition "${def.id || 'unknown'}": ${validationError}`);
             continue;
           }
 
-          const existing = await effectDefRepo.getDefinitionById(def.id);
+          // Extract only allowed fields
+          const sanitizedDef = {
+            id: normalizedId,
+            name: def.name,
+            description: def.description,
+            category: def.category,
+            stackingBehavior: def.stackingBehavior,
+            maxStacks: def.maxStacks ?? 1,
+            accuracyModifier: def.accuracyModifier ?? 0,
+            defenseModifier: def.defenseModifier ?? 0,
+            energyModifier: def.energyModifier ?? 0,
+            damageModifier: def.damageModifier ?? 0,
+            tickDamage: def.tickDamage,
+            tickHealing: def.tickHealing,
+            tickMessage: def.tickMessage,
+            silentTick: def.silentTick ?? false,
+            wearOffMessage: def.wearOffMessage,
+            blocksRegen: def.blocksRegen ?? false,
+            blocksMovement: def.blocksMovement ?? false,
+            isBlind: def.isBlind ?? false,
+          };
+
+          const existing = await effectDefRepo.getDefinitionById(normalizedId!);
 
           if (existing && merge) {
-            await effectDefRepo.updateDefinition(def.id, def);
+            await effectDefRepo.updateDefinition(normalizedId!, sanitizedDef);
             results.updated++;
           } else if (!existing) {
-            await effectDefRepo.createDefinition(def);
+            await effectDefRepo.createDefinition(sanitizedDef);
             results.created++;
           } else {
-            results.errors.push(`Skipped "${def.id}": already exists (merge disabled)`);
+            results.errors.push(`Skipped "${normalizedId}": already exists (merge disabled)`);
           }
         } catch (err) {
           results.errors.push(`Failed to import "${def.id}": ${err instanceof Error ? err.message : String(err)}`);
