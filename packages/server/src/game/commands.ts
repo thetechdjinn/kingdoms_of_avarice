@@ -6,7 +6,7 @@ import { colors } from '../utils/colors.js';
 import { processAdminCommand, getPlayerLocation, setPlayerLocation } from './adminCommands.js';
 import * as playerRepo from '../db/repositories/playerRepository.js';
 import { handleGet, handleDrop, handleInventory, handleExamine, getRoomItemsDescription, handleWield, handleWear, handleRemove, handleEquipment, handlePut, handleGetFrom, handleLookIn, handleUse, handleLight, handleExtinguish, handleRepair, handleSearch, handleRecipes, handleCraft, handleEnchantments, handleEnchant } from './itemCommands.js';
-import { handleAttack, handleFlee } from './combatCommands.js';
+import { handleAttack, handleFlee, handleBreak } from './combatCommands.js';
 import { isSpellMnemonic, handleSpellCommand, handleSpellbook } from './spellCommands.js';
 import * as characterRepo from '../db/repositories/characterRepository.js';
 import * as progressionRepo from '../db/repositories/progressionRepository.js';
@@ -220,6 +220,11 @@ export async function processCommand(
     return fleeResult;
   }
 
+  // Break combat command (bre, brea, break)
+  if ('break'.startsWith(command) && command.length >= 3) {
+    return handleBreak(socket, _connectedPlayers);
+  }
+
   // Spellbook command
   if (command === 'spells' || command === 'spellbook' || command === 'sp') {
     return handleSpellbook(socket);
@@ -425,7 +430,7 @@ async function handleMove(
 
   // Save room location to database first
   try {
-    await playerRepo.setCurrentRoomId(socket.playerId, newRoom.id);
+    await characterRepo.updateCharacterRoom(socket.characterId!, newRoom.id);
   } catch (error) {
     console.error('Failed to save room location:', error);
     return { type: MessageType.ERROR, message: 'Something prevents you from moving.' };

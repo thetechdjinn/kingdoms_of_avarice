@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Status Effects Editor - Kingdoms of Avarice</title>
+    <link rel="stylesheet" href="/src/editor.css" />
+    <link rel="stylesheet" href="/src/status-editor.css" />
+  </head>
+  <body>
+    <div id="editor-app">
+      <nav id="main-nav">
+        <div class="nav-brand">Kingdoms of Avarice</div>
+        <div class="nav-links">
+          <a href="/" class="nav-link">Game</a>
+          <div class="nav-dropdown" id="nav-dev-dropdown">
+            <button class="nav-link nav-dropdown-btn active">Developer</button>
+            <div class="nav-dropdown-menu">
+              <a href="/editor.html" class="nav-dropdown-item">Room Editor</a>
+              <a href="/item-editor.html" class="nav-dropdown-item">Item Editor</a>
+              <a href="/spell-editor.html" class="nav-dropdown-item">Spell Editor</a>
+              <a href="/status-editor.html" class="nav-dropdown-item active">Status Effects</a>
+              <a href="/progression-editor.html" class="nav-dropdown-item">Progression Editor</a>
+            </div>
+          </div>
+          <a href="/admin.html" class="nav-link" id="nav-admin-link" style="display: none;">Admin</a>
+        </div>
+        <div class="nav-spacer"></div>
+        <a href="/docs.html?file=Spell_and_Effects_Guide.md" target="_blank" rel="noopener noreferrer" class="help-link nav-help" title="View Documentation">?</a>
+        <div class="nav-user-menu">
+          <button class="nav-user-btn" id="nav-username">User</button>
+          <div class="dropdown-menu" id="user-dropdown">
+            <button class="dropdown-item" id="logout-btn">Logout</button>
+          </div>
+        </div>
+      </nav>
+
+      <div id="editor-layout">
+        <aside id="effect-list-panel">
+          <div class="panel-header">
+            <h2>Status Effects</h2>
+            <button id="new-effect-btn" class="btn-primary">+ New Effect</button>
+          </div>
+          <div id="effect-filter">
+            <label for="category-select">Filter by Category:</label>
+            <select id="category-select">
+              <option value="">All Categories</option>
+              <option value="buff">Buff</option>
+              <option value="debuff">Debuff</option>
+              <option value="dot">DoT (Damage)</option>
+              <option value="hot">HoT (Healing)</option>
+              <option value="control">Control</option>
+            </select>
+          </div>
+          <div id="effect-search">
+            <input type="text" id="search-input" placeholder="Search effects..." />
+          </div>
+          <ul id="effect-list"></ul>
+
+          <div class="panel-footer">
+            <button id="import-btn" class="btn-small">Import</button>
+            <button id="export-btn" class="btn-small">Export</button>
+          </div>
+        </aside>
+
+        <main id="effect-editor-panel">
+          <div id="no-effect-selected">
+            <p>Select an effect from the list or create a new one.</p>
+          </div>
+
+          <form id="effect-form" style="display: none;">
+            <div class="form-header">
+              <h2 id="effect-form-title">Edit Status Effect</h2>
+              <span id="effect-id-display"></span>
+            </div>
+
+            <!-- Tabs -->
+            <div class="form-tabs">
+              <button type="button" class="tab-btn active" data-tab="basic">Basic</button>
+              <button type="button" class="tab-btn" data-tab="modifiers">Modifiers</button>
+              <button type="button" class="tab-btn" data-tab="periodic">Periodic</button>
+              <button type="button" class="tab-btn" data-tab="flags">Flags</button>
+            </div>
+
+            <!-- Basic Tab Content -->
+            <div class="tab-content active" id="tab-basic">
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="effect-id">Effect ID</label>
+                  <input type="text" id="effect-id" required placeholder="poisoned" pattern="[a-z_]+" />
+                  <span class="hint-inline">Lowercase, no spaces (e.g., poisoned, blessed)</span>
+                </div>
+                <div class="form-group">
+                  <label for="effect-name">Display Name</label>
+                  <input type="text" id="effect-name" required placeholder="Poisoned" />
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label for="effect-description">Description</label>
+                <textarea id="effect-description" rows="3" placeholder="Poison courses through your veins..."></textarea>
+              </div>
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="effect-category">Category</label>
+                  <select id="effect-category" required>
+                    <option value="buff">Buff</option>
+                    <option value="debuff">Debuff</option>
+                    <option value="dot">DoT (Damage over Time)</option>
+                    <option value="hot">HoT (Healing over Time)</option>
+                    <option value="control">Control</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="effect-stacking">Stacking Behavior</label>
+                  <select id="effect-stacking" required>
+                    <option value="replace">Replace (new replaces old)</option>
+                    <option value="refresh">Refresh (reset duration)</option>
+                    <option value="stack">Stack (multiple instances)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="form-row">
+                <div class="form-group" id="max-stacks-group">
+                  <label for="effect-max-stacks">Max Stacks</label>
+                  <input type="number" id="effect-max-stacks" min="1" value="1" />
+                  <span class="hint-inline">Only applies when stacking behavior is "Stack"</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Modifiers Tab Content -->
+            <div class="tab-content" id="tab-modifiers">
+              <p class="hint">Combat stat modifiers. Positive values are bonuses, negative are penalties.</p>
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="effect-accuracy">Accuracy Modifier</label>
+                  <input type="number" id="effect-accuracy" value="0" />
+                  <span class="hint-inline">+/- to hit chance</span>
+                </div>
+                <div class="form-group">
+                  <label for="effect-defense">Defense Modifier</label>
+                  <input type="number" id="effect-defense" value="0" />
+                  <span class="hint-inline">+/- to defense</span>
+                </div>
+              </div>
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="effect-energy">Energy Modifier (%)</label>
+                  <input type="number" id="effect-energy" value="0" />
+                  <span class="hint-inline">% change to attack energy gain</span>
+                </div>
+                <div class="form-group">
+                  <label for="effect-damage">Damage Modifier (%)</label>
+                  <input type="number" id="effect-damage" value="0" />
+                  <span class="hint-inline">% change to damage dealt</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Periodic Tab Content -->
+            <div class="tab-content" id="tab-periodic">
+              <p class="hint">Periodic effects apply every 5 seconds. Use for DoT/HoT effects.</p>
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="effect-tick-damage">Tick Damage</label>
+                  <input type="text" id="effect-tick-damage" placeholder="1d4" />
+                  <span class="hint-inline">Dice notation (e.g., 1d4, 2d6+2)</span>
+                </div>
+                <div class="form-group">
+                  <label for="effect-tick-healing">Tick Healing</label>
+                  <input type="text" id="effect-tick-healing" placeholder="1d6" />
+                  <span class="hint-inline">Dice notation (e.g., 1d6, 2d8)</span>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label for="effect-tick-message">Tick Message</label>
+                <input type="text" id="effect-tick-message" placeholder="You feel sick." />
+                <span class="hint-inline">Custom message shown each tick (leave empty for default)</span>
+              </div>
+
+              <div class="form-row">
+                <div class="form-group checkbox-group">
+                  <label class="checkbox-label">
+                    <input type="checkbox" id="effect-silent-tick" />
+                    Silent Tick
+                  </label>
+                  <span class="hint-inline">Suppress tick messages (good for passive effects)</span>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label for="effect-wear-off">Wear Off Message</label>
+                <input type="text" id="effect-wear-off" placeholder="The poison fades." />
+                <span class="hint-inline">Message shown when effect expires</span>
+              </div>
+            </div>
+
+            <!-- Flags Tab Content -->
+            <div class="tab-content" id="tab-flags">
+              <p class="hint">Special flags that affect gameplay behavior.</p>
+
+              <div class="flag-grid">
+                <div class="form-group checkbox-group">
+                  <label class="checkbox-label">
+                    <input type="checkbox" id="effect-blocks-regen" />
+                    Blocks Regeneration
+                  </label>
+                  <span class="hint-inline">Prevents natural HP/mana regen</span>
+                </div>
+
+                <div class="form-group checkbox-group">
+                  <label class="checkbox-label">
+                    <input type="checkbox" id="effect-blocks-movement" />
+                    Blocks Movement
+                  </label>
+                  <span class="hint-inline">Prevents movement commands</span>
+                </div>
+
+                <div class="form-group checkbox-group">
+                  <label class="checkbox-label">
+                    <input type="checkbox" id="effect-is-blind" />
+                    Is Blind
+                  </label>
+                  <span class="hint-inline">Applies blind penalty in combat</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="form-actions">
+              <button type="submit" class="btn-primary">Save Effect</button>
+              <button type="button" id="duplicate-effect-btn" class="btn-secondary">Duplicate</button>
+              <button type="button" id="delete-effect-btn" class="btn-danger">Delete Effect</button>
+            </div>
+          </form>
+        </main>
+
+        <aside id="preview-panel">
+          <div class="panel-header">
+            <h2>Preview</h2>
+          </div>
+          <div id="effect-preview">
+            <div id="preview-content">
+              <p class="hint">Select an effect to see preview</p>
+            </div>
+          </div>
+
+          <div class="panel-section">
+            <h3>Usage</h3>
+            <div id="usage-info">
+              <p class="hint">This effect ID can be used in the Spell Editor's "Status Effect" field to apply this effect when a spell is cast.</p>
+            </div>
+          </div>
+        </aside>
+      </div>
+    </div>
+
+    <!-- Import Modal -->
+    <div id="import-modal" class="modal" style="display: none;">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>Import Status Effects</h3>
+          <button id="close-import-modal" class="close-btn">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label for="import-file">Select JSON file:</label>
+            <input type="file" id="import-file" accept=".json" />
+          </div>
+          <label class="checkbox-label">
+            <input type="checkbox" id="import-merge" checked />
+            Merge with existing (update if ID matches)
+          </label>
+        </div>
+        <div class="modal-footer">
+          <button id="do-import-btn" class="btn-primary">Import</button>
+        </div>
+      </div>
+    </div>
+
+    <script type="module" src="/src/status-editor.ts"></script>
+  </body>
+</html>

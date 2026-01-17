@@ -37,6 +37,12 @@ CREATE TABLE IF NOT EXISTS spells (
     -- Combat behavior
     is_attack_spell BOOLEAN NOT NULL DEFAULT FALSE,  -- If true, replaces melee combat action
 
+    -- Stat scaling (adds bonus damage/healing based on character stats)
+    damage_scaling_stat VARCHAR(20) CHECK (damage_scaling_stat IN ('none', 'strength', 'agility', 'constitution', 'intellect', 'wisdom', 'charisma')),
+    damage_scaling_factor DECIMAL(4,2),  -- Percentage of stat added (e.g., 0.50 = 50%)
+    healing_scaling_stat VARCHAR(20) CHECK (healing_scaling_stat IN ('none', 'strength', 'agility', 'constitution', 'intellect', 'wisdom', 'charisma')),
+    healing_scaling_factor DECIMAL(4,2),  -- Percentage of stat added (e.g., 0.50 = 50%)
+
     -- Metadata
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP

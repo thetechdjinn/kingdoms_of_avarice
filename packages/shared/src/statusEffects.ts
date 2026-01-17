@@ -43,6 +43,11 @@ export interface StatusEffectDefinition {
   tickDamage?: string;         // Dice notation for damage per tick (e.g., "1d4")
   tickHealing?: string;        // Dice notation for healing per tick
 
+  // Tick messages (for DoT/HoT effects)
+  tickMessage?: string;        // Custom message on tick (e.g., "You feel sick.")
+  silentTick?: boolean;        // If true, don't show any tick message (for passive effects)
+  wearOffMessage?: string;     // Custom message when effect expires
+
   // Special flags
   blocksRegen?: boolean;       // Prevents natural regeneration
   blocksMovement?: boolean;    // Prevents movement commands

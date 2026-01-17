@@ -45,6 +45,11 @@ export async function runMigrations(): Promise<void> {
       const statusEffectsSchema = readFileSync(statusEffectsSchemaPath, 'utf-8');
       await client.query(statusEffectsSchema);
 
+      // Run status effect definitions schema
+      const statusEffectDefsSchemaPath = join(sqlDir, 'schema_status_effect_definitions.sql');
+      const statusEffectDefsSchema = readFileSync(statusEffectDefsSchemaPath, 'utf-8');
+      await client.query(statusEffectDefsSchema);
+
       // Add brief_mode column if it doesn't exist (for existing databases)
       await client.query(`
         ALTER TABLE players ADD COLUMN IF NOT EXISTS brief_mode BOOLEAN DEFAULT FALSE
@@ -71,6 +76,20 @@ export async function runMigrations(): Promise<void> {
       // Remove UNIQUE constraint from email if it exists (allow NULL and duplicates for now)
       await client.query(`
         ALTER TABLE players DROP CONSTRAINT IF EXISTS players_email_key
+      `);
+
+      // Add spell stat scaling columns (for existing databases)
+      await client.query(`
+        ALTER TABLE spells ADD COLUMN IF NOT EXISTS damage_scaling_stat VARCHAR(20)
+      `);
+      await client.query(`
+        ALTER TABLE spells ADD COLUMN IF NOT EXISTS damage_scaling_factor DECIMAL(4,2)
+      `);
+      await client.query(`
+        ALTER TABLE spells ADD COLUMN IF NOT EXISTS healing_scaling_stat VARCHAR(20)
+      `);
+      await client.query(`
+        ALTER TABLE spells ADD COLUMN IF NOT EXISTS healing_scaling_factor DECIMAL(4,2)
       `);
 
       // Seed default game settings
@@ -121,6 +140,16 @@ export async function seedInitialData(): Promise<void> {
     console.log('Spell seed data already exists, skipping spells...');
   } else {
     await seedSpells();
+  }
+
+  // Check if status effect definitions already exist
+  const effectDefCheck = await getPool().query('SELECT COUNT(*) FROM status_effect_definitions');
+  const effectDefsExist = parseInt(effectDefCheck.rows[0].count) > 0;
+
+  if (effectDefsExist) {
+    console.log('Status effect definitions already exist, skipping...');
+  } else {
+    await seedStatusEffectDefinitions();
   }
 }
 
@@ -187,6 +216,70 @@ async function seedSpells(): Promise<void> {
   } catch (error) {
     console.error('Failed to seed spells:', error);
     // Don't throw - spells are optional, game can run without them
+  }
+}
+
+async function seedStatusEffectDefinitions(): Promise<void> {
+  console.log('Seeding default status effect definitions...');
+
+  try {
+    // Seed the default status effect definitions from code registry
+    await getPool().query(`
+      INSERT INTO status_effect_definitions (
+        id, name, description, category, stacking_behavior, max_stacks,
+        accuracy_modifier, defense_modifier, energy_modifier, damage_modifier,
+        tick_damage, tick_healing, tick_message, silent_tick, wear_off_message,
+        blocks_regen, blocks_movement, is_blind
+      ) VALUES
+      ('blessed', 'Blessed', 'Divine favor grants improved accuracy', 'buff', 'refresh', 1,
+       10, 0, 0, 0,
+       NULL, NULL, NULL, TRUE, 'The divine blessing fades.',
+       FALSE, FALSE, FALSE),
+      ('shielded', 'Shielded', 'A magical barrier provides extra protection', 'buff', 'refresh', 1,
+       0, 15, 0, 0,
+       NULL, NULL, NULL, TRUE, 'Your magical shield dissipates.',
+       FALSE, FALSE, FALSE),
+      ('hasted', 'Hasted', 'Magical speed increases combat energy regeneration', 'buff', 'refresh', 1,
+       0, 0, 25, 0,
+       NULL, NULL, NULL, TRUE, 'The haste spell wears off.',
+       FALSE, FALSE, FALSE),
+      ('empowered', 'Empowered', 'Raw magical power increases damage dealt', 'buff', 'refresh', 1,
+       0, 0, 0, 20,
+       NULL, NULL, NULL, TRUE, 'The empowerment fades.',
+       FALSE, FALSE, FALSE),
+      ('cursed', 'Cursed', 'A dark curse hampers combat effectiveness', 'debuff', 'refresh', 1,
+       -10, -10, 0, 0,
+       NULL, NULL, NULL, TRUE, 'The curse lifts.',
+       FALSE, FALSE, FALSE),
+      ('weakened', 'Weakened', 'Magical weakness reduces damage dealt', 'debuff', 'refresh', 1,
+       0, 0, 0, -25,
+       NULL, NULL, NULL, TRUE, 'Your strength returns.',
+       FALSE, FALSE, FALSE),
+      ('blinded', 'Blinded', 'Unable to see, suffering major accuracy penalties', 'debuff', 'refresh', 1,
+       0, 0, 0, 0,
+       NULL, NULL, NULL, TRUE, 'Your vision clears.',
+       FALSE, FALSE, TRUE),
+      ('poisoned', 'Poisoned', 'Venom courses through your veins', 'dot', 'refresh', 1,
+       0, 0, 0, 0,
+       '1d4', NULL, 'The poison burns through your veins.', FALSE, 'The poison runs its course.',
+       TRUE, FALSE, FALSE),
+      ('burning', 'Burning', 'Magical flames sear your flesh', 'dot', 'refresh', 1,
+       0, 0, 0, 0,
+       '1d6', NULL, 'The flames sear your flesh!', FALSE, 'The flames die out.',
+       FALSE, FALSE, FALSE),
+      ('regenerating', 'Regenerating', 'Healing magic mends your wounds over time', 'hot', 'refresh', 1,
+       0, 0, 0, 0,
+       NULL, '1d6', 'Healing energy flows through you.', FALSE, 'The regeneration effect fades.',
+       FALSE, FALSE, FALSE),
+      ('entangled', 'Entangled', 'Magical vines restrict your movement', 'control', 'refresh', 1,
+       0, -5, 0, 0,
+       NULL, NULL, 'The vines tighten around you.', FALSE, 'The vines wither and release you.',
+       FALSE, TRUE, FALSE)
+      ON CONFLICT (id) DO NOTHING
+    `);
+    console.log('Status effect definitions seeded successfully');
+  } catch (error) {
+    console.error('Failed to seed status effect definitions:', error);
   }
 }
 

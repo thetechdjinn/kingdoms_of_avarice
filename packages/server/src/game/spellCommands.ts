@@ -167,6 +167,8 @@ async function handleOffensiveSpell(
     mnemonic: spell.mnemonic,
     manaCost: spell.manaCost,
     damageDice: spell.damageDice || '1d4',
+    damageScalingStat: spell.damageScalingStat,
+    damageScalingFactor: spell.damageScalingFactor,
   };
 
   // Add target if not already in combat with them
@@ -182,24 +184,24 @@ async function handleOffensiveSpell(
   socket.regenState.enhancedRegen.clear();
   target.regenState.enhancedRegen.clear();
 
-  // Broadcast to room
+  // Broadcast to room (exclude both caster and target - they get personalized messages)
   broadcastToRoom(
     currentRoomId,
-    `${colors.combatAttacker(socket.username)} begins casting ${colors.cyan(spell.name)} at ${colors.combatDefender(target.username)}!`,
-    socket.playerId
+    `${socket.username} moves to attack ${target.username}.`,
+    [socket.playerId, target.playerId]
   );
 
   // Notify target
   const targetMessage = {
     type: MessageType.OUTPUT,
-    payload: `${colors.combatAttacker(socket.username)} begins casting ${colors.cyan(spell.name)} at you!`,
+    payload: `${colors.combatAttacker(socket.username)} begins casting ${colors.cyan(spell.name.toLowerCase())} at you!`,
     timestamp: Date.now(),
   };
   target.send(JSON.stringify(targetMessage));
 
   return {
     type: MessageType.OUTPUT,
-    message: `You begin casting ${colors.cyan(spell.name)} at ${colors.combatDefender(target.username)}!`,
+    message: colors.boldRed('*COMBAT ENGAGED*'),
   };
 }
 
@@ -259,7 +261,7 @@ async function handleHealingSpell(
     // Notify the target
     const targetNotify = {
       type: MessageType.OUTPUT,
-      payload: `${colors.cyan(socket.username)} casts ${colors.cyan(spell.name)} on you! You are healed for ${colors.green(actualHeal.toString())} HP!`,
+      payload: `${colors.cyan(socket.username)} casts ${colors.cyan(spell.name.toLowerCase())} on you! You are healed for ${colors.green(actualHeal.toString())} HP!`,
       timestamp: Date.now(),
     };
     targetSocket.send(JSON.stringify(targetNotify));
@@ -269,12 +271,12 @@ async function handleHealingSpell(
   if (isSelfHeal) {
     broadcastToRoom(
       currentRoomId,
-      `${socket.username} casts ${colors.cyan(spell.name)} and is healed.`,
+      `${socket.username} casts ${colors.cyan(spell.name.toLowerCase())} and is healed.`,
       socket.playerId
     );
     return {
       type: MessageType.OUTPUT,
-      message: `You cast ${colors.cyan(spell.name)} and heal for ${colors.green(actualHeal.toString())} HP!`,
+      message: `You cast ${colors.cyan(spell.name.toLowerCase())} and heal for ${colors.green(actualHeal.toString())} HP!`,
     };
   } else {
     // Broadcast to others (excluding caster - target already got direct message)
@@ -282,7 +284,7 @@ async function handleHealingSpell(
       if (playerId !== socket.playerId && playerId !== targetSocket.playerId && getPlayerLocation(playerId) === currentRoomId) {
         const broadcastMsg = {
           type: MessageType.OUTPUT,
-          payload: `${socket.username} casts ${colors.cyan(spell.name)} on ${targetName}.`,
+          payload: `${socket.username} casts ${colors.cyan(spell.name.toLowerCase())} on ${targetName}.`,
           timestamp: Date.now(),
         };
         playerSocket.send(JSON.stringify(broadcastMsg));
@@ -290,7 +292,7 @@ async function handleHealingSpell(
     }
     return {
       type: MessageType.OUTPUT,
-      message: `You cast ${colors.cyan(spell.name)} on ${colors.cyan(targetName)} and heal for ${colors.green(actualHeal.toString())} HP!`,
+      message: `You cast ${colors.cyan(spell.name.toLowerCase())} on ${colors.cyan(targetName)} and heal for ${colors.green(actualHeal.toString())} HP!`,
     };
   }
 }
@@ -339,7 +341,7 @@ async function handleBuffSpell(
   const currentRoomId = getPlayerLocation(socket.playerId);
   broadcastToRoom(
     currentRoomId,
-    `${socket.username} casts ${colors.cyan(spell.name)} and is ${colors.yellow(effectDef.name)}!`,
+    `${socket.username} casts ${colors.cyan(spell.name.toLowerCase())} and is ${colors.yellow(effectDef.name.toLowerCase())}!`,
     socket.playerId
   );
 
@@ -349,30 +351,87 @@ async function handleBuffSpell(
   const durationStr = formatDuration(durationMs);
   return {
     type: MessageType.OUTPUT,
-    message: `You cast ${colors.cyan(spell.name)}. ${result.message} (${durationStr})`,
+    message: `You cast ${colors.cyan(spell.name.toLowerCase())}. ${result.message} (${durationStr})`,
   };
 }
 
 /**
- * Handle debuff spell casting - requires a valid target (NPC or player)
- * Currently returns an error as NPCs are not yet implemented.
+ * Handle debuff spell casting - applies a harmful status effect to a target
+ * Can target players (PvP) or NPCs (when implemented)
  */
 async function handleDebuffSpell(
   socket: AuthenticatedSocket,
   spell: Spell,
   args: string[],
-  _connectedPlayers: Map<number, AuthenticatedSocket>
+  connectedPlayers: Map<number, AuthenticatedSocket>
 ): Promise<CommandResponse> {
   // Need a target for debuff spells
-  if (spell.targetType === SpellTargetType.ENEMY && args.length === 0) {
+  if (args.length === 0) {
     return { type: MessageType.ERROR, message: `Cast ${spell.name} at whom?` };
   }
 
-  // For now, debuff spells require NPCs which aren't implemented yet
-  // Don't deduct mana - spell didn't actually cast
+  const targetName = args.join(' ');
+  const currentRoomId = getPlayerLocation(socket.playerId);
+
+  // Find the target player
+  const target = findPlayerInRoom(targetName, currentRoomId, connectedPlayers, socket.playerId);
+  if (!target) {
+    return { type: MessageType.ERROR, message: `You don't see ${targetName} here.` };
+  }
+
+  // Check if spell has a status effect defined
+  if (!spell.statusEffect) {
+    return {
+      type: MessageType.ERROR,
+      message: `${spell.name} has no effect defined.`,
+    };
+  }
+
+  // Check if the effect exists in the registry
+  const effectDef = getEffectDefinition(spell.statusEffect);
+  if (!effectDef) {
+    return {
+      type: MessageType.ERROR,
+      message: `Unknown effect: ${spell.statusEffect}`,
+    };
+  }
+
+  // Deduct mana
+  socket.vitals.resource = (socket.vitals.resource ?? 0) - spell.manaCost;
+
+  // Calculate duration in milliseconds (effectDuration is in seconds)
+  const durationMs = (spell.effectDuration ?? 60) * 1000;
+
+  // Apply the status effect to the target
+  const result = await applyEffect(target, spell.statusEffect, durationMs, spell.id);
+
+  // Set combat flags if this is an aggressive action
+  socket.regenState.inCombat = true;
+  target.regenState.inCombat = true;
+  socket.regenState.enhancedRegen.clear();
+  target.regenState.enhancedRegen.clear();
+
+  // Broadcast to room (exclude caster and target)
+  broadcastToRoom(
+    currentRoomId,
+    `${socket.username} casts ${colors.cyan(spell.name.toLowerCase())} on ${target.username}!`,
+    [socket.playerId, target.playerId]
+  );
+
+  // Notify target
+  const targetMessage = {
+    type: MessageType.OUTPUT,
+    payload: `${colors.combatAttacker(socket.username)} casts ${colors.cyan(spell.name.toLowerCase())} on you! ${result.message}`,
+    timestamp: Date.now(),
+  };
+  target.send(JSON.stringify(targetMessage));
+
+  // Send updated vitals to target
+  sendVitals(target);
+
   return {
-    type: MessageType.ERROR,
-    message: `There are no valid targets for ${colors.cyan(spell.name)} here.`,
+    type: MessageType.OUTPUT,
+    message: `You cast ${colors.cyan(spell.name.toLowerCase())} on ${colors.combatDefender(target.username)}. ${result.message}`,
   };
 }
 
@@ -391,13 +450,13 @@ async function handleUtilitySpell(
   const currentRoomId = getPlayerLocation(socket.playerId);
   broadcastToRoom(
     currentRoomId,
-    `${socket.username} casts ${colors.cyan(spell.name)}.`,
+    `${socket.username} casts ${colors.cyan(spell.name.toLowerCase())}.`,
     socket.playerId
   );
 
   return {
     type: MessageType.OUTPUT,
-    message: `You cast ${colors.cyan(spell.name)}. (Utility effects not yet implemented)`,
+    message: `You cast ${colors.cyan(spell.name.toLowerCase())}. (Utility effects not yet implemented)`,
   };
 }
 

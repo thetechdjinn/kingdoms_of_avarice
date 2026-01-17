@@ -13,15 +13,27 @@ import {
   EffectModifiers,
 } from '@koa/shared';
 import * as statusEffectRepo from '../db/repositories/statusEffectRepository.js';
+import * as effectDefRepo from '../db/repositories/statusEffectDefinitionRepository.js';
 import { parseDiceString } from './combatCalculations.js';
 import { AuthenticatedSocket } from './socket.js';
 import { colors } from '../utils/colors.js';
 import { MessageType } from '@koa/shared';
 
 // ============================================================================
-// Effect Registry - Defines all available status effects
+// Effect Registry - Loaded from database with fallback to defaults
 // ============================================================================
 
+/**
+ * Runtime cache of effect definitions loaded from the database.
+ * This is populated by loadEffectDefinitions() on server startup.
+ */
+let loadedDefinitions: Map<string, StatusEffectDefinition> = new Map();
+let definitionsInitialized = false;
+
+/**
+ * Fallback effect definitions used when database is unavailable.
+ * These are also used to seed the database on first run.
+ */
 export const EFFECT_REGISTRY: Record<string, StatusEffectDefinition> = {
   // === BUFFS ===
   blessed: {
@@ -32,6 +44,7 @@ export const EFFECT_REGISTRY: Record<string, StatusEffectDefinition> = {
     stackingBehavior: StackingBehavior.REFRESH,
     maxStacks: 1,
     accuracyModifier: 10,
+    wearOffMessage: 'The blessing fades.',
   },
   shielded: {
     id: 'shielded',
@@ -41,6 +54,7 @@ export const EFFECT_REGISTRY: Record<string, StatusEffectDefinition> = {
     stackingBehavior: StackingBehavior.REFRESH,
     maxStacks: 1,
     defenseModifier: 15,
+    wearOffMessage: 'Your magical shield dissipates.',
   },
   hasted: {
     id: 'hasted',
@@ -50,6 +64,7 @@ export const EFFECT_REGISTRY: Record<string, StatusEffectDefinition> = {
     stackingBehavior: StackingBehavior.REFRESH,
     maxStacks: 1,
     energyModifier: 25, // +25% attack energy
+    wearOffMessage: 'Your movements return to normal.',
   },
   strengthened: {
     id: 'strengthened',
@@ -59,6 +74,7 @@ export const EFFECT_REGISTRY: Record<string, StatusEffectDefinition> = {
     stackingBehavior: StackingBehavior.REFRESH,
     maxStacks: 1,
     damageModifier: 15, // +15% damage
+    wearOffMessage: 'The surge of strength fades.',
   },
 
   // === DEBUFFS (for future use with NPCs) ===
@@ -100,6 +116,8 @@ export const EFFECT_REGISTRY: Record<string, StatusEffectDefinition> = {
     stackingBehavior: StackingBehavior.STACK,
     maxStacks: 3,
     tickDamage: '1d4',
+    tickMessage: 'You feel sick.',
+    wearOffMessage: 'The poison fades from your system.',
     blocksRegen: true,
   },
   burning: {
@@ -110,6 +128,8 @@ export const EFFECT_REGISTRY: Record<string, StatusEffectDefinition> = {
     stackingBehavior: StackingBehavior.REFRESH,
     maxStacks: 1,
     tickDamage: '1d6',
+    tickMessage: 'You are burning!',
+    wearOffMessage: 'The flames die out.',
   },
 
   // === HEALING OVER TIME ===
@@ -121,6 +141,8 @@ export const EFFECT_REGISTRY: Record<string, StatusEffectDefinition> = {
     stackingBehavior: StackingBehavior.REFRESH,
     maxStacks: 1,
     tickHealing: '1d6',
+    silentTick: true,  // Passive healing - no spam
+    wearOffMessage: 'Your regeneration fades.',
   },
 
   // === CONTROL ===
@@ -137,10 +159,53 @@ export const EFFECT_REGISTRY: Record<string, StatusEffectDefinition> = {
 };
 
 /**
- * Get an effect definition by ID
+ * Get an effect definition by ID.
+ * First checks the database-loaded definitions, then falls back to the code registry.
  */
 export function getEffectDefinition(effectId: string): StatusEffectDefinition | null {
+  // Check loaded definitions first (from database)
+  const loaded = loadedDefinitions.get(effectId);
+  if (loaded) {
+    return loaded;
+  }
+  // Fall back to code registry
   return EFFECT_REGISTRY[effectId] ?? null;
+}
+
+/**
+ * Initialize effect definitions from the database.
+ * Called during server startup.
+ */
+export async function initializeEffectDefinitions(): Promise<void> {
+  try {
+    const definitions = await effectDefRepo.getAllDefinitions();
+    loadedDefinitions = new Map(definitions.map(d => [d.id, d]));
+    definitionsInitialized = true;
+    console.log(`[StatusEffects] Loaded ${loadedDefinitions.size} effect definitions from database`);
+  } catch (error) {
+    console.error('[StatusEffects] Failed to load effect definitions from database, using fallback:', error);
+    // Use the code registry as fallback
+    loadedDefinitions = new Map(Object.entries(EFFECT_REGISTRY));
+    definitionsInitialized = true;
+  }
+}
+
+/**
+ * Reload effect definitions from the database.
+ * Called when definitions are updated via the API.
+ */
+export async function reloadEffectDefinitions(): Promise<void> {
+  await initializeEffectDefinitions();
+}
+
+/**
+ * Get all available effect IDs (for use by spell editor)
+ */
+export function getAllEffectIds(): string[] {
+  if (definitionsInitialized && loadedDefinitions.size > 0) {
+    return Array.from(loadedDefinitions.keys());
+  }
+  return Object.keys(EFFECT_REGISTRY);
 }
 
 // ============================================================================
@@ -393,19 +458,28 @@ export async function processEffectsTick(
       socket.vitals.hp = Math.max(0, socket.vitals.hp - totalDamage);
       vitalsChanged = true;
 
-      const stackInfo = effect.stacks > 1 ? ` (x${effect.stacks})` : '';
-      sendMessage(
-        socket,
-        MessageType.SYSTEM,
-        `${colors.red(definition.name)}${stackInfo} deals ${colors.red(totalDamage.toString())} damage!`
-      );
+      // Show tick message unless silentTick is true
+      if (!definition.silentTick) {
+        if (definition.tickMessage) {
+          // Use custom tick message
+          sendMessage(socket, MessageType.SYSTEM, colors.red(definition.tickMessage));
+        } else {
+          // Default tick message with damage
+          const stackInfo = effect.stacks > 1 ? ` (x${effect.stacks})` : '';
+          sendMessage(
+            socket,
+            MessageType.SYSTEM,
+            `${colors.red(definition.name)}${stackInfo} deals ${colors.red(totalDamage.toString())} damage!`
+          );
+        }
+      }
 
       // Check for death from DoT
       if (socket.vitals.hp <= 0) {
         sendMessage(
           socket,
           MessageType.SYSTEM,
-          colors.red('You have been slain by poison!')
+          colors.red('You have been slain!')
         );
         // Death handling will be done by the caller
       }
@@ -422,11 +496,21 @@ export async function processEffectsTick(
 
       if (actualHealing > 0) {
         vitalsChanged = true;
-        sendMessage(
-          socket,
-          MessageType.SYSTEM,
-          `${colors.green(definition.name)} heals you for ${colors.green(actualHealing.toString())} HP.`
-        );
+
+        // Show tick message unless silentTick is true
+        if (!definition.silentTick) {
+          if (definition.tickMessage) {
+            // Use custom tick message
+            sendMessage(socket, MessageType.SYSTEM, colors.green(definition.tickMessage));
+          } else {
+            // Default tick message with healing amount
+            sendMessage(
+              socket,
+              MessageType.SYSTEM,
+              `${colors.green(definition.name)} heals you for ${colors.green(actualHealing.toString())} HP.`
+            );
+          }
+        }
       }
     }
   }
@@ -443,10 +527,12 @@ export async function processEffectsTick(
     }
 
     if (definition) {
+      // Use custom wear-off message or default
+      const wearOffMsg = definition.wearOffMessage || `${definition.name} has worn off.`;
       sendMessage(
         socket,
         MessageType.SYSTEM,
-        `${colors.gray(definition.name)} has worn off.`
+        colors.gray(wearOffMsg)
       );
     }
   }

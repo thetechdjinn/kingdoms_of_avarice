@@ -15,7 +15,7 @@ import { initializeProgressionData } from './progressionLoader.js';
 import { initializeDefaultRegenConfigs, startRegenLoops } from './regeneration.js';
 import { startCombatLoop } from './combat.js';
 import { initializeSpellMnemonics } from './spellCommands.js';
-import { loadEffectsFromDb, processEffectsTick } from './statusEffects.js';
+import { loadEffectsFromDb, processEffectsTick, initializeEffectDefinitions } from './statusEffects.js';
 import { colors } from '../utils/colors.js';
 import { checkWebSocketIp } from '../middleware/ipAccess.js';
 
@@ -100,6 +100,9 @@ export async function initializeGameWorld(): Promise<void> {
 
   // Start combat loop
   startCombatLoop(connectedPlayers);
+
+  // Initialize status effect definitions from database
+  await initializeEffectDefinitions();
 
   // Initialize spell system
   await initializeSpellMnemonics();
@@ -412,14 +415,18 @@ function broadcastToAll(text: string, excludePlayerId?: number): void {
 }
 
 // Broadcast to players in a specific room (except excludePlayerId)
-export function broadcastToRoom(roomId: number, text: string, excludePlayerId?: number): void {
+export function broadcastToRoom(roomId: number, text: string, excludePlayerIds?: number | number[]): void {
   const message: GameMessage = {
     type: MessageType.OUTPUT,
     payload: text,
     timestamp: Date.now(),
   };
+  const excludeSet = new Set(
+    excludePlayerIds === undefined ? [] :
+    Array.isArray(excludePlayerIds) ? excludePlayerIds : [excludePlayerIds]
+  );
   for (const [playerId, socket] of connectedPlayers) {
-    if (playerId !== excludePlayerId && getPlayerLocation(playerId) === roomId) {
+    if (!excludeSet.has(playerId) && getPlayerLocation(playerId) === roomId) {
       socket.send(JSON.stringify(message));
     }
   }

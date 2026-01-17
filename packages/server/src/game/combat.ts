@@ -4,7 +4,7 @@
  * Manages the global combat timer and processes combat rounds for all players.
  */
 
-import { MessageType, GameMessage, AttackResult } from '@koa/shared';
+import { MessageType, GameMessage, AttackResult, SpellScalingStat } from '@koa/shared';
 import { AuthenticatedSocket } from './socket.js';
 import { getPlayerLocation } from './adminCommands.js';
 import { colors } from '../utils/colors.js';
@@ -23,6 +23,34 @@ import {
   getEquipmentAccuracyBonus,
 } from './combatStats.js';
 import * as characterRepo from '../db/repositories/characterRepository.js';
+
+/**
+ * Get character stat value based on spell scaling stat
+ * Maps spell stat names to character stat property names
+ */
+function getStatValueForScaling(
+  stats: { strength: number; dexterity: number; intelligence: number; constitution: number; wisdom: number; charisma: number },
+  scalingStat: SpellScalingStat | null
+): number {
+  if (!scalingStat || scalingStat === SpellScalingStat.NONE) return 0;
+
+  switch (scalingStat) {
+    case SpellScalingStat.STRENGTH:
+      return stats.strength;
+    case SpellScalingStat.AGILITY:
+      return stats.dexterity;  // Agility maps to dexterity
+    case SpellScalingStat.CONSTITUTION:
+      return stats.constitution;  // Health/vitality
+    case SpellScalingStat.INTELLECT:
+      return stats.intelligence;  // Intellect maps to intelligence
+    case SpellScalingStat.WISDOM:
+      return stats.wisdom;
+    case SpellScalingStat.CHARISMA:
+      return stats.charisma;
+    default:
+      return 0;
+  }
+}
 
 const DEFAULT_COMBAT_ROUND_MS = 4000;
 const parsedRoundMs = parseInt(process.env.COMBAT_ROUND_MS || '', 10);
@@ -214,6 +242,13 @@ async function processSpellCombat(
   // Parse spell damage dice
   const { min: minDamage, max: maxDamage } = parseDiceString(spell.damageDice);
 
+  // Calculate scaling bonus from caster's stats
+  let scalingBonus = 0;
+  if (spell.damageScalingStat && spell.damageScalingFactor) {
+    const statValue = getStatValueForScaling(attacker.characterStats, spell.damageScalingStat);
+    scalingBonus = Math.floor(statValue * spell.damageScalingFactor);
+  }
+
   // Process each target
   for (const targetId of targets) {
     const target = connectedPlayersRef.get(targetId);
@@ -230,8 +265,9 @@ async function processSpellCombat(
       continue;
     }
 
-    // Roll spell damage (no miss chance for spells - they always hit)
-    const damage = Math.floor(Math.random() * (maxDamage - minDamage + 1)) + minDamage;
+    // Roll spell damage (no miss chance for spells - they always hit) + scaling bonus
+    const baseDamage = Math.floor(Math.random() * (maxDamage - minDamage + 1)) + minDamage;
+    const damage = baseDamage + scalingBonus;
 
     // Send spell messages
     const attackerMsg = `You cast ${colors.cyan(spell.spellName)} at ${colors.combatDefender(target.username)} for ${colors.combatDamage(damage.toString())} damage!`;
