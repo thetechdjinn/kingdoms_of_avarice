@@ -310,40 +310,39 @@ export async function performLevelUp(characterId: number): Promise<LevelUpResult
     return { success: false, newLevel: 0, cpEarned: 0 };
   }
 
-  // Deduct XP cost
-  progression.std_xp -= checkResult.std_xp_required;
-
-  // Reset essence earned this level (wallet keeps accumulated essence)
-  progression.essence_earned_this_level = 0;
-
-  // Increment level
-  progression.level++;
-  const newLevel = progression.level;
-
-  // Calculate CP earned for this level
+  // Calculate new values before modifying state
+  const newLevel = progression.level + 1;
   const cpEarned = getCpEarnedForLevel(newLevel);
+  const newStdXp = progression.std_xp - checkResult.std_xp_required;
+
+  // Persist level and CP to database FIRST
+  try {
+    const character = await characterRepo.findCharacterById(characterId);
+    if (!character) {
+      console.error(`[Progression] Character ${characterId} not found for level-up persistence`);
+      return { success: false, newLevel: 0, cpEarned: 0 };
+    }
+
+    const newUnspentCp = (character.unspent_cp ?? 0) + cpEarned;
+    await characterRepo.updateCharacterStats(characterId, {
+      level: newLevel,
+      unspent_cp: newUnspentCp,
+    });
+  } catch (error) {
+    console.error(`[Progression] Failed to persist level-up for character ${characterId}:`, error);
+    return { success: false, newLevel: 0, cpEarned: 0 };
+  }
+
+  // Database succeeded, now update in-memory state
+  progression.std_xp = newStdXp;
+  progression.essence_earned_this_level = 0;
+  progression.level = newLevel;
 
   // Reset activity tracker for diminishing returns
   const tracker = activityTrackers.get(characterId);
   if (tracker) {
     tracker.activity_counts = [];
     tracker.last_reset_level = newLevel;
-  }
-
-  // Persist level and CP to database
-  try {
-    const character = await characterRepo.findCharacterById(characterId);
-    if (character) {
-      const newUnspentCp = (character.unspent_cp ?? 0) + cpEarned;
-      await characterRepo.updateCharacterStats(characterId, {
-        level: newLevel,
-        unspent_cp: newUnspentCp,
-      });
-    }
-  } catch (error) {
-    console.error(`[Progression] Failed to persist level-up for character ${characterId}:`, error);
-    // Note: In-memory state is already updated, but DB failed
-    // This is a partial failure - log and continue
   }
 
   return { success: true, newLevel, cpEarned };
