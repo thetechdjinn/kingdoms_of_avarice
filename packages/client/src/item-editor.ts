@@ -362,7 +362,7 @@ function loadWeaponData(template: ItemTemplate): void {
 
   if (damageDice) damageDice.value = data?.damage_dice || '1d6';
   if (damageType) damageType.value = data?.damage_type || 'slashing';
-  if (attackSpeed) attackSpeed.value = String(data?.attack_speed || 10);
+  if (attackSpeed) attackSpeed.value = String(data?.attack_speed || 1500);
   if (critModifier) critModifier.value = String(data?.crit_modifier || 2);
   if (range) range.value = data?.range || 'melee';
 

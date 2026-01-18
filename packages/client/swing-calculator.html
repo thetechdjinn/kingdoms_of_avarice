@@ -454,7 +454,7 @@
                 </div>
 
                 <div class="output-item">
-                  <span class="output-label">Stat Dodge (AGI + CHA)</span>
+                  <span class="output-label">Stat Dodge (DEX + CHA)</span>
                   <span class="output-value" id="out-stat-dodge">0%</span>
                 </div>
 
@@ -524,7 +524,7 @@
               <h3>Dodge Formulas (MajorMUD-style)</h3>
               <div class="formula">
                 <p><span class="var">baseDodge</span> = <span class="var">classDodgeBonus</span> + <span class="var">raceDodgeBonus</span> + <span class="var">equipDodgeBonus</span></p>
-                <p><span class="var">statDodge</span> = floor(<span class="var">AGI</span>/<span class="num">10</span>) * <span class="num">2</span> + floor(<span class="var">CHA</span>/<span class="num">10</span>) * <span class="num">1</span></p>
+                <p><span class="var">statDodge</span> = floor(<span class="var">DEX</span>/<span class="num">10</span>) * <span class="num">2</span> + floor(<span class="var">CHA</span>/<span class="num">10</span>) * <span class="num">1</span></p>
                 <p><span class="var">preCap</span> = <span class="var">baseDodge</span> + <span class="var">statDodge</span></p>
                 <p><span class="var">postCap</span> = if (<span class="var">preCap</span> > <span class="num">52</span>) then <span class="num">52</span> + floor((<span class="var">preCap</span> - <span class="num">52</span>) / <span class="num">4</span>) else <span class="var">preCap</span></p>
                 <p><span class="var">effectiveDodge</span> = if (<span class="var">attackerAcc</span> ≤ <span class="num">8</span>) then <span class="num">0</span> else max(<span class="num">0</span>, min(<span class="num">90</span>, floor(<span class="var">postCap</span> * <span class="num">10</span> / <span class="var">attackerAcc</span>)))</p>

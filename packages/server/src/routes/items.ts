@@ -13,16 +13,17 @@ export function setupItemRoutes(app: Express): void {
   // Get all item templates (optionally filtered by type)
   app.get('/api/items/templates', requireDeveloper, async (req: Request, res: Response) => {
     try {
-      let templates = await itemRepo.getAllTemplates();
-
-      // Filter by type if specified
       const typeFilter = typeof req.query.type === 'string' ? req.query.type : undefined;
+      let templates;
+
       if (typeFilter) {
         if (!Object.values(ItemType).includes(typeFilter as ItemType)) {
           res.status(400).json({ success: false, message: 'Invalid item type' });
           return;
         }
-        templates = templates.filter(t => t.item_type === typeFilter);
+        templates = await itemRepo.getTemplatesByType(typeFilter as ItemType);
+      } else {
+        templates = await itemRepo.getAllTemplates();
       }
 
       res.json({ success: true, templates });

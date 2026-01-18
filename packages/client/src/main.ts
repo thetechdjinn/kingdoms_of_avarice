@@ -409,7 +409,7 @@ async function updateNavigation(): Promise<void> {
       // Show/hide Developer nav dropdown based on roles
       const devDropdown = document.getElementById('nav-dev-dropdown');
       if (devDropdown) {
-        devDropdown.style.display = isDeveloper ? 'block' : 'none';
+        devDropdown.style.display = isDeveloper ? 'flex' : 'none';
       }
 
       // Show/hide Admin nav dropdown based on roles
