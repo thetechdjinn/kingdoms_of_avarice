@@ -758,7 +758,7 @@ function formatItemExamine(item: ItemInstance): CommandResponse {
   // Weapon info
   if (template.weapon_data) {
     const wd = template.weapon_data;
-    lines.push(`Damage: ${colors.boldWhite(wd.damage_dice)} (${wd.damage_type})`);
+    lines.push(`Damage: ${colors.boldWhite(`${wd.min_damage}-${wd.max_damage}`)} (${wd.damage_type})`);
     if (template.flags?.two_handed) {
       lines.push('This is a two-handed weapon.');
     }

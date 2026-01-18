@@ -398,7 +398,8 @@ async function processAttackerCombat(
 
   // Get weapon data from equipped weapon
   const weaponSpeed = attackerEquipment.weapon.attackSpeed;
-  const weaponDamage = attackerEquipment.weapon.damageDice;
+  const weaponMinDamage = attackerEquipment.weapon.minDamage;
+  const weaponMaxDamage = attackerEquipment.weapon.maxDamage;
 
   // Get class crit bonus (MajorMUD-style: some classes get flat crit bonuses)
   let classCritBonus = 0;
@@ -461,11 +462,10 @@ async function processAttackerCombat(
 
     const targetDefense = calculateDefense(defenseFactors);
 
-    // Parse weapon damage dice and apply damage modifier from status effects
-    const { min: baseMinDamage, max: baseMaxDamage } = parseDiceString(weaponDamage);
+    // Apply damage modifier from status effects to weapon damage range
     const damageMultiplier = 1 + (attackerEffectMods.damageModifier / 100);
-    const minDamage = Math.max(1, Math.floor(baseMinDamage * damageMultiplier));
-    const maxDamage = Math.max(1, Math.floor(baseMaxDamage * damageMultiplier));
+    const minDamage = Math.max(1, Math.floor(weaponMinDamage * damageMultiplier));
+    const maxDamage = Math.max(1, Math.floor(weaponMaxDamage * damageMultiplier));
 
     // Calculate defender's dodge chance (MajorMUD-style)
     // Dodge is a class skill - only classes with dodge_bonus > 0 can dodge

@@ -17,7 +17,8 @@ interface ItemTemplate {
   container_capacity?: number;
   container_weight_limit?: number;
   weapon_data?: {
-    damage_dice: string;
+    min_damage: number;
+    max_damage: number;
     damage_type: string;
     attack_speed?: number;
     crit_modifier?: number;
@@ -354,13 +355,15 @@ function selectTemplate(id: number): void {
 
 function loadWeaponData(template: ItemTemplate): void {
   const data = template.weapon_data;
-  const damageDice = getElement<HTMLInputElement>('weapon-damage-dice');
+  const minDamage = getElement<HTMLInputElement>('weapon-min-damage');
+  const maxDamage = getElement<HTMLInputElement>('weapon-max-damage');
   const damageType = getElement<HTMLSelectElement>('weapon-damage-type');
   const attackSpeed = getElement<HTMLInputElement>('weapon-attack-speed');
   const critModifier = getElement<HTMLInputElement>('weapon-crit-modifier');
   const range = getElement<HTMLSelectElement>('weapon-range');
 
-  if (damageDice) damageDice.value = data?.damage_dice || '1d6';
+  if (minDamage) minDamage.value = String(data?.min_damage ?? 1);
+  if (maxDamage) maxDamage.value = String(data?.max_damage ?? 6);
   if (damageType) damageType.value = data?.damage_type || 'slashing';
   if (attackSpeed) attackSpeed.value = String(data?.attack_speed || 1500);
   if (critModifier) critModifier.value = String(data?.crit_modifier || 2);
@@ -470,7 +473,7 @@ function updatePreview(template: ItemTemplate): void {
     html += `
       <div class="preview-section">
         <div class="preview-section-title">Weapon</div>
-        <div>Damage: ${escapeHtml(template.weapon_data.damage_dice)} ${escapeHtml(template.weapon_data.damage_type)}</div>
+        <div>Damage: ${template.weapon_data.min_damage}-${template.weapon_data.max_damage} ${escapeHtml(template.weapon_data.damage_type)}</div>
         <div>Speed: ${template.weapon_data.attack_speed || 1500}</div>
       </div>
     `;
@@ -701,7 +704,8 @@ function gatherFormData(): Partial<ItemTemplate> {
   // Type-specific data
   if (itemType === 'weapon') {
     const weaponData: NonNullable<ItemTemplate['weapon_data']> = {
-      damage_dice: (document.getElementById('weapon-damage-dice') as HTMLInputElement).value,
+      min_damage: parseNumberOrDefault((document.getElementById('weapon-min-damage') as HTMLInputElement).value, 1),
+      max_damage: parseNumberOrDefault((document.getElementById('weapon-max-damage') as HTMLInputElement).value, 6),
       damage_type: (document.getElementById('weapon-damage-type') as HTMLSelectElement).value,
       attack_speed: parseNumberOrDefault((document.getElementById('weapon-attack-speed') as HTMLInputElement).value, 1500),
       crit_modifier: parseNumberOrDefault((document.getElementById('weapon-crit-modifier') as HTMLInputElement).value, 2),

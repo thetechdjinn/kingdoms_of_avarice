@@ -18,7 +18,8 @@ interface WeaponTemplate {
   id: number;
   name: string;
   weapon_data: {
-    damage_dice: string;
+    min_damage: number;
+    max_damage: number;
     damage_type: string;
     attack_speed: number;
   };
@@ -125,9 +126,11 @@ function populateWeaponSelect(): void {
     const option = document.createElement('option');
     option.value = String(weapon.id);
     const speed = weapon.weapon_data.attack_speed || 0;
+    const minDmg = weapon.weapon_data.min_damage ?? 1;
+    const maxDmg = weapon.weapon_data.max_damage ?? 4;
     option.textContent = `${weapon.name} (${speed})`;
     option.dataset.speed = String(speed);
-    option.dataset.damage = weapon.weapon_data.damage_dice || '';
+    option.dataset.damage = `${minDmg}-${maxDmg}`;
     option.dataset.type = weapon.weapon_data.damage_type || '';
     select.appendChild(option);
   }
@@ -410,8 +413,24 @@ function setText(id: string, text: string): void {
   if (el) el.textContent = text;
 }
 
+function calculateSwingsPerRound(effectiveEnergy: number, weaponSpeed: number, maxAttacks: number, rounds: number): number[] {
+  const swingsPerRound: number[] = [];
+  let carriedEnergy = 0;
+
+  for (let round = 0; round < rounds; round++) {
+    const totalEnergy = effectiveEnergy + carriedEnergy;
+    const rawSwings = totalEnergy / weaponSpeed;
+    const actualSwings = Math.min(Math.floor(rawSwings), maxAttacks);
+    swingsPerRound.push(actualSwings);
+    carriedEnergy = totalEnergy - (actualSwings * weaponSpeed);
+  }
+
+  return swingsPerRound;
+}
+
 function updateBreakdownTable(baseInputs: CalculationInputs): void {
   const tbody = document.getElementById('breakdown-tbody');
+  const levelRangeSelect = document.getElementById('level-range-select') as HTMLSelectElement;
   if (!tbody) return;
 
   // Update combat level display
@@ -419,16 +438,26 @@ function updateBreakdownTable(baseInputs: CalculationInputs): void {
 
   tbody.innerHTML = '';
 
-  // Show levels 1, 5, 10, 15, 20, 25, 30 (plus current level if not in list)
-  const levels = [1, 5, 10, 15, 20, 25, 30];
-  if (!levels.includes(baseInputs.characterLevel)) {
-    levels.push(baseInputs.characterLevel);
-    levels.sort((a, b) => a - b);
-  }
+  // Get level range from dropdown
+  const rangeValue = levelRangeSelect?.value || '1-20';
+  const [startStr, endStr] = rangeValue.split('-');
+  const startLevel = parseInt(startStr, 10) || 1;
+  const endLevel = parseInt(endStr, 10) || 20;
 
-  for (const level of levels) {
+  const numRounds = 4;
+
+  // Show all levels in the selected range
+  for (let level = startLevel; level <= endLevel; level++) {
     const inputs = { ...baseInputs, characterLevel: level };
     const results = calculate(inputs);
+
+    // Calculate swings for each of the first N rounds
+    const swingsPerRound = calculateSwingsPerRound(
+      results.effectiveEnergy,
+      inputs.weaponSpeed,
+      inputs.maxAttacks,
+      numRounds
+    );
 
     const tr = document.createElement('tr');
     if (level === baseInputs.characterLevel) {
@@ -438,7 +467,7 @@ function updateBreakdownTable(baseInputs: CalculationInputs): void {
     tr.innerHTML = `
       <td>${level}</td>
       <td>${results.effectiveEnergy.toLocaleString()}</td>
-      <td>${results.actualSwings}</td>
+      <td>${swingsPerRound.join(', ')}</td>
       <td>${results.totalCrit}%</td>
     `;
 
@@ -446,36 +475,159 @@ function updateBreakdownTable(baseInputs: CalculationInputs): void {
   }
 }
 
+let selectedWeaponId: number | null = null;
+
 function onWeaponSelect(): void {
   const select = document.getElementById('weapon-select') as HTMLSelectElement;
   const speedInput = document.getElementById('weapon-speed') as HTMLInputElement;
-  const statsDiv = document.getElementById('weapon-stats');
+  const editSection = document.getElementById('weapon-edit-section');
+  const statusDiv = document.getElementById('weapon-save-status');
 
   if (!select || !speedInput) return;
 
-  const selectedOption = select.selectedOptions[0];
+  // Clear any previous status
+  if (statusDiv) {
+    statusDiv.textContent = '';
+    statusDiv.className = 'weapon-save-status';
+  }
 
   if (select.value === 'custom') {
-    if (statsDiv) statsDiv.style.display = 'none';
+    selectedWeaponId = null;
+    if (editSection) editSection.style.display = 'none';
     speedInput.disabled = false;
   } else {
-    const speed = selectedOption?.dataset.speed;
-    const damage = selectedOption?.dataset.damage;
-    const type = selectedOption?.dataset.type;
+    selectedWeaponId = parseInt(select.value, 10);
+    const weapon = weapons.find(w => w.id === selectedWeaponId);
 
-    if (speed) {
-      speedInput.value = speed;
+    if (weapon?.weapon_data) {
+      const wd = weapon.weapon_data;
+
+      // Update the main speed input
+      speedInput.value = String(wd.attack_speed || 1500);
       speedInput.disabled = true;
-    }
 
-    if (statsDiv) {
-      statsDiv.style.display = 'block';
-      setText('weapon-damage', damage || '-');
-      setText('weapon-type', type || '-');
+      // Populate edit fields
+      const minDmgInput = document.getElementById('edit-min-damage') as HTMLInputElement;
+      const maxDmgInput = document.getElementById('edit-max-damage') as HTMLInputElement;
+      const speedEditInput = document.getElementById('edit-attack-speed') as HTMLInputElement;
+      const typeSelect = document.getElementById('edit-damage-type') as HTMLSelectElement;
+
+      if (minDmgInput) minDmgInput.value = String(wd.min_damage ?? 1);
+      if (maxDmgInput) maxDmgInput.value = String(wd.max_damage ?? 6);
+      if (speedEditInput) speedEditInput.value = String(wd.attack_speed || 1500);
+      if (typeSelect) typeSelect.value = wd.damage_type || 'slashing';
+
+      if (editSection) editSection.style.display = 'block';
     }
   }
 
   updateDisplay();
+}
+
+async function saveWeapon(): Promise<void> {
+  if (!selectedWeaponId) return;
+
+  const weapon = weapons.find(w => w.id === selectedWeaponId);
+  if (!weapon) return;
+
+  const saveBtn = document.getElementById('save-weapon-btn') as HTMLButtonElement;
+  const statusDiv = document.getElementById('weapon-save-status');
+  const speedInput = document.getElementById('weapon-speed') as HTMLInputElement;
+
+  // Get values from edit fields
+  const minDamage = parseInt((document.getElementById('edit-min-damage') as HTMLInputElement).value, 10) || 1;
+  const maxDamage = parseInt((document.getElementById('edit-max-damage') as HTMLInputElement).value, 10) || 6;
+  const attackSpeed = parseInt((document.getElementById('edit-attack-speed') as HTMLInputElement).value, 10) || 1500;
+  const damageType = (document.getElementById('edit-damage-type') as HTMLSelectElement).value;
+
+  // Validate
+  if (minDamage > maxDamage) {
+    if (statusDiv) {
+      statusDiv.textContent = 'Min damage cannot exceed max damage';
+      statusDiv.className = 'weapon-save-status error';
+    }
+    return;
+  }
+
+  // Disable save button during save
+  if (saveBtn) saveBtn.disabled = true;
+  if (statusDiv) {
+    statusDiv.textContent = 'Saving...';
+    statusDiv.className = 'weapon-save-status';
+  }
+
+  try {
+    // We need to fetch the full template first, then update it
+    const getResponse = await fetch(`/api/items/templates/${selectedWeaponId}`, { credentials: 'include' });
+    if (!getResponse.ok) throw new Error('Failed to fetch weapon');
+
+    const template = await getResponse.json();
+
+    // Update weapon_data
+    template.weapon_data = {
+      ...template.weapon_data,
+      min_damage: minDamage,
+      max_damage: maxDamage,
+      attack_speed: attackSpeed,
+      damage_type: damageType,
+    };
+
+    // Save the template
+    const saveResponse = await fetch(`/api/items/templates/${selectedWeaponId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify(template),
+    });
+
+    if (!saveResponse.ok) throw new Error('Failed to save weapon');
+
+    // Update local cache
+    weapon.weapon_data = {
+      min_damage: minDamage,
+      max_damage: maxDamage,
+      damage_type: damageType,
+      attack_speed: attackSpeed,
+    };
+
+    // Update the dropdown option's data attributes
+    const select = document.getElementById('weapon-select') as HTMLSelectElement;
+    const option = select.querySelector(`option[value="${selectedWeaponId}"]`) as HTMLOptionElement;
+    if (option) {
+      option.dataset.speed = String(attackSpeed);
+      option.dataset.damage = `${minDamage}-${maxDamage}`;
+      option.dataset.type = damageType;
+      option.textContent = `${weapon.name} (${attackSpeed})`;
+    }
+
+    // Update main speed input
+    if (speedInput) speedInput.value = String(attackSpeed);
+
+    if (statusDiv) {
+      statusDiv.textContent = 'Saved!';
+      statusDiv.className = 'weapon-save-status success';
+    }
+
+    // Recalculate with new values
+    updateDisplay();
+
+    // Clear status after 2 seconds
+    setTimeout(() => {
+      if (statusDiv) {
+        statusDiv.textContent = '';
+        statusDiv.className = 'weapon-save-status';
+      }
+    }, 2000);
+
+  } catch (error) {
+    console.error('Failed to save weapon:', error);
+    if (statusDiv) {
+      statusDiv.textContent = 'Failed to save';
+      statusDiv.className = 'weapon-save-status error';
+    }
+  } finally {
+    if (saveBtn) saveBtn.disabled = false;
+  }
 }
 
 // ============================================================================
@@ -509,6 +661,30 @@ function setupEventListeners(): void {
   const weaponSelect = document.getElementById('weapon-select');
   if (weaponSelect) {
     weaponSelect.addEventListener('change', onWeaponSelect);
+  }
+
+  // Level range select
+  const levelRangeSelect = document.getElementById('level-range-select');
+  if (levelRangeSelect) {
+    levelRangeSelect.addEventListener('change', updateDisplay);
+  }
+
+  // Save weapon button
+  const saveWeaponBtn = document.getElementById('save-weapon-btn');
+  if (saveWeaponBtn) {
+    saveWeaponBtn.addEventListener('click', saveWeapon);
+  }
+
+  // Update calculations when edit fields change
+  const editSpeedInput = document.getElementById('edit-attack-speed');
+  if (editSpeedInput) {
+    editSpeedInput.addEventListener('input', () => {
+      const speedInput = document.getElementById('weapon-speed') as HTMLInputElement;
+      if (speedInput && selectedWeaponId) {
+        speedInput.value = (editSpeedInput as HTMLInputElement).value;
+        updateDisplay();
+      }
+    });
   }
 
   // Logout handler
