@@ -417,12 +417,15 @@ function calculateSwingsPerRound(effectiveEnergy: number, weaponSpeed: number, m
   const swingsPerRound: number[] = [];
   let carriedEnergy = 0;
 
+  // Prevent division by zero
+  const safeWeaponSpeed = Math.max(1, weaponSpeed);
+
   for (let round = 0; round < rounds; round++) {
     const totalEnergy = effectiveEnergy + carriedEnergy;
-    const rawSwings = totalEnergy / weaponSpeed;
+    const rawSwings = totalEnergy / safeWeaponSpeed;
     const actualSwings = Math.min(Math.floor(rawSwings), maxAttacks);
     swingsPerRound.push(actualSwings);
-    carriedEnergy = totalEnergy - (actualSwings * weaponSpeed);
+    carriedEnergy = totalEnergy - (actualSwings * safeWeaponSpeed);
   }
 
   return swingsPerRound;

@@ -20,6 +20,7 @@ import {
   getCpEarnedForLevel,
 } from '@koa/shared';
 import * as characterRepo from '../db/repositories/characterRepository.js';
+import * as progressionRepo from '../db/repositories/progressionRepository.js';
 
 // ============================================================================
 // DATA STORES (In-memory for now, can be backed by DB/JSON files)
@@ -324,9 +325,17 @@ export async function performLevelUp(characterId: number): Promise<LevelUpResult
     }
 
     const newUnspentCp = (character.unspent_cp ?? 0) + cpEarned;
+
+    // Persist level and CP to characters table
     await characterRepo.updateCharacterStats(characterId, {
       level: newLevel,
       unspent_cp: newUnspentCp,
+    });
+
+    // Persist XP and essence reset to character_progression table
+    await progressionRepo.updateCharacterProgression(characterId, {
+      std_xp: newStdXp,
+      essence_earned_this_level: 0,
     });
   } catch (error) {
     console.error(`[Progression] Failed to persist level-up for character ${characterId}:`, error);
