@@ -85,10 +85,10 @@ export function loadTalents(): TalentDefinition[] {
 }
 
 /**
- * Force reseed classes and races with updated data
+ * Force reseed races with updated data (base_stats min/max format)
  * Uses update instead of delete+create to preserve any custom data
  */
-async function forceReseedClassesAndRaces(): Promise<void> {
+async function forceReseedRaces(): Promise<void> {
   try {
     // Check if races need updating to new base_stats format (with min/max ranges)
     const existingRaces = await progressionRepo.getAllRaces();
@@ -221,7 +221,7 @@ export async function initializeProgressionData(): Promise<void> {
   // Note: Talents are DB-only for now, no in-memory registration needed
   
   // Force reseed if stats are outdated
-  await forceReseedClassesAndRaces();
+  await forceReseedRaces();
   
   // Seed database if empty
   await seedDatabaseIfEmpty();

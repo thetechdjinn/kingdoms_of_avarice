@@ -141,12 +141,12 @@ function dbToClassDefinition(row: DbClassDefinition): ClassDefinition {
     talent_tree_id: row.talent_tree_id ?? undefined,
     resource_type: row.resource_type ?? undefined,
     playable: row.playable,
-    combat_level: row.combat_level ?? 3,
+    combat_level: row.combat_level ?? 1,
     magic_level: row.magic_level ?? 0,
     magic_school: row.magic_school ?? undefined,
     stealth: row.stealth ?? false,
     thievery: row.thievery ?? false,
-    special_abilities: row.special_abilities ?? undefined,
+    special_abilities: row.special_abilities ?? [],
   };
 }
 
@@ -269,7 +269,7 @@ export async function createClass(classDef: ClassDefinition & { resource_type?: 
       classDef.talent_tree_id ?? null,
       classDef.resource_type ?? 'none',
       classDef.playable ?? true,
-      classDef.combat_level ?? 3,
+      classDef.combat_level ?? 1,
       classDef.magic_level ?? 0,
       classDef.magic_school ?? null,
       classDef.stealth ?? false,

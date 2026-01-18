@@ -4,7 +4,7 @@
  * Handles the "train" command for allocating Character Points (CP) to stats.
  */
 
-import { MessageType, CPStatName, CP_STAT_NAMES, CP_STAT_ABBREVIATIONS, getCPCostForNextPoint, getTotalCPCost, DEFAULT_STARTING_CP } from '@koa/shared';
+import { MessageType, CPStatName, CP_STAT_NAMES, CP_STAT_ABBREVIATIONS, getCPCostForNextPoint, getTotalCPCost, getMaxPointsAffordable, DEFAULT_STARTING_CP } from '@koa/shared';
 import { AuthenticatedSocket } from './socket.js';
 import { CommandResponse } from './commands.js';
 import { colors } from '../utils/colors.js';
@@ -131,7 +131,7 @@ export async function handleTrain(
 
   // Check if enough CP
   if (cpCost > unspentCp) {
-    const affordable = getMaxAffordablePoints(currentSpent, unspentCp);
+    const affordable = getMaxPointsAffordable(currentSpent, unspentCp);
     if (affordable === 0) {
       return {
         type: MessageType.ERROR,
@@ -166,25 +166,6 @@ export async function handleTrain(
     : `You train your ${statName} ${amount} times. ${statDisplay}: ${currentValue} -> ${colors.green(String(newValue))} (${cpCost} CP spent, ${newUnspentCp} CP remaining)`;
 
   return { type: MessageType.OUTPUT, message };
-}
-
-/**
- * Calculate how many points can be afforded with available CP
- */
-function getMaxAffordablePoints(currentSpent: number, availableCp: number): number {
-  let points = 0;
-  let spent = 0;
-
-  while (true) {
-    const nextCost = getCPCostForNextPoint(currentSpent + points);
-    if (spent + nextCost > availableCp) {
-      break;
-    }
-    spent += nextCost;
-    points++;
-  }
-
-  return points;
 }
 
 /**
