@@ -427,6 +427,7 @@ export function setupAdminRoutes(app: Express): void {
       charisma: { min: 1, max: 255 },
       current_room_id: { min: 1, max: Number.MAX_SAFE_INTEGER },
       gold: { min: 0, max: Number.MAX_SAFE_INTEGER },
+      unspent_cp: { min: 0, max: 10000 },
     };
 
     for (const [field, range] of Object.entries(numericFields)) {
@@ -441,6 +442,20 @@ export function setupAdminRoutes(app: Express): void {
           return;
         }
         updates[field] = value;
+      }
+    }
+
+    // Validate cp_spent if provided (must be an object with numeric values)
+    if (updates.cp_spent !== undefined) {
+      if (typeof updates.cp_spent !== 'object' || updates.cp_spent === null || Array.isArray(updates.cp_spent)) {
+        res.status(400).json({ success: false, message: 'cp_spent must be an object' });
+        return;
+      }
+      for (const [stat, value] of Object.entries(updates.cp_spent)) {
+        if (typeof value !== 'number' || value < 0) {
+          res.status(400).json({ success: false, message: `Invalid cp_spent value for ${stat}` });
+          return;
+        }
       }
     }
 

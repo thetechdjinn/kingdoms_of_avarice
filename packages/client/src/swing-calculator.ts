@@ -1,4 +1,11 @@
-(function() {
+import {
+  ENCUMBRANCE_CRIT_THRESHOLDS,
+  CRIT_SOFT_CAP,
+  COMBAT_LEVEL_ENERGY_MULTIPLIER,
+  DODGE_SOFT_CAP,
+  DODGE_STAT_CONTRIBUTION,
+  DODGE_MIN_ATTACKER_ACCURACY,
+} from '@koa/shared';
 
 interface AuthInfo {
   authenticated: boolean;
@@ -16,15 +23,6 @@ interface WeaponTemplate {
     attack_speed: number;
   };
 }
-
-// Combat level multipliers (from game settings)
-const COMBAT_LEVEL_MULTIPLIERS: Record<number, number> = {
-  1: 0.6,
-  2: 0.75,
-  3: 0.9,
-  4: 1.0,
-  5: 1.15,
-};
 
 let weapons: WeaponTemplate[] = [];
 
@@ -136,25 +134,8 @@ function populateWeaponSelect(): void {
 }
 
 // ============================================================================
-// Calculations
+// Calculations (using constants from @koa/shared)
 // ============================================================================
-
-// Encumbrance crit thresholds (MajorMUD-style)
-const ENCUMBRANCE_CRIT_THRESHOLDS = {
-  LIGHT: { maxRatio: 0.32, bonus: 20 },
-  MEDIUM: { maxRatio: 0.65, bonus: 10 },
-  HEAVY: { maxRatio: 1.0, bonus: 0 },
-};
-
-const CRIT_SOFT_CAP = 40;
-
-// Dodge constants (MajorMUD-style)
-const DODGE_SOFT_CAP = 52;
-const DODGE_STAT_CONTRIBUTION = {
-  agilityPer10: 2,   // +2% dodge per 10 AGI
-  charmPer10: 1,     // +1% dodge per 10 CHA
-};
-const DODGE_MIN_ATTACKER_ACCURACY = 8;
 
 interface CalculationInputs {
   baseEnergy: number;
@@ -209,7 +190,7 @@ function calculateEncumbranceCritBonus(encRatio: number): number {
 
 function calculate(inputs: CalculationInputs): CalculationResults {
   // Combat level multiplier
-  const combatMult = COMBAT_LEVEL_MULTIPLIERS[inputs.combatLevel] ?? 1.0;
+  const combatMult = COMBAT_LEVEL_ENERGY_MULTIPLIER[inputs.combatLevel] ?? 1.0;
 
   // Character level bonus (2% per level above 1)
   const levelMult = 1 + (inputs.characterLevel - 1) * 0.02;
@@ -562,5 +543,3 @@ document.addEventListener('DOMContentLoaded', async () => {
   showContent();
   updateDisplay();
 });
-
-})();

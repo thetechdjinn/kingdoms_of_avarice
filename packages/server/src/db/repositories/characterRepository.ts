@@ -272,6 +272,9 @@ export interface UpdateCharacterAdminInput {
   charisma?: number;
   current_room_id?: number;
   gold?: number;
+  // Character Points (CP) system
+  unspent_cp?: number;
+  cp_spent?: Record<string, number>;
 }
 
 /**
@@ -304,6 +307,8 @@ export async function updateCharacterAdmin(
     charisma: 'charisma',
     current_room_id: 'current_room_id',
     gold: 'gold',
+    unspent_cp: 'unspent_cp',
+    cp_spent: 'cp_spent',
   };
 
   for (const [key, dbField] of Object.entries(fieldMap)) {
