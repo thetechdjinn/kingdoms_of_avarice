@@ -136,3 +136,6 @@ export * from "./spells.js";
 
 // Re-export status effects system
 export * from "./statusEffects.js";
+
+// Re-export character points system
+export * from "./characterPoints.js";

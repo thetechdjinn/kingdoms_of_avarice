@@ -77,8 +77,8 @@ export function calculateSwings(
   // Calculate bonus crit chance if we would exceed max attacks
   let bonusCritChance = 0;
   if (swings > maxAttacks) {
-    // Each excess attack converts to +5% crit chance
-    bonusCritChance = (swings - maxAttacks) * 5;
+    // Each excess attack converts to +1% crit chance
+    bonusCritChance = (swings - maxAttacks) * 1;
     swings = maxAttacks;
   }
 
@@ -153,8 +153,12 @@ export function calculateDefense(factors: DefenseFactors): number {
 /**
  * Calculate miss chance using the squared ratio formula
  *
- * Formula: ((D^2 / A^2) / 100) = miss chance (as decimal)
- * This creates a squared relationship where large disparities are very impactful.
+ * Formula: D^2 / (A^2 + D^2) = miss chance (as decimal)
+ * This creates a squared relationship where large disparities are impactful:
+ * - Equal A and D: 50% miss
+ * - A = 2D: 20% miss
+ * - A = 3D: 10% miss
+ * - D = 2A: 80% miss
  *
  * @param accuracy - Attacker's total accuracy
  * @param defense - Defender's total defense
@@ -164,8 +168,10 @@ export function calculateMissChance(accuracy: number, defense: number): number {
   const acc = Math.max(1, accuracy);
   const def = Math.max(1, defense);
 
-  // Formula: (D^2 / A^2) / 100
-  const missChance = ((def * def) / (acc * acc)) / 100;
+  // Formula: D^2 / (A^2 + D^2)
+  const accSq = acc * acc;
+  const defSq = def * def;
+  const missChance = defSq / (accSq + defSq);
 
   // Clamp between 5% and 95% (always some chance to hit or miss)
   return Math.min(0.95, Math.max(0.05, missChance));

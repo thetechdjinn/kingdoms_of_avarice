@@ -22,6 +22,8 @@ export interface DbCharacter {
   charisma: number;
   current_room_id: number;
   gold: number;
+  unspent_cp: number;
+  cp_spent: Record<string, number>;
   created_at: Date;
 }
 
@@ -71,8 +73,8 @@ export async function createCharacter(input: CreateCharacterInput, client?: pg.P
       player_id, name, race, class,
       health, max_health, mana, max_mana,
       strength, intelligence, dexterity, constitution, wisdom, charisma,
-      current_room_id, gold
-    ) VALUES ($1, $2, $3, $4, $5, $5, $6, $6, $7, $8, $9, $10, $11, $12, 1, 100)
+      current_room_id, gold, unspent_cp, cp_spent
+    ) VALUES ($1, $2, $3, $4, $5, $5, $6, $6, $7, $8, $9, $10, $11, $12, 1, 100, 100, '{}')
     RETURNING *`,
     [
       input.playerId,
@@ -138,24 +140,36 @@ export async function updateCharacterRoom(characterId: number, roomId: number): 
   );
 }
 
+// Fields that can be updated via updateCharacterStats
+type UpdatableCharacterFields =
+  | 'health' | 'mana' | 'experience' | 'level' | 'gold'
+  | 'strength' | 'intelligence' | 'dexterity' | 'constitution' | 'wisdom' | 'charisma'
+  | 'unspent_cp' | 'cp_spent' | 'max_health' | 'max_mana';
+
 export async function updateCharacterStats(
   characterId: number,
-  updates: Partial<Pick<DbCharacter, 'health' | 'mana' | 'experience' | 'level' | 'gold'>>
+  updates: Partial<Record<UpdatableCharacterFields, unknown>>
 ): Promise<void> {
   const setClauses: string[] = [];
   const values: unknown[] = [];
   let paramIndex = 1;
-  
+
   for (const [key, value] of Object.entries(updates)) {
     if (value !== undefined) {
-      setClauses.push(`${key} = $${paramIndex}`);
-      values.push(value);
+      // Handle JSONB fields specially
+      if (key === 'cp_spent') {
+        setClauses.push(`${key} = $${paramIndex}::jsonb`);
+        values.push(JSON.stringify(value));
+      } else {
+        setClauses.push(`${key} = $${paramIndex}`);
+        values.push(value);
+      }
       paramIndex++;
     }
   }
-  
+
   if (setClauses.length === 0) return;
-  
+
   values.push(characterId);
   await query(
     `UPDATE characters SET ${setClauses.join(', ')} WHERE id = $${paramIndex}`,

@@ -22,6 +22,12 @@ interface ItemTemplate {
     attack_speed?: number;
     crit_modifier?: number;
     range?: string;
+    attack_verbs?: {
+      hit: string;
+      miss: string;
+      hit_3p: string;
+      miss_3p: string;
+    };
   };
   armor_data?: {
     armor_class: number;
@@ -331,12 +337,23 @@ function loadWeaponData(template: ItemTemplate): void {
   const attackSpeed = getElement<HTMLInputElement>('weapon-attack-speed');
   const critModifier = getElement<HTMLInputElement>('weapon-crit-modifier');
   const range = getElement<HTMLSelectElement>('weapon-range');
-  
+
   if (damageDice) damageDice.value = data?.damage_dice || '1d6';
   if (damageType) damageType.value = data?.damage_type || 'slashing';
   if (attackSpeed) attackSpeed.value = String(data?.attack_speed || 10);
   if (critModifier) critModifier.value = String(data?.crit_modifier || 2);
   if (range) range.value = data?.range || 'melee';
+
+  // Attack verbs
+  const verbHit = getElement<HTMLInputElement>('weapon-verb-hit');
+  const verbHit3p = getElement<HTMLInputElement>('weapon-verb-hit-3p');
+  const verbMiss = getElement<HTMLInputElement>('weapon-verb-miss');
+  const verbMiss3p = getElement<HTMLInputElement>('weapon-verb-miss-3p');
+
+  if (verbHit) verbHit.value = data?.attack_verbs?.hit || '';
+  if (verbHit3p) verbHit3p.value = data?.attack_verbs?.hit_3p || '';
+  if (verbMiss) verbMiss.value = data?.attack_verbs?.miss || '';
+  if (verbMiss3p) verbMiss3p.value = data?.attack_verbs?.miss_3p || '';
 }
 
 function loadArmorData(template: ItemTemplate): void {
@@ -661,13 +678,30 @@ function gatherFormData(): Partial<ItemTemplate> {
 
   // Type-specific data
   if (itemType === 'weapon') {
-    data.weapon_data = {
+    const weaponData: NonNullable<ItemTemplate['weapon_data']> = {
       damage_dice: (document.getElementById('weapon-damage-dice') as HTMLInputElement).value,
       damage_type: (document.getElementById('weapon-damage-type') as HTMLSelectElement).value,
       attack_speed: parseNumberOrDefault((document.getElementById('weapon-attack-speed') as HTMLInputElement).value, 10),
       crit_modifier: parseNumberOrDefault((document.getElementById('weapon-crit-modifier') as HTMLInputElement).value, 2),
       range: (document.getElementById('weapon-range') as HTMLSelectElement).value,
     };
+
+    // Attack verbs - only include if at least one is filled
+    const verbHit = (document.getElementById('weapon-verb-hit') as HTMLInputElement).value.trim();
+    const verbHit3p = (document.getElementById('weapon-verb-hit-3p') as HTMLInputElement).value.trim();
+    const verbMiss = (document.getElementById('weapon-verb-miss') as HTMLInputElement).value.trim();
+    const verbMiss3p = (document.getElementById('weapon-verb-miss-3p') as HTMLInputElement).value.trim();
+
+    if (verbHit || verbHit3p || verbMiss || verbMiss3p) {
+      weaponData.attack_verbs = {
+        hit: verbHit,
+        miss: verbMiss,
+        hit_3p: verbHit3p,
+        miss_3p: verbMiss3p,
+      };
+    }
+
+    data.weapon_data = weaponData;
   }
 
   if (itemType === 'armor') {

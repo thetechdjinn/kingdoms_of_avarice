@@ -11,11 +11,16 @@ CREATE TABLE IF NOT EXISTS race_definitions (
     race_id VARCHAR(50) UNIQUE NOT NULL,
     display_name VARCHAR(100) NOT NULL,
     description TEXT,
-    
-    -- Stat modifiers (applied to base stats)
+
+    -- Base stats with min (starting) and max (cap) values
+    -- Format: {"strength": {"min": 40, "max": 100}, "agility": {...}, ...}
+    base_stats JSONB DEFAULT '{}',
+
+    -- Legacy stat modifiers (deprecated, use base_stats instead)
     stat_modifiers JSONB DEFAULT '{}',
-    
+
     -- Special traits/abilities granted by race
+    -- Format: [{"id": "night_vision", "value": 80}, {"id": "stealth", "value": true}, ...]
     traits JSONB DEFAULT '[]',
 
     -- Restrictions

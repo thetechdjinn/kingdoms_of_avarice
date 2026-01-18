@@ -116,7 +116,7 @@ export interface DefenseFactors {
 export const DEFAULT_COMBAT_CONFIG: CombatConfig = {
   roundIntervalMs: 4000,
   maxAttacksPerRound: 6,
-  baseEnergyPerRound: 100,
+  baseEnergyPerRound: 20,  // Low base so level 1 gets 1-2 attacks, scaling up with levels
 };
 
 /**

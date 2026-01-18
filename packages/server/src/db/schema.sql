@@ -34,6 +34,9 @@ CREATE TABLE IF NOT EXISTS characters (
     charisma INTEGER NOT NULL DEFAULT 10,
     current_room_id INTEGER DEFAULT 1,
     gold INTEGER DEFAULT 0,
+    -- Character Points (CP) system
+    unspent_cp INTEGER DEFAULT 100,  -- CP available to spend on stats
+    cp_spent JSONB DEFAULT '{}',     -- Points spent per stat: {"strength": 10, "agility": 5, ...}
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 

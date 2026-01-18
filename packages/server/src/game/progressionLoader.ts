@@ -98,7 +98,7 @@ async function forceReseedClassesAndRaces(): Promise<void> {
         console.log('[Progression] Updating classes with new stat format...');
         const seedClasses = loadJsonFile<ClassDefinition[]>('classes.json');
         const seedMap = new Map(seedClasses.map(c => [c.class_id, c]));
-        
+
         // Update existing classes with new stats from seed data
         for (const cls of existingClasses) {
           const seedData = seedMap.get(cls.class_id);
@@ -110,23 +110,42 @@ async function forceReseedClassesAndRaces(): Promise<void> {
       }
     }
 
-    // Check if races need updating (missing wisdom/charm)
+    // Check if races need updating to new base_stats format (with min/max ranges)
     const existingRaces = await progressionRepo.getAllRaces();
     if (existingRaces.length > 0) {
       const firstRace = existingRaces[0];
-      if (firstRace.stat_modifiers && !('wisdom' in firstRace.stat_modifiers)) {
-        console.log('[Progression] Updating races with new stat format...');
+      // Check if using old stat_modifiers format instead of new base_stats format
+      const needsUpdate = !firstRace.base_stats ||
+        !firstRace.base_stats.strength ||
+        typeof firstRace.base_stats.strength !== 'object' ||
+        !('min' in firstRace.base_stats.strength);
+
+      if (needsUpdate) {
+        console.log('[Progression] Updating races with new base_stats format (min/max ranges)...');
         const seedRaces = loadJsonFile<RaceDefinition[]>('races.json');
         const seedMap = new Map(seedRaces.map(r => [r.race_id, r]));
-        
-        // Update existing races with new stats from seed data
+
+        // Update existing races with new base_stats from seed data
         for (const race of existingRaces) {
           const seedData = seedMap.get(race.race_id);
-          if (seedData?.stat_modifiers) {
-            await progressionRepo.updateRace(race.race_id, { stat_modifiers: seedData.stat_modifiers });
+          if (seedData?.base_stats) {
+            await progressionRepo.updateRace(race.race_id, {
+              base_stats: seedData.base_stats,
+              traits: seedData.traits,
+            });
           }
         }
-        console.log(`[Progression] Updated ${existingRaces.length} races with 6-stat format`);
+
+        // Add any new races that don't exist
+        for (const seedRace of seedRaces) {
+          const exists = existingRaces.some(r => r.race_id === seedRace.race_id);
+          if (!exists) {
+            await progressionRepo.createRace(seedRace);
+            console.log(`[Progression] Added new race: ${seedRace.display_name}`);
+          }
+        }
+
+        console.log(`[Progression] Updated races with base_stats min/max format`);
       }
     }
   } catch (error) {

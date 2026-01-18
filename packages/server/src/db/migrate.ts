@@ -114,6 +114,19 @@ export async function runMigrations(): Promise<void> {
         CHECK (healing_scaling_stat IS NULL OR healing_scaling_stat IN ('none', 'strength', 'agility', 'constitution', 'intellect', 'wisdom', 'charisma'))
       `);
 
+      // Add base_stats column to race_definitions (for existing databases)
+      await client.query(`
+        ALTER TABLE race_definitions ADD COLUMN IF NOT EXISTS base_stats JSONB DEFAULT '{}'
+      `);
+
+      // Add CP system columns to characters table (for existing databases)
+      await client.query(`
+        ALTER TABLE characters ADD COLUMN IF NOT EXISTS unspent_cp INTEGER DEFAULT 100
+      `);
+      await client.query(`
+        ALTER TABLE characters ADD COLUMN IF NOT EXISTS cp_spent JSONB DEFAULT '{}'
+      `);
+
       // Seed default game settings
       await client.query(`
         INSERT INTO game_settings (key, value) VALUES

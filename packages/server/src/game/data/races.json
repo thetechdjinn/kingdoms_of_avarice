@@ -2,97 +2,254 @@
   {
     "race_id": "human",
     "display_name": "Human",
-    "description": "Versatile and adaptable, humans excel in any profession through determination and ambition.",
+    "description": "Versatile and adaptable, humans are the most common race. They excel in any profession through determination and have no particular strengths or weaknesses.",
     "playable": true,
-    "stat_modifiers": {
-      "strength": 0,
-      "dexterity": 0,
-      "intelligence": 0,
-      "wisdom": 0,
-      "constitution": 0,
-      "charisma": 1
+    "base_stats": {
+      "strength": { "min": 40, "max": 100 },
+      "agility": { "min": 40, "max": 100 },
+      "constitution": { "min": 40, "max": 100 },
+      "intellect": { "min": 40, "max": 100 },
+      "wisdom": { "min": 40, "max": 100 },
+      "charisma": { "min": 40, "max": 100 }
     },
-    "traits": ["adaptable", "ambitious"],
+    "traits": [],
     "allowed_classes": []
   },
   {
     "race_id": "elf",
     "display_name": "Elf",
-    "description": "Ancient and graceful, elves possess natural affinity for magic and keen senses.",
+    "description": "Ancient and graceful, elves possess natural affinity for magic and keen senses. They are agile and intelligent but physically frail.",
     "playable": true,
-    "stat_modifiers": {
-      "strength": -1,
-      "dexterity": 2,
-      "intelligence": 1,
-      "wisdom": 1,
-      "constitution": -2,
-      "charisma": 0
+    "base_stats": {
+      "strength": { "min": 35, "max": 90 },
+      "agility": { "min": 50, "max": 120 },
+      "constitution": { "min": 30, "max": 80 },
+      "intellect": { "min": 50, "max": 120 },
+      "wisdom": { "min": 40, "max": 100 },
+      "charisma": { "min": 50, "max": 120 }
     },
-    "traits": ["darkvision", "magic_affinity", "keen_senses"],
+    "traits": [
+      { "id": "mana_bonus", "value": 10 },
+      { "id": "night_vision", "value": 50 },
+      { "id": "stealth", "value": true }
+    ],
+    "allowed_classes": []
+  },
+  {
+    "race_id": "dark_elf",
+    "display_name": "Dark Elf",
+    "description": "Mysterious denizens of the underground, dark elves are cunning and deadly. They excel in combat and stealth, with superior night vision.",
+    "playable": true,
+    "base_stats": {
+      "strength": { "min": 40, "max": 90 },
+      "agility": { "min": 50, "max": 120 },
+      "constitution": { "min": 30, "max": 90 },
+      "intellect": { "min": 50, "max": 120 },
+      "wisdom": { "min": 30, "max": 100 },
+      "charisma": { "min": 40, "max": 110 }
+    },
+    "traits": [
+      { "id": "accuracy_bonus", "value": 3 },
+      { "id": "crit_bonus", "value": 1 },
+      { "id": "night_vision", "value": 80 },
+      { "id": "stealth", "value": true }
+    ],
     "allowed_classes": []
   },
   {
     "race_id": "dwarf",
     "display_name": "Dwarf",
-    "description": "Stout and resilient, dwarves are master craftsmen with unmatched endurance.",
+    "description": "Stout and resilient, dwarves are master craftsmen with unmatched endurance. They are strong and wise but slow and not particularly charming.",
     "playable": true,
-    "stat_modifiers": {
-      "strength": 1,
-      "dexterity": -1,
-      "intelligence": 0,
-      "wisdom": 1,
-      "constitution": 2,
-      "charisma": -1
+    "base_stats": {
+      "strength": { "min": 50, "max": 110 },
+      "agility": { "min": 30, "max": 90 },
+      "constitution": { "min": 50, "max": 120 },
+      "intellect": { "min": 30, "max": 90 },
+      "wisdom": { "min": 50, "max": 120 },
+      "charisma": { "min": 30, "max": 85 }
     },
-    "traits": ["darkvision", "poison_resist", "stonecunning"],
-    "allowed_classes": []
-  },
-  {
-    "race_id": "halfling",
-    "display_name": "Halfling",
-    "description": "Small but nimble, halflings are naturally lucky and excel at avoiding danger.",
-    "playable": true,
-    "stat_modifiers": {
-      "strength": -2,
-      "dexterity": 2,
-      "intelligence": 0,
-      "wisdom": 0,
-      "constitution": 0,
-      "charisma": 1
-    },
-    "traits": ["lucky", "nimble", "brave"],
-    "allowed_classes": []
-  },
-  {
-    "race_id": "orc",
-    "display_name": "Orc",
-    "description": "Powerful and fierce, orcs are born warriors with incredible physical strength.",
-    "playable": true,
-    "stat_modifiers": {
-      "strength": 3,
-      "dexterity": 0,
-      "intelligence": -2,
-      "wisdom": -1,
-      "constitution": 2,
-      "charisma": -2
-    },
-    "traits": ["darkvision", "savage_attacks", "relentless"],
+    "traits": [
+      { "id": "encumbrance_bonus", "value": 20 },
+      { "id": "magic_resist", "value": 10 },
+      { "id": "night_vision", "value": 75 }
+    ],
     "allowed_classes": []
   },
   {
     "race_id": "gnome",
     "display_name": "Gnome",
-    "description": "Curious and inventive, gnomes have a natural talent for illusion and tinkering.",
+    "description": "Curious and inventive, gnomes have a natural talent for magic and mechanisms. They come with innate lockpicking ability.",
     "playable": true,
-    "stat_modifiers": {
-      "strength": -2,
-      "dexterity": 1,
-      "intelligence": 2,
-      "wisdom": 0,
-      "constitution": -1,
-      "charisma": 1
+    "base_stats": {
+      "strength": { "min": 35, "max": 90 },
+      "agility": { "min": 45, "max": 110 },
+      "constitution": { "min": 40, "max": 100 },
+      "intellect": { "min": 45, "max": 110 },
+      "wisdom": { "min": 40, "max": 100 },
+      "charisma": { "min": 35, "max": 90 }
     },
-    "traits": ["darkvision", "gnome_cunning", "tinker"],
+    "traits": [
+      { "id": "magic_resist", "value": 5 },
+      { "id": "night_vision", "value": 65 },
+      { "id": "picklocks", "value": 10 }
+    ],
+    "allowed_classes": []
+  },
+  {
+    "race_id": "halfling",
+    "display_name": "Halfling",
+    "description": "Small but incredibly nimble, halflings are naturally stealthy and hard to hit. They are weak but make excellent thieves.",
+    "playable": true,
+    "base_stats": {
+      "strength": { "min": 20, "max": 60 },
+      "agility": { "min": 60, "max": 150 },
+      "constitution": { "min": 40, "max": 100 },
+      "intellect": { "min": 30, "max": 90 },
+      "wisdom": { "min": 40, "max": 100 },
+      "charisma": { "min": 40, "max": 100 }
+    },
+    "traits": [
+      { "id": "dodge_bonus", "value": 10 },
+      { "id": "hp_per_level", "value": -1 },
+      { "id": "stealth", "value": true }
+    ],
+    "allowed_classes": []
+  },
+  {
+    "race_id": "half_elf",
+    "display_name": "Half-Elf",
+    "description": "Combining human versatility with elven grace, half-elves are well-rounded adventurers with minor magical affinity.",
+    "playable": true,
+    "base_stats": {
+      "strength": { "min": 40, "max": 90 },
+      "agility": { "min": 45, "max": 110 },
+      "constitution": { "min": 30, "max": 100 },
+      "intellect": { "min": 45, "max": 110 },
+      "wisdom": { "min": 40, "max": 100 },
+      "charisma": { "min": 50, "max": 110 }
+    },
+    "traits": [
+      { "id": "mana_bonus", "value": 10 },
+      { "id": "night_vision", "value": 25 }
+    ],
+    "allowed_classes": []
+  },
+  {
+    "race_id": "half_orc",
+    "display_name": "Half-Orc",
+    "description": "Strong and tough, half-orcs combine orcish power with human adaptability. They have no special abilities but are versatile fighters.",
+    "playable": true,
+    "base_stats": {
+      "strength": { "min": 45, "max": 110 },
+      "agility": { "min": 40, "max": 100 },
+      "constitution": { "min": 50, "max": 120 },
+      "intellect": { "min": 30, "max": 90 },
+      "wisdom": { "min": 30, "max": 95 },
+      "charisma": { "min": 30, "max": 80 }
+    },
+    "traits": [],
+    "allowed_classes": []
+  },
+  {
+    "race_id": "half_ogre",
+    "display_name": "Half-Ogre",
+    "description": "Massive and incredibly strong, half-ogres are living tanks. They are slow and dim-witted but nearly impossible to kill.",
+    "playable": true,
+    "base_stats": {
+      "strength": { "min": 70, "max": 150 },
+      "agility": { "min": 20, "max": 60 },
+      "constitution": { "min": 60, "max": 150 },
+      "intellect": { "min": 20, "max": 60 },
+      "wisdom": { "min": 25, "max": 70 },
+      "charisma": { "min": 25, "max": 60 }
+    },
+    "traits": [
+      { "id": "hp_per_level", "value": 1 },
+      { "id": "magic_resist", "value": 15 },
+      { "id": "ac_bonus", "value": 2 },
+      { "id": "no_kai", "value": true }
+    ],
+    "allowed_classes": []
+  },
+  {
+    "race_id": "goblin",
+    "display_name": "Goblin",
+    "description": "Cunning and quick, goblins are small but surprisingly intelligent. They excel at stealth and trickery.",
+    "playable": true,
+    "base_stats": {
+      "strength": { "min": 30, "max": 70 },
+      "agility": { "min": 55, "max": 125 },
+      "constitution": { "min": 40, "max": 100 },
+      "intellect": { "min": 45, "max": 115 },
+      "wisdom": { "min": 40, "max": 100 },
+      "charisma": { "min": 40, "max": 100 }
+    },
+    "traits": [
+      { "id": "night_vision", "value": 65 },
+      { "id": "stealth", "value": true }
+    ],
+    "allowed_classes": []
+  },
+  {
+    "race_id": "kang",
+    "display_name": "Kang",
+    "description": "Reptilian warriors with natural armor and poison immunity. They are strong and wise but slow and unsociable.",
+    "playable": true,
+    "base_stats": {
+      "strength": { "min": 55, "max": 120 },
+      "agility": { "min": 30, "max": 90 },
+      "constitution": { "min": 50, "max": 110 },
+      "intellect": { "min": 30, "max": 90 },
+      "wisdom": { "min": 45, "max": 110 },
+      "charisma": { "min": 30, "max": 85 }
+    },
+    "traits": [
+      { "id": "ac_bonus", "value": 5 },
+      { "id": "poison_immunity", "value": true }
+    ],
+    "allowed_classes": []
+  },
+  {
+    "race_id": "nekojin",
+    "display_name": "Nekojin",
+    "description": "Cat-like humanoids with incredible agility and natural tracking abilities. They are vulnerable to cold but resistant to fire.",
+    "playable": true,
+    "base_stats": {
+      "strength": { "min": 40, "max": 100 },
+      "agility": { "min": 60, "max": 130 },
+      "constitution": { "min": 30, "max": 80 },
+      "intellect": { "min": 40, "max": 100 },
+      "wisdom": { "min": 30, "max": 90 },
+      "charisma": { "min": 50, "max": 110 }
+    },
+    "traits": [
+      { "id": "cold_resist", "value": -10 },
+      { "id": "fire_resist", "value": 10 },
+      { "id": "night_vision", "value": 50 },
+      { "id": "stealth", "value": true },
+      { "id": "tracking", "value": 10 }
+    ],
+    "allowed_classes": []
+  },
+  {
+    "race_id": "gaunt_one",
+    "display_name": "Gaunt One",
+    "description": "Mysterious beings with incredible mental powers. They have superior dark vision and perception but are physically weak.",
+    "playable": true,
+    "base_stats": {
+      "strength": { "min": 40, "max": 100 },
+      "agility": { "min": 50, "max": 110 },
+      "constitution": { "min": 30, "max": 70 },
+      "intellect": { "min": 60, "max": 140 },
+      "wisdom": { "min": 50, "max": 100 },
+      "charisma": { "min": 30, "max": 80 }
+    },
+    "traits": [
+      { "id": "dark_vision", "value": 200 },
+      { "id": "perception", "value": 10 },
+      { "id": "see_hidden", "value": true }
+    ],
     "allowed_classes": []
   }
 ]

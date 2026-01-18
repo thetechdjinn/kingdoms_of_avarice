@@ -380,7 +380,7 @@ export function setupStatusEffectDefinitionRoutes(app: Express): void {
             results.errors.push(`Skipped "${normalizedId}": already exists (merge disabled)`);
           }
         } catch (err) {
-          results.errors.push(`Failed to import "${normalizedId || def.id || 'unknown'}": ${err instanceof Error ? err.message : String(err)}`);
+          results.errors.push(`Failed to import "${def.id || 'unknown'}": ${err instanceof Error ? err.message : String(err)}`);
         }
       }
 

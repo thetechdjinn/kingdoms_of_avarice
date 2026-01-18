@@ -4,7 +4,7 @@
  * Manages the global combat timer and processes combat rounds for all players.
  */
 
-import { MessageType, GameMessage, AttackResult, SpellScalingStat } from '@koa/shared';
+import { MessageType, GameMessage, AttackResult, SpellScalingStat, AttackVerbs } from '@koa/shared';
 import { AuthenticatedSocket } from './socket.js';
 import { getPlayerLocation } from './adminCommands.js';
 import { colors } from '../utils/colors.js';
@@ -146,6 +146,14 @@ function broadcastToRoomExcept(
 }
 
 /**
+ * Weapon info for combat messages
+ */
+interface WeaponInfo {
+  name: string;
+  verbs: AttackVerbs;
+}
+
+/**
  * Format a swing result into combat message text
  */
 function formatSwingMessage(
@@ -154,36 +162,58 @@ function formatSwingMessage(
   attackerName: string,
   defenderName: string,
   isAttacker: boolean,
-  isDefender: boolean
+  isDefender: boolean,
+  weapon?: WeaponInfo
 ): string {
   const attacker = isAttacker ? 'You' : attackerName;
   const defender = isDefender ? 'you' : defenderName;
   const attackerPossessive = isAttacker ? 'Your' : `${attackerName}'s`;
 
+  // Get attack verbs from weapon or use defaults
+  const hitVerb1p = weapon?.verbs.hit || 'hit';
+  const hitVerb3p = weapon?.verbs.hit_3p || 'hits';
+  const missVerb1p = weapon?.verbs.miss || 'swing at';
+  const missVerb3p = weapon?.verbs.miss_3p || 'swings at';
+
+  // Format weapon name for miss messages
+  const weaponName = weapon?.name || 'fists';
+  const isUnarmed = weaponName === 'fists';
+
   switch (result) {
     case AttackResult.CRITICAL:
       if (isAttacker) {
-        return `${colors.combatCritical('CRITICAL!')} You hit ${colors.combatDefender(defenderName)} for ${colors.combatDamage(damage.toString())} damage!`;
+        return `You ${colors.combatCritical('critically')} ${colors.combatHit(hitVerb1p)} ${colors.combatDefender(defenderName)} for ${colors.combatDamage(damage.toString())} damage!`;
       } else if (isDefender) {
-        return `${colors.combatCritical('CRITICAL!')} ${colors.combatAttacker(attackerName)} hits you for ${colors.combatDamage(damage.toString())} damage!`;
+        return `${colors.combatAttacker(attackerName)} ${colors.combatCritical('critically')} ${colors.combatHit(hitVerb3p)} you for ${colors.combatDamage(damage.toString())} damage!`;
       }
-      return `${colors.combatCritical('CRITICAL!')} ${attackerName} hits ${defenderName} for ${damage} damage!`;
+      return `${attackerName} critically ${hitVerb3p} ${defenderName} for ${damage} damage!`;
 
     case AttackResult.HIT:
       if (isAttacker) {
-        return `${colors.combatHit('You hit')} ${colors.combatDefender(defenderName)} for ${colors.combatDamage(damage.toString())} damage.`;
+        return `You ${colors.combatHit(hitVerb1p)} ${colors.combatDefender(defenderName)} for ${colors.combatDamage(damage.toString())} damage.`;
       } else if (isDefender) {
-        return `${colors.combatAttacker(attackerName)} ${colors.combatHit('hits you')} for ${colors.combatDamage(damage.toString())} damage.`;
+        return `${colors.combatAttacker(attackerName)} ${colors.combatHit(hitVerb3p)} you for ${colors.combatDamage(damage.toString())} damage.`;
       }
-      return `${attackerName} hits ${defenderName} for ${damage} damage.`;
+      return `${attackerName} ${hitVerb3p} ${defenderName} for ${damage} damage.`;
 
     case AttackResult.MISS:
-      if (isAttacker) {
-        return `${colors.combatMiss('You miss')} ${colors.combatDefender(defenderName)}.`;
-      } else if (isDefender) {
-        return `${colors.combatAttacker(attackerName)} ${colors.combatMiss('misses you')}.`;
+      if (isUnarmed) {
+        // Unarmed: "You swing at Goblin, but miss."
+        if (isAttacker) {
+          return `You ${colors.combatMiss(missVerb1p)} ${colors.combatDefender(defenderName)}, but miss.`;
+        } else if (isDefender) {
+          return `${colors.combatAttacker(attackerName)} ${colors.combatMiss(missVerb3p)} you, but misses.`;
+        }
+        return `${attackerName} ${missVerb3p} ${defenderName}, but misses.`;
+      } else {
+        // Armed: "You swing your battle axe at Goblin, but miss."
+        if (isAttacker) {
+          return `You ${colors.combatMiss(missVerb1p)} ${colors.combatDefender(defenderName)} with your ${colors.item(weaponName)}, but miss.`;
+        } else if (isDefender) {
+          return `${colors.combatAttacker(attackerName)} ${colors.combatMiss(missVerb3p)} you with their ${colors.item(weaponName)}, but misses.`;
+        }
+        return `${attackerName} ${missVerb3p} ${defenderName} with their ${weaponName}, but misses.`;
       }
-      return `${attackerName} misses ${defenderName}.`;
 
     case AttackResult.DODGE:
       if (isAttacker) {
@@ -432,15 +462,21 @@ async function processAttackerCombat(
     const defenderMessages: string[] = [];
     const roomMessages: string[] = [];
 
+    // Build weapon info for combat messages
+    const weaponInfo: WeaponInfo = {
+      name: attackerEquipment.weapon.weaponName,
+      verbs: attackerEquipment.weapon.attackVerbs,
+    };
+
     for (const swing of combatResult.swings) {
       attackerMessages.push(formatSwingMessage(
-        swing.result, swing.damage, attacker.username, target.username, true, false
+        swing.result, swing.damage, attacker.username, target.username, true, false, weaponInfo
       ));
       defenderMessages.push(formatSwingMessage(
-        swing.result, swing.damage, attacker.username, target.username, false, true
+        swing.result, swing.damage, attacker.username, target.username, false, true, weaponInfo
       ));
       roomMessages.push(formatSwingMessage(
-        swing.result, swing.damage, attacker.username, target.username, false, false
+        swing.result, swing.damage, attacker.username, target.username, false, false, weaponInfo
       ));
     }
 

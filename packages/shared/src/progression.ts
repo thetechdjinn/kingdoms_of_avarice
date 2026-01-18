@@ -172,12 +172,18 @@ export interface LevelCheckResult {
 // RACE DEFINITION SCHEMA
 // ============================================================================
 
+import type { RaceBaseStats, RacialTrait } from './characterPoints.js';
+
 export interface RaceDefinition {
   race_id: string;
   display_name: string;
   description?: string;
+  // New format: base stats with min/max ranges for CP system
+  base_stats?: RaceBaseStats;
+  // Legacy format (deprecated): flat stat modifiers
   stat_modifiers?: Record<string, number>;
-  traits?: string[];
+  // Racial traits/abilities
+  traits?: RacialTrait[] | string[];
   allowed_classes?: string[];
   playable?: boolean;
 }
