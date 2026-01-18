@@ -1,5 +1,5 @@
 import pg from 'pg';
-import crypto from 'crypto';
+import crypto from 'node:crypto';
 import { query } from '../index.js';
 import bcrypt from 'bcrypt';
 

@@ -355,6 +355,12 @@
                     <input type="number" id="race-dodge-bonus" value="0" min="0" max="25" />
                     <div class="hint">e.g., Halfling: 10%</div>
                   </div>
+
+                  <div class="input-group">
+                    <label for="equip-dodge-bonus">Equipment Dodge Bonus %</label>
+                    <input type="number" id="equip-dodge-bonus" value="0" min="0" max="50" />
+                    <div class="hint">Total from gear</div>
+                  </div>
                 </div>
 
                 <div class="input-row">
@@ -449,7 +455,7 @@
                 <h4 class="sub-section-title">Dodge Results (Defender)</h4>
 
                 <div class="output-item">
-                  <span class="output-label">Base Dodge (class + race)</span>
+                  <span class="output-label">Base Dodge (class + race + equip)</span>
                   <span class="output-value" id="out-base-dodge">0%</span>
                 </div>
 

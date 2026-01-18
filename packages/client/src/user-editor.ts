@@ -374,24 +374,46 @@ async function resetPassword(): Promise<void> {
   }
 }
 
+let passwordClearTimeout: ReturnType<typeof setTimeout> | null = null;
+
 function showPasswordModal(password: string): void {
-  const modal = document.getElementById('password-modal')!;
-  const messageEl = document.getElementById('password-message')!;
-  const displayEl = document.getElementById('password-display')!;
+  const modal = document.getElementById('password-modal');
+  const messageEl = document.getElementById('password-message');
+  const displayEl = document.getElementById('password-display');
+
+  if (!modal || !messageEl || !displayEl) return;
 
   messageEl.textContent = `Password has been reset for ${selectedUserData?.username}. The new password is:`;
   displayEl.textContent = password;
   displayEl.style.display = 'block';
   modal.style.display = 'flex';
 
+  // Clear any existing timeout
+  if (passwordClearTimeout) {
+    clearTimeout(passwordClearTimeout);
+  }
+
   // Auto-clear password from DOM after 60 seconds for security
-  setTimeout(() => {
+  passwordClearTimeout = setTimeout(() => {
     displayEl.textContent = '(password cleared for security)';
+    passwordClearTimeout = null;
   }, 60000);
 }
 
 function hidePasswordModal(): void {
-  document.getElementById('password-modal')!.style.display = 'none';
+  const modal = document.getElementById('password-modal');
+  const displayEl = document.getElementById('password-display');
+
+  if (modal) modal.style.display = 'none';
+
+  // Clear password from DOM immediately when closing
+  if (displayEl) displayEl.textContent = '';
+
+  // Clear pending timeout
+  if (passwordClearTimeout) {
+    clearTimeout(passwordClearTimeout);
+    passwordClearTimeout = null;
+  }
 }
 
 function showUserMessage(message: string, type: 'success' | 'error'): void {

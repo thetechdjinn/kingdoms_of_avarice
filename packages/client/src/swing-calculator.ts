@@ -170,6 +170,7 @@ interface CalculationInputs {
   // Dodge inputs
   classDodgeBonus: number;
   raceDodgeBonus: number;
+  equipDodgeBonus: number;
   charisma: number;
   attackerAccuracy: number;
 }
@@ -269,8 +270,8 @@ function calculate(inputs: CalculationInputs): CalculationResults {
   // Dodge Calculations (MajorMUD-style)
   // ============================================================================
 
-  // Base dodge from class and race
-  const baseDodge = inputs.classDodgeBonus + inputs.raceDodgeBonus;
+  // Base dodge from class, race, and equipment
+  const baseDodge = inputs.classDodgeBonus + inputs.raceDodgeBonus + inputs.equipDodgeBonus;
 
   // Stat contributions: +2% per 10 AGI (DEX), +1% per 10 CHA
   const agiBonus = Math.floor(inputs.dexterity / 10) * DODGE_STAT_CONTRIBUTION.agilityPer10;
@@ -334,6 +335,7 @@ function getInputs(): CalculationInputs {
     // Dodge inputs
     classDodgeBonus: getNumberValue('class-dodge-bonus', 0),
     raceDodgeBonus: getNumberValue('race-dodge-bonus', 0),
+    equipDodgeBonus: getNumberValue('equip-dodge-bonus', 0),
     charisma: getNumberValue('charisma', 50),
     attackerAccuracy: getNumberValue('attacker-accuracy', 50),
   };
@@ -511,7 +513,7 @@ function setupEventListeners(): void {
   const inputIds = [
     'weapon-speed', 'combat-level', 'character-level', 'intelligence', 'dexterity',
     'encumbrance', 'class-crit-bonus', 'weapon-crit', 'max-attacks', 'base-energy',
-    'class-dodge-bonus', 'race-dodge-bonus', 'charisma', 'attacker-accuracy'
+    'class-dodge-bonus', 'race-dodge-bonus', 'equip-dodge-bonus', 'charisma', 'attacker-accuracy'
   ];
 
   for (const id of inputIds) {

@@ -411,16 +411,33 @@ export function setupAdminRoutes(app: Express): void {
       updates.name = updates.name.trim();
     }
 
-    // Validate numeric fields
-    const numericFields = ['level', 'experience', 'health', 'max_health', 'mana', 'max_mana',
-      'strength', 'intelligence', 'dexterity', 'constitution', 'wisdom', 'charisma',
-      'current_room_id', 'gold'];
+    // Validate numeric fields with ranges
+    const numericFields: Record<string, { min: number; max: number }> = {
+      level: { min: 1, max: 1000 },
+      experience: { min: 0, max: Number.MAX_SAFE_INTEGER },
+      health: { min: 0, max: 100000 },
+      max_health: { min: 1, max: 100000 },
+      mana: { min: 0, max: 100000 },
+      max_mana: { min: 0, max: 100000 },
+      strength: { min: 1, max: 255 },
+      intelligence: { min: 1, max: 255 },
+      dexterity: { min: 1, max: 255 },
+      constitution: { min: 1, max: 255 },
+      wisdom: { min: 1, max: 255 },
+      charisma: { min: 1, max: 255 },
+      current_room_id: { min: 1, max: Number.MAX_SAFE_INTEGER },
+      gold: { min: 0, max: Number.MAX_SAFE_INTEGER },
+    };
 
-    for (const field of numericFields) {
+    for (const [field, range] of Object.entries(numericFields)) {
       if (updates[field] !== undefined) {
         const value = Number(updates[field]);
         if (isNaN(value)) {
           res.status(400).json({ success: false, message: `Invalid value for ${field}` });
+          return;
+        }
+        if (value < range.min || value > range.max) {
+          res.status(400).json({ success: false, message: `${field} must be between ${range.min} and ${range.max}` });
           return;
         }
         updates[field] = value;
