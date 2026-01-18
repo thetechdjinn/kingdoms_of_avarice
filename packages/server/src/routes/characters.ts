@@ -162,18 +162,29 @@ export function setupCharacterRoutes(app: Express): void {
         }
       }
 
-      // Calculate final stats: class base + race modifiers
-      const baseStats = classDef.base_stats || {};
-      const raceModifiers = race.stat_modifiers || {};
+      // Calculate starting stats from race base_stats (min values)
+      // Characters start with racial base stats and 100 CP to allocate
+      const raceBaseStats = race.base_stats;
 
-      const finalStats: CharacterStats = {
-        strength: (baseStats.strength ?? 10) + (raceModifiers.strength ?? 0),
-        intelligence: (baseStats.intelligence ?? 10) + (raceModifiers.intelligence ?? 0),
-        dexterity: (baseStats.dexterity ?? 10) + (raceModifiers.dexterity ?? 0),
-        constitution: (baseStats.constitution ?? 10) + (raceModifiers.constitution ?? 0),
-        wisdom: (baseStats.wisdom ?? 10) + (raceModifiers.wisdom ?? 0),
-        charisma: (baseStats.charisma ?? 10) + (raceModifiers.charisma ?? 0),
-      };
+      // Use new base_stats format if available, otherwise fall back to legacy
+      const finalStats: CharacterStats = raceBaseStats && raceBaseStats.strength
+        ? {
+            strength: raceBaseStats.strength.min ?? 40,
+            intelligence: raceBaseStats.intellect?.min ?? 40, // Note: mapped from intellect to intelligence
+            dexterity: raceBaseStats.agility?.min ?? 40,      // Note: mapped from agility to dexterity
+            constitution: raceBaseStats.constitution?.min ?? 40,
+            wisdom: raceBaseStats.wisdom?.min ?? 40,
+            charisma: raceBaseStats.charisma?.min ?? 40,
+          }
+        : {
+            // Legacy fallback: use class base + race modifiers
+            strength: 40,
+            intelligence: 40,
+            dexterity: 40,
+            constitution: 40,
+            wisdom: 40,
+            charisma: 40,
+          };
 
       // Get global settings outside transaction (read-only, no lock needed)
       const globalMaxChars = await settingsRepo.getMaxCharactersPerPlayer();

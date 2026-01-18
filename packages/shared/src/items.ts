@@ -66,6 +66,32 @@ export enum DamageType {
   UNHOLY = 'unholy',
 }
 
+// Attack verbs for weapon combat messages
+export interface AttackVerbs {
+  hit: string;       // 1st person: "chop", "slash", "stab"
+  miss: string;      // 1st person: "swing at", "thrust at"
+  hit_3p: string;    // 3rd person: "chops", "slashes", "stabs"
+  miss_3p: string;   // 3rd person: "swings at", "thrusts at"
+}
+
+// Default attack verbs by damage type
+export const DEFAULT_ATTACK_VERBS: Record<DamageType, AttackVerbs> = {
+  [DamageType.SLASHING]: { hit: 'slash', miss: 'swing at', hit_3p: 'slashes', miss_3p: 'swings at' },
+  [DamageType.PIERCING]: { hit: 'stab', miss: 'thrust at', hit_3p: 'stabs', miss_3p: 'thrusts at' },
+  [DamageType.BLUDGEONING]: { hit: 'smash', miss: 'swing at', hit_3p: 'smashes', miss_3p: 'swings at' },
+  [DamageType.FIRE]: { hit: 'burn', miss: 'swing at', hit_3p: 'burns', miss_3p: 'swings at' },
+  [DamageType.ICE]: { hit: 'freeze', miss: 'swing at', hit_3p: 'freezes', miss_3p: 'swings at' },
+  [DamageType.LIGHTNING]: { hit: 'shock', miss: 'swing at', hit_3p: 'shocks', miss_3p: 'swings at' },
+  [DamageType.POISON]: { hit: 'strike', miss: 'swing at', hit_3p: 'strikes', miss_3p: 'swings at' },
+  [DamageType.HOLY]: { hit: 'smite', miss: 'swing at', hit_3p: 'smites', miss_3p: 'swings at' },
+  [DamageType.UNHOLY]: { hit: 'curse', miss: 'swing at', hit_3p: 'curses', miss_3p: 'swings at' },
+};
+
+// Unarmed attack verbs
+export const UNARMED_ATTACK_VERBS: AttackVerbs = {
+  hit: 'punch', miss: 'swing at', hit_3p: 'punches', miss_3p: 'swings at'
+};
+
 // Item flags
 export interface ItemFlags {
   takeable?: boolean;
@@ -85,6 +111,7 @@ export interface WeaponData {
   crit_modifier?: number;
   range?: 'melee' | 'ranged' | 'thrown';
   skill_type?: string;
+  attack_verbs?: AttackVerbs;
 }
 
 // Armor data

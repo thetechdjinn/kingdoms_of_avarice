@@ -8,6 +8,7 @@ import * as playerRepo from '../db/repositories/playerRepository.js';
 import { handleGet, handleDrop, handleInventory, handleExamine, getRoomItemsDescription, handleWield, handleWear, handleRemove, handleEquipment, handlePut, handleGetFrom, handleLookIn, handleUse, handleLight, handleExtinguish, handleRepair, handleSearch, handleRecipes, handleCraft, handleEnchantments, handleEnchant } from './itemCommands.js';
 import { handleAttack, handleFlee, handleBreak } from './combatCommands.js';
 import { isSpellMnemonic, handleSpellCommand, handleSpellbook } from './spellCommands.js';
+import { handleTrain } from './trainingCommands.js';
 import * as characterRepo from '../db/repositories/characterRepository.js';
 import * as progressionRepo from '../db/repositories/progressionRepository.js';
 
@@ -205,7 +206,7 @@ export async function processCommand(
   }
 
   // Combat commands
-  if (command === 'attack' || command === 'att' || command === 'kill' || command === 'k') {
+  if (command === 'attack' || command === 'att' || command === 'kill' || command === 'k' || command === 'a') {
     return handleAttack(socket, args, _connectedPlayers);
   }
 
@@ -228,6 +229,11 @@ export async function processCommand(
   // Spellbook command
   if (command === 'spells' || command === 'spellbook' || command === 'sp') {
     return handleSpellbook(socket);
+  }
+
+  // Training command (allocate CP to stats)
+  if (command === 'train' || command === 'tr') {
+    return handleTrain(socket, args.join(' '));
   }
 
   // Status/character sheet command (st, sta, stat, statu, status)

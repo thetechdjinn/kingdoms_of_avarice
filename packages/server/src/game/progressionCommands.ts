@@ -158,7 +158,10 @@ async function handleClassInfo(args: string[]): Promise<CommandResponse> {
       `  ${colors.boldCyan('Description:')} ${cls.description || 'none'}`,
       `  ${colors.boldCyan('Essence Multiplier:')} ${cls.essence_multiplier}x`,
       `  ${colors.boldCyan('Tags:')} ${cls.subscribed_tags.join(', ') || 'none'}`,
-      `  ${colors.boldCyan('Base Stats:')} ${cls.base_stats ? JSON.stringify(cls.base_stats) : 'none'}`,
+      `  ${colors.boldCyan('Combat Level:')} ${cls.combat_level ?? 1}`,
+      `  ${colors.boldCyan('Magic Level:')} ${cls.magic_level ?? 0}${cls.magic_school ? ` (${cls.magic_school})` : ''}`,
+      `  ${colors.boldCyan('Stealth:')} ${cls.stealth ? 'Yes' : 'No'}`,
+      `  ${colors.boldCyan('Thievery:')} ${cls.thievery ? 'Yes' : 'No'}`,
       `  ${colors.boldCyan('Talent Tree:')} ${cls.talent_tree_id || 'none'}`,
     ];
 
@@ -312,7 +315,7 @@ async function handleRaceInfo(args: string[]): Promise<CommandResponse> {
       `  ${colors.boldCyan('Description:')} ${race.description || 'none'}`,
       `  ${colors.boldCyan('Playable:')} ${race.playable ? 'Yes' : 'No'}`,
       `  ${colors.boldCyan('Stat Modifiers:')} ${race.stat_modifiers ? JSON.stringify(race.stat_modifiers) : 'none'}`,
-      `  ${colors.boldCyan('Traits:')} ${race.traits?.join(', ') || 'none'}`,
+      `  ${colors.boldCyan('Traits:')} ${race.traits?.length ? race.traits.map((t) => typeof t === 'string' ? t : `${t.id}=${t.value}`).join(', ') : 'none'}`,
       `  ${colors.boldCyan('Allowed Classes:')} ${race.allowed_classes?.join(', ') || 'all'}`,
     ];
 

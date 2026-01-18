@@ -488,12 +488,11 @@ function selectClass(classId: string): void {
   (document.getElementById('class-resource') as HTMLSelectElement).value = cls.resource_type || '';
   (document.getElementById('class-playable') as HTMLInputElement).checked = cls.playable !== false;
   (document.getElementById('class-tags') as HTMLInputElement).value = cls.subscribed_tags.join(', ');
-  (document.getElementById('class-str') as HTMLInputElement).value = String(cls.base_stats?.strength || 10);
-  (document.getElementById('class-dex') as HTMLInputElement).value = String(cls.base_stats?.dexterity || 10);
-  (document.getElementById('class-int') as HTMLInputElement).value = String(cls.base_stats?.intelligence || 10);
-  (document.getElementById('class-wis') as HTMLInputElement).value = String(cls.base_stats?.wisdom || 10);
-  (document.getElementById('class-con') as HTMLInputElement).value = String(cls.base_stats?.constitution || 10);
-  (document.getElementById('class-cha') as HTMLInputElement).value = String(cls.base_stats?.charm || 10);
+  (document.getElementById('class-combat-level') as HTMLInputElement).value = String(cls.combat_level ?? 3);
+  (document.getElementById('class-magic-level') as HTMLInputElement).value = String(cls.magic_level ?? 0);
+  (document.getElementById('class-magic-school') as HTMLSelectElement).value = cls.magic_school || '';
+  (document.getElementById('class-stealth') as HTMLInputElement).checked = cls.stealth === true;
+  (document.getElementById('class-thievery') as HTMLInputElement).checked = cls.thievery === true;
 
   loadClassAbilities(classId);
   renderClassList();
@@ -518,13 +517,25 @@ function selectRace(raceId: string): void {
   (document.getElementById('race-name') as HTMLInputElement).value = race.display_name;
   (document.getElementById('race-description') as HTMLTextAreaElement).value = race.description || '';
   (document.getElementById('race-playable') as HTMLInputElement).checked = race.playable !== false;
-  (document.getElementById('race-str') as HTMLInputElement).value = String(race.stat_modifiers?.strength || 0);
-  (document.getElementById('race-dex') as HTMLInputElement).value = String(race.stat_modifiers?.dexterity || 0);
-  (document.getElementById('race-int') as HTMLInputElement).value = String(race.stat_modifiers?.intelligence || 0);
-  (document.getElementById('race-wis') as HTMLInputElement).value = String(race.stat_modifiers?.wisdom || 0);
-  (document.getElementById('race-con') as HTMLInputElement).value = String(race.stat_modifiers?.constitution || 0);
-  (document.getElementById('race-cha') as HTMLInputElement).value = String(race.stat_modifiers?.charm || 0);
-  (document.getElementById('race-traits') as HTMLInputElement).value = race.traits?.join(', ') || '';
+
+  // Load base_stats with min/max ranges
+  const bs = race.base_stats as Record<string, { min: number; max: number }> | undefined;
+  (document.getElementById('race-str-min') as HTMLInputElement).value = String(bs?.strength?.min ?? 40);
+  (document.getElementById('race-str-max') as HTMLInputElement).value = String(bs?.strength?.max ?? 100);
+  (document.getElementById('race-agi-min') as HTMLInputElement).value = String(bs?.agility?.min ?? 40);
+  (document.getElementById('race-agi-max') as HTMLInputElement).value = String(bs?.agility?.max ?? 100);
+  (document.getElementById('race-con-min') as HTMLInputElement).value = String(bs?.constitution?.min ?? 40);
+  (document.getElementById('race-con-max') as HTMLInputElement).value = String(bs?.constitution?.max ?? 100);
+  (document.getElementById('race-int-min') as HTMLInputElement).value = String(bs?.intellect?.min ?? 40);
+  (document.getElementById('race-int-max') as HTMLInputElement).value = String(bs?.intellect?.max ?? 100);
+  (document.getElementById('race-wis-min') as HTMLInputElement).value = String(bs?.wisdom?.min ?? 40);
+  (document.getElementById('race-wis-max') as HTMLInputElement).value = String(bs?.wisdom?.max ?? 100);
+  (document.getElementById('race-cha-min') as HTMLInputElement).value = String(bs?.charisma?.min ?? 40);
+  (document.getElementById('race-cha-max') as HTMLInputElement).value = String(bs?.charisma?.max ?? 100);
+
+  // Format traits for display
+  const traitsValue = race.traits?.map(t => typeof t === 'string' ? t : `${t.id}=${t.value}`).join(', ') || '';
+  (document.getElementById('race-traits') as HTMLInputElement).value = traitsValue;
   (document.getElementById('race-allowed-classes') as HTMLInputElement).value = race.allowed_classes?.join(', ') || '';
 
   renderRaceList();
@@ -648,6 +659,7 @@ async function handleClassSubmit(e: Event): Promise<void> {
   e.preventDefault();
 
   const classId = (document.getElementById('class-id') as HTMLInputElement).value;
+  const magicSchool = (document.getElementById('class-magic-school') as HTMLSelectElement).value;
   const data: Partial<ClassDefinition> = {
     class_id: classId,
     display_name: (document.getElementById('class-name') as HTMLInputElement).value,
@@ -656,14 +668,11 @@ async function handleClassSubmit(e: Event): Promise<void> {
     resource_type: (document.getElementById('class-resource') as HTMLSelectElement).value || 'none',
     playable: (document.getElementById('class-playable') as HTMLInputElement).checked,
     subscribed_tags: (document.getElementById('class-tags') as HTMLInputElement).value.split(',').map(t => t.trim()).filter(Boolean),
-    base_stats: {
-      strength: parseStatValue((document.getElementById('class-str') as HTMLInputElement).value),
-      dexterity: parseStatValue((document.getElementById('class-dex') as HTMLInputElement).value),
-      intelligence: parseStatValue((document.getElementById('class-int') as HTMLInputElement).value),
-      wisdom: parseStatValue((document.getElementById('class-wis') as HTMLInputElement).value),
-      constitution: parseStatValue((document.getElementById('class-con') as HTMLInputElement).value),
-      charisma: parseStatValue((document.getElementById('class-cha') as HTMLInputElement).value),
-    },
+    combat_level: parseStatValue((document.getElementById('class-combat-level') as HTMLInputElement).value) || 3,
+    magic_level: parseStatValue((document.getElementById('class-magic-level') as HTMLInputElement).value) || 0,
+    magic_school: magicSchool || undefined,
+    stealth: (document.getElementById('class-stealth') as HTMLInputElement).checked,
+    thievery: (document.getElementById('class-thievery') as HTMLInputElement).checked,
   };
 
   try {
@@ -711,20 +720,49 @@ async function handleRaceSubmit(e: Event): Promise<void> {
     return;
   }
 
+  // Parse traits - support both simple strings and id=value format
+  const traitsRaw = raceTraitsEl?.value.split(',').map(t => t.trim()).filter(Boolean) ?? [];
+  const traits = traitsRaw.map(t => {
+    if (t.includes('=')) {
+      const [id, val] = t.split('=');
+      const numVal = Number(val);
+      return { id: id.trim(), value: isNaN(numVal) ? val.trim() === 'true' : numVal };
+    }
+    return t;
+  });
+
   const data: Partial<RaceDefinition> = {
     race_id: raceId,
     display_name: raceNameEl.value,
     description: raceDescEl?.value || undefined,
     playable: racePlayableEl?.checked ?? false,
-    stat_modifiers: {
-      strength: Number((document.getElementById('race-str') as HTMLInputElement | null)?.value) || 0,
-      dexterity: Number((document.getElementById('race-dex') as HTMLInputElement | null)?.value) || 0,
-      intelligence: Number((document.getElementById('race-int') as HTMLInputElement | null)?.value) || 0,
-      wisdom: Number((document.getElementById('race-wis') as HTMLInputElement | null)?.value) || 0,
-      constitution: Number((document.getElementById('race-con') as HTMLInputElement | null)?.value) || 0,
-      charm: Number((document.getElementById('race-cha') as HTMLInputElement | null)?.value) || 0,
+    base_stats: {
+      strength: {
+        min: Number((document.getElementById('race-str-min') as HTMLInputElement | null)?.value) || 40,
+        max: Number((document.getElementById('race-str-max') as HTMLInputElement | null)?.value) || 100,
+      },
+      agility: {
+        min: Number((document.getElementById('race-agi-min') as HTMLInputElement | null)?.value) || 40,
+        max: Number((document.getElementById('race-agi-max') as HTMLInputElement | null)?.value) || 100,
+      },
+      constitution: {
+        min: Number((document.getElementById('race-con-min') as HTMLInputElement | null)?.value) || 40,
+        max: Number((document.getElementById('race-con-max') as HTMLInputElement | null)?.value) || 100,
+      },
+      intellect: {
+        min: Number((document.getElementById('race-int-min') as HTMLInputElement | null)?.value) || 40,
+        max: Number((document.getElementById('race-int-max') as HTMLInputElement | null)?.value) || 100,
+      },
+      wisdom: {
+        min: Number((document.getElementById('race-wis-min') as HTMLInputElement | null)?.value) || 40,
+        max: Number((document.getElementById('race-wis-max') as HTMLInputElement | null)?.value) || 100,
+      },
+      charisma: {
+        min: Number((document.getElementById('race-cha-min') as HTMLInputElement | null)?.value) || 40,
+        max: Number((document.getElementById('race-cha-max') as HTMLInputElement | null)?.value) || 100,
+      },
     },
-    traits: raceTraitsEl?.value.split(',').map(t => t.trim()).filter(Boolean) ?? [],
+    traits: traits as RaceDefinition['traits'],
     allowed_classes: raceAllowedEl?.value.split(',').map(t => t.trim()).filter(Boolean) ?? [],
   };
 

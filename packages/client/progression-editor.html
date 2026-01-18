@@ -71,7 +71,7 @@
               <div class="form-row">
                 <div class="form-group">
                   <label for="class-id">Class ID</label>
-                  <input type="text" id="class-id" required placeholder="e.g., warrior_01" pattern="^[a-z][a-z0-9_]*$" title="Must be lowercase alphanumeric starting with a letter (underscores allowed)" />
+                  <input type="text" id="class-id" required placeholder="e.g., warrior" pattern="^[a-z][a-z0-9_]*$" title="Must be lowercase alphanumeric starting with a letter (underscores allowed)" />
                 </div>
                 <div class="form-group">
                   <label for="class-name">Display Name</label>
@@ -110,14 +110,35 @@
               </div>
               
               <div class="form-section">
-                <h3>Base Stats</h3>
-                <div class="form-row stats-row">
-                  <div class="form-group"><label for="class-str">STR</label><input type="number" id="class-str" value="10" min="1" max="20" /></div>
-                  <div class="form-group"><label for="class-dex">DEX</label><input type="number" id="class-dex" value="10" min="1" max="20" /></div>
-                  <div class="form-group"><label for="class-int">INT</label><input type="number" id="class-int" value="10" min="1" max="20" /></div>
-                  <div class="form-group"><label for="class-wis">WIS</label><input type="number" id="class-wis" value="10" min="1" max="20" /></div>
-                  <div class="form-group"><label for="class-con">CON</label><input type="number" id="class-con" value="10" min="1" max="20" /></div>
-                  <div class="form-group"><label for="class-cha">CHA</label><input type="number" id="class-cha" value="10" min="1" max="20" /></div>
+                <h3>Combat &amp; Magic</h3>
+                <div class="form-row">
+                  <div class="form-group">
+                    <label for="class-combat-level">Combat Level (1-5)</label>
+                    <input type="number" id="class-combat-level" value="3" min="1" max="5" />
+                  </div>
+                  <div class="form-group">
+                    <label for="class-magic-level">Magic Level (0-3)</label>
+                    <input type="number" id="class-magic-level" value="0" min="0" max="3" />
+                  </div>
+                  <div class="form-group">
+                    <label for="class-magic-school">Magic School</label>
+                    <select id="class-magic-school">
+                      <option value="">None</option>
+                      <option value="mage">Mage</option>
+                      <option value="priest">Priest</option>
+                      <option value="druid">Druid</option>
+                      <option value="bardic">Bardic</option>
+                      <option value="kai">Kai</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="form-row">
+                  <div class="form-group checkbox-group">
+                    <label><input type="checkbox" id="class-stealth" /> Stealth</label>
+                  </div>
+                  <div class="form-group checkbox-group">
+                    <label><input type="checkbox" id="class-thievery" /> Thievery</label>
+                  </div>
                 </div>
               </div>
               
@@ -187,14 +208,58 @@
               </div>
               
               <div class="form-section">
-                <h3>Stat Modifiers</h3>
+                <h3>Base Stats (Min = starting value, Max = cap with CP)</h3>
                 <div class="form-row stats-row">
-                  <div class="form-group"><label for="race-str">STR</label><input type="number" id="race-str" value="0" min="-5" max="5" /></div>
-                  <div class="form-group"><label for="race-dex">DEX</label><input type="number" id="race-dex" value="0" min="-5" max="5" /></div>
-                  <div class="form-group"><label for="race-int">INT</label><input type="number" id="race-int" value="0" min="-5" max="5" /></div>
-                  <div class="form-group"><label for="race-wis">WIS</label><input type="number" id="race-wis" value="0" min="-5" max="5" /></div>
-                  <div class="form-group"><label for="race-con">CON</label><input type="number" id="race-con" value="0" min="-5" max="5" /></div>
-                  <div class="form-group"><label for="race-cha">CHA</label><input type="number" id="race-cha" value="0" min="-5" max="5" /></div>
+                  <div class="form-group">
+                    <label>STR</label>
+                    <div class="stat-range">
+                      <input type="number" id="race-str-min" value="40" min="1" max="200" placeholder="Min" />
+                      <span>-</span>
+                      <input type="number" id="race-str-max" value="100" min="1" max="200" placeholder="Max" />
+                    </div>
+                  </div>
+                  <div class="form-group">
+                    <label>AGI</label>
+                    <div class="stat-range">
+                      <input type="number" id="race-agi-min" value="40" min="1" max="200" placeholder="Min" />
+                      <span>-</span>
+                      <input type="number" id="race-agi-max" value="100" min="1" max="200" placeholder="Max" />
+                    </div>
+                  </div>
+                  <div class="form-group">
+                    <label>CON</label>
+                    <div class="stat-range">
+                      <input type="number" id="race-con-min" value="40" min="1" max="200" placeholder="Min" />
+                      <span>-</span>
+                      <input type="number" id="race-con-max" value="100" min="1" max="200" placeholder="Max" />
+                    </div>
+                  </div>
+                </div>
+                <div class="form-row stats-row">
+                  <div class="form-group">
+                    <label>INT</label>
+                    <div class="stat-range">
+                      <input type="number" id="race-int-min" value="40" min="1" max="200" placeholder="Min" />
+                      <span>-</span>
+                      <input type="number" id="race-int-max" value="100" min="1" max="200" placeholder="Max" />
+                    </div>
+                  </div>
+                  <div class="form-group">
+                    <label>WIS</label>
+                    <div class="stat-range">
+                      <input type="number" id="race-wis-min" value="40" min="1" max="200" placeholder="Min" />
+                      <span>-</span>
+                      <input type="number" id="race-wis-max" value="100" min="1" max="200" placeholder="Max" />
+                    </div>
+                  </div>
+                  <div class="form-group">
+                    <label>CHA</label>
+                    <div class="stat-range">
+                      <input type="number" id="race-cha-min" value="40" min="1" max="200" placeholder="Min" />
+                      <span>-</span>
+                      <input type="number" id="race-cha-max" value="100" min="1" max="200" placeholder="Max" />
+                    </div>
+                  </div>
                 </div>
               </div>
               
@@ -205,7 +270,7 @@
               
               <div class="form-group">
                 <label for="race-allowed-classes">Allowed Classes (comma-separated, empty = all)</label>
-                <input type="text" id="race-allowed-classes" placeholder="warrior_01, mage_01" />
+                <input type="text" id="race-allowed-classes" placeholder="warrior, mage, thief" />
               </div>
               
               <div class="form-actions">

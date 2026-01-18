@@ -11,6 +11,10 @@ import {
   ItemType,
   WeaponData,
   StatModifiers,
+  AttackVerbs,
+  DamageType,
+  DEFAULT_ATTACK_VERBS,
+  UNARMED_ATTACK_VERBS,
 } from '@koa/shared';
 import * as itemRepo from '../db/repositories/itemRepository.js';
 
@@ -22,6 +26,8 @@ export interface WeaponStats {
   attackSpeed: number;
   critModifier: number;
   damageType: string;
+  weaponName: string;
+  attackVerbs: AttackVerbs;
 }
 
 /**
@@ -48,6 +54,8 @@ const DEFAULT_WEAPON: WeaponStats = {
   attackSpeed: 8,           // Fists are fast
   critModifier: 0,          // No bonus crit from fists
   damageType: 'bludgeoning',
+  weaponName: 'fists',
+  attackVerbs: UNARMED_ATTACK_VERBS,
 };
 
 // Default armor stats when unarmored
@@ -65,11 +73,20 @@ function getWeaponStats(weapon: ItemInstance | undefined): WeaponStats {
   }
 
   const weaponData = weapon.template.weapon_data as WeaponData;
+  const damageType = weaponData.damage_type || DamageType.BLUDGEONING;
+
+  // Resolve attack verbs: custom > damage-type default > unarmed
+  const attackVerbs = weaponData.attack_verbs
+    || DEFAULT_ATTACK_VERBS[damageType as DamageType]
+    || UNARMED_ATTACK_VERBS;
+
   return {
     damageDice: weaponData.damage_dice || '1d4',
     attackSpeed: weaponData.attack_speed ?? 10,
     critModifier: weaponData.crit_modifier ?? 0,
-    damageType: weaponData.damage_type || 'bludgeoning',
+    damageType,
+    weaponName: weapon.template.name,
+    attackVerbs,
   };
 }
 

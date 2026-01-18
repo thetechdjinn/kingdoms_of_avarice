@@ -37,11 +37,15 @@ export interface ClassDefinition {
   description?: string;
   essence_multiplier: number;
   subscribed_tags: ThematicTag[];
-  base_stats?: Record<string, number>;
   talent_tree_id?: string;
   resource_type?: string;
   playable?: boolean;
   combat_level?: number; // 1-5, defaults to 1. Higher = better melee combat
+  magic_level?: number; // 0-3, magic power level
+  magic_school?: string; // mage, priest, druid, bardic, kai
+  stealth?: boolean; // Can use stealth abilities
+  thievery?: boolean; // Can use thief skills (picklocks, traps)
+  special_abilities?: string[]; // Class-specific abilities
 }
 
 // ============================================================================
@@ -172,12 +176,18 @@ export interface LevelCheckResult {
 // RACE DEFINITION SCHEMA
 // ============================================================================
 
+import type { RaceBaseStats, RacialTrait } from './characterPoints.js';
+
 export interface RaceDefinition {
   race_id: string;
   display_name: string;
   description?: string;
+  // New format: base stats with min/max ranges for CP system
+  base_stats?: RaceBaseStats;
+  // Legacy format (deprecated): flat stat modifiers
   stat_modifiers?: Record<string, number>;
-  traits?: string[];
+  // Racial traits/abilities
+  traits?: RacialTrait[] | string[];
   allowed_classes?: string[];
   playable?: boolean;
 }
