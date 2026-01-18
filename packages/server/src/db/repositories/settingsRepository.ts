@@ -171,40 +171,45 @@ export async function getCombatSettings(): Promise<CombatSettings> {
     return combatSettingsCache;
   }
 
-  // Fetch all combat settings from DB
+  // Fetch all combat settings from DB in parallel
+  const [
+    baseEnergy,
+    defaultSpeed,
+    maxAttacks,
+    roundInterval,
+    unarmedSpeed,
+    levelMults,
+    levelAccuracy,
+  ] = await Promise.all([
+    getSetting<number>('combat_base_energy'),
+    getSetting<number>('combat_default_weapon_speed'),
+    getSetting<number>('combat_max_attacks_per_round'),
+    getSetting<number>('combat_round_interval_ms'),
+    getSetting<number>('combat_unarmed_speed'),
+    getSetting<Record<string, number>>('combat_level_multipliers'),
+    getSetting<Record<string, number>>('combat_level_accuracy_bonus'),
+  ]);
+
   const settings: CombatSettings = { ...DEFAULT_COMBAT_SETTINGS };
 
-  const baseEnergy = await getSetting<number>('combat_base_energy');
   if (typeof baseEnergy === 'number' && baseEnergy > 0) {
     settings.base_energy = baseEnergy;
   }
-
-  const defaultSpeed = await getSetting<number>('combat_default_weapon_speed');
   if (typeof defaultSpeed === 'number' && defaultSpeed > 0) {
     settings.default_weapon_speed = defaultSpeed;
   }
-
-  const maxAttacks = await getSetting<number>('combat_max_attacks_per_round');
   if (typeof maxAttacks === 'number' && maxAttacks > 0) {
     settings.max_attacks_per_round = maxAttacks;
   }
-
-  const roundInterval = await getSetting<number>('combat_round_interval_ms');
   if (typeof roundInterval === 'number' && roundInterval > 0) {
     settings.round_interval_ms = roundInterval;
   }
-
-  const unarmedSpeed = await getSetting<number>('combat_unarmed_speed');
   if (typeof unarmedSpeed === 'number' && unarmedSpeed > 0) {
     settings.unarmed_speed = unarmedSpeed;
   }
-
-  const levelMults = await getSetting<Record<string, number>>('combat_level_multipliers');
   if (isValidRecordStringNumber(levelMults)) {
     settings.level_multipliers = levelMults;
   }
-
-  const levelAccuracy = await getSetting<Record<string, number>>('combat_level_accuracy_bonus');
   if (isValidRecordStringNumber(levelAccuracy)) {
     settings.level_accuracy_bonus = levelAccuracy;
   }
