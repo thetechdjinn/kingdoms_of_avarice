@@ -13,7 +13,8 @@
     "build": "npm run build --workspaces",
     "build:shared": "npm run build --workspace=@koa/shared",
     "build:client": "npm run build --workspace=@koa/client",
-    "build:server": "npm run build --workspace=@koa/server"
+    "build:server": "npm run build --workspace=@koa/server",
+    "migrate": "npm run migrate --workspace=@koa/server"
   },
   "devDependencies": {
     "concurrently": "^8.2.2",

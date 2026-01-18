@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Game Settings Editor - Kingdoms of Avarice</title>
+    <link rel="stylesheet" href="/src/editor.css" />
+    <style>
+      #settings-editor-panel {
+        flex: 1;
+        padding: 2rem;
+        overflow-y: auto;
+        max-width: 900px;
+      }
+
+      .settings-tabs {
+        display: flex;
+        gap: 0;
+        margin-bottom: 1.5rem;
+        border-bottom: 1px solid #333;
+      }
+
+      .settings-tab {
+        background: transparent;
+        border: none;
+        color: #888;
+        padding: 0.75rem 1.5rem;
+        cursor: pointer;
+        font-size: 1rem;
+        border-bottom: 2px solid transparent;
+        transition: all 0.2s;
+      }
+
+      .settings-tab:hover {
+        color: #aaa;
+      }
+
+      .settings-tab.active {
+        color: #00ff00;
+        border-bottom-color: #00ff00;
+      }
+
+      .settings-section {
+        display: none;
+      }
+
+      .settings-section.active {
+        display: block;
+      }
+
+      .setting-item {
+        background: #16213e;
+        border: 1px solid #333;
+        border-radius: 8px;
+        padding: 1.25rem;
+        margin-bottom: 1rem;
+      }
+
+      .setting-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 0.75rem;
+      }
+
+      .setting-label {
+        color: #00ff00;
+        font-weight: 500;
+        font-size: 1rem;
+      }
+
+      .setting-key {
+        color: #666;
+        font-size: 0.8rem;
+        font-family: monospace;
+      }
+
+      .setting-description {
+        color: #888;
+        font-size: 0.9rem;
+        margin-bottom: 1rem;
+      }
+
+      .setting-controls {
+        display: flex;
+        gap: 0.5rem;
+        align-items: flex-start;
+      }
+
+      .setting-controls input[type="number"],
+      .setting-controls input[type="text"],
+      .setting-controls select {
+        flex: 1;
+        max-width: 200px;
+        padding: 0.5rem 0.75rem;
+        background-color: #0f0f23;
+        color: #eee;
+        border: 1px solid #333;
+        border-radius: 4px;
+        font-size: 1rem;
+      }
+
+      .setting-controls textarea {
+        flex: 1;
+        min-height: 100px;
+        padding: 0.75rem;
+        background-color: #0f0f23;
+        color: #eee;
+        border: 1px solid #333;
+        border-radius: 4px;
+        font-size: 0.9rem;
+        font-family: monospace;
+        resize: vertical;
+      }
+
+      .setting-controls input:focus,
+      .setting-controls select:focus,
+      .setting-controls textarea:focus {
+        outline: none;
+        border-color: #00ff00;
+      }
+
+      .setting-message {
+        padding: 0.5rem 0.75rem;
+        border-radius: 4px;
+        font-size: 0.85rem;
+        margin-top: 0.5rem;
+      }
+
+      .setting-message.success {
+        background: rgba(0, 255, 0, 0.1);
+        color: #00ff00;
+      }
+
+      .setting-message.error {
+        background: rgba(255, 68, 68, 0.1);
+        color: #ff4444;
+      }
+
+      /* Key-Value Editor */
+      .key-value-editor {
+        background: #0f0f23;
+        border: 1px solid #333;
+        border-radius: 4px;
+        padding: 0.75rem;
+      }
+
+      .kv-header {
+        display: flex;
+        gap: 0.5rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 1px solid #333;
+        margin-bottom: 0.5rem;
+      }
+
+      .kv-header-label {
+        flex: 1;
+        font-size: 0.8rem;
+        color: #888;
+        text-transform: uppercase;
+      }
+
+      .kv-header-spacer {
+        width: 28px;
+      }
+
+      .kv-rows {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        max-height: 300px;
+        overflow-y: auto;
+      }
+
+      .kv-row {
+        display: flex;
+        gap: 0.5rem;
+        align-items: center;
+      }
+
+      .kv-row input {
+        flex: 1;
+        padding: 0.4rem 0.6rem;
+        background-color: #1a1a2e;
+        color: #eee;
+        border: 1px solid #333;
+        border-radius: 4px;
+        font-size: 0.9rem;
+        text-align: center;
+      }
+
+      .kv-row input:focus {
+        outline: none;
+        border-color: #00ff00;
+      }
+
+      .kv-row .kv-remove {
+        width: 28px;
+        height: 28px;
+        padding: 0;
+        background: transparent;
+        border: 1px solid #444;
+        border-radius: 4px;
+        color: #666;
+        cursor: pointer;
+        font-size: 1rem;
+        line-height: 1;
+      }
+
+      .kv-row .kv-remove:hover {
+        background: #4a1a1a;
+        border-color: #ff4444;
+        color: #ff4444;
+      }
+
+      .kv-actions {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 0.75rem;
+        padding-top: 0.75rem;
+        border-top: 1px solid #333;
+      }
+
+      .page-header {
+        margin-bottom: 2rem;
+        padding-bottom: 1rem;
+        border-bottom: 1px solid #333;
+      }
+
+      .page-header h1 {
+        color: #00ff00;
+        font-size: 1.5rem;
+        margin-bottom: 0.5rem;
+      }
+
+      .page-header p {
+        color: #888;
+        font-size: 0.95rem;
+      }
+
+      .loading-state {
+        color: #888;
+        padding: 2rem;
+        text-align: center;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="editor-app">
+      <nav id="main-nav">
+        <div class="nav-brand">Kingdoms of Avarice</div>
+        <div class="nav-links">
+          <a href="/" class="nav-link">Game</a>
+          <div class="nav-dropdown" id="nav-dev-dropdown" style="display: none;">
+            <button class="nav-link nav-dropdown-btn">Developer</button>
+            <div class="nav-dropdown-menu">
+              <a href="/editor.html" class="nav-dropdown-item">Room Editor</a>
+              <a href="/item-editor.html" class="nav-dropdown-item">Item Editor</a>
+              <a href="/spell-editor.html" class="nav-dropdown-item">Spell Editor</a>
+              <a href="/status-editor.html" class="nav-dropdown-item">Status Effects Editor</a>
+              <a href="/progression-editor.html" class="nav-dropdown-item">Progression Editor</a>
+              <a href="/swing-calculator.html" class="nav-dropdown-item">Swing Calculator</a>
+            </div>
+          </div>
+          <div class="nav-dropdown" id="nav-admin-dropdown" style="display: none;">
+            <button class="nav-link nav-dropdown-btn active">Admin</button>
+            <div class="nav-dropdown-menu">
+              <a href="/admin.html" class="nav-dropdown-item">Admin Panel</a>
+              <a href="/game-settings-editor.html" class="nav-dropdown-item active">Game Settings</a>
+              <a href="/user-editor.html" class="nav-dropdown-item">User Editor</a>
+            </div>
+          </div>
+        </div>
+        <div class="nav-spacer"></div>
+        <div class="nav-user-menu">
+          <button class="nav-user-btn" id="nav-username">User</button>
+          <div class="dropdown-menu" id="user-dropdown">
+            <button class="dropdown-item" id="logout-btn">Logout</button>
+          </div>
+        </div>
+      </nav>
+
+      <div id="editor-layout">
+        <main id="settings-editor-panel">
+          <div id="loading-state" class="loading-state">Loading settings...</div>
+
+          <div id="settings-content" style="display: none;">
+            <div class="page-header">
+              <h1>Game Settings Editor</h1>
+              <p>Configure all game settings. Changes take effect immediately after saving.</p>
+            </div>
+
+            <div class="settings-tabs">
+              <button class="settings-tab active" data-tab="general">General</button>
+              <button class="settings-tab" data-tab="combat">Combat</button>
+            </div>
+
+            <!-- General Settings -->
+            <div id="tab-general" class="settings-section active">
+              <div class="setting-item" data-key="max_characters_per_player">
+                <div class="setting-header">
+                  <div>
+                    <div class="setting-label">Max Characters Per Player</div>
+                    <div class="setting-key">max_characters_per_player</div>
+                  </div>
+                </div>
+                <div class="setting-description">Default number of characters each player can create. Can be overridden per-player in the User Editor.</div>
+                <div class="setting-controls">
+                  <input type="number" id="setting-max_characters_per_player" min="1" max="100" />
+                  <button class="btn-primary" data-save="max_characters_per_player">Save</button>
+                </div>
+                <div class="setting-message" id="msg-max_characters_per_player" style="display: none;"></div>
+              </div>
+
+              <div class="setting-item" data-key="ip_access_mode">
+                <div class="setting-header">
+                  <div>
+                    <div class="setting-label">IP Access Mode</div>
+                    <div class="setting-key">ip_access_mode</div>
+                  </div>
+                </div>
+                <div class="setting-description">Controls how IP access rules are applied. In blocklist mode, all IPs are allowed unless explicitly blocked. In allowlist mode, all IPs are blocked unless explicitly allowed.</div>
+                <div class="setting-controls">
+                  <select id="setting-ip_access_mode">
+                    <option value="blocklist">Blocklist (allow all, block specific)</option>
+                    <option value="allowlist">Allowlist (block all, allow specific)</option>
+                  </select>
+                  <button class="btn-primary" data-save="ip_access_mode">Save</button>
+                </div>
+                <div class="setting-message" id="msg-ip_access_mode" style="display: none;"></div>
+              </div>
+            </div>
+
+            <!-- Combat Settings -->
+            <div id="tab-combat" class="settings-section">
+              <div class="setting-item" data-key="combat_base_energy">
+                <div class="setting-header">
+                  <div>
+                    <div class="setting-label">Base Energy</div>
+                    <div class="setting-key">combat_base_energy</div>
+                  </div>
+                </div>
+                <div class="setting-description">Base energy pool available per combat round before level multipliers.</div>
+                <div class="setting-controls">
+                  <input type="number" id="setting-combat_base_energy" min="1000" max="100000" />
+                  <button class="btn-primary" data-save="combat_base_energy">Save</button>
+                </div>
+                <div class="setting-message" id="msg-combat_base_energy" style="display: none;"></div>
+              </div>
+
+              <div class="setting-item" data-key="combat_default_weapon_speed">
+                <div class="setting-header">
+                  <div>
+                    <div class="setting-label">Default Weapon Speed</div>
+                    <div class="setting-key">combat_default_weapon_speed</div>
+                  </div>
+                </div>
+                <div class="setting-description">Energy cost for weapons without a specified attack speed. Lower values mean faster attacks.</div>
+                <div class="setting-controls">
+                  <input type="number" id="setting-combat_default_weapon_speed" min="100" max="10000" />
+                  <button class="btn-primary" data-save="combat_default_weapon_speed">Save</button>
+                </div>
+                <div class="setting-message" id="msg-combat_default_weapon_speed" style="display: none;"></div>
+              </div>
+
+              <div class="setting-item" data-key="combat_max_attacks_per_round">
+                <div class="setting-header">
+                  <div>
+                    <div class="setting-label">Max Attacks Per Round</div>
+                    <div class="setting-key">combat_max_attacks_per_round</div>
+                  </div>
+                </div>
+                <div class="setting-description">Maximum number of attacks any combatant can make per round, regardless of remaining energy.</div>
+                <div class="setting-controls">
+                  <input type="number" id="setting-combat_max_attacks_per_round" min="1" max="20" />
+                  <button class="btn-primary" data-save="combat_max_attacks_per_round">Save</button>
+                </div>
+                <div class="setting-message" id="msg-combat_max_attacks_per_round" style="display: none;"></div>
+              </div>
+
+              <div class="setting-item" data-key="combat_round_interval_ms">
+                <div class="setting-header">
+                  <div>
+                    <div class="setting-label">Round Interval (ms)</div>
+                    <div class="setting-key">combat_round_interval_ms</div>
+                  </div>
+                </div>
+                <div class="setting-description">Time between combat rounds in milliseconds.</div>
+                <div class="setting-controls">
+                  <input type="number" id="setting-combat_round_interval_ms" min="1000" max="30000" />
+                  <button class="btn-primary" data-save="combat_round_interval_ms">Save</button>
+                </div>
+                <div class="setting-message" id="msg-combat_round_interval_ms" style="display: none;"></div>
+              </div>
+
+              <div class="setting-item" data-key="combat_unarmed_speed">
+                <div class="setting-header">
+                  <div>
+                    <div class="setting-label">Unarmed Speed</div>
+                    <div class="setting-key">combat_unarmed_speed</div>
+                  </div>
+                </div>
+                <div class="setting-description">Energy cost for unarmed attacks (punching, kicking).</div>
+                <div class="setting-controls">
+                  <input type="number" id="setting-combat_unarmed_speed" min="100" max="10000" />
+                  <button class="btn-primary" data-save="combat_unarmed_speed">Save</button>
+                </div>
+                <div class="setting-message" id="msg-combat_unarmed_speed" style="display: none;"></div>
+              </div>
+
+              <div class="setting-item" data-key="combat_level_multipliers">
+                <div class="setting-header">
+                  <div>
+                    <div class="setting-label">Level Energy Multipliers</div>
+                    <div class="setting-key">combat_level_multipliers</div>
+                  </div>
+                </div>
+                <div class="setting-description">Energy multiplier per combat level. Higher multipliers give more attacks per round.</div>
+                <div class="key-value-editor" id="editor-combat_level_multipliers">
+                  <div class="kv-header">
+                    <span class="kv-header-label">Level</span>
+                    <span class="kv-header-label">Multiplier</span>
+                    <span class="kv-header-spacer"></span>
+                  </div>
+                  <div class="kv-rows" id="rows-combat_level_multipliers"></div>
+                  <div class="kv-actions">
+                    <button class="btn-small" data-add-row="combat_level_multipliers">+ Add Level</button>
+                    <button class="btn-primary" data-save="combat_level_multipliers">Save</button>
+                  </div>
+                </div>
+                <div class="setting-message" id="msg-combat_level_multipliers" style="display: none;"></div>
+              </div>
+
+              <div class="setting-item" data-key="combat_level_accuracy_bonus">
+                <div class="setting-header">
+                  <div>
+                    <div class="setting-label">Level Accuracy Bonus</div>
+                    <div class="setting-key">combat_level_accuracy_bonus</div>
+                  </div>
+                </div>
+                <div class="setting-description">Accuracy bonus percentage per combat level.</div>
+                <div class="key-value-editor" id="editor-combat_level_accuracy_bonus">
+                  <div class="kv-header">
+                    <span class="kv-header-label">Level</span>
+                    <span class="kv-header-label">Bonus %</span>
+                    <span class="kv-header-spacer"></span>
+                  </div>
+                  <div class="kv-rows" id="rows-combat_level_accuracy_bonus"></div>
+                  <div class="kv-actions">
+                    <button class="btn-small" data-add-row="combat_level_accuracy_bonus">+ Add Level</button>
+                    <button class="btn-primary" data-save="combat_level_accuracy_bonus">Save</button>
+                  </div>
+                </div>
+                <div class="setting-message" id="msg-combat_level_accuracy_bonus" style="display: none;"></div>
+              </div>
+            </div>
+          </div>
+        </main>
+      </div>
+    </div>
+    <script type="module" src="/src/game-settings-editor.ts"></script>
+  </body>
+</html>

@@ -41,6 +41,31 @@ let selectedType: string | null = null;
 let classAbilities: ClassAbilityMapping[] = [];
 
 // ============================================================================
+// Toast Notifications
+// ============================================================================
+
+type ToastType = 'success' | 'error' | 'warning' | 'info';
+
+function showToast(message: string, type: ToastType = 'info', duration: number = 3000): void {
+  let container = document.getElementById('toast-container');
+  if (!container) {
+    container = document.createElement('div');
+    container.id = 'toast-container';
+    document.body.appendChild(container);
+  }
+
+  const toast = document.createElement('div');
+  toast.className = `toast ${type}`;
+  toast.textContent = message;
+  container.appendChild(toast);
+
+  setTimeout(() => {
+    toast.classList.add('toast-out');
+    setTimeout(() => toast.remove(), 300);
+  }, duration);
+}
+
+// ============================================================================
 // HELPER FUNCTIONS
 // ============================================================================
 
@@ -89,11 +114,11 @@ async function checkAuth(): Promise<boolean> {
       navUsername.textContent = data.username || 'User';
     }
 
-    // Show Admin link if user is admin
+    // Show Admin dropdown if user is admin
     const isAdmin = roles.includes('admin');
-    const adminLink = document.getElementById('nav-admin-link');
-    if (adminLink) {
-      adminLink.style.display = isAdmin ? 'block' : 'none';
+    const adminDropdown = document.getElementById('nav-admin-dropdown');
+    if (adminDropdown) {
+      adminDropdown.style.display = isAdmin ? 'flex' : 'none';
     }
 
     return true;
@@ -493,6 +518,8 @@ function selectClass(classId: string): void {
   (document.getElementById('class-magic-school') as HTMLSelectElement).value = cls.magic_school || '';
   (document.getElementById('class-stealth') as HTMLInputElement).checked = cls.stealth === true;
   (document.getElementById('class-thievery') as HTMLInputElement).checked = cls.thievery === true;
+  (document.getElementById('class-crit-bonus') as HTMLInputElement).value = String(cls.crit_bonus ?? 0);
+  (document.getElementById('class-dodge-bonus') as HTMLInputElement).value = String(cls.dodge_bonus ?? 0);
 
   loadClassAbilities(classId);
   renderClassList();
@@ -517,6 +544,7 @@ function selectRace(raceId: string): void {
   (document.getElementById('race-name') as HTMLInputElement).value = race.display_name;
   (document.getElementById('race-description') as HTMLTextAreaElement).value = race.description || '';
   (document.getElementById('race-playable') as HTMLInputElement).checked = race.playable !== false;
+  (document.getElementById('race-dodge-bonus') as HTMLInputElement).value = String(race.dodge_bonus ?? 0);
 
   // Load base_stats with min/max ranges
   const bs = race.base_stats as Record<string, { min: number; max: number }> | undefined;
@@ -673,6 +701,8 @@ async function handleClassSubmit(e: Event): Promise<void> {
     magic_school: magicSchool || undefined,
     stealth: (document.getElementById('class-stealth') as HTMLInputElement).checked,
     thievery: (document.getElementById('class-thievery') as HTMLInputElement).checked,
+    crit_bonus: parseStatValue((document.getElementById('class-crit-bonus') as HTMLInputElement).value) || 0,
+    dodge_bonus: parseStatValue((document.getElementById('class-dodge-bonus') as HTMLInputElement).value) || 0,
   };
 
   try {
@@ -690,12 +720,13 @@ async function handleClassSubmit(e: Event): Promise<void> {
     if (result.success) {
       await loadClasses();
       selectClass(classId);
+      showToast('Class saved successfully!', 'success');
     } else {
-      alert('Failed to save class: ' + (result.message || 'Unknown error'));
+      showToast('Failed to save class: ' + (result.message || 'Unknown error'), 'error');
     }
   } catch (error) {
     console.error('Failed to save class:', error);
-    alert('Failed to save class');
+    showToast('Failed to save class', 'error');
   }
 }
 
@@ -710,13 +741,13 @@ async function handleRaceSubmit(e: Event): Promise<void> {
   const raceAllowedEl = document.getElementById('race-allowed-classes') as HTMLInputElement | null;
 
   if (!raceIdEl || !raceNameEl) {
-    alert('Required form elements are missing');
+    showToast('Required form elements are missing', 'error');
     return;
   }
 
   const raceId = raceIdEl.value.trim();
   if (!raceId) {
-    alert('Race ID is required');
+    showToast('Race ID is required', 'warning');
     return;
   }
 
@@ -764,6 +795,7 @@ async function handleRaceSubmit(e: Event): Promise<void> {
     },
     traits: traits as RaceDefinition['traits'],
     allowed_classes: raceAllowedEl?.value.split(',').map(t => t.trim()).filter(Boolean) ?? [],
+    dodge_bonus: Number((document.getElementById('race-dodge-bonus') as HTMLInputElement | null)?.value) || 0,
   };
 
   if (data.allowed_classes?.length === 0) delete data.allowed_classes;
@@ -783,12 +815,13 @@ async function handleRaceSubmit(e: Event): Promise<void> {
     if (result.success) {
       await loadRaces();
       selectRace(raceId);
+      showToast('Race saved successfully!', 'success');
     } else {
-      alert('Failed to save race: ' + (result.message || 'Unknown error'));
+      showToast('Failed to save race: ' + (result.message || 'Unknown error'), 'error');
     }
   } catch (error) {
     console.error('Failed to save race:', error);
-    alert('Failed to save race');
+    showToast('Failed to save race', 'error');
   }
 }
 
@@ -805,13 +838,13 @@ async function handleAbilitySubmit(e: Event): Promise<void> {
   const abilityTagsEl = document.getElementById('ability-tags') as HTMLInputElement | null;
 
   if (!abilityIdEl || !abilityNameEl || !abilityTypeEl) {
-    alert('Required form elements are missing');
+    showToast('Required form elements are missing', 'error');
     return;
   }
 
   const abilityId = abilityIdEl.value.trim();
   if (!abilityId) {
-    alert('Ability ID is required');
+    showToast('Ability ID is required', 'warning');
     return;
   }
 
@@ -841,12 +874,13 @@ async function handleAbilitySubmit(e: Event): Promise<void> {
     if (result.success) {
       await loadAbilities();
       selectAbility(abilityId);
+      showToast('Ability saved successfully!', 'success');
     } else {
-      alert('Failed to save ability: ' + (result.message || 'Unknown error'));
+      showToast('Failed to save ability: ' + (result.message || 'Unknown error'), 'error');
     }
   } catch (error) {
     console.error('Failed to save ability:', error);
-    alert('Failed to save ability');
+    showToast('Failed to save ability', 'error');
   }
 }
 
@@ -863,13 +897,13 @@ async function handleTalentSubmit(e: Event): Promise<void> {
   const talentGrantsEl = document.getElementById('talent-grants') as HTMLSelectElement | null;
 
   if (!talentIdEl || !talentNameEl) {
-    alert('Required form elements are missing');
+    showToast('Required form elements are missing', 'error');
     return;
   }
 
   const talentId = talentIdEl.value.trim();
   if (!talentId) {
-    alert('Talent ID is required');
+    showToast('Talent ID is required', 'warning');
     return;
   }
   const data: Partial<TalentDefinition> = {
@@ -900,12 +934,13 @@ async function handleTalentSubmit(e: Event): Promise<void> {
     if (result.success) {
       await loadTalents();
       selectTalent(talentId);
+      showToast('Talent saved successfully!', 'success');
     } else {
-      alert('Failed to save talent: ' + (result.message || 'Unknown error'));
+      showToast('Failed to save talent: ' + (result.message || 'Unknown error'), 'error');
     }
   } catch (error) {
     console.error('Failed to save talent:', error);
-    alert('Failed to save talent');
+    showToast('Failed to save talent', 'error');
   }
 }
 
@@ -919,13 +954,13 @@ async function handleEventSubmit(e: Event): Promise<void> {
   const eventTagsEl = document.getElementById('event-tags') as HTMLInputElement | null;
 
   if (!eventIdEl || !eventTagsEl) {
-    alert('Required form elements are missing');
+    showToast('Required form elements are missing', 'error');
     return;
   }
 
   const eventId = eventIdEl.value.trim();
   if (!eventId) {
-    alert('Event ID is required');
+    showToast('Event ID is required', 'warning');
     return;
   }
   const data: Partial<GameEvent> = {
@@ -951,12 +986,13 @@ async function handleEventSubmit(e: Event): Promise<void> {
     if (result.success) {
       await loadEvents();
       selectEvent(eventId);
+      showToast('Event saved successfully!', 'success');
     } else {
-      alert('Failed to save event: ' + (result.message || 'Unknown error'));
+      showToast('Failed to save event: ' + (result.message || 'Unknown error'), 'error');
     }
   } catch (error) {
     console.error('Failed to save event:', error);
-    alert('Failed to save event');
+    showToast('Failed to save event', 'error');
   }
 }
 
@@ -999,12 +1035,13 @@ async function handleDelete(type: string): Promise<void> {
         case 'talent': await loadTalents(); break;
         case 'event': await loadEvents(); break;
       }
+      showToast('Deleted successfully!', 'success');
     } else {
-      alert('Failed to delete: ' + (result.message || 'Unknown error'));
+      showToast('Failed to delete: ' + (result.message || 'Unknown error'), 'error');
     }
   } catch (error) {
     console.error('Failed to delete:', error);
-    alert('Failed to delete');
+    showToast('Failed to delete', 'error');
   }
 }
 
@@ -1020,7 +1057,7 @@ async function handleAddClassAbility(): Promise<void> {
   const autoLearnEl = document.getElementById('add-class-ability-auto') as HTMLInputElement | null;
 
   if (!abilitySelectEl) {
-    alert('Required form elements are missing');
+    showToast('Required form elements are missing', 'error');
     return;
   }
 
@@ -1030,7 +1067,7 @@ async function handleAddClassAbility(): Promise<void> {
   const autoLearn = autoLearnEl?.checked ?? false;
 
   if (!abilityId) {
-    alert('Please select an ability');
+    showToast('Please select an ability', 'warning');
     return;
   }
 
@@ -1049,12 +1086,13 @@ async function handleAddClassAbility(): Promise<void> {
     if (result.success) {
       await loadClassAbilities(selectedId);
       (document.getElementById('add-class-ability-select') as HTMLSelectElement).value = '';
+      showToast('Ability added to class!', 'success');
     } else {
-      alert('Failed to add ability: ' + (result.message || 'Unknown error'));
+      showToast('Failed to add ability: ' + (result.message || 'Unknown error'), 'error');
     }
   } catch (error) {
     console.error('Failed to add class ability:', error);
-    alert('Failed to add ability');
+    showToast('Failed to add ability', 'error');
   }
 }
 
@@ -1069,12 +1107,13 @@ async function handleRemoveClassAbility(abilityId: string): Promise<void> {
     const result = await response.json();
     if (result.success) {
       await loadClassAbilities(selectedId);
+      showToast('Ability removed from class!', 'success');
     } else {
-      alert('Failed to remove ability: ' + (result.message || 'Unknown error'));
+      showToast('Failed to remove ability: ' + (result.message || 'Unknown error'), 'error');
     }
   } catch (error) {
     console.error('Failed to remove class ability:', error);
-    alert('Failed to remove ability');
+    showToast('Failed to remove ability', 'error');
   }
 }
 

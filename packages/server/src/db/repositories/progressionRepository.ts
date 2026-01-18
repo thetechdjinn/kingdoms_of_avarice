@@ -32,6 +32,8 @@ interface DbClassDefinition {
   magic_school: string | null;
   stealth: boolean;
   thievery: boolean;
+  crit_bonus: number;
+  dodge_bonus: number;
   special_abilities: string[] | null;
   created_at: Date;
   updated_at: Date;
@@ -47,6 +49,7 @@ interface DbRaceDefinition {
   traits: Array<string | { id: string; value: number | boolean }> | null;
   allowed_classes: string[] | null;
   playable: boolean;
+  dodge_bonus: number;
   created_at: Date;
   updated_at: Date;
 }
@@ -146,6 +149,8 @@ function dbToClassDefinition(row: DbClassDefinition): ClassDefinition {
     magic_school: row.magic_school ?? undefined,
     stealth: row.stealth ?? false,
     thievery: row.thievery ?? false,
+    crit_bonus: row.crit_bonus ?? 0,
+    dodge_bonus: row.dodge_bonus ?? 0,
     special_abilities: row.special_abilities ?? [],
   };
 }
@@ -162,6 +167,7 @@ function dbToRaceDefinition(row: DbRaceDefinition): RaceDefinition {
     traits: row.traits as unknown as RaceDefinition['traits'],
     allowed_classes: row.allowed_classes ?? undefined,
     playable: row.playable,
+    dodge_bonus: row.dodge_bonus ?? 0,
   };
 }
 
@@ -257,8 +263,8 @@ export async function createClass(classDef: ClassDefinition & { resource_type?: 
     `INSERT INTO class_definitions (
       class_id, display_name, description, essence_multiplier,
       subscribed_tags, talent_tree_id, resource_type, playable,
-      combat_level, magic_level, magic_school, stealth, thievery, special_abilities
-    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+      combat_level, magic_level, magic_school, stealth, thievery, crit_bonus, dodge_bonus, special_abilities
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
     RETURNING *`,
     [
       classDef.class_id,
@@ -274,6 +280,8 @@ export async function createClass(classDef: ClassDefinition & { resource_type?: 
       classDef.magic_school ?? null,
       classDef.stealth ?? false,
       classDef.thievery ?? false,
+      classDef.crit_bonus ?? 0,
+      classDef.dodge_bonus ?? 0,
       classDef.special_abilities ?? [],
     ]
   );
@@ -333,6 +341,14 @@ export async function updateClass(classId: string, updates: Partial<ClassDefinit
     setClauses.push(`thievery = $${paramIndex++}`);
     values.push(updates.thievery);
   }
+  if (updates.crit_bonus !== undefined) {
+    setClauses.push(`crit_bonus = $${paramIndex++}`);
+    values.push(updates.crit_bonus);
+  }
+  if (updates.dodge_bonus !== undefined) {
+    setClauses.push(`dodge_bonus = $${paramIndex++}`);
+    values.push(updates.dodge_bonus);
+  }
   if (updates.special_abilities !== undefined) {
     setClauses.push(`special_abilities = $${paramIndex++}`);
     values.push(updates.special_abilities);
@@ -385,8 +401,8 @@ export async function createRace(raceDef: RaceDefinition): Promise<RaceDefinitio
   const result = await query<DbRaceDefinition>(
     `INSERT INTO race_definitions (
       race_id, display_name, description, stat_modifiers, base_stats,
-      traits, allowed_classes, playable
-    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      traits, allowed_classes, playable, dodge_bonus
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
     RETURNING *`,
     [
       raceDef.race_id,
@@ -397,6 +413,7 @@ export async function createRace(raceDef: RaceDefinition): Promise<RaceDefinitio
       raceDef.traits ? JSON.stringify(raceDef.traits) : null,
       raceDef.allowed_classes ? JSON.stringify(raceDef.allowed_classes) : null,
       raceDef.playable ?? true,
+      raceDef.dodge_bonus ?? 0,
     ]
   );
   return dbToRaceDefinition(result.rows[0]);
@@ -434,6 +451,10 @@ export async function updateRace(raceId: string, updates: Partial<RaceDefinition
   if (updates.playable !== undefined) {
     setClauses.push(`playable = $${paramIndex++}`);
     values.push(updates.playable);
+  }
+  if (updates.dodge_bonus !== undefined) {
+    setClauses.push(`dodge_bonus = $${paramIndex++}`);
+    values.push(updates.dodge_bonus);
   }
 
   if (setClauses.length === 0) return getRaceById(raceId);

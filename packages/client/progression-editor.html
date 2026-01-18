@@ -21,9 +21,17 @@
               <a href="/spell-editor.html" class="nav-dropdown-item">Spell Editor</a>
               <a href="/status-editor.html" class="nav-dropdown-item">Status Effects Editor</a>
               <a href="/progression-editor.html" class="nav-dropdown-item active">Progression Editor</a>
+              <a href="/swing-calculator.html" class="nav-dropdown-item">Swing Calculator</a>
             </div>
           </div>
-          <a href="/admin.html" class="nav-link" id="nav-admin-link" style="display: none;">Admin</a>
+          <div class="nav-dropdown" id="nav-admin-dropdown" style="display: none;">
+            <button class="nav-link nav-dropdown-btn">Admin</button>
+            <div class="nav-dropdown-menu">
+              <a href="/admin.html" class="nav-dropdown-item">Admin Panel</a>
+              <a href="/game-settings-editor.html" class="nav-dropdown-item">Game Settings</a>
+              <a href="/user-editor.html" class="nav-dropdown-item">User Editor</a>
+            </div>
+          </div>
         </div>
 
         <!-- Main Tab Navigation -->
@@ -140,8 +148,20 @@
                     <label><input type="checkbox" id="class-thievery" /> Thievery</label>
                   </div>
                 </div>
+                <div class="form-row">
+                  <div class="form-group">
+                    <label for="class-crit-bonus">Crit Bonus %</label>
+                    <input type="number" id="class-crit-bonus" value="0" min="0" max="50" />
+                    <span class="hint">Flat crit bonus (e.g., 10 for Ninja/Mystic)</span>
+                  </div>
+                  <div class="form-group">
+                    <label for="class-dodge-bonus">Dodge Bonus %</label>
+                    <input type="number" id="class-dodge-bonus" value="0" min="0" max="50" />
+                    <span class="hint">Base dodge chance (e.g., 25 for Ninja/Mystic)</span>
+                  </div>
+                </div>
               </div>
-              
+
               <div class="form-section">
                 <h3>Class Abilities</h3>
                 <div id="class-abilities-list"></div>
@@ -206,7 +226,15 @@
               <div class="form-group checkbox-group">
                 <label><input type="checkbox" id="race-playable" checked /> Playable</label>
               </div>
-              
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="race-dodge-bonus">Dodge Bonus %</label>
+                  <input type="number" id="race-dodge-bonus" value="0" min="0" max="25" />
+                  <span class="hint">Racial dodge bonus (e.g., 10 for Halfling)</span>
+                </div>
+              </div>
+
               <div class="form-section">
                 <h3>Base Stats (Min = starting value, Max = cap with CP)</h3>
                 <div class="form-row stats-row">

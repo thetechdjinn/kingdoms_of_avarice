@@ -57,10 +57,13 @@ CREATE TABLE IF NOT EXISTS class_definitions (
     
     -- Reference to talent tree
     talent_tree_id VARCHAR(50),
-    
+
     -- Resource type (mana, kai, rage, etc.)
     resource_type VARCHAR(20) DEFAULT 'none',
-    
+
+    -- Critical hit bonus (flat % bonus, e.g., 10 for Ninja/Mystic)
+    crit_bonus INTEGER DEFAULT 0,
+
     -- Display
     playable BOOLEAN DEFAULT TRUE,
     

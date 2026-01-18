@@ -10,10 +10,17 @@ export function setupItemRoutes(app: Express): void {
   // ITEM TEMPLATES
   // ============================================================================
 
-  // Get all item templates
-  app.get('/api/items/templates', requireDeveloper, async (_req: Request, res: Response) => {
+  // Get all item templates (optionally filtered by type)
+  app.get('/api/items/templates', requireDeveloper, async (req: Request, res: Response) => {
     try {
-      const templates = await itemRepo.getAllTemplates();
+      let templates = await itemRepo.getAllTemplates();
+
+      // Filter by type if specified
+      const typeFilter = req.query.type as string;
+      if (typeFilter) {
+        templates = templates.filter(t => t.item_type === typeFilter);
+      }
+
       res.json({ success: true, templates });
     } catch (error) {
       console.error('Failed to get item templates:', error);

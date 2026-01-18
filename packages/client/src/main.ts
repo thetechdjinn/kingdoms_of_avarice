@@ -412,10 +412,10 @@ async function updateNavigation(): Promise<void> {
         devDropdown.style.display = isDeveloper ? 'block' : 'none';
       }
 
-      // Show/hide Admin nav link based on roles
-      const adminLink = document.getElementById('nav-admin-link');
-      if (adminLink) {
-        adminLink.style.display = isAdmin ? 'block' : 'none';
+      // Show/hide Admin nav dropdown based on roles
+      const adminDropdown = document.getElementById('nav-admin-dropdown');
+      if (adminDropdown) {
+        adminDropdown.style.display = isAdmin ? 'flex' : 'none';
       }
     }
   } catch (error) {

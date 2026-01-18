@@ -29,6 +29,31 @@ interface GameSettings {
   ip_access_mode: 'allowlist' | 'blocklist';
 }
 
+// ============================================================================
+// Toast Notifications
+// ============================================================================
+
+type ToastType = 'success' | 'error' | 'warning' | 'info';
+
+function showToast(message: string, type: ToastType = 'info', duration: number = 3000): void {
+  let container = document.getElementById('toast-container');
+  if (!container) {
+    container = document.createElement('div');
+    container.id = 'toast-container';
+    document.body.appendChild(container);
+  }
+
+  const toast = document.createElement('div');
+  toast.className = `toast ${type}`;
+  toast.textContent = message;
+  container.appendChild(toast);
+
+  setTimeout(() => {
+    toast.classList.add('toast-out');
+    setTimeout(() => toast.remove(), 300);
+  }, duration);
+}
+
 async function checkAdminAuth(): Promise<boolean> {
   try {
     const response = await fetch('/api/auth/me', { credentials: 'include' });
@@ -64,10 +89,10 @@ async function checkAdminAuth(): Promise<boolean> {
         devDropdown.style.display = isDeveloper ? 'block' : 'none';
       }
 
-      // Show/hide Admin nav link based on roles (always visible on admin page)
-      const adminLink = document.getElementById('nav-admin-link');
-      if (adminLink) {
-        adminLink.style.display = isAdmin ? 'block' : 'none';
+      // Show/hide Admin nav dropdown based on roles (always visible on admin page)
+      const adminDropdown = document.getElementById('nav-admin-dropdown');
+      if (adminDropdown) {
+        adminDropdown.style.display = isAdmin ? 'flex' : 'none';
       }
 
       return isAdmin;
@@ -160,18 +185,19 @@ async function approveUser(playerId: number): Promise<void> {
     if (data.success) {
       // Remove the user from the list
       userItem?.remove();
-      
+
       // Check if list is now empty
       const listEl = document.getElementById('pending-users-list');
       if (listEl && listEl.children.length === 0) {
         listEl.innerHTML = '<p class="no-users">No users pending approval</p>';
       }
+      showToast('User approved successfully!', 'success');
     } else {
       if (button) {
         button.disabled = false;
         button.textContent = 'Approve';
       }
-      alert('Failed to approve user: ' + (data.error || 'Unknown error'));
+      showToast('Failed to approve user: ' + (data.error || 'Unknown error'), 'error');
     }
   } catch (error) {
     console.error('Failed to approve user:', error);
@@ -179,7 +205,7 @@ async function approveUser(playerId: number): Promise<void> {
       button.disabled = false;
       button.textContent = 'Approve';
     }
-    alert('Failed to approve user');
+    showToast('Failed to approve user', 'error');
   }
 }
 
@@ -302,7 +328,7 @@ async function loadAllPlayers(): Promise<void> {
         if (value !== '') {
           const numValue = parseInt(value, 10);
           if (isNaN(numValue) || numValue < 1) {
-            alert('Please enter a valid positive number or leave empty for default');
+            showToast('Please enter a valid positive number or leave empty for default', 'warning');
             return;
           }
         }
@@ -326,12 +352,14 @@ async function savePlayerCharacterLimit(playerId: number, maxCharacters: number 
     });
 
     const data = await response.json();
-    if (!data.success) {
-      alert('Failed to save: ' + (data.message || 'Unknown error'));
+    if (data.success) {
+      showToast('Character limit saved!', 'success');
+    } else {
+      showToast('Failed to save: ' + (data.message || 'Unknown error'), 'error');
     }
   } catch (error) {
     console.error('Failed to save player limit:', error);
-    alert('Failed to save player limit');
+    showToast('Failed to save player limit', 'error');
   }
 }
 
@@ -457,12 +485,13 @@ async function deleteIpEntry(entryId: number): Promise<void> {
 
     if (data.success) {
       await loadIpAccessEntries();
+      showToast('IP entry deleted!', 'success');
     } else {
-      alert('Failed to delete: ' + (data.message || 'Unknown error'));
+      showToast('Failed to delete: ' + (data.message || 'Unknown error'), 'error');
     }
   } catch (error) {
     console.error('Failed to delete IP entry:', error);
-    alert('Failed to delete entry');
+    showToast('Failed to delete entry', 'error');
   }
 }
 

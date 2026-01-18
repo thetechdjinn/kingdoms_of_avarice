@@ -17,7 +17,7 @@ VALUES
     5, 2, 15,
     'weapon', 'main_hand',
     '{"takeable": true}',
-    '{"damage_dice": "1d6", "damage_type": "slashing", "attack_speed": 3, "range": "melee", "skill_type": "swords"}'
+    '{"damage_dice": "1d6", "damage_type": "slashing", "attack_speed": 7000, "range": "melee", "skill_type": "swords"}'
 ),
 (
     'Steel Longsword',
@@ -28,7 +28,7 @@ VALUES
     6, 2, 100,
     'weapon', 'main_hand',
     '{"takeable": true}',
-    '{"damage_dice": "1d8", "damage_type": "slashing", "attack_speed": 3, "range": "melee", "skill_type": "swords"}'
+    '{"damage_dice": "1d8", "damage_type": "slashing", "attack_speed": 6500, "range": "melee", "skill_type": "swords"}'
 ),
 (
     'Iron Dagger',
@@ -39,7 +39,7 @@ VALUES
     1, 1, 10,
     'weapon', 'main_hand',
     '{"takeable": true}',
-    '{"damage_dice": "1d4", "damage_type": "piercing", "attack_speed": 2, "range": "melee", "skill_type": "daggers"}'
+    '{"damage_dice": "1d4", "damage_type": "piercing", "attack_speed": 4000, "range": "melee", "skill_type": "daggers"}'
 ),
 (
     'Wooden Club',
@@ -50,7 +50,7 @@ VALUES
     4, 2, 5,
     'weapon', 'main_hand',
     '{"takeable": true}',
-    '{"damage_dice": "1d6", "damage_type": "bludgeoning", "attack_speed": 4, "range": "melee", "skill_type": "bludgeons"}'
+    '{"damage_dice": "1d6", "damage_type": "bludgeoning", "attack_speed": 8000, "range": "melee", "skill_type": "bludgeons"}'
 ),
 (
     'Battle Axe',
@@ -61,7 +61,7 @@ VALUES
     10, 3, 150,
     'weapon', 'main_hand',
     '{"takeable": true, "two_handed": true}',
-    '{"damage_dice": "1d12", "damage_type": "slashing", "attack_speed": 5, "range": "melee", "skill_type": "axes"}'
+    '{"damage_dice": "1d12", "damage_type": "slashing", "attack_speed": 9500, "range": "melee", "skill_type": "axes"}'
 );
 
 -- Armor
