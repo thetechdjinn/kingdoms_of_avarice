@@ -502,7 +502,7 @@
                 <p><span class="var">effectiveEnergy</span> = <span class="var">baseEnergy</span> * <span class="var">combatMult</span> * <span class="var">levelMult</span> * <span class="var">dexMult</span> * <span class="var">encMult</span></p>
                 <p><span class="var">levelMult</span> = <span class="num">1</span> + (<span class="var">charLevel</span> - <span class="num">1</span>) * <span class="num">0.02</span></p>
                 <p><span class="var">dexMult</span> = <span class="num">1</span> + max(<span class="num">0</span>, (<span class="var">dex</span> - <span class="num">50</span>) / <span class="num">10</span>) * <span class="num">0.01</span></p>
-                <p><span class="var">encMult</span> = <span class="num">1</span> + (<span class="num">0.5</span> - <span class="var">encRatio</span>) * <span class="num">0.5</span></p>
+                <p><span class="var">encMult</span> = max(<span class="num">0.5</span>, <span class="num">1</span> + (<span class="num">0.5</span> - <span class="var">encRatio</span>) * <span class="num">0.5</span>)</p>
                 <p><span class="var">rawSwings</span> = <span class="var">effectiveEnergy</span> / <span class="var">weaponSpeed</span></p>
                 <p><span class="var">swings</span> = min(<span class="var">rawSwings</span>, <span class="var">maxAttacks</span>)</p>
               </div>

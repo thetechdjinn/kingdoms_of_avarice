@@ -307,21 +307,7 @@ async function saveUser(): Promise<void> {
   }
 
   try {
-    // Update user details
-    const updateResponse = await fetch(`/api/admin/users/${selectedUserId}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username, email, max_characters }),
-      credentials: 'include',
-    });
-
-    const updateData = await updateResponse.json();
-    if (!updateData.success) {
-      showUserMessage(updateData.message || 'Failed to update user', 'error');
-      return;
-    }
-
-    // Update role if changed
+    // Update role first if changed (more critical for security)
     const currentRole = getPrimaryRole(selectedUserData?.roles || []);
     if (role !== currentRole) {
       const roleResponse = await fetch(`/api/admin/users/${selectedUserId}/role`, {
@@ -336,6 +322,20 @@ async function saveUser(): Promise<void> {
         showUserMessage(roleData.message || 'Failed to update role', 'error');
         return;
       }
+    }
+
+    // Update user details
+    const updateResponse = await fetch(`/api/admin/users/${selectedUserId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, email, max_characters }),
+      credentials: 'include',
+    });
+
+    const updateData = await updateResponse.json();
+    if (!updateData.success) {
+      showUserMessage(updateData.message || 'Failed to update user', 'error');
+      return;
     }
 
     showUserMessage('User saved successfully!', 'success');
