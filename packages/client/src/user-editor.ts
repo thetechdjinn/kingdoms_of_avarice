@@ -383,6 +383,11 @@ function showPasswordModal(password: string): void {
   displayEl.textContent = password;
   displayEl.style.display = 'block';
   modal.style.display = 'flex';
+
+  // Auto-clear password from DOM after 60 seconds for security
+  setTimeout(() => {
+    displayEl.textContent = '(password cleared for security)';
+  }, 60000);
 }
 
 function hidePasswordModal(): void {
@@ -436,10 +441,10 @@ function hideCharacterModal(): void {
 }
 
 async function saveCharacter(): Promise<void> {
-  const charId = parseInt((document.getElementById('char-id') as HTMLInputElement).value);
+  const charId = parseInt((document.getElementById('char-id') as HTMLInputElement).value, 10);
 
   const parseIntSafe = (value: string): number => {
-    const parsed = parseInt(value);
+    const parsed = parseInt(value, 10);
     return isNaN(parsed) ? 0 : parsed;
   };
 

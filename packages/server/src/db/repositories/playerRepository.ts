@@ -1,4 +1,5 @@
 import pg from 'pg';
+import crypto from 'crypto';
 import { query } from '../index.js';
 import bcrypt from 'bcrypt';
 
@@ -314,13 +315,14 @@ export async function resetPlayerPassword(
 }
 
 /**
- * Generate a random password
+ * Generate a cryptographically secure random password
  */
 function generateRandomPassword(length: number = 12): string {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
+  const randomBytes = crypto.randomBytes(length);
   let password = '';
   for (let i = 0; i < length; i++) {
-    password += chars.charAt(Math.floor(Math.random() * chars.length));
+    password += chars.charAt(randomBytes[i] % chars.length);
   }
   return password;
 }
