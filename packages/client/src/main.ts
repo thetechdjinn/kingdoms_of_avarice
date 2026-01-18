@@ -16,7 +16,11 @@ interface ClassDefinition {
   class_id: string;
   display_name: string;
   description: string | null;
-  base_stats: Record<string, number> | null;
+  combat_level?: number;
+  magic_level?: number;
+  magic_school?: string;
+  stealth?: boolean;
+  thievery?: boolean;
   playable: boolean;
 }
 
@@ -24,7 +28,8 @@ interface RaceDefinition {
   race_id: string;
   display_name: string;
   description: string | null;
-  stat_modifiers: Record<string, number> | null;
+  base_stats?: Record<string, { min: number; max: number }>;
+  stat_modifiers?: Record<string, number> | null;
   allowed_classes: string[] | null;
   playable: boolean;
 }
@@ -822,16 +827,16 @@ function updateStatPreview(): void {
     return;
   }
 
-  const baseStats = classDef.base_stats || {};
-  const modifiers = race.stat_modifiers || {};
+  // Stats come from race base_stats (min values are starting stats)
+  const raceStats = race.base_stats;
 
   const stats = {
-    strength: (baseStats.strength ?? 10) + (modifiers.strength ?? 0),
-    intelligence: (baseStats.intelligence ?? 10) + (modifiers.intelligence ?? 0),
-    dexterity: (baseStats.dexterity ?? 10) + (modifiers.dexterity ?? 0),
-    constitution: (baseStats.constitution ?? 10) + (modifiers.constitution ?? 0),
-    wisdom: (baseStats.wisdom ?? 10) + (modifiers.wisdom ?? 0),
-    charisma: (baseStats.charisma ?? 10) + (modifiers.charisma ?? 0),
+    strength: raceStats?.strength?.min ?? 40,
+    intelligence: raceStats?.intellect?.min ?? 40,
+    dexterity: raceStats?.agility?.min ?? 40,
+    constitution: raceStats?.constitution?.min ?? 40,
+    wisdom: raceStats?.wisdom?.min ?? 40,
+    charisma: raceStats?.charisma?.min ?? 40,
   };
 
   document.getElementById('preview-str')!.textContent = String(stats.strength);

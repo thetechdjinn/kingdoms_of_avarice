@@ -37,11 +37,15 @@ export interface ClassDefinition {
   description?: string;
   essence_multiplier: number;
   subscribed_tags: ThematicTag[];
-  base_stats?: Record<string, number>;
   talent_tree_id?: string;
   resource_type?: string;
   playable?: boolean;
   combat_level?: number; // 1-5, defaults to 1. Higher = better melee combat
+  magic_level?: number; // 0-3, magic power level
+  magic_school?: string; // mage, priest, druid, bardic, kai
+  stealth?: boolean; // Can use stealth abilities
+  thievery?: boolean; // Can use thief skills (picklocks, traps)
+  special_abilities?: string[]; // Class-specific abilities
 }
 
 // ============================================================================

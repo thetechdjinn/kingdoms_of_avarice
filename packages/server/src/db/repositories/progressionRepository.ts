@@ -24,10 +24,15 @@ interface DbClassDefinition {
   description: string | null;
   essence_multiplier: string;
   subscribed_tags: string[];
-  base_stats: Record<string, number> | null;
   talent_tree_id: string | null;
   resource_type: string;
   playable: boolean;
+  combat_level: number;
+  magic_level: number;
+  magic_school: string | null;
+  stealth: boolean;
+  thievery: boolean;
+  special_abilities: string[] | null;
   created_at: Date;
   updated_at: Date;
 }
@@ -38,7 +43,8 @@ interface DbRaceDefinition {
   display_name: string;
   description: string | null;
   stat_modifiers: Record<string, number> | null;
-  traits: string[] | null;
+  base_stats: Record<string, { min: number; max: number }> | null;
+  traits: Array<string | { id: string; value: number | boolean }> | null;
   allowed_classes: string[] | null;
   playable: boolean;
   created_at: Date;
@@ -132,10 +138,15 @@ function dbToClassDefinition(row: DbClassDefinition): ClassDefinition {
     description: row.description ?? undefined,
     essence_multiplier: parseFloat(row.essence_multiplier),
     subscribed_tags: row.subscribed_tags as ThematicTag[],
-    base_stats: row.base_stats ?? undefined,
     talent_tree_id: row.talent_tree_id ?? undefined,
     resource_type: row.resource_type ?? undefined,
     playable: row.playable,
+    combat_level: row.combat_level ?? 3,
+    magic_level: row.magic_level ?? 0,
+    magic_school: row.magic_school ?? undefined,
+    stealth: row.stealth ?? false,
+    thievery: row.thievery ?? false,
+    special_abilities: row.special_abilities ?? undefined,
   };
 }
 
@@ -145,7 +156,10 @@ function dbToRaceDefinition(row: DbRaceDefinition): RaceDefinition {
     display_name: row.display_name,
     description: row.description ?? undefined,
     stat_modifiers: row.stat_modifiers ?? undefined,
-    traits: row.traits ?? undefined,
+    // Cast base_stats to RaceBaseStats - DB stores as JSONB which comes back as Record
+    base_stats: row.base_stats as unknown as RaceDefinition['base_stats'],
+    // Cast traits - can be string[] or RacialTrait[] depending on data
+    traits: row.traits as unknown as RaceDefinition['traits'],
     allowed_classes: row.allowed_classes ?? undefined,
     playable: row.playable,
   };
@@ -242,8 +256,9 @@ export async function createClass(classDef: ClassDefinition & { resource_type?: 
   const result = await query<DbClassDefinition>(
     `INSERT INTO class_definitions (
       class_id, display_name, description, essence_multiplier,
-      subscribed_tags, base_stats, talent_tree_id, resource_type, playable
-    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+      subscribed_tags, talent_tree_id, resource_type, playable,
+      combat_level, magic_level, magic_school, stealth, thievery, special_abilities
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
     RETURNING *`,
     [
       classDef.class_id,
@@ -251,10 +266,15 @@ export async function createClass(classDef: ClassDefinition & { resource_type?: 
       classDef.description ?? null,
       classDef.essence_multiplier,
       classDef.subscribed_tags,
-      classDef.base_stats ?? null,
       classDef.talent_tree_id ?? null,
       classDef.resource_type ?? 'none',
       classDef.playable ?? true,
+      classDef.combat_level ?? 3,
+      classDef.magic_level ?? 0,
+      classDef.magic_school ?? null,
+      classDef.stealth ?? false,
+      classDef.thievery ?? false,
+      classDef.special_abilities ?? [],
     ]
   );
   return dbToClassDefinition(result.rows[0]);
@@ -281,10 +301,6 @@ export async function updateClass(classId: string, updates: Partial<ClassDefinit
     setClauses.push(`subscribed_tags = $${paramIndex++}`);
     values.push(updates.subscribed_tags);
   }
-  if (updates.base_stats !== undefined) {
-    setClauses.push(`base_stats = $${paramIndex++}`);
-    values.push(updates.base_stats ? JSON.stringify(updates.base_stats) : null);
-  }
   if (updates.talent_tree_id !== undefined) {
     setClauses.push(`talent_tree_id = $${paramIndex++}`);
     values.push(updates.talent_tree_id);
@@ -296,6 +312,30 @@ export async function updateClass(classId: string, updates: Partial<ClassDefinit
   if (updates.playable !== undefined) {
     setClauses.push(`playable = $${paramIndex++}`);
     values.push(updates.playable);
+  }
+  if (updates.combat_level !== undefined) {
+    setClauses.push(`combat_level = $${paramIndex++}`);
+    values.push(updates.combat_level);
+  }
+  if (updates.magic_level !== undefined) {
+    setClauses.push(`magic_level = $${paramIndex++}`);
+    values.push(updates.magic_level);
+  }
+  if (updates.magic_school !== undefined) {
+    setClauses.push(`magic_school = $${paramIndex++}`);
+    values.push(updates.magic_school);
+  }
+  if (updates.stealth !== undefined) {
+    setClauses.push(`stealth = $${paramIndex++}`);
+    values.push(updates.stealth);
+  }
+  if (updates.thievery !== undefined) {
+    setClauses.push(`thievery = $${paramIndex++}`);
+    values.push(updates.thievery);
+  }
+  if (updates.special_abilities !== undefined) {
+    setClauses.push(`special_abilities = $${paramIndex++}`);
+    values.push(updates.special_abilities);
   }
 
   if (setClauses.length === 0) return getClassById(classId);
@@ -344,15 +384,16 @@ export async function getRaceById(raceId: string): Promise<RaceDefinition | null
 export async function createRace(raceDef: RaceDefinition): Promise<RaceDefinition> {
   const result = await query<DbRaceDefinition>(
     `INSERT INTO race_definitions (
-      race_id, display_name, description, stat_modifiers,
+      race_id, display_name, description, stat_modifiers, base_stats,
       traits, allowed_classes, playable
-    ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
     RETURNING *`,
     [
       raceDef.race_id,
       raceDef.display_name,
       raceDef.description ?? null,
       raceDef.stat_modifiers ? JSON.stringify(raceDef.stat_modifiers) : null,
+      raceDef.base_stats ? JSON.stringify(raceDef.base_stats) : null,
       raceDef.traits ? JSON.stringify(raceDef.traits) : null,
       raceDef.allowed_classes ? JSON.stringify(raceDef.allowed_classes) : null,
       raceDef.playable ?? true,
@@ -377,6 +418,10 @@ export async function updateRace(raceId: string, updates: Partial<RaceDefinition
   if (updates.stat_modifiers !== undefined) {
     setClauses.push(`stat_modifiers = $${paramIndex++}`);
     values.push(updates.stat_modifiers ? JSON.stringify(updates.stat_modifiers) : null);
+  }
+  if (updates.base_stats !== undefined) {
+    setClauses.push(`base_stats = $${paramIndex++}`);
+    values.push(updates.base_stats ? JSON.stringify(updates.base_stats) : null);
   }
   if (updates.traits !== undefined) {
     setClauses.push(`traits = $${paramIndex++}`);

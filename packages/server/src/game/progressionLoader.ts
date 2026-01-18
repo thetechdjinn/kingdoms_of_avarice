@@ -85,31 +85,11 @@ export function loadTalents(): TalentDefinition[] {
 }
 
 /**
- * Force reseed classes and races with updated stat data
+ * Force reseed classes and races with updated data
  * Uses update instead of delete+create to preserve any custom data
  */
 async function forceReseedClassesAndRaces(): Promise<void> {
   try {
-    // Check if classes need updating (missing wisdom/charm)
-    const existingClasses = await progressionRepo.getAllClasses();
-    if (existingClasses.length > 0) {
-      const firstClass = existingClasses[0];
-      if (firstClass.base_stats && !('wisdom' in firstClass.base_stats)) {
-        console.log('[Progression] Updating classes with new stat format...');
-        const seedClasses = loadJsonFile<ClassDefinition[]>('classes.json');
-        const seedMap = new Map(seedClasses.map(c => [c.class_id, c]));
-
-        // Update existing classes with new stats from seed data
-        for (const cls of existingClasses) {
-          const seedData = seedMap.get(cls.class_id);
-          if (seedData?.base_stats) {
-            await progressionRepo.updateClass(cls.class_id, { base_stats: seedData.base_stats });
-          }
-        }
-        console.log(`[Progression] Updated ${existingClasses.length} classes with 6-stat format`);
-      }
-    }
-
     // Check if races need updating to new base_stats format (with min/max ranges)
     const existingRaces = await progressionRepo.getAllRaces();
     if (existingRaces.length > 0) {

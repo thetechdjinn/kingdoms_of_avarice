@@ -127,6 +127,40 @@ export async function runMigrations(): Promise<void> {
         ALTER TABLE characters ADD COLUMN IF NOT EXISTS cp_spent JSONB DEFAULT '{}'
       `);
 
+      // Add new class fields (combat_level, magic_level, etc.)
+      await client.query(`
+        ALTER TABLE class_definitions ADD COLUMN IF NOT EXISTS combat_level INTEGER DEFAULT 3
+      `);
+      await client.query(`
+        ALTER TABLE class_definitions ADD COLUMN IF NOT EXISTS magic_level INTEGER DEFAULT 0
+      `);
+      await client.query(`
+        ALTER TABLE class_definitions ADD COLUMN IF NOT EXISTS magic_school VARCHAR(50)
+      `);
+      await client.query(`
+        ALTER TABLE class_definitions ADD COLUMN IF NOT EXISTS stealth BOOLEAN DEFAULT FALSE
+      `);
+      await client.query(`
+        ALTER TABLE class_definitions ADD COLUMN IF NOT EXISTS thievery BOOLEAN DEFAULT FALSE
+      `);
+      await client.query(`
+        ALTER TABLE class_definitions ADD COLUMN IF NOT EXISTS special_abilities JSONB DEFAULT '[]'
+      `);
+
+      // Purge old classes and races to reseed with new MajorMUD data
+      // Check if we need to reseed by looking for old-style class IDs
+      const oldClassCheck = await client.query(`
+        SELECT COUNT(*) FROM class_definitions WHERE class_id LIKE '%_01'
+      `);
+      if (parseInt(oldClassCheck.rows[0].count) > 0) {
+        console.log('Purging old-style class and race definitions...');
+        // Delete old classes (those with _01 suffix or old IDs)
+        await client.query(`DELETE FROM class_definitions`);
+        // Delete old races (those with _01 suffix or old IDs)
+        await client.query(`DELETE FROM race_definitions`);
+        console.log('Old class and race definitions purged');
+      }
+
       // Seed default game settings
       await client.query(`
         INSERT INTO game_settings (key, value) VALUES

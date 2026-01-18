@@ -228,7 +228,6 @@
 /* Stats Row */
 .stats-row .form-group {
   flex: 0 0 auto;
-  width: 80px;
   text-align: center;
 }
 
@@ -240,6 +239,23 @@
 
 .stats-row .form-group input {
   text-align: center;
+}
+
+/* Stat Range (min-max inputs for races) */
+.stat-range {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.stat-range input {
+  width: 60px;
+  padding: 0.4rem;
+  text-align: center;
+}
+
+.stat-range span {
+  color: #666;
 }
 
 /* Form Section */

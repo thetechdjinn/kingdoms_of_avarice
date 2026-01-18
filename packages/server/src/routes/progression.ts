@@ -51,7 +51,7 @@ export function setupProgressionRoutes(app: Express): void {
 
   app.post('/api/progression/classes', requireDeveloper, async (req: Request, res: Response) => {
     try {
-      const { class_id, display_name, description, essence_multiplier, subscribed_tags, base_stats, talent_tree_id, resource_type, playable } = req.body;
+      const { class_id, display_name, description, essence_multiplier, subscribed_tags, talent_tree_id, resource_type, playable } = req.body;
 
       if (!class_id || !display_name) {
         res.status(400).json({ success: false, message: 'class_id and display_name are required' });
@@ -95,7 +95,6 @@ export function setupProgressionRoutes(app: Express): void {
         description,
         essence_multiplier: multiplier,
         subscribed_tags: subscribed_tags ?? [],
-        base_stats,
         talent_tree_id,
         resource_type,
         playable,
