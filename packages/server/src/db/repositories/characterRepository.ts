@@ -315,7 +315,11 @@ export async function updateCharacterAdmin(
     }
   }
 
-  if (setClauses.length === 0) return null;
+  if (setClauses.length === 0) {
+    // No updates requested, return the current character
+    const result = await query<DbCharacter>('SELECT * FROM characters WHERE id = $1', [characterId]);
+    return result.rows[0] || null;
+  }
 
   values.push(characterId);
   const result = await query<DbCharacter>(

@@ -223,7 +223,7 @@
         <div class="nav-brand">Kingdoms of Avarice</div>
         <div class="nav-links">
           <a href="/" class="nav-link">Game</a>
-          <div class="nav-dropdown" id="nav-dev-dropdown" style="display: none;">
+          <div class="nav-dropdown" id="nav-dev-dropdown">
             <button class="nav-link nav-dropdown-btn active">Developer</button>
             <div class="nav-dropdown-menu">
               <a href="/editor.html" class="nav-dropdown-item">Room Editor</a>
@@ -515,7 +515,19 @@
                 <p><span class="var">encCrit</span> = <span class="num">20</span> if enc ≤ <span class="num">32%</span>, <span class="num">10</span> if enc ≤ <span class="num">65%</span>, else <span class="num">0</span></p>
                 <p><span class="var">preCap</span> = <span class="var">statCrit</span> + <span class="var">encCrit</span> + <span class="var">classBonus</span> + <span class="var">weaponCrit</span></p>
                 <p><span class="var">finalCrit</span> = if (<span class="var">preCap</span> > <span class="num">40</span>) then <span class="num">40</span> + floor((<span class="var">preCap</span> - <span class="num">40</span>) / <span class="num">3</span>) else <span class="var">preCap</span></p>
+                <p><span class="var">finalCrit</span> = max(<span class="num">0</span>, min(<span class="num">60</span>, <span class="var">finalCrit</span>))</p>
                 <p><span class="var">critDamage</span> = <span class="var">maxWeaponDamage</span> * random(<span class="num">2.0</span> to <span class="num">4.0</span>)</p>
+              </div>
+            </div>
+
+            <div class="formula-section">
+              <h3>Dodge Formulas (MajorMUD-style)</h3>
+              <div class="formula">
+                <p><span class="var">baseDodge</span> = <span class="var">classDodgeBonus</span> + <span class="var">raceDodgeBonus</span> + <span class="var">equipDodgeBonus</span></p>
+                <p><span class="var">statDodge</span> = floor(<span class="var">AGI</span>/<span class="num">10</span>) * <span class="num">2</span> + floor(<span class="var">CHA</span>/<span class="num">10</span>) * <span class="num">1</span></p>
+                <p><span class="var">preCap</span> = <span class="var">baseDodge</span> + <span class="var">statDodge</span></p>
+                <p><span class="var">postCap</span> = if (<span class="var">preCap</span> > <span class="num">52</span>) then <span class="num">52</span> + floor((<span class="var">preCap</span> - <span class="num">52</span>) / <span class="num">4</span>) else <span class="var">preCap</span></p>
+                <p><span class="var">effectiveDodge</span> = if (<span class="var">attackerAcc</span> ≤ <span class="num">8</span>) then <span class="num">0</span> else min(<span class="num">90</span>, floor(<span class="var">postCap</span> * <span class="num">10</span> / <span class="var">attackerAcc</span>))</p>
               </div>
             </div>
           </div>

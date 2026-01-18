@@ -16,8 +16,12 @@ export function setupItemRoutes(app: Express): void {
       let templates = await itemRepo.getAllTemplates();
 
       // Filter by type if specified
-      const typeFilter = req.query.type as string;
+      const typeFilter = typeof req.query.type === 'string' ? req.query.type : undefined;
       if (typeFilter) {
+        if (!Object.values(ItemType).includes(typeFilter as ItemType)) {
+          res.status(400).json({ success: false, message: 'Invalid item type' });
+          return;
+        }
         templates = templates.filter(t => t.item_type === typeFilter);
       }
 

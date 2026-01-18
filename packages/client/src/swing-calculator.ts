@@ -436,8 +436,12 @@ function updateBreakdownTable(baseInputs: CalculationInputs): void {
 
   tbody.innerHTML = '';
 
-  // Show levels 1, 5, 10, 15, 20, 25, 30
+  // Show levels 1, 5, 10, 15, 20, 25, 30 (plus current level if not in list)
   const levels = [1, 5, 10, 15, 20, 25, 30];
+  if (!levels.includes(baseInputs.characterLevel)) {
+    levels.push(baseInputs.characterLevel);
+    levels.sort((a, b) => a - b);
+  }
 
   for (const level of levels) {
     const inputs = { ...baseInputs, characterLevel: level };

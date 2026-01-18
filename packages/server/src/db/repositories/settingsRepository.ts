@@ -66,6 +66,17 @@ function isValidIpAccessMode(value: unknown): value is IpAccessMode {
 }
 
 /**
+ * Validate that a value is a valid Record<string, number>
+ */
+function isValidRecordStringNumber(value: unknown): value is Record<string, number> {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) return false;
+  for (const key in value) {
+    if (typeof key !== 'string' || typeof (value as Record<string, unknown>)[key] !== 'number') return false;
+  }
+  return true;
+}
+
+/**
  * Get a single setting value by key
  */
 export async function getSetting<T>(key: string): Promise<T | null> {
@@ -189,12 +200,12 @@ export async function getCombatSettings(): Promise<CombatSettings> {
   }
 
   const levelMults = await getSetting<Record<string, number>>('combat_level_multipliers');
-  if (levelMults && typeof levelMults === 'object') {
+  if (isValidRecordStringNumber(levelMults)) {
     settings.level_multipliers = levelMults;
   }
 
   const levelAccuracy = await getSetting<Record<string, number>>('combat_level_accuracy_bonus');
-  if (levelAccuracy && typeof levelAccuracy === 'object') {
+  if (isValidRecordStringNumber(levelAccuracy)) {
     settings.level_accuracy_bonus = levelAccuracy;
   }
 

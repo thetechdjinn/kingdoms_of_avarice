@@ -438,28 +438,38 @@ function hideCharacterModal(): void {
 async function saveCharacter(): Promise<void> {
   const charId = parseInt((document.getElementById('char-id') as HTMLInputElement).value);
 
+  const parseIntSafe = (value: string): number => {
+    const parsed = parseInt(value);
+    return isNaN(parsed) ? 0 : parsed;
+  };
+
   const updates = {
     name: (document.getElementById('char-name') as HTMLInputElement).value.trim(),
-    level: parseInt((document.getElementById('char-level') as HTMLInputElement).value),
+    level: parseIntSafe((document.getElementById('char-level') as HTMLInputElement).value),
     race: (document.getElementById('char-race') as HTMLInputElement).value.trim(),
     class: (document.getElementById('char-class') as HTMLInputElement).value.trim(),
-    experience: parseInt((document.getElementById('char-experience') as HTMLInputElement).value),
-    gold: parseInt((document.getElementById('char-gold') as HTMLInputElement).value),
-    health: parseInt((document.getElementById('char-health') as HTMLInputElement).value),
-    max_health: parseInt((document.getElementById('char-max-health') as HTMLInputElement).value),
-    mana: parseInt((document.getElementById('char-mana') as HTMLInputElement).value),
-    max_mana: parseInt((document.getElementById('char-max-mana') as HTMLInputElement).value),
-    strength: parseInt((document.getElementById('char-str') as HTMLInputElement).value),
-    intelligence: parseInt((document.getElementById('char-int') as HTMLInputElement).value),
-    dexterity: parseInt((document.getElementById('char-dex') as HTMLInputElement).value),
-    constitution: parseInt((document.getElementById('char-con') as HTMLInputElement).value),
-    wisdom: parseInt((document.getElementById('char-wis') as HTMLInputElement).value),
-    charisma: parseInt((document.getElementById('char-cha') as HTMLInputElement).value),
-    current_room_id: parseInt((document.getElementById('char-room') as HTMLInputElement).value),
+    experience: parseIntSafe((document.getElementById('char-experience') as HTMLInputElement).value),
+    gold: parseIntSafe((document.getElementById('char-gold') as HTMLInputElement).value),
+    health: parseIntSafe((document.getElementById('char-health') as HTMLInputElement).value),
+    max_health: parseIntSafe((document.getElementById('char-max-health') as HTMLInputElement).value),
+    mana: parseIntSafe((document.getElementById('char-mana') as HTMLInputElement).value),
+    max_mana: parseIntSafe((document.getElementById('char-max-mana') as HTMLInputElement).value),
+    strength: parseIntSafe((document.getElementById('char-str') as HTMLInputElement).value),
+    intelligence: parseIntSafe((document.getElementById('char-int') as HTMLInputElement).value),
+    dexterity: parseIntSafe((document.getElementById('char-dex') as HTMLInputElement).value),
+    constitution: parseIntSafe((document.getElementById('char-con') as HTMLInputElement).value),
+    wisdom: parseIntSafe((document.getElementById('char-wis') as HTMLInputElement).value),
+    charisma: parseIntSafe((document.getElementById('char-cha') as HTMLInputElement).value),
+    current_room_id: parseIntSafe((document.getElementById('char-room') as HTMLInputElement).value),
   };
 
   if (updates.name.length < 2) {
     showCharMessage('Name must be at least 2 characters', 'error');
+    return;
+  }
+
+  if (updates.level < 1) {
+    showCharMessage('Level must be at least 1', 'error');
     return;
   }
 
@@ -516,7 +526,8 @@ async function deleteCharacter(charId: number): Promise<void> {
 }
 
 function showCharMessage(message: string, type: 'success' | 'error'): void {
-  const msgEl = document.getElementById('char-message')!;
+  const msgEl = document.getElementById('char-message');
+  if (!msgEl) return;
   msgEl.textContent = message;
   msgEl.className = `message ${type}`;
   msgEl.style.display = 'block';
@@ -524,7 +535,8 @@ function showCharMessage(message: string, type: 'success' | 'error'): void {
 
 function hideCharMessage(): void {
   const msgEl = document.getElementById('char-message');
-  if (msgEl) msgEl.style.display = 'none';
+  if (!msgEl) return;
+  msgEl.style.display = 'none';
 }
 
 // ============================================================================
