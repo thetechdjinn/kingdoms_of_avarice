@@ -7,7 +7,7 @@
 
 -- Weapons
 INSERT INTO item_templates (name, short_desc, long_desc, room_desc, keywords, weight, size, base_value, item_type, equipment_slot, flags, weapon_data)
-VALUES 
+VALUES
 (
     'Rusty Iron Sword',
     'a rusty iron sword',
@@ -17,7 +17,7 @@ VALUES
     5, 2, 15,
     'weapon', 'main_hand',
     '{"takeable": true}',
-    '{"damage_dice": "1d6", "damage_type": "slashing", "attack_speed": 1400, "range": "melee", "skill_type": "swords"}'
+    '{"min_damage": 1, "max_damage": 6, "damage_type": "slashing", "attack_speed": 1400, "range": "melee", "skill_type": "swords"}'
 ),
 (
     'Steel Longsword',
@@ -28,7 +28,7 @@ VALUES
     6, 2, 100,
     'weapon', 'main_hand',
     '{"takeable": true}',
-    '{"damage_dice": "1d8", "damage_type": "slashing", "attack_speed": 1300, "range": "melee", "skill_type": "swords"}'
+    '{"min_damage": 1, "max_damage": 8, "damage_type": "slashing", "attack_speed": 1300, "range": "melee", "skill_type": "swords"}'
 ),
 (
     'Iron Dagger',
@@ -39,7 +39,7 @@ VALUES
     1, 1, 10,
     'weapon', 'main_hand',
     '{"takeable": true}',
-    '{"damage_dice": "1d4", "damage_type": "piercing", "attack_speed": 800, "range": "melee", "skill_type": "daggers"}'
+    '{"min_damage": 1, "max_damage": 4, "damage_type": "piercing", "attack_speed": 800, "range": "melee", "skill_type": "daggers"}'
 ),
 (
     'Wooden Club',
@@ -50,7 +50,7 @@ VALUES
     4, 2, 5,
     'weapon', 'main_hand',
     '{"takeable": true}',
-    '{"damage_dice": "1d6", "damage_type": "bludgeoning", "attack_speed": 1600, "range": "melee", "skill_type": "bludgeons"}'
+    '{"min_damage": 1, "max_damage": 6, "damage_type": "bludgeoning", "attack_speed": 1600, "range": "melee", "skill_type": "bludgeons"}'
 ),
 (
     'Battle Axe',
@@ -61,7 +61,7 @@ VALUES
     10, 3, 150,
     'weapon', 'main_hand',
     '{"takeable": true, "two_handed": true}',
-    '{"damage_dice": "1d12", "damage_type": "slashing", "attack_speed": 1900, "range": "melee", "skill_type": "axes"}'
+    '{"min_damage": 4, "max_damage": 12, "damage_type": "slashing", "attack_speed": 1900, "range": "melee", "skill_type": "axes"}'
 );
 
 -- Armor

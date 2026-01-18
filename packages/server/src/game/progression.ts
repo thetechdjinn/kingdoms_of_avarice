@@ -17,7 +17,10 @@ import {
   getYieldMultiplier,
   getEssenceRequired,
   getMatchingTags,
+  getCpEarnedForLevel,
 } from '@koa/shared';
+import * as characterRepo from '../db/repositories/characterRepository.js';
+import * as progressionRepo from '../db/repositories/progressionRepository.js';
 
 // ============================================================================
 // DATA STORES (In-memory for now, can be backed by DB/JSON files)
@@ -285,36 +288,73 @@ export function checkLevelUp(characterId: number): LevelCheckResult | null {
 }
 
 /**
- * Perform level up for a character
+ * Level up result containing the new level and CP earned
  */
-export function performLevelUp(characterId: number): boolean {
+export interface LevelUpResult {
+  success: boolean;
+  newLevel: number;
+  cpEarned: number;
+}
+
+/**
+ * Perform level up for a character
+ * Awards CP based on the new level and persists to database
+ */
+export async function performLevelUp(characterId: number): Promise<LevelUpResult> {
   const checkResult = checkLevelUp(characterId);
   if (!checkResult || !checkResult.can_level_up) {
-    return false;
+    return { success: false, newLevel: 0, cpEarned: 0 };
   }
 
   const progression = characterProgressions.get(characterId);
   if (!progression) {
-    return false;
+    return { success: false, newLevel: 0, cpEarned: 0 };
   }
 
-  // Deduct XP cost
-  progression.std_xp -= checkResult.std_xp_required;
-  
-  // Reset essence earned this level (wallet keeps accumulated essence)
+  // Calculate new values before modifying state
+  const newLevel = progression.level + 1;
+  const cpEarned = getCpEarnedForLevel(newLevel);
+  const newStdXp = progression.std_xp - checkResult.std_xp_required;
+
+  // Persist level and CP to database FIRST
+  try {
+    const character = await characterRepo.findCharacterById(characterId);
+    if (!character) {
+      console.error(`[Progression] Character ${characterId} not found for level-up persistence`);
+      return { success: false, newLevel: 0, cpEarned: 0 };
+    }
+
+    const newUnspentCp = (character.unspent_cp ?? 0) + cpEarned;
+
+    // Persist level and CP to characters table
+    await characterRepo.updateCharacterStats(characterId, {
+      level: newLevel,
+      unspent_cp: newUnspentCp,
+    });
+
+    // Persist XP and essence reset to character_progression table
+    await progressionRepo.updateCharacterProgression(characterId, {
+      std_xp: newStdXp,
+      essence_earned_this_level: 0,
+    });
+  } catch (error) {
+    console.error(`[Progression] Failed to persist level-up for character ${characterId}:`, error);
+    return { success: false, newLevel: 0, cpEarned: 0 };
+  }
+
+  // Database succeeded, now update in-memory state
+  progression.std_xp = newStdXp;
   progression.essence_earned_this_level = 0;
-  
-  // Increment level
-  progression.level++;
+  progression.level = newLevel;
 
   // Reset activity tracker for diminishing returns
   const tracker = activityTrackers.get(characterId);
   if (tracker) {
     tracker.activity_counts = [];
-    tracker.last_reset_level = progression.level;
+    tracker.last_reset_level = newLevel;
   }
 
-  return true;
+  return { success: true, newLevel, cpEarned };
 }
 
 // ============================================================================

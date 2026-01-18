@@ -617,7 +617,7 @@ async function handleItemInfo(
   ];
 
   if (template.weapon_data) {
-    lines.push(`  ${colors.boldCyan('Damage:')} ${template.weapon_data.damage_dice} ${template.weapon_data.damage_type}`);
+    lines.push(`  ${colors.boldCyan('Damage:')} ${template.weapon_data.min_damage}-${template.weapon_data.max_damage} ${template.weapon_data.damage_type}`);
   }
   if (template.armor_data) {
     lines.push(`  ${colors.boldCyan('AC:')} ${template.armor_data.armor_class}`);

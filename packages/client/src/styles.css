@@ -239,9 +239,19 @@ button:hover {
   background-color: #1a1a1a;
   border: 1px solid #00ff00;
   border-radius: 4px;
-  margin-top: 4px;
+  padding-top: 4px;
   z-index: 1000;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+}
+
+/* Bridge the gap between trigger and menu to prevent hover loss */
+.nav-dropdown-menu::before {
+  content: '';
+  position: absolute;
+  top: -8px;
+  left: 0;
+  right: 0;
+  height: 8px;
 }
 
 .nav-dropdown:hover .nav-dropdown-menu {

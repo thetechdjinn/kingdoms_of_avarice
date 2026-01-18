@@ -192,8 +192,12 @@
                 <h3>Weapon Data</h3>
                 <div class="form-row">
                   <div class="form-group">
-                    <label for="weapon-damage-dice">Damage Dice</label>
-                    <input type="text" id="weapon-damage-dice" placeholder="1d8" />
+                    <label for="weapon-min-damage">Min Damage</label>
+                    <input type="number" id="weapon-min-damage" min="1" value="1" />
+                  </div>
+                  <div class="form-group">
+                    <label for="weapon-max-damage">Max Damage</label>
+                    <input type="number" id="weapon-max-damage" min="1" value="6" />
                   </div>
                   <div class="form-group">
                     <label for="weapon-damage-type">Damage Type</label>

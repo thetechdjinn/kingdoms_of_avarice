@@ -105,7 +105,8 @@ export interface ItemFlags {
 
 // Weapon data
 export interface WeaponData {
-  damage_dice: string;
+  min_damage: number;
+  max_damage: number;
   damage_type: DamageType;
   attack_speed?: number;
   crit_modifier?: number;

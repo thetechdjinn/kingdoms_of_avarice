@@ -23,7 +23,8 @@ import { getCombatSettings } from '../db/repositories/settingsRepository.js';
  * Weapon stats used in combat calculations
  */
 export interface WeaponStats {
-  damageDice: string;
+  minDamage: number;
+  maxDamage: number;
   attackSpeed: number;
   critModifier: number;
   damageType: string;
@@ -56,7 +57,8 @@ const DEFAULT_WEAPON_SPEED = 7500;
 
 function getDefaultWeaponStats(unarmedSpeed: number = DEFAULT_UNARMED_SPEED): WeaponStats {
   return {
-    damageDice: '1d4',        // Unarmed damage
+    minDamage: 1,             // Unarmed min damage
+    maxDamage: 4,             // Unarmed max damage
     attackSpeed: unarmedSpeed, // Fists are fast (lower = faster)
     critModifier: 0,          // No bonus crit from fists
     damageType: 'bludgeoning',
@@ -96,7 +98,8 @@ function getWeaponStats(
     || UNARMED_ATTACK_VERBS;
 
   return {
-    damageDice: weaponData.damage_dice || '1d4',
+    minDamage: weaponData.min_damage ?? 1,
+    maxDamage: weaponData.max_damage ?? 4,
     attackSpeed: weaponData.attack_speed ?? defaultSpeed,
     critModifier: weaponData.crit_modifier ?? 0,
     damageType,

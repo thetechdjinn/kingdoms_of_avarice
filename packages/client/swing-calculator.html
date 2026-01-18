@@ -8,69 +8,78 @@
     <style>
       #calculator-panel {
         flex: 1;
-        padding: 2rem;
+        padding: 1.5rem;
         overflow-y: auto;
-        max-width: 1000px;
       }
 
       .page-header {
-        margin-bottom: 2rem;
-        padding-bottom: 1rem;
-        border-bottom: 1px solid #333;
-      }
-
-      .page-header h1 {
-        color: #00ff00;
-        font-size: 1.5rem;
-        margin-bottom: 0.5rem;
-      }
-
-      .page-header p {
-        color: #888;
-        font-size: 0.95rem;
-      }
-
-      .calculator-grid {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 2rem;
-      }
-
-      .input-section, .output-section {
-        background: #16213e;
-        border: 1px solid #333;
-        border-radius: 8px;
-        padding: 1.5rem;
-      }
-
-      .section-title {
-        color: #00ff00;
-        font-size: 1.1rem;
         margin-bottom: 1rem;
         padding-bottom: 0.5rem;
         border-bottom: 1px solid #333;
       }
 
+      .page-header h1 {
+        color: #00ff00;
+        font-size: 1.3rem;
+        margin-bottom: 0.25rem;
+      }
+
+      .page-header p {
+        color: #888;
+        font-size: 0.85rem;
+      }
+
+      .calculator-grid {
+        display: grid;
+        grid-template-columns: minmax(320px, 1fr) minmax(280px, 1fr) minmax(220px, auto);
+        gap: 1.5rem;
+        align-items: start;
+      }
+
+      @media (max-width: 1200px) {
+        .calculator-grid {
+          grid-template-columns: 1fr 1fr;
+        }
+        .breakdown-section {
+          grid-column: 1 / -1;
+        }
+      }
+
+      .input-section, .output-section, .breakdown-section {
+        background: #16213e;
+        border: 1px solid #333;
+        border-radius: 8px;
+        padding: 1rem;
+      }
+
+      .section-title {
+        color: #00ff00;
+        font-size: 1rem;
+        margin-bottom: 0.75rem;
+        padding-bottom: 0.4rem;
+        border-bottom: 1px solid #333;
+      }
+
       .input-group {
-        margin-bottom: 1.25rem;
+        margin-bottom: 0.75rem;
       }
 
       .input-group label {
         display: block;
         color: #aaa;
-        font-size: 0.9rem;
-        margin-bottom: 0.5rem;
+        font-size: 0.8rem;
+        margin-bottom: 0.3rem;
       }
 
       .input-group input,
       .input-group select {
         width: 100%;
-        padding: 0.6rem 0.75rem;
+        padding: 0.4rem 0.5rem;
         background-color: #0f0f23;
         color: #eee;
         border: 1px solid #333;
         border-radius: 4px;
-        font-size: 1rem;
+        font-size: 0.9rem;
       }
 
       .input-group input:focus,
@@ -81,21 +90,29 @@
 
       .input-group .hint {
         color: #666;
-        font-size: 0.8rem;
-        margin-top: 0.25rem;
+        font-size: 0.7rem;
+        margin-top: 0.2rem;
       }
 
       .input-row {
         display: grid;
         grid-template-columns: 1fr 1fr;
-        gap: 1rem;
+        gap: 0.75rem;
+      }
+
+      .sub-section-title {
+        color: #00aaaa;
+        font-size: 0.85rem;
+        margin: 0.75rem 0 0.5rem 0;
+        padding-top: 0.5rem;
+        border-top: 1px solid #333;
       }
 
       .output-item {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        padding: 0.75rem 0;
+        padding: 0.4rem 0;
         border-bottom: 1px solid #222;
       }
 
@@ -105,13 +122,40 @@
 
       .output-label {
         color: #888;
-        font-size: 0.95rem;
+        font-size: 0.8rem;
       }
 
       .output-value {
-        font-size: 1.2rem;
+        font-size: 1rem;
         font-weight: bold;
         color: #00ff00;
+      }
+
+      .breakdown-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 0.5rem;
+      }
+
+      .breakdown-subtitle {
+        color: #888;
+        font-size: 0.8rem;
+      }
+
+      .level-range-select {
+        padding: 0.3rem 0.5rem;
+        background-color: #0f0f23;
+        color: #eee;
+        border: 1px solid #333;
+        border-radius: 4px;
+        font-size: 0.8rem;
+        cursor: pointer;
+      }
+
+      .level-range-select:focus {
+        outline: none;
+        border-color: #00ff00;
       }
 
       .output-value.warning {
@@ -126,27 +170,15 @@
         color: #00ffff;
       }
 
-      .swing-breakdown {
-        margin-top: 1.5rem;
-        padding-top: 1rem;
-        border-top: 1px solid #333;
-      }
-
-      .swing-breakdown h4 {
-        color: #00ff00;
-        font-size: 0.95rem;
-        margin-bottom: 0.75rem;
-      }
-
       .breakdown-table {
         width: 100%;
         border-collapse: collapse;
-        font-size: 0.85rem;
+        font-size: 0.8rem;
       }
 
       .breakdown-table th,
       .breakdown-table td {
-        padding: 0.5rem;
+        padding: 0.35rem 0.5rem;
         text-align: center;
         border: 1px solid #333;
       }
@@ -154,6 +186,7 @@
       .breakdown-table th {
         background: #0f0f23;
         color: #00ff00;
+        font-size: 0.75rem;
       }
 
       .breakdown-table td {
@@ -161,7 +194,8 @@
       }
 
       .breakdown-table .current-row {
-        background: rgba(0, 255, 0, 0.1);
+        background: rgba(0, 255, 0, 0.15);
+        color: #00ff00;
       }
 
       .formula-section {
@@ -214,6 +248,83 @@
 
       .weapon-stats .stat-value {
         color: #00ffff;
+      }
+
+      .weapon-edit-section {
+        margin-top: 0.75rem;
+        padding: 0.75rem;
+        background: #0f0f23;
+        border: 1px solid #333;
+        border-radius: 4px;
+      }
+
+      .weapon-edit-row {
+        display: flex;
+        gap: 0.5rem;
+        align-items: flex-end;
+        flex-wrap: wrap;
+      }
+
+      .weapon-edit-field {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+      }
+
+      .weapon-edit-field label {
+        font-size: 0.75rem;
+        color: #888;
+      }
+
+      .weapon-edit-field input,
+      .weapon-edit-field select {
+        width: 80px;
+        padding: 0.4rem;
+        background-color: #1a1a2e;
+        color: #eee;
+        border: 1px solid #333;
+        border-radius: 4px;
+        font-size: 0.85rem;
+      }
+
+      .weapon-edit-field input:focus,
+      .weapon-edit-field select:focus {
+        outline: none;
+        border-color: #00ff00;
+      }
+
+      .save-weapon-btn {
+        padding: 0.4rem 0.75rem;
+        background-color: #00aa00;
+        color: #fff;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 0.85rem;
+        transition: background-color 0.2s;
+      }
+
+      .save-weapon-btn:hover {
+        background-color: #00cc00;
+      }
+
+      .save-weapon-btn:disabled {
+        background-color: #555;
+        cursor: not-allowed;
+      }
+
+      .weapon-save-status {
+        margin-top: 0.5rem;
+        font-size: 0.8rem;
+        min-height: 1.2em;
+      }
+
+      .weapon-save-status.success {
+        color: #00ff00;
+      }
+
+      .weapon-save-status.error {
+        color: #ff4444;
       }
     </style>
   </head>
@@ -271,9 +382,34 @@
                   <select id="weapon-select">
                     <option value="custom">-- Custom Speed --</option>
                   </select>
-                  <div id="weapon-stats" class="weapon-stats" style="display: none;">
-                    <span>Damage: <span class="stat-value" id="weapon-damage">-</span></span>
-                    <span>Type: <span class="stat-value" id="weapon-type">-</span></span>
+                  <div id="weapon-edit-section" class="weapon-edit-section" style="display: none;">
+                    <div class="weapon-edit-row">
+                      <div class="weapon-edit-field">
+                        <label for="edit-min-damage">Min Dmg</label>
+                        <input type="number" id="edit-min-damage" min="1" value="1" />
+                      </div>
+                      <div class="weapon-edit-field">
+                        <label for="edit-max-damage">Max Dmg</label>
+                        <input type="number" id="edit-max-damage" min="1" value="6" />
+                      </div>
+                      <div class="weapon-edit-field">
+                        <label for="edit-attack-speed">Speed</label>
+                        <input type="number" id="edit-attack-speed" min="100" value="1500" />
+                      </div>
+                      <div class="weapon-edit-field">
+                        <label for="edit-damage-type">Type</label>
+                        <select id="edit-damage-type">
+                          <option value="slashing">Slashing</option>
+                          <option value="piercing">Piercing</option>
+                          <option value="bludgeoning">Bludgeoning</option>
+                          <option value="fire">Fire</option>
+                          <option value="ice">Ice</option>
+                          <option value="lightning">Lightning</option>
+                        </select>
+                      </div>
+                      <button type="button" id="save-weapon-btn" class="save-weapon-btn">Save</button>
+                    </div>
+                    <div id="weapon-save-status" class="weapon-save-status"></div>
                   </div>
                 </div>
 
@@ -384,6 +520,33 @@
                 </div>
               </div>
 
+              <!-- Breakdown Table - Middle Column -->
+              <div class="breakdown-section">
+                <h3 class="section-title">Swings by Level</h3>
+                <div class="breakdown-header">
+                  <div class="breakdown-subtitle">Combat Level: <span id="breakdown-combat-level">1</span></div>
+                  <select id="level-range-select" class="level-range-select">
+                    <option value="1-20">Levels 1-20</option>
+                    <option value="21-40">Levels 21-40</option>
+                    <option value="41-60">Levels 41-60</option>
+                    <option value="61-80">Levels 61-80</option>
+                  </select>
+                </div>
+                <table class="breakdown-table">
+                  <thead>
+                    <tr>
+                      <th>Lvl</th>
+                      <th>Energy</th>
+                      <th>Swings (R1-R4)</th>
+                      <th>Crit</th>
+                    </tr>
+                  </thead>
+                  <tbody id="breakdown-tbody">
+                  </tbody>
+                </table>
+              </div>
+
+              <!-- Calculated Results - Right Column -->
               <div class="output-section">
                 <h3 class="section-title">Calculated Results</h3>
 
@@ -483,24 +646,10 @@
                   <span class="output-label">Carried Energy (to next round)</span>
                   <span class="output-value" id="out-carried">0</span>
                 </div>
-
-                <div class="swing-breakdown">
-                  <h4>Swings by Character Level (Combat Level <span id="breakdown-combat-level">1</span>)</h4>
-                  <table class="breakdown-table">
-                    <thead>
-                      <tr>
-                        <th>Char Lvl</th>
-                        <th>Energy</th>
-                        <th>Swings</th>
-                        <th>Crit %</th>
-                      </tr>
-                    </thead>
-                    <tbody id="breakdown-tbody">
-                    </tbody>
-                  </table>
-                </div>
               </div>
+
             </div>
+          </div>
 
             <div class="formula-section">
               <h3>Energy Formulas</h3>
