@@ -212,7 +212,7 @@ function formatSwingMessage(
         } else if (isDefender) {
           return `${colors.combatAttacker(attackerName)} ${colors.combatMiss(missVerb3p)} you with their ${colors.item(weaponName)}, but misses.`;
         }
-        return `${attackerName} ${missVerb3p} ${defenderName} with their ${weaponName}, but misses.`;
+        return `${attackerName} ${missVerb3p} ${defenderName} with their ${colors.item(weaponName)}, but misses.`;
       }
 
     case AttackResult.DODGE:
