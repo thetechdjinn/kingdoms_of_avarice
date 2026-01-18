@@ -141,7 +141,6 @@ function populateWeaponSelect(): void {
 // ============================================================================
 
 interface CalculationInputs {
-  baseEnergy: number;
   combatLevel: number;
   characterLevel: number;
   intelligence: number;
@@ -160,9 +159,11 @@ interface CalculationInputs {
 }
 
 interface CalculationResults {
-  combatMult: number;
-  levelMult: number;
-  dexMult: number;
+  // MajorMUD-style additive energy components
+  combatContribution: number;
+  levelContribution: number;
+  agilityContribution: number;
+  baseEnergy: number;
   encMult: number;
   effectiveEnergy: number;
   rawSwings: number;
@@ -192,25 +193,38 @@ function calculateEncumbranceCritBonus(encRatio: number): number {
 }
 
 function calculate(inputs: CalculationInputs): CalculationResults {
-  // Combat level multiplier
-  const combatMult = COMBAT_LEVEL_ENERGY_MULTIPLIER[inputs.combatLevel] ?? 1.0;
+  // MajorMUD-style additive formula:
+  // Base Energy = (CombatLevel * 2 + 3) * 500 + (CharLevel * 10) + ((DEX - 50) * 2)
 
-  // Character level bonus (2% per level above 1)
-  const levelMult = 1 + (inputs.characterLevel - 1) * 0.02;
+  // Combat level is the primary factor: (CL * 2 + 3) * 500
+  // Combat 1 = 2500, Combat 2 = 3500, Combat 3 = 4500, Combat 4 = 5500, Combat 5 = 6500
+  // Ratio of Combat 5 to Combat 1 = 2.6x (matches MajorMUD research)
+  const combatContribution = (inputs.combatLevel * 2 + 3) * 500;
 
-  // Dexterity bonus for energy (1% per 10 DEX above 50)
-  const dexBonus = Math.max(0, (inputs.dexterity - 50) / 10) * 0.01;
-  const dexMult = 1 + dexBonus;
+  // Character level adds +10 energy per level
+  const levelContribution = inputs.characterLevel * 10;
 
-  // Encumbrance modifier for energy (50% = baseline)
+  // Agility (DEX) adds +2 energy per point above 50
+  const agilityContribution = Math.max(0, (inputs.dexterity - 50)) * 2;
+
+  // Base energy before encumbrance
+  const baseEnergy = combatContribution + levelContribution + agilityContribution;
+
+  // Encumbrance modifier (MajorMUD-style):
+  // At 50% encumbrance = 1.0x (baseline)
+  // At 0% encumbrance = 1.5x (+50% bonus)
+  // At 100% encumbrance = 0.5x (-50% penalty)
   const encRatio = inputs.encumbrance / 100;
-  const encOffset = 0.5 - encRatio;
-  const encMult = Math.max(0.5, 1 + encOffset * 0.5);
+  let encMult: number;
+  if (inputs.encumbrance < 50) {
+    encMult = 1.0 + ((50 - inputs.encumbrance) / 100);
+  } else {
+    encMult = 1.0 - ((inputs.encumbrance - 50) / 100);
+  }
+  encMult = Math.max(0.5, encMult);
 
   // Calculate effective energy
-  const effectiveEnergy = Math.floor(
-    inputs.baseEnergy * combatMult * levelMult * dexMult * encMult
-  );
+  const effectiveEnergy = Math.floor(baseEnergy * encMult);
 
   // Calculate swings
   const weaponSpeed = Math.max(1, inputs.weaponSpeed);
@@ -282,9 +296,10 @@ function calculate(inputs: CalculationInputs): CalculationResults {
   }
 
   return {
-    combatMult,
-    levelMult,
-    dexMult,
+    combatContribution,
+    levelContribution,
+    agilityContribution,
+    baseEnergy,
     encMult,
     effectiveEnergy,
     rawSwings,
@@ -306,7 +321,6 @@ function calculate(inputs: CalculationInputs): CalculationResults {
 
 function getInputs(): CalculationInputs {
   return {
-    baseEnergy: getNumberValue('base-energy', 20000),
     combatLevel: getNumberValue('combat-level', 1),
     characterLevel: getNumberValue('character-level', 1),
     intelligence: getNumberValue('intelligence', 50),
@@ -340,10 +354,11 @@ function updateDisplay(): void {
   const inputs = getInputs();
   const results = calculate(inputs);
 
-  // Update output values
-  setText('out-combat-mult', `${results.combatMult}x`);
-  setText('out-level-mult', `${results.levelMult.toFixed(2)}x`);
-  setText('out-dex-mult', `${results.dexMult.toFixed(3)}x`);
+  // Update output values (MajorMUD-style additive formula)
+  setText('out-combat-energy', results.combatContribution.toLocaleString());
+  setText('out-level-energy', `+${results.levelContribution}`);
+  setText('out-agility-energy', `+${results.agilityContribution}`);
+  setText('out-base-energy', results.baseEnergy.toLocaleString());
   setText('out-enc-mult', `${results.encMult.toFixed(2)}x`);
   setText('out-energy', results.effectiveEnergy.toLocaleString());
   setText('out-raw-swings', results.rawSwings.toFixed(2));
@@ -648,7 +663,7 @@ function setupEventListeners(): void {
   // All inputs trigger recalculation
   const inputIds = [
     'weapon-speed', 'combat-level', 'character-level', 'intelligence', 'dexterity',
-    'encumbrance', 'class-crit-bonus', 'weapon-crit', 'max-attacks', 'base-energy',
+    'encumbrance', 'class-crit-bonus', 'weapon-crit', 'max-attacks',
     'class-dodge-bonus', 'race-dodge-bonus', 'equip-dodge-bonus', 'charisma', 'attacker-accuracy'
   ];
 

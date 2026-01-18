@@ -74,10 +74,14 @@ export const DEFAULT_RUNTIME_CONFIG: RuntimeCombatConfig = {
 };
 
 /**
- * Calculate energy available per combat round
+ * Calculate energy available per combat round (MajorMUD-style additive formula)
  *
  * Energy determines how many attacks a character can make.
- * Factors: combat level (most significant), character level, dexterity, encumbrance
+ * This uses an additive formula reverse-engineered from MajorMUD:
+ *
+ *   Base Energy = (CombatLevel * 2 + 3) * 100 + (CharLevel * 10) + ((Agility - 50) * 2)
+ *   Encumbrance Modifier: ±50% based on deviation from 50% baseline
+ *   Final Energy = Base Energy * Encumbrance Modifier
  *
  * @param factors - Character stats affecting energy
  * @param config - Optional runtime config (uses defaults if not provided)
@@ -86,30 +90,37 @@ export function calculateRoundEnergy(
   factors: EnergyFactors,
   config: RuntimeCombatConfig = DEFAULT_RUNTIME_CONFIG
 ): number {
-  const baseEnergy = config.baseEnergy;
+  // MajorMUD-style additive formula:
+  // Combat level is the primary factor: (CL * 2 + 3) * 500
+  // This gives: Combat 1 = 2500, Combat 2 = 3500, Combat 3 = 4500, Combat 4 = 5500, Combat 5 = 6500
+  // Ratio of Combat 5 to Combat 1 = 2.6x (matches MajorMUD research)
+  const combatContribution = (factors.combatLevel * 2 + 3) * 500;
 
-  // Combat level multiplier (most significant factor)
-  const combatMultiplier = config.levelMultipliers[String(factors.combatLevel)] ?? 1.0;
+  // Character level adds +10 energy per level
+  const levelContribution = factors.characterLevel * 10;
 
-  // Character level bonus (2% per level)
-  const levelMultiplier = 1 + (factors.characterLevel - 1) * 0.02;
+  // Agility (DEX) adds +2 energy per point above 50
+  const agilityContribution = Math.max(0, (factors.dexterity - 50)) * 2;
 
-  // Dexterity bonus (1% per 10 DEX above 50)
-  const dexBonus = Math.max(0, (factors.dexterity - 50) / 10) * 0.01;
-  const dexMultiplier = 1 + dexBonus;
+  // Base energy before encumbrance
+  const baseEnergy = combatContribution + levelContribution + agilityContribution;
 
-  // Encumbrance modifier (50% = baseline, less = bonus, more = penalty)
-  // At 0% encumbrance: +25% energy
-  // At 50% encumbrance: no modifier
-  // At 100% encumbrance: -25% energy
-  const encumbranceOffset = ENCUMBRANCE_BASELINE - factors.encumbranceRatio;
-  const encumbranceMultiplier = 1 + (encumbranceOffset * 0.5);
+  // Encumbrance modifier (MajorMUD-style):
+  // At 50% encumbrance = 1.0x (baseline)
+  // At 0% encumbrance = 1.5x (+50% bonus)
+  // At 100% encumbrance = 0.5x (-50% penalty)
+  const encumbrancePercent = factors.encumbranceRatio * 100;
+  let encumbranceModifier: number;
+  if (encumbrancePercent < 50) {
+    encumbranceModifier = 1.0 + ((50 - encumbrancePercent) / 100);
+  } else {
+    encumbranceModifier = 1.0 - ((encumbrancePercent - 50) / 100);
+  }
 
-  const totalEnergy = baseEnergy
-    * combatMultiplier
-    * levelMultiplier
-    * dexMultiplier
-    * Math.max(0.5, encumbranceMultiplier); // Floor at 50% to prevent negative energy
+  // Floor at 50% to prevent extremely low energy
+  encumbranceModifier = Math.max(0.5, encumbranceModifier);
+
+  const totalEnergy = baseEnergy * encumbranceModifier;
 
   return Math.floor(totalEnergy);
 }

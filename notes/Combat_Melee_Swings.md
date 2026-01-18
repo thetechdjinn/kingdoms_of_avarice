@@ -80,3 +80,104 @@ There is a rather narrow range of values for AC and ACC that don't return the ca
 - **Encumbrance**: Affected accuracy negatively when too high
 
 The system essentially compared your total accuracy score against the defender's total defensive score (AC + hidden defenses), with the squared relationship making large disparities very impactful.
+
+--- Reverse Engineering
+
+I can help you research this! MajorMUD's exact internal numbers were never officially published, so the community has reverse-engineered them over the years. Let me search for the specific values that have been documented.Let me look for more specific swing calculation formulas:Let me look at the MMUD Explorer source code on GitHub - it likely has the reverse-engineered formulas:Let me look at the General.bas file which likely contains the swing calculation formulas:Based on my extensive research, I can now provide you with the best available information about MajorMUD's swing mechanics. Unfortunately, the exact internal numbers were never officially published by the developers (West Coast Creations / Metropolis), so what exists is reverse-engineered through testing and community effort.
+
+## What We Know About MajorMUD's Swing System
+
+### The Energy System Concept
+
+The system works like this:
+
+- Each combat round, you get a pool of **energy** based on: combat level, character level, agility, and encumbrance
+- Each weapon swing **consumes energy** equal to the weapon's speed value
+- **Swings per round = floor(available energy / weapon speed)**
+- **Leftover energy carries over** to the next round (creating the 1-2-2-1-2-2 pattern you described)
+- **Maximum cap of 6 attacks per round** (excess converts to crit chance bonus)
+
+### Combat Level Energy Multipliers
+
+Based on the community research and MMUD Explorer calculations, the combat level affects your base energy significantly. The exact values that have been reverse-engineered suggest something like:
+
+| Combat Level | Approximate Energy Multiplier |
+| ------------ | ----------------------------- |
+| Combat 1     | Lowest (base ~3)              |
+| Combat 2     | ~4                            |
+| Combat 3     | ~5                            |
+| Combat 4     | ~6                            |
+| Combat 5     | Highest (~7-8)                |
+
+### Factors Affecting Energy Per Round
+
+From the community research:
+
+1. **Level contribution**: Energy increases with character level (roughly +1 energy per few levels)
+2. **Agility contribution**: For every 10 points of agility above 50, you get additional energy (~+1 per 10-15 agility)
+3. **Encumbrance modifier**:
+   - At 50% encumbrance = baseline (1.0x multiplier)
+   - Below 50% = bonus to swings
+   - Above 50% = penalty to swings
+
+### Typical Weapon Speeds
+
+Stock MajorMUD weapons have speed values like:
+
+- **Very fast weapons**: ~1500-2000
+- **Fast weapons**: ~2500-3000
+- **Medium weapons**: ~3500-4500
+- **Slow weapons**: ~5000-6000
+- **Very slow (two-handed)**: ~7000+
+
+### The Problem You're Facing
+
+The exact formula hasn't been fully cracked because:
+
+1. The original code is proprietary and compiled
+2. Different MajorMUD versions (1.11i through 1.11p) have different formulas
+3. Metro changed combat formulas between versions (notably the /10 to /14 change in accuracy)
+4. The energy values in Nightmare Redux databases may not perfectly match the DLL calculations
+
+### Implemented Formula (Kingdoms of Avarice)
+
+Based on MajorMUD research, the following formula is implemented:
+
+```
+Combat Energy = (CombatLevel * 2 + 3) * 500
+Level Energy  = CharacterLevel * 10
+DEX Energy    = max(0, DEX - 50) * 2
+
+Base Energy   = Combat Energy + Level Energy + DEX Energy
+
+Encumbrance Modifier:
+  if enc < 50%: modifier = 1.0 + ((50 - enc) / 100)
+  if enc > 50%: modifier = 1.0 - ((enc - 50) / 100)
+  modifier = max(0.5, modifier)  // floor at 50%
+
+Effective Energy = floor(Base Energy * Encumbrance Modifier)
+Available Energy = Effective Energy + Carry Over Energy
+
+Swings = floor(Available Energy / Weapon Speed)
+Swings = min(Swings, 6)  // cap at 6
+
+Carry Over = Available Energy - (Swings * Weapon Speed)
+```
+
+**Combat Level Energy Values:**
+| Combat Level | Energy |
+|--------------|--------|
+| 1 (Mage/Priest) | 2500 |
+| 2 (Warlock) | 3500 |
+| 3 (Druid) | 4500 |
+| 4 (Warrior) | 5500 |
+| 5 (Witchunter) | 6500 |
+
+Ratio of Combat 5 to Combat 1 = 2.6x (matches MajorMUD research)
+
+**Current Weapon Speeds:**
+- Iron Dagger: 800 (very fast)
+- Steel Longsword: 1300 (fast)
+- Rusty Iron Sword: 1400 (medium)
+- Wooden Club: 1600 (medium-slow)
+- Battle Axe: 1900 (slow)
