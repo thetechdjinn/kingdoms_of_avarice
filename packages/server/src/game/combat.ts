@@ -471,10 +471,10 @@ async function processAttackerCombat(
     // Dodge is a class skill - only classes with dodge_bonus > 0 can dodge
     let defenderDodgeChance = 0;
     if (target.characterId) {
-      const defenderProgression = await progressionRepo.getCharacterProgression(target.characterId);
-      if (defenderProgression) {
-        const defenderClassDef = await progressionRepo.getClassById(defenderProgression.class_id);
-        const defenderRaceDef = await progressionRepo.getRaceById(defenderProgression.race_id);
+      const defenderCharacter = await characterRepo.findCharacterById(target.characterId);
+      if (defenderCharacter) {
+        const defenderClassDef = await progressionRepo.getClassById(defenderCharacter.class);
+        const defenderRaceDef = await progressionRepo.getRaceById(defenderCharacter.race);
 
         const classDodgeBonus = defenderClassDef?.dodge_bonus ?? 0;
         const raceDodgeBonus = defenderRaceDef?.dodge_bonus ?? 0;
