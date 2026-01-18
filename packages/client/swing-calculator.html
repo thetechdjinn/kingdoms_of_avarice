@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Swing Calculator - Kingdoms of Avarice</title>
+    <link rel="stylesheet" href="/src/editor.css" />
+    <style>
+      #calculator-panel {
+        flex: 1;
+        padding: 2rem;
+        overflow-y: auto;
+        max-width: 1000px;
+      }
+
+      .page-header {
+        margin-bottom: 2rem;
+        padding-bottom: 1rem;
+        border-bottom: 1px solid #333;
+      }
+
+      .page-header h1 {
+        color: #00ff00;
+        font-size: 1.5rem;
+        margin-bottom: 0.5rem;
+      }
+
+      .page-header p {
+        color: #888;
+        font-size: 0.95rem;
+      }
+
+      .calculator-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 2rem;
+      }
+
+      .input-section, .output-section {
+        background: #16213e;
+        border: 1px solid #333;
+        border-radius: 8px;
+        padding: 1.5rem;
+      }
+
+      .section-title {
+        color: #00ff00;
+        font-size: 1.1rem;
+        margin-bottom: 1rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 1px solid #333;
+      }
+
+      .input-group {
+        margin-bottom: 1.25rem;
+      }
+
+      .input-group label {
+        display: block;
+        color: #aaa;
+        font-size: 0.9rem;
+        margin-bottom: 0.5rem;
+      }
+
+      .input-group input,
+      .input-group select {
+        width: 100%;
+        padding: 0.6rem 0.75rem;
+        background-color: #0f0f23;
+        color: #eee;
+        border: 1px solid #333;
+        border-radius: 4px;
+        font-size: 1rem;
+      }
+
+      .input-group input:focus,
+      .input-group select:focus {
+        outline: none;
+        border-color: #00ff00;
+      }
+
+      .input-group .hint {
+        color: #666;
+        font-size: 0.8rem;
+        margin-top: 0.25rem;
+      }
+
+      .input-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1rem;
+      }
+
+      .output-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.75rem 0;
+        border-bottom: 1px solid #222;
+      }
+
+      .output-item:last-child {
+        border-bottom: none;
+      }
+
+      .output-label {
+        color: #888;
+        font-size: 0.95rem;
+      }
+
+      .output-value {
+        font-size: 1.2rem;
+        font-weight: bold;
+        color: #00ff00;
+      }
+
+      .output-value.warning {
+        color: #ffaa00;
+      }
+
+      .output-value.danger {
+        color: #ff4444;
+      }
+
+      .output-value.highlight {
+        color: #00ffff;
+      }
+
+      .swing-breakdown {
+        margin-top: 1.5rem;
+        padding-top: 1rem;
+        border-top: 1px solid #333;
+      }
+
+      .swing-breakdown h4 {
+        color: #00ff00;
+        font-size: 0.95rem;
+        margin-bottom: 0.75rem;
+      }
+
+      .breakdown-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.85rem;
+      }
+
+      .breakdown-table th,
+      .breakdown-table td {
+        padding: 0.5rem;
+        text-align: center;
+        border: 1px solid #333;
+      }
+
+      .breakdown-table th {
+        background: #0f0f23;
+        color: #00ff00;
+      }
+
+      .breakdown-table td {
+        color: #ccc;
+      }
+
+      .breakdown-table .current-row {
+        background: rgba(0, 255, 0, 0.1);
+      }
+
+      .formula-section {
+        margin-top: 2rem;
+        background: #0f0f23;
+        border: 1px solid #333;
+        border-radius: 8px;
+        padding: 1.5rem;
+      }
+
+      .formula-section h3 {
+        color: #00ff00;
+        font-size: 1rem;
+        margin-bottom: 1rem;
+      }
+
+      .formula {
+        font-family: monospace;
+        color: #aaa;
+        font-size: 0.85rem;
+        line-height: 1.6;
+      }
+
+      .formula .var {
+        color: #00ffff;
+      }
+
+      .formula .num {
+        color: #ffaa00;
+      }
+
+      .loading-state {
+        color: #888;
+        padding: 2rem;
+        text-align: center;
+      }
+
+      .weapon-stats {
+        margin-top: 0.5rem;
+        padding: 0.5rem;
+        background: #0f0f23;
+        border-radius: 4px;
+        font-size: 0.85rem;
+        color: #888;
+      }
+
+      .weapon-stats span {
+        margin-right: 1rem;
+      }
+
+      .weapon-stats .stat-value {
+        color: #00ffff;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="editor-app">
+      <nav id="main-nav">
+        <div class="nav-brand">Kingdoms of Avarice</div>
+        <div class="nav-links">
+          <a href="/" class="nav-link">Game</a>
+          <div class="nav-dropdown" id="nav-dev-dropdown">
+            <button class="nav-link nav-dropdown-btn active">Developer</button>
+            <div class="nav-dropdown-menu">
+              <a href="/editor.html" class="nav-dropdown-item">Room Editor</a>
+              <a href="/item-editor.html" class="nav-dropdown-item">Item Editor</a>
+              <a href="/spell-editor.html" class="nav-dropdown-item">Spell Editor</a>
+              <a href="/status-editor.html" class="nav-dropdown-item">Status Effects Editor</a>
+              <a href="/progression-editor.html" class="nav-dropdown-item">Progression Editor</a>
+              <a href="/swing-calculator.html" class="nav-dropdown-item active">Swing Calculator</a>
+            </div>
+          </div>
+          <div class="nav-dropdown" id="nav-admin-dropdown" style="display: none;">
+            <button class="nav-link nav-dropdown-btn">Admin</button>
+            <div class="nav-dropdown-menu">
+              <a href="/admin.html" class="nav-dropdown-item">Admin Panel</a>
+              <a href="/game-settings-editor.html" class="nav-dropdown-item">Game Settings</a>
+              <a href="/user-editor.html" class="nav-dropdown-item">User Editor</a>
+            </div>
+          </div>
+        </div>
+        <div class="nav-spacer"></div>
+        <div class="nav-user-menu">
+          <button class="nav-user-btn" id="nav-username">User</button>
+          <div class="dropdown-menu" id="user-dropdown">
+            <button class="dropdown-item" id="logout-btn">Logout</button>
+          </div>
+        </div>
+      </nav>
+
+      <div id="editor-layout">
+        <main id="calculator-panel">
+          <div id="loading-state" class="loading-state">Loading...</div>
+
+          <div id="calculator-content" style="display: none;">
+            <div class="page-header">
+              <h1>Swing Calculator</h1>
+              <p>Calculate expected attacks per round based on weapon speed, combat level, and character stats.</p>
+            </div>
+
+            <div class="calculator-grid">
+              <div class="input-section">
+                <h3 class="section-title">Input Parameters</h3>
+
+                <div class="input-group">
+                  <label for="weapon-select">Weapon</label>
+                  <select id="weapon-select">
+                    <option value="custom">-- Custom Speed --</option>
+                  </select>
+                  <div id="weapon-stats" class="weapon-stats" style="display: none;">
+                    <span>Damage: <span class="stat-value" id="weapon-damage">-</span></span>
+                    <span>Type: <span class="stat-value" id="weapon-type">-</span></span>
+                  </div>
+                </div>
+
+                <div class="input-group">
+                  <label for="weapon-speed">Weapon Speed (energy cost per swing)</label>
+                  <input type="number" id="weapon-speed" value="7500" min="100" max="100000" />
+                  <div class="hint">Lower = faster attacks. Current weapons: 4000-9500</div>
+                </div>
+
+                <div class="input-row">
+                  <div class="input-group">
+                    <label for="combat-level">Combat Level</label>
+                    <select id="combat-level">
+                      <option value="1">1 - Mage/Priest (0.6x)</option>
+                      <option value="2">2 - Warlock (0.75x)</option>
+                      <option value="3">3 - Druid (0.9x)</option>
+                      <option value="4">4 - Warrior (1.0x)</option>
+                      <option value="5">5 - Witchunter (1.15x)</option>
+                    </select>
+                  </div>
+
+                  <div class="input-group">
+                    <label for="character-level">Character Level</label>
+                    <input type="number" id="character-level" value="1" min="1" max="100" />
+                  </div>
+                </div>
+
+                <div class="input-row">
+                  <div class="input-group">
+                    <label for="intelligence">Intelligence</label>
+                    <input type="number" id="intelligence" value="50" min="1" max="200" />
+                    <div class="hint">+1% crit per 10 INT above 50</div>
+                  </div>
+
+                  <div class="input-group">
+                    <label for="dexterity">Dexterity</label>
+                    <input type="number" id="dexterity" value="50" min="1" max="200" />
+                    <div class="hint">+1% crit per 25 DEX above 50</div>
+                  </div>
+                </div>
+
+                <div class="input-row">
+                  <div class="input-group">
+                    <label for="encumbrance">Encumbrance %</label>
+                    <input type="number" id="encumbrance" value="50" min="0" max="100" />
+                    <div class="hint">≤32%: +20% crit, ≤65%: +10% crit</div>
+                  </div>
+
+                  <div class="input-group">
+                    <label for="class-crit-bonus">Class Crit Bonus %</label>
+                    <input type="number" id="class-crit-bonus" value="0" min="0" max="50" />
+                    <div class="hint">e.g., Ninja/Mystic: +10%</div>
+                  </div>
+                </div>
+
+                <div class="input-row">
+                  <div class="input-group">
+                    <label for="weapon-crit">Weapon Crit Bonus %</label>
+                    <input type="number" id="weapon-crit" value="0" min="0" max="50" />
+                    <div class="hint">From weapon crit_modifier</div>
+                  </div>
+
+                  <div class="input-group">
+                    <label for="max-attacks">Max Attacks/Round</label>
+                    <input type="number" id="max-attacks" value="6" min="1" max="20" />
+                  </div>
+                </div>
+
+                <h4 class="sub-section-title">Dodge (Defender)</h4>
+                <div class="input-row">
+                  <div class="input-group">
+                    <label for="class-dodge-bonus">Class Dodge Bonus %</label>
+                    <input type="number" id="class-dodge-bonus" value="0" min="0" max="50" />
+                    <div class="hint">e.g., Ninja/Mystic: 25%</div>
+                  </div>
+
+                  <div class="input-group">
+                    <label for="race-dodge-bonus">Race Dodge Bonus %</label>
+                    <input type="number" id="race-dodge-bonus" value="0" min="0" max="25" />
+                    <div class="hint">e.g., Halfling: 10%</div>
+                  </div>
+
+                  <div class="input-group">
+                    <label for="equip-dodge-bonus">Equipment Dodge Bonus %</label>
+                    <input type="number" id="equip-dodge-bonus" value="0" min="0" max="50" />
+                    <div class="hint">Total from gear</div>
+                  </div>
+                </div>
+
+                <div class="input-row">
+                  <div class="input-group">
+                    <label for="charisma">Charm/Charisma</label>
+                    <input type="number" id="charisma" value="50" min="1" max="200" />
+                    <div class="hint">+1% dodge per 10 CHA</div>
+                  </div>
+
+                  <div class="input-group">
+                    <label for="attacker-accuracy">Attacker Accuracy</label>
+                    <input type="number" id="attacker-accuracy" value="50" min="1" max="500" />
+                    <div class="hint">Reduces dodge effectiveness</div>
+                  </div>
+                </div>
+
+                <div class="input-group">
+                  <label for="base-energy">Base Energy</label>
+                  <input type="number" id="base-energy" value="20000" min="1000" max="100000" />
+                  <div class="hint">From game settings</div>
+                </div>
+              </div>
+
+              <div class="output-section">
+                <h3 class="section-title">Calculated Results</h3>
+
+                <div class="output-item">
+                  <span class="output-label">Combat Level Multiplier</span>
+                  <span class="output-value" id="out-combat-mult">0.6x</span>
+                </div>
+
+                <div class="output-item">
+                  <span class="output-label">Character Level Bonus</span>
+                  <span class="output-value" id="out-level-mult">1.0x</span>
+                </div>
+
+                <div class="output-item">
+                  <span class="output-label">Dexterity Bonus</span>
+                  <span class="output-value" id="out-dex-mult">1.0x</span>
+                </div>
+
+                <div class="output-item">
+                  <span class="output-label">Encumbrance Modifier</span>
+                  <span class="output-value" id="out-enc-mult">1.0x</span>
+                </div>
+
+                <div class="output-item">
+                  <span class="output-label">Effective Energy</span>
+                  <span class="output-value highlight" id="out-energy">12000</span>
+                </div>
+
+                <div class="output-item">
+                  <span class="output-label">Raw Swings (before cap)</span>
+                  <span class="output-value" id="out-raw-swings">1.6</span>
+                </div>
+
+                <div class="output-item">
+                  <span class="output-label">Actual Swings</span>
+                  <span class="output-value highlight" id="out-swings">1</span>
+                </div>
+
+                <div class="output-item">
+                  <span class="output-label">Excess Attacks</span>
+                  <span class="output-value" id="out-excess">0</span>
+                </div>
+
+                <div class="output-item">
+                  <span class="output-label">Stat-Based Crit (level + INT + DEX)</span>
+                  <span class="output-value" id="out-stat-crit">0%</span>
+                </div>
+
+                <div class="output-item">
+                  <span class="output-label">Encumbrance Crit Bonus</span>
+                  <span class="output-value" id="out-enc-crit">0%</span>
+                </div>
+
+                <div class="output-item">
+                  <span class="output-label">Pre-Cap Crit Total</span>
+                  <span class="output-value" id="out-precap-crit">0%</span>
+                </div>
+
+                <div class="output-item">
+                  <span class="output-label">Final Crit (after 40% soft cap)</span>
+                  <span class="output-value highlight" id="out-total-crit">0%</span>
+                </div>
+
+                <div class="output-item">
+                  <span class="output-label">Crit Damage Multiplier</span>
+                  <span class="output-value" id="out-crit-damage">2.0x - 4.0x</span>
+                </div>
+
+                <h4 class="sub-section-title">Dodge Results (Defender)</h4>
+
+                <div class="output-item">
+                  <span class="output-label">Base Dodge (class + race + equip)</span>
+                  <span class="output-value" id="out-base-dodge">0%</span>
+                </div>
+
+                <div class="output-item">
+                  <span class="output-label">Stat Dodge (DEX + CHA)</span>
+                  <span class="output-value" id="out-stat-dodge">0%</span>
+                </div>
+
+                <div class="output-item">
+                  <span class="output-label">Pre-Cap Dodge Total</span>
+                  <span class="output-value" id="out-precap-dodge">0%</span>
+                </div>
+
+                <div class="output-item">
+                  <span class="output-label">After Soft Cap (52%)</span>
+                  <span class="output-value" id="out-postcap-dodge">0%</span>
+                </div>
+
+                <div class="output-item">
+                  <span class="output-label">Effective Dodge (vs accuracy)</span>
+                  <span class="output-value highlight" id="out-effective-dodge">0%</span>
+                </div>
+
+                <div class="output-item">
+                  <span class="output-label">Carried Energy (to next round)</span>
+                  <span class="output-value" id="out-carried">0</span>
+                </div>
+
+                <div class="swing-breakdown">
+                  <h4>Swings by Character Level (Combat Level <span id="breakdown-combat-level">1</span>)</h4>
+                  <table class="breakdown-table">
+                    <thead>
+                      <tr>
+                        <th>Char Lvl</th>
+                        <th>Energy</th>
+                        <th>Swings</th>
+                        <th>Crit %</th>
+                      </tr>
+                    </thead>
+                    <tbody id="breakdown-tbody">
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+
+            <div class="formula-section">
+              <h3>Energy Formulas</h3>
+              <div class="formula">
+                <p><span class="var">effectiveEnergy</span> = <span class="var">baseEnergy</span> * <span class="var">combatMult</span> * <span class="var">levelMult</span> * <span class="var">dexMult</span> * <span class="var">encMult</span></p>
+                <p><span class="var">levelMult</span> = <span class="num">1</span> + (<span class="var">charLevel</span> - <span class="num">1</span>) * <span class="num">0.02</span></p>
+                <p><span class="var">dexMult</span> = <span class="num">1</span> + max(<span class="num">0</span>, (<span class="var">dex</span> - <span class="num">50</span>) / <span class="num">10</span>) * <span class="num">0.01</span></p>
+                <p><span class="var">encMult</span> = max(<span class="num">0.5</span>, <span class="num">1</span> + (<span class="num">0.5</span> - <span class="var">encRatio</span>) * <span class="num">0.5</span>)</p>
+                <p><span class="var">rawSwings</span> = <span class="var">effectiveEnergy</span> / <span class="var">weaponSpeed</span></p>
+                <p><span class="var">swings</span> = min(<span class="var">rawSwings</span>, <span class="var">maxAttacks</span>)</p>
+              </div>
+            </div>
+
+            <div class="formula-section">
+              <h3>Critical Hit Formulas (MajorMUD-style)</h3>
+              <div class="formula">
+                <p><span class="var">statCrit</span> = floor(<span class="var">level</span>/<span class="num">10</span>) + max(<span class="num">0</span>, floor((<span class="var">INT</span>-<span class="num">50</span>)/<span class="num">10</span>)) + max(<span class="num">0</span>, floor((<span class="var">DEX</span>-<span class="num">50</span>)/<span class="num">25</span>))</p>
+                <p><span class="var">encCrit</span> = <span class="num">20</span> if enc ≤ <span class="num">32%</span>, <span class="num">10</span> if enc ≤ <span class="num">65%</span>, else <span class="num">0</span></p>
+                <p><span class="var">preCap</span> = <span class="var">statCrit</span> + <span class="var">encCrit</span> + <span class="var">classBonus</span> + <span class="var">weaponCrit</span></p>
+                <p><span class="var">finalCrit</span> = if (<span class="var">preCap</span> > <span class="num">40</span>) then <span class="num">40</span> + floor((<span class="var">preCap</span> - <span class="num">40</span>) / <span class="num">3</span>) else <span class="var">preCap</span></p>
+                <p><span class="var">finalCrit</span> = max(<span class="num">0</span>, min(<span class="num">60</span>, <span class="var">finalCrit</span>))</p>
+                <p><span class="var">critDamage</span> = <span class="var">maxWeaponDamage</span> * random(<span class="num">2.0</span> to <span class="num">4.0</span>)</p>
+              </div>
+            </div>
+
+            <div class="formula-section">
+              <h3>Dodge Formulas (MajorMUD-style)</h3>
+              <div class="formula">
+                <p><span class="var">baseDodge</span> = <span class="var">classDodgeBonus</span> + <span class="var">raceDodgeBonus</span> + <span class="var">equipDodgeBonus</span></p>
+                <p><span class="var">statDodge</span> = floor(<span class="var">DEX</span>/<span class="num">10</span>) * <span class="num">2</span> + floor(<span class="var">CHA</span>/<span class="num">10</span>) * <span class="num">1</span></p>
+                <p><span class="var">preCap</span> = <span class="var">baseDodge</span> + <span class="var">statDodge</span></p>
+                <p><span class="var">postCap</span> = if (<span class="var">preCap</span> > <span class="num">52</span>) then <span class="num">52</span> + floor((<span class="var">preCap</span> - <span class="num">52</span>) / <span class="num">4</span>) else <span class="var">preCap</span></p>
+                <p><span class="var">effectiveDodge</span> = if (<span class="var">baseDodge</span> = <span class="num">0</span> or <span class="var">attackerAcc</span> ≤ <span class="num">8</span>) then <span class="num">0</span> else max(<span class="num">0</span>, min(<span class="num">90</span>, floor(<span class="var">postCap</span> * <span class="num">10</span> / <span class="var">attackerAcc</span>)))</p>
+              </div>
+            </div>
+          </div>
+        </main>
+      </div>
+    </div>
+    <script type="module" src="/src/swing-calculator.ts"></script>
+  </body>
+</html>

@@ -101,6 +101,7 @@
     "display_name": "Halfling",
     "description": "Small but incredibly nimble, halflings are naturally stealthy and hard to hit. They are weak but make excellent thieves.",
     "playable": true,
+    "dodge_bonus": 10,
     "base_stats": {
       "strength": { "min": 20, "max": 60 },
       "agility": { "min": 60, "max": 150 },
@@ -110,7 +111,6 @@
       "charisma": { "min": 40, "max": 100 }
     },
     "traits": [
-      { "id": "dodge_bonus", "value": 10 },
       { "id": "hp_per_level", "value": -1 },
       { "id": "stealth", "value": true }
     ],

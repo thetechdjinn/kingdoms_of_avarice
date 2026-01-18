@@ -17,6 +17,7 @@ import {
   UNARMED_ATTACK_VERBS,
 } from '@koa/shared';
 import * as itemRepo from '../db/repositories/itemRepository.js';
+import { getCombatSettings } from '../db/repositories/settingsRepository.js';
 
 /**
  * Weapon stats used in combat calculations
@@ -48,15 +49,21 @@ export interface EquipmentCombatStats {
   totalWeight: number;
 }
 
-// Default weapon stats when unarmed
-const DEFAULT_WEAPON: WeaponStats = {
-  damageDice: '1d4',        // Unarmed damage
-  attackSpeed: 8,           // Fists are fast
-  critModifier: 0,          // No bonus crit from fists
-  damageType: 'bludgeoning',
-  weaponName: 'fists',
-  attackVerbs: UNARMED_ATTACK_VERBS,
-};
+// Default weapon stats when unarmed (fallback values)
+// Actual unarmed_speed and default_weapon_speed loaded from game_settings
+const DEFAULT_UNARMED_SPEED = 4500;
+const DEFAULT_WEAPON_SPEED = 7500;
+
+function getDefaultWeaponStats(unarmedSpeed: number = DEFAULT_UNARMED_SPEED): WeaponStats {
+  return {
+    damageDice: '1d4',        // Unarmed damage
+    attackSpeed: unarmedSpeed, // Fists are fast (lower = faster)
+    critModifier: 0,          // No bonus crit from fists
+    damageType: 'bludgeoning',
+    weaponName: 'fists',
+    attackVerbs: UNARMED_ATTACK_VERBS,
+  };
+}
 
 // Default armor stats when unarmored
 const DEFAULT_ARMOR: ArmorStats = {
@@ -66,10 +73,18 @@ const DEFAULT_ARMOR: ArmorStats = {
 
 /**
  * Get weapon stats from an equipped main hand item
+ *
+ * @param weapon - The equipped weapon item (or undefined if unarmed)
+ * @param unarmedSpeed - Speed for unarmed combat (from settings)
+ * @param defaultSpeed - Default speed for weapons without attack_speed (from settings)
  */
-function getWeaponStats(weapon: ItemInstance | undefined): WeaponStats {
+function getWeaponStats(
+  weapon: ItemInstance | undefined,
+  unarmedSpeed: number = DEFAULT_UNARMED_SPEED,
+  defaultSpeed: number = DEFAULT_WEAPON_SPEED
+): WeaponStats {
   if (!weapon?.template?.weapon_data) {
-    return DEFAULT_WEAPON;
+    return getDefaultWeaponStats(unarmedSpeed);
   }
 
   const weaponData = weapon.template.weapon_data as WeaponData;
@@ -82,7 +97,7 @@ function getWeaponStats(weapon: ItemInstance | undefined): WeaponStats {
 
   return {
     damageDice: weaponData.damage_dice || '1d4',
-    attackSpeed: weaponData.attack_speed ?? 10,
+    attackSpeed: weaponData.attack_speed ?? defaultSpeed,
     critModifier: weaponData.crit_modifier ?? 0,
     damageType,
     weaponName: weapon.template.name,
@@ -173,10 +188,11 @@ function calculateTotalWeight(inventory: ItemInstance[], equipped: ItemInstance[
  * @returns Equipment combat stats including weapon, armor, and modifiers
  */
 export async function getEquipmentCombatStats(playerId: number): Promise<EquipmentCombatStats> {
-  // Fetch equipped items and inventory in parallel
-  const [equipped, inventory] = await Promise.all([
+  // Fetch equipped items, inventory, and combat settings in parallel
+  const [equipped, inventory, combatSettings] = await Promise.all([
     itemRepo.getPlayerEquipped(playerId),
     itemRepo.getPlayerInventory(playerId),
+    getCombatSettings(),
   ]);
 
   // Find main hand weapon
@@ -185,7 +201,11 @@ export async function getEquipmentCombatStats(playerId: number): Promise<Equipme
   );
 
   return {
-    weapon: getWeaponStats(mainHandWeapon),
+    weapon: getWeaponStats(
+      mainHandWeapon,
+      combatSettings.unarmed_speed,
+      combatSettings.default_weapon_speed
+    ),
     armor: calculateArmorStats(equipped),
     statModifiers: calculateStatModifiers(equipped),
     totalWeight: calculateTotalWeight(inventory, equipped),

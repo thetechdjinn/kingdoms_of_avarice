@@ -129,6 +129,8 @@
     "magic_level": 0,
     "stealth": true,
     "thievery": false,
+    "crit_bonus": 10,
+    "dodge_bonus": 25,
     "special_abilities": ["dodge", "enhanced_crits", "traps", "lockpicking", "tracking"],
     "playable": true
   },
@@ -205,6 +207,8 @@
     "magic_school": "kai",
     "stealth": true,
     "thievery": false,
+    "crit_bonus": 10,
+    "dodge_bonus": 25,
     "special_abilities": ["martial_arts", "dodge", "enhanced_crits"],
     "playable": true
   },

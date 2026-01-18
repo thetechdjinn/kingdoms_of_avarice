@@ -13,13 +13,35 @@ let spells: Spell[] = [];
 let selectedSpellId: number | null = null;
 let currentUser: AuthInfo | null = null;
 
+// Toast notification system
+type ToastType = 'success' | 'error' | 'warning' | 'info';
+
+function showToast(message: string, type: ToastType = 'info', duration: number = 3000): void {
+  let container = document.getElementById('toast-container');
+  if (!container) {
+    container = document.createElement('div');
+    container.id = 'toast-container';
+    document.body.appendChild(container);
+  }
+
+  const toast = document.createElement('div');
+  toast.className = `toast ${type}`;
+  toast.textContent = message;
+  container.appendChild(toast);
+
+  setTimeout(() => {
+    toast.classList.add('toast-out');
+    setTimeout(() => toast.remove(), 300);
+  }, duration);
+}
+
 // Helper to show error messages
 function showError(message: string): void {
   const list = document.getElementById('spell-list');
   if (list) {
     list.innerHTML = `<div class="error-message" style="color: #ff6b6b; padding: 1rem;">${escapeHtml(message)}</div>`;
   } else {
-    alert(message);
+    showToast(message, 'error');
   }
 }
 
@@ -60,11 +82,11 @@ async function checkAuth(): Promise<boolean> {
       usernameEl.textContent = data.username;
     }
 
-    // Show Admin link if user is admin
+    // Show Admin dropdown if user is admin
     const isAdmin = roles.includes('admin');
-    const adminLink = document.getElementById('nav-admin-link');
-    if (adminLink) {
-      adminLink.style.display = isAdmin ? 'block' : 'none';
+    const adminDropdown = document.getElementById('nav-admin-dropdown');
+    if (adminDropdown) {
+      adminDropdown.style.display = isAdmin ? 'flex' : 'none';
     }
 
     return true;
@@ -376,7 +398,7 @@ async function createSpell(): Promise<void> {
 
   const mnemonic = prompt('Enter mnemonic (short command, 2-10 chars):');
   if (!mnemonic || mnemonic.length < 2 || mnemonic.length > 10) {
-    alert('Mnemonic must be 2-10 characters');
+    showToast('Mnemonic must be 2-10 characters', 'warning');
     return;
   }
 
@@ -397,7 +419,7 @@ async function createSpell(): Promise<void> {
 
     if (!response.ok) {
       const data = await response.json();
-      alert(`Failed to create spell: ${data.message || 'HTTP ' + response.status}`);
+      showToast(`Failed to create spell: ${data.message || 'HTTP ' + response.status}`, 'error');
       return;
     }
     const data = await response.json();
@@ -405,11 +427,11 @@ async function createSpell(): Promise<void> {
       spells.push(data.spell);
       selectSpell(data.spell.id);
     } else {
-      alert('Failed to create spell: ' + data.message);
+      showToast('Failed to create spell: ' + data.message, 'error');
     }
   } catch (error) {
     console.error('Failed to create spell:', error);
-    alert('Failed to create spell');
+    showToast('Failed to create spell', 'error');
   }
 }
 
@@ -432,13 +454,13 @@ async function saveSpell(): Promise<void> {
         spells[index] = data.spell;
       }
       selectSpell(selectedSpellId);
-      alert('Spell saved successfully!');
+      showToast('Spell saved successfully!', 'success');
     } else {
-      alert('Failed to save spell: ' + data.message);
+      showToast('Failed to save spell: ' + data.message, 'error');
     }
   } catch (error) {
     console.error('Failed to save spell:', error);
-    alert('Failed to save spell');
+    showToast('Failed to save spell', 'error');
   }
 }
 
@@ -462,11 +484,11 @@ async function deleteSpell(): Promise<void> {
       document.getElementById('preview-content')!.innerHTML = '<p class="hint">Select a spell to see preview</p>';
       renderSpellList();
     } else {
-      alert('Failed to delete spell: ' + data.message);
+      showToast('Failed to delete spell: ' + data.message, 'error');
     }
   } catch (error) {
     console.error('Failed to delete spell:', error);
-    alert('Failed to delete spell');
+    showToast('Failed to delete spell', 'error');
   }
 }
 
@@ -481,7 +503,7 @@ async function duplicateSpell(): Promise<void> {
 
   const newMnemonic = prompt('Enter mnemonic for duplicate:', spell.mnemonic + '2');
   if (!newMnemonic || newMnemonic.length < 2 || newMnemonic.length > 10) {
-    alert('Mnemonic must be 2-10 characters');
+    showToast('Mnemonic must be 2-10 characters', 'warning');
     return;
   }
 
@@ -499,11 +521,11 @@ async function duplicateSpell(): Promise<void> {
       spells.push(data.spell);
       selectSpell(data.spell.id);
     } else {
-      alert('Failed to duplicate spell: ' + data.message);
+      showToast('Failed to duplicate spell: ' + data.message, 'error');
     }
   } catch (error) {
     console.error('Failed to duplicate spell:', error);
-    alert('Failed to duplicate spell');
+    showToast('Failed to duplicate spell', 'error');
   }
 }
 
@@ -558,7 +580,7 @@ async function exportSpells(): Promise<void> {
     URL.revokeObjectURL(url);
   } catch (error) {
     console.error('Failed to export spells:', error);
-    alert('Failed to export spells');
+    showToast('Failed to export spells', 'error');
   }
 }
 
@@ -575,7 +597,7 @@ async function doImport(): Promise<void> {
   const merge = (document.getElementById('import-merge') as HTMLInputElement).checked;
 
   if (!fileInput.files || fileInput.files.length === 0) {
-    alert('Please select a file');
+    showToast('Please select a file', 'warning');
     return;
   }
 
@@ -595,18 +617,18 @@ async function doImport(): Promise<void> {
 
     const result = await response.json();
     if (result.success) {
-      alert(`Import complete!\nCreated: ${result.results.created}\nUpdated: ${result.results.updated}\nErrors: ${result.results.errors.length}`);
+      showToast(`Import complete! Created: ${result.results.created}, Updated: ${result.results.updated}, Errors: ${result.results.errors.length}`, 'success', 4000);
       hideImportModal();
       await fetchSpells();
     } else {
-      alert('Import failed: ' + result.message);
+      showToast('Import failed: ' + result.message, 'error');
     }
   } catch (error) {
     console.error('Failed to import:', error);
     const errorMessage = error instanceof SyntaxError
       ? 'Failed to import: Invalid JSON file format'
       : 'Failed to import: ' + (error instanceof Error ? error.message : 'Unknown error');
-    alert(errorMessage);
+    showToast(errorMessage, 'error');
   }
 }
 

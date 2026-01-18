@@ -25,6 +25,31 @@ let areas: string[] = [];
 let currentUser: AuthInfo | null = null;
 let mapViewMode: 'room' | 'area' = 'room';
 
+// ============================================================================
+// Toast Notifications
+// ============================================================================
+
+type ToastType = 'success' | 'error' | 'warning' | 'info';
+
+function showToast(message: string, type: ToastType = 'info', duration: number = 3000): void {
+  let container = document.getElementById('toast-container');
+  if (!container) {
+    container = document.createElement('div');
+    container.id = 'toast-container';
+    document.body.appendChild(container);
+  }
+
+  const toast = document.createElement('div');
+  toast.className = `toast ${type}`;
+  toast.textContent = message;
+  container.appendChild(toast);
+
+  setTimeout(() => {
+    toast.classList.add('toast-out');
+    setTimeout(() => toast.remove(), 300);
+  }, duration);
+}
+
 async function checkAuth(): Promise<boolean> {
   try {
     const response = await fetch('/api/auth/me');
@@ -53,11 +78,11 @@ async function checkAuth(): Promise<boolean> {
       usernameEl.textContent = data.username;
     }
 
-    // Show Admin link if user is admin
+    // Show Admin dropdown if user is admin
     const isAdmin = roles.includes(ROLE_ADMIN);
-    const adminLink = document.getElementById('nav-admin-link');
-    if (adminLink) {
-      adminLink.style.display = isAdmin ? 'block' : 'none';
+    const adminDropdown = document.getElementById('nav-admin-dropdown');
+    if (adminDropdown) {
+      adminDropdown.style.display = isAdmin ? 'flex' : 'none';
     }
 
     return true;
@@ -247,12 +272,13 @@ async function createRoom(): Promise<void> {
       rooms.push(data.room);
       selectRoom(data.room.id);
       await fetchAreas();
+      showToast('Room created successfully!', 'success');
     } else {
-      alert('Failed to create room: ' + data.message);
+      showToast('Failed to create room: ' + data.message, 'error');
     }
   } catch (error) {
     console.error('Failed to create room:', error);
-    alert('Failed to create room');
+    showToast('Failed to create room', 'error');
   }
 }
 
@@ -283,12 +309,13 @@ async function saveRoom(): Promise<void> {
       
       renderRoomList();
       await fetchAreas();
+      showToast('Room saved successfully!', 'success');
     } else {
-      alert('Failed to save room: ' + data.message);
+      showToast('Failed to save room: ' + data.message, 'error');
     }
   } catch (error) {
     console.error('Failed to save room:', error);
-    alert('Failed to save room');
+    showToast('Failed to save room', 'error');
   }
 }
 
@@ -311,12 +338,13 @@ async function deleteRoom(): Promise<void> {
       document.getElementById('room-form')!.style.display = 'none';
       renderRoomList();
       await fetchAreas();
+      showToast('Room deleted successfully!', 'success');
     } else {
-      alert('Failed to delete room: ' + data.message);
+      showToast('Failed to delete room: ' + data.message, 'error');
     }
   } catch (error) {
     console.error('Failed to delete room:', error);
-    alert('Failed to delete room');
+    showToast('Failed to delete room', 'error');
   }
 }
 
@@ -328,7 +356,7 @@ async function addExit(): Promise<void> {
   const bidirectional = (document.getElementById('exit-bidirectional') as HTMLInputElement).checked;
 
   if (!direction || isNaN(toRoomId)) {
-    alert('Please select a direction and target room');
+    showToast('Please select a direction and target room', 'warning');
     return;
   }
 
@@ -356,12 +384,13 @@ async function addExit(): Promise<void> {
       // Reset form
       (document.getElementById('exit-direction') as HTMLSelectElement).value = '';
       (document.getElementById('exit-target') as HTMLSelectElement).value = '';
+      showToast('Exit added successfully!', 'success');
     } else {
-      alert('Failed to add exit: ' + data.message);
+      showToast('Failed to add exit: ' + data.message, 'error');
     }
   } catch (error) {
     console.error('Failed to add exit:', error);
-    alert('Failed to add exit');
+    showToast('Failed to add exit', 'error');
   }
 }
 
@@ -379,12 +408,13 @@ async function deleteExit(roomId: number, direction: string): Promise<void> {
       if (selectedRoomId) {
         selectRoom(selectedRoomId);
       }
+      showToast('Exit deleted successfully!', 'success');
     } else {
-      alert('Failed to delete exit: ' + data.message);
+      showToast('Failed to delete exit: ' + data.message, 'error');
     }
   } catch (error) {
     console.error('Failed to delete exit:', error);
-    alert('Failed to delete exit');
+    showToast('Failed to delete exit', 'error');
   }
 }
 
@@ -875,7 +905,7 @@ async function renameArea(oldName: string): Promise<void> {
 
     const data = await response.json();
     if (data.success) {
-      alert(data.message);
+      showToast(data.message, 'success');
       await fetchRooms();
       await fetchAreas();
       renderAreaList();
@@ -883,11 +913,11 @@ async function renameArea(oldName: string): Promise<void> {
         selectRoom(selectedRoomId);
       }
     } else {
-      alert('Failed to rename area: ' + data.message);
+      showToast('Failed to rename area: ' + data.message, 'error');
     }
   } catch (error) {
     console.error('Failed to rename area:', error);
-    alert('Failed to rename area');
+    showToast('Failed to rename area', 'error');
   }
 }
 

@@ -8,6 +8,36 @@ export interface GameSettings {
 }
 
 /**
+ * Combat-related settings stored in the database
+ * These can be tweaked without code changes for balance tuning
+ */
+export interface CombatSettings {
+  base_energy: number;
+  default_weapon_speed: number;
+  max_attacks_per_round: number;
+  round_interval_ms: number;
+  unarmed_speed: number;
+  level_multipliers: Record<string, number>;
+  level_accuracy_bonus: Record<string, number>;
+}
+
+// Default combat settings (used as fallbacks if DB values missing)
+const DEFAULT_COMBAT_SETTINGS: CombatSettings = {
+  base_energy: 20000,
+  default_weapon_speed: 7500,
+  max_attacks_per_round: 6,
+  round_interval_ms: 4000,
+  unarmed_speed: 4500,
+  level_multipliers: { '1': 0.6, '2': 0.75, '3': 0.9, '4': 1.0, '5': 1.15 },
+  level_accuracy_bonus: { '1': 0, '2': 10, '3': 20, '4': 35, '5': 50 },
+};
+
+// Cache for combat settings (refreshed periodically)
+let combatSettingsCache: CombatSettings | null = null;
+let combatSettingsCacheTime: number = 0;
+const COMBAT_SETTINGS_CACHE_TTL = 60000; // 1 minute cache
+
+/**
  * Parse a JSONB value, handling both pre-parsed objects and JSON strings
  */
 function parseJsonbValue<T>(value: unknown): T {
@@ -33,6 +63,17 @@ function isValidCharacterLimit(value: unknown): value is number {
  */
 function isValidIpAccessMode(value: unknown): value is IpAccessMode {
   return value === 'allowlist' || value === 'blocklist';
+}
+
+/**
+ * Validate that a value is a valid Record<string, number>
+ */
+function isValidRecordStringNumber(value: unknown): value is Record<string, number> {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) return false;
+  for (const key in value) {
+    if (typeof key !== 'string' || typeof (value as Record<string, unknown>)[key] !== 'number') return false;
+  }
+  return true;
 }
 
 /**
@@ -112,4 +153,128 @@ export async function getIpAccessMode(): Promise<IpAccessMode> {
     return value;
   }
   return 'blocklist';
+}
+
+// ============================================================================
+// COMBAT SETTINGS
+// ============================================================================
+
+/**
+ * Get all combat settings with caching
+ * Settings are cached for 1 minute to avoid DB hits on every combat round
+ */
+export async function getCombatSettings(): Promise<CombatSettings> {
+  const now = Date.now();
+
+  // Return cached settings if still valid
+  if (combatSettingsCache && (now - combatSettingsCacheTime) < COMBAT_SETTINGS_CACHE_TTL) {
+    return combatSettingsCache;
+  }
+
+  // Fetch all combat settings from DB in parallel
+  const [
+    baseEnergy,
+    defaultSpeed,
+    maxAttacks,
+    roundInterval,
+    unarmedSpeed,
+    levelMults,
+    levelAccuracy,
+  ] = await Promise.all([
+    getSetting<number>('combat_base_energy'),
+    getSetting<number>('combat_default_weapon_speed'),
+    getSetting<number>('combat_max_attacks_per_round'),
+    getSetting<number>('combat_round_interval_ms'),
+    getSetting<number>('combat_unarmed_speed'),
+    getSetting<Record<string, number>>('combat_level_multipliers'),
+    getSetting<Record<string, number>>('combat_level_accuracy_bonus'),
+  ]);
+
+  const settings: CombatSettings = { ...DEFAULT_COMBAT_SETTINGS };
+
+  if (typeof baseEnergy === 'number' && baseEnergy > 0) {
+    settings.base_energy = baseEnergy;
+  }
+  if (typeof defaultSpeed === 'number' && defaultSpeed > 0) {
+    settings.default_weapon_speed = defaultSpeed;
+  }
+  if (typeof maxAttacks === 'number' && maxAttacks > 0) {
+    settings.max_attacks_per_round = maxAttacks;
+  }
+  if (typeof roundInterval === 'number' && roundInterval > 0) {
+    settings.round_interval_ms = roundInterval;
+  }
+  if (typeof unarmedSpeed === 'number' && unarmedSpeed > 0) {
+    settings.unarmed_speed = unarmedSpeed;
+  }
+  if (isValidRecordStringNumber(levelMults)) {
+    settings.level_multipliers = levelMults;
+  }
+  if (isValidRecordStringNumber(levelAccuracy)) {
+    settings.level_accuracy_bonus = levelAccuracy;
+  }
+
+  // Update cache
+  combatSettingsCache = settings;
+  combatSettingsCacheTime = now;
+
+  return settings;
+}
+
+/**
+ * Clear the combat settings cache (call after updating settings)
+ */
+export function clearCombatSettingsCache(): void {
+  combatSettingsCache = null;
+  combatSettingsCacheTime = 0;
+}
+
+/**
+ * Get the combat level energy multiplier for a given combat level
+ */
+export async function getCombatLevelMultiplier(combatLevel: number): Promise<number> {
+  const settings = await getCombatSettings();
+  return settings.level_multipliers[String(combatLevel)] ?? 1.0;
+}
+
+/**
+ * Get the combat level accuracy bonus for a given combat level
+ */
+export async function getCombatLevelAccuracyBonus(combatLevel: number): Promise<number> {
+  const settings = await getCombatSettings();
+  return settings.level_accuracy_bonus[String(combatLevel)] ?? 0;
+}
+
+/**
+ * Update a single combat setting
+ */
+export async function setCombatSetting(
+  key: keyof CombatSettings,
+  value: number | Record<string, number>
+): Promise<void> {
+  const dbKey = `combat_${key.replace(/([A-Z])/g, '_$1').toLowerCase()}`;
+  await setSetting(dbKey, value);
+  clearCombatSettingsCache();
+}
+
+/**
+ * Get all settings as a raw key-value object (for admin editor)
+ * Returns all settings from the database with their actual values
+ */
+export async function getAllSettingsRaw(): Promise<Record<string, unknown>> {
+  const result = await query<{ key: string; value: unknown }>('SELECT key, value FROM game_settings');
+
+  const settings: Record<string, unknown> = {};
+
+  for (const row of result.rows) {
+    try {
+      settings[row.key] = parseJsonbValue(row.value);
+    } catch (err) {
+      console.error(`Failed to parse setting "${row.key}":`, err);
+      // Store raw value if parsing fails
+      settings[row.key] = row.value;
+    }
+  }
+
+  return settings;
 }

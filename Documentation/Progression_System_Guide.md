@@ -69,7 +69,7 @@ All progression commands require Developer or Admin role.
 | `@editclass <id> <field> <value>`       | Edit a class field |
 | `@deleteclass <id>`                     | Delete a class     |
 
-**Editable fields**: `name`, `desc`, `multiplier`, `tags`
+**Editable fields**: `name`, `desc`, `multiplier`, `tags`, `crit_bonus`, `dodge_bonus`
 
 Example:
 
@@ -77,7 +77,13 @@ Example:
 @createclass monk_01 Monk 1.5
 @editclass monk_01 tags melee,holy,protection
 @editclass monk_01 desc A martial artist channeling inner power.
+@editclass monk_01 crit_bonus 10
+@editclass monk_01 dodge_bonus 25
 ```
+
+**Combat bonuses:**
+- `crit_bonus`: Flat % bonus to critical hit chance (e.g., Ninja/Mystic: +10%)
+- `dodge_bonus`: Enables dodge ability with base % (e.g., Ninja/Mystic: +25%)
 
 #### Race Commands
 
@@ -89,7 +95,7 @@ Example:
 | `@editrace <id> <field> <value>` | Edit a race field |
 | `@deleterace <id>`               | Delete a race     |
 
-**Editable fields**: `name`, `desc`, `playable`, `stats`, `traits`
+**Editable fields**: `name`, `desc`, `playable`, `stats`, `traits`, `dodge_bonus`
 
 Example:
 
@@ -97,7 +103,11 @@ Example:
 @createrace orc_01 Orc
 @editrace orc_01 stats {"strength": 2, "constitution": 1, "intelligence": -2}
 @editrace orc_01 traits darkvision,intimidating
+@editrace orc_01 dodge_bonus 10
 ```
+
+**Combat bonuses:**
+- `dodge_bonus`: Racial dodge bonus % (e.g., Halfling: +10%)
 
 #### Ability Commands
 
@@ -308,9 +318,27 @@ All endpoints require Developer role authentication.
 
 The system includes sample JSON data files in `packages/server/src/game/data/`:
 
-- `classes.json` - 6 classes (Warrior, Mage, Rogue, Cleric, Ranger, Paladin)
+- `classes.json` - 15 classes with combat levels, magic schools, and bonuses
+- `races.json` - 14 races with stat ranges, traits, and combat bonuses
 - `progression_table.json` - Level 1-10 requirements
 - `essence_events.json` - Combat, exploration, and social events
 - `talents.json` - Sample talents for each class
 
 This data is loaded on server startup for testing.
+
+### Classes with Combat Bonuses
+
+| Class    | Crit Bonus | Dodge Bonus | Notes                    |
+|----------|------------|-------------|--------------------------|
+| Ninja    | +10%       | +25%        | High crit and dodge      |
+| Mystic   | +10%       | +25%        | High crit and dodge      |
+| Others   | +0%        | +0%         | Standard combat          |
+
+### Races with Dodge Bonus
+
+| Race     | Dodge Bonus | Notes                         |
+|----------|-------------|-------------------------------|
+| Halfling | +10%        | Natural evasiveness           |
+| Others   | +0%         | No racial dodge bonus         |
+
+For full details on dodge and crit mechanics, see [Combat Energy System](Combat_Energy_System.md).

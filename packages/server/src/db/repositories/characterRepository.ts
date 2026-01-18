@@ -249,3 +249,88 @@ export async function toSharedCharacterWithDisplayNames(dbChar: DbCharacter): Pr
     gold: dbChar.gold,
   };
 }
+
+// ============================================================================
+// Admin Functions
+// ============================================================================
+
+export interface UpdateCharacterAdminInput {
+  name?: string;
+  race?: string;
+  class?: string;
+  level?: number;
+  experience?: number;
+  health?: number;
+  max_health?: number;
+  mana?: number;
+  max_mana?: number;
+  strength?: number;
+  intelligence?: number;
+  dexterity?: number;
+  constitution?: number;
+  wisdom?: number;
+  charisma?: number;
+  current_room_id?: number;
+  gold?: number;
+  // Character Points (CP) system
+  unspent_cp?: number;
+  cp_spent?: Record<string, number>;
+}
+
+/**
+ * Update character fields (admin only)
+ * Allows updating any field including name, race, class
+ */
+export async function updateCharacterAdmin(
+  characterId: number,
+  updates: UpdateCharacterAdminInput
+): Promise<DbCharacter | null> {
+  const setClauses: string[] = [];
+  const values: unknown[] = [];
+  let paramIndex = 1;
+
+  const fieldMap: Record<keyof UpdateCharacterAdminInput, string> = {
+    name: 'name',
+    race: 'race',
+    class: 'class',
+    level: 'level',
+    experience: 'experience',
+    health: 'health',
+    max_health: 'max_health',
+    mana: 'mana',
+    max_mana: 'max_mana',
+    strength: 'strength',
+    intelligence: 'intelligence',
+    dexterity: 'dexterity',
+    constitution: 'constitution',
+    wisdom: 'wisdom',
+    charisma: 'charisma',
+    current_room_id: 'current_room_id',
+    gold: 'gold',
+    unspent_cp: 'unspent_cp',
+    cp_spent: 'cp_spent',
+  };
+
+  for (const [key, dbField] of Object.entries(fieldMap)) {
+    const value = updates[key as keyof UpdateCharacterAdminInput];
+    if (value !== undefined) {
+      setClauses.push(`${dbField} = $${paramIndex}`);
+      values.push(value);
+      paramIndex++;
+    }
+  }
+
+  if (setClauses.length === 0) {
+    // No updates requested, return the current character
+    const result = await query<DbCharacter>('SELECT * FROM characters WHERE id = $1', [characterId]);
+    return result.rows[0] || null;
+  }
+
+  values.push(characterId);
+  const result = await query<DbCharacter>(
+    `UPDATE characters SET ${setClauses.join(', ')} WHERE id = $${paramIndex} RETURNING *`,
+    values
+  );
+
+  return result.rows[0] || null;
+}

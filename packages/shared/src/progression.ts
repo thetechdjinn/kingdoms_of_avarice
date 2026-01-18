@@ -45,6 +45,8 @@ export interface ClassDefinition {
   magic_school?: string; // mage, priest, druid, bardic, kai
   stealth?: boolean; // Can use stealth abilities
   thievery?: boolean; // Can use thief skills (picklocks, traps)
+  crit_bonus?: number; // Flat crit chance bonus (e.g., 10 for Ninja/Mystic)
+  dodge_bonus?: number; // Flat dodge chance bonus (e.g., 25 for Ninja/Mystic)
   special_abilities?: string[]; // Class-specific abilities
 }
 
@@ -190,6 +192,7 @@ export interface RaceDefinition {
   traits?: RacialTrait[] | string[];
   allowed_classes?: string[];
   playable?: boolean;
+  dodge_bonus?: number; // Racial dodge bonus (e.g., 10 for Halfling)
 }
 
 // ============================================================================

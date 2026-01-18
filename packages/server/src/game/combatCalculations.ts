@@ -6,12 +6,18 @@
  * - Number of attacks (swings) per round
  * - Hit/miss determination
  * - Damage calculation
+ *
+ * NOTE: Combat settings are loaded from the database (game_settings table).
+ * Functions accept an optional config parameter; if not provided, they use
+ * fallback defaults from @koa/shared.
  */
 
 import {
   EnergyFactors,
   AccuracyFactors,
   DefenseFactors,
+  CriticalHitFactors,
+  DodgeFactors,
   AttackResult,
   SwingResult,
   COMBAT_LEVEL_ENERGY_MULTIPLIER,
@@ -19,19 +25,71 @@ import {
   ENCUMBRANCE_BASELINE,
   DEFAULT_WEAPON_SPEED,
   DEFAULT_COMBAT_CONFIG,
+  ENCUMBRANCE_CRIT_THRESHOLDS,
+  CRIT_SOFT_CAP,
+  CRIT_DAMAGE_MULTIPLIER,
+  DODGE_SOFT_CAP,
+  DODGE_STAT_CONTRIBUTION,
+  DODGE_MIN_ATTACKER_ACCURACY,
 } from '@koa/shared';
+import { CombatSettings } from '../db/repositories/settingsRepository.js';
+
+/**
+ * Runtime combat configuration (loaded from database)
+ */
+export interface RuntimeCombatConfig {
+  baseEnergy: number;
+  maxAttacksPerRound: number;
+  defaultWeaponSpeed: number;
+  levelMultipliers: Record<string, number>;
+  levelAccuracyBonus: Record<string, number>;
+}
+
+/**
+ * Convert CombatSettings from DB to RuntimeCombatConfig
+ */
+export function toRuntimeConfig(settings: CombatSettings): RuntimeCombatConfig {
+  return {
+    baseEnergy: settings.base_energy,
+    maxAttacksPerRound: settings.max_attacks_per_round,
+    defaultWeaponSpeed: settings.default_weapon_speed,
+    levelMultipliers: settings.level_multipliers,
+    levelAccuracyBonus: settings.level_accuracy_bonus,
+  };
+}
+
+/**
+ * Default runtime config (fallback when DB not available)
+ */
+export const DEFAULT_RUNTIME_CONFIG: RuntimeCombatConfig = {
+  baseEnergy: DEFAULT_COMBAT_CONFIG.baseEnergyPerRound,
+  maxAttacksPerRound: DEFAULT_COMBAT_CONFIG.maxAttacksPerRound,
+  defaultWeaponSpeed: DEFAULT_WEAPON_SPEED,
+  levelMultipliers: Object.fromEntries(
+    Object.entries(COMBAT_LEVEL_ENERGY_MULTIPLIER).map(([k, v]) => [k, v])
+  ),
+  levelAccuracyBonus: Object.fromEntries(
+    Object.entries(COMBAT_LEVEL_ACCURACY_BONUS).map(([k, v]) => [k, v])
+  ),
+};
 
 /**
  * Calculate energy available per combat round
  *
  * Energy determines how many attacks a character can make.
  * Factors: combat level (most significant), character level, dexterity, encumbrance
+ *
+ * @param factors - Character stats affecting energy
+ * @param config - Optional runtime config (uses defaults if not provided)
  */
-export function calculateRoundEnergy(factors: EnergyFactors): number {
-  const baseEnergy = DEFAULT_COMBAT_CONFIG.baseEnergyPerRound;
+export function calculateRoundEnergy(
+  factors: EnergyFactors,
+  config: RuntimeCombatConfig = DEFAULT_RUNTIME_CONFIG
+): number {
+  const baseEnergy = config.baseEnergy;
 
   // Combat level multiplier (most significant factor)
-  const combatMultiplier = COMBAT_LEVEL_ENERGY_MULTIPLIER[factors.combatLevel] ?? 1.0;
+  const combatMultiplier = config.levelMultipliers[String(factors.combatLevel)] ?? 1.0;
 
   // Character level bonus (2% per level)
   const levelMultiplier = 1 + (factors.characterLevel - 1) * 0.02;
@@ -61,14 +119,16 @@ export function calculateRoundEnergy(factors: EnergyFactors): number {
  *
  * @param availableEnergy - Total energy available (round energy + carried energy)
  * @param weaponSpeed - Energy cost per swing (lower = faster)
+ * @param config - Optional runtime config (uses defaults if not provided)
  * @returns Object with swings count and remaining energy
  */
 export function calculateSwings(
   availableEnergy: number,
-  weaponSpeed: number = DEFAULT_WEAPON_SPEED
+  weaponSpeed?: number,
+  config: RuntimeCombatConfig = DEFAULT_RUNTIME_CONFIG
 ): { swings: number; remainingEnergy: number; bonusCritChance: number } {
-  const speed = Math.max(1, weaponSpeed); // Prevent division by zero
-  const maxAttacks = DEFAULT_COMBAT_CONFIG.maxAttacksPerRound;
+  const speed = Math.max(1, weaponSpeed ?? config.defaultWeaponSpeed); // Prevent division by zero
+  const maxAttacks = config.maxAttacksPerRound;
 
   // Calculate raw number of swings
   let swings = Math.floor(availableEnergy / speed);
@@ -89,10 +149,16 @@ export function calculateSwings(
  * Calculate total accuracy rating
  *
  * Accuracy is compared against defense to determine hit chance.
+ *
+ * @param factors - Character stats affecting accuracy
+ * @param config - Optional runtime config (uses defaults if not provided)
  */
-export function calculateAccuracy(factors: AccuracyFactors): number {
+export function calculateAccuracy(
+  factors: AccuracyFactors,
+  config: RuntimeCombatConfig = DEFAULT_RUNTIME_CONFIG
+): number {
   // Base from combat level
-  const combatBonus = COMBAT_LEVEL_ACCURACY_BONUS[factors.combatLevel] ?? 0;
+  const combatBonus = config.levelAccuracyBonus[String(factors.combatLevel)] ?? 0;
 
   // Character level contribution (2 per level)
   const levelBonus = factors.characterLevel * 2;
@@ -151,6 +217,145 @@ export function calculateDefense(factors: DefenseFactors): number {
 }
 
 /**
+ * Calculate encumbrance-based crit bonus (MajorMUD-style)
+ *
+ * Light armor users get significant crit bonuses as a trade-off for less protection.
+ *
+ * @param encumbranceRatio - Current encumbrance as ratio (0.0-1.0)
+ * @returns Crit bonus percentage (0, 10, or 20)
+ */
+export function calculateEncumbranceCritBonus(encumbranceRatio: number): number {
+  if (encumbranceRatio <= ENCUMBRANCE_CRIT_THRESHOLDS.LIGHT.maxRatio) {
+    return ENCUMBRANCE_CRIT_THRESHOLDS.LIGHT.bonus;  // +20% for very light
+  }
+  if (encumbranceRatio <= ENCUMBRANCE_CRIT_THRESHOLDS.MEDIUM.maxRatio) {
+    return ENCUMBRANCE_CRIT_THRESHOLDS.MEDIUM.bonus; // +10% for medium
+  }
+  return ENCUMBRANCE_CRIT_THRESHOLDS.HEAVY.bonus;    // +0% for heavy
+}
+
+/**
+ * Calculate critical hit chance (MajorMUD-style)
+ *
+ * Base formula: (Level/10) + ((INT-50)/10) + ((DEX-50)/25)
+ * Plus: class bonus, encumbrance bonus, weapon/equipment modifiers
+ *
+ * Applies soft cap at 40% with diminishing returns above:
+ *   if (crit > 40) crit = 40 + ((crit - 40) / 3)
+ *
+ * @param factors - All factors affecting crit chance
+ * @returns Final crit chance percentage (typically 0-50)
+ */
+export function calculateCritChance(factors: CriticalHitFactors): number {
+  // Base from character level (+1% per 10 levels)
+  const levelBonus = Math.floor(factors.characterLevel / 10);
+
+  // Intelligence bonus (+1% per 10 INT above 50) - primary stat for crits
+  const intBonus = Math.max(0, Math.floor((factors.intelligence - 50) / 10));
+
+  // Dexterity bonus (+1% per 25 DEX above 50) - secondary stat for crits
+  const dexBonus = Math.max(0, Math.floor((factors.dexterity - 50) / 25));
+
+  // Class bonus (e.g., Ninja/Mystic get +10%)
+  const classBonus = factors.classCritBonus;
+
+  // Weapon crit modifier
+  const weaponBonus = factors.weaponCritModifier;
+
+  // Other equipment bonuses
+  const equipBonus = factors.equipmentCritBonus;
+
+  // Encumbrance bonus (light armor = more crits)
+  const encBonus = calculateEncumbranceCritBonus(factors.encumbranceRatio);
+
+  // Sum all bonuses
+  let totalCrit = levelBonus + intBonus + dexBonus + classBonus + weaponBonus + equipBonus + encBonus;
+
+  // Apply MajorMUD-style soft cap with diminishing returns
+  // Above 40%, excess crit is divided by 3
+  if (totalCrit > CRIT_SOFT_CAP) {
+    const excessCrit = totalCrit - CRIT_SOFT_CAP;
+    totalCrit = CRIT_SOFT_CAP + Math.floor(excessCrit / 3);
+  }
+
+  // Clamp to reasonable bounds (0-60% effective max due to diminishing returns)
+  return Math.max(0, Math.min(60, totalCrit));
+}
+
+// ============================================================================
+// DODGE CALCULATIONS (MajorMUD-style)
+// ============================================================================
+
+/**
+ * Calculate dodge chance using MajorMUD-style formula
+ *
+ * Dodge is a class skill - only classes with dodge_bonus > 0 can dodge.
+ * The formula is:
+ *   baseDodge = classDodgeBonus + raceDodgeBonus + equipmentDodgeBonus
+ *   statDodge = floor(agility / 10) * 2 + floor(charm / 10) * 1
+ *   totalDodge = baseDodge + statDodge
+ *
+ * Then apply soft cap at 52% with diminishing returns.
+ * Finally factor in attacker accuracy to get effective dodge.
+ *
+ * @param factors - DodgeFactors containing all dodge-related values
+ * @returns Effective dodge chance (0-90, capped by diminishing returns)
+ */
+export function calculateDodgeChance(factors: DodgeFactors): number {
+  // If no class or race dodge bonus and no equipment bonus, can't dodge at all
+  const baseDodge = factors.classDodgeBonus + factors.raceDodgeBonus + factors.equipmentDodgeBonus;
+  if (baseDodge <= 0) {
+    return 0;
+  }
+
+  // Stat contributions: +2% per 10 AGI, +1% per 10 CHA
+  const agiBonus = Math.floor(factors.agility / 10) * DODGE_STAT_CONTRIBUTION.agilityPer10;
+  const chaBonus = Math.floor(factors.charm / 10) * DODGE_STAT_CONTRIBUTION.charmPer10;
+
+  // Total pre-cap dodge
+  let totalDodge = baseDodge + agiBonus + chaBonus;
+
+  // Apply soft cap at 52% with harsh diminishing returns
+  // Above 52%, gains are severely reduced
+  if (totalDodge > DODGE_SOFT_CAP) {
+    const excessDodge = totalDodge - DODGE_SOFT_CAP;
+    // MajorMUD-style: very harsh diminishing returns above cap
+    // Testing showed 52% -> 85-90% max even with massive investment
+    totalDodge = DODGE_SOFT_CAP + Math.floor(excessDodge / 4);
+  }
+
+  // Factor in attacker accuracy (MajorMUD-style)
+  // If attacker accuracy is very low, dodge doesn't work
+  // Otherwise: effectiveDodge = (totalDodge * 10) / attackerAccuracy
+  if (factors.attackerAccuracy <= DODGE_MIN_ATTACKER_ACCURACY) {
+    return 0;
+  }
+
+  // Scale dodge based on attacker accuracy
+  // Higher accuracy monsters reduce dodge effectiveness
+  const effectiveDodge = Math.floor((totalDodge * 10) / factors.attackerAccuracy);
+
+  // Clamp to reasonable bounds (max ~90% as per MajorMUD testing)
+  return Math.max(0, Math.min(90, effectiveDodge));
+}
+
+/**
+ * Check if a defender can dodge (has any source of dodge ability)
+ *
+ * @param classDodgeBonus - Class dodge bonus
+ * @param raceDodgeBonus - Race dodge bonus
+ * @param equipmentDodgeBonus - Equipment dodge bonus
+ * @returns True if the defender has any dodge capability
+ */
+export function canDodge(
+  classDodgeBonus: number,
+  raceDodgeBonus: number,
+  equipmentDodgeBonus: number
+): boolean {
+  return (classDodgeBonus + raceDodgeBonus + equipmentDodgeBonus) > 0;
+}
+
+/**
  * Calculate miss chance using the squared ratio formula
  *
  * Formula: D^2 / (A^2 + D^2) = miss chance (as decimal)
@@ -180,27 +385,38 @@ export function calculateMissChance(accuracy: number, defense: number): number {
 /**
  * Determine if an attack hits, misses, is dodged, or is a critical
  *
+ * MajorMUD combat sequence:
+ * 1. Roll dodge FIRST (if defender has dodge ability)
+ * 2. If dodge succeeds, attack is completely avoided
+ * 3. If dodge fails, roll accuracy vs defense
+ * 4. If hit, check for critical
+ *
  * @param accuracy - Attacker's accuracy
  * @param defense - Defender's defense
  * @param critChance - Critical hit chance (0-100)
+ * @param dodgeChance - Defender's effective dodge chance (0-100), 0 if no dodge ability
  * @returns AttackResult enum value
  */
 export function resolveAttack(
   accuracy: number,
   defense: number,
-  critChance: number
+  critChance: number,
+  dodgeChance: number = 0
 ): AttackResult {
+  // MajorMUD-style: Check dodge FIRST before accuracy
+  // Dodge is a complete avoidance - no damage, no further checks
+  if (dodgeChance > 0) {
+    const dodgeRoll = Math.random() * 100;
+    if (dodgeRoll < dodgeChance) {
+      return AttackResult.DODGE;
+    }
+  }
+
+  // Dodge failed (or defender can't dodge) - check accuracy vs defense
   const missChance = calculateMissChance(accuracy, defense);
   const roll = Math.random();
 
-  // Check for miss first
   if (roll < missChance) {
-    // Determine type of miss (dodge vs pure miss)
-    // Higher defense = more likely to be a dodge
-    const dodgeChance = Math.min(0.5, defense / (defense + accuracy));
-    if (Math.random() < dodgeChance) {
-      return AttackResult.DODGE;
-    }
     return AttackResult.MISS;
   }
 
@@ -214,12 +430,18 @@ export function resolveAttack(
 }
 
 /**
- * Calculate damage for a single hit
+ * Calculate damage for a single hit (MajorMUD-style)
+ *
+ * Normal hits: Roll damage between min and max
+ * Critical hits: Use MAX damage × random(2.0-4.0) multiplier
+ *
+ * This makes crits significantly more impactful - they always use the weapon's
+ * maximum damage potential multiplied by a variable factor.
  *
  * @param minDamage - Minimum damage
  * @param maxDamage - Maximum damage
  * @param isCritical - Whether this is a critical hit
- * @param critMultiplier - Damage multiplier for crits (default 2.0)
+ * @param _critMultiplier - DEPRECATED: Now uses CRIT_DAMAGE_MULTIPLIER range
  * @param damageReduction - Flat damage reduction from armor
  * @returns Final damage dealt (minimum 1)
  */
@@ -227,16 +449,20 @@ export function calculateDamage(
   minDamage: number,
   maxDamage: number,
   isCritical: boolean,
-  critMultiplier: number = 2.0,
+  _critMultiplier: number = 2.0,
   damageReduction: number = 0
 ): number {
-  // Roll base damage
-  const range = Math.max(0, maxDamage - minDamage);
-  let damage = minDamage + Math.floor(Math.random() * (range + 1));
+  let damage: number;
 
-  // Apply critical multiplier
   if (isCritical) {
-    damage = Math.floor(damage * critMultiplier);
+    // MajorMUD-style: Crits use MAX damage × random(2.0-4.0)
+    const multiplierRange = CRIT_DAMAGE_MULTIPLIER.max - CRIT_DAMAGE_MULTIPLIER.min;
+    const critMultiplier = CRIT_DAMAGE_MULTIPLIER.min + (Math.random() * multiplierRange);
+    damage = Math.floor(maxDamage * critMultiplier);
+  } else {
+    // Normal hit: Roll damage between min and max
+    const range = Math.max(0, maxDamage - minDamage);
+    damage = minDamage + Math.floor(Math.random() * (range + 1));
   }
 
   // Apply damage reduction
@@ -283,6 +509,9 @@ export function parseDiceString(diceString: string): { min: number; max: number;
 /**
  * Execute a full combat round between attacker and defender
  *
+ * @param config - Optional runtime config (uses defaults if not provided)
+ * @param defenderCurrentHp - Defender's current HP (optional, for early termination)
+ * @param defenderDodgeChance - Defender's effective dodge chance (0-100), 0 if no dodge ability
  * @returns Array of swing results for the round
  */
 export function executeCombatRound(
@@ -297,23 +526,35 @@ export function executeCombatRound(
   minDamage: number,
   maxDamage: number,
   critMultiplier: number,
-  damageReduction: number
+  damageReduction: number,
+  config: RuntimeCombatConfig = DEFAULT_RUNTIME_CONFIG,
+  defenderCurrentHp?: number,
+  defenderDodgeChance: number = 0
 ): { swings: SwingResult[]; remainingEnergy: number; totalDamage: number } {
   const totalEnergy = availableEnergy + carriedEnergy;
-  const { swings: numSwings, remainingEnergy, bonusCritChance } = calculateSwings(totalEnergy, weaponSpeed);
+  const { swings: numSwings, remainingEnergy, bonusCritChance } = calculateSwings(totalEnergy, weaponSpeed, config);
 
-  const effectiveCritChance = Math.min(100, baseCritChance + bonusCritChance);
+  // Cap bonus crit chance at 25% to prevent excess attacks from guaranteeing crits
+  const cappedBonusCrit = Math.min(25, bonusCritChance);
+  const effectiveCritChance = Math.min(50, baseCritChance + cappedBonusCrit);
   const swings: SwingResult[] = [];
   let totalDamage = 0;
+  let remainingHp = defenderCurrentHp ?? Infinity;
 
   for (let i = 0; i < numSwings; i++) {
-    const result = resolveAttack(attackerAccuracy, defenderDefense, effectiveCritChance);
+    // Stop attacking if defender is already dead
+    if (remainingHp <= 0) {
+      break;
+    }
+
+    const result = resolveAttack(attackerAccuracy, defenderDefense, effectiveCritChance, defenderDodgeChance);
     const isCritical = result === AttackResult.CRITICAL;
 
     let damage = 0;
     if (result === AttackResult.HIT || result === AttackResult.CRITICAL) {
       damage = calculateDamage(minDamage, maxDamage, isCritical, critMultiplier, damageReduction);
       totalDamage += damage;
+      remainingHp -= damage;
     }
 
     swings.push({

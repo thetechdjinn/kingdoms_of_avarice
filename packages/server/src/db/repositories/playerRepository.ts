@@ -1,4 +1,5 @@
 import pg from 'pg';
+import crypto from 'node:crypto';
 import { query } from '../index.js';
 import bcrypt from 'bcrypt';
 
@@ -146,4 +147,182 @@ export async function getAllPlayers(): Promise<PlayerSummary[]> {
     'SELECT id, username, email, max_characters, created_at, last_login FROM players ORDER BY username'
   );
   return result.rows;
+}
+
+// ============================================================================
+// Admin Functions
+// ============================================================================
+
+export interface PlayerWithDetails {
+  id: number;
+  username: string;
+  email: string | null;
+  max_characters: number | null;
+  created_at: Date;
+  last_login: Date | null;
+  character_count: number;
+  roles: string[];
+}
+
+/**
+ * Get all players with character count and roles (for admin user list)
+ */
+export async function getAllPlayersWithDetails(): Promise<PlayerWithDetails[]> {
+  const result = await query<{
+    id: number;
+    username: string;
+    email: string | null;
+    max_characters: number | null;
+    created_at: Date;
+    last_login: Date | null;
+    character_count: string;
+    roles: string[];
+  }>(
+    `SELECT
+      p.id,
+      p.username,
+      p.email,
+      p.max_characters,
+      p.created_at,
+      p.last_login,
+      (SELECT COUNT(*) FROM characters WHERE player_id = p.id) as character_count,
+      COALESCE(
+        (SELECT array_agg(r.name ORDER BY r.priority DESC)
+         FROM player_roles pr
+         JOIN roles r ON pr.role_id = r.id
+         WHERE pr.player_id = p.id),
+        '{}'::text[]
+      ) as roles
+    FROM players p
+    ORDER BY p.username`
+  );
+
+  return result.rows.map(row => ({
+    ...row,
+    character_count: parseInt(row.character_count, 10),
+  }));
+}
+
+/**
+ * Get a single player with their roles (for admin detail view)
+ */
+export async function getPlayerWithRoles(playerId: number): Promise<PlayerWithDetails | null> {
+  const result = await query<{
+    id: number;
+    username: string;
+    email: string | null;
+    max_characters: number | null;
+    created_at: Date;
+    last_login: Date | null;
+    character_count: string;
+    roles: string[];
+  }>(
+    `SELECT
+      p.id,
+      p.username,
+      p.email,
+      p.max_characters,
+      p.created_at,
+      p.last_login,
+      (SELECT COUNT(*) FROM characters WHERE player_id = p.id) as character_count,
+      COALESCE(
+        (SELECT array_agg(r.name ORDER BY r.priority DESC)
+         FROM player_roles pr
+         JOIN roles r ON pr.role_id = r.id
+         WHERE pr.player_id = p.id),
+        '{}'::text[]
+      ) as roles
+    FROM players p
+    WHERE p.id = $1`,
+    [playerId]
+  );
+
+  if (result.rows.length === 0) return null;
+
+  const row = result.rows[0];
+  return {
+    ...row,
+    character_count: parseInt(row.character_count, 10),
+  };
+}
+
+export interface UpdatePlayerAdminInput {
+  username?: string;
+  email?: string | null;
+  max_characters?: number | null;
+}
+
+/**
+ * Update player fields (admin only)
+ */
+export async function updatePlayerAdmin(
+  playerId: number,
+  updates: UpdatePlayerAdminInput
+): Promise<boolean> {
+  const setClauses: string[] = [];
+  const values: unknown[] = [];
+  let paramIndex = 1;
+
+  if (updates.username !== undefined) {
+    setClauses.push(`username = $${paramIndex}`);
+    values.push(updates.username);
+    paramIndex++;
+  }
+
+  if (updates.email !== undefined) {
+    setClauses.push(`email = $${paramIndex}`);
+    values.push(updates.email);
+    paramIndex++;
+  }
+
+  if (updates.max_characters !== undefined) {
+    setClauses.push(`max_characters = $${paramIndex}`);
+    values.push(updates.max_characters);
+    paramIndex++;
+  }
+
+  if (setClauses.length === 0) return false;
+
+  values.push(playerId);
+  const result = await query(
+    `UPDATE players SET ${setClauses.join(', ')} WHERE id = $${paramIndex}`,
+    values
+  );
+
+  return (result.rowCount ?? 0) > 0;
+}
+
+/**
+ * Reset a player's password (admin only)
+ * If newPassword is not provided, generates a random password
+ * Returns the new password so it can be shown to the admin
+ */
+export async function resetPlayerPassword(
+  playerId: number,
+  newPassword?: string
+): Promise<string | null> {
+  // Generate random password if not provided
+  const password = newPassword || generateRandomPassword();
+  const passwordHash = await bcrypt.hash(password, 10);
+
+  const result = await query(
+    'UPDATE players SET password_hash = $1 WHERE id = $2',
+    [passwordHash, playerId]
+  );
+
+  if ((result.rowCount ?? 0) === 0) return null;
+  return password;
+}
+
+/**
+ * Generate a cryptographically secure random password
+ */
+function generateRandomPassword(length: number = 12): string {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
+  const randomBytes = crypto.randomBytes(length);
+  let password = '';
+  for (let i = 0; i < length; i++) {
+    password += chars.charAt(randomBytes[i] % chars.length);
+  }
+  return password;
 }

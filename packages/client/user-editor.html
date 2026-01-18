@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>User Editor - Kingdoms of Avarice</title>
+    <link rel="stylesheet" href="/src/editor.css" />
+    <style>
+      #user-list-panel {
+        width: 320px;
+        background-color: #16213e;
+        border-right: 1px solid #333;
+        display: flex;
+        flex-direction: column;
+      }
+
+      #user-filter {
+        padding: 0.75rem 1rem;
+        border-bottom: 1px solid #333;
+      }
+
+      #user-filter input,
+      #user-filter select {
+        width: 100%;
+        padding: 0.5rem;
+        background-color: #0f0f23;
+        color: #eee;
+        border: 1px solid #333;
+        border-radius: 4px;
+        margin-bottom: 0.5rem;
+      }
+
+      #user-filter input:focus,
+      #user-filter select:focus {
+        outline: none;
+        border-color: #00ff00;
+      }
+
+      #user-list {
+        list-style: none;
+        flex: 1;
+        overflow-y: auto;
+      }
+
+      #user-list li {
+        padding: 0.75rem 1rem;
+        cursor: pointer;
+        border-bottom: 1px solid #222;
+        transition: background-color 0.2s;
+      }
+
+      #user-list li:hover {
+        background-color: #1f2b47;
+      }
+
+      #user-list li.selected {
+        background-color: #0e4429;
+        border-left: 3px solid #00ff00;
+      }
+
+      .user-info {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .user-name {
+        font-weight: 500;
+        color: #eee;
+      }
+
+      .user-role {
+        font-size: 0.75rem;
+        padding: 0.15rem 0.4rem;
+        border-radius: 3px;
+        background: #333;
+        color: #888;
+      }
+
+      .user-role.admin { background: #4a1a1a; color: #ff6666; }
+      .user-role.sysop { background: #4a3a1a; color: #ffaa66; }
+      .user-role.developer { background: #1a4a2a; color: #66ff66; }
+      .user-role.moderator { background: #1a2a4a; color: #6699ff; }
+      .user-role.player { background: #2a2a2a; color: #aaa; }
+      .user-role.pending { background: #3a3a1a; color: #aaaa66; }
+
+      .user-meta {
+        font-size: 0.8rem;
+        color: #666;
+        margin-top: 0.25rem;
+      }
+
+      #user-editor-panel {
+        flex: 1;
+        padding: 2rem;
+        overflow-y: auto;
+      }
+
+      #no-user-selected {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 100%;
+        color: #666;
+        font-size: 1.1rem;
+      }
+
+      .user-tabs {
+        display: flex;
+        gap: 0;
+        margin-bottom: 1.5rem;
+        border-bottom: 1px solid #333;
+      }
+
+      .user-tab {
+        background: transparent;
+        border: none;
+        color: #888;
+        padding: 0.75rem 1.5rem;
+        cursor: pointer;
+        font-size: 1rem;
+        border-bottom: 2px solid transparent;
+        transition: all 0.2s;
+      }
+
+      .user-tab:hover {
+        color: #aaa;
+      }
+
+      .user-tab.active {
+        color: #00ff00;
+        border-bottom-color: #00ff00;
+      }
+
+      .user-section {
+        display: none;
+      }
+
+      .user-section.active {
+        display: block;
+      }
+
+      .form-row {
+        display: flex;
+        gap: 1rem;
+        margin-bottom: 1rem;
+      }
+
+      .form-row .form-group {
+        flex: 1;
+      }
+
+      .readonly-field {
+        background-color: #1a1a2e !important;
+        color: #888 !important;
+        cursor: not-allowed;
+      }
+
+      .message {
+        padding: 0.75rem 1rem;
+        border-radius: 4px;
+        margin: 1rem 0;
+      }
+
+      .message.success {
+        background: rgba(0, 255, 0, 0.1);
+        color: #00ff00;
+      }
+
+      .message.error {
+        background: rgba(255, 68, 68, 0.1);
+        color: #ff4444;
+      }
+
+      /* Characters list */
+      #characters-list {
+        list-style: none;
+      }
+
+      .character-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.75rem 1rem;
+        background: #0f0f23;
+        border-radius: 4px;
+        margin-bottom: 0.5rem;
+        border: 1px solid #333;
+      }
+
+      .character-info {
+        flex: 1;
+      }
+
+      .character-name {
+        color: #00ff00;
+        font-weight: 500;
+        margin-bottom: 0.25rem;
+      }
+
+      .character-meta {
+        font-size: 0.85rem;
+        color: #888;
+      }
+
+      .character-actions {
+        display: flex;
+        gap: 0.5rem;
+      }
+
+      /* Modal styles */
+      .modal {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.7);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+      }
+
+      .modal-content {
+        background: #16213e;
+        border: 1px solid #00ff00;
+        border-radius: 8px;
+        width: 600px;
+        max-width: 90%;
+        max-height: 85vh;
+        display: flex;
+        flex-direction: column;
+      }
+
+      .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1rem;
+        border-bottom: 1px solid #333;
+      }
+
+      .modal-header h3 {
+        color: #00ff00;
+        margin: 0;
+      }
+
+      .close-btn {
+        background: none;
+        border: none;
+        color: #aaa;
+        font-size: 1.5rem;
+        cursor: pointer;
+        padding: 0;
+        line-height: 1;
+      }
+
+      .close-btn:hover {
+        color: #fff;
+      }
+
+      .modal-body {
+        padding: 1rem;
+        overflow-y: auto;
+      }
+
+      .modal-footer {
+        display: flex;
+        justify-content: flex-end;
+        gap: 0.5rem;
+        padding: 1rem;
+        border-top: 1px solid #333;
+      }
+
+      .stat-row {
+        display: flex;
+        gap: 0.5rem;
+      }
+
+      .stat-row .form-group {
+        flex: 1;
+      }
+
+      .stat-row .form-group input {
+        text-align: center;
+      }
+
+      .password-display {
+        background: #0f0f23;
+        border: 1px solid #00ff00;
+        padding: 1rem;
+        border-radius: 4px;
+        font-family: monospace;
+        font-size: 1.2rem;
+        text-align: center;
+        color: #00ff00;
+        margin-top: 0.5rem;
+      }
+
+      .empty-state {
+        color: #666;
+        text-align: center;
+        padding: 2rem;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="editor-app">
+      <nav id="main-nav">
+        <div class="nav-brand">Kingdoms of Avarice</div>
+        <div class="nav-links">
+          <a href="/" class="nav-link">Game</a>
+          <div class="nav-dropdown" id="nav-dev-dropdown" style="display: none;">
+            <button class="nav-link nav-dropdown-btn">Developer</button>
+            <div class="nav-dropdown-menu">
+              <a href="/editor.html" class="nav-dropdown-item">Room Editor</a>
+              <a href="/item-editor.html" class="nav-dropdown-item">Item Editor</a>
+              <a href="/spell-editor.html" class="nav-dropdown-item">Spell Editor</a>
+              <a href="/status-editor.html" class="nav-dropdown-item">Status Effects Editor</a>
+              <a href="/progression-editor.html" class="nav-dropdown-item">Progression Editor</a>
+              <a href="/swing-calculator.html" class="nav-dropdown-item">Swing Calculator</a>
+            </div>
+          </div>
+          <div class="nav-dropdown" id="nav-admin-dropdown">
+            <button class="nav-link nav-dropdown-btn active">Admin</button>
+            <div class="nav-dropdown-menu">
+              <a href="/admin.html" class="nav-dropdown-item">Admin Panel</a>
+              <a href="/game-settings-editor.html" class="nav-dropdown-item">Game Settings</a>
+              <a href="/user-editor.html" class="nav-dropdown-item active">User Editor</a>
+            </div>
+          </div>
+        </div>
+        <div class="nav-spacer"></div>
+        <div class="nav-user-menu">
+          <button class="nav-user-btn" id="nav-username">User</button>
+          <div class="dropdown-menu" id="user-dropdown">
+            <button class="dropdown-item" id="logout-btn">Logout</button>
+          </div>
+        </div>
+      </nav>
+
+      <div id="editor-layout">
+        <aside id="user-list-panel">
+          <div class="panel-header">
+            <h2>Users</h2>
+          </div>
+          <div id="user-filter">
+            <input type="text" id="search-input" placeholder="Search users..." />
+            <select id="role-filter">
+              <option value="">All Roles</option>
+              <option value="admin">Admin</option>
+              <option value="sysop">Sysop</option>
+              <option value="developer">Developer</option>
+              <option value="moderator">Moderator</option>
+              <option value="player">Player</option>
+              <option value="pending">Pending</option>
+            </select>
+          </div>
+          <ul id="user-list">
+            <li class="empty-state">Loading...</li>
+          </ul>
+        </aside>
+
+        <main id="user-editor-panel">
+          <div id="no-user-selected">
+            <p>Select a user from the list to view and edit their details.</p>
+          </div>
+
+          <div id="user-form" style="display: none;">
+            <div class="form-header">
+              <h2 id="user-form-title">Edit User</h2>
+              <span id="user-id-display"></span>
+            </div>
+
+            <div class="user-tabs">
+              <button class="user-tab active" data-tab="details">Details</button>
+              <button class="user-tab" data-tab="characters">Characters</button>
+            </div>
+
+            <!-- Details Tab -->
+            <div id="tab-details" class="user-section active">
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="user-username">Username</label>
+                  <input type="text" id="user-username" />
+                </div>
+                <div class="form-group">
+                  <label for="user-email">Email</label>
+                  <input type="email" id="user-email" placeholder="(not set)" />
+                </div>
+              </div>
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="user-role">Role</label>
+                  <select id="user-role">
+                    <option value="pending">Pending</option>
+                    <option value="player">Player</option>
+                    <option value="moderator">Moderator</option>
+                    <option value="developer">Developer</option>
+                    <option value="sysop">Sysop</option>
+                    <option value="admin">Admin</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="user-max-chars">Max Characters</label>
+                  <input type="number" id="user-max-chars" min="1" max="100" placeholder="(use default)" />
+                </div>
+              </div>
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="user-created">Created</label>
+                  <input type="text" id="user-created" class="readonly-field" readonly />
+                </div>
+                <div class="form-group">
+                  <label for="user-last-login">Last Login</label>
+                  <input type="text" id="user-last-login" class="readonly-field" readonly />
+                </div>
+              </div>
+
+              <div id="user-message" class="message" style="display: none;"></div>
+
+              <div class="form-actions">
+                <button type="button" id="save-user-btn" class="btn-primary">Save User</button>
+                <button type="button" id="reset-password-btn" class="btn-secondary">Reset Password</button>
+              </div>
+            </div>
+
+            <!-- Characters Tab -->
+            <div id="tab-characters" class="user-section">
+              <ul id="characters-list">
+                <li class="empty-state">No characters</li>
+              </ul>
+            </div>
+          </div>
+        </main>
+      </div>
+    </div>
+
+    <!-- Character Edit Modal -->
+    <div id="character-modal" class="modal" style="display: none;">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>Edit Character</h3>
+          <button class="close-btn" id="close-character-modal">&times;</button>
+        </div>
+        <div class="modal-body">
+          <input type="hidden" id="char-id" />
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="char-name">Name</label>
+              <input type="text" id="char-name" />
+            </div>
+            <div class="form-group">
+              <label for="char-level">Level</label>
+              <input type="number" id="char-level" min="1" />
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="char-race">Race</label>
+              <input type="text" id="char-race" />
+            </div>
+            <div class="form-group">
+              <label for="char-class">Class</label>
+              <input type="text" id="char-class" />
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="char-experience">Experience</label>
+              <input type="number" id="char-experience" min="0" />
+            </div>
+            <div class="form-group">
+              <label for="char-gold">Gold</label>
+              <input type="number" id="char-gold" min="0" />
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="char-health">Health</label>
+              <input type="number" id="char-health" min="0" />
+            </div>
+            <div class="form-group">
+              <label for="char-max-health">Max Health</label>
+              <input type="number" id="char-max-health" min="1" />
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="char-mana">Mana</label>
+              <input type="number" id="char-mana" min="0" />
+            </div>
+            <div class="form-group">
+              <label for="char-max-mana">Max Mana</label>
+              <input type="number" id="char-max-mana" min="0" />
+            </div>
+          </div>
+
+          <h4 style="color: #00ff00; margin: 1rem 0 0.5rem;">Stats</h4>
+          <div class="stat-row">
+            <div class="form-group">
+              <label for="char-str">STR</label>
+              <input type="number" id="char-str" min="1" />
+            </div>
+            <div class="form-group">
+              <label for="char-int">INT</label>
+              <input type="number" id="char-int" min="1" />
+            </div>
+            <div class="form-group">
+              <label for="char-dex">DEX</label>
+              <input type="number" id="char-dex" min="1" />
+            </div>
+          </div>
+          <div class="stat-row">
+            <div class="form-group">
+              <label for="char-con">CON</label>
+              <input type="number" id="char-con" min="1" />
+            </div>
+            <div class="form-group">
+              <label for="char-wis">WIS</label>
+              <input type="number" id="char-wis" min="1" />
+            </div>
+            <div class="form-group">
+              <label for="char-cha">CHA</label>
+              <input type="number" id="char-cha" min="1" />
+            </div>
+          </div>
+
+          <div class="form-group" style="margin-top: 1rem;">
+            <label for="char-room">Current Room ID</label>
+            <input type="number" id="char-room" min="1" />
+          </div>
+
+          <div id="char-message" class="message" style="display: none;"></div>
+        </div>
+        <div class="modal-footer">
+          <button id="save-character-btn" class="btn-primary">Save Character</button>
+          <button id="cancel-character-btn" class="btn-secondary">Cancel</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Password Reset Modal -->
+    <div id="password-modal" class="modal" style="display: none;">
+      <div class="modal-content" style="width: 400px;">
+        <div class="modal-header">
+          <h3>Password Reset</h3>
+          <button class="close-btn" id="close-password-modal">&times;</button>
+        </div>
+        <div class="modal-body">
+          <p id="password-message"></p>
+          <div id="password-display" class="password-display" style="display: none;"></div>
+        </div>
+        <div class="modal-footer">
+          <button id="close-password-btn" class="btn-primary">Close</button>
+        </div>
+      </div>
+    </div>
+
+    <script type="module" src="/src/user-editor.ts"></script>
+  </body>
+</html>

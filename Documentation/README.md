@@ -14,6 +14,11 @@ Welcome to the Kingdoms of Avarice documentation. This guide covers all aspects 
 - [Item Editor Guide](Item_Editor_Guide.md) - Creating items and equipment
 - [Items Architecture](Items_Architecture.md) - Technical item system details
 - [Progression System Guide](Progression_System_Guide.md) - Classes, races, abilities, and talents
+- [Spell and Effects Guide](Spell_and_Effects_Guide.md) - Spells and status effects
+
+### Combat System
+
+- [Combat Energy System](Combat_Energy_System.md) - Attack energy, weapon speed, and swings per round
 
 ### Administration
 

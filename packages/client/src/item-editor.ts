@@ -75,13 +75,35 @@ let templates: ItemTemplate[] = [];
 let selectedTemplateId: number | null = null;
 let currentUser: AuthInfo | null = null;
 
+// Toast notification system
+type ToastType = 'success' | 'error' | 'warning' | 'info';
+
+function showToast(message: string, type: ToastType = 'info', duration: number = 3000): void {
+  let container = document.getElementById('toast-container');
+  if (!container) {
+    container = document.createElement('div');
+    container.id = 'toast-container';
+    document.body.appendChild(container);
+  }
+
+  const toast = document.createElement('div');
+  toast.className = `toast ${type}`;
+  toast.textContent = message;
+  container.appendChild(toast);
+
+  setTimeout(() => {
+    toast.classList.add('toast-out');
+    setTimeout(() => toast.remove(), 300);
+  }, duration);
+}
+
 // Helper to show error messages to the user
 function showError(message: string): void {
   const list = document.getElementById('item-list');
   if (list) {
     list.innerHTML = `<div class="error-message" style="color: #ff6b6b; padding: 1rem;">${escapeHtml(message)}</div>`;
   } else {
-    alert(message);
+    showToast(message, 'error');
   }
 }
 
@@ -142,11 +164,11 @@ async function checkAuth(): Promise<boolean> {
       usernameEl.textContent = data.username;
     }
 
-    // Show Admin link if user is admin
+    // Show Admin dropdown if user is admin
     const isAdmin = roles.includes('admin');
-    const adminLink = document.getElementById('nav-admin-link');
-    if (adminLink) {
-      adminLink.style.display = isAdmin ? 'block' : 'none';
+    const adminDropdown = document.getElementById('nav-admin-dropdown');
+    if (adminDropdown) {
+      adminDropdown.style.display = isAdmin ? 'flex' : 'none';
     }
 
     return true;
@@ -340,7 +362,7 @@ function loadWeaponData(template: ItemTemplate): void {
 
   if (damageDice) damageDice.value = data?.damage_dice || '1d6';
   if (damageType) damageType.value = data?.damage_type || 'slashing';
-  if (attackSpeed) attackSpeed.value = String(data?.attack_speed || 10);
+  if (attackSpeed) attackSpeed.value = String(data?.attack_speed || 1500);
   if (critModifier) critModifier.value = String(data?.crit_modifier || 2);
   if (range) range.value = data?.range || 'melee';
 
@@ -449,7 +471,7 @@ function updatePreview(template: ItemTemplate): void {
       <div class="preview-section">
         <div class="preview-section-title">Weapon</div>
         <div>Damage: ${escapeHtml(template.weapon_data.damage_dice)} ${escapeHtml(template.weapon_data.damage_type)}</div>
-        <div>Speed: ${template.weapon_data.attack_speed || 10}</div>
+        <div>Speed: ${template.weapon_data.attack_speed || 1500}</div>
       </div>
     `;
   }
@@ -544,7 +566,7 @@ async function createTemplate(): Promise<void> {
     });
 
     if (!response.ok) {
-      alert(`Failed to create template: HTTP ${response.status}`);
+      showToast(`Failed to create template: HTTP ${response.status}`, 'error');
       return;
     }
     const data = await response.json();
@@ -552,11 +574,11 @@ async function createTemplate(): Promise<void> {
       templates.push(data.template);
       selectTemplate(data.template.id);
     } else {
-      alert('Failed to create item: ' + data.message);
+      showToast('Failed to create item: ' + data.message, 'error');
     }
   } catch (error) {
     console.error('Failed to create item:', error);
-    alert('Failed to create item');
+    showToast('Failed to create item', 'error');
   }
 }
 
@@ -579,13 +601,13 @@ async function saveTemplate(): Promise<void> {
         templates[index] = data.template;
       }
       selectTemplate(selectedTemplateId);
-      alert('Item saved successfully!');
+      showToast('Item saved successfully!', 'success');
     } else {
-      alert('Failed to save item: ' + data.message);
+      showToast('Failed to save item: ' + data.message, 'error');
     }
   } catch (error) {
     console.error('Failed to save item:', error);
-    alert('Failed to save item');
+    showToast('Failed to save item', 'error');
   }
 }
 
@@ -608,11 +630,11 @@ async function deleteTemplate(): Promise<void> {
       document.getElementById('item-form')!.style.display = 'none';
       renderTemplateList();
     } else {
-      alert('Failed to delete item: ' + data.message);
+      showToast('Failed to delete item: ' + data.message, 'error');
     }
   } catch (error) {
     console.error('Failed to delete item:', error);
-    alert('Failed to delete item');
+    showToast('Failed to delete item', 'error');
   }
 }
 
@@ -639,11 +661,11 @@ async function duplicateTemplate(): Promise<void> {
       templates.push(data.template);
       selectTemplate(data.template.id);
     } else {
-      alert('Failed to duplicate item: ' + data.message);
+      showToast('Failed to duplicate item: ' + data.message, 'error');
     }
   } catch (error) {
     console.error('Failed to duplicate item:', error);
-    alert('Failed to duplicate item');
+    showToast('Failed to duplicate item', 'error');
   }
 }
 
@@ -681,7 +703,7 @@ function gatherFormData(): Partial<ItemTemplate> {
     const weaponData: NonNullable<ItemTemplate['weapon_data']> = {
       damage_dice: (document.getElementById('weapon-damage-dice') as HTMLInputElement).value,
       damage_type: (document.getElementById('weapon-damage-type') as HTMLSelectElement).value,
-      attack_speed: parseNumberOrDefault((document.getElementById('weapon-attack-speed') as HTMLInputElement).value, 10),
+      attack_speed: parseNumberOrDefault((document.getElementById('weapon-attack-speed') as HTMLInputElement).value, 1500),
       crit_modifier: parseNumberOrDefault((document.getElementById('weapon-crit-modifier') as HTMLInputElement).value, 2),
       range: (document.getElementById('weapon-range') as HTMLSelectElement).value,
     };
@@ -776,7 +798,7 @@ async function exportItems(): Promise<void> {
     URL.revokeObjectURL(url);
   } catch (error) {
     console.error('Failed to export items:', error);
-    alert('Failed to export items');
+    showToast('Failed to export items', 'error');
   }
 }
 
@@ -793,7 +815,7 @@ async function doImport(): Promise<void> {
   const merge = (document.getElementById('import-merge') as HTMLInputElement).checked;
 
   if (!fileInput.files || fileInput.files.length === 0) {
-    alert('Please select a file');
+    showToast('Please select a file', 'warning');
     return;
   }
 
@@ -813,18 +835,18 @@ async function doImport(): Promise<void> {
 
     const result = await response.json();
     if (result.success) {
-      alert(`Import complete!\nCreated: ${result.results.created}\nUpdated: ${result.results.updated}\nErrors: ${result.results.errors.length}`);
+      showToast(`Import complete! Created: ${result.results.created}, Updated: ${result.results.updated}, Errors: ${result.results.errors.length}`, 'success', 4000);
       hideImportModal();
       await fetchTemplates();
     } else {
-      alert('Import failed: ' + result.message);
+      showToast('Import failed: ' + result.message, 'error');
     }
   } catch (error) {
     console.error('Failed to import:', error);
-    const errorMessage = error instanceof SyntaxError 
+    const errorMessage = error instanceof SyntaxError
       ? 'Failed to import: Invalid JSON file format'
       : 'Failed to import: ' + (error instanceof Error ? error.message : 'Unknown error');
-    alert(errorMessage);
+    showToast(errorMessage, 'error');
   }
 }
 
@@ -839,12 +861,12 @@ async function spawnItem(): Promise<void> {
   const quantity = parseInt((document.getElementById('spawn-quantity') as HTMLInputElement).value, 10);
 
   if (isNaN(roomId) || roomId < 1) {
-    alert('Invalid room ID');
+    showToast('Invalid room ID', 'warning');
     return;
   }
 
   if (isNaN(quantity) || quantity < 1) {
-    alert('Invalid quantity - must be a positive number');
+    showToast('Invalid quantity - must be a positive number', 'warning');
     return;
   }
 
@@ -864,13 +886,13 @@ async function spawnItem(): Promise<void> {
 
     const data = await response.json();
     if (data.success) {
-      alert(data.message);
+      showToast(data.message, 'success');
     } else {
-      alert('Failed to spawn item: ' + data.message);
+      showToast('Failed to spawn item: ' + data.message, 'error');
     }
   } catch (error) {
     console.error('Failed to spawn item:', error);
-    alert('Failed to spawn item');
+    showToast('Failed to spawn item', 'error');
   }
 }
 

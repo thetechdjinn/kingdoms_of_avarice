@@ -13,9 +13,15 @@ import {
   calculateRoundEnergy,
   calculateAccuracy,
   calculateDefense,
+  calculateCritChance,
+  calculateDodgeChance,
   executeCombatRound,
   parseDiceString,
+  RuntimeCombatConfig,
+  toRuntimeConfig,
+  DEFAULT_RUNTIME_CONFIG,
 } from './combatCalculations.js';
+import { getCombatSettings } from '../db/repositories/settingsRepository.js';
 import { clearCombatState } from './combatCommands.js';
 import {
   getEquipmentCombatStats,
@@ -23,6 +29,7 @@ import {
   getEquipmentAccuracyBonus,
 } from './combatStats.js';
 import * as characterRepo from '../db/repositories/characterRepository.js';
+import * as progressionRepo from '../db/repositories/progressionRepository.js';
 
 /**
  * Get character stat value based on spell scaling stat
@@ -63,7 +70,7 @@ const COMBAT_ROUND_MS = Number.isFinite(parsedRoundMs) && parsedRoundMs > 0
 const DEFAULT_ENCUMBRANCE_RATIO = 0.5;  // 50% encumbrance baseline
 const DEFAULT_EQUIPMENT_BONUS = 0;
 const DEFAULT_SPELL_MODIFIER = 0;
-const DEFAULT_WEAPON_SPEED = 10;
+const DEFAULT_WEAPON_SPEED = 7500;
 const DEFAULT_UNARMED_DAMAGE = '1d6';
 const DEFAULT_BASE_CRIT_CHANCE = 5;     // 5% base crit chance
 const DEFAULT_CRIT_MULTIPLIER = 2.0;
@@ -326,7 +333,8 @@ async function processSpellCombat(
  */
 async function processAttackerCombat(
   attacker: AuthenticatedSocket,
-  targets: Set<number>
+  targets: Set<number>,
+  combatConfig: RuntimeCombatConfig = DEFAULT_RUNTIME_CONFIG
 ): Promise<void> {
   if (!connectedPlayersRef) return;
 
@@ -370,7 +378,7 @@ async function processAttackerCombat(
 
   // Apply energy modifier from status effects
   const energyMultiplier = 1 + (attackerEffectMods.energyModifier / 100);
-  const roundEnergy = Math.floor(calculateRoundEnergy(energyFactors) * energyMultiplier);
+  const roundEnergy = Math.floor(calculateRoundEnergy(energyFactors, combatConfig) * energyMultiplier);
 
   // Calculate attacker's accuracy with equipment and status effect bonuses
   const equipmentAccuracyBonus = getEquipmentAccuracyBonus(attackerEquipment.statModifiers);
@@ -386,13 +394,34 @@ async function processAttackerCombat(
     isBlind: attackerEffectMods.isBlind,
   };
 
-  const attackerAccuracy = calculateAccuracy(accuracyFactors);
+  const attackerAccuracy = calculateAccuracy(accuracyFactors, combatConfig);
 
   // Get weapon data from equipped weapon
   const weaponSpeed = attackerEquipment.weapon.attackSpeed;
   const weaponDamage = attackerEquipment.weapon.damageDice;
-  const baseCritChance = DEFAULT_BASE_CRIT_CHANCE + attackerEquipment.weapon.critModifier;
-  const critMultiplier = DEFAULT_CRIT_MULTIPLIER;
+
+  // Get class crit bonus (MajorMUD-style: some classes get flat crit bonuses)
+  let classCritBonus = 0;
+  if (attacker.characterId) {
+    const progression = await progressionRepo.getCharacterProgression(attacker.characterId);
+    if (progression) {
+      const classDef = await progressionRepo.getClassById(progression.class_id);
+      classCritBonus = classDef?.crit_bonus ?? 0;
+    }
+  }
+
+  // Calculate crit chance using MajorMUD-style formula
+  const critFactors = {
+    characterLevel: attacker.characterLevel,
+    intelligence: effectiveInt,
+    dexterity: effectiveDex,
+    classCritBonus,
+    weaponCritModifier: attackerEquipment.weapon.critModifier,
+    equipmentCritBonus: 0, // TODO: Add equipment crit bonuses when implemented
+    encumbranceRatio,
+  };
+  const baseCritChance = calculateCritChance(critFactors);
+  const critMultiplier = DEFAULT_CRIT_MULTIPLIER; // Now unused but kept for API compatibility
 
   const attackerRoomId = getPlayerLocation(attacker.playerId);
 
@@ -438,7 +467,43 @@ async function processAttackerCombat(
     const minDamage = Math.max(1, Math.floor(baseMinDamage * damageMultiplier));
     const maxDamage = Math.max(1, Math.floor(baseMaxDamage * damageMultiplier));
 
+    // Calculate defender's dodge chance (MajorMUD-style)
+    // Dodge is a class skill - only classes with dodge_bonus > 0 can dodge
+    let defenderDodgeChance = 0;
+    if (target.characterId) {
+      const defenderProgression = await progressionRepo.getCharacterProgression(target.characterId);
+      if (defenderProgression) {
+        const defenderClassDef = await progressionRepo.getClassById(defenderProgression.class_id);
+        const defenderRaceDef = await progressionRepo.getRaceById(defenderProgression.race_id);
+
+        const classDodgeBonus = defenderClassDef?.dodge_bonus ?? 0;
+        const raceDodgeBonus = defenderRaceDef?.dodge_bonus ?? 0;
+
+        // Only calculate dodge if defender has any dodge bonus
+        if (classDodgeBonus > 0 || raceDodgeBonus > 0) {
+          // Get defender's effective stats for dodge calculation
+          const defenderDex = target.characterStats.dexterity + (defenderEquipment.statModifiers.dexterity || 0);
+          const defenderCha = target.characterStats.charisma + (defenderEquipment.statModifiers.charisma || 0);
+
+          // TODO: Add equipment dodge bonus when implemented on items
+          const equipmentDodgeBonus = 0;
+
+          const dodgeFactors = {
+            classDodgeBonus,
+            raceDodgeBonus,
+            agility: defenderDex, // DEX maps to Agility
+            charm: defenderCha, // CHA maps to Charm
+            equipmentDodgeBonus,
+            attackerAccuracy, // Attacker's accuracy reduces dodge effectiveness
+          };
+
+          defenderDodgeChance = calculateDodgeChance(dodgeFactors);
+        }
+      }
+    }
+
     // Execute combat round with actual equipment stats
+    // Pass defender's current HP to stop combat when they reach 0
     const combatResult = executeCombatRound(
       attacker.username,
       target.username,
@@ -451,7 +516,10 @@ async function processAttackerCombat(
       minDamage,
       maxDamage,
       critMultiplier,
-      defenderEquipment.armor.damageReduction
+      defenderEquipment.armor.damageReduction,
+      combatConfig,
+      target.vitals.hp,
+      defenderDodgeChance
     );
 
     // Update carried energy for next round
@@ -563,10 +631,14 @@ async function handlePlayerDeath(
 /**
  * Process a single combat round for all players in combat
  */
-function processCombatRound(): void {
+async function processCombatRound(): Promise<void> {
   if (!connectedPlayersRef) return;
 
   try {
+    // Load combat settings from database (cached)
+    const settings = await getCombatSettings();
+    const combatConfig = toRuntimeConfig(settings);
+
     // Collect all attackers who have targets
     const attackers: AuthenticatedSocket[] = [];
     for (const [, socket] of connectedPlayersRef) {
@@ -577,7 +649,7 @@ function processCombatRound(): void {
 
     // Process combat for each attacker
     for (const attacker of attackers) {
-      processAttackerCombat(attacker, attacker.combatState.targets).catch((error) => {
+      processAttackerCombat(attacker, attacker.combatState.targets, combatConfig).catch((error) => {
         console.error(`[Combat] Error processing combat for ${attacker.username}:`, error);
       });
     }

@@ -4,7 +4,10 @@ import { requireAdmin } from '../middleware/auth.js';
 import * as settingsRepo from '../db/repositories/settingsRepository.js';
 import * as ipAccessRepo from '../db/repositories/ipAccessRepository.js';
 import * as playerRepo from '../db/repositories/playerRepository.js';
+import * as characterRepo from '../db/repositories/characterRepository.js';
+import * as roleRepo from '../db/repositories/roleRepository.js';
 import { resolveHostnameImmediate } from '../services/dnsResolver.js';
+import { Role } from '@koa/shared';
 
 export function setupAdminRoutes(app: Express): void {
   // GET /api/admin/settings - Get all settings
@@ -15,6 +18,17 @@ export function setupAdminRoutes(app: Express): void {
     } catch (error) {
       console.error('Failed to get settings:', error);
       res.status(500).json({ success: false, message: 'Failed to get settings' });
+    }
+  });
+
+  // GET /api/admin/settings/all - Get all settings as raw key-value pairs (for settings editor)
+  app.get('/api/admin/settings/all', requireAdmin, async (_req: Request, res: Response) => {
+    try {
+      const settings = await settingsRepo.getAllSettingsRaw();
+      res.json({ success: true, settings });
+    } catch (error) {
+      console.error('Failed to get all settings:', error);
+      res.status(500).json({ success: false, message: 'Failed to get all settings' });
     }
   });
 
@@ -197,6 +211,287 @@ export function setupAdminRoutes(app: Express): void {
     } catch (error) {
       console.error('Failed to update player character limit:', error);
       res.status(500).json({ success: false, message: 'Failed to update player character limit' });
+    }
+  });
+
+  // ============================================================================
+  // User/Character Admin Endpoints (for User Editor)
+  // ============================================================================
+
+  // GET /api/admin/users - List all users with character counts and roles
+  app.get('/api/admin/users', requireAdmin, async (_req: Request, res: Response) => {
+    try {
+      const users = await playerRepo.getAllPlayersWithDetails();
+      res.json({ success: true, users });
+    } catch (error) {
+      console.error('Failed to get users:', error);
+      res.status(500).json({ success: false, message: 'Failed to get users' });
+    }
+  });
+
+  // GET /api/admin/users/:id - Get user details with characters
+  app.get('/api/admin/users/:id', requireAdmin, async (req: Request, res: Response) => {
+    const userId = Number(req.params.id);
+    if (!Number.isInteger(userId) || userId <= 0) {
+      res.status(400).json({ success: false, message: 'Invalid user ID' });
+      return;
+    }
+
+    try {
+      const user = await playerRepo.getPlayerWithRoles(userId);
+      if (!user) {
+        res.status(404).json({ success: false, message: 'User not found' });
+        return;
+      }
+
+      const characters = await characterRepo.findCharactersByPlayerId(userId);
+      res.json({ success: true, user, characters });
+    } catch (error) {
+      console.error('Failed to get user:', error);
+      res.status(500).json({ success: false, message: 'Failed to get user' });
+    }
+  });
+
+  // PUT /api/admin/users/:id - Update user details
+  app.put('/api/admin/users/:id', requireAdmin, async (req: Request, res: Response) => {
+    const userId = Number(req.params.id);
+    if (!Number.isInteger(userId) || userId <= 0) {
+      res.status(400).json({ success: false, message: 'Invalid user ID' });
+      return;
+    }
+
+    const { username, email, max_characters } = req.body;
+
+    // Validate username if provided
+    if (username !== undefined) {
+      if (typeof username !== 'string' || username.trim().length < 3) {
+        res.status(400).json({ success: false, message: 'Username must be at least 3 characters' });
+        return;
+      }
+
+      // Check if username is already taken by another user
+      const existingPlayer = await playerRepo.findPlayerByUsername(username.trim());
+      if (existingPlayer && existingPlayer.id !== userId) {
+        res.status(400).json({ success: false, message: 'Username already taken' });
+        return;
+      }
+    }
+
+    // Validate max_characters if provided
+    if (max_characters !== undefined && max_characters !== null) {
+      const numValue = Number(max_characters);
+      if (isNaN(numValue) || numValue < 1 || numValue > 100) {
+        res.status(400).json({ success: false, message: 'Max characters must be between 1 and 100' });
+        return;
+      }
+    }
+
+    try {
+      const updates: playerRepo.UpdatePlayerAdminInput = {};
+      if (username !== undefined) updates.username = username.trim();
+      if (email !== undefined) updates.email = email?.trim() || null;
+      if (max_characters !== undefined) updates.max_characters = max_characters;
+
+      const updated = await playerRepo.updatePlayerAdmin(userId, updates);
+      if (!updated) {
+        res.status(404).json({ success: false, message: 'User not found' });
+        return;
+      }
+
+      res.json({ success: true, message: 'User updated' });
+    } catch (error) {
+      console.error('Failed to update user:', error);
+      res.status(500).json({ success: false, message: 'Failed to update user' });
+    }
+  });
+
+  // POST /api/admin/users/:id/reset-password - Reset user password
+  app.post('/api/admin/users/:id/reset-password', requireAdmin, async (req: Request, res: Response) => {
+    const userId = Number(req.params.id);
+    if (!Number.isInteger(userId) || userId <= 0) {
+      res.status(400).json({ success: false, message: 'Invalid user ID' });
+      return;
+    }
+
+    const { password } = req.body;
+
+    // If password provided, validate it
+    if (password !== undefined && (typeof password !== 'string' || password.length < 6)) {
+      res.status(400).json({ success: false, message: 'Password must be at least 6 characters' });
+      return;
+    }
+
+    try {
+      const newPassword = await playerRepo.resetPlayerPassword(userId, password);
+      if (!newPassword) {
+        res.status(404).json({ success: false, message: 'User not found' });
+        return;
+      }
+
+      res.json({ success: true, message: 'Password reset', password: newPassword });
+    } catch (error) {
+      console.error('Failed to reset password:', error);
+      res.status(500).json({ success: false, message: 'Failed to reset password' });
+    }
+  });
+
+  // PUT /api/admin/users/:id/role - Change user role
+  app.put('/api/admin/users/:id/role', requireAdmin, async (req: Request, res: Response) => {
+    const userId = Number(req.params.id);
+    if (!Number.isInteger(userId) || userId <= 0) {
+      res.status(400).json({ success: false, message: 'Invalid user ID' });
+      return;
+    }
+
+    const { role } = req.body;
+
+    // Validate role
+    const validRoles = Object.values(Role);
+    if (!validRoles.includes(role)) {
+      res.status(400).json({ success: false, message: 'Invalid role' });
+      return;
+    }
+
+    try {
+      const user = await playerRepo.findPlayerById(userId);
+      if (!user) {
+        res.status(404).json({ success: false, message: 'User not found' });
+        return;
+      }
+
+      // Get current roles
+      const currentRoles = await roleRepo.getPlayerRoles(userId);
+
+      // Remove all current roles except PENDING
+      for (const currentRole of currentRoles) {
+        if (currentRole !== Role.PENDING) {
+          await roleRepo.removeRole(userId, currentRole);
+        }
+      }
+
+      // Add the new role
+      await roleRepo.assignRole(userId, role, req.user?.playerId);
+
+      // If assigning a role higher than PENDING, also ensure PLAYER is assigned
+      if (role !== Role.PENDING && role !== Role.PLAYER) {
+        await roleRepo.assignRole(userId, Role.PLAYER, req.user?.playerId);
+      }
+
+      res.json({ success: true, message: 'Role updated' });
+    } catch (error) {
+      console.error('Failed to update role:', error);
+      res.status(500).json({ success: false, message: 'Failed to update role' });
+    }
+  });
+
+  // PUT /api/admin/characters/:id - Update character
+  app.put('/api/admin/characters/:id', requireAdmin, async (req: Request, res: Response) => {
+    const characterId = Number(req.params.id);
+    if (!Number.isInteger(characterId) || characterId <= 0) {
+      res.status(400).json({ success: false, message: 'Invalid character ID' });
+      return;
+    }
+
+    const updates = req.body;
+
+    // Validate character name if provided
+    if (updates.name !== undefined) {
+      if (typeof updates.name !== 'string' || updates.name.trim().length < 2) {
+        res.status(400).json({ success: false, message: 'Character name must be at least 2 characters' });
+        return;
+      }
+
+      // Check if name is already taken by another character
+      const existingChar = await characterRepo.findCharacterByName(updates.name.trim());
+      if (existingChar && existingChar.id !== characterId) {
+        res.status(400).json({ success: false, message: 'Character name already taken' });
+        return;
+      }
+
+      updates.name = updates.name.trim();
+    }
+
+    // Validate numeric fields with ranges
+    const numericFields: Record<string, { min: number; max: number }> = {
+      level: { min: 1, max: 1000 },
+      experience: { min: 0, max: Number.MAX_SAFE_INTEGER },
+      health: { min: 0, max: 100000 },
+      max_health: { min: 1, max: 100000 },
+      mana: { min: 0, max: 100000 },
+      max_mana: { min: 0, max: 100000 },
+      strength: { min: 1, max: 255 },
+      intelligence: { min: 1, max: 255 },
+      dexterity: { min: 1, max: 255 },
+      constitution: { min: 1, max: 255 },
+      wisdom: { min: 1, max: 255 },
+      charisma: { min: 1, max: 255 },
+      current_room_id: { min: 1, max: Number.MAX_SAFE_INTEGER },
+      gold: { min: 0, max: Number.MAX_SAFE_INTEGER },
+      unspent_cp: { min: 0, max: 10000 },
+    };
+
+    for (const [field, range] of Object.entries(numericFields)) {
+      if (updates[field] !== undefined) {
+        const value = Number(updates[field]);
+        if (isNaN(value)) {
+          res.status(400).json({ success: false, message: `Invalid value for ${field}` });
+          return;
+        }
+        if (value < range.min || value > range.max) {
+          res.status(400).json({ success: false, message: `${field} must be between ${range.min} and ${range.max}` });
+          return;
+        }
+        updates[field] = value;
+      }
+    }
+
+    // Validate cp_spent if provided (must be an object with numeric values)
+    if (updates.cp_spent !== undefined) {
+      if (typeof updates.cp_spent !== 'object' || updates.cp_spent === null || Array.isArray(updates.cp_spent)) {
+        res.status(400).json({ success: false, message: 'cp_spent must be an object' });
+        return;
+      }
+      for (const [stat, value] of Object.entries(updates.cp_spent)) {
+        if (typeof value !== 'number' || value < 0) {
+          res.status(400).json({ success: false, message: `Invalid cp_spent value for ${stat}` });
+          return;
+        }
+      }
+    }
+
+    try {
+      const character = await characterRepo.updateCharacterAdmin(characterId, updates);
+      if (!character) {
+        res.status(404).json({ success: false, message: 'Character not found' });
+        return;
+      }
+
+      res.json({ success: true, message: 'Character updated', character });
+    } catch (error) {
+      console.error('Failed to update character:', error);
+      res.status(500).json({ success: false, message: 'Failed to update character' });
+    }
+  });
+
+  // DELETE /api/admin/characters/:id - Delete character
+  app.delete('/api/admin/characters/:id', requireAdmin, async (req: Request, res: Response) => {
+    const characterId = Number(req.params.id);
+    if (!Number.isInteger(characterId) || characterId <= 0) {
+      res.status(400).json({ success: false, message: 'Invalid character ID' });
+      return;
+    }
+
+    try {
+      const deleted = await characterRepo.deleteCharacter(characterId);
+      if (!deleted) {
+        res.status(404).json({ success: false, message: 'Character not found' });
+        return;
+      }
+
+      res.json({ success: true, message: 'Character deleted' });
+    } catch (error) {
+      console.error('Failed to delete character:', error);
+      res.status(500).json({ success: false, message: 'Failed to delete character' });
     }
   });
 }

@@ -147,6 +147,21 @@ export async function runMigrations(): Promise<void> {
         ALTER TABLE class_definitions ADD COLUMN IF NOT EXISTS special_abilities JSONB DEFAULT '[]'
       `);
 
+      // Add crit_bonus column to class_definitions (MajorMUD-style class crit bonuses)
+      await client.query(`
+        ALTER TABLE class_definitions ADD COLUMN IF NOT EXISTS crit_bonus INTEGER DEFAULT 0
+      `);
+
+      // Add dodge_bonus column to class_definitions (MajorMUD-style class dodge - Ninja/Mystic get 25)
+      await client.query(`
+        ALTER TABLE class_definitions ADD COLUMN IF NOT EXISTS dodge_bonus INTEGER DEFAULT 0
+      `);
+
+      // Add dodge_bonus column to race_definitions (MajorMUD-style race dodge - Halfling gets 10)
+      await client.query(`
+        ALTER TABLE race_definitions ADD COLUMN IF NOT EXISTS dodge_bonus INTEGER DEFAULT 0
+      `);
+
       // Purge old classes and races to reseed with new MajorMUD data
       // Check if we need to reseed by looking for old-style class IDs
       const oldClassCheck = await client.query(`
@@ -161,12 +176,66 @@ export async function runMigrations(): Promise<void> {
         console.log('Old class and race definitions purged');
       }
 
+      // Scale weapon attack speeds (migration for existing weapons)
+      // With 20000 base energy and 0.6 level 1 multiplier, effective energy is 12000
+      // Any weapon with speed < 2000 would allow > 6 attacks (12000/2000 = 6)
+      // Scale weapons so the fastest (daggers) allow ~3 attacks at level 1
+      // Target minimum speed: 4000 (12000/4000 = 3 attacks)
+      //
+      // First pass: Scale weapons with speed < 2000 (way too fast) - multiply to get minimum 4000
+      await client.query(`
+        UPDATE item_templates
+        SET weapon_data = jsonb_set(
+          weapon_data,
+          '{attack_speed}',
+          to_jsonb(GREATEST(4000, (weapon_data->>'attack_speed')::integer * 5))
+        )
+        WHERE item_type = 'weapon'
+          AND weapon_data IS NOT NULL
+          AND weapon_data ? 'attack_speed'
+          AND (weapon_data->>'attack_speed')::integer < 2000
+      `);
+
+      // Second pass: Scale weapons with speed between 2000-4000 (still too fast)
+      await client.query(`
+        UPDATE item_templates
+        SET weapon_data = jsonb_set(
+          weapon_data,
+          '{attack_speed}',
+          to_jsonb((weapon_data->>'attack_speed')::integer * 2)
+        )
+        WHERE item_type = 'weapon'
+          AND weapon_data IS NOT NULL
+          AND weapon_data ? 'attack_speed'
+          AND (weapon_data->>'attack_speed')::integer >= 2000
+          AND (weapon_data->>'attack_speed')::integer < 4000
+      `);
+
       // Seed default game settings
       await client.query(`
         INSERT INTO game_settings (key, value) VALUES
           ('max_characters_per_player', '3'),
-          ('ip_access_mode', '"blocklist"')
+          ('ip_access_mode', '"blocklist"'),
+          ('combat_base_energy', '20000'),
+          ('combat_default_weapon_speed', '7500'),
+          ('combat_max_attacks_per_round', '6'),
+          ('combat_round_interval_ms', '4000'),
+          ('combat_unarmed_speed', '4500'),
+          ('combat_level_multipliers', '{"1": 0.6, "2": 0.75, "3": 0.9, "4": 1.0, "5": 1.15}'),
+          ('combat_level_accuracy_bonus', '{"1": 0, "2": 10, "3": 20, "4": 35, "5": 50}')
         ON CONFLICT (key) DO NOTHING
+      `);
+
+      // Update combat settings if they have old values (for existing databases)
+      await client.query(`
+        UPDATE game_settings
+        SET value = '7500'
+        WHERE key = 'combat_default_weapon_speed' AND value::integer < 3000
+      `);
+      await client.query(`
+        UPDATE game_settings
+        SET value = '4500'
+        WHERE key = 'combat_unarmed_speed' AND value::integer < 3000
       `);
     });
 

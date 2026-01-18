@@ -409,13 +409,13 @@ async function updateNavigation(): Promise<void> {
       // Show/hide Developer nav dropdown based on roles
       const devDropdown = document.getElementById('nav-dev-dropdown');
       if (devDropdown) {
-        devDropdown.style.display = isDeveloper ? 'block' : 'none';
+        devDropdown.style.display = isDeveloper ? 'flex' : 'none';
       }
 
-      // Show/hide Admin nav link based on roles
-      const adminLink = document.getElementById('nav-admin-link');
-      if (adminLink) {
-        adminLink.style.display = isAdmin ? 'block' : 'none';
+      // Show/hide Admin nav dropdown based on roles
+      const adminDropdown = document.getElementById('nav-admin-dropdown');
+      if (adminDropdown) {
+        adminDropdown.style.display = isAdmin ? 'flex' : 'none';
       }
     }
   } catch (error) {
