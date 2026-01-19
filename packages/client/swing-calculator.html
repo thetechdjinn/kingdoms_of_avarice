@@ -685,7 +685,7 @@
                 <p style="color: #888; margin-bottom: 0.5rem;">// Energy pool is fixed, modified only by DEX and encumbrance</p>
                 <p><span class="var">baseEnergy</span> = <span class="num">1000</span> (fixed)</p>
                 <p><span class="var">dexBonus</span> = max(<span class="num">0</span>, <span class="var">DEX</span> - <span class="num">50</span>) * <span class="num">5</span></p>
-                <p><span class="var">encMult</span> = <span class="num">1.0</span> ± ((<span class="num">50</span> - <span class="var">enc%</span>) / <span class="num">100</span>), min <span class="num">0.5</span></p>
+                <p><span class="var">encMult</span> = if (<span class="var">enc%</span> &lt; <span class="num">50</span>) then <span class="num">1.0</span> + ((<span class="num">50</span> - <span class="var">enc%</span>) / <span class="num">100</span>) else <span class="num">1.0</span> - ((<span class="var">enc%</span> - <span class="num">50</span>) / <span class="num">100</span>), min <span class="num">0.5</span></p>
                 <p><span class="var">effectiveEnergy</span> = (<span class="var">baseEnergy</span> + <span class="var">dexBonus</span>) * <span class="var">encMult</span></p>
                 <p style="color: #888; margin-top: 0.75rem; margin-bottom: 0.5rem;">// Combat level and character level reduce WEAPON COST, not energy</p>
                 <p><span class="var">speedDivisor</span> = <span class="num">1.558</span> + (<span class="num">0.073</span> × <span class="var">level</span>) + (<span class="num">0.007</span> × <span class="var">combat</span>) + (<span class="num">0.035</span> × <span class="var">level</span> × <span class="var">combat</span>)</p>

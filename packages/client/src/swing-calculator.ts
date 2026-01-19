@@ -469,18 +469,6 @@ function calculateSwingsPerRound(effectiveEnergy: number, effectiveWeaponCost: n
   return swingsPerRound;
 }
 
-/**
- * Calculate effective weapon cost based on level and combat level
- * Uses the MajorMUD-style speed divisor formula
- */
-function calculateEffectiveWeaponCostForLevel(baseWeaponSpeed: number, characterLevel: number, combatLevel: number): number {
-  const speedDivisor = SPEED_DIVISOR_BASE
-    + (SPEED_DIVISOR_PER_LEVEL * characterLevel)
-    + (SPEED_DIVISOR_PER_COMBAT * combatLevel)
-    + (SPEED_DIVISOR_LEVEL_COMBAT_INTERACTION * characterLevel * combatLevel);
-  return Math.max(1, Math.floor(baseWeaponSpeed / speedDivisor));
-}
-
 function updateBreakdownTable(baseInputs: CalculationInputs): void {
   const tbody = document.getElementById('breakdown-tbody');
   const levelRangeSelect = document.getElementById('level-range-select') as HTMLSelectElement;
@@ -519,7 +507,7 @@ function updateBreakdownTable(baseInputs: CalculationInputs): void {
 
     tr.innerHTML = `
       <td>${level}</td>
-      <td>${results.effectiveWeaponCost}</td>
+      <td>${results.effectiveWeaponCost.toLocaleString()}</td>
       <td>${swingsPerRound.join(', ')}</td>
       <td>${results.totalCrit}%</td>
     `;

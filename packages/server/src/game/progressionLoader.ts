@@ -102,14 +102,11 @@ async function migrateClassCombatLevels(): Promise<void> {
       const seedData = seedMap.get(cls.class_id);
       if (!seedData) continue;
 
-      // Only update if class has the migration default (3) but JSON says differently
-      // This preserves user customizations while fixing classes stuck at the default
+      // Only update combat_level if class has the migration default (3) but JSON says differently
+      // This preserves user customizations - only fixes combat_level, leaves other fields untouched
       if (cls.combat_level === 3 && seedData.combat_level !== 3) {
         await progressionRepo.updateClass(cls.class_id, {
           combat_level: seedData.combat_level,
-          magic_level: seedData.magic_level,
-          crit_bonus: seedData.crit_bonus,
-          dodge_bonus: seedData.dodge_bonus,
         });
         console.log(`[Progression] Migrated ${cls.display_name}: combat_level ${cls.combat_level} -> ${seedData.combat_level}`);
         updatedCount++;
