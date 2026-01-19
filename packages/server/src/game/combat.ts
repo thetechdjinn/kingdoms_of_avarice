@@ -15,6 +15,7 @@ import {
   calculateDefense,
   calculateCritChance,
   calculateDodgeChance,
+  calculateEffectiveWeaponCost,
   executeCombatRound,
   parseDiceString,
   RuntimeCombatConfig,
@@ -397,9 +398,19 @@ async function processAttackerCombat(
   const attackerAccuracy = calculateAccuracy(accuracyFactors, combatConfig);
 
   // Get weapon data from equipped weapon
-  const weaponSpeed = attackerEquipment.weapon.attackSpeed;
+  const baseWeaponSpeed = attackerEquipment.weapon.attackSpeed;
   const weaponMinDamage = attackerEquipment.weapon.minDamage;
   const weaponMaxDamage = attackerEquipment.weapon.maxDamage;
+
+  // Calculate effective weapon cost (MajorMUD-style: level and combat reduce weapon cost)
+  const effectiveWeaponCost = calculateEffectiveWeaponCost(
+    baseWeaponSpeed,
+    attacker.characterLevel,
+    attacker.combatLevel
+  );
+
+  // Debug logging for swing calculations
+  console.log(`[Combat Debug] ${attacker.username}: Level=${attacker.characterLevel}, Combat=${attacker.combatLevel}, STR=${effectiveStr}, DEX=${effectiveDex}, Weight=${attackerEquipment.totalWeight}, MaxCap=${effectiveStr * 48}, Enc=${(encumbranceRatio * 100).toFixed(1)}%, BaseSpeed=${baseWeaponSpeed}, EffectiveCost=${effectiveWeaponCost}, RoundEnergy=${roundEnergy}, ExpectedSwings=${Math.floor(roundEnergy / effectiveWeaponCost)}`);
 
   // Get class crit bonus (MajorMUD-style: some classes get flat crit bonuses)
   let classCritBonus = 0;
@@ -513,7 +524,7 @@ async function processAttackerCombat(
       targetDefense,
       roundEnergy,
       attacker.combatState.carriedEnergy,
-      weaponSpeed,
+      effectiveWeaponCost,
       baseCritChance,
       minDamage,
       maxDamage,

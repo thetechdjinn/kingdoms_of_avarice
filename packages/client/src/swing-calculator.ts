@@ -141,7 +141,6 @@ function populateWeaponSelect(): void {
 // ============================================================================
 
 interface CalculationInputs {
-  baseEnergy: number;
   combatLevel: number;
   characterLevel: number;
   intelligence: number;
@@ -160,11 +159,14 @@ interface CalculationInputs {
 }
 
 interface CalculationResults {
-  combatMult: number;
-  levelMult: number;
-  dexMult: number;
-  encMult: number;
-  effectiveEnergy: number;
+  // MajorMUD-style energy and weapon cost (based on Nightmare Redux data)
+  baseEnergy: number;           // Fixed base energy pool
+  dexBonus: number;             // Bonus from DEX above 50
+  encMult: number;              // Encumbrance multiplier
+  effectiveEnergy: number;      // Final energy after modifiers
+  baseWeaponSpeed: number;      // Original weapon speed
+  speedDivisor: number;         // Divisor based on level & combat
+  effectiveWeaponCost: number;  // Reduced weapon cost per swing
   rawSwings: number;
   actualSwings: number;
   excessAttacks: number;
@@ -191,35 +193,64 @@ function calculateEncumbranceCritBonus(encRatio: number): number {
   return ENCUMBRANCE_CRIT_THRESHOLDS.HEAVY.bonus;
 }
 
+// MajorMUD-style constants (from Nightmare Redux data reverse-engineering)
+const SPEED_DIVISOR_BASE = 1.558;
+const SPEED_DIVISOR_PER_LEVEL = 0.073;
+const SPEED_DIVISOR_PER_COMBAT = 0.007;
+const SPEED_DIVISOR_LEVEL_COMBAT_INTERACTION = 0.035;
+const BASE_ENERGY_POOL = 1000;
+const ENERGY_PER_DEX_ABOVE_50 = 5;
+
 function calculate(inputs: CalculationInputs): CalculationResults {
-  // Combat level multiplier
-  const combatMult = COMBAT_LEVEL_ENERGY_MULTIPLIER[inputs.combatLevel] ?? 1.0;
+  // MajorMUD-style formula (reverse-engineered from Nightmare Redux data):
+  // In MajorMUD, combat level and character level reduce the WEAPON COST, not increase energy.
+  // This creates an interaction where combat level matters MORE at higher character levels.
+  //
+  // Speed Divisor = 1.558 + (0.073 × Level) + (0.007 × Combat) + (0.035 × Level × Combat)
+  // Effective Weapon Cost = floor(Base Weapon Speed / Speed Divisor)
+  //
+  // Energy pool is fixed at 1000, modified only by DEX (+5 per point above 50) and encumbrance.
 
-  // Character level bonus (2% per level above 1)
-  const levelMult = 1 + (inputs.characterLevel - 1) * 0.02;
+  // Fixed base energy pool
+  const baseEnergy = BASE_ENERGY_POOL;
 
-  // Dexterity bonus for energy (1% per 10 DEX above 50)
-  const dexBonus = Math.max(0, (inputs.dexterity - 50) / 10) * 0.01;
-  const dexMult = 1 + dexBonus;
+  // DEX bonus: +5 energy per point above 50
+  const dexBonus = Math.max(0, inputs.dexterity - 50) * ENERGY_PER_DEX_ABOVE_50;
 
-  // Encumbrance modifier for energy (50% = baseline)
+  // Encumbrance modifier (MajorMUD-style):
+  // At 50% encumbrance = 1.0x (baseline)
+  // At 0% encumbrance = 1.5x (+50% bonus)
+  // At 100% encumbrance = 0.5x (-50% penalty)
   const encRatio = inputs.encumbrance / 100;
-  const encOffset = 0.5 - encRatio;
-  const encMult = Math.max(0.5, 1 + encOffset * 0.5);
+  let encMult: number;
+  if (inputs.encumbrance < 50) {
+    encMult = 1.0 + ((50 - inputs.encumbrance) / 100);
+  } else {
+    encMult = 1.0 - ((inputs.encumbrance - 50) / 100);
+  }
+  encMult = Math.max(0.5, encMult);
 
   // Calculate effective energy
-  const effectiveEnergy = Math.floor(
-    inputs.baseEnergy * combatMult * levelMult * dexMult * encMult
-  );
+  const effectiveEnergy = Math.floor((baseEnergy + dexBonus) * encMult);
 
-  // Calculate swings
-  const weaponSpeed = Math.max(1, inputs.weaponSpeed);
-  const rawSwings = effectiveEnergy / weaponSpeed;
+  // Calculate speed divisor based on level and combat
+  const speedDivisor = SPEED_DIVISOR_BASE
+    + (SPEED_DIVISOR_PER_LEVEL * inputs.characterLevel)
+    + (SPEED_DIVISOR_PER_COMBAT * inputs.combatLevel)
+    + (SPEED_DIVISOR_LEVEL_COMBAT_INTERACTION * inputs.characterLevel * inputs.combatLevel);
+
+  // Calculate effective weapon cost (reduced by level and combat)
+  const baseWeaponSpeed = Math.max(1, inputs.weaponSpeed);
+  const effectiveWeaponCost = Math.floor(baseWeaponSpeed / speedDivisor);
+
+  // Calculate swings using effective weapon cost
+  const safeWeaponCost = Math.max(1, effectiveWeaponCost);
+  const rawSwings = effectiveEnergy / safeWeaponCost;
   const actualSwings = Math.min(Math.floor(rawSwings), inputs.maxAttacks);
   const excessAttacks = Math.max(0, Math.floor(rawSwings) - inputs.maxAttacks);
 
-  // Carried energy
-  const carriedEnergy = effectiveEnergy - (actualSwings * weaponSpeed);
+  // Carried energy (using effective weapon cost)
+  const carriedEnergy = effectiveEnergy - (actualSwings * safeWeaponCost);
 
   // MajorMUD-style crit calculation
   // Base from character level (+1% per 10 levels)
@@ -282,11 +313,13 @@ function calculate(inputs: CalculationInputs): CalculationResults {
   }
 
   return {
-    combatMult,
-    levelMult,
-    dexMult,
+    baseEnergy,
+    dexBonus,
     encMult,
     effectiveEnergy,
+    baseWeaponSpeed,
+    speedDivisor,
+    effectiveWeaponCost,
     rawSwings,
     actualSwings,
     excessAttacks,
@@ -306,13 +339,12 @@ function calculate(inputs: CalculationInputs): CalculationResults {
 
 function getInputs(): CalculationInputs {
   return {
-    baseEnergy: getNumberValue('base-energy', 20000),
     combatLevel: getNumberValue('combat-level', 1),
     characterLevel: getNumberValue('character-level', 1),
     intelligence: getNumberValue('intelligence', 50),
     dexterity: getNumberValue('dexterity', 50),
     encumbrance: getNumberValue('encumbrance', 50),
-    weaponSpeed: getNumberValue('weapon-speed', 7500),
+    weaponSpeed: getNumberValue('weapon-speed', 900),
     classCritBonus: getNumberValue('class-crit-bonus', 0),
     weaponCrit: getNumberValue('weapon-crit', 0),
     maxAttacks: getNumberValue('max-attacks', 6),
@@ -340,12 +372,18 @@ function updateDisplay(): void {
   const inputs = getInputs();
   const results = calculate(inputs);
 
-  // Update output values
-  setText('out-combat-mult', `${results.combatMult}x`);
-  setText('out-level-mult', `${results.levelMult.toFixed(2)}x`);
-  setText('out-dex-mult', `${results.dexMult.toFixed(3)}x`);
+  // Update output values (MajorMUD-style: weapon cost reduction formula)
+  setText('out-base-energy', results.baseEnergy.toLocaleString());
+  setText('out-dex-energy', `+${results.dexBonus}`);
+  // Calculate and display max capacity from strength input
+  const strength = getNumberValue('strength', 55);
+  const maxCapacity = strength * 48;
+  setText('out-max-capacity', maxCapacity.toLocaleString());
   setText('out-enc-mult', `${results.encMult.toFixed(2)}x`);
   setText('out-energy', results.effectiveEnergy.toLocaleString());
+  setText('out-base-speed', results.baseWeaponSpeed.toLocaleString());
+  setText('out-speed-divisor', results.speedDivisor.toFixed(3));
+  setText('out-effective-cost', results.effectiveWeaponCost.toLocaleString());
   setText('out-raw-swings', results.rawSwings.toFixed(2));
   setText('out-swings', String(results.actualSwings));
   setText('out-excess', String(results.excessAttacks));
@@ -413,19 +451,19 @@ function setText(id: string, text: string): void {
   if (el) el.textContent = text;
 }
 
-function calculateSwingsPerRound(effectiveEnergy: number, weaponSpeed: number, maxAttacks: number, rounds: number): number[] {
+function calculateSwingsPerRound(effectiveEnergy: number, effectiveWeaponCost: number, maxAttacks: number, rounds: number): number[] {
   const swingsPerRound: number[] = [];
   let carriedEnergy = 0;
 
   // Prevent division by zero
-  const safeWeaponSpeed = Math.max(1, weaponSpeed);
+  const safeWeaponCost = Math.max(1, effectiveWeaponCost);
 
   for (let round = 0; round < rounds; round++) {
     const totalEnergy = effectiveEnergy + carriedEnergy;
-    const rawSwings = totalEnergy / safeWeaponSpeed;
+    const rawSwings = totalEnergy / safeWeaponCost;
     const actualSwings = Math.min(Math.floor(rawSwings), maxAttacks);
     swingsPerRound.push(actualSwings);
-    carriedEnergy = totalEnergy - (actualSwings * safeWeaponSpeed);
+    carriedEnergy = totalEnergy - (actualSwings * safeWeaponCost);
   }
 
   return swingsPerRound;
@@ -454,10 +492,10 @@ function updateBreakdownTable(baseInputs: CalculationInputs): void {
     const inputs = { ...baseInputs, characterLevel: level };
     const results = calculate(inputs);
 
-    // Calculate swings for each of the first N rounds
+    // Calculate swings for each of the first N rounds using effective weapon cost
     const swingsPerRound = calculateSwingsPerRound(
       results.effectiveEnergy,
-      inputs.weaponSpeed,
+      results.effectiveWeaponCost,
       inputs.maxAttacks,
       numRounds
     );
@@ -469,7 +507,7 @@ function updateBreakdownTable(baseInputs: CalculationInputs): void {
 
     tr.innerHTML = `
       <td>${level}</td>
-      <td>${results.effectiveEnergy.toLocaleString()}</td>
+      <td>${results.effectiveWeaponCost.toLocaleString()}</td>
       <td>${swingsPerRound.join(', ')}</td>
       <td>${results.totalCrit}%</td>
     `;
@@ -644,13 +682,51 @@ function showContent(): void {
   if (content) content.style.display = 'block';
 }
 
+/**
+ * Calculate encumbrance percentage from weight and strength
+ * Uses MajorMUD formula: MaxCapacity = STR × 48
+ */
+function calculateEncumbrancePercent(weight: number, strength: number): number {
+  const maxCapacity = strength * 48;
+  if (maxCapacity <= 0) return 100;
+  if (weight <= 0) return 0;
+  const ratio = (weight / maxCapacity) * 100;
+  return Math.min(100, Math.max(0, ratio));
+}
+
+/**
+ * Update the encumbrance field based on weight and strength inputs
+ */
+function updateEncumbranceFromWeightAndStr(): void {
+  const strength = getNumberValue('strength', 55);
+  const weight = getNumberValue('carried-weight', 0);
+  const encPercent = calculateEncumbrancePercent(weight, strength);
+
+  const encInput = document.getElementById('encumbrance') as HTMLInputElement;
+  if (encInput) {
+    encInput.value = encPercent.toFixed(1);
+  }
+
+  updateDisplay();
+}
+
 function setupEventListeners(): void {
   // All inputs trigger recalculation
   const inputIds = [
     'weapon-speed', 'combat-level', 'character-level', 'intelligence', 'dexterity',
-    'encumbrance', 'class-crit-bonus', 'weapon-crit', 'max-attacks', 'base-energy',
+    'encumbrance', 'class-crit-bonus', 'weapon-crit', 'max-attacks',
     'class-dodge-bonus', 'race-dodge-bonus', 'equip-dodge-bonus', 'charisma', 'attacker-accuracy'
   ];
+
+  // Weight and strength inputs recalculate encumbrance
+  const encInputIds = ['strength', 'carried-weight'];
+  for (const id of encInputIds) {
+    const el = document.getElementById(id);
+    if (el) {
+      el.addEventListener('input', updateEncumbranceFromWeightAndStr);
+      el.addEventListener('change', updateEncumbranceFromWeightAndStr);
+    }
+  }
 
   for (const id of inputIds) {
     const el = document.getElementById(id);
@@ -720,5 +796,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   setupEventListeners();
   await loadWeapons();
   showContent();
-  updateDisplay();
+  // Calculate initial encumbrance from weight/strength inputs
+  updateEncumbranceFromWeightAndStr();
 });

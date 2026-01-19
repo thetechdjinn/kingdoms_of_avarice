@@ -218,20 +218,28 @@ export async function getEquipmentCombatStats(playerId: number): Promise<Equipme
 /**
  * Calculate encumbrance ratio based on weight and strength
  *
- * @param totalWeight - Total weight being carried
+ * Weight units based on MajorMUD (from Nightmare Redux):
+ * - Dagger: 35, Long sword: 90, Greatsword: 150-200
+ * - Silk Cape: 50, Great Cloak: 100
+ * - Leather armor: 325-400, Chainmail pieces: 150-160
+ * - Plate boots: 200, Full plate corselet: 1500
+ *
+ * Carrying capacity formula derived from MajorMUD data:
+ * - Kang, STR 55 = 2640 max capacity (55 × 48 = 2640)
+ * - Half-elf, STR 40 = 1920 max capacity (40 × 48 = 1920)
+ *
+ * @param totalWeight - Total weight being carried (in weight units)
  * @param strength - Character's strength stat
- * @returns Encumbrance ratio (0.0 = empty, 0.5 = baseline, 1.0 = max capacity)
+ * @returns Encumbrance ratio (0.0 = empty, 1.0 = max capacity)
  */
 export function calculateEncumbranceRatio(totalWeight: number, strength: number): number {
-  // Base carrying capacity: 50 + (strength * 2) pounds
-  // A character with 50 STR can carry 150 pounds at baseline (50% encumbrance)
-  const maxCapacity = 50 + (strength * 2);
-  const baselineCapacity = maxCapacity * 0.5; // 50% of max is the baseline
+  // MajorMUD formula: MaxCapacity = STR × 48
+  const maxCapacity = strength * 48;
 
   if (totalWeight <= 0) return 0;
+  if (maxCapacity <= 0) return 1.0; // Prevent division by zero
   if (totalWeight >= maxCapacity) return 1.0;
 
-  // Return ratio where 0.5 = baseline capacity
   return totalWeight / maxCapacity;
 }
 
