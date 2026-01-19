@@ -85,6 +85,46 @@ export function loadTalents(): TalentDefinition[] {
 }
 
 /**
+ * One-time migration: Update classes that have the old default combat_level (3)
+ * but should have a different value according to the JSON.
+ * Only updates classes still at the default - preserves user customizations.
+ */
+async function migrateClassCombatLevels(): Promise<void> {
+  try {
+    const existingClasses = await progressionRepo.getAllClasses();
+    if (existingClasses.length === 0) return;
+
+    const seedClasses = loadJsonFile<ClassDefinition[]>('classes.json');
+    const seedMap = new Map(seedClasses.map(c => [c.class_id, c]));
+
+    let updatedCount = 0;
+    for (const cls of existingClasses) {
+      const seedData = seedMap.get(cls.class_id);
+      if (!seedData) continue;
+
+      // Only update if class has the migration default (3) but JSON says differently
+      // This preserves user customizations while fixing classes stuck at the default
+      if (cls.combat_level === 3 && seedData.combat_level !== 3) {
+        await progressionRepo.updateClass(cls.class_id, {
+          combat_level: seedData.combat_level,
+          magic_level: seedData.magic_level,
+          crit_bonus: seedData.crit_bonus,
+          dodge_bonus: seedData.dodge_bonus,
+        });
+        console.log(`[Progression] Migrated ${cls.display_name}: combat_level ${cls.combat_level} -> ${seedData.combat_level}`);
+        updatedCount++;
+      }
+    }
+
+    if (updatedCount > 0) {
+      console.log(`[Progression] Migrated ${updatedCount} class(es) to correct combat levels`);
+    }
+  } catch (error) {
+    console.warn('[Progression] Could not migrate class combat levels:', error);
+  }
+}
+
+/**
  * Force reseed races with updated data (base_stats min/max format)
  * Uses update instead of delete+create to preserve any custom data
  */
@@ -220,9 +260,12 @@ export async function initializeProgressionData(): Promise<void> {
   loadGameEvents();
   // Note: Talents are DB-only for now, no in-memory registration needed
   
-  // Force reseed if stats are outdated
+  // One-time migration: update class combat levels if they all have the old default value
+  await migrateClassCombatLevels();
+
+  // Force reseed races if stats are outdated
   await forceReseedRaces();
-  
+
   // Seed database if empty
   await seedDatabaseIfEmpty();
   

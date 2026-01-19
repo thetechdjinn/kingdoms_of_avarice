@@ -9,8 +9,8 @@ Weapons have a "speed" stat (lower is faster). The game used an energy-based sys
 **3. Character Level**
 Higher levels provided more energy per round, allowing more swings.
 
-**4. Agility**
-Agility has a strong impact on your swings - player guides recommend raising agility to increase the number of attacks per round.
+**4. Dexterity**
+Dexterity has a strong impact on your swings - player guides recommend raising dexterity to increase the number of attacks per round. Each point of DEX above 50 adds +5 energy to your pool.
 
 **5. Encumbrance**
 Encumbrance now effects your swings on a sliding scale. At 50% encumbrance you will swing as normal, with less encumbrance your amount of swings should increase, with more encumbrance they will decrease.
@@ -22,7 +22,7 @@ Maximum attacks per round has now been capped at 6. If you would theoretically h
 
 The system worked roughly like this:
 
-- Each round gave you a base amount of **energy** (influenced by combat level, character level, and agility)
+- Each round gave you a base amount of **energy** (influenced by dexterity and encumbrance; combat level and character level reduce weapon cost)
 - Each weapon swing consumed energy equal to the weapon's **speed** value
 - Your swings = floor(available energy / weapon speed)
 - Encumbrance modified this as a multiplier around the 50% baseline
@@ -47,11 +47,11 @@ The chance to miss was calculated as: D=total of defensive stats, A=total of acc
 
 The attacker's accuracy was built from multiple factors:
 
-Level, Combat Level, Agility, Intellect, Charisma, Encumbrance, spells, and worn items were all factors in the player's calculated Accuracy.
+Level, Combat Level, Dexterity, Intellect, Charisma, Encumbrance, spells, and worn items were all factors in the player's calculated Accuracy.
 
 Specifically, for every 10 points added to stats:
 
-- Agility: +1 Accuracy
+- Dexterity: +1 Accuracy
 - Charisma: +1.2 Accuracy
 
 Combat level (1-5) was one of the biggest factors, with Combat-5 classes having substantially higher base accuracy than Combat-1 classes.
@@ -91,7 +91,7 @@ I can help you research this! MajorMUD's exact internal numbers were never offic
 
 The system works like this:
 
-- Each combat round, you get a pool of **energy** based on: combat level, character level, agility, and encumbrance
+- Each combat round, you get a pool of **energy** based on: dexterity and encumbrance (combat level and character level reduce weapon cost instead)
 - Each weapon swing **consumes energy** equal to the weapon's speed value
 - **Swings per round = floor(available energy / weapon speed)**
 - **Leftover energy carries over** to the next round (creating the 1-2-2-1-2-2 pattern you described)
@@ -114,7 +114,7 @@ Based on the community research and MMUD Explorer calculations, the combat level
 From the community research:
 
 1. **Level contribution**: Energy increases with character level (roughly +1 energy per few levels)
-2. **Agility contribution**: For every 10 points of agility above 50, you get additional energy (~+1 per 10-15 agility)
+2. **Dexterity contribution**: +5 energy per point of DEX above 50
 3. **Encumbrance modifier**:
    - At 50% encumbrance = baseline (1.0x multiplier)
    - Below 50% = bonus to swings
@@ -141,43 +141,49 @@ The exact formula hasn't been fully cracked because:
 
 ### Implemented Formula (Kingdoms of Avarice)
 
-Based on MajorMUD research, the following formula is implemented:
+Based on reverse-engineering from Nightmare Redux editor data, the following MajorMUD-style formula is implemented:
+
+**Key Insight:** In MajorMUD, combat level and character level don't increase your energy pool - they REDUCE the effective weapon cost. This creates an interaction where combat level matters MORE at higher character levels.
 
 ```
-Combat Energy = (CombatLevel * 2 + 3) * 500
-Level Energy  = CharacterLevel * 10
-DEX Energy    = max(0, DEX - 50) * 2
-
-Base Energy   = Combat Energy + Level Energy + DEX Energy
+// Energy Pool (fixed base, modified by DEX and encumbrance only)
+Base Energy = 1000 (fixed constant)
+DEX Bonus   = max(0, DEX - 50) * 5
 
 Encumbrance Modifier:
   if enc < 50%: modifier = 1.0 + ((50 - enc) / 100)
   if enc > 50%: modifier = 1.0 - ((enc - 50) / 100)
   modifier = max(0.5, modifier)  // floor at 50%
 
-Effective Energy = floor(Base Energy * Encumbrance Modifier)
-Available Energy = Effective Energy + Carry Over Energy
+Effective Energy = floor((Base Energy + DEX Bonus) * Encumbrance Modifier)
 
-Swings = floor(Available Energy / Weapon Speed)
-Swings = min(Swings, 6)  // cap at 6
+// Weapon Cost Reduction (this is where level and combat matter)
+Speed Divisor = 1.558 + (0.073 × Level) + (0.007 × Combat) + (0.035 × Level × Combat)
+Effective Weapon Cost = floor(Base Weapon Speed / Speed Divisor)
 
-Carry Over = Available Energy - (Swings * Weapon Speed)
+// Swings Calculation
+Available Energy = Effective Energy + Carried Energy
+Raw Swings = Available Energy / Effective Weapon Cost
+Swings = min(floor(Raw Swings), 6)  // cap at 6
+Carried Energy = Available Energy - (Swings * Effective Weapon Cost)
 ```
 
-**Combat Level Energy Values:**
-| Combat Level | Energy |
-|--------------|--------|
-| 1 (Mage/Priest) | 2500 |
-| 2 (Warlock) | 3500 |
-| 3 (Druid) | 4500 |
-| 4 (Warrior) | 5500 |
-| 5 (Witchunter) | 6500 |
+**Example: Dagger (speed 900) at different levels and combat ratings:**
 
-Ratio of Combat 5 to Combat 1 = 2.6x (matches MajorMUD research)
+| Level | Combat 1 | Combat 5 |
+|-------|----------|----------|
+| 1     | 537      | 488      |
+| 5     | 427      | 317      |
+| 10    | 340      | 220      |
+
+At L1C1 with a dagger: 1000 energy / 537 cost = 1.86 swings → 1 swing
+At L10C5 with a dagger: 1000 energy / 220 cost = 4.54 swings → 4 swings
+
+This matches the Nightmare Redux data exactly.
 
 **Current Weapon Speeds:**
-- Iron Dagger: 800 (very fast)
+- Dagger: 900 (very fast)
 - Steel Longsword: 1300 (fast)
 - Rusty Iron Sword: 1400 (medium)
 - Wooden Club: 1600 (medium-slow)
-- Battle Axe: 1900 (slow)
+- Greataxe: 2000 (slow, two-handed)

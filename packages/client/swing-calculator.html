@@ -414,9 +414,9 @@
                 </div>
 
                 <div class="input-group">
-                  <label for="weapon-speed">Weapon Speed (energy cost per swing)</label>
-                  <input type="number" id="weapon-speed" value="7500" min="100" max="100000" />
-                  <div class="hint">Lower = faster attacks. Current weapons: 4000-9500</div>
+                  <label for="weapon-speed">Weapon Speed (base cost before reduction)</label>
+                  <input type="number" id="weapon-speed" value="900" min="100" max="100000" />
+                  <div class="hint">Lower = faster. Typical: dagger 900, longsword 1300, greataxe 2000</div>
                 </div>
 
                 <div class="input-row">
@@ -447,14 +447,29 @@
                   <div class="input-group">
                     <label for="dexterity">Dexterity</label>
                     <input type="number" id="dexterity" value="50" min="1" max="200" />
-                    <div class="hint">+1% crit per 25 DEX above 50</div>
+                    <div class="hint">+5 energy per pt above 50, +1% crit per 25</div>
+                  </div>
+                </div>
+
+                <h4 class="sub-section-title">Encumbrance (MajorMUD: Capacity = STR × 48)</h4>
+                <div class="input-row">
+                  <div class="input-group">
+                    <label for="strength">Strength</label>
+                    <input type="number" id="strength" value="55" min="1" max="200" />
+                    <div class="hint">Max capacity = STR × 48</div>
+                  </div>
+
+                  <div class="input-group">
+                    <label for="carried-weight">Carried Weight</label>
+                    <input type="number" id="carried-weight" value="0" min="0" max="10000" />
+                    <div class="hint">Total weight of inventory + equipped</div>
                   </div>
                 </div>
 
                 <div class="input-row">
                   <div class="input-group">
-                    <label for="encumbrance">Encumbrance %</label>
-                    <input type="number" id="encumbrance" value="50" min="0" max="100" />
+                    <label for="encumbrance">Encumbrance % (auto-calculated)</label>
+                    <input type="number" id="encumbrance" value="0" min="0" max="100" readonly />
                     <div class="hint">≤32%: +20% crit, ≤65%: +10% crit</div>
                   </div>
 
@@ -530,7 +545,7 @@
                   <thead>
                     <tr>
                       <th>Lvl</th>
-                      <th>Energy</th>
+                      <th>Wpn Cost</th>
                       <th>Swings (R1-R4)</th>
                       <th>Crit</th>
                     </tr>
@@ -542,26 +557,21 @@
 
               <!-- Calculated Results - Right Column -->
               <div class="output-section">
-                <h3 class="section-title">Energy Breakdown</h3>
+                <h3 class="section-title">Energy & Weapon Cost</h3>
 
                 <div class="output-item">
-                  <span class="output-label">Combat Level Energy</span>
-                  <span class="output-value" id="out-combat-energy">500</span>
+                  <span class="output-label">Base Energy (fixed)</span>
+                  <span class="output-value" id="out-base-energy">1000</span>
                 </div>
 
                 <div class="output-item">
-                  <span class="output-label">Character Level</span>
-                  <span class="output-value" id="out-level-energy">+10</span>
+                  <span class="output-label">Dexterity Bonus (+5/pt above 50)</span>
+                  <span class="output-value" id="out-dex-energy">+0</span>
                 </div>
 
                 <div class="output-item">
-                  <span class="output-label">Dexterity Bonus</span>
-                  <span class="output-value" id="out-agility-energy">+0</span>
-                </div>
-
-                <div class="output-item">
-                  <span class="output-label">Base Energy</span>
-                  <span class="output-value" id="out-base-energy">510</span>
+                  <span class="output-label">Max Capacity (STR × 48)</span>
+                  <span class="output-value" id="out-max-capacity">2640</span>
                 </div>
 
                 <div class="output-item">
@@ -571,12 +581,31 @@
 
                 <div class="output-item">
                   <span class="output-label">Effective Energy</span>
-                  <span class="output-value highlight" id="out-energy">510</span>
+                  <span class="output-value highlight" id="out-energy">1000</span>
+                </div>
+
+                <h4 class="sub-section-title">Weapon Cost Reduction</h4>
+
+                <div class="output-item">
+                  <span class="output-label">Base Weapon Speed</span>
+                  <span class="output-value" id="out-base-speed">900</span>
                 </div>
 
                 <div class="output-item">
+                  <span class="output-label">Speed Divisor (lvl + combat)</span>
+                  <span class="output-value" id="out-speed-divisor">1.638</span>
+                </div>
+
+                <div class="output-item">
+                  <span class="output-label">Effective Weapon Cost</span>
+                  <span class="output-value highlight" id="out-effective-cost">549</span>
+                </div>
+
+                <h4 class="sub-section-title">Swings</h4>
+
+                <div class="output-item">
                   <span class="output-label">Raw Swings (before cap)</span>
-                  <span class="output-value" id="out-raw-swings">1.6</span>
+                  <span class="output-value" id="out-raw-swings">1.82</span>
                 </div>
 
                 <div class="output-item">
@@ -651,16 +680,19 @@
           </div>
 
             <div class="formula-section">
-              <h3>Energy Formulas (MajorMUD-style)</h3>
+              <h3>Swing Formulas (MajorMUD-style from Nightmare Redux data)</h3>
               <div class="formula">
-                <p><span class="var">combatEnergy</span> = (<span class="var">combatLevel</span> * <span class="num">2</span> + <span class="num">3</span>) * <span class="num">500</span></p>
-                <p><span class="var">levelEnergy</span> = <span class="var">charLevel</span> * <span class="num">10</span></p>
-                <p><span class="var">dexEnergy</span> = max(<span class="num">0</span>, <span class="var">DEX</span> - <span class="num">50</span>) * <span class="num">2</span></p>
-                <p><span class="var">baseEnergy</span> = <span class="var">combatEnergy</span> + <span class="var">levelEnergy</span> + <span class="var">dexEnergy</span></p>
+                <p style="color: #888; margin-bottom: 0.5rem;">// Energy pool is fixed, modified only by DEX and encumbrance</p>
+                <p><span class="var">baseEnergy</span> = <span class="num">1000</span> (fixed)</p>
+                <p><span class="var">dexBonus</span> = max(<span class="num">0</span>, <span class="var">DEX</span> - <span class="num">50</span>) * <span class="num">5</span></p>
                 <p><span class="var">encMult</span> = <span class="num">1.0</span> ± ((<span class="num">50</span> - <span class="var">enc%</span>) / <span class="num">100</span>), min <span class="num">0.5</span></p>
-                <p><span class="var">effectiveEnergy</span> = <span class="var">baseEnergy</span> * <span class="var">encMult</span></p>
-                <p><span class="var">rawSwings</span> = <span class="var">effectiveEnergy</span> / <span class="var">weaponSpeed</span></p>
-                <p><span class="var">swings</span> = min(<span class="var">rawSwings</span>, <span class="var">maxAttacks</span>)</p>
+                <p><span class="var">effectiveEnergy</span> = (<span class="var">baseEnergy</span> + <span class="var">dexBonus</span>) * <span class="var">encMult</span></p>
+                <p style="color: #888; margin-top: 0.75rem; margin-bottom: 0.5rem;">// Combat level and character level reduce WEAPON COST, not energy</p>
+                <p><span class="var">speedDivisor</span> = <span class="num">1.558</span> + (<span class="num">0.073</span> × <span class="var">level</span>) + (<span class="num">0.007</span> × <span class="var">combat</span>) + (<span class="num">0.035</span> × <span class="var">level</span> × <span class="var">combat</span>)</p>
+                <p><span class="var">effectiveWeaponCost</span> = floor(<span class="var">baseWeaponSpeed</span> / <span class="var">speedDivisor</span>)</p>
+                <p style="color: #888; margin-top: 0.75rem; margin-bottom: 0.5rem;">// Swings calculated from energy and effective weapon cost</p>
+                <p><span class="var">rawSwings</span> = <span class="var">effectiveEnergy</span> / <span class="var">effectiveWeaponCost</span></p>
+                <p><span class="var">swings</span> = min(floor(<span class="var">rawSwings</span>), <span class="var">maxAttacks</span>)</p>
               </div>
             </div>
 

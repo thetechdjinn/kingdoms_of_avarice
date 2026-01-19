@@ -73,37 +73,87 @@ export const DEFAULT_RUNTIME_CONFIG: RuntimeCombatConfig = {
   ),
 };
 
+// ============================================================================
+// MajorMUD-style Combat Energy System
+// Based on reverse-engineering from Nightmare Redux editor data
+// ============================================================================
+
 /**
- * Calculate energy available per combat round (MajorMUD-style additive formula)
+ * Constants for the MajorMUD-style weapon speed divisor formula.
+ * Derived from Nightmare Redux data showing effective weapon costs at various levels/combat ratings.
  *
- * Energy determines how many attacks a character can make.
- * This uses an additive formula reverse-engineered from MajorMUD:
+ * Formula: Speed Divisor = BASE + (PER_LEVEL × Level) + (PER_COMBAT × Combat) + (INTERACTION × Level × Combat)
+ */
+export const SPEED_DIVISOR_BASE = 1.558;
+export const SPEED_DIVISOR_PER_LEVEL = 0.073;
+export const SPEED_DIVISOR_PER_COMBAT = 0.007;
+export const SPEED_DIVISOR_LEVEL_COMBAT_INTERACTION = 0.035;
+
+/**
+ * Base energy pool constant. This is fixed and does not change with level or combat rating.
+ * Energy pool is modified only by DEX and encumbrance.
+ */
+export const BASE_ENERGY_POOL = 1000;
+
+/**
+ * DEX bonus to energy: +5 energy per point of DEX above 50
+ */
+export const ENERGY_PER_DEX_ABOVE_50 = 5;
+
+/**
+ * Calculate the effective weapon cost (energy per swing) based on MajorMUD mechanics.
  *
- *   Base Energy = (CombatLevel * 2 + 3) * 100 + (CharLevel * 10) + ((Agility - 50) * 2)
- *   Encumbrance Modifier: ±50% based on deviation from 50% baseline
- *   Final Energy = Base Energy * Encumbrance Modifier
+ * In MajorMUD, combat level and character level reduce the effective cost of swinging a weapon,
+ * rather than increasing the energy pool. This creates an interaction where combat level
+ * matters MORE at higher character levels.
  *
- * @param factors - Character stats affecting energy
+ * Formula derived from Nightmare Redux data:
+ *   Speed Divisor = 1.558 + (0.073 × Level) + (0.007 × Combat) + (0.035 × Level × Combat)
+ *   Effective Cost = floor(Base Weapon Speed / Speed Divisor)
+ *
+ * @param baseWeaponSpeed - The weapon's base speed value
+ * @param characterLevel - Character's level (1+)
+ * @param combatLevel - Class combat rating (1-5)
+ * @returns Effective energy cost per swing
+ */
+export function calculateEffectiveWeaponCost(
+  baseWeaponSpeed: number,
+  characterLevel: number,
+  combatLevel: number
+): number {
+  const speedDivisor = SPEED_DIVISOR_BASE
+    + (SPEED_DIVISOR_PER_LEVEL * characterLevel)
+    + (SPEED_DIVISOR_PER_COMBAT * combatLevel)
+    + (SPEED_DIVISOR_LEVEL_COMBAT_INTERACTION * characterLevel * combatLevel);
+
+  return Math.floor(baseWeaponSpeed / speedDivisor);
+}
+
+/**
+ * Calculate energy available per combat round (MajorMUD-style)
+ *
+ * In MajorMUD, the energy pool is primarily determined by DEX and encumbrance,
+ * NOT by combat level or character level. Combat level and character level
+ * instead affect the effective weapon cost (see calculateEffectiveWeaponCost).
+ *
+ * Formula:
+ *   Base Energy = 1000 (fixed constant)
+ *   DEX Bonus = max(0, DEX - 50) × 5
+ *   Encumbrance Modifier = 1.0 ± ((50 - enc%) / 100), min 0.5
+ *   Total Energy = (Base Energy + DEX Bonus) × Encumbrance Modifier
+ *
+ * @param factors - Character stats affecting energy (only dexterity and encumbrance used)
  * @param config - Optional runtime config (uses defaults if not provided)
  */
 export function calculateRoundEnergy(
   factors: EnergyFactors,
   config: RuntimeCombatConfig = DEFAULT_RUNTIME_CONFIG
 ): number {
-  // MajorMUD-style additive formula:
-  // Combat level is the primary factor: (CL * 2 + 3) * 500
-  // This gives: Combat 1 = 2500, Combat 2 = 3500, Combat 3 = 4500, Combat 4 = 5500, Combat 5 = 6500
-  // Ratio of Combat 5 to Combat 1 = 2.6x (matches MajorMUD research)
-  const combatContribution = (factors.combatLevel * 2 + 3) * 500;
+  // Base energy is fixed
+  const baseEnergy = BASE_ENERGY_POOL;
 
-  // Character level adds +10 energy per level
-  const levelContribution = factors.characterLevel * 10;
-
-  // Agility (DEX) adds +2 energy per point above 50
-  const agilityContribution = Math.max(0, (factors.dexterity - 50)) * 2;
-
-  // Base energy before encumbrance
-  const baseEnergy = combatContribution + levelContribution + agilityContribution;
+  // DEX bonus: +5 energy per point above 50
+  const dexBonus = Math.max(0, factors.dexterity - 50) * ENERGY_PER_DEX_ABOVE_50;
 
   // Encumbrance modifier (MajorMUD-style):
   // At 50% encumbrance = 1.0x (baseline)
@@ -120,7 +170,7 @@ export function calculateRoundEnergy(
   // Floor at 50% to prevent extremely low energy
   encumbranceModifier = Math.max(0.5, encumbranceModifier);
 
-  const totalEnergy = baseEnergy * encumbranceModifier;
+  const totalEnergy = (baseEnergy + dexBonus) * encumbranceModifier;
 
   return Math.floor(totalEnergy);
 }

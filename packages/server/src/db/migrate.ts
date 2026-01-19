@@ -176,42 +176,12 @@ export async function runMigrations(): Promise<void> {
         console.log('Old class and race definitions purged');
       }
 
-      // Scale weapon attack speeds (migration for existing weapons)
-      // With 20000 base energy and 0.6 level 1 multiplier, effective energy is 12000
-      // Any weapon with speed < 2000 would allow > 6 attacks (12000/2000 = 6)
-      // Scale weapons so the fastest (daggers) allow ~3 attacks at level 1
-      // Target minimum speed: 4000 (12000/4000 = 3 attacks)
-      //
-      // First pass: Scale weapons with speed < 2000 (way too fast) - multiply to get minimum 4000
-      await client.query(`
-        UPDATE item_templates
-        SET weapon_data = jsonb_set(
-          weapon_data,
-          '{attack_speed}',
-          to_jsonb(GREATEST(4000, (weapon_data->>'attack_speed')::integer * 5))
-        )
-        WHERE item_type = 'weapon'
-          AND weapon_data IS NOT NULL
-          AND weapon_data ? 'attack_speed'
-          AND (weapon_data->>'attack_speed')::integer < 2000
-      `);
+      // NOTE: Old weapon speed scaling migrations removed.
+      // The MajorMUD-style formula now uses a fixed 1000 base energy pool with
+      // weapon cost reduction based on level and combat rating.
+      // Weapon speeds should now be in the 800-2000 range (dagger ~900, greatsword ~1800).
 
-      // Second pass: Scale weapons with speed between 2000-4000 (still too fast)
-      await client.query(`
-        UPDATE item_templates
-        SET weapon_data = jsonb_set(
-          weapon_data,
-          '{attack_speed}',
-          to_jsonb((weapon_data->>'attack_speed')::integer * 2)
-        )
-        WHERE item_type = 'weapon'
-          AND weapon_data IS NOT NULL
-          AND weapon_data ? 'attack_speed'
-          AND (weapon_data->>'attack_speed')::integer >= 2000
-          AND (weapon_data->>'attack_speed')::integer < 4000
-      `);
-
-      // Seed default game settings
+      // Seed default game settings (only if they don't exist)
       await client.query(`
         INSERT INTO game_settings (key, value) VALUES
           ('max_characters_per_player', '3'),
@@ -225,18 +195,7 @@ export async function runMigrations(): Promise<void> {
           ('combat_level_accuracy_bonus', '{"1": 0, "2": 10, "3": 20, "4": 35, "5": 50}')
         ON CONFLICT (key) DO NOTHING
       `);
-
-      // Update combat settings if they have old values (for existing databases)
-      await client.query(`
-        UPDATE game_settings
-        SET value = '7500'
-        WHERE key = 'combat_default_weapon_speed' AND value::integer < 3000
-      `);
-      await client.query(`
-        UPDATE game_settings
-        SET value = '4500'
-        WHERE key = 'combat_unarmed_speed' AND value::integer < 3000
-      `);
+      // NOTE: Never update existing game_settings values - respect user configuration
     });
 
     console.log('Database migrations completed successfully');
@@ -335,8 +294,9 @@ async function seedItems(): Promise<void> {
     const seedSql = readFileSync(seedPath, 'utf-8');
     await getPool().query(seedSql);
     console.log('Item seed data inserted successfully');
-    
-    // Note: normalizeItemNames is called in the main execution chain after seeding
+
+    // Normalize item names only for freshly seeded items
+    await normalizeItemNames();
   } catch (error) {
     console.error('Failed to seed items:', error);
     // Don't throw - items are optional, game can run without them
@@ -413,25 +373,7 @@ async function seedStatusEffectDefinitions(): Promise<void> {
        0, -5, 0, 0,
        NULL, NULL, 'The vines tighten around you.', FALSE, 'The vines wither and release you.',
        FALSE, TRUE, FALSE)
-      ON CONFLICT (id) DO UPDATE SET
-        name = EXCLUDED.name,
-        description = EXCLUDED.description,
-        category = EXCLUDED.category,
-        stacking_behavior = EXCLUDED.stacking_behavior,
-        max_stacks = EXCLUDED.max_stacks,
-        accuracy_modifier = EXCLUDED.accuracy_modifier,
-        defense_modifier = EXCLUDED.defense_modifier,
-        energy_modifier = EXCLUDED.energy_modifier,
-        damage_modifier = EXCLUDED.damage_modifier,
-        tick_damage = EXCLUDED.tick_damage,
-        tick_healing = EXCLUDED.tick_healing,
-        tick_message = EXCLUDED.tick_message,
-        silent_tick = EXCLUDED.silent_tick,
-        wear_off_message = EXCLUDED.wear_off_message,
-        blocks_regen = EXCLUDED.blocks_regen,
-        blocks_movement = EXCLUDED.blocks_movement,
-        is_blind = EXCLUDED.is_blind,
-        updated_at = NOW()
+      ON CONFLICT (id) DO NOTHING
     `);
     console.log('Status effect definitions seeded successfully');
   } catch (error) {
@@ -450,7 +392,6 @@ async function normalizeItemNames(): Promise<void> {
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   runMigrations()
     .then(() => seedInitialData())
-    .then(() => normalizeItemNames())
     .then(() => process.exit(0))
     .catch(() => process.exit(1));
 }
