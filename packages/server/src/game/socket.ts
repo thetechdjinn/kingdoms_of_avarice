@@ -361,15 +361,28 @@ export function setupGameSocket(wss: WebSocketServer): void {
       }
 
       // Process command through the queue system
-      try {
-        if (message.type === MessageType.COMMAND) {
+      if (message.type === MessageType.COMMAND) {
+        try {
           // handlePlayerInput determines whether to queue, bypass, or execute immediately
           // It handles sending responses and vitals internally
           await handlePlayerInput(authWs, message.payload);
+        } catch (error) {
+          console.error('Queue system error, falling back to direct processing:', error);
+          // Fallback to direct command processing if queue system fails
+          try {
+            const response = await processCommand(
+              message.payload,
+              authWs,
+              gameWorld,
+              connectedPlayers
+            );
+            sendMessage(authWs, response.type, response.message);
+            sendVitals(authWs);
+          } catch (fallbackError) {
+            console.error('Fallback command processing also failed:', fallbackError);
+            sendMessage(authWs, MessageType.ERROR, 'An error occurred processing your command');
+          }
         }
-      } catch (error) {
-        console.error('Command processing error:', error);
-        sendMessage(authWs, MessageType.ERROR, 'An error occurred processing your command');
       }
     });
 

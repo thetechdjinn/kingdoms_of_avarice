@@ -332,8 +332,6 @@ export interface DelaySettings {
   minDelay: number;
   /** Maximum delay in ms (ceiling) */
   maxDelay: number;
-  /** Tick rate for the game loop in ms */
-  tickRateMs: number;
 }
 
 // ============================================================================
