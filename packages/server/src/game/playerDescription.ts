@@ -7,6 +7,7 @@
 
 import { Character, Gender, EquipmentSlot, ItemInstance } from '@koa/shared';
 import { wordWrap } from '../utils/textFormat.js';
+import { colors } from '../utils/colors.js';
 
 // Stat adjective thresholds and descriptions
 interface StatThreshold {
@@ -253,13 +254,14 @@ export function generatePlayerDescription(data: PlayerDescriptionData): string {
   const equipmentSection = formatEquippedItems(equippedItems);
 
   // Combine name header, wrapped description, and equipment
+  // Colors: Name bracket = cyan, description = white, "equipped with" = yellow
   const lines: string[] = [];
-  lines.push(`[ ${character.name} ]`);
-  lines.push(wordWrap(description, 80));
+  lines.push(colors.cyan(`[ ${character.name} ]`));
+  lines.push(colors.white(wordWrap(description, 80)));
 
   if (equipmentSection) {
     lines.push('');
-    lines.push(`${pronouns.subject} is equipped with:`);
+    lines.push(colors.yellow(`${pronouns.subject} is equipped with:`));
     lines.push('');
     lines.push(equipmentSection);
   }
@@ -269,18 +271,22 @@ export function generatePlayerDescription(data: PlayerDescriptionData): string {
 
 /**
  * Format equipped items for display
+ * Colors: Item names = green, slot names = blue
+ * Layout: Item names left-aligned, slots aligned at fixed column
  */
 export function formatEquippedItems(items: ItemInstance[]): string {
   if (!items || items.length === 0) {
     return '';
   }
 
+  const ITEM_COL_WIDTH = 25;  // Fixed width for item name column
   const lines: string[] = [];
 
   for (const item of items) {
     const itemName = item.template?.name || 'unknown item';
     const slotName = item.equipped_slot ? SLOT_DISPLAY_NAMES[item.equipped_slot] || item.equipped_slot : 'Unknown';
-    lines.push(`${itemName} (${slotName})`);
+    const paddedItemName = itemName.padEnd(ITEM_COL_WIDTH);
+    lines.push(colors.green(paddedItemName) + colors.cyan(`(${slotName})`));
   }
 
   return lines.join('\r\n');
