@@ -127,6 +127,17 @@ export async function runMigrations(): Promise<void> {
         ALTER TABLE characters ADD COLUMN IF NOT EXISTS cp_spent JSONB DEFAULT '{}'
       `);
 
+      // Add appearance columns to characters table (for existing databases)
+      await client.query(`
+        ALTER TABLE characters ADD COLUMN IF NOT EXISTS gender VARCHAR(10) DEFAULT 'neutral'
+      `);
+      await client.query(`
+        ALTER TABLE characters ADD COLUMN IF NOT EXISTS hair VARCHAR(100)
+      `);
+      await client.query(`
+        ALTER TABLE characters ADD COLUMN IF NOT EXISTS eye_color VARCHAR(50)
+      `);
+
       // Add new class fields (combat_level, magic_level, etc.)
       await client.query(`
         ALTER TABLE class_definitions ADD COLUMN IF NOT EXISTS combat_level INTEGER DEFAULT 3

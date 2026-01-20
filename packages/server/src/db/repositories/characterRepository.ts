@@ -1,6 +1,6 @@
 import pg from 'pg';
 import { query } from '../index.js';
-import { Character, CharacterStats } from '@koa/shared';
+import { Character, CharacterStats, Gender } from '@koa/shared';
 
 export interface DbCharacter {
   id: number;
@@ -24,6 +24,10 @@ export interface DbCharacter {
   gold: number;
   unspent_cp: number;
   cp_spent: Record<string, number>;
+  // Appearance fields
+  gender: string | null;
+  hair: string | null;
+  eye_color: string | null;
   created_at: Date;
 }
 
@@ -215,6 +219,9 @@ export function toSharedCharacter(dbChar: DbCharacter): Character {
       charisma: dbChar.charisma,
     },
     gold: dbChar.gold,
+    gender: (dbChar.gender as Gender) || 'neutral',
+    hair: dbChar.hair || undefined,
+    eyeColor: dbChar.eye_color || undefined,
   };
 }
 
@@ -247,6 +254,9 @@ export async function toSharedCharacterWithDisplayNames(dbChar: DbCharacter): Pr
       charisma: dbChar.charisma,
     },
     gold: dbChar.gold,
+    gender: (dbChar.gender as Gender) || 'neutral',
+    hair: dbChar.hair || undefined,
+    eyeColor: dbChar.eye_color || undefined,
   };
 }
 

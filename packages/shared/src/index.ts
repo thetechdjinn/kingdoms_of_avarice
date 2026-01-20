@@ -81,6 +81,9 @@ export interface CharacterStats {
   charisma: number;
 }
 
+// Gender type for character appearance
+export type Gender = 'male' | 'female' | 'neutral';
+
 // Character data
 export interface Character {
   id: number;
@@ -95,6 +98,10 @@ export interface Character {
   maxMana: number;
   stats: CharacterStats;
   gold: number;
+  // Appearance fields
+  gender?: Gender;
+  hair?: string;
+  eyeColor?: string;
 }
 
 // Auth response

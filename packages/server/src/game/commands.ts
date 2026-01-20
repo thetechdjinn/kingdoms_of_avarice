@@ -11,6 +11,8 @@ import { isSpellMnemonic, handleSpellCommand, handleSpellbook } from './spellCom
 import { handleTrain } from './trainingCommands.js';
 import * as characterRepo from '../db/repositories/characterRepository.js';
 import * as progressionRepo from '../db/repositories/progressionRepository.js';
+import * as itemRepo from '../db/repositories/itemRepository.js';
+import { generatePlayerDescription } from './playerDescription.js';
 
 export interface CommandResponse {
   type: MessageType;
@@ -77,7 +79,7 @@ export async function processCommand(
   const currentRoomId = getPlayerLocation(socket.playerId);
 
   if (command === 'look' || command === 'l') {
-    // Check if looking at an item or in a container
+    // Check if looking at an item, player, or in a container
     if (args.length > 0) {
       // Check for "look in <container>"
       if (args[0].toLowerCase() === 'in' && args.length > 1) {
@@ -87,6 +89,16 @@ export async function processCommand(
       // If it's a direction, look in that direction
       if (isDirection(direction)) {
         return await handleLookDirection(socket, currentRoomId, direction, world, _connectedPlayers);
+      }
+      // Check if looking at self
+      const targetName = args.join(' ').toLowerCase();
+      if (socket.username.toLowerCase() === targetName || socket.username.toLowerCase().startsWith(targetName)) {
+        return await handleLookAtPlayer(socket);
+      }
+      // Try to find another player in the room with that name
+      const targetPlayer = findPlayerInRoom(targetName, currentRoomId, _connectedPlayers, socket.playerId);
+      if (targetPlayer) {
+        return await handleLookAtPlayer(targetPlayer);
       }
       // Otherwise, examine an item
       return handleExamine(socket, args, currentRoomId);
@@ -282,6 +294,61 @@ function getPlayersInRoom(
     }
   }
   return players;
+}
+
+/**
+ * Find a player in the same room by name (case-insensitive partial match)
+ * Excludes the searching player from results
+ */
+function findPlayerInRoom(
+  targetName: string,
+  roomId: number,
+  connectedPlayers: Map<number, AuthenticatedSocket>,
+  excludePlayerId: number
+): AuthenticatedSocket | null {
+  const lowerTarget = targetName.toLowerCase();
+
+  for (const [playerId, socket] of connectedPlayers) {
+    if (playerId === excludePlayerId) continue;
+    if (getPlayerLocation(playerId) !== roomId) continue;
+
+    const playerName = socket.username.toLowerCase();
+    if (playerName === lowerTarget || playerName.startsWith(lowerTarget)) {
+      return socket;
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Handle looking at another player
+ * Returns their description based on stats, appearance, and equipment
+ */
+async function handleLookAtPlayer(
+  targetSocket: AuthenticatedSocket
+): Promise<CommandResponse> {
+  // Get character data
+  const character = await characterRepo.findCharacterById(targetSocket.characterId!);
+  if (!character) {
+    return { type: MessageType.ERROR, message: 'Something went wrong.' };
+  }
+
+  // Get display names for race/class
+  const sharedChar = await characterRepo.toSharedCharacterWithDisplayNames(character);
+
+  // Get equipped items
+  const equippedItems = await itemRepo.getPlayerEquipped(targetSocket.playerId);
+
+  // Generate description
+  const description = generatePlayerDescription({
+    character: sharedChar,
+    currentHp: targetSocket.vitals.hp,
+    maxHp: targetSocket.vitals.maxHp,
+    equippedItems,
+  });
+
+  return { type: MessageType.OUTPUT, message: description };
 }
 
 async function handleLook(
@@ -661,84 +728,142 @@ async function handleStatus(socket: AuthenticatedSocket): Promise<CommandRespons
   const className = classDef?.display_name || character.class;
   const raceName = raceDef?.display_name || character.race;
 
-  // Calculate experience needed for next level
-  const nextLevel = await progressionRepo.getLevelRequirement(character.level + 1);
-  const currentLevel = await progressionRepo.getLevelRequirement(character.level);
-  const expForNext = nextLevel?.std_xp_required ?? 0;
-  const expForCurrent = currentLevel?.std_xp_required ?? 0;
-  const expProgress = character.experience - expForCurrent;
-  const expNeeded = expForNext - expForCurrent;
+  // Build the MajorMUD-style 3-column character sheet
+  // Colors: Labels are green, values are cyan
+  // Format from MajorMUD:
+  // Name: Slaughter Machine               Lives/CP:      9/0
+  // Race: Elf         Exp: 3000000000     Perception:     47
+  // Class: Warrior    Level: 10           Stealth:        44
+  // Hits:   133/133   Armour Class:  26/6 Thievery:        0
+  //                                       Traps:           0
+  //                                       Picklocks:       0
+  // Strength:  65     Dexterity:    70    Tracking:        0
+  // Intellect: 50     Constitution: 70    Martial Arts:   23
+  // Wisdom:    40     Charisma:     50    MagicRes:       42
 
-  // Build the character sheet
   const lines: string[] = [];
-  const separator = colors.gray('─'.repeat(50));
 
-  // Header
-  lines.push(separator);
-  lines.push(colors.boldYellow(`  ${character.name}`));
-  lines.push(`  ${colors.white('Level')} ${colors.green(character.level.toString())} ${colors.cyan(raceName)} ${colors.magenta(className)}`);
-  lines.push(separator);
+  // Column widths (widened for readability)
+  const COL1 = 18;  // First column width
+  const COL2 = 20;  // Second column width
+  const COL3 = 18;  // Third column width
+  const GAP = 2;    // Space between columns
+  const LABEL_WIDTH = 7;  // Fixed label width for Name/Race/Class alignment
 
-  // Health and Mana bars
-  const hpPercent = Math.round((socket.vitals.hp / socket.vitals.maxHp) * 100);
-  const maxResource = socket.vitals.maxResource ?? 0;
-  const resource = socket.vitals.resource ?? 0;
-  const mpPercent = maxResource > 0 ? Math.round((resource / maxResource) * 100) : 0;
-
-  const hpColor = hpPercent >= 75 ? colors.green : hpPercent >= 50 ? colors.yellow : hpPercent >= 25 ? colors.orange : colors.red;
-  const mpColor = colors.blue;
-
-  lines.push(`  ${colors.white('Health:')} ${hpColor(`${socket.vitals.hp}/${socket.vitals.maxHp}`)} ${colors.gray(`(${hpPercent}%)`)}`);
-  lines.push(`  ${colors.white('Mana:')}   ${mpColor(`${resource}/${maxResource}`)} ${colors.gray(`(${mpPercent}%)`)}`);
-  lines.push('');
-
-  // Experience
-  if (nextLevel) {
-    const expPercent = expNeeded > 0 ? Math.round((expProgress / expNeeded) * 100) : 100;
-    lines.push(`  ${colors.white('Experience:')} ${colors.yellow(character.experience.toLocaleString())}`);
-    lines.push(`  ${colors.white('Next Level:')} ${colors.gray(`${expProgress.toLocaleString()} / ${expNeeded.toLocaleString()} (${expPercent}%)`)}`);
-  } else {
-    lines.push(`  ${colors.white('Experience:')} ${colors.yellow(character.experience.toLocaleString())} ${colors.gray('(Max Level)')}`);
-  }
-  lines.push('');
-
-  // Gold
-  lines.push(`  ${colors.white('Gold:')} ${colors.gold(character.gold.toLocaleString())}`);
-  lines.push('');
-
-  // Stats
-  lines.push(separator);
-  lines.push(colors.boldCyan('  Statistics'));
-  lines.push(separator);
-
-  const statLine = (label: string, value: number, color: (s: string) => string = colors.white): string => {
-    const modifier = Math.floor((value - 10) / 2);
-    const modStr = modifier >= 0 ? `+${modifier}` : `${modifier}`;
-    return `  ${colors.gray(label.padEnd(14))} ${color(value.toString().padStart(2))} ${colors.gray(`(${modStr})`)}`;
+  // Helper: Cell with green label and cyan LEFT-aligned value (for text like Name, Race, Class)
+  // Label is padded to LABEL_WIDTH so values align vertically
+  const cellLeft = (label: string, value: string, width: number): string => {
+    const paddedLabel = label.padEnd(LABEL_WIDTH);
+    const content = paddedLabel + value;
+    const padding = Math.max(0, width - content.length);
+    return colors.green(paddedLabel) + colors.cyan(value) + ' '.repeat(padding + GAP);
   };
 
-  lines.push(statLine('Strength', character.strength, colors.red));
-  lines.push(statLine('Intelligence', character.intelligence, colors.blue));
-  lines.push(statLine('Dexterity', character.dexterity, colors.green));
-  lines.push(statLine('Constitution', character.constitution, colors.orange));
-  lines.push(statLine('Wisdom', character.wisdom, colors.cyan));
-  lines.push(statLine('Charisma', character.charisma, colors.magenta));
-  lines.push(separator);
+  // Helper: Cell with green label and cyan RIGHT-aligned value (for numbers)
+  const cellRight = (label: string, value: string, width: number): string => {
+    const valueWidth = width - label.length;
+    return colors.green(label) + colors.cyan(value.padStart(valueWidth)) + ' '.repeat(GAP);
+  };
 
-  // Combat status
+  // Helper: Empty cell
+  const empty = (width: number): string => ' '.repeat(width + GAP);
+
+  // Build each row
+  const maxResource = socket.vitals.maxResource ?? 0;
+  const resource = socket.vitals.resource ?? 0;
+  const hp = socket.vitals.hp;
+  const maxHp = socket.vitals.maxHp;
+  const lives = 0; // Not implemented
+  const cp = character.unspent_cp ?? 0;
+
+  // Unimplemented skills (show 0)
+  const perception = 0;
+  const stealth = 0;
+  const thievery = 0;
+  const traps = 0;
+  const picklocks = 0;
+  const tracking = 0;
+  const martialArts = 0;
+  const magicRes = 0;
+  const armourClass = '0/0';
+
+  // Row 1: Name (spans col1+col2+gap) | Lives/CP
+  // Add extra GAP to match the space that would be between col1 and col2 in other rows
+  lines.push(
+    cellLeft('Name:', character.name, COL1 + COL2 + GAP) +
+    cellRight('Lives/CP:', `${lives}/${cp}`, COL3)
+  );
+
+  // Row 2: Race | Exp | Perception
+  lines.push(
+    cellLeft('Race:', raceName, COL1) +
+    cellRight('Exp:', character.experience.toString(), COL2) +
+    cellRight('Perception:', perception.toString(), COL3)
+  );
+
+  // Row 3: Class | Level | Stealth
+  lines.push(
+    cellLeft('Class:', className, COL1) +
+    cellRight('Level:', character.level.toString(), COL2) +
+    cellRight('Stealth:', stealth.toString(), COL3)
+  );
+
+  // Row 4: Hits | Armour Class | Thievery
+  lines.push(
+    cellRight('Hits:', `${hp}/${maxHp}`, COL1) +
+    cellRight('Armour Class:', armourClass, COL2) +
+    cellRight('Thievery:', thievery.toString(), COL3)
+  );
+
+  // Row 5: Mana | (empty) | Traps
+  lines.push(
+    cellRight('Mana:', `${resource}/${maxResource}`, COL1) +
+    empty(COL2) +
+    cellRight('Traps:', traps.toString(), COL3)
+  );
+
+  // Row 6: (empty) | (empty) | Picklocks
+  lines.push(
+    empty(COL1) +
+    empty(COL2) +
+    cellRight('Picklocks:', picklocks.toString(), COL3)
+  );
+
+  // Row 7: Strength | Dexterity | Tracking
+  lines.push(
+    cellRight('Strength:', character.strength.toString(), COL1) +
+    cellRight('Dexterity:', character.dexterity.toString(), COL2) +
+    cellRight('Tracking:', tracking.toString(), COL3)
+  );
+
+  // Row 8: Intellect | Constitution | Martial Arts
+  lines.push(
+    cellRight('Intellect:', character.intelligence.toString(), COL1) +
+    cellRight('Constitution:', character.constitution.toString(), COL2) +
+    cellRight('Martial Arts:', martialArts.toString(), COL3)
+  );
+
+  // Row 9: Wisdom | Charisma | MagicRes
+  lines.push(
+    cellRight('Wisdom:', character.wisdom.toString(), COL1) +
+    cellRight('Charisma:', character.charisma.toString(), COL2) +
+    cellRight('MagicRes:', magicRes.toString(), COL3)
+  );
+
+  // Add combat status on a new line if applicable
   if (socket.regenState.inCombat) {
-    lines.push(`  ${colors.red('[ IN COMBAT ]')}`);
+    lines.push('');
+    lines.push(colors.red('[ IN COMBAT ]'));
   } else if (socket.regenState.enhancedRegen.size > 0) {
-    lines.push(`  ${colors.cyan('[ RESTING ]')}`);
+    lines.push('');
+    lines.push(colors.cyan('[ RESTING ]'));
   }
 
   // Active effects
   const activeEffects = getActiveEffectsDisplay(socket);
   if (activeEffects.length > 0) {
     lines.push('');
-    lines.push(separator);
-    lines.push(colors.boldCyan('  Active Effects'));
-    lines.push(separator);
+    lines.push(colors.boldCyan('Active Effects:'));
 
     for (const effect of activeEffects) {
       const timeLeft = formatDuration(effect.remainingMs);
@@ -764,7 +889,6 @@ async function handleStatus(socket: AuthenticatedSocket): Promise<CommandRespons
 
       lines.push(`  ${effectColor(effect.name)}${stackInfo} ${colors.gray(`(${timeLeft})`)}`);
     }
-    lines.push(separator);
   }
 
   return { type: MessageType.OUTPUT, message: lines.join('\r\n') };

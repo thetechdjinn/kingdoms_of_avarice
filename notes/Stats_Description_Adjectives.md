@@ -40,19 +40,19 @@ current heath (HPs)
 
 I will break it down, In the above:
 
-- Frag is gigantic. "Gigantic" refers to Frag's Constituion being at or over 100.
+- Frag is gigantic. "Gigantic" refers to Frag's Constitution being at or over 100.
 - muscular Kang Ninja with no hair and black eyes. "Muscular" means Frag's strength is between 70-79 and notes that he is a Kang (race) Ninja (class)
 - He moves with uncanny speed: "Uncanny speed" is his Dexterity is between 80-89.
 - and is hostile and rather unappealing: "hostile and rather unappealing" means his charm is between 30-39.
 - Frag appears to be quite stupid: "quite stupid" means Frag's intellect is between 30-39.
-- and seems a little naive: "seems a little naive" means Frag's wisom is between 40-49.
+- and seems a little naive: "seems a little naive" means Frag's wisdom is between 40-49.
 - He is unwounded: Means he is at full hit points.
 
 I don't have a list of all the original values and while I can get them. It would take a good bit of time to create the characters and state them.
 
 ### Strength
 
-- 20-29: puny
+- 0-29: puny
 - 30-39: weak
 - 40-49: slightly built
 - 50-59: moderately built
@@ -65,40 +65,43 @@ I don't have a list of all the original values and while I can get them. It woul
 
 ### Dexterity:
 
+- 0-29: slowly
 - 30-39: clumsily
-- 40-49: slugishly
+- 40-49: sluggishly
 - 50-59: cautiously
 - 60-69: gracefully
-- 70-79: very swifty
+- 70-79: very swiftly
 - 80-89: with uncanny speed
 - 90-99: with catlike agility
 - 100+: blindingly fast
 
-### Intelliect:
+### Intellect:
 
+- 0-29: utterly moronic
 - 30-39: quite stupid
 - 40-49: slightly dull
 - 50-59: intelligent
 - 60-69: bright
-- 70-79: extremely cleaver
+- 70-79: extremely clever
 - 80-89: brilliant
 - 90-99: a genius
 - 100+: all-knowing
 
 ### Wisdom:
 
-- 30-39:
-- 40-49: Seems a little naive
-- 50-59: looks fairly knowledgeable
-- 60-69: quite experienced and wise
-- 70-79: worldly air about him
-- 80-89: possess a wisdom beyond his/her years
-- 90-99: be in an elightened state of mind
-- 100+: at one with the Gods
+- 0-29: selfish and hot-tempered
+- 30-39: rather selfish
+- 40-49: a little naive
+- 50-59: fairly knowledgeable
+- 60-69: quite wise
+- 70-79: has a worldly air
+- 80-89: wise beyond his/her years
+- 90-99: spiritually enlightened
+- 100+: one with the Gods
 
 ### Constitution:
 
-- 30-39:
+- 0-39: frail
 - 40-49: thin
 - 50-59: healthy
 - 60-69: stout
@@ -109,6 +112,7 @@ I don't have a list of all the original values and while I can get them. It woul
 
 ### Charisma:
 
+- 0-29: openly hostile and quite revolting
 - 30-39: hostile and rather unappealing
 - 40-49: unfriendly and aloof
 - 50-59: likeable in an unassuming sort of way
@@ -120,12 +124,12 @@ I don't have a list of all the original values and while I can get them. It woul
 
 ### HPs
 
-- 100% He is unwounded.
-- 75%-99% slightly wounded.
-- 50-75% moderately wounded
-- 25-50% severely wounded
-- 1-25% critically wounded
-- 0% mortally wounded (if they drop to the ground, but aren't dead yet.)
+- 100%: unwounded.
+- 75-99%: slightly wounded.
+- 50-74%: moderately wounded.
+- 25-49%: severely wounded.
+- 1-24%: critically wounded.
+- 0% or below: mortally wounded. (dropped to the ground, but not dead yet)
 
 ## Update the stat command output.
 
@@ -142,9 +146,9 @@ Class: Priest     Level: 50            Stealth:         0
 Hits:   527/527   Armour Class:   8/1  Thievery:        0
 Mana:   427/427   Spellcasting: 203    Traps:           0
                                        Picklocks:       0
-Strength:  110    Dexterity: 90        Tracking:        0
-Intellect: 40     Health:    120       Martial Arts:   48
-Willpower: 120    Charm:     70        MagicRes:      110
+Strength:  110    Dexterity:    90     Tracking:        0
+Intellect: 40     Constitution: 120    Martial Arts:   48
+Wisdom:    120    Charisma:     70     MagicRes:      110
 ```
 
 Near Armor class, the 8/1 is 8 AC and 1 damage reduction. The 1 DR means if a user gets hit for 10, he takes 9 damage.
@@ -163,6 +167,6 @@ Picklocks is the ability to pick locks.
 
 Tracking is the ability to track monsters or users.
 
-Lives/CP is how many lives they have before they get rolled back to half there level. The CPs are the character points they have, but haven't spent yet.
+Lives/CP is how many lives they have before they get rolled back to half their level. The CPs are the character points they have, but haven't spent yet.
 
 Spellcasting is the ability to cast spells.
