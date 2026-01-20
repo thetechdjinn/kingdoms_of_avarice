@@ -38,14 +38,16 @@ let combatSettingsCacheTime: number = 0;
 const COMBAT_SETTINGS_CACHE_TTL = 60000; // 1 minute cache
 
 /**
- * Parse a JSONB value, handling both pre-parsed objects and JSON strings
+ * Parse a JSONB value, handling both pre-parsed objects and JSON strings.
+ * Falls back to returning the raw string if JSON parsing fails (for legacy data).
  */
 function parseJsonbValue<T>(value: unknown): T {
   if (typeof value === 'string') {
     try {
       return JSON.parse(value) as T;
     } catch {
-      throw new Error(`Failed to parse JSON value: ${value}`);
+      // If JSON parsing fails, return the raw string (handles legacy unquoted values)
+      return value as T;
     }
   }
   return value as T;
