@@ -1,0 +1,326 @@
+{
+  "actions": {
+    "move": {
+      "baseDelay": 500,
+      "modifierCategories": ["encumbrance", "terrain", "armor", "status"],
+      "canInterrupt": false,
+      "clearQueueOnFail": false
+    },
+    "attack": {
+      "baseDelay": 0,
+      "modifierCategories": [],
+      "canInterrupt": false,
+      "clearQueueOnFail": false,
+      "combatBehavior": {
+        "startsAutoAttack": true,
+        "onlyInCombat": false,
+        "usesCombatRound": true
+      }
+    },
+    "cast": {
+      "baseDelay": 0,
+      "modifierCategories": [],
+      "canInterrupt": false,
+      "clearQueueOnFail": false,
+      "combatBehavior": {
+        "onlyInCombat": false,
+        "usesCombatRound": false,
+        "interruptibleByDamage": true
+      }
+    },
+    "look": {
+      "baseDelay": 0,
+      "modifierCategories": [],
+      "canInterrupt": false,
+      "clearQueueOnFail": false,
+      "bypassQueue": true
+    },
+    "get": {
+      "baseDelay": 0,
+      "modifierCategories": [],
+      "canInterrupt": false,
+      "clearQueueOnFail": false
+    },
+    "drop": {
+      "baseDelay": 0,
+      "modifierCategories": [],
+      "canInterrupt": false,
+      "clearQueueOnFail": false
+    },
+    "say": {
+      "baseDelay": 0,
+      "modifierCategories": [],
+      "canInterrupt": false,
+      "clearQueueOnFail": false,
+      "bypassQueue": true
+    },
+    "inventory": {
+      "baseDelay": 0,
+      "modifierCategories": [],
+      "canInterrupt": false,
+      "clearQueueOnFail": false,
+      "bypassQueue": true
+    },
+    "equipment": {
+      "baseDelay": 0,
+      "modifierCategories": [],
+      "canInterrupt": false,
+      "clearQueueOnFail": false,
+      "bypassQueue": true
+    },
+    "score": {
+      "baseDelay": 0,
+      "modifierCategories": [],
+      "canInterrupt": false,
+      "clearQueueOnFail": false,
+      "bypassQueue": true
+    },
+    "who": {
+      "baseDelay": 0,
+      "modifierCategories": [],
+      "canInterrupt": false,
+      "clearQueueOnFail": false,
+      "bypassQueue": true
+    },
+    "bash": {
+      "baseDelay": 0,
+      "modifierCategories": [],
+      "canInterrupt": false,
+      "clearQueueOnFail": false,
+      "combatOnly": true,
+      "combatBehavior": {
+        "onlyInCombat": true,
+        "usesCombatRound": true,
+        "sharedCooldownWith": ["kick", "trip"]
+      }
+    }
+  },
+  "queue": {
+    "maxSize": 15,
+    "overflowMessage": "Why don't you slow down a few seconds?",
+    "overflowCooldownMs": 1000,
+    "clearEvents": ["death", "teleport", "stun", "disconnect"],
+    "priorityCommands": ["quit", "recall"]
+  },
+  "queueBypass": {
+    "enabled": false,
+    "bypassCommands": ["look", "say", "who", "score", "inventory", "equipment", "stat", "help"],
+    "zeroDelayBypass": false
+  },
+  "timing": {
+    "tickRateMs": 100,
+    "alignToTicks": true,
+    "playerProcessingOrder": "shuffle"
+  },
+  "combat": {
+    "model": "hybrid",
+    "roundDurationMs": 2000,
+    "autoAttack": true,
+    "queuePausedDuringCombat": false,
+    "allowedCommandsInCombat": ["attack", "cast", "use", "say", "look", "inventory", "equipment", "score", "who"],
+    "exitCombatCommands": ["recall"],
+    "combatDelayModifier": 1.0,
+    "exitConditions": {
+      "targetDies": true,
+      "allEnemiesDefeated": true,
+      "playerDies": true,
+      "playerMovesAway": true,
+      "timeout": {
+        "enabled": false,
+        "durationMs": 30000
+      }
+    }
+  },
+  "encumbrance": {
+    "affectsActions": ["move"],
+    "curve": [
+      { "percent": 0, "multiplier": 0.70 },
+      { "percent": 25, "multiplier": 0.85 },
+      { "percent": 50, "multiplier": 1.00 },
+      { "percent": 75, "multiplier": 1.35 },
+      { "percent": 90, "multiplier": 1.80 },
+      { "percent": 100, "multiplier": 2.50 }
+    ],
+    "interpolation": "linear",
+    "overEncumbered": {
+      "threshold": 100,
+      "blocksAction": true,
+      "message": "You are too encumbered to move!"
+    }
+  },
+  "cooldowns": {
+    "abilities": {
+      "berserk": {
+        "cooldownMs": 60000,
+        "sharedCooldownGroup": null,
+        "startOnUse": true
+      },
+      "bash": {
+        "cooldownMs": 8000,
+        "sharedCooldownGroup": "meleeSpecial",
+        "startOnUse": true
+      },
+      "kick": {
+        "cooldownMs": 6000,
+        "sharedCooldownGroup": "meleeSpecial",
+        "startOnUse": true
+      },
+      "heal": {
+        "cooldownMs": 5000,
+        "sharedCooldownGroup": "healing",
+        "startOnUse": false,
+        "startOnComplete": true
+      }
+    },
+    "groups": {
+      "meleeSpecial": {
+        "description": "Shared cooldown for melee special attacks",
+        "triggersCooldownFor": ["bash", "kick", "trip", "disarm"]
+      },
+      "healing": {
+        "description": "Shared cooldown for healing abilities"
+      }
+    }
+  },
+  "terrain": {
+    "affectsActions": ["move"],
+    "types": {
+      "road": { "multiplier": 0.8, "description": "Well-maintained path" },
+      "grass": { "multiplier": 1.0, "description": "Open grassland" },
+      "forest": { "multiplier": 1.2, "description": "Dense trees slow progress" },
+      "swamp": { "multiplier": 1.6, "description": "Murky water and mud" },
+      "mountain": { "multiplier": 1.4, "description": "Rocky, steep terrain" },
+      "sand": { "multiplier": 1.3, "description": "Loose, shifting sand" },
+      "ice": { "multiplier": 1.1, "description": "Slippery frozen surface" },
+      "underwater": { "multiplier": 2.0, "description": "Resistance of water" },
+      "indoor": { "multiplier": 1.0, "description": "Inside a building" },
+      "dungeon": { "multiplier": 1.1, "description": "Dark underground passage" }
+    }
+  },
+  "weaponSpeed": {
+    "affectsActions": ["attack"],
+    "types": {
+      "dagger": { "multiplier": 0.6 },
+      "shortSword": { "multiplier": 0.8 },
+      "longSword": { "multiplier": 1.0 },
+      "battleAxe": { "multiplier": 1.2 },
+      "greatSword": { "multiplier": 1.4 },
+      "warHammer": { "multiplier": 1.5 },
+      "staff": { "multiplier": 1.1 },
+      "mace": { "multiplier": 1.0 },
+      "spear": { "multiplier": 1.1 },
+      "fists": { "multiplier": 0.5 }
+    },
+    "default": 1.0
+  },
+  "delaySettings": {
+    "minDelay": 50,
+    "maxDelay": 10000,
+    "tickRate": 100
+  },
+  "aliases": {
+    "n": "north",
+    "s": "south",
+    "e": "east",
+    "w": "west",
+    "u": "up",
+    "d": "down",
+    "ne": "northeast",
+    "nw": "northwest",
+    "se": "southeast",
+    "sw": "southwest",
+    "l": "look",
+    "i": "inventory",
+    "eq": "equipment",
+    "sc": "score",
+    "k": "kill",
+    "c": "cast",
+    "ga": "get all",
+    "da": "drop all"
+  },
+  "interruptTriggers": {
+    "takeDamage": {
+      "interrupts": ["cast"],
+      "chance": 0.75,
+      "message": "Your concentration is broken!"
+    },
+    "bash": {
+      "interrupts": ["cast", "attack"],
+      "chance": 1.0,
+      "message": "You are knocked off balance!"
+    },
+    "stun": {
+      "interrupts": ["cast", "attack"],
+      "chance": 1.0,
+      "message": "You are stunned!",
+      "clearsQueue": true
+    },
+    "knockdown": {
+      "interrupts": ["cast", "attack"],
+      "chance": 1.0,
+      "message": "You are knocked to the ground!"
+    },
+    "silence": {
+      "interrupts": ["cast"],
+      "chance": 1.0,
+      "message": "You have been silenced!"
+    },
+    "forcedMovement": {
+      "interrupts": ["cast", "attack"],
+      "chance": 1.0,
+      "message": "You are forced to move!"
+    }
+  },
+  "interruptDelayBehavior": {
+    "takeDamage": {
+      "delayMode": "partial",
+      "delayPercent": 0.5
+    },
+    "bash": {
+      "delayMode": "fixed",
+      "delayMs": 1500
+    },
+    "stun": {
+      "delayMode": "replace",
+      "delayMs": 3000
+    },
+    "silence": {
+      "delayMode": "cancel"
+    },
+    "knockdown": {
+      "delayMode": "fixed",
+      "delayMs": 2000
+    },
+    "forcedMovement": {
+      "delayMode": "cancel"
+    }
+  },
+  "interruptResistance": {
+    "sources": {
+      "skill_concentration": {
+        "type": "skill",
+        "reductionPerLevel": 0.02,
+        "maxReduction": 0.5,
+        "reduction": 0
+      },
+      "item_focus_crystal": {
+        "type": "equipment",
+        "slot": "held",
+        "reduction": 0.25
+      },
+      "spell_iron_mind": {
+        "type": "buff",
+        "reduction": 0.5,
+        "duration": 60000
+      }
+    },
+    "minimumChance": 0.1
+  },
+  "stackingRules": {
+    "haste": { "rule": "bestOnly", "category": "speedBuff" },
+    "slow": { "rule": "worstOnly", "category": "speedDebuff" },
+    "encumbrance": { "rule": "multiplicative" },
+    "terrain": { "rule": "multiplicative" },
+    "equipment": { "rule": "multiplicative", "cap": { "min": 0.5, "max": 2.0 } }
+  }
+}

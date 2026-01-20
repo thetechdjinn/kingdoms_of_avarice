@@ -2,7 +2,7 @@ import { WebSocketServer, WebSocket } from 'ws';
 import { IncomingMessage } from 'http';
 import { URL } from 'url';
 import { parse as parseCookie } from 'cookie';
-import { MessageType, GameMessage, Role, VitalsData, ResourceType, PlayerRegenState, ActiveStatusEffect } from '@koa/shared';
+import { MessageType, GameMessage, Role, VitalsData, ResourceType, PlayerRegenState, ActiveStatusEffect, PlayerQueueState, createPlayerQueueState } from '@koa/shared';
 import type { CharacterStats, CombatActionType, SpellCastingState } from '@koa/shared';
 import { verifyToken, COOKIE_NAME } from '../routes/auth.js';
 import { GameWorld } from './world.js';
@@ -18,6 +18,9 @@ import { initializeSpellMnemonics } from './spellCommands.js';
 import { loadEffectsFromDb, processEffectsTick, initializeEffectDefinitions } from './statusEffects.js';
 import { colors } from '../utils/colors.js';
 import { checkWebSocketIp } from '../middleware/ipAccess.js';
+import { startGameLoop, stopGameLoop } from './gameLoop.js';
+import { initializeTickProcessor, startQueuedAction, executeQueuedCommand, handlePlayerInput } from './tickProcessor.js';
+import { getCommandQueueConfig } from '../config/commandQueueConfig.js';
 
 // Combat state tracked per-player in memory
 interface CombatState {
@@ -45,6 +48,8 @@ interface AuthenticatedSocket extends WebSocket {
   combatLevel: number;
   // Status effects
   activeEffects: Map<string, ActiveStatusEffect>;
+  // Command queue state
+  queueState: PlayerQueueState;
 }
 
 const connectedPlayers = new Map<number, AuthenticatedSocket>();
@@ -106,6 +111,21 @@ export async function initializeGameWorld(): Promise<void> {
 
   // Initialize spell system
   await initializeSpellMnemonics();
+
+  // Initialize command queue system
+  try {
+    const config = getCommandQueueConfig();
+    console.log(`[CommandQueue] Loaded configuration with ${Object.keys(config.actions).length} action types`);
+
+    // Initialize the tick processor with references
+    initializeTickProcessor(gameWorld, connectedPlayers, sendMessage, sendVitals);
+
+    // Start the game loop for command queue processing
+    startGameLoop(connectedPlayers, startQueuedAction, executeQueuedCommand);
+  } catch (error) {
+    console.error('[CommandQueue] Failed to initialize command queue system:', error);
+    // Continue without command queue - commands will process immediately (legacy mode)
+  }
 
   worldInitialized = true;
 }
@@ -278,6 +298,9 @@ export function setupGameSocket(wss: WebSocketServer): void {
       console.error('Failed to load status effects:', error);
     }
 
+    // Initialize command queue state
+    authWs.queueState = createPlayerQueueState();
+
     // Load brief mode from database (default to false on error)
     try {
       authWs.briefMode = await playerRepo.getBriefMode(payload.playerId);
@@ -337,13 +360,12 @@ export function setupGameSocket(wss: WebSocketServer): void {
         return;
       }
 
-      // Process command in separate try/catch
+      // Process command through the queue system
       try {
         if (message.type === MessageType.COMMAND) {
-          const response = await processCommand(message.payload, authWs, gameWorld, connectedPlayers);
-          sendMessage(authWs, response.type, response.message);
-          // Send vitals after every command
-          sendVitals(authWs);
+          // handlePlayerInput determines whether to queue, bypass, or execute immediately
+          // It handles sending responses and vitals internally
+          await handlePlayerInput(authWs, message.payload);
         }
       } catch (error) {
         console.error('Command processing error:', error);

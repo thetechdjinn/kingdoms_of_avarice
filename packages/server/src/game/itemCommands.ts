@@ -7,6 +7,7 @@ import { wordWrap } from '../utils/textFormat.js';
 import * as itemRepo from '../db/repositories/itemRepository.js';
 import * as craftingRepo from '../db/repositories/craftingRepository.js';
 import { withTransaction } from '../db/index.js';
+import { calculateEncumbranceRatio } from './combatStats.js';
 
 // Get the display name for an item (uses name, falls back to short_desc for legacy)
 // Returns name as stored in database (should be lowercase)
@@ -653,6 +654,25 @@ const INVENTORY_SLOT_NAMES: Record<string, string> = {
   'held': 'held',
 };
 
+// Calculate total weight of items
+function calculateTotalWeight(items: ItemInstance[]): number {
+  let totalWeight = 0;
+  for (const item of items) {
+    const itemWeight = item.template?.weight || 0;
+    const quantity = item.quantity || 1;
+    totalWeight += itemWeight * quantity;
+  }
+  return totalWeight;
+}
+
+// Get encumbrance level label based on percentage
+function getEncumbranceLevel(percent: number): string {
+  if (percent < 20) return 'None';
+  if (percent < 35) return 'Light';
+  if (percent < 65) return 'Medium';
+  return 'Heavy';
+}
+
 // Handle "inventory" / "i" command
 export async function handleInventory(
   socket: AuthenticatedSocket
@@ -660,25 +680,40 @@ export async function handleInventory(
   const items = await itemRepo.getPlayerInventory(socket.playerId);
   const equipped = await itemRepo.getPlayerEquipped(socket.playerId);
 
+  const lines: string[] = [];
+
   if (items.length === 0 && equipped.length === 0) {
-    return { type: MessageType.OUTPUT, message: 'You are not carrying anything.' };
+    lines.push('You are not carrying anything.');
+  } else {
+    lines.push(colors.boldYellow('You are carrying:'));
+
+    // Show equipped items first with slot indicator
+    for (const item of equipped) {
+      const name = getItemName(item);
+      const slot = item.equipped_slot ? INVENTORY_SLOT_NAMES[item.equipped_slot] || item.equipped_slot : 'worn';
+      lines.push(`  ${colors.item(name)} (${slot})`);
+    }
+
+    // Show inventory items
+    for (const item of items) {
+      const display = itemRepo.instanceToDisplay(item);
+      const name = getItemDisplayName(display);
+      lines.push(`  ${colors.item(name)}`);
+    }
   }
 
-  const lines = [colors.boldYellow('You are carrying:')];
+  // Calculate encumbrance
+  const allItems = [...items, ...equipped];
+  const totalWeight = calculateTotalWeight(allItems);
+  const strength = socket.characterStats?.strength || 10;
+  const maxCapacity = strength * 48;
+  const encumbranceRatio = calculateEncumbranceRatio(totalWeight, strength);
+  const encumbrancePercent = Math.round(encumbranceRatio * 100);
+  const encumbranceLevel = getEncumbranceLevel(encumbrancePercent);
 
-  // Show equipped items first with slot indicator
-  for (const item of equipped) {
-    const name = getItemName(item);
-    const slot = item.equipped_slot ? INVENTORY_SLOT_NAMES[item.equipped_slot] || item.equipped_slot : 'worn';
-    lines.push(`  ${colors.item(name)} (${slot})`);
-  }
-
-  // Show inventory items
-  for (const item of items) {
-    const display = itemRepo.instanceToDisplay(item);
-    const name = getItemDisplayName(display);
-    lines.push(`  ${colors.item(name)}`);
-  }
+  // Add encumbrance line (yellow = brown in ANSI)
+  lines.push('');
+  lines.push(colors.yellow(`Encumbrance: ${totalWeight}/${maxCapacity} ${encumbranceLevel} (${encumbrancePercent}%)`));
 
   return { type: MessageType.OUTPUT, message: lines.join('\r\n') };
 }
