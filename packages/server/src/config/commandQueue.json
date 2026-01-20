@@ -216,7 +216,7 @@
   "delaySettings": {
     "minDelay": 50,
     "maxDelay": 10000,
-    "tickRate": 100
+    "tickRateMs": 100
   },
   "aliases": {
     "n": "north",

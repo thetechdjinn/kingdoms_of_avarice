@@ -167,10 +167,10 @@ export async function startQueuedAction(
 }
 
 /**
- * Execute a completed action
- * Called by the game loop when currentAction.completesAt is reached
+ * Execute a command and send response to player
+ * Centralized command execution to avoid code duplication
  */
-export async function executeQueuedCommand(
+async function executeCommandAndRespond(
   player: AuthenticatedSocket,
   command: string
 ): Promise<void> {
@@ -179,7 +179,6 @@ export async function executeQueuedCommand(
     return;
   }
 
-  // Execute the command using the existing command processor
   try {
     const response = await processCommand(
       command,
@@ -193,6 +192,17 @@ export async function executeQueuedCommand(
     console.error(`[TickProcessor] Error processing command '${command}':`, error);
     sendMessageFn(player, MessageType.ERROR, 'An error occurred processing your command.');
   }
+}
+
+/**
+ * Execute a completed action
+ * Called by the game loop when currentAction.completesAt is reached
+ */
+export async function executeQueuedCommand(
+  player: AuthenticatedSocket,
+  command: string
+): Promise<void> {
+  await executeCommandAndRespond(player, command);
 }
 
 /**
@@ -217,19 +227,7 @@ export async function handlePlayerInput(
   // Check if this command should bypass the queue entirely
   if (shouldBypassQueue(resolvedCommand)) {
     // Execute immediately without affecting readyAt
-    try {
-      const response = await processCommand(
-        resolvedCommand,
-        player,
-        gameWorldRef,
-        connectedPlayersRef
-      );
-      sendMessageFn(player, response.type, response.message);
-      sendVitalsFn(player);
-    } catch (error) {
-      console.error(`[TickProcessor] Error processing bypass command '${resolvedCommand}':`, error);
-      sendMessageFn(player, MessageType.ERROR, 'An error occurred processing your command.');
-    }
+    await executeCommandAndRespond(player, resolvedCommand);
     return;
   }
 
@@ -239,22 +237,10 @@ export async function handlePlayerInput(
     const delay = calculateDelay(player, actionType);
 
     // Execute immediately but update readyAt
-    try {
-      const response = await processCommand(
-        resolvedCommand,
-        player,
-        gameWorldRef,
-        connectedPlayersRef
-      );
-      sendMessageFn(player, response.type, response.message);
-      sendVitalsFn(player);
+    await executeCommandAndRespond(player, resolvedCommand);
 
-      // Priority commands affect readyAt
-      setPlayerReadyAt(player, Date.now() + delay);
-    } catch (error) {
-      console.error(`[TickProcessor] Error processing priority command '${resolvedCommand}':`, error);
-      sendMessageFn(player, MessageType.ERROR, 'An error occurred processing your command.');
-    }
+    // Priority commands affect readyAt
+    setPlayerReadyAt(player, Date.now() + delay);
     return;
   }
 

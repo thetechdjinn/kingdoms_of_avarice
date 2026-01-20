@@ -19,6 +19,7 @@ let tickOverrunCount = 0;
 
 // Round-robin state for player processing
 let roundRobinIndex = 0;
+let lastPlayerCount = 0;
 
 // Reference to connected players (set during initialization)
 let connectedPlayersRef: Map<number, AuthenticatedSocket> | null = null;
@@ -67,12 +68,18 @@ function getPlayersInProcessingOrder(): AuthenticatedSocket[] {
       // Rotate the starting position each tick
       const rotated = [...players];
       if (rotated.length > 0) {
+        // Reset index when player count changes to ensure fair distribution
+        if (rotated.length !== lastPlayerCount) {
+          roundRobinIndex = 0;
+          lastPlayerCount = rotated.length;
+        }
         roundRobinIndex = roundRobinIndex % rotated.length;
         const before = rotated.slice(0, roundRobinIndex);
         const after = rotated.slice(roundRobinIndex);
         roundRobinIndex = (roundRobinIndex + 1) % rotated.length;
         return [...after, ...before];
       }
+      lastPlayerCount = 0;
       return rotated;
 
     default:
@@ -137,6 +144,8 @@ async function processTick(): Promise<void> {
           await startActionProcessor(player, command);
         } catch (error) {
           console.error(`[GameLoop] Error starting command for player ${player.playerId}:`, error);
+          // Re-queue the command at the front so it can be retried
+          player.queueState.commandQueue.unshift(command);
         }
       }
     }
@@ -209,6 +218,8 @@ export function stopGameLoop(): void {
   connectedPlayersRef = null;
   startActionProcessor = null;
   commandProcessor = null;
+  roundRobinIndex = 0;
+  lastPlayerCount = 0;
   console.log(`[GameLoop] Stopped after ${tickCount} ticks (${tickOverrunCount} overruns)`);
 }
 
