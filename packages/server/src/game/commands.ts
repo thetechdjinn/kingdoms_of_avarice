@@ -11,6 +11,8 @@ import { isSpellMnemonic, handleSpellCommand, handleSpellbook } from './spellCom
 import { handleTrain } from './trainingCommands.js';
 import * as characterRepo from '../db/repositories/characterRepository.js';
 import * as progressionRepo from '../db/repositories/progressionRepository.js';
+import * as itemRepo from '../db/repositories/itemRepository.js';
+import { generatePlayerDescription } from './playerDescription.js';
 
 export interface CommandResponse {
   type: MessageType;
@@ -77,7 +79,7 @@ export async function processCommand(
   const currentRoomId = getPlayerLocation(socket.playerId);
 
   if (command === 'look' || command === 'l') {
-    // Check if looking at an item or in a container
+    // Check if looking at an item, player, or in a container
     if (args.length > 0) {
       // Check for "look in <container>"
       if (args[0].toLowerCase() === 'in' && args.length > 1) {
@@ -87,6 +89,11 @@ export async function processCommand(
       // If it's a direction, look in that direction
       if (isDirection(direction)) {
         return await handleLookDirection(socket, currentRoomId, direction, world, _connectedPlayers);
+      }
+      // Try to find a player in the room with that name
+      const targetPlayer = findPlayerInRoom(args.join(' '), currentRoomId, _connectedPlayers, socket.playerId);
+      if (targetPlayer) {
+        return await handleLookAtPlayer(targetPlayer);
       }
       // Otherwise, examine an item
       return handleExamine(socket, args, currentRoomId);
@@ -282,6 +289,61 @@ function getPlayersInRoom(
     }
   }
   return players;
+}
+
+/**
+ * Find a player in the same room by name (case-insensitive partial match)
+ * Excludes the searching player from results
+ */
+function findPlayerInRoom(
+  targetName: string,
+  roomId: number,
+  connectedPlayers: Map<number, AuthenticatedSocket>,
+  excludePlayerId: number
+): AuthenticatedSocket | null {
+  const lowerTarget = targetName.toLowerCase();
+
+  for (const [playerId, socket] of connectedPlayers) {
+    if (playerId === excludePlayerId) continue;
+    if (getPlayerLocation(playerId) !== roomId) continue;
+
+    const playerName = socket.username.toLowerCase();
+    if (playerName === lowerTarget || playerName.startsWith(lowerTarget)) {
+      return socket;
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Handle looking at another player
+ * Returns their description based on stats, appearance, and equipment
+ */
+async function handleLookAtPlayer(
+  targetSocket: AuthenticatedSocket
+): Promise<CommandResponse> {
+  // Get character data
+  const character = await characterRepo.findCharacterById(targetSocket.characterId!);
+  if (!character) {
+    return { type: MessageType.ERROR, message: 'Something went wrong.' };
+  }
+
+  // Get display names for race/class
+  const sharedChar = await characterRepo.toSharedCharacterWithDisplayNames(character);
+
+  // Get equipped items
+  const equippedItems = await itemRepo.getPlayerEquipped(targetSocket.characterId!);
+
+  // Generate description
+  const description = generatePlayerDescription({
+    character: sharedChar,
+    currentHp: targetSocket.vitals.hp,
+    maxHp: targetSocket.vitals.maxHp,
+    equippedItems,
+  });
+
+  return { type: MessageType.OUTPUT, message: description };
 }
 
 async function handleLook(
