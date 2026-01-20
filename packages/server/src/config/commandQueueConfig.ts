@@ -100,6 +100,15 @@ function validateConfig(cfg: CommandQueueConfig): void {
     throw new Error(`maxDelay (${cfg.delaySettings.maxDelay}) must be >= minDelay (${cfg.delaySettings.minDelay})`);
   }
 
+  // Validate encumbrance interpolation
+  const validInterpolations = ['linear', 'step', 'smooth'];
+  if (!validInterpolations.includes(cfg.encumbrance.interpolation)) {
+    throw new Error(
+      `Invalid encumbrance interpolation: '${cfg.encumbrance.interpolation}'. ` +
+      `Must be one of: ${validInterpolations.join(', ')}`
+    );
+  }
+
   // Validate actions have required fields
   for (const [actionName, action] of Object.entries(cfg.actions)) {
     if (typeof action.baseDelay !== 'number' || action.baseDelay < 0) {
@@ -261,15 +270,22 @@ export function getEncumbranceMultiplier(encumbrancePercent: number): number {
     const upper = curve[i + 1];
 
     if (encumbrancePercent >= lower.percent && encumbrancePercent < upper.percent) {
-      if (interpolation === 'step') {
-        // Step: use lower value until reaching upper point
-        return lower.multiplier;
-      }
-
-      // Linear interpolation (default)
       const range = upper.percent - lower.percent;
       const position = (encumbrancePercent - lower.percent) / range;
-      return lower.multiplier + (upper.multiplier - lower.multiplier) * position;
+
+      switch (interpolation) {
+        case 'step':
+          // Step: use lower value until reaching upper point
+          return lower.multiplier;
+        case 'smooth':
+          // Smoothstep interpolation for gradual transitions
+          const smoothPosition = position * position * (3 - 2 * position);
+          return lower.multiplier + (upper.multiplier - lower.multiplier) * smoothPosition;
+        case 'linear':
+        default:
+          // Linear interpolation
+          return lower.multiplier + (upper.multiplier - lower.multiplier) * position;
+      }
     }
   }
 
