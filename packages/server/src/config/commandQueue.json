@@ -97,9 +97,9 @@
     "priorityCommands": ["quit", "recall"]
   },
   "queueBypass": {
-    "enabled": false,
-    "bypassCommands": ["look", "say", "who", "score", "inventory", "equipment", "stat", "help"],
-    "zeroDelayBypass": false
+    "enabled": true,
+    "bypassCommands": ["look", "say", "who", "score", "inventory", "equipment", "stat", "help", "?"],
+    "zeroDelayBypass": true
   },
   "timing": {
     "tickRateMs": 100,
@@ -111,7 +111,7 @@
     "roundDurationMs": 2000,
     "autoAttack": true,
     "queuePausedDuringCombat": false,
-    "allowedCommandsInCombat": ["attack", "cast", "use", "say", "look", "inventory", "equipment", "score", "who", "break", "bre", "brea"],
+    "allowedCommandsInCombat": ["attack", "cast", "use", "say", "look", "inventory", "equipment", "score", "who", "break", "bre", "brea", "help", "?", "stat"],
     "exitCombatCommands": ["recall"],
     "combatDelayModifier": 1.0,
     "exitConditions": {

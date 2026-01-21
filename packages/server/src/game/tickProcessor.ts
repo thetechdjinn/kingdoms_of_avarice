@@ -23,7 +23,6 @@ import {
   clampDelay,
   getEncumbranceMultiplier,
   getTerrainMultiplier,
-  isCombatOnlyAction,
 } from '../config/commandQueueConfig.js';
 import { enqueueCommand, setPlayerReadyAt } from './gameLoop.js';
 import { getEquipmentCombatStats, calculateEncumbranceRatio } from './combatStats.js';
@@ -231,7 +230,6 @@ export async function startQueuedAction(
 
   // Check if action is blocked (e.g., over-encumbered)
   if (delay === Infinity) {
-    const config = getCommandQueueConfig();
     if (sendMessageFn) {
       sendMessageFn(player, MessageType.ERROR, config.encumbrance.overEncumbered.message);
     }
@@ -379,14 +377,6 @@ export function handleQueueClearEvent(
     player.queueState.currentAction = null;
     console.log(`[TickProcessor] Cleared queue for player ${player.playerId} due to ${eventType}`);
   }
-}
-
-/**
- * Check if a player can perform a combat-only action
- */
-export function canPerformCombatAction(player: AuthenticatedSocket): boolean {
-  // Check if player is in combat based on regenState
-  return player.regenState.inCombat;
 }
 
 /**
