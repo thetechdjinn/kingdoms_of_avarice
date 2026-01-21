@@ -84,6 +84,15 @@ export interface CharacterStats {
 // Gender type for character appearance
 export type Gender = 'male' | 'female' | 'neutral';
 
+// Currency data for characters
+export interface Currency {
+  copper: number;
+  silver: number;
+  gold: number;
+  platinum: number;
+  runic: number;
+}
+
 // Character data
 export interface Character {
   id: number;
@@ -98,7 +107,7 @@ export interface Character {
   mana: number;
   maxMana: number;
   stats: CharacterStats;
-  gold: number;
+  currency: Currency;
   // Appearance fields
   gender?: Gender;
   hair?: string;

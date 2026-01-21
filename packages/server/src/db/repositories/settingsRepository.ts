@@ -157,6 +157,86 @@ export async function getIpAccessMode(): Promise<IpAccessMode> {
   return 'blocklist';
 }
 
+/**
+ * Get the customizable name for runic currency
+ * Defaults to "runic" if not set
+ */
+export async function getRunicName(): Promise<string> {
+  const value = await getSetting<string>('currency_runic_name');
+  if (typeof value === 'string' && value.length > 0) {
+    return value;
+  }
+  return 'runic';
+}
+
+/**
+ * Currency encumbrance settings
+ */
+export interface CurrencyEncumbranceSettings {
+  copperPerEnc: number;
+  silverPerEnc: number;
+  goldPerEnc: number;
+  platinumPerEnc: number;
+  runicPerEnc: number;
+}
+
+// Default currency encumbrance values
+const DEFAULT_CURRENCY_ENCUMBRANCE: CurrencyEncumbranceSettings = {
+  copperPerEnc: 25,
+  silverPerEnc: 25,
+  goldPerEnc: 15,
+  platinumPerEnc: 10,
+  runicPerEnc: 4,
+};
+
+// Cache for currency encumbrance settings
+let currencyEncumbranceCache: CurrencyEncumbranceSettings | null = null;
+let currencyEncumbranceCacheTime: number = 0;
+const CURRENCY_ENCUMBRANCE_CACHE_TTL = 60000; // 1 minute cache
+
+/**
+ * Get currency encumbrance settings with caching
+ */
+export async function getCurrencyEncumbranceSettings(): Promise<CurrencyEncumbranceSettings> {
+  const now = Date.now();
+
+  // Return cached settings if still valid
+  if (currencyEncumbranceCache && (now - currencyEncumbranceCacheTime) < CURRENCY_ENCUMBRANCE_CACHE_TTL) {
+    return currencyEncumbranceCache;
+  }
+
+  // Fetch all currency settings from DB in parallel
+  const [copper, silver, gold, platinum, runic] = await Promise.all([
+    getSetting<number>('currency_copper_per_enc'),
+    getSetting<number>('currency_silver_per_enc'),
+    getSetting<number>('currency_gold_per_enc'),
+    getSetting<number>('currency_platinum_per_enc'),
+    getSetting<number>('currency_runic_per_enc'),
+  ]);
+
+  const settings: CurrencyEncumbranceSettings = {
+    copperPerEnc: (typeof copper === 'number' && copper > 0) ? copper : DEFAULT_CURRENCY_ENCUMBRANCE.copperPerEnc,
+    silverPerEnc: (typeof silver === 'number' && silver > 0) ? silver : DEFAULT_CURRENCY_ENCUMBRANCE.silverPerEnc,
+    goldPerEnc: (typeof gold === 'number' && gold > 0) ? gold : DEFAULT_CURRENCY_ENCUMBRANCE.goldPerEnc,
+    platinumPerEnc: (typeof platinum === 'number' && platinum > 0) ? platinum : DEFAULT_CURRENCY_ENCUMBRANCE.platinumPerEnc,
+    runicPerEnc: (typeof runic === 'number' && runic > 0) ? runic : DEFAULT_CURRENCY_ENCUMBRANCE.runicPerEnc,
+  };
+
+  // Update cache
+  currencyEncumbranceCache = settings;
+  currencyEncumbranceCacheTime = now;
+
+  return settings;
+}
+
+/**
+ * Clear the currency encumbrance settings cache (call after updating settings)
+ */
+export function clearCurrencyEncumbranceCache(): void {
+  currencyEncumbranceCache = null;
+  currencyEncumbranceCacheTime = 0;
+}
+
 // ============================================================================
 // COMBAT SETTINGS
 // ============================================================================

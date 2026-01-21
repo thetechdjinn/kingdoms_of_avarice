@@ -293,6 +293,7 @@
             <div class="settings-tabs">
               <button class="settings-tab active" data-tab="general">General</button>
               <button class="settings-tab" data-tab="combat">Combat</button>
+              <button class="settings-tab" data-tab="currency">Currency</button>
             </div>
 
             <!-- General Settings -->
@@ -411,20 +412,20 @@
               <div class="setting-item" data-key="combat_level_multipliers">
                 <div class="setting-header">
                   <div>
-                    <div class="setting-label">Level Energy Multipliers</div>
+                    <div class="setting-label">Combat Level Energy Multipliers</div>
                     <div class="setting-key">combat_level_multipliers</div>
                   </div>
                 </div>
-                <div class="setting-description">Energy multiplier per combat level. Higher multipliers give more attacks per round.</div>
+                <div class="setting-description">Energy multiplier per combat level (not character level). Higher multipliers give more attacks per round.</div>
                 <div class="key-value-editor" id="editor-combat_level_multipliers">
                   <div class="kv-header">
-                    <span class="kv-header-label">Level</span>
+                    <span class="kv-header-label">Combat Level</span>
                     <span class="kv-header-label">Multiplier</span>
                     <span class="kv-header-spacer"></span>
                   </div>
                   <div class="kv-rows" id="rows-combat_level_multipliers"></div>
                   <div class="kv-actions">
-                    <button class="btn-small" data-add-row="combat_level_multipliers">+ Add Level</button>
+                    <button class="btn-small" data-add-row="combat_level_multipliers">+ Add Combat Level</button>
                     <button class="btn-primary" data-save="combat_level_multipliers">Save</button>
                   </div>
                 </div>
@@ -434,24 +435,117 @@
               <div class="setting-item" data-key="combat_level_accuracy_bonus">
                 <div class="setting-header">
                   <div>
-                    <div class="setting-label">Level Accuracy Bonus</div>
+                    <div class="setting-label">Combat Level Accuracy Bonus</div>
                     <div class="setting-key">combat_level_accuracy_bonus</div>
                   </div>
                 </div>
-                <div class="setting-description">Accuracy bonus percentage per combat level.</div>
+                <div class="setting-description">Accuracy bonus percentage per combat level (not character level).</div>
                 <div class="key-value-editor" id="editor-combat_level_accuracy_bonus">
                   <div class="kv-header">
-                    <span class="kv-header-label">Level</span>
+                    <span class="kv-header-label">Combat Level</span>
                     <span class="kv-header-label">Bonus %</span>
                     <span class="kv-header-spacer"></span>
                   </div>
                   <div class="kv-rows" id="rows-combat_level_accuracy_bonus"></div>
                   <div class="kv-actions">
-                    <button class="btn-small" data-add-row="combat_level_accuracy_bonus">+ Add Level</button>
+                    <button class="btn-small" data-add-row="combat_level_accuracy_bonus">+ Add Combat Level</button>
                     <button class="btn-primary" data-save="combat_level_accuracy_bonus">Save</button>
                   </div>
                 </div>
                 <div class="setting-message" id="msg-combat_level_accuracy_bonus" style="display: none;"></div>
+              </div>
+            </div>
+
+            <!-- Currency Settings -->
+            <div id="tab-currency" class="settings-section">
+              <div class="setting-item" data-key="currency_runic_name">
+                <div class="setting-header">
+                  <div>
+                    <div class="setting-label">Runic Currency Name</div>
+                    <div class="setting-key">currency_runic_name</div>
+                  </div>
+                </div>
+                <div class="setting-description">The display name for the highest tier currency. Default is "runic". This name is used in inventory displays and commands.</div>
+                <div class="setting-controls">
+                  <input type="text" id="setting-currency_runic_name" maxlength="20" placeholder="runic" />
+                  <button class="btn-primary" data-save="currency_runic_name">Save</button>
+                </div>
+                <div class="setting-message" id="msg-currency_runic_name" style="display: none;"></div>
+              </div>
+
+              <div class="setting-item" data-key="currency_copper_per_enc">
+                <div class="setting-header">
+                  <div>
+                    <div class="setting-label">Copper Coins per Encumbrance Point</div>
+                    <div class="setting-key">currency_copper_per_enc</div>
+                  </div>
+                </div>
+                <div class="setting-description">How many copper coins equal 1 encumbrance point. Default: 25</div>
+                <div class="setting-controls">
+                  <input type="number" id="setting-currency_copper_per_enc" min="1" max="1000" />
+                  <button class="btn-primary" data-save="currency_copper_per_enc">Save</button>
+                </div>
+                <div class="setting-message" id="msg-currency_copper_per_enc" style="display: none;"></div>
+              </div>
+
+              <div class="setting-item" data-key="currency_silver_per_enc">
+                <div class="setting-header">
+                  <div>
+                    <div class="setting-label">Silver Coins per Encumbrance Point</div>
+                    <div class="setting-key">currency_silver_per_enc</div>
+                  </div>
+                </div>
+                <div class="setting-description">How many silver coins equal 1 encumbrance point. Default: 25</div>
+                <div class="setting-controls">
+                  <input type="number" id="setting-currency_silver_per_enc" min="1" max="1000" />
+                  <button class="btn-primary" data-save="currency_silver_per_enc">Save</button>
+                </div>
+                <div class="setting-message" id="msg-currency_silver_per_enc" style="display: none;"></div>
+              </div>
+
+              <div class="setting-item" data-key="currency_gold_per_enc">
+                <div class="setting-header">
+                  <div>
+                    <div class="setting-label">Gold Coins per Encumbrance Point</div>
+                    <div class="setting-key">currency_gold_per_enc</div>
+                  </div>
+                </div>
+                <div class="setting-description">How many gold coins equal 1 encumbrance point. Default: 15</div>
+                <div class="setting-controls">
+                  <input type="number" id="setting-currency_gold_per_enc" min="1" max="1000" />
+                  <button class="btn-primary" data-save="currency_gold_per_enc">Save</button>
+                </div>
+                <div class="setting-message" id="msg-currency_gold_per_enc" style="display: none;"></div>
+              </div>
+
+              <div class="setting-item" data-key="currency_platinum_per_enc">
+                <div class="setting-header">
+                  <div>
+                    <div class="setting-label">Platinum Coins per Encumbrance Point</div>
+                    <div class="setting-key">currency_platinum_per_enc</div>
+                  </div>
+                </div>
+                <div class="setting-description">How many platinum coins equal 1 encumbrance point. Default: 10</div>
+                <div class="setting-controls">
+                  <input type="number" id="setting-currency_platinum_per_enc" min="1" max="1000" />
+                  <button class="btn-primary" data-save="currency_platinum_per_enc">Save</button>
+                </div>
+                <div class="setting-message" id="msg-currency_platinum_per_enc" style="display: none;"></div>
+              </div>
+
+              <div class="setting-item" data-key="currency_runic_per_enc">
+                <div class="setting-header">
+                  <div>
+                    <div class="setting-label">Runic Coins per Encumbrance Point</div>
+                    <div class="setting-key">currency_runic_per_enc</div>
+                  </div>
+                </div>
+                <div class="setting-description">How many runic coins equal 1 encumbrance point. Default: 4</div>
+                <div class="setting-controls">
+                  <input type="number" id="setting-currency_runic_per_enc" min="1" max="1000" />
+                  <button class="btn-primary" data-save="currency_runic_per_enc">Save</button>
+                </div>
+                <div class="setting-message" id="msg-currency_runic_per_enc" style="display: none;"></div>
               </div>
             </div>
           </div>

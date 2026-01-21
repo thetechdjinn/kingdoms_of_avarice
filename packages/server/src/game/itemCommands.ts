@@ -1,4 +1,4 @@
-import { MessageType, ItemLocationType, ItemInstance, getItemDisplayName, EquipmentSlot, ItemType, TWO_HANDED_BLOCKED_SLOTS, getAlternatePairedSlot, ItemCondition, CraftingRecipe, AppliedEnchantment } from '@koa/shared';
+import { MessageType, ItemLocationType, ItemInstance, getItemDisplayName, EquipmentSlot, ItemType, TWO_HANDED_BLOCKED_SLOTS, getAlternatePairedSlot, ItemCondition, CraftingRecipe, AppliedEnchantment, Currency } from '@koa/shared';
 import { CommandResponse } from './commands.js';
 import { AuthenticatedSocket, broadcastToRoom } from './socket.js';
 import { getPlayerLocation } from './adminCommands.js';
@@ -6,6 +6,8 @@ import { colors } from '../utils/colors.js';
 import { wordWrap } from '../utils/textFormat.js';
 import * as itemRepo from '../db/repositories/itemRepository.js';
 import * as craftingRepo from '../db/repositories/craftingRepository.js';
+import * as characterRepo from '../db/repositories/characterRepository.js';
+import * as settingsRepo from '../db/repositories/settingsRepository.js';
 import { withTransaction } from '../db/index.js';
 import { calculateEncumbranceRatio } from './combatStats.js';
 
@@ -687,6 +689,51 @@ function getEncumbranceLevel(percent: number): string {
   return 'Heavy';
 }
 
+/**
+ * Calculate total wealth in copper farthings.
+ * Conversion rates: 10 copper = 1 silver, 10 silver = 1 gold,
+ * 10 gold = 1 platinum, 100 platinum = 1 runic.
+ *
+ * @param currency - The currency amounts to convert
+ * @returns Total wealth expressed in copper farthings
+ */
+function calculateTotalWealth(currency: Currency): number {
+  return currency.copper +
+    (currency.silver * 10) +
+    (currency.gold * 100) +
+    (currency.platinum * 1000) +
+    (currency.runic * 100000);
+}
+
+/**
+ * Format currency display for the inventory command.
+ * Shows all currency types and total wealth in copper farthings.
+ *
+ * @param currency - The currency amounts to display
+ * @returns Array of formatted display lines
+ */
+async function formatCurrencyDisplay(currency: Currency): Promise<string[]> {
+  const runicName = await settingsRepo.getRunicName();
+
+  const lines: string[] = [];
+
+  // "You have:" line with all currency types (using colors.gold() for currency values)
+  const currencyParts: string[] = [];
+  currencyParts.push(`${colors.gold(String(currency.runic))} ${runicName}`);
+  currencyParts.push(`${colors.gold(String(currency.platinum))} platinum`);
+  currencyParts.push(`${colors.gold(String(currency.gold))} gold`);
+  currencyParts.push(`${colors.gold(String(currency.silver))} silver`);
+  currencyParts.push(`and ${colors.gold(String(currency.copper))} copper`);
+
+  lines.push(`${colors.green('You have:')} ${currencyParts.join(', ')}.`);
+
+  // Wealth line
+  const totalWealth = calculateTotalWealth(currency);
+  lines.push(`${colors.green('Wealth:')} ${colors.gold(String(totalWealth))} copper farthings.`);
+
+  return lines;
+}
+
 // Handle "inventory" / "i" command
 export async function handleInventory(
   socket: AuthenticatedSocket
@@ -697,38 +744,76 @@ export async function handleInventory(
   const items = await itemRepo.getCharacterInventory(socket.characterId!);
   const equipped = await itemRepo.getCharacterEquipped(socket.characterId!);
 
+  // Fetch character data for currency
+  const character = await characterRepo.findCharacterById(socket.characterId!);
+  const currency: Currency = character ? {
+    copper: character.copper ?? 0,
+    silver: character.silver ?? 0,
+    gold: character.gold ?? 0,
+    platinum: character.platinum ?? 0,
+    runic: character.runic ?? 0,
+  } : { copper: 0, silver: 0, gold: 0, platinum: 0, runic: 0 };
+
   const lines: string[] = [];
 
   if (items.length === 0 && equipped.length === 0) {
-    lines.push('You are not carrying anything.');
+    lines.push('You are carrying:');
+    lines.push('  nothing');
   } else {
-    lines.push(colors.boldYellow('You are carrying:'));
+    lines.push('You are carrying:');
+
+    // Build paragraph-form item list
+    const itemParts: string[] = [];
 
     // Show equipped items first with slot indicator
     for (const item of equipped) {
       const name = getItemName(item);
       const slot = item.equipped_slot ? INVENTORY_SLOT_NAMES[item.equipped_slot] || item.equipped_slot : 'worn';
-      lines.push(`  ${colors.item(name)} (${slot})`);
+      itemParts.push(`${colors.item(name)} (${slot})`);
     }
 
-    // Show inventory items
+    // Show inventory items (non-equipped)
     for (const item of items) {
       const display = itemRepo.instanceToDisplay(item);
       const name = getItemDisplayName(display);
-      lines.push(`  ${colors.item(name)}`);
+      itemParts.push(colors.item(name));
+    }
+
+    // Join items with commas and word-wrap at 80 chars
+    if (itemParts.length > 0) {
+      const itemLine = '  ' + itemParts.join(', ');
+      lines.push(wordWrap(itemLine, 78)); // 78 to account for 2-char indent
     }
   }
 
-  // Calculate encumbrance
+  // Add blank line before currency
+  lines.push('');
+
+  // Add currency display
+  const currencyLines = await formatCurrencyDisplay(currency);
+  lines.push(...currencyLines);
+
+  // Calculate encumbrance (including currency weight)
   const allItems = [...items, ...equipped];
-  const totalWeight = calculateTotalWeight(allItems);
+  const itemWeight = calculateTotalWeight(allItems);
+
+  // Get currency encumbrance settings from database
+  const encSettings = await settingsRepo.getCurrencyEncumbranceSettings();
+  const currencyWeight =
+    Math.floor(currency.copper / encSettings.copperPerEnc) +
+    Math.floor(currency.silver / encSettings.silverPerEnc) +
+    Math.floor(currency.gold / encSettings.goldPerEnc) +
+    Math.floor(currency.platinum / encSettings.platinumPerEnc) +
+    Math.floor(currency.runic / encSettings.runicPerEnc);
+
+  const totalWeight = itemWeight + currencyWeight;
   const strength = socket.characterStats?.strength || 10;
   const maxCapacity = strength * 48;
   const encumbranceRatio = calculateEncumbranceRatio(totalWeight, strength);
   const encumbrancePercent = Math.round(encumbranceRatio * 100);
   const encumbranceLevel = getEncumbranceLevel(encumbrancePercent);
 
-  // Add encumbrance line (yellow = brown in ANSI)
+  // Add encumbrance line
   lines.push('');
   lines.push(colors.yellow(`Encumbrance: ${totalWeight}/${maxCapacity} ${encumbranceLevel} (${encumbrancePercent}%)`));
 
@@ -2018,8 +2103,260 @@ export async function handleEnchant(
   const itemName = template.name;
   broadcastToRoom(currentRoomId, `${socket.username} enchants ${itemName} with magical energy!`, socket.playerId);
 
-  return { 
-    type: MessageType.OUTPUT, 
-    message: `You enchant ${colors.item(itemName)} with ${colors.magenta(enchantment.name)}!` 
+  return {
+    type: MessageType.OUTPUT,
+    message: `You enchant ${colors.item(itemName)} with ${colors.magenta(enchantment.name)}!`
   };
+}
+
+// ============================================================================
+// CURRENCY COMMANDS
+// ============================================================================
+
+/**
+ * Mapping of currency type names to their item template names and character fields.
+ * Used to look up the correct database template and character column for each currency type.
+ */
+const CURRENCY_TYPES: Record<string, { templateName: string; field: keyof Currency }> = {
+  'copper': { templateName: 'copper coins', field: 'copper' },
+  'silver': { templateName: 'silver coins', field: 'silver' },
+  'gold': { templateName: 'gold coins', field: 'gold' },
+  'platinum': { templateName: 'platinum coins', field: 'platinum' },
+  'runic': { templateName: 'runic coins', field: 'runic' },
+};
+
+/**
+ * Parse currency type from user input.
+ * Handles full names ("gold"), abbreviations ("g"), and partial matches ("gol").
+ *
+ * @param input - The user's input string
+ * @returns The normalized currency type name, or null if not recognized
+ */
+function parseCurrencyType(input: string): string | null {
+  const lower = input.toLowerCase();
+  // Exact matches
+  if (CURRENCY_TYPES[lower]) return lower;
+  // Single-letter abbreviations
+  const abbrevMap: Record<string, string> = {
+    'c': 'copper',
+    's': 'silver',
+    'g': 'gold',
+    'p': 'platinum',
+    'r': 'runic',
+  };
+  if (abbrevMap[lower]) return abbrevMap[lower];
+  // Partial matches
+  for (const type of Object.keys(CURRENCY_TYPES)) {
+    if (type.startsWith(lower)) return type;
+  }
+  return null;
+}
+
+/**
+ * Handle "drop <amount> <currency_type>" command
+ * Drops currency from character inventory to the room as a stackable item.
+ * Uses a transaction to ensure atomicity - either both the character update
+ * and item creation succeed, or neither does.
+ */
+export async function handleDropCurrency(
+  socket: AuthenticatedSocket,
+  args: string[],
+  currentRoomId: number
+): Promise<CommandResponse | null> {
+  const charError = requireCharacter(socket);
+  if (charError) return charError;
+
+  if (args.length < 2) {
+    return null; // Not a currency drop, let normal drop handle it
+  }
+
+  // Check if first arg is a number and second is a currency type
+  const amount = parseInt(args[0]);
+  if (isNaN(amount)) {
+    return null; // Not a currency drop
+  }
+  if (amount <= 0) {
+    return { type: MessageType.ERROR, message: 'You must drop a positive amount.' };
+  }
+
+  const currencyType = parseCurrencyType(args[1]);
+  if (!currencyType) {
+    return null; // Not a valid currency type, let normal drop handle it
+  }
+
+  // Get character's current currency
+  const character = await characterRepo.findCharacterById(socket.characterId!);
+  if (!character) {
+    return { type: MessageType.ERROR, message: 'Character not found.' };
+  }
+
+  const currencyInfo = CURRENCY_TYPES[currencyType];
+  const currentAmount = character[currencyInfo.field] ?? 0;
+
+  if (currentAmount < amount) {
+    return { type: MessageType.ERROR, message: `You don't have that much ${currencyType}.` };
+  }
+
+  // Find the currency template
+  const template = await itemRepo.getTemplateByName(currencyInfo.templateName);
+  if (!template) {
+    return { type: MessageType.ERROR, message: 'Currency system is not configured. Please contact an administrator.' };
+  }
+
+  // Use transaction to ensure atomicity
+  try {
+    await withTransaction(async (client) => {
+      // Deduct currency from character
+      await client.query(
+        `UPDATE characters SET ${currencyInfo.field} = ${currencyInfo.field} - $1 WHERE id = $2`,
+        [amount, socket.characterId]
+      );
+
+      // Check if there's already currency of this type in the room
+      const existingResult = await client.query(
+        `SELECT id, quantity FROM item_instances
+         WHERE template_id = $1 AND location_type = $2 AND location_id = $3 AND condition = $4
+         LIMIT 1`,
+        [template.id, ItemLocationType.ROOM, currentRoomId, ItemCondition.PRISTINE]
+      );
+
+      if (existingResult.rows.length > 0) {
+        // Add to existing stack
+        await client.query(
+          'UPDATE item_instances SET quantity = quantity + $1 WHERE id = $2',
+          [amount, existingResult.rows[0].id]
+        );
+      } else {
+        // Create new instance in room
+        await client.query(
+          `INSERT INTO item_instances (template_id, location_type, location_id, quantity, condition)
+           VALUES ($1, $2, $3, $4, $5)`,
+          [template.id, ItemLocationType.ROOM, currentRoomId, amount, ItemCondition.PRISTINE]
+        );
+      }
+    });
+  } catch (error) {
+    console.error('Failed to drop currency:', error);
+    return { type: MessageType.ERROR, message: 'Failed to drop currency. Please try again.' };
+  }
+
+  const displayName = amount === 1 ? `1 ${currencyType} coin` : `${amount} ${currencyType} coins`;
+  broadcastToRoom(currentRoomId, `${socket.username} drops ${displayName}.`, socket.playerId);
+
+  return { type: MessageType.OUTPUT, message: `You drop ${colors.gold(displayName)}.` };
+}
+
+/**
+ * Handle picking up currency items - "get <currency_type>" or "get <amount> <currency_type>"
+ * Picks up currency from the room and adds it to the character's wallet.
+ * Uses a transaction to ensure atomicity - either both the item removal
+ * and character update succeed, or neither does.
+ */
+export async function handleGetCurrency(
+  socket: AuthenticatedSocket,
+  args: string[],
+  currentRoomId: number
+): Promise<CommandResponse | null> {
+  const charError = requireCharacter(socket);
+  if (charError) return charError;
+
+  if (args.length === 0) {
+    return null;
+  }
+
+  // Check if first arg is a currency type (e.g., "get gold" or "g g")
+  // OR if first arg is a number and second is currency type (e.g., "get 50 gold")
+  let amount: number | null = null;
+  let currencyType: string | null = null;
+
+  const firstArgNum = parseInt(args[0]);
+  if (!isNaN(firstArgNum) && args.length > 1) {
+    // "get 50 gold" format
+    if (firstArgNum <= 0) {
+      return { type: MessageType.ERROR, message: 'You must pick up a positive amount.' };
+    }
+    amount = firstArgNum;
+    currencyType = parseCurrencyType(args[1]);
+  } else {
+    // "get gold" format - get all
+    currencyType = parseCurrencyType(args[0]);
+    amount = null; // null means get all
+  }
+
+  if (!currencyType) {
+    return null; // Not a currency get, let normal get handle it
+  }
+
+  const currencyInfo = CURRENCY_TYPES[currencyType];
+
+  // Find the currency template
+  const template = await itemRepo.getTemplateByName(currencyInfo.templateName);
+  if (!template) {
+    return null; // Currency template not set up, fall through to normal get
+  }
+
+  // Find currency items of this type in the room
+  const roomItems = await itemRepo.getInstancesInRoom(currentRoomId);
+  const currencyItems = roomItems.filter(i => i.template_id === template.id);
+
+  if (currencyItems.length === 0) {
+    return { type: MessageType.ERROR, message: `You don't see any ${currencyType} coins here.` };
+  }
+
+  // Calculate total available
+  const totalAvailable = currencyItems.reduce((sum, item) => sum + item.quantity, 0);
+
+  // Determine how much to pick up
+  const pickupAmount = amount === null ? totalAvailable : Math.min(amount, totalAvailable);
+
+  if (pickupAmount <= 0) {
+    return { type: MessageType.ERROR, message: `There aren't that many ${currencyType} coins here.` };
+  }
+
+  // Use transaction to ensure atomicity
+  try {
+    await withTransaction(async (client) => {
+      // Add currency to character
+      await client.query(
+        `UPDATE characters SET ${currencyInfo.field} = ${currencyInfo.field} + $1 WHERE id = $2`,
+        [pickupAmount, socket.characterId]
+      );
+
+      // Remove currency items from room
+      let remaining = pickupAmount;
+      for (const item of currencyItems) {
+        if (remaining <= 0) break;
+
+        if (item.quantity <= remaining) {
+          remaining -= item.quantity;
+          await client.query('DELETE FROM item_instances WHERE id = $1', [item.id]);
+        } else {
+          await client.query(
+            'UPDATE item_instances SET quantity = quantity - $1 WHERE id = $2',
+            [remaining, item.id]
+          );
+          remaining = 0;
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Failed to pick up currency:', error);
+    return { type: MessageType.ERROR, message: 'Failed to pick up currency. Please try again.' };
+  }
+
+  const displayName = pickupAmount === 1 ? `1 ${currencyType} coin` : `${pickupAmount} ${currencyType} coins`;
+  broadcastToRoom(currentRoomId, `${socket.username} picks up ${displayName}.`, socket.playerId);
+
+  return { type: MessageType.OUTPUT, message: `You pick up ${colors.gold(displayName)}.` };
+}
+
+/**
+ * Check if an item instance is a currency item (coins).
+ * Used to determine if special currency handling should be applied.
+ *
+ * @param item - The item instance to check
+ * @returns True if the item is a currency type, false otherwise
+ */
+export function isCurrencyItem(item: ItemInstance): boolean {
+  return item.template?.item_type === ItemType.CURRENCY;
 }

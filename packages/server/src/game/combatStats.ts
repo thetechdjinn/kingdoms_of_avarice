@@ -17,7 +17,8 @@ import {
   UNARMED_ATTACK_VERBS,
 } from '@koa/shared';
 import * as itemRepo from '../db/repositories/itemRepository.js';
-import { getCombatSettings } from '../db/repositories/settingsRepository.js';
+import * as characterRepo from '../db/repositories/characterRepository.js';
+import { getCombatSettings, getCurrencyEncumbranceSettings } from '../db/repositories/settingsRepository.js';
 
 /**
  * Weapon stats used in combat calculations
@@ -185,16 +186,32 @@ function calculateTotalWeight(inventory: ItemInstance[], equipped: ItemInstance[
 }
 
 /**
+ * Calculate currency weight based on the number of coins
+ * Uses configurable encumbrance settings from database
+ */
+async function calculateCurrencyWeight(character: characterRepo.DbCharacter | null): Promise<number> {
+  if (!character) return 0;
+
+  const encSettings = await getCurrencyEncumbranceSettings();
+  return Math.floor((character.copper ?? 0) / encSettings.copperPerEnc) +
+    Math.floor((character.silver ?? 0) / encSettings.silverPerEnc) +
+    Math.floor((character.gold ?? 0) / encSettings.goldPerEnc) +
+    Math.floor((character.platinum ?? 0) / encSettings.platinumPerEnc) +
+    Math.floor((character.runic ?? 0) / encSettings.runicPerEnc);
+}
+
+/**
  * Get all combat-relevant stats for a player from their equipment
  *
  * @param characterId - The character's ID (used for item lookup)
  * @returns Equipment combat stats including weapon, armor, and modifiers
  */
 export async function getEquipmentCombatStats(characterId: number): Promise<EquipmentCombatStats> {
-  // Fetch equipped items, inventory, and combat settings in parallel
-  const [equipped, inventory, combatSettings] = await Promise.all([
+  // Fetch equipped items, inventory, character data, and combat settings in parallel
+  const [equipped, inventory, character, combatSettings] = await Promise.all([
     itemRepo.getCharacterEquipped(characterId),
     itemRepo.getCharacterInventory(characterId),
+    characterRepo.findCharacterById(characterId),
     getCombatSettings(),
   ]);
 
@@ -202,6 +219,10 @@ export async function getEquipmentCombatStats(characterId: number): Promise<Equi
   const mainHandWeapon = equipped.find(
     item => item.equipped_slot === EquipmentSlot.MAIN_HAND
   );
+
+  // Calculate total weight including currency
+  const itemWeight = calculateTotalWeight(inventory, equipped);
+  const currencyWeight = await calculateCurrencyWeight(character);
 
   return {
     weapon: getWeaponStats(
@@ -211,7 +232,7 @@ export async function getEquipmentCombatStats(characterId: number): Promise<Equi
     ),
     armor: calculateArmorStats(equipped),
     statModifiers: calculateStatModifiers(equipped),
-    totalWeight: calculateTotalWeight(inventory, equipped),
+    totalWeight: itemWeight + currencyWeight,
   };
 }
 

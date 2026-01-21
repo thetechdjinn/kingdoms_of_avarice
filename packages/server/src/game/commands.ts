@@ -8,7 +8,7 @@ import { AuthenticatedSocket, broadcastToRoom } from './socket.js';
 import { colors } from '../utils/colors.js';
 import { processAdminCommand, getPlayerLocation, setPlayerLocation } from './adminCommands.js';
 import * as playerRepo from '../db/repositories/playerRepository.js';
-import { handleGet, handleDrop, handleInventory, handleExamine, getRoomItemsDescription, handleWield, handleWear, handleRemove, handleEquipment, handlePut, handleGetFrom, handleLookIn, handleUse, handleLight, handleExtinguish, handleRepair, handleSearch, handleRecipes, handleCraft, handleEnchantments, handleEnchant } from './itemCommands.js';
+import { handleGet, handleDrop, handleInventory, handleExamine, getRoomItemsDescription, handleWield, handleWear, handleRemove, handleEquipment, handlePut, handleGetFrom, handleLookIn, handleUse, handleLight, handleExtinguish, handleRepair, handleSearch, handleRecipes, handleCraft, handleEnchantments, handleEnchant, handleDropCurrency, handleGetCurrency } from './itemCommands.js';
 import { handleAttack, handleFlee, handleBreak } from './combatCommands.js';
 import { isSpellMnemonic, handleSpellCommand, handleSpellbook } from './spellCommands.js';
 import { handleTrain } from './trainingCommands.js';
@@ -119,6 +119,11 @@ export async function processCommand(
     if (fullArgs.toLowerCase().includes(' from ')) {
       return handleGetFrom(socket, args, currentRoomId);
     }
+    // Try currency handling first (e.g., "get gold", "get 50 gold")
+    const currencyResult = await handleGetCurrency(socket, args, currentRoomId);
+    if (currencyResult) {
+      return currencyResult;
+    }
     return handleGet(socket, args, currentRoomId);
   }
 
@@ -127,6 +132,11 @@ export async function processCommand(
   }
 
   if (command === 'drop') {
+    // Try currency handling first (e.g., "drop 50 gold")
+    const currencyResult = await handleDropCurrency(socket, args, currentRoomId);
+    if (currencyResult) {
+      return currencyResult;
+    }
     return handleDrop(socket, args, currentRoomId);
   }
 
