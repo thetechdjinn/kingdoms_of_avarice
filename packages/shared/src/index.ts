@@ -88,6 +88,7 @@ export type Gender = 'male' | 'female' | 'neutral';
 export interface Character {
   id: number;
   name: string;
+  lastName?: string;
   race: string;
   class: string;
   level: number;

@@ -7,6 +7,7 @@ export interface Room {
   name: string;
   description: string;
   area: string;
+  terrain: string;
   exits: Map<string, number>;
 }
 
@@ -36,6 +37,7 @@ export class GameWorld {
         name: dbRoom.name,
         description: dbRoom.description || '',
         area: dbRoom.area || 'Unknown',
+        terrain: dbRoom.terrain || 'indoor',
         exits: dbRoom.exits,
       });
     }
@@ -60,6 +62,7 @@ export class GameWorld {
       name: dbRoom.name,
       description: dbRoom.description || '',
       area: dbRoom.area || 'Unknown',
+      terrain: dbRoom.terrain || 'indoor',
       exits: dbRoom.exits,
     };
 
@@ -69,12 +72,13 @@ export class GameWorld {
 
   async createRoom(name: string, description: string, area: string): Promise<Room> {
     const dbRoom = await roomRepo.createRoom({ name, description, area });
-    
+
     const room: Room = {
       id: dbRoom.id,
       name: dbRoom.name,
       description: dbRoom.description || '',
       area: dbRoom.area || 'Unknown',
+      terrain: dbRoom.terrain || 'indoor',
       exits: new Map(),
     };
 
@@ -129,6 +133,7 @@ export class GameWorld {
           name: dbRoom.name,
           description: dbRoom.description || '',
           area: dbRoom.area || 'Unknown',
+          terrain: dbRoom.terrain || 'indoor',
           exits: dbRoom.exits,
         });
       }

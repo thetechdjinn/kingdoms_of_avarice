@@ -173,6 +173,16 @@ export async function runMigrations(): Promise<void> {
         ALTER TABLE race_definitions ADD COLUMN IF NOT EXISTS dodge_bonus INTEGER DEFAULT 0
       `);
 
+      // Add terrain column to rooms (for movement speed modifiers)
+      await client.query(`
+        ALTER TABLE rooms ADD COLUMN IF NOT EXISTS terrain VARCHAR(20) DEFAULT 'indoor'
+      `);
+
+      // Add last_name column to characters (for existing databases)
+      await client.query(`
+        ALTER TABLE characters ADD COLUMN IF NOT EXISTS last_name VARCHAR(50)
+      `);
+
       // Purge old classes and races to reseed with new MajorMUD data
       // Check if we need to reseed by looking for old-style class IDs
       const oldClassCheck = await client.query(`

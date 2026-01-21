@@ -17,7 +17,6 @@ import type {
   CombatQueueConfig,
   EncumbranceConfig,
   TerrainConfig,
-  WeaponSpeedConfig,
   DelaySettings,
   AliasConfig,
   InterruptTrigger,
@@ -67,7 +66,6 @@ function validateConfig(cfg: CommandQueueConfig): void {
     'encumbrance',
     'cooldowns',
     'terrain',
-    'weaponSpeed',
     'delaySettings',
     'aliases',
     'interruptTriggers',
@@ -237,15 +235,6 @@ export function getTerrainMultiplier(terrainType: string): number {
 }
 
 /**
- * Get the weapon speed multiplier for a weapon type
- */
-export function getWeaponSpeedMultiplier(weaponType: string): number {
-  const cfg = getCommandQueueConfig();
-  const weapon = cfg.weaponSpeed.types[weaponType];
-  return weapon?.multiplier ?? cfg.weaponSpeed.default;
-}
-
-/**
  * Get the encumbrance delay multiplier using curve interpolation
  */
 export function getEncumbranceMultiplier(encumbrancePercent: number): number {
@@ -351,7 +340,6 @@ export {
   CombatQueueConfig,
   EncumbranceConfig,
   TerrainConfig,
-  WeaponSpeedConfig,
   DelaySettings,
   AliasConfig,
   InterruptTrigger,

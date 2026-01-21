@@ -100,7 +100,7 @@ export function setupCharacterRoutes(app: Express): void {
       return;
     }
 
-    const { name, raceId, classId } = req.body;
+    const { name, lastName, raceId, classId, gender, hair, eyeColor } = req.body;
 
     // Validate name
     if (!name || typeof name !== 'string') {
@@ -209,9 +209,13 @@ export function setupCharacterRoutes(app: Express): void {
         const newCharacter = await characterRepo.createCharacter({
           playerId: payload.playerId,
           name: trimmedName,
+          lastName: lastName?.trim() || undefined,
           race: raceId,
           characterClass: classId,
           stats: finalStats,
+          gender: gender || 'neutral',
+          hair: hair || undefined,
+          eyeColor: eyeColor || undefined,
         }, client);
 
         await progressionRepo.createCharacterProgression(newCharacter.id, classId, client);

@@ -5,6 +5,7 @@ export interface DbRoom {
   name: string;
   description: string | null;
   area: string | null;
+  terrain: string | null;
 }
 
 export interface DbRoomExit {
@@ -22,6 +23,7 @@ export interface CreateRoomInput {
   name: string;
   description?: string;
   area?: string;
+  terrain?: string;
 }
 
 export interface CreateExitInput {
@@ -86,10 +88,10 @@ export async function getAllRoomsWithExits(): Promise<RoomWithExits[]> {
 
 export async function createRoom(input: CreateRoomInput): Promise<DbRoom> {
   const result = await query<DbRoom>(
-    `INSERT INTO rooms (name, description, area)
-     VALUES ($1, $2, $3)
+    `INSERT INTO rooms (name, description, area, terrain)
+     VALUES ($1, $2, $3, $4)
      RETURNING *`,
-    [input.name, input.description || null, input.area || null]
+    [input.name, input.description || null, input.area || null, input.terrain || 'indoor']
   );
   return result.rows[0];
 }
@@ -113,6 +115,10 @@ export async function updateRoom(
   if (updates.area !== undefined) {
     setClauses.push(`area = $${paramIndex++}`);
     values.push(updates.area);
+  }
+  if (updates.terrain !== undefined) {
+    setClauses.push(`terrain = $${paramIndex++}`);
+    values.push(updates.terrain);
   }
 
   if (setClauses.length === 0) return getRoomById(id);

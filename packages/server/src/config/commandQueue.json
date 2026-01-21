@@ -135,13 +135,12 @@
     "affectsActions": ["move"],
     "curve": [
       { "percent": 0, "multiplier": 0.70 },
-      { "percent": 25, "multiplier": 0.85 },
-      { "percent": 50, "multiplier": 1.00 },
-      { "percent": 75, "multiplier": 1.35 },
-      { "percent": 90, "multiplier": 1.80 },
-      { "percent": 100, "multiplier": 2.50 }
+      { "percent": 20, "multiplier": 0.85 },
+      { "percent": 35, "multiplier": 1.00 },
+      { "percent": 65, "multiplier": 1.35 },
+      { "percent": 100, "multiplier": 1.35 }
     ],
-    "interpolation": "linear",
+    "interpolation": "step",
     "overEncumbered": {
       "threshold": 100,
       "blocksAction": true,
@@ -196,22 +195,6 @@
       "indoor": { "multiplier": 1.0, "description": "Inside a building" },
       "dungeon": { "multiplier": 1.1, "description": "Dark underground passage" }
     }
-  },
-  "weaponSpeed": {
-    "affectsActions": ["attack"],
-    "types": {
-      "dagger": { "multiplier": 0.6 },
-      "shortSword": { "multiplier": 0.8 },
-      "longSword": { "multiplier": 1.0 },
-      "battleAxe": { "multiplier": 1.2 },
-      "greatSword": { "multiplier": 1.4 },
-      "warHammer": { "multiplier": 1.5 },
-      "staff": { "multiplier": 1.1 },
-      "mace": { "multiplier": 1.0 },
-      "spear": { "multiplier": 1.1 },
-      "fists": { "multiplier": 0.5 }
-    },
-    "default": 1.0
   },
   "delaySettings": {
     "minDelay": 50,

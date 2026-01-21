@@ -305,22 +305,6 @@ export interface TerrainConfig {
 }
 
 // ============================================================================
-// Weapon Speed Configuration
-// ============================================================================
-
-/**
- * Configuration for weapon-based delay modifiers
- */
-export interface WeaponSpeedConfig {
-  /** Actions affected by weapon speed */
-  affectsActions: string[];
-  /** Weapon types and their modifiers */
-  types: Record<string, { multiplier: number }>;
-  /** Default multiplier for unknown weapons */
-  default: number;
-}
-
-// ============================================================================
 // Delay Settings
 // ============================================================================
 
@@ -386,8 +370,6 @@ export interface CommandQueueConfig {
   };
   /** Terrain settings */
   terrain: TerrainConfig;
-  /** Weapon speed settings */
-  weaponSpeed: WeaponSpeedConfig;
   /** Global delay settings */
   delaySettings: DelaySettings;
   /** Command aliases */

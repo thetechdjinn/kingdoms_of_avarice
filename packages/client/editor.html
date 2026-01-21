@@ -93,7 +93,23 @@
               <input type="text" id="room-area" list="area-suggestions" placeholder="Enter existing or new area name" />
               <datalist id="area-suggestions"></datalist>
             </div>
-            
+
+            <div class="form-group">
+              <label for="room-terrain">Terrain <span class="hint-inline">(affects movement speed)</span></label>
+              <select id="room-terrain">
+                <option value="indoor">Indoor (1.0x)</option>
+                <option value="road">Road (0.8x - faster)</option>
+                <option value="grass">Grass (1.0x)</option>
+                <option value="forest">Forest (1.2x)</option>
+                <option value="sand">Sand (1.3x)</option>
+                <option value="mountain">Mountain (1.4x)</option>
+                <option value="swamp">Swamp (1.6x)</option>
+                <option value="underwater">Underwater (2.0x - slowest)</option>
+                <option value="ice">Ice (1.1x)</option>
+                <option value="dungeon">Dungeon (1.1x)</option>
+              </select>
+            </div>
+
             <div class="form-group">
               <label for="room-description">Description</label>
               <textarea id="room-description" rows="5"></textarea>
