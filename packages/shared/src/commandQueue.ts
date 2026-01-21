@@ -189,15 +189,44 @@ export interface TimingConfig {
 
 /**
  * Configuration for an ability cooldown
+ *
+ * ## Cooldown Start Modes
+ *
+ * Cooldowns can start at two different points in an ability's execution:
+ *
+ * - **startOnUse**: Cooldown begins immediately when the ability is initiated,
+ *   before it finishes. If the ability is interrupted, the cooldown is still
+ *   active. Use this to prevent spam attempts (e.g., bash, kick).
+ *
+ * - **startOnComplete**: Cooldown begins only after the ability successfully
+ *   finishes. If interrupted, no cooldown is applied - the player can retry
+ *   immediately. Use this when failure shouldn't penalize (e.g., healing).
+ *
+ * ## Examples
+ *
+ * ```
+ * // Bash: startOnUse=true
+ * // Player tries bash -> cooldown starts -> bash interrupted -> still on cooldown
+ *
+ * // Heal: startOnComplete=true
+ * // Player casts heal -> heal interrupted -> no cooldown -> can retry immediately
+ * // Player casts heal -> heal completes -> cooldown starts
+ * ```
  */
 export interface CooldownConfig {
   /** Cooldown duration in ms */
   cooldownMs: number;
   /** Shared cooldown group (null for individual cooldown) */
   sharedCooldownGroup: string | null;
-  /** Whether cooldown starts when ability is used (default: true) */
+  /**
+   * Start cooldown when ability is initiated (before completion).
+   * Use for abilities where you want to prevent spam attempts.
+   */
   startOnUse: boolean;
-  /** Whether cooldown starts when ability completes (default: false) */
+  /**
+   * Start cooldown when ability successfully completes.
+   * Use for abilities where interruption shouldn't penalize the player.
+   */
   startOnComplete?: boolean;
 }
 

@@ -14,6 +14,7 @@ import * as spellRepo from '../db/repositories/spellRepository.js';
 import * as characterRepo from '../db/repositories/characterRepository.js';
 import { parseDiceString } from './combatCalculations.js';
 import { applyEffect, getEffectDefinition, formatDuration } from './statusEffects.js';
+import { isOnCooldown, startCooldown, getCooldownMessage } from './cooldownTracker.js';
 
 /**
  * Cache of all spell mnemonics for quick lookup
@@ -84,6 +85,11 @@ export async function handleSpellCommand(
   const spell = await spellRepo.getSpellByMnemonic(mnemonic);
   if (!spell) {
     return { type: MessageType.ERROR, message: 'Unknown spell.' };
+  }
+
+  // Check cooldown using spell mnemonic as ability identifier
+  if (isOnCooldown(socket, mnemonic)) {
+    return { type: MessageType.ERROR, message: getCooldownMessage(spell.name) };
   }
 
   // Get character info for class/level checks
@@ -199,6 +205,9 @@ async function handleOffensiveSpell(
   };
   target.send(JSON.stringify(targetMessage));
 
+  // Start cooldown on use (offensive spells initiate combat, cooldown starts now)
+  startCooldown(socket, spell.mnemonic, 'use');
+
   return {
     type: MessageType.OUTPUT,
     message: `${colors.yellow('*COMBAT ENGAGED*')} You begin casting ${colors.cyan(spell.name.toLowerCase())} at ${colors.combatDefender(target.username)}!`,
@@ -266,6 +275,10 @@ async function handleHealingSpell(
     };
     targetSocket.send(JSON.stringify(targetNotify));
   }
+
+  // Start cooldown (healing spells are instant - call both modes)
+  startCooldown(socket, spell.mnemonic, 'use');
+  startCooldown(socket, spell.mnemonic, 'complete');
 
   // Broadcast to room (excluding caster and target who get direct messages)
   if (isSelfHeal) {
@@ -336,6 +349,10 @@ async function handleBuffSpell(
       message: result.message,
     };
   }
+
+  // Start cooldown (buff spells are instant - call both modes)
+  startCooldown(socket, spell.mnemonic, 'use');
+  startCooldown(socket, spell.mnemonic, 'complete');
 
   // Broadcast to room
   const currentRoomId = getPlayerLocation(socket.playerId);
@@ -426,6 +443,10 @@ async function handleDebuffSpell(
   };
   target.send(JSON.stringify(targetMessage));
 
+  // Start cooldown (debuff spells are instant - call both modes)
+  startCooldown(socket, spell.mnemonic, 'use');
+  startCooldown(socket, spell.mnemonic, 'complete');
+
   // Send updated vitals to target
   sendVitals(target);
 
@@ -447,6 +468,10 @@ async function handleUtilitySpell(
 ): Promise<CommandResponse> {
   // Deduct mana
   socket.vitals.resource = (socket.vitals.resource ?? 0) - spell.manaCost;
+
+  // Start cooldown (utility spells are instant - call both modes)
+  startCooldown(socket, spell.mnemonic, 'use');
+  startCooldown(socket, spell.mnemonic, 'complete');
 
   const currentRoomId = getPlayerLocation(socket.playerId);
   broadcastToRoom(
