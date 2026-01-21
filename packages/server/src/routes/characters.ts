@@ -136,8 +136,8 @@ export function setupCharacterRoutes(app: Express): void {
         res.status(400).json({ success: false, message: 'Last name must be 50 characters or less' });
         return;
       }
-      if (trimmedLastName.length > 0 && !/^[a-zA-Z]+$/.test(trimmedLastName)) {
-        res.status(400).json({ success: false, message: 'Last name must contain only letters' });
+      if (trimmedLastName.length > 0 && !/^[a-zA-Z][a-zA-Z'-]*$/.test(trimmedLastName)) {
+        res.status(400).json({ success: false, message: 'Last name must start with a letter and contain only letters, hyphens, and apostrophes' });
         return;
       }
     }

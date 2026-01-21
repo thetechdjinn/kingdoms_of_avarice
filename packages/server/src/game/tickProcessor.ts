@@ -129,11 +129,11 @@ async function calculateDelay(player: AuthenticatedSocket, actionType: string): 
   }
 
   // Check if this action is affected by encumbrance
-  if (config.encumbrance.affectsActions.includes(actionType)) {
+  if (config.encumbrance.affectsActions.includes(actionType) && player.characterId) {
     const strength = player.characterStats?.strength || 10;
 
     // Get equipment stats to calculate total weight
-    const equipmentStats = await getEquipmentCombatStats(player.characterId!);
+    const equipmentStats = await getEquipmentCombatStats(player.characterId);
     const encumbranceRatio = calculateEncumbranceRatio(equipmentStats.totalWeight, strength);
     const encumbrancePercent = encumbranceRatio * 100;
 
@@ -303,11 +303,17 @@ export async function handlePlayerInput(
     const actionType = getActionTypeForCommand(commandName);
     const delay = await calculateDelay(player, actionType);
 
+    // Check if action is blocked (e.g., by over-encumbrance)
+    if (delay === Infinity) {
+      sendMessageFn?.(player, MessageType.ERROR, 'You are too encumbered to do that!');
+      return;
+    }
+
     // Execute immediately but update readyAt
     await executeCommandAndRespond(player, resolvedCommand);
 
-    // Priority commands affect readyAt (use 0 if blocked by encumbrance)
-    setPlayerReadyAt(player, Date.now() + (delay === Infinity ? 0 : delay));
+    // Priority commands affect readyAt
+    setPlayerReadyAt(player, Date.now() + delay);
     return;
   }
 

@@ -9,6 +9,14 @@ import * as craftingRepo from '../db/repositories/craftingRepository.js';
 import { withTransaction } from '../db/index.js';
 import { calculateEncumbranceRatio } from './combatStats.js';
 
+// Guard function to check if character is selected
+function requireCharacter(socket: AuthenticatedSocket): CommandResponse | null {
+  if (!socket.characterId) {
+    return { type: MessageType.ERROR, message: 'No character selected.' };
+  }
+  return null;
+}
+
 // Get the display name for an item (uses name, falls back to short_desc for legacy)
 // Returns name as stored in database (should be lowercase)
 function getItemName(item: ItemInstance): string {
@@ -52,6 +60,9 @@ export async function handleGet(
   args: string[],
   currentRoomId: number
 ): Promise<CommandResponse> {
+  const charError = requireCharacter(socket);
+  if (charError) return charError;
+
   if (args.length === 0) {
     return { type: MessageType.ERROR, message: 'Get what?' };
   }
@@ -345,6 +356,9 @@ export async function handleDrop(
   args: string[],
   currentRoomId: number
 ): Promise<CommandResponse> {
+  const charError = requireCharacter(socket);
+  if (charError) return charError;
+
   if (args.length === 0) {
     return { type: MessageType.ERROR, message: 'Drop what?' };
   }
@@ -677,6 +691,9 @@ function getEncumbranceLevel(percent: number): string {
 export async function handleInventory(
   socket: AuthenticatedSocket
 ): Promise<CommandResponse> {
+  const charError = requireCharacter(socket);
+  if (charError) return charError;
+
   const items = await itemRepo.getCharacterInventory(socket.characterId!);
   const equipped = await itemRepo.getCharacterEquipped(socket.characterId!);
 
@@ -724,6 +741,9 @@ export async function handleExamine(
   args: string[],
   currentRoomId: number
 ): Promise<CommandResponse> {
+  const charError = requireCharacter(socket);
+  if (charError) return charError;
+
   if (args.length === 0) {
     return { type: MessageType.ERROR, message: 'Examine what?' };
   }
@@ -866,6 +886,9 @@ export async function handleWield(
   args: string[],
   currentRoomId: number
 ): Promise<CommandResponse> {
+  const charError = requireCharacter(socket);
+  if (charError) return charError;
+
   if (args.length === 0) {
     return { type: MessageType.ERROR, message: 'Wield what?' };
   }
@@ -937,6 +960,9 @@ export async function handleWear(
   args: string[],
   currentRoomId: number
 ): Promise<CommandResponse> {
+  const charError = requireCharacter(socket);
+  if (charError) return charError;
+
   if (args.length === 0) {
     return { type: MessageType.ERROR, message: 'Wear what?' };
   }
@@ -1022,6 +1048,9 @@ export async function handleRemove(
   args: string[],
   currentRoomId: number
 ): Promise<CommandResponse> {
+  const charError = requireCharacter(socket);
+  if (charError) return charError;
+
   if (args.length === 0) {
     return { type: MessageType.ERROR, message: 'Remove what?' };
   }
@@ -1070,6 +1099,9 @@ export async function handleRemove(
 export async function handleEquipment(
   socket: AuthenticatedSocket
 ): Promise<CommandResponse> {
+  const charError = requireCharacter(socket);
+  if (charError) return charError;
+
   const equipped = await itemRepo.getCharacterEquipped(socket.characterId!);
 
   if (equipped.length === 0) {
@@ -1151,6 +1183,9 @@ export async function handlePut(
   args: string[],
   currentRoomId: number
 ): Promise<CommandResponse> {
+  const charError = requireCharacter(socket);
+  if (charError) return charError;
+
   if (args.length === 0) {
     return { type: MessageType.ERROR, message: 'Put what where?' };
   }
@@ -1231,6 +1266,9 @@ export async function handleGetFrom(
   args: string[],
   currentRoomId: number
 ): Promise<CommandResponse> {
+  const charError = requireCharacter(socket);
+  if (charError) return charError;
+
   if (args.length === 0) {
     return { type: MessageType.ERROR, message: 'Get what from where?' };
   }
@@ -1315,6 +1353,9 @@ export async function handleLookIn(
   args: string[],
   currentRoomId: number
 ): Promise<CommandResponse> {
+  const charError = requireCharacter(socket);
+  if (charError) return charError;
+
   if (args.length === 0) {
     return { type: MessageType.ERROR, message: 'Look in what?' };
   }
@@ -1354,6 +1395,9 @@ export async function handleUse(
   args: string[],
   currentRoomId: number
 ): Promise<CommandResponse> {
+  const charError = requireCharacter(socket);
+  if (charError) return charError;
+
   if (args.length === 0) {
     return { type: MessageType.ERROR, message: 'Use what?' };
   }
@@ -1452,6 +1496,9 @@ export async function handleLight(
   args: string[],
   currentRoomId: number
 ): Promise<CommandResponse> {
+  const charError = requireCharacter(socket);
+  if (charError) return charError;
+
   if (args.length === 0) {
     return { type: MessageType.ERROR, message: 'Light what?' };
   }
@@ -1510,6 +1557,9 @@ export async function handleExtinguish(
   args: string[],
   currentRoomId: number
 ): Promise<CommandResponse> {
+  const charError = requireCharacter(socket);
+  if (charError) return charError;
+
   if (args.length === 0) {
     return { type: MessageType.ERROR, message: 'Extinguish what?' };
   }
@@ -1564,6 +1614,9 @@ export async function handleRepair(
   args: string[],
   currentRoomId: number
 ): Promise<CommandResponse> {
+  const charError = requireCharacter(socket);
+  if (charError) return charError;
+
   if (args.length === 0) {
     return { type: MessageType.ERROR, message: 'Repair what?' };
   }
@@ -1706,6 +1759,9 @@ export async function handleCraft(
   args: string[],
   currentRoomId: number
 ): Promise<CommandResponse> {
+  const charError = requireCharacter(socket);
+  if (charError) return charError;
+
   if (args.length === 0) {
     return { type: MessageType.ERROR, message: 'Craft what? Use "recipes" to see available recipes.' };
   }
@@ -1827,6 +1883,9 @@ export async function handleEnchant(
   args: string[],
   currentRoomId: number
 ): Promise<CommandResponse> {
+  const charError = requireCharacter(socket);
+  if (charError) return charError;
+
   if (args.length === 0) {
     return { type: MessageType.ERROR, message: 'Enchant what? Usage: enchant <item> with <enchantment>' };
   }

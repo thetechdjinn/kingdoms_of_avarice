@@ -641,6 +641,10 @@ async function handleGive(
   socket: AuthenticatedSocket
 ): Promise<CommandResponse> {
   // @give <template_id|name> [quantity] - Give item to yourself
+  if (!socket.characterId) {
+    return { type: MessageType.ERROR, message: 'No character selected.' };
+  }
+
   if (args.length < 1) {
     return { type: MessageType.ERROR, message: 'Usage: @give <template_id|name> [quantity]' };
   }

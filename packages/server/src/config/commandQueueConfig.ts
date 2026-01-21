@@ -79,7 +79,7 @@ function validateConfig(cfg: CommandQueueConfig): void {
       throw new Error(`Missing required configuration section: ${section}`);
     }
     const value = cfg[section as keyof CommandQueueConfig];
-    if (value === null || typeof value !== 'object') {
+    if (value === null || typeof value !== 'object' || Array.isArray(value)) {
       throw new Error(`Configuration section '${section}' must be an object`);
     }
   }
