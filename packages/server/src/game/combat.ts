@@ -356,7 +356,7 @@ async function processAttackerCombat(
   }
 
   // Get attacker's equipment stats
-  const attackerEquipment = await getEquipmentCombatStats(attacker.playerId);
+  const attackerEquipment = await getEquipmentCombatStats(attacker.characterId!);
 
   // Calculate effective stats with equipment modifiers
   const effectiveDex = attacker.characterStats.dexterity + (attackerEquipment.statModifiers.dexterity || 0);
@@ -456,7 +456,7 @@ async function processAttackerCombat(
     }
 
     // Get defender's equipment stats
-    const defenderEquipment = await getEquipmentCombatStats(target.playerId);
+    const defenderEquipment = await getEquipmentCombatStats(target.characterId!);
     const defenderEquipmentBonus = getEquipmentAccuracyBonus(defenderEquipment.statModifiers);
 
     // Get defender's status effect modifiers

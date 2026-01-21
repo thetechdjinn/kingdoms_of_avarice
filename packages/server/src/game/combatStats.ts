@@ -187,14 +187,14 @@ function calculateTotalWeight(inventory: ItemInstance[], equipped: ItemInstance[
 /**
  * Get all combat-relevant stats for a player from their equipment
  *
- * @param playerId - The player's character ID (used for item lookup)
+ * @param characterId - The character's ID (used for item lookup)
  * @returns Equipment combat stats including weapon, armor, and modifiers
  */
-export async function getEquipmentCombatStats(playerId: number): Promise<EquipmentCombatStats> {
+export async function getEquipmentCombatStats(characterId: number): Promise<EquipmentCombatStats> {
   // Fetch equipped items, inventory, and combat settings in parallel
   const [equipped, inventory, combatSettings] = await Promise.all([
-    itemRepo.getPlayerEquipped(playerId),
-    itemRepo.getPlayerInventory(playerId),
+    itemRepo.getCharacterEquipped(characterId),
+    itemRepo.getCharacterInventory(characterId),
     getCombatSettings(),
   ]);
 

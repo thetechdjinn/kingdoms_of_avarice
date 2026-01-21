@@ -169,8 +169,8 @@ CREATE TABLE IF NOT EXISTS item_instances (
     
     -- Location (polymorphic - references different tables based on location_type)
     -- Note: Traditional FK constraints cannot be used with polymorphic associations.
-    -- Valid location_types: 'room' -> rooms.id, 'player' -> players.id, 
-    --                       'equipped' -> players.id, 'container' -> item_instances.id
+    -- Valid location_types: 'room' -> rooms.id, 'player' -> characters.id (inventory),
+    --                       'equipped' -> characters.id, 'container' -> item_instances.id
     -- Referential integrity is enforced at the application layer.
     location_type VARCHAR(50) NOT NULL CHECK (location_type IN ('room', 'player', 'equipped', 'container')),
     location_id INTEGER NOT NULL,

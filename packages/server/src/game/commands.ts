@@ -789,7 +789,7 @@ async function handleStatus(socket: AuthenticatedSocket): Promise<CommandRespons
 
   // Row 1: Name (spans col1+col2+gap) | Lives/CP
   // Add extra GAP to match the space that would be between col1 and col2 in other rows
-  const fullName = character.last_name ? `${character.name} ${character.last_name}` : character.name;
+  const fullName = character.last_name ? `${character.name} ${character.last_name.trim()}` : character.name;
   lines.push(
     cellLeft('Name:', fullName, COL1 + COL2 + GAP) +
     cellRight('Lives/CP:', `${lives}/${cp}`, COL3)

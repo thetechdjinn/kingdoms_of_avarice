@@ -125,6 +125,48 @@ export function setupCharacterRoutes(app: Express): void {
       return;
     }
 
+    // Validate lastName if provided
+    if (lastName !== undefined && lastName !== null && lastName !== '') {
+      if (typeof lastName !== 'string') {
+        res.status(400).json({ success: false, message: 'Invalid last name' });
+        return;
+      }
+      const trimmedLastName = lastName.trim();
+      if (trimmedLastName.length > 50) {
+        res.status(400).json({ success: false, message: 'Last name must be 50 characters or less' });
+        return;
+      }
+      if (trimmedLastName.length > 0 && !/^[a-zA-Z]+$/.test(trimmedLastName)) {
+        res.status(400).json({ success: false, message: 'Last name must contain only letters' });
+        return;
+      }
+    }
+
+    // Validate gender if provided
+    const validGenders = ['male', 'female', 'neutral'];
+    if (gender !== undefined && gender !== null && gender !== '') {
+      if (typeof gender !== 'string' || !validGenders.includes(gender)) {
+        res.status(400).json({ success: false, message: 'Invalid gender selection' });
+        return;
+      }
+    }
+
+    // Validate hair if provided (max 100 chars per schema)
+    if (hair !== undefined && hair !== null && hair !== '') {
+      if (typeof hair !== 'string' || hair.length > 100) {
+        res.status(400).json({ success: false, message: 'Invalid hair selection' });
+        return;
+      }
+    }
+
+    // Validate eyeColor if provided (max 50 chars per schema)
+    if (eyeColor !== undefined && eyeColor !== null && eyeColor !== '') {
+      if (typeof eyeColor !== 'string' || eyeColor.length > 50) {
+        res.status(400).json({ success: false, message: 'Invalid eye color selection' });
+        return;
+      }
+    }
+
     // Validate raceId
     if (!raceId || typeof raceId !== 'string') {
       res.status(400).json({ success: false, message: 'Race selection is required' });

@@ -679,7 +679,7 @@ async function handleGive(
     await itemRepo.createInstance({
       template_id: template.id,
       location_type: ItemLocationType.PLAYER,
-      location_id: socket.playerId,
+      location_id: socket.characterId!,
       quantity,
       condition: ItemCondition.PRISTINE,
     });

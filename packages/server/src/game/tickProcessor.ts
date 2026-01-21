@@ -133,7 +133,7 @@ async function calculateDelay(player: AuthenticatedSocket, actionType: string): 
     const strength = player.characterStats?.strength || 10;
 
     // Get equipment stats to calculate total weight
-    const equipmentStats = await getEquipmentCombatStats(player.playerId);
+    const equipmentStats = await getEquipmentCombatStats(player.characterId!);
     const encumbranceRatio = calculateEncumbranceRatio(equipmentStats.totalWeight, strength);
     const encumbrancePercent = encumbranceRatio * 100;
 

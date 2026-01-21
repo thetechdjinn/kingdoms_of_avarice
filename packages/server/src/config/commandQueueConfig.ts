@@ -78,6 +78,10 @@ function validateConfig(cfg: CommandQueueConfig): void {
     if (!(section in cfg)) {
       throw new Error(`Missing required configuration section: ${section}`);
     }
+    const value = cfg[section as keyof CommandQueueConfig];
+    if (value === null || typeof value !== 'object') {
+      throw new Error(`Configuration section '${section}' must be an object`);
+    }
   }
 
   // Validate timing config
@@ -105,6 +109,18 @@ function validateConfig(cfg: CommandQueueConfig): void {
       `Invalid encumbrance interpolation: '${cfg.encumbrance.interpolation}'. ` +
       `Must be one of: ${validInterpolations.join(', ')}`
     );
+  }
+
+  // Validate encumbrance curve is sorted by percent ascending
+  if (cfg.encumbrance.curve.length > 1) {
+    for (let i = 1; i < cfg.encumbrance.curve.length; i++) {
+      if (cfg.encumbrance.curve[i].percent <= cfg.encumbrance.curve[i - 1].percent) {
+        throw new Error(
+          `Encumbrance curve must be sorted by percent ascending. ` +
+          `Found ${cfg.encumbrance.curve[i - 1].percent} before ${cfg.encumbrance.curve[i].percent}`
+        );
+      }
+    }
   }
 
   // Validate actions have required fields
