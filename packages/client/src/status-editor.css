@@ -362,6 +362,23 @@
   color: #ff4444;
 }
 
+/* Range inputs for damage/healing */
+.range-inputs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.range-inputs input {
+  width: 80px;
+  text-align: center;
+}
+
+.range-separator {
+  color: #888;
+  font-weight: bold;
+}
+
 /* Hint text */
 .hint {
   color: #666;

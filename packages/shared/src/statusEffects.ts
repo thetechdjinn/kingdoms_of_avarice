@@ -41,10 +41,13 @@ export interface StatusEffectDefinition {
 
   // Speed modifier (affects command queue delays)
   speedModifier?: number;      // % change to action delays (-20 = 20% faster, +50 = 50% slower)
+  affectsActions?: string[];   // Actions this speed modifier affects (empty/undefined = all actions)
 
-  // Periodic effects (DoT/HoT)
-  tickDamage?: string;         // Dice notation for damage per tick (e.g., "1d4")
-  tickHealing?: string;        // Dice notation for healing per tick
+  // Periodic effects (DoT/HoT) - damage/healing ranges per tick
+  tickDamageMin?: number;      // Minimum damage per tick (e.g., 1 for range 1-4)
+  tickDamageMax?: number;      // Maximum damage per tick (e.g., 4 for range 1-4)
+  tickHealingMin?: number;     // Minimum healing per tick (e.g., 1 for range 1-6)
+  tickHealingMax?: number;     // Maximum healing per tick (e.g., 6 for range 1-6)
 
   // Tick messages (for DoT/HoT effects)
   tickMessage?: string;        // Custom message on tick (e.g., "You feel sick.")

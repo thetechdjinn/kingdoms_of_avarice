@@ -14,11 +14,26 @@ import {
 } from '@koa/shared';
 import * as statusEffectRepo from '../db/repositories/statusEffectRepository.js';
 import * as effectDefRepo from '../db/repositories/statusEffectDefinitionRepository.js';
-import { parseDiceString } from './combatCalculations.js';
 import { AuthenticatedSocket } from './socket.js';
 import { colors } from '../utils/colors.js';
 import { MessageType } from '@koa/shared';
 import { handleInterruptTrigger } from './interruptHandler.js';
+
+// ============================================================================
+// Utility Functions
+// ============================================================================
+
+/**
+ * Roll a random integer between min and max (inclusive).
+ * Used for damage/healing ranges instead of dice notation.
+ *
+ * @param min - Minimum value (inclusive)
+ * @param max - Maximum value (inclusive)
+ * @returns Random integer in the range [min, max]
+ */
+function rollRange(min: number, max: number): number {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
 
 // ============================================================================
 // Effect-to-Interrupt Mapping
@@ -38,6 +53,50 @@ const EFFECT_INTERRUPT_TRIGGERS: Record<string, string> = {
 // ============================================================================
 // Effect Registry - Loaded from database with fallback to defaults
 // ============================================================================
+//
+// STATUS EFFECT REFERENCE
+// =======================
+//
+// This section documents all available status effects and their modifiers.
+//
+// MODIFIER TYPES:
+// ---------------
+// - accuracyModifier:  Additive bonus/penalty to hit chance (e.g., +10 = +10% hit)
+// - defenseModifier:   Additive bonus/penalty to defense (e.g., +15 = +15 defense)
+// - damageModifier:    Percentage change to damage dealt (e.g., +15 = +15% damage)
+// - energyModifier:    Percentage change to attack energy (e.g., +25 = +25% energy)
+// - speedModifier:     Percentage change to action delays:
+//                      - Negative = FASTER (e.g., -20 = 20% faster actions)
+//                      - Positive = SLOWER (e.g., +50 = 50% slower actions)
+//
+// SPEED MODIFIER STACKING RULES:
+// ------------------------------
+// Speed modifiers use category-based stacking to prevent abuse:
+//
+// - Speed BUFFS (negative speedModifier, e.g., hasted):
+//   Rule: "bestOnly" - Only the strongest speed buff applies
+//   Example: Hasted (-20%) + another haste (-15%) = -20% (best one wins)
+//
+// - Speed DEBUFFS (positive speedModifier, e.g., slowed):
+//   Rule: "worstOnly" - Only the strongest speed debuff applies
+//   Example: Slowed (+50%) + another slow (+30%) = +50% (worst one wins)
+//
+// - Combined: If you have both buffs and debuffs, they ADD together
+//   Example: Hasted (-20%) + Slowed (+50%) = +30% slower overall
+//
+// SPECIAL FLAGS:
+// --------------
+// - blocksRegen:     Prevents natural HP/mana regeneration
+// - blocksMovement:  Prevents all movement commands
+// - isBlind:         Applies blind penalty in combat calculations
+//
+// STACKING BEHAVIORS:
+// -------------------
+// - REPLACE:  New application completely replaces the old effect
+// - REFRESH:  New application resets duration but doesn't stack values
+// - STACK:    Multiple applications stack (up to maxStacks), multiplying effects
+//
+// ============================================================================
 
 /**
  * Runtime cache of effect definitions loaded from the database.
@@ -49,9 +108,60 @@ let definitionsInitialized = false;
 /**
  * Fallback effect definitions used when database is unavailable.
  * These are also used to seed the database on first run.
+ *
+ * EFFECT SUMMARY TABLE:
+ * =====================
+ *
+ * BUFFS (beneficial effects):
+ * ---------------------------
+ * | Effect      | What It Does                                        |
+ * |-------------|-----------------------------------------------------|
+ * | blessed     | +10 accuracy (better hit chance)                    |
+ * | shielded    | +15 defense (harder to hit)                         |
+ * | hasted      | -20% action delay (faster), +25% attack energy      |
+ * | strengthened| +15% damage dealt                                   |
+ *
+ * DEBUFFS (harmful effects):
+ * --------------------------
+ * | Effect      | What It Does                                        |
+ * |-------------|-----------------------------------------------------|
+ * | cursed      | -10 accuracy, -10 defense                           |
+ * | slowed      | +50% action delay (slower), -25% attack energy      |
+ * | blinded     | Combat blind penalty (severe accuracy reduction)    |
+ *
+ * DAMAGE OVER TIME (periodic damage):
+ * -----------------------------------
+ * | Effect      | What It Does                                        |
+ * |-------------|-----------------------------------------------------|
+ * | poisoned    | 1-4 damage/tick, blocks regen, stacks up to 3x      |
+ * | burning     | 1-6 damage/tick                                     |
+ *
+ * HEALING OVER TIME (periodic healing):
+ * -------------------------------------
+ * | Effect      | What It Does                                        |
+ * |-------------|-----------------------------------------------------|
+ * | regenerating| 1-6 healing/tick (silent, no spam messages)         |
+ *
+ * CONTROL (movement/action restrictions):
+ * ---------------------------------------
+ * | Effect      | What It Does                                        |
+ * |-------------|-----------------------------------------------------|
+ * | entangled   | Cannot move, +100% action delay, -50% attack energy |
+ *
  */
 export const EFFECT_REGISTRY: Record<string, StatusEffectDefinition> = {
-  // === BUFFS ===
+  // =========================================================================
+  // BUFFS - Beneficial effects that help the player
+  // =========================================================================
+
+  /**
+   * BLESSED
+   * -------
+   * A divine blessing that improves combat accuracy.
+   *
+   * Effect: +10 accuracy modifier (additive to hit chance)
+   * Stacking: REFRESH (reapplying resets duration, doesn't stack bonus)
+   */
   blessed: {
     id: 'blessed',
     name: 'Blessed',
@@ -62,6 +172,15 @@ export const EFFECT_REGISTRY: Record<string, StatusEffectDefinition> = {
     accuracyModifier: 10,
     wearOffMessage: 'The blessing fades.',
   },
+
+  /**
+   * SHIELDED
+   * --------
+   * A magical barrier that improves defense.
+   *
+   * Effect: +15 defense modifier (additive to defense rating)
+   * Stacking: REFRESH (reapplying resets duration, doesn't stack bonus)
+   */
   shielded: {
     id: 'shielded',
     name: 'Shielded',
@@ -72,6 +191,21 @@ export const EFFECT_REGISTRY: Record<string, StatusEffectDefinition> = {
     defenseModifier: 15,
     wearOffMessage: 'Your magical shield dissipates.',
   },
+
+  /**
+   * HASTED
+   * ------
+   * Magical speed enhancement that reduces action delays.
+   *
+   * Effects:
+   * - speedModifier: -20 (20% FASTER actions - movement, combat, spells)
+   * - energyModifier: +25 (25% more attack energy per round)
+   *
+   * Speed Stacking: Uses "bestOnly" rule - if you have multiple haste effects,
+   * only the strongest one applies. Hasted (-20%) + Minor Haste (-10%) = -20%
+   *
+   * Stacking: REFRESH (reapplying resets duration, doesn't stack bonus)
+   */
   hasted: {
     id: 'hasted',
     name: 'Hasted',
@@ -79,10 +213,19 @@ export const EFFECT_REGISTRY: Record<string, StatusEffectDefinition> = {
     category: StatusEffectCategory.BUFF,
     stackingBehavior: StackingBehavior.REFRESH,
     maxStacks: 1,
-    energyModifier: 25, // +25% attack energy
-    speedModifier: -20, // 20% faster actions
+    energyModifier: 25,
+    speedModifier: -20,
     wearOffMessage: 'Your movements return to normal.',
   },
+
+  /**
+   * STRENGTHENED
+   * ------------
+   * Magical strength enhancement that increases damage output.
+   *
+   * Effect: +15% damage dealt (percentage modifier)
+   * Stacking: REFRESH (reapplying resets duration, doesn't stack bonus)
+   */
   strengthened: {
     id: 'strengthened',
     name: 'Strengthened',
@@ -90,11 +233,25 @@ export const EFFECT_REGISTRY: Record<string, StatusEffectDefinition> = {
     category: StatusEffectCategory.BUFF,
     stackingBehavior: StackingBehavior.REFRESH,
     maxStacks: 1,
-    damageModifier: 15, // +15% damage
+    damageModifier: 15,
     wearOffMessage: 'The surge of strength fades.',
   },
 
-  // === DEBUFFS (for future use with NPCs) ===
+  // =========================================================================
+  // DEBUFFS - Harmful effects that hinder the player
+  // =========================================================================
+
+  /**
+   * CURSED
+   * ------
+   * A dark curse that weakens combat effectiveness.
+   *
+   * Effects:
+   * - accuracyModifier: -10 (harder to hit enemies)
+   * - defenseModifier: -10 (easier to be hit)
+   *
+   * Stacking: REFRESH (reapplying resets duration, doesn't stack penalty)
+   */
   cursed: {
     id: 'cursed',
     name: 'Cursed',
@@ -105,6 +262,23 @@ export const EFFECT_REGISTRY: Record<string, StatusEffectDefinition> = {
     accuracyModifier: -10,
     defenseModifier: -10,
   },
+
+  /**
+   * SLOWED
+   * ------
+   * Magical slowness that increases action delays.
+   *
+   * Effects:
+   * - speedModifier: +50 (50% SLOWER actions - movement, combat, spells)
+   * - energyModifier: -25 (25% less attack energy per round)
+   *
+   * Speed Stacking: Uses "worstOnly" rule - if you have multiple slow effects,
+   * only the strongest one applies. Slowed (+50%) + Minor Slow (+30%) = +50%
+   *
+   * Combined with Haste: Hasted (-20%) + Slowed (+50%) = +30% slower overall
+   *
+   * Stacking: REFRESH (reapplying resets duration, doesn't stack penalty)
+   */
   slowed: {
     id: 'slowed',
     name: 'Slowed',
@@ -112,9 +286,20 @@ export const EFFECT_REGISTRY: Record<string, StatusEffectDefinition> = {
     category: StatusEffectCategory.DEBUFF,
     stackingBehavior: StackingBehavior.REFRESH,
     maxStacks: 1,
-    energyModifier: -25, // -25% attack energy
-    speedModifier: 50, // 50% slower actions
+    energyModifier: -25,
+    speedModifier: 50,
   },
+
+  /**
+   * BLINDED
+   * -------
+   * Unable to see clearly, severely impacting combat.
+   *
+   * Effect: isBlind flag triggers blind penalty in combat calculations
+   * (typically a large accuracy penalty and inability to target enemies)
+   *
+   * Stacking: REFRESH (reapplying resets duration)
+   */
   blinded: {
     id: 'blinded',
     name: 'Blinded',
@@ -125,7 +310,26 @@ export const EFFECT_REGISTRY: Record<string, StatusEffectDefinition> = {
     isBlind: true,
   },
 
-  // === DAMAGE OVER TIME ===
+  // =========================================================================
+  // DAMAGE OVER TIME (DoT) - Periodic damage effects
+  // =========================================================================
+
+  /**
+   * POISONED
+   * --------
+   * Poison damage that ticks periodically and can stack.
+   *
+   * Effects:
+   * - tickDamage: 1-4 per tick (multiplied by stack count)
+   * - blocksRegen: true (prevents natural HP regeneration)
+   *
+   * Stacking: STACK up to 3 times
+   * - 1 stack: 1-4 damage per tick
+   * - 2 stacks: 2-8 damage per tick
+   * - 3 stacks: 3-12 damage per tick
+   *
+   * Each new poison application adds a stack AND refreshes duration.
+   */
   poisoned: {
     id: 'poisoned',
     name: 'Poisoned',
@@ -133,11 +337,21 @@ export const EFFECT_REGISTRY: Record<string, StatusEffectDefinition> = {
     category: StatusEffectCategory.DOT,
     stackingBehavior: StackingBehavior.STACK,
     maxStacks: 3,
-    tickDamage: '1d4',
+    tickDamageMin: 1,
+    tickDamageMax: 4,
     tickMessage: 'You feel sick.',
     wearOffMessage: 'The poison fades from your system.',
     blocksRegen: true,
   },
+
+  /**
+   * BURNING
+   * -------
+   * Fire damage that ticks periodically.
+   *
+   * Effect: tickDamage: 1-6 per tick
+   * Stacking: REFRESH (reapplying resets duration, doesn't stack damage)
+   */
   burning: {
     id: 'burning',
     name: 'Burning',
@@ -145,12 +359,25 @@ export const EFFECT_REGISTRY: Record<string, StatusEffectDefinition> = {
     category: StatusEffectCategory.DOT,
     stackingBehavior: StackingBehavior.REFRESH,
     maxStacks: 1,
-    tickDamage: '1d6',
+    tickDamageMin: 1,
+    tickDamageMax: 6,
     tickMessage: 'You are burning!',
     wearOffMessage: 'The flames die out.',
   },
 
-  // === HEALING OVER TIME ===
+  // =========================================================================
+  // HEALING OVER TIME (HoT) - Periodic healing effects
+  // =========================================================================
+
+  /**
+   * REGENERATING
+   * ------------
+   * Magical regeneration that heals periodically.
+   *
+   * Effect: tickHealing: 1-6 per tick
+   * Silent: true (no spam messages, healing happens quietly)
+   * Stacking: REFRESH (reapplying resets duration, doesn't stack healing)
+   */
   regenerating: {
     id: 'regenerating',
     name: 'Regenerating',
@@ -158,12 +385,31 @@ export const EFFECT_REGISTRY: Record<string, StatusEffectDefinition> = {
     category: StatusEffectCategory.HOT,
     stackingBehavior: StackingBehavior.REFRESH,
     maxStacks: 1,
-    tickHealing: '1d6',
-    silentTick: true,  // Passive healing - no spam
+    tickHealingMin: 1,
+    tickHealingMax: 6,
+    silentTick: true,
     wearOffMessage: 'Your regeneration fades.',
   },
 
-  // === CONTROL ===
+  // =========================================================================
+  // CONTROL - Movement and action restrictions
+  // =========================================================================
+
+  /**
+   * ENTANGLED
+   * ---------
+   * Vines or roots that completely restrict movement and slow actions.
+   *
+   * Effects:
+   * - blocksMovement: true (cannot use any movement commands)
+   * - speedModifier: +100 (100% slower actions - doubled delay)
+   * - energyModifier: -50 (50% less attack energy per round)
+   *
+   * Stacking: REFRESH (reapplying resets duration, doesn't stack penalty)
+   *
+   * Note: While entangled, you cannot move but can still attack and cast
+   * spells (at greatly reduced effectiveness due to energy/speed penalties).
+   */
   entangled: {
     id: 'entangled',
     name: 'Entangled',
@@ -172,8 +418,8 @@ export const EFFECT_REGISTRY: Record<string, StatusEffectDefinition> = {
     stackingBehavior: StackingBehavior.REFRESH,
     maxStacks: 1,
     blocksMovement: true,
-    energyModifier: -50, // -50% attack energy
-    speedModifier: 100, // 100% slower actions (blocked by blocksMovement anyway)
+    energyModifier: -50,
+    speedModifier: 100,
   },
 };
 
@@ -484,10 +730,11 @@ export async function processEffectsTick(
       continue;
     }
 
-    // Process DoT damage
-    if (definition.tickDamage) {
-      const damageResult = parseDiceString(definition.tickDamage);
-      const totalDamage = damageResult.roll * effect.stacks;
+    // Process DoT damage (using min/max range)
+    if (definition.tickDamageMin !== undefined && definition.tickDamageMax !== undefined) {
+      // Roll random value in range, multiplied by stack count
+      const baseDamage = rollRange(definition.tickDamageMin, definition.tickDamageMax);
+      const totalDamage = baseDamage * effect.stacks;
 
       socket.vitals.hp = Math.max(0, socket.vitals.hp - totalDamage);
       vitalsChanged = true;
@@ -512,9 +759,10 @@ export async function processEffectsTick(
     }
 
     // Process HoT healing (only if player is still alive to prevent unintended revival)
-    if (definition.tickHealing && socket.vitals.hp > 0) {
-      const healResult = parseDiceString(definition.tickHealing);
-      const totalHealing = healResult.roll * effect.stacks;
+    if (definition.tickHealingMin !== undefined && definition.tickHealingMax !== undefined && socket.vitals.hp > 0) {
+      // Roll random value in range, multiplied by stack count
+      const baseHealing = rollRange(definition.tickHealingMin, definition.tickHealingMax);
+      const totalHealing = baseHealing * effect.stacks;
 
       const oldHp = socket.vitals.hp;
       socket.vitals.hp = Math.min(socket.vitals.maxHp, socket.vitals.hp + totalHealing);

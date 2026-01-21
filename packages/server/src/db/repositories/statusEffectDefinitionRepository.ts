@@ -18,8 +18,10 @@ interface DbStatusEffectDefinition {
   defense_modifier: number;
   energy_modifier: number;
   damage_modifier: number;
-  tick_damage: string | null;
-  tick_healing: string | null;
+  tick_damage_min: number | null;
+  tick_damage_max: number | null;
+  tick_healing_min: number | null;
+  tick_healing_max: number | null;
   tick_message: string | null;
   silent_tick: boolean;
   wear_off_message: string | null;
@@ -43,8 +45,10 @@ function dbToDefinition(row: DbStatusEffectDefinition): StatusEffectDefinition {
     defenseModifier: row.defense_modifier,
     energyModifier: row.energy_modifier,
     damageModifier: row.damage_modifier,
-    tickDamage: row.tick_damage ?? undefined,
-    tickHealing: row.tick_healing ?? undefined,
+    tickDamageMin: row.tick_damage_min ?? undefined,
+    tickDamageMax: row.tick_damage_max ?? undefined,
+    tickHealingMin: row.tick_healing_min ?? undefined,
+    tickHealingMax: row.tick_healing_max ?? undefined,
     tickMessage: row.tick_message ?? undefined,
     silentTick: row.silent_tick,
     wearOffMessage: row.wear_off_message ?? undefined,
@@ -116,8 +120,10 @@ export interface CreateDefinitionInput {
   defenseModifier?: number;
   energyModifier?: number;
   damageModifier?: number;
-  tickDamage?: string;
-  tickHealing?: string;
+  tickDamageMin?: number;
+  tickDamageMax?: number;
+  tickHealingMin?: number;
+  tickHealingMax?: number;
   tickMessage?: string;
   silentTick?: boolean;
   wearOffMessage?: string;
@@ -134,9 +140,10 @@ export async function createDefinition(input: CreateDefinitionInput): Promise<St
     `INSERT INTO status_effect_definitions (
       id, name, description, category, stacking_behavior, max_stacks,
       accuracy_modifier, defense_modifier, energy_modifier, damage_modifier,
-      tick_damage, tick_healing, tick_message, silent_tick, wear_off_message,
+      tick_damage_min, tick_damage_max, tick_healing_min, tick_healing_max,
+      tick_message, silent_tick, wear_off_message,
       blocks_regen, blocks_movement, is_blind
-    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
     RETURNING *`,
     [
       input.id.toLowerCase(),
@@ -149,8 +156,10 @@ export async function createDefinition(input: CreateDefinitionInput): Promise<St
       input.defenseModifier ?? 0,
       input.energyModifier ?? 0,
       input.damageModifier ?? 0,
-      input.tickDamage || null,
-      input.tickHealing || null,
+      input.tickDamageMin ?? null,
+      input.tickDamageMax ?? null,
+      input.tickHealingMin ?? null,
+      input.tickHealingMax ?? null,
       input.tickMessage || null,
       input.silentTick ?? false,
       input.wearOffMessage || null,
@@ -179,8 +188,10 @@ export async function updateDefinition(id: string, input: Partial<CreateDefiniti
     defenseModifier: input.defenseModifier ?? existing.defenseModifier,
     energyModifier: input.energyModifier ?? existing.energyModifier,
     damageModifier: input.damageModifier ?? existing.damageModifier,
-    tickDamage: input.tickDamage !== undefined ? input.tickDamage : existing.tickDamage,
-    tickHealing: input.tickHealing !== undefined ? input.tickHealing : existing.tickHealing,
+    tickDamageMin: input.tickDamageMin !== undefined ? input.tickDamageMin : existing.tickDamageMin,
+    tickDamageMax: input.tickDamageMax !== undefined ? input.tickDamageMax : existing.tickDamageMax,
+    tickHealingMin: input.tickHealingMin !== undefined ? input.tickHealingMin : existing.tickHealingMin,
+    tickHealingMax: input.tickHealingMax !== undefined ? input.tickHealingMax : existing.tickHealingMax,
     tickMessage: input.tickMessage !== undefined ? input.tickMessage : existing.tickMessage,
     silentTick: input.silentTick !== undefined ? input.silentTick : existing.silentTick,
     wearOffMessage: input.wearOffMessage !== undefined ? input.wearOffMessage : existing.wearOffMessage,
@@ -193,9 +204,10 @@ export async function updateDefinition(id: string, input: Partial<CreateDefiniti
     `UPDATE status_effect_definitions SET
       name = $1, description = $2, category = $3, stacking_behavior = $4, max_stacks = $5,
       accuracy_modifier = $6, defense_modifier = $7, energy_modifier = $8, damage_modifier = $9,
-      tick_damage = $10, tick_healing = $11, tick_message = $12, silent_tick = $13, wear_off_message = $14,
-      blocks_regen = $15, blocks_movement = $16, is_blind = $17, updated_at = NOW()
-    WHERE id = $18
+      tick_damage_min = $10, tick_damage_max = $11, tick_healing_min = $12, tick_healing_max = $13,
+      tick_message = $14, silent_tick = $15, wear_off_message = $16,
+      blocks_regen = $17, blocks_movement = $18, is_blind = $19, updated_at = NOW()
+    WHERE id = $20
     RETURNING *`,
     [
       updated.name,
@@ -207,8 +219,10 @@ export async function updateDefinition(id: string, input: Partial<CreateDefiniti
       updated.defenseModifier,
       updated.energyModifier,
       updated.damageModifier,
-      updated.tickDamage || null,
-      updated.tickHealing || null,
+      updated.tickDamageMin ?? null,
+      updated.tickDamageMax ?? null,
+      updated.tickHealingMin ?? null,
+      updated.tickHealingMax ?? null,
       updated.tickMessage || null,
       updated.silentTick,
       updated.wearOffMessage || null,
@@ -278,9 +292,10 @@ export async function importDefinitions(definitions: StatusEffectDefinition[]): 
           `UPDATE status_effect_definitions SET
             name = $1, description = $2, category = $3, stacking_behavior = $4, max_stacks = $5,
             accuracy_modifier = $6, defense_modifier = $7, energy_modifier = $8, damage_modifier = $9,
-            tick_damage = $10, tick_healing = $11, tick_message = $12, silent_tick = $13, wear_off_message = $14,
-            blocks_regen = $15, blocks_movement = $16, is_blind = $17, updated_at = NOW()
-          WHERE id = $18`,
+            tick_damage_min = $10, tick_damage_max = $11, tick_healing_min = $12, tick_healing_max = $13,
+            tick_message = $14, silent_tick = $15, wear_off_message = $16,
+            blocks_regen = $17, blocks_movement = $18, is_blind = $19, updated_at = NOW()
+          WHERE id = $20`,
           [
             def.name,
             def.description || null,
@@ -291,8 +306,10 @@ export async function importDefinitions(definitions: StatusEffectDefinition[]): 
             def.defenseModifier ?? 0,
             def.energyModifier ?? 0,
             def.damageModifier ?? 0,
-            def.tickDamage || null,
-            def.tickHealing || null,
+            def.tickDamageMin ?? null,
+            def.tickDamageMax ?? null,
+            def.tickHealingMin ?? null,
+            def.tickHealingMax ?? null,
             def.tickMessage || null,
             def.silentTick ?? false,
             def.wearOffMessage || null,
@@ -309,9 +326,10 @@ export async function importDefinitions(definitions: StatusEffectDefinition[]): 
           `INSERT INTO status_effect_definitions (
             id, name, description, category, stacking_behavior, max_stacks,
             accuracy_modifier, defense_modifier, energy_modifier, damage_modifier,
-            tick_damage, tick_healing, tick_message, silent_tick, wear_off_message,
+            tick_damage_min, tick_damage_max, tick_healing_min, tick_healing_max,
+            tick_message, silent_tick, wear_off_message,
             blocks_regen, blocks_movement, is_blind
-          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)`,
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)`,
           [
             normalizedId,
             def.name,
@@ -323,8 +341,10 @@ export async function importDefinitions(definitions: StatusEffectDefinition[]): 
             def.defenseModifier ?? 0,
             def.energyModifier ?? 0,
             def.damageModifier ?? 0,
-            def.tickDamage || null,
-            def.tickHealing || null,
+            def.tickDamageMin ?? null,
+            def.tickDamageMax ?? null,
+            def.tickHealingMin ?? null,
+            def.tickHealingMax ?? null,
             def.tickMessage || null,
             def.silentTick ?? false,
             def.wearOffMessage || null,

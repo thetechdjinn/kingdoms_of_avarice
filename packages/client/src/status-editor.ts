@@ -237,15 +237,19 @@ function selectEffect(id: string): void {
   if (energyInput) energyInput.value = String(effect.energyModifier ?? 0);
   if (damageInput) damageInput.value = String(effect.damageModifier ?? 0);
 
-  // Periodic effects
-  const tickDamageInput = getElement<HTMLInputElement>('effect-tick-damage');
-  const tickHealingInput = getElement<HTMLInputElement>('effect-tick-healing');
+  // Periodic effects (damage/healing ranges)
+  const tickDamageMinInput = getElement<HTMLInputElement>('effect-tick-damage-min');
+  const tickDamageMaxInput = getElement<HTMLInputElement>('effect-tick-damage-max');
+  const tickHealingMinInput = getElement<HTMLInputElement>('effect-tick-healing-min');
+  const tickHealingMaxInput = getElement<HTMLInputElement>('effect-tick-healing-max');
   const tickMessageInput = getElement<HTMLInputElement>('effect-tick-message');
   const silentTickCheckbox = getElement<HTMLInputElement>('effect-silent-tick');
   const wearOffInput = getElement<HTMLInputElement>('effect-wear-off');
 
-  if (tickDamageInput) tickDamageInput.value = effect.tickDamage || '';
-  if (tickHealingInput) tickHealingInput.value = effect.tickHealing || '';
+  if (tickDamageMinInput) tickDamageMinInput.value = effect.tickDamageMin?.toString() || '';
+  if (tickDamageMaxInput) tickDamageMaxInput.value = effect.tickDamageMax?.toString() || '';
+  if (tickHealingMinInput) tickHealingMinInput.value = effect.tickHealingMin?.toString() || '';
+  if (tickHealingMaxInput) tickHealingMaxInput.value = effect.tickHealingMax?.toString() || '';
   if (tickMessageInput) tickMessageInput.value = effect.tickMessage || '';
   if (silentTickCheckbox) silentTickCheckbox.checked = effect.silentTick || false;
   if (wearOffInput) wearOffInput.value = effect.wearOffMessage || '';
@@ -313,14 +317,16 @@ function updatePreview(effect: StatusEffectDefinition): void {
     `;
   }
 
-  // Periodic effects
-  if (effect.tickDamage || effect.tickHealing) {
+  // Periodic effects (damage/healing ranges)
+  const hasDamageRange = effect.tickDamageMin !== undefined && effect.tickDamageMax !== undefined;
+  const hasHealingRange = effect.tickHealingMin !== undefined && effect.tickHealingMax !== undefined;
+  if (hasDamageRange || hasHealingRange) {
     html += `<div class="preview-section"><div class="preview-section-title">Periodic Effects</div>`;
-    if (effect.tickDamage) {
-      html += `<div>Damage: ${escapeHtml(effect.tickDamage)}/tick</div>`;
+    if (hasDamageRange) {
+      html += `<div>Damage: ${effect.tickDamageMin}-${effect.tickDamageMax}/tick</div>`;
     }
-    if (effect.tickHealing) {
-      html += `<div>Healing: ${escapeHtml(effect.tickHealing)}/tick</div>`;
+    if (hasHealingRange) {
+      html += `<div>Healing: ${effect.tickHealingMin}-${effect.tickHealingMax}/tick</div>`;
     }
     if (effect.tickMessage) {
       html += `<div class="preview-message">"${escapeHtml(effect.tickMessage)}"</div>`;
@@ -543,6 +549,10 @@ async function duplicateEffect(): Promise<void> {
 
 function gatherFormData(): Partial<StatusEffectDefinition> {
   const maxStacksValue = parseInt((document.getElementById('effect-max-stacks') as HTMLInputElement).value, 10);
+  const tickDamageMin = parseInt((document.getElementById('effect-tick-damage-min') as HTMLInputElement).value, 10);
+  const tickDamageMax = parseInt((document.getElementById('effect-tick-damage-max') as HTMLInputElement).value, 10);
+  const tickHealingMin = parseInt((document.getElementById('effect-tick-healing-min') as HTMLInputElement).value, 10);
+  const tickHealingMax = parseInt((document.getElementById('effect-tick-healing-max') as HTMLInputElement).value, 10);
   return {
     name: (document.getElementById('effect-name') as HTMLInputElement).value,
     description: (document.getElementById('effect-description') as HTMLTextAreaElement).value || '',
@@ -553,8 +563,10 @@ function gatherFormData(): Partial<StatusEffectDefinition> {
     defenseModifier: parseInt((document.getElementById('effect-defense') as HTMLInputElement).value, 10) || 0,
     energyModifier: parseInt((document.getElementById('effect-energy') as HTMLInputElement).value, 10) || 0,
     damageModifier: parseInt((document.getElementById('effect-damage') as HTMLInputElement).value, 10) || 0,
-    tickDamage: (document.getElementById('effect-tick-damage') as HTMLInputElement).value || undefined,
-    tickHealing: (document.getElementById('effect-tick-healing') as HTMLInputElement).value || undefined,
+    tickDamageMin: isNaN(tickDamageMin) ? undefined : tickDamageMin,
+    tickDamageMax: isNaN(tickDamageMax) ? undefined : tickDamageMax,
+    tickHealingMin: isNaN(tickHealingMin) ? undefined : tickHealingMin,
+    tickHealingMax: isNaN(tickHealingMax) ? undefined : tickHealingMax,
     tickMessage: (document.getElementById('effect-tick-message') as HTMLInputElement).value || undefined,
     silentTick: (document.getElementById('effect-silent-tick') as HTMLInputElement).checked,
     wearOffMessage: (document.getElementById('effect-wear-off') as HTMLInputElement).value || undefined,

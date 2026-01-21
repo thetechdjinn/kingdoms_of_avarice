@@ -28,6 +28,7 @@ import { enqueueCommand, setPlayerReadyAt } from './gameLoop.js';
 import { getEquipmentCombatStats, calculateEncumbranceRatio } from './combatStats.js';
 import { getPlayerLocation } from './adminCommands.js';
 import { getEffectModifiers } from './statusEffects.js';
+import { getStatusEffectDelayMultiplier } from './delayModifiers.js';
 
 // References set during initialization
 let gameWorldRef: GameWorld | null = null;
@@ -167,11 +168,11 @@ async function calculateDelay(player: AuthenticatedSocket, actionType: string): 
     return Infinity;
   }
 
-  // Apply speed modifier from status effects
-  // speedModifier is a percentage: -20 = 20% faster, +50 = 50% slower
-  if (effectModifiers.speedModifier !== 0) {
-    const speedMultiplier = 1 + (effectModifiers.speedModifier / 100);
-    delay *= Math.max(0.1, speedMultiplier); // Minimum 10% of base delay
+  // Apply speed modifier from status effects with proper stacking rules
+  // Uses bestOnly for haste effects, worstOnly for slow effects
+  const statusEffectMultiplier = getStatusEffectDelayMultiplier(player, actionType);
+  if (statusEffectMultiplier !== 1.0) {
+    delay *= statusEffectMultiplier;
   }
 
   // Apply combat delay modifier if player is in combat
