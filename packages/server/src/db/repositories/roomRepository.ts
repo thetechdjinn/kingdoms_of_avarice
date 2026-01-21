@@ -1,4 +1,5 @@
 import { query } from '../index.js';
+import { RoomFeatures, RoomTrainingConfig } from '@koa/shared';
 
 export interface DbRoom {
   id: number;
@@ -6,6 +7,7 @@ export interface DbRoom {
   description: string | null;
   area: string | null;
   terrain: string | null;
+  features: RoomFeatures;
 }
 
 export interface DbRoomExit {
@@ -24,6 +26,7 @@ export interface CreateRoomInput {
   description?: string;
   area?: string;
   terrain?: string;
+  features?: RoomFeatures;
 }
 
 export interface CreateExitInput {
@@ -88,10 +91,10 @@ export async function getAllRoomsWithExits(): Promise<RoomWithExits[]> {
 
 export async function createRoom(input: CreateRoomInput): Promise<DbRoom> {
   const result = await query<DbRoom>(
-    `INSERT INTO rooms (name, description, area, terrain)
-     VALUES ($1, $2, $3, $4)
+    `INSERT INTO rooms (name, description, area, terrain, features)
+     VALUES ($1, $2, $3, $4, $5)
      RETURNING *`,
-    [input.name, input.description || null, input.area || null, input.terrain || 'indoor']
+    [input.name, input.description || null, input.area || null, input.terrain || 'indoor', JSON.stringify(input.features || {})]
   );
   return result.rows[0];
 }
@@ -119,6 +122,10 @@ export async function updateRoom(
   if (updates.terrain !== undefined) {
     setClauses.push(`terrain = $${paramIndex++}`);
     values.push(updates.terrain);
+  }
+  if (updates.features !== undefined) {
+    setClauses.push(`features = $${paramIndex++}`);
+    values.push(JSON.stringify(updates.features));
   }
 
   if (setClauses.length === 0) return getRoomById(id);
@@ -233,4 +240,106 @@ export async function deleteBidirectionalExit(
 export async function getRoomCount(): Promise<number> {
   const result = await query<{ count: string }>('SELECT COUNT(*) as count FROM rooms');
   return parseInt(result.rows[0].count);
+}
+
+// ============================================================================
+// ROOM FEATURES
+// ============================================================================
+
+/**
+ * Get features for a room
+ */
+export async function getRoomFeatures(roomId: number): Promise<RoomFeatures> {
+  const result = await query<{ features: RoomFeatures }>(
+    'SELECT features FROM rooms WHERE id = $1',
+    [roomId]
+  );
+  if (result.rows.length === 0) {
+    return {};
+  }
+  return result.rows[0].features || {};
+}
+
+/**
+ * Update features for a room
+ */
+export async function updateRoomFeatures(roomId: number, features: RoomFeatures): Promise<void> {
+  await query(
+    'UPDATE rooms SET features = $1 WHERE id = $2',
+    [JSON.stringify(features), roomId]
+  );
+}
+
+/**
+ * Check if a room is a training room
+ */
+export async function isTrainingRoom(roomId: number): Promise<boolean> {
+  const features = await getRoomFeatures(roomId);
+  return features.training?.enabled === true;
+}
+
+/**
+ * Get training configuration for a room
+ * Returns null if the room is not a training room
+ */
+export async function getTrainingConfig(roomId: number): Promise<RoomTrainingConfig | null> {
+  const features = await getRoomFeatures(roomId);
+  if (!features.training?.enabled) {
+    return null;
+  }
+  return features.training;
+}
+
+/**
+ * Check if a character can train in a room
+ * @param roomId - Room to check
+ * @param characterClass - Character's class name
+ * @param characterLevel - Character's current level
+ * @param targetLevel - Level character wants to train to (optional, defaults to current+1)
+ * @returns Object with allowed status and reason if denied
+ */
+export async function canTrainInRoom(
+  roomId: number,
+  characterClass: string,
+  characterLevel: number,
+  targetLevel?: number
+): Promise<{ allowed: boolean; reason?: string }> {
+  const config = await getTrainingConfig(roomId);
+
+  if (!config) {
+    return { allowed: false, reason: 'This is not a training room.' };
+  }
+
+  // Check class restriction
+  if (config.allowedClasses && config.allowedClasses.length > 0) {
+    const classLower = characterClass.toLowerCase();
+    const allowedLower = config.allowedClasses.map(c => c.toLowerCase());
+    if (!allowedLower.includes(classLower)) {
+      return {
+        allowed: false,
+        reason: `This training room does not accept ${characterClass}s.`,
+      };
+    }
+  }
+
+  // Check level restrictions
+  const minLevel = config.minLevel ?? 1;
+  const maxLevel = config.maxLevel ?? 999;
+  const checkLevel = targetLevel ?? characterLevel + 1;
+
+  if (checkLevel < minLevel) {
+    return {
+      allowed: false,
+      reason: `This training room only accepts characters level ${minLevel} or higher.`,
+    };
+  }
+
+  if (checkLevel > maxLevel) {
+    return {
+      allowed: false,
+      reason: `This training room only trains characters up to level ${maxLevel}.`,
+    };
+  }
+
+  return { allowed: true };
 }

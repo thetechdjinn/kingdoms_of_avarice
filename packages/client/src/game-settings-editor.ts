@@ -121,6 +121,11 @@ function populateSettingsForm(): void {
   setInputValue('currency_gold_per_enc', settings.currency_gold_per_enc ?? 15);
   setInputValue('currency_platinum_per_enc', settings.currency_platinum_per_enc ?? 10);
   setInputValue('currency_runic_per_enc', settings.currency_runic_per_enc ?? 4);
+
+  // Training settings
+  setInputValue('training_base_cost', settings.training_base_cost ?? 28);
+  setInputValue('training_cost_multiplier', settings.training_cost_multiplier ?? 1.8);
+  setInputValue('initial_character_points', settings.initial_character_points ?? 100);
 }
 
 function setInputValue(key: string, value: unknown): void {

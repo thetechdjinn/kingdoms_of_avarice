@@ -201,3 +201,127 @@ export function canRaiseStat(
   const costForNext = getCPCostForNextPoint(currentPointsSpent);
   return availableCP >= costForNext;
 }
+
+// ============================================================================
+// TRAINING COST FORMULA (Level-up currency costs)
+// ============================================================================
+
+// Maximum level for training cost calculation (prevents overflow)
+const MAX_TRAINING_LEVEL = 100;
+
+/**
+ * Calculate the currency cost to train to a target level.
+ * Uses exponential scaling: cost_to_level_N = ceil(baseCost * multiplier^(N-2))
+ *
+ * Level 2 costs baseCost (multiplier^0 = 1)
+ * Level 3 costs baseCost * multiplier^1
+ * Level 4 costs baseCost * multiplier^2
+ * etc.
+ *
+ * @param targetLevel - The level to train to (must be >= 2, capped at MAX_TRAINING_LEVEL)
+ * @param baseCost - Base cost in copper for training to level 2 (default 28)
+ * @param multiplier - Exponential multiplier per level (default 1.8)
+ * @returns Cost in copper to train to the target level, or 0 if targetLevel < 2
+ */
+export function calculateTrainingCost(
+  targetLevel: number,
+  baseCost: number = 28,
+  multiplier: number = 1.8
+): number {
+  // Validate inputs
+  if (!Number.isFinite(targetLevel) || !Number.isFinite(baseCost) || !Number.isFinite(multiplier)) {
+    return 0;
+  }
+
+  if (targetLevel < 2) {
+    return 0;
+  }
+
+  // Cap at max level to prevent numeric overflow
+  const cappedLevel = Math.min(targetLevel, MAX_TRAINING_LEVEL);
+
+  // Ensure positive values
+  const safeCost = Math.max(1, baseCost);
+  const safeMultiplier = Math.max(1, multiplier);
+
+  // cost_to_level_N = ceil(baseCost * multiplier^(N-2))
+  const exponent = cappedLevel - 2;
+  const cost = Math.ceil(safeCost * Math.pow(safeMultiplier, exponent));
+
+  // Final safety check for infinity/NaN
+  if (!Number.isFinite(cost)) {
+    return Number.MAX_SAFE_INTEGER;
+  }
+
+  return cost;
+}
+
+/**
+ * Calculate total currency cost to train from current level to target level
+ *
+ * @param currentLevel - Current character level
+ * @param targetLevel - Target level to train to
+ * @param baseCost - Base cost in copper for training to level 2
+ * @param multiplier - Exponential multiplier per level
+ * @returns Total cost in copper for all level-ups
+ */
+export function calculateTotalTrainingCost(
+  currentLevel: number,
+  targetLevel: number,
+  baseCost: number = 28,
+  multiplier: number = 1.8
+): number {
+  if (targetLevel <= currentLevel) {
+    return 0;
+  }
+
+  let total = 0;
+  for (let level = currentLevel + 1; level <= targetLevel; level++) {
+    total += calculateTrainingCost(level, baseCost, multiplier);
+  }
+  return total;
+}
+
+/**
+ * Format a copper amount as a readable currency string
+ * Conversion: 10 copper = 1 silver, 10 silver = 1 gold, 10 gold = 1 platinum
+ *
+ * @param copperAmount - Amount in copper farthings
+ * @returns Formatted string like "5 gold 3 silver 2 copper" or just "25 copper"
+ */
+export function formatCurrency(copperAmount: number): string {
+  if (copperAmount <= 0) {
+    return '0 copper';
+  }
+
+  let remaining = copperAmount;
+  const parts: string[] = [];
+
+  // Platinum (1000 copper)
+  const platinum = Math.floor(remaining / 1000);
+  if (platinum > 0) {
+    parts.push(`${platinum} platinum`);
+    remaining = remaining % 1000;
+  }
+
+  // Gold (100 copper)
+  const gold = Math.floor(remaining / 100);
+  if (gold > 0) {
+    parts.push(`${gold} gold`);
+    remaining = remaining % 100;
+  }
+
+  // Silver (10 copper)
+  const silver = Math.floor(remaining / 10);
+  if (silver > 0) {
+    parts.push(`${silver} silver`);
+    remaining = remaining % 10;
+  }
+
+  // Copper
+  if (remaining > 0 || parts.length === 0) {
+    parts.push(`${remaining} copper`);
+  }
+
+  return parts.join(' ');
+}

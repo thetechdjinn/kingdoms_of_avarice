@@ -258,7 +258,12 @@ export async function processCommand(
 
   // Training command (allocate CP to stats)
   if (command === 'train' || command === 'tr') {
-    return handleTrain(socket, args.join(' '));
+    const trainResult = await handleTrain(socket, args.join(' '));
+    // null means the training form was sent (no text response needed)
+    if (trainResult === null) {
+      return { type: MessageType.SYSTEM, message: '' };
+    }
+    return trainResult;
   }
 
   // Status/character sheet command (st, sta, stat, statu, status)

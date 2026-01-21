@@ -1,5 +1,6 @@
 import { Terminal } from 'xterm';
-import { MessageType, GameMessage, VitalsData, ResourceType, Character } from '@koa/shared';
+import { MessageType, GameMessage, VitalsData, ResourceType, Character, TrainingFormPayload, TrainingSubmitPayload } from '@koa/shared';
+import { TrainingForm, TrainingFormResult } from './forms/TrainingForm.js';
 import 'xterm/css/xterm.css';
 
 let terminal: Terminal | null = null;
@@ -10,6 +11,7 @@ let currentUsername: string = '';
 let selectedCharacterId: number | null = null;
 let isInGame: boolean = false;
 let canBypassExitTimer: boolean = false;
+let activeTrainingForm: TrainingForm | null = null;
 
 // Types for API responses
 interface ClassDefinition {
@@ -190,6 +192,15 @@ function handleServerMessage(message: GameMessage): void {
     case MessageType.LOGOUT:
       // Server requested game exit (via 'x' command) - return to landing page
       handleGameExit();
+      break;
+
+    case MessageType.TRAINING_FORM:
+      try {
+        const trainingData = JSON.parse(message.payload) as TrainingFormPayload;
+        handleTrainingForm(trainingData);
+      } catch {
+        console.error('Failed to parse training form data');
+      }
       break;
   }
 }
@@ -1027,6 +1038,79 @@ function escapeHtml(text: string): string {
   const div = document.createElement('div');
   div.textContent = text;
   return div.innerHTML;
+}
+
+/**
+ * Handle training form data from the server
+ */
+function handleTrainingForm(data: TrainingFormPayload): void {
+  if (!terminal) {
+    console.error('No terminal available for training form');
+    return;
+  }
+
+  // Close any existing training form
+  if (activeTrainingForm) {
+    activeTrainingForm.destroy();
+    activeTrainingForm = null;
+  }
+
+  // Convert server data format to form data format
+  const formData = {
+    characterName: data.characterName,
+    familyName: data.familyName,
+    race: data.race,
+    class: data.class,
+    level: data.level,
+    stats: data.stats as Record<'strength' | 'agility' | 'constitution' | 'intellect' | 'wisdom' | 'charisma', { current: number; min: number; max: number; spent: number }>,
+    unspentCp: data.unspentCp,
+    appearance: data.appearance,
+  };
+
+  // Create and show the training form
+  activeTrainingForm = new TrainingForm(terminal, formData, handleTrainingComplete);
+  activeTrainingForm.show();
+}
+
+/**
+ * Handle training form completion
+ */
+function handleTrainingComplete(result: TrainingFormResult): void {
+  activeTrainingForm = null;
+
+  // Send the result to the server
+  sendTrainingSubmit(result);
+
+  // Clear the terminal and request a room look to restore normal display
+  if (terminal) {
+    terminal.clear();
+  }
+
+  // If not cancelled, send a command to refresh the room display
+  if (!result.cancelled) {
+    sendCommand('glance');
+  }
+}
+
+/**
+ * Send training form submission to server
+ */
+function sendTrainingSubmit(result: TrainingFormResult): void {
+  if (!socket || socket.readyState !== WebSocket.OPEN) return;
+
+  const payload: TrainingSubmitPayload = {
+    stats: result.stats,
+    cpSpent: result.cpSpent,
+    cancelled: result.cancelled,
+  };
+
+  const message: GameMessage = {
+    type: MessageType.TRAINING_SUBMIT,
+    payload: JSON.stringify(payload),
+    timestamp: Date.now(),
+  };
+
+  socket.send(JSON.stringify(message));
 }
 
 /**

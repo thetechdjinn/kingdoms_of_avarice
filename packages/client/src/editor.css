@@ -908,3 +908,72 @@ body {
     transform: translateX(100%);
   }
 }
+
+/* ============================================================================
+   Collapsible Sections
+   ============================================================================ */
+
+.form-section.collapsible .section-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  user-select: none;
+  padding: 0.5rem 0;
+  margin: 0;
+}
+
+.form-section.collapsible .section-header:hover {
+  color: #00cc00;
+}
+
+.form-section.collapsible .collapse-icon {
+  font-size: 0.75rem;
+  color: #666;
+  transition: transform 0.2s;
+}
+
+.form-section.collapsible .section-content {
+  padding-top: 1rem;
+}
+
+/* Form row for inline inputs */
+.form-row {
+  display: flex;
+  gap: 1rem;
+}
+
+.form-row .form-group {
+  flex: 1;
+}
+
+/* Checkbox grid for class selection */
+.checkbox-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 0.5rem;
+  padding: 0.5rem;
+  background: #0f0f23;
+  border-radius: 4px;
+  border: 1px solid #333;
+}
+
+.checkbox-grid .checkbox-label {
+  padding: 0.25rem 0.5rem;
+  background: #16213e;
+  border-radius: 4px;
+  transition: background 0.2s;
+}
+
+.checkbox-grid .checkbox-label:hover {
+  background: #1f2b47;
+}
+
+/* Training options sub-section */
+#training-options {
+  margin-top: 1rem;
+  padding: 1rem;
+  background: #0f0f23;
+  border-radius: 4px;
+  border: 1px solid #333;
+}

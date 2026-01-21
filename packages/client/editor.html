@@ -114,7 +114,43 @@
               <label for="room-description">Description</label>
               <textarea id="room-description" rows="5"></textarea>
             </div>
-            
+
+            <div class="form-section collapsible">
+              <h3 class="section-header" id="training-section-header">
+                <span class="collapse-icon">▶</span>
+                Training Room Settings
+              </h3>
+              <div class="section-content" id="training-section-content" style="display: none;">
+                <div class="form-group">
+                  <label class="checkbox-label">
+                    <input type="checkbox" id="room-training-enabled" />
+                    Enable Training Room
+                  </label>
+                  <p class="hint">When enabled, players can use the 'train' command here to allocate stats and level up.</p>
+                </div>
+
+                <div id="training-options" style="display: none;">
+                  <div class="form-row">
+                    <div class="form-group">
+                      <label for="room-training-min-level">Min Level</label>
+                      <input type="number" id="room-training-min-level" min="1" max="999" value="1" />
+                    </div>
+                    <div class="form-group">
+                      <label for="room-training-max-level">Max Level</label>
+                      <input type="number" id="room-training-max-level" min="1" max="999" value="999" />
+                    </div>
+                  </div>
+
+                  <div class="form-group">
+                    <label for="room-training-classes">Allowed Classes <span class="hint-inline">(empty = all classes)</span></label>
+                    <div id="training-class-checkboxes" class="checkbox-grid">
+                      <!-- Populated by JavaScript -->
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
             <div class="form-section">
               <h3>Exits</h3>
               <div id="exits-list"></div>

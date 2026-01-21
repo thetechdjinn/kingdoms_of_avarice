@@ -354,6 +354,24 @@ export function setupGameSocket(wss: WebSocketServer): void {
     // Send initial vitals
     sendVitals(authWs);
 
+    // Check if this is a new character that should show the training form
+    // New characters have full unspent CP and no points allocated
+    const isNewCharacter = character.unspent_cp >= 100 &&
+      (!character.cp_spent || Object.keys(character.cp_spent).length === 0 ||
+       Object.values(character.cp_spent).every(v => v === 0));
+
+    if (isNewCharacter) {
+      // Send training form after a short delay to let the room render first
+      setTimeout(async () => {
+        try {
+          const { sendTrainingForm } = await import('./trainingCommands.js');
+          await sendTrainingForm(authWs, true);
+        } catch (error) {
+          console.error('Failed to send training form for new character:', error);
+        }
+      }, 500);
+    }
+
     ws.on('message', async (data) => {
       // Parse JSON separately to distinguish parse errors from command errors
       let message: GameMessage;
@@ -386,6 +404,21 @@ export function setupGameSocket(wss: WebSocketServer): void {
             console.error('Fallback command processing also failed:', fallbackError);
             sendMessage(authWs, MessageType.ERROR, 'An error occurred processing your command');
           }
+        }
+      }
+
+      // Handle training form submission
+      if (message.type === MessageType.TRAINING_SUBMIT) {
+        try {
+          const { handleTrainingSubmit } = await import('./trainingCommands.js');
+          const payload = JSON.parse(message.payload);
+          const response = await handleTrainingSubmit(authWs, payload);
+          if (response) {
+            sendMessage(authWs, response.type, response.message);
+          }
+        } catch (error) {
+          console.error('Training submit error:', error);
+          sendMessage(authWs, MessageType.ERROR, 'An error occurred processing your training.');
         }
       }
     });

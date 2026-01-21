@@ -51,7 +51,8 @@ CREATE TABLE IF NOT EXISTS rooms (
     name VARCHAR(100) NOT NULL,
     description TEXT,
     area VARCHAR(100),
-    terrain VARCHAR(20) DEFAULT 'indoor'
+    terrain VARCHAR(20) DEFAULT 'indoor',
+    features JSONB DEFAULT '{}'
 );
 
 -- Room exits

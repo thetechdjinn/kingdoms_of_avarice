@@ -178,6 +178,11 @@ export async function runMigrations(): Promise<void> {
         ALTER TABLE rooms ADD COLUMN IF NOT EXISTS terrain VARCHAR(20) DEFAULT 'indoor'
       `);
 
+      // Add features column to rooms (for training rooms, portals, etc.)
+      await client.query(`
+        ALTER TABLE rooms ADD COLUMN IF NOT EXISTS features JSONB DEFAULT '{}'
+      `);
+
       // Migrate status_effect_definitions from dice notation to damage/healing ranges
       // Check if old columns exist and migrate if needed
       const oldDiceColumnsCheck = await client.query(`
@@ -304,7 +309,10 @@ export async function runMigrations(): Promise<void> {
           ('currency_silver_per_enc', '25'),
           ('currency_gold_per_enc', '15'),
           ('currency_platinum_per_enc', '10'),
-          ('currency_runic_per_enc', '4')
+          ('currency_runic_per_enc', '4'),
+          ('training_base_cost', '28'),
+          ('training_cost_multiplier', '1.8'),
+          ('initial_character_points', '100')
         ON CONFLICT (key) DO NOTHING
       `);
       // NOTE: Never update existing game_settings values - respect user configuration
@@ -386,33 +394,36 @@ async function seedRooms(): Promise<void> {
 
   console.log('Seeding initial room data...');
 
-  // Insert rooms
+  // Insert rooms (including training hall)
   await getPool().query(`
-    INSERT INTO rooms (id, name, description, area) VALUES
-    (1, 'Town Square', 'You stand in the center of a bustling town square. A weathered stone fountain bubbles quietly in the center. Merchants hawk their wares from wooden stalls, and townsfolk hurry about their daily business.', 'Silverton'),
-    (2, 'North Road', 'A cobblestone road stretches northward toward the city gates. Guards in polished armor stand watch at their posts.', 'Silverton'),
-    (3, 'Merchant District', 'Colorful awnings shade the entrances to various shops. The smell of fresh bread mingles with the scent of leather and metal.', 'Silverton'),
-    (4, 'Temple Steps', 'Marble steps lead up to an imposing temple dedicated to the old gods. Incense smoke drifts from within.', 'Silverton'),
-    (5, 'The Rusty Blade Tavern', 'A warm glow emanates from this well-worn tavern. The sound of laughter and clinking mugs spills out into the street.', 'Silverton'),
-    (6, 'City Gates', 'Massive iron-bound wooden gates mark the boundary between civilization and the wilderness beyond. A guard eyes you warily.', 'Silverton')
+    INSERT INTO rooms (id, name, description, area, features) VALUES
+    (1, 'Town Square', 'You stand in the center of a bustling town square. A weathered stone fountain bubbles quietly in the center. Merchants hawk their wares from wooden stalls, and townsfolk hurry about their daily business.', 'Silverton', '{}'),
+    (2, 'North Road', 'A cobblestone road stretches northward toward the city gates. Guards in polished armor stand watch at their posts.', 'Silverton', '{}'),
+    (3, 'Merchant District', 'Colorful awnings shade the entrances to various shops. The smell of fresh bread mingles with the scent of leather and metal.', 'Silverton', '{}'),
+    (4, 'Temple Steps', 'Marble steps lead up to an imposing temple dedicated to the old gods. Incense smoke drifts from within.', 'Silverton', '{}'),
+    (5, 'The Rusty Blade Tavern', 'A warm glow emanates from this well-worn tavern. The sound of laughter and clinking mugs spills out into the street.', 'Silverton', '{}'),
+    (6, 'City Gates', 'Massive iron-bound wooden gates mark the boundary between civilization and the wilderness beyond. A guard eyes you warily.', 'Silverton', '{}'),
+    (7, 'Training Hall', 'A spacious hall with high ceilings and weapon racks lining the walls. Training dummies stand in neat rows, their surfaces showing the marks of countless practice sessions. A grizzled instructor watches newcomers with a critical eye.', 'Silverton', '{"training": {"enabled": true, "minLevel": 1, "maxLevel": 999}}')
   `);
 
-  // Reset sequence to max id so next insert gets id 7
+  // Reset sequence to max id so next insert gets id 8
   await getPool().query(`SELECT setval('rooms_id_seq', (SELECT MAX(id) FROM rooms))`);
 
-  // Insert room exits
+  // Insert room exits (including training hall connected to town square)
   await getPool().query(`
     INSERT INTO room_exits (from_room_id, to_room_id, direction) VALUES
     (1, 2, 'north'),
     (1, 3, 'east'),
     (1, 4, 'south'),
     (1, 5, 'west'),
+    (1, 7, 'up'),
     (2, 1, 'south'),
     (2, 6, 'north'),
     (3, 1, 'west'),
     (4, 1, 'north'),
     (5, 1, 'east'),
-    (6, 2, 'south')
+    (6, 2, 'south'),
+    (7, 1, 'down')
   `);
 
   console.log('Room seed data inserted successfully');
