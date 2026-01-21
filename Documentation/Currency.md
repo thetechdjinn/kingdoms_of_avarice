@@ -46,9 +46,9 @@ Encumbrance: 425/480 Light (89%)
 - Non-equipped inventory items follow
 - Currency section appears after items
 - "You have:" is displayed in green
-- Currency values are displayed in blue
+- Currency values are displayed in gold
 - "Wealth:" is displayed in green
-- Total wealth value is displayed in blue
+- Total wealth value is displayed in gold
 - Encumbrance includes currency weight
 
 ## Weight Calculation
