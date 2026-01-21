@@ -188,11 +188,19 @@
       <div id="character-create-container" style="display: none">
         <h1>Create Character</h1>
         <form id="character-create-form">
-          <div class="form-group">
-            <label for="char-name">Character Name</label>
-            <input type="text" id="char-name" required minlength="3" maxlength="20"
-                   pattern="[a-zA-Z][a-zA-Z0-9 ]*"
-                   title="Must start with a letter, can contain letters, numbers, and spaces" />
+          <div class="form-row">
+            <div class="form-group">
+              <label for="char-name">First Name</label>
+              <input type="text" id="char-name" required minlength="3" maxlength="20"
+                     pattern="[a-zA-Z]{3,20}"
+                     title="Must be 3-20 letters" />
+            </div>
+            <div class="form-group">
+              <label for="char-last-name">Last Name <span class="hint-inline">(optional)</span></label>
+              <input type="text" id="char-last-name" maxlength="50"
+                     pattern="[a-zA-Z][a-zA-Z'-]*"
+                     title="Must start with a letter and contain only letters, hyphens, and apostrophes" />
+            </div>
           </div>
           <div class="form-row">
             <div class="form-group">
@@ -210,6 +218,58 @@
           </div>
           <div id="race-description" class="info-box"></div>
           <div id="class-description" class="info-box"></div>
+
+          <!-- Appearance Section -->
+          <div class="form-section">
+            <h3>Appearance</h3>
+            <div class="form-row">
+              <div class="form-group">
+                <label for="char-gender">Gender</label>
+                <select id="char-gender">
+                  <option value="neutral">Neutral</option>
+                  <option value="male">Male</option>
+                  <option value="female">Female</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="char-hair">Hair</label>
+                <select id="char-hair">
+                  <option value="">None/Bald</option>
+                  <option value="short black hair">Short Black</option>
+                  <option value="short brown hair">Short Brown</option>
+                  <option value="short blonde hair">Short Blonde</option>
+                  <option value="short red hair">Short Red</option>
+                  <option value="short gray hair">Short Gray</option>
+                  <option value="short white hair">Short White</option>
+                  <option value="long black hair">Long Black</option>
+                  <option value="long brown hair">Long Brown</option>
+                  <option value="long blonde hair">Long Blonde</option>
+                  <option value="long red hair">Long Red</option>
+                  <option value="long gray hair">Long Gray</option>
+                  <option value="long white hair">Long White</option>
+                  <option value="braided black hair">Braided Black</option>
+                  <option value="braided brown hair">Braided Brown</option>
+                  <option value="braided blonde hair">Braided Blonde</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="char-eye-color">Eye Color</label>
+                <select id="char-eye-color">
+                  <option value="brown eyes">Brown</option>
+                  <option value="blue eyes">Blue</option>
+                  <option value="green eyes">Green</option>
+                  <option value="gray eyes">Gray</option>
+                  <option value="hazel eyes">Hazel</option>
+                  <option value="amber eyes">Amber</option>
+                  <option value="violet eyes">Violet</option>
+                  <option value="red eyes">Red</option>
+                  <option value="golden eyes">Golden</option>
+                  <option value="silver eyes">Silver</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
           <div id="stat-preview" class="stat-preview">
             <h3>Stats Preview</h3>
             <div class="stat-grid">

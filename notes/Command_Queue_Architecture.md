@@ -204,11 +204,6 @@ interface GameConfig {
     affectsActions: string[];
     types: Record<string, { multiplier: number; description: string }>;
   };
-  weaponSpeed: {
-    affectsActions: string[];
-    types: Record<string, { multiplier: number }>;
-    default: number;
-  };
   aliases: AliasConfig;
   interruptTriggers: Record<string, InterruptTrigger>;
   interruptDelayBehavior: Record<string, DelayBehavior>;
@@ -589,7 +584,6 @@ Applied only to specific action types.
 | `encumbrance` | move | Weight carried affects movement speed |
 | `terrain` | move | Room terrain type affects movement |
 | `armor` | move | Heavy armor slows movement |
-| `weaponSpeed` | attack | Weapon type determines attack speed |
 | `spellComplexity` | cast | Higher level spells take longer |
 | `skillLevel` | various | Higher skill = faster execution |
 
@@ -612,11 +606,12 @@ Modifiers are registered with the delay calculator and associated with action ty
 ```
 DelayCalculator
 ├── modifiers
-│   ├── move: [encumbrance, terrain, armor, boots]
-│   ├── attack: [weaponSpeed, skill, stance]
+│   ├── move: [encumbrance, terrain, armor, status]
 │   ├── cast: [spellLevel, focus, interruption]
 │   ├── global: [haste, slow, stun]
 ```
+
+**Note:** Attack timing is handled by the combat engine, not the command queue delay system.
 
 ### Modifier Priority
 
@@ -725,10 +720,11 @@ All delays and modifiers should be defined in configuration files.
       "clearQueueOnFail": false
     },
     "attack": {
-      "baseDelay": 2000,
-      "modifierCategories": ["weaponSpeed", "skill", "stance", "status"],
-      "canInterrupt": true,
-      "clearQueueOnFail": false
+      "baseDelay": 0,
+      "modifierCategories": [],
+      "canInterrupt": false,
+      "clearQueueOnFail": false,
+      "comment": "Attack timing handled by combat engine"
     },
     "cast": {
       "baseDelay": 3000,
@@ -935,25 +931,6 @@ function getEncumbranceMultiplier(encumbrancePercent):
       "ice": { "multiplier": 1.1, "description": "Slippery frozen surface" },
       "underwater": { "multiplier": 2.0, "description": "Resistance of water" }
     }
-  }
-}
-```
-
-### Weapon Speed Modifiers
-
-```json
-{
-  "weaponSpeed": {
-    "affectsActions": ["attack"],
-    "types": {
-      "dagger": { "multiplier": 0.6 },
-      "shortSword": { "multiplier": 0.8 },
-      "longSword": { "multiplier": 1.0 },
-      "battleAxe": { "multiplier": 1.2 },
-      "greatSword": { "multiplier": 1.4 },
-      "warHammer": { "multiplier": 1.5 }
-    },
-    "default": 1.0
   }
 }
 ```
@@ -1836,7 +1813,7 @@ Create the core delay calculation system.
    - Encumbrance modifier with curve interpolation
    - Terrain modifier from room data
    - Status effect modifier from player buffs/debuffs
-   - Equipment modifier (armor weight, weapon speed)
+   - Equipment modifier (armor weight)
 
 #### 3.2 Encumbrance Integration
 

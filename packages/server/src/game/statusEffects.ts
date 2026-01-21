@@ -64,6 +64,7 @@ export const EFFECT_REGISTRY: Record<string, StatusEffectDefinition> = {
     stackingBehavior: StackingBehavior.REFRESH,
     maxStacks: 1,
     energyModifier: 25, // +25% attack energy
+    speedModifier: -20, // 20% faster actions
     wearOffMessage: 'Your movements return to normal.',
   },
   strengthened: {
@@ -96,6 +97,7 @@ export const EFFECT_REGISTRY: Record<string, StatusEffectDefinition> = {
     stackingBehavior: StackingBehavior.REFRESH,
     maxStacks: 1,
     energyModifier: -25, // -25% attack energy
+    speedModifier: 50, // 50% slower actions
   },
   blinded: {
     id: 'blinded',
@@ -155,6 +157,7 @@ export const EFFECT_REGISTRY: Record<string, StatusEffectDefinition> = {
     maxStacks: 1,
     blocksMovement: true,
     energyModifier: -50, // -50% attack energy
+    speedModifier: 100, // 100% slower actions (blocked by blocksMovement anyway)
   },
 };
 
@@ -363,6 +366,7 @@ export function getEffectModifiers(socket: AuthenticatedSocket): EffectModifiers
     defenseModifier: 0,
     energyModifier: 0,
     damageModifier: 0,
+    speedModifier: 0,
     blocksRegen: false,
     blocksMovement: false,
     isBlind: false,
@@ -394,6 +398,7 @@ export function getEffectModifiers(socket: AuthenticatedSocket): EffectModifiers
     modifiers.defenseModifier += (definition.defenseModifier ?? 0) * stackMultiplier;
     modifiers.energyModifier += (definition.energyModifier ?? 0) * stackMultiplier;
     modifiers.damageModifier += (definition.damageModifier ?? 0) * stackMultiplier;
+    modifiers.speedModifier += (definition.speedModifier ?? 0) * stackMultiplier;
 
     // Boolean flags don't stack - any one effect sets them
     if (definition.blocksRegen) modifiers.blocksRegen = true;

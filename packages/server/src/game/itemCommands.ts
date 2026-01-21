@@ -9,6 +9,14 @@ import * as craftingRepo from '../db/repositories/craftingRepository.js';
 import { withTransaction } from '../db/index.js';
 import { calculateEncumbranceRatio } from './combatStats.js';
 
+// Guard function to check if character is selected
+function requireCharacter(socket: AuthenticatedSocket): CommandResponse | null {
+  if (!socket.characterId) {
+    return { type: MessageType.ERROR, message: 'No character selected.' };
+  }
+  return null;
+}
+
 // Get the display name for an item (uses name, falls back to short_desc for legacy)
 // Returns name as stored in database (should be lowercase)
 function getItemName(item: ItemInstance): string {
@@ -52,6 +60,9 @@ export async function handleGet(
   args: string[],
   currentRoomId: number
 ): Promise<CommandResponse> {
+  const charError = requireCharacter(socket);
+  if (charError) return charError;
+
   if (args.length === 0) {
     return { type: MessageType.ERROR, message: 'Get what?' };
   }
@@ -116,10 +127,10 @@ async function pickUpItem(
   const existingStack = await itemRepo.findStackableInstance(
     item.template_id,
     ItemLocationType.PLAYER,
-    socket.playerId,
+    socket.characterId!,
     item.condition
   );
-  
+
   if (existingStack) {
     // Add to existing stack and delete room instance
     await itemRepo.addToInstanceQuantity(existingStack.id, item.quantity);
@@ -129,7 +140,7 @@ async function pickUpItem(
     await itemRepo.updateInstanceLocation(
       item.id,
       ItemLocationType.PLAYER,
-      socket.playerId
+      socket.characterId!
     );
   }
 
@@ -171,10 +182,10 @@ async function pickUpMultipleItems(
       const existingStack = await itemRepo.findStackableInstance(
         item.template_id,
         ItemLocationType.PLAYER,
-        socket.playerId,
+        socket.characterId!,
         item.condition
       );
-      
+
       if (existingStack) {
         await itemRepo.addToInstanceQuantity(existingStack.id, item.quantity);
         await itemRepo.deleteInstance(item.id);
@@ -182,17 +193,17 @@ async function pickUpMultipleItems(
         await itemRepo.updateInstanceLocation(
           item.id,
           ItemLocationType.PLAYER,
-          socket.playerId
+          socket.characterId!
         );
       }
     } else {
       // Taking partial from this instance
       await itemRepo.updateInstanceQuantity(item.id, item.quantity - takeFromThis);
-      
+
       const existingStack = await itemRepo.findStackableInstance(
         item.template_id,
         ItemLocationType.PLAYER,
-        socket.playerId,
+        socket.characterId!,
         item.condition
       );
       
@@ -202,7 +213,7 @@ async function pickUpMultipleItems(
         await itemRepo.createInstance({
           template_id: item.template_id,
           location_type: ItemLocationType.PLAYER,
-          location_id: socket.playerId,
+          location_id: socket.characterId!,
           quantity: takeFromThis,
           condition: item.condition,
         });
@@ -241,10 +252,10 @@ async function pickUpItemQuantity(
     const existingStack = await itemRepo.findStackableInstance(
       item.template_id,
       ItemLocationType.PLAYER,
-      socket.playerId,
+      socket.characterId!,
       item.condition
     );
-    
+
     if (existingStack) {
       // Add to existing stack and delete room instance
       await itemRepo.addToInstanceQuantity(existingStack.id, item.quantity);
@@ -254,18 +265,18 @@ async function pickUpItemQuantity(
       await itemRepo.updateInstanceLocation(
         item.id,
         ItemLocationType.PLAYER,
-        socket.playerId
+        socket.characterId!
       );
     }
   } else {
     // Picking up partial - reduce room stack
     await itemRepo.updateInstanceQuantity(item.id, item.quantity - actualQuantity);
-    
+
     // Check if we can stack with existing item in inventory
     const existingStack = await itemRepo.findStackableInstance(
       item.template_id,
       ItemLocationType.PLAYER,
-      socket.playerId,
+      socket.characterId!,
       item.condition
     );
     
@@ -277,7 +288,7 @@ async function pickUpItemQuantity(
       await itemRepo.createInstance({
         template_id: item.template_id,
         location_type: ItemLocationType.PLAYER,
-        location_id: socket.playerId,
+        location_id: socket.characterId!,
         quantity: actualQuantity,
         condition: item.condition,
       });
@@ -313,10 +324,10 @@ async function handleGetAll(
     const existingStack = await itemRepo.findStackableInstance(
       item.template_id,
       ItemLocationType.PLAYER,
-      socket.playerId,
+      socket.characterId!,
       item.condition
     );
-    
+
     if (existingStack) {
       await itemRepo.addToInstanceQuantity(existingStack.id, item.quantity);
       await itemRepo.deleteInstance(item.id);
@@ -324,7 +335,7 @@ async function handleGetAll(
       await itemRepo.updateInstanceLocation(
         item.id,
         ItemLocationType.PLAYER,
-        socket.playerId
+        socket.characterId!
       );
     }
     pickedUp.push(getItemName(item));
@@ -345,6 +356,9 @@ export async function handleDrop(
   args: string[],
   currentRoomId: number
 ): Promise<CommandResponse> {
+  const charError = requireCharacter(socket);
+  if (charError) return charError;
+
   if (args.length === 0) {
     return { type: MessageType.ERROR, message: 'Drop what?' };
   }
@@ -367,7 +381,7 @@ export async function handleDrop(
   }
 
   // Find matching items in inventory
-  const matches = await itemRepo.findItemsInInventoryByKeyword(socket.playerId, keyword);
+  const matches = await itemRepo.findItemsInCharacterInventoryByKeyword(socket.characterId!, keyword);
 
   if (matches.length === 0) {
     return { type: MessageType.ERROR, message: `You don't have that.` };
@@ -590,7 +604,7 @@ async function handleDropAll(
   socket: AuthenticatedSocket,
   currentRoomId: number
 ): Promise<CommandResponse> {
-  const items = await itemRepo.getPlayerInventory(socket.playerId);
+  const items = await itemRepo.getCharacterInventory(socket.characterId!);
 
   // Filter out no_drop items
   const droppableItems = items.filter(i => !i.template?.flags?.no_drop);
@@ -677,8 +691,11 @@ function getEncumbranceLevel(percent: number): string {
 export async function handleInventory(
   socket: AuthenticatedSocket
 ): Promise<CommandResponse> {
-  const items = await itemRepo.getPlayerInventory(socket.playerId);
-  const equipped = await itemRepo.getPlayerEquipped(socket.playerId);
+  const charError = requireCharacter(socket);
+  if (charError) return charError;
+
+  const items = await itemRepo.getCharacterInventory(socket.characterId!);
+  const equipped = await itemRepo.getCharacterEquipped(socket.characterId!);
 
   const lines: string[] = [];
 
@@ -724,6 +741,9 @@ export async function handleExamine(
   args: string[],
   currentRoomId: number
 ): Promise<CommandResponse> {
+  const charError = requireCharacter(socket);
+  if (charError) return charError;
+
   if (args.length === 0) {
     return { type: MessageType.ERROR, message: 'Examine what?' };
   }
@@ -731,11 +751,11 @@ export async function handleExamine(
   const keyword = args.join(' ');
 
   // First check inventory (includes equipped items)
-  let matches = await itemRepo.findItemsInInventoryByKeyword(socket.playerId, keyword);
+  let matches = await itemRepo.findItemsInCharacterInventoryByKeyword(socket.characterId!, keyword);
 
   // Also check equipped items
   if (matches.length === 0) {
-    const equipped = await itemRepo.getPlayerEquipped(socket.playerId);
+    const equipped = await itemRepo.getCharacterEquipped(socket.characterId!);
     matches = equipped.filter(item => {
       const template = item.template;
       if (!template) return false;
@@ -866,12 +886,15 @@ export async function handleWield(
   args: string[],
   currentRoomId: number
 ): Promise<CommandResponse> {
+  const charError = requireCharacter(socket);
+  if (charError) return charError;
+
   if (args.length === 0) {
     return { type: MessageType.ERROR, message: 'Wield what?' };
   }
 
   const keyword = args.join(' ');
-  const matches = await itemRepo.findItemsInInventoryByKeyword(socket.playerId, keyword);
+  const matches = await itemRepo.findItemsInCharacterInventoryByKeyword(socket.characterId!, keyword);
 
   if (matches.length === 0) {
     return { type: MessageType.ERROR, message: `You don't have that.` };
@@ -893,7 +916,7 @@ export async function handleWield(
   const isTwoHanded = template.flags?.two_handed === true;
 
   // Get currently equipped items
-  const equipped = await itemRepo.getPlayerEquipped(socket.playerId);
+  const equipped = await itemRepo.getCharacterEquipped(socket.characterId!);
 
   // Check for two-handed weapon conflicts
   if (isTwoHanded) {
@@ -903,7 +926,7 @@ export async function handleWield(
         if (equippedItem.template?.flags?.cursed) {
           return { type: MessageType.ERROR, message: `You can't wield that - a cursed item is blocking the slot.` };
         }
-        await itemRepo.updateInstanceLocation(equippedItem.id, ItemLocationType.PLAYER, socket.playerId);
+        await itemRepo.updateInstanceLocation(equippedItem.id, ItemLocationType.PLAYER, socket.characterId!);
         const unequippedName = getItemName(equippedItem);
         broadcastToRoom(currentRoomId, `${socket.username} stops using ${unequippedName}.`, socket.playerId);
       }
@@ -917,13 +940,13 @@ export async function handleWield(
       return { type: MessageType.ERROR, message: `You can't remove your current weapon - it's cursed!` };
     }
     // Unequip current main hand weapon
-    await itemRepo.updateInstanceLocation(mainHandItem.id, ItemLocationType.PLAYER, socket.playerId);
+    await itemRepo.updateInstanceLocation(mainHandItem.id, ItemLocationType.PLAYER, socket.characterId!);
     const unequippedName = getItemName(mainHandItem);
     broadcastToRoom(currentRoomId, `${socket.username} stops wielding ${unequippedName}.`, socket.playerId);
   }
 
   // Equip the new weapon
-  await itemRepo.updateInstanceLocation(item.id, ItemLocationType.EQUIPPED, socket.playerId, EquipmentSlot.MAIN_HAND);
+  await itemRepo.updateInstanceLocation(item.id, ItemLocationType.EQUIPPED, socket.characterId!, EquipmentSlot.MAIN_HAND);
 
   const itemName = template.name;
   broadcastToRoom(currentRoomId, `${socket.username} wields ${itemName}.`, socket.playerId);
@@ -937,12 +960,15 @@ export async function handleWear(
   args: string[],
   currentRoomId: number
 ): Promise<CommandResponse> {
+  const charError = requireCharacter(socket);
+  if (charError) return charError;
+
   if (args.length === 0) {
     return { type: MessageType.ERROR, message: 'Wear what?' };
   }
 
   const keyword = args.join(' ');
-  const matches = await itemRepo.findItemsInInventoryByKeyword(socket.playerId, keyword);
+  const matches = await itemRepo.findItemsInCharacterInventoryByKeyword(socket.characterId!, keyword);
 
   if (matches.length === 0) {
     return { type: MessageType.ERROR, message: `You don't have that.` };
@@ -967,7 +993,7 @@ export async function handleWear(
   let targetSlot = template.equipment_slot as EquipmentSlot;
 
   // Get currently equipped items
-  const equipped = await itemRepo.getPlayerEquipped(socket.playerId);
+  const equipped = await itemRepo.getCharacterEquipped(socket.characterId!);
 
   // Check if a two-handed weapon is equipped and this would conflict
   const mainHandItem = equipped.find(e => e.equipped_slot === EquipmentSlot.MAIN_HAND);
@@ -991,7 +1017,7 @@ export async function handleWear(
           return { type: MessageType.ERROR, message: `You can't remove that - it's cursed!` };
         }
         // Unequip from primary slot
-        await itemRepo.updateInstanceLocation(currentlyInSlot.id, ItemLocationType.PLAYER, socket.playerId);
+        await itemRepo.updateInstanceLocation(currentlyInSlot.id, ItemLocationType.PLAYER, socket.characterId!);
         const unequippedName = getItemName(currentlyInSlot);
         broadcastToRoom(currentRoomId, `${socket.username} removes ${unequippedName}.`, socket.playerId);
       }
@@ -1001,14 +1027,14 @@ export async function handleWear(
         return { type: MessageType.ERROR, message: `You can't remove that - it's cursed!` };
       }
       // Unequip current item
-      await itemRepo.updateInstanceLocation(currentlyInSlot.id, ItemLocationType.PLAYER, socket.playerId);
+      await itemRepo.updateInstanceLocation(currentlyInSlot.id, ItemLocationType.PLAYER, socket.characterId!);
       const unequippedName = getItemName(currentlyInSlot);
       broadcastToRoom(currentRoomId, `${socket.username} removes ${unequippedName}.`, socket.playerId);
     }
   }
 
   // Equip the item
-  await itemRepo.updateInstanceLocation(item.id, ItemLocationType.EQUIPPED, socket.playerId, targetSlot);
+  await itemRepo.updateInstanceLocation(item.id, ItemLocationType.EQUIPPED, socket.characterId!, targetSlot);
 
   const itemName = template.name;
   broadcastToRoom(currentRoomId, `${socket.username} wears ${itemName}.`, socket.playerId);
@@ -1022,6 +1048,9 @@ export async function handleRemove(
   args: string[],
   currentRoomId: number
 ): Promise<CommandResponse> {
+  const charError = requireCharacter(socket);
+  if (charError) return charError;
+
   if (args.length === 0) {
     return { type: MessageType.ERROR, message: 'Remove what?' };
   }
@@ -1029,7 +1058,7 @@ export async function handleRemove(
   const keyword = args.join(' ');
 
   // Search equipped items
-  const equipped = await itemRepo.getPlayerEquipped(socket.playerId);
+  const equipped = await itemRepo.getCharacterEquipped(socket.characterId!);
   
   // Filter by keyword
   const matches = equipped.filter(item => {
@@ -1058,7 +1087,7 @@ export async function handleRemove(
   }
 
   // Move to inventory
-  await itemRepo.updateInstanceLocation(item.id, ItemLocationType.PLAYER, socket.playerId);
+  await itemRepo.updateInstanceLocation(item.id, ItemLocationType.PLAYER, socket.characterId!);
 
   const itemName = getItemName(item);
   broadcastToRoom(currentRoomId, `${socket.username} removes ${itemName}.`, socket.playerId);
@@ -1070,7 +1099,10 @@ export async function handleRemove(
 export async function handleEquipment(
   socket: AuthenticatedSocket
 ): Promise<CommandResponse> {
-  const equipped = await itemRepo.getPlayerEquipped(socket.playerId);
+  const charError = requireCharacter(socket);
+  if (charError) return charError;
+
+  const equipped = await itemRepo.getCharacterEquipped(socket.characterId!);
 
   if (equipped.length === 0) {
     return { type: MessageType.OUTPUT, message: 'You are not wearing anything.' };
@@ -1123,7 +1155,7 @@ async function findContainer(
   currentRoomId: number
 ): Promise<{ container: ItemInstance | null; error?: string }> {
   // Check inventory first
-  let matches = await itemRepo.findItemsInInventoryByKeyword(socket.playerId, keyword);
+  let matches = await itemRepo.findItemsInCharacterInventoryByKeyword(socket.characterId!, keyword);
   
   // Filter to containers only
   let containers = matches.filter(m => m.template?.item_type === ItemType.CONTAINER);
@@ -1151,6 +1183,9 @@ export async function handlePut(
   args: string[],
   currentRoomId: number
 ): Promise<CommandResponse> {
+  const charError = requireCharacter(socket);
+  if (charError) return charError;
+
   if (args.length === 0) {
     return { type: MessageType.ERROR, message: 'Put what where?' };
   }
@@ -1168,7 +1203,7 @@ export async function handlePut(
   const containerKeyword = inMatch[2].trim();
 
   // Find the item in inventory
-  const itemMatches = await itemRepo.findItemsInInventoryByKeyword(socket.playerId, itemKeyword);
+  const itemMatches = await itemRepo.findItemsInCharacterInventoryByKeyword(socket.characterId!, itemKeyword);
 
   if (itemMatches.length === 0) {
     return { type: MessageType.ERROR, message: `You don't have that.` };
@@ -1231,6 +1266,9 @@ export async function handleGetFrom(
   args: string[],
   currentRoomId: number
 ): Promise<CommandResponse> {
+  const charError = requireCharacter(socket);
+  if (charError) return charError;
+
   if (args.length === 0) {
     return { type: MessageType.ERROR, message: 'Get what from where?' };
   }
@@ -1271,7 +1309,7 @@ export async function handleGetFrom(
   const item = itemMatches[0];
 
   // Move item to player inventory
-  await itemRepo.updateInstanceLocation(item.id, ItemLocationType.PLAYER, socket.playerId);
+  await itemRepo.updateInstanceLocation(item.id, ItemLocationType.PLAYER, socket.characterId!);
 
   const itemName = getItemName(item);
   const containerName = container.template?.name ?? 'something';
@@ -1296,7 +1334,7 @@ async function handleGetAllFromContainer(
   const pickedUp: string[] = [];
 
   for (const item of items) {
-    await itemRepo.updateInstanceLocation(item.id, ItemLocationType.PLAYER, socket.playerId);
+    await itemRepo.updateInstanceLocation(item.id, ItemLocationType.PLAYER, socket.characterId!);
     pickedUp.push(withArticle(getItemName(item)));
   }
 
@@ -1315,6 +1353,9 @@ export async function handleLookIn(
   args: string[],
   currentRoomId: number
 ): Promise<CommandResponse> {
+  const charError = requireCharacter(socket);
+  if (charError) return charError;
+
   if (args.length === 0) {
     return { type: MessageType.ERROR, message: 'Look in what?' };
   }
@@ -1354,12 +1395,15 @@ export async function handleUse(
   args: string[],
   currentRoomId: number
 ): Promise<CommandResponse> {
+  const charError = requireCharacter(socket);
+  if (charError) return charError;
+
   if (args.length === 0) {
     return { type: MessageType.ERROR, message: 'Use what?' };
   }
 
   const keyword = args.join(' ');
-  const matches = await itemRepo.findItemsInInventoryByKeyword(socket.playerId, keyword);
+  const matches = await itemRepo.findItemsInCharacterInventoryByKeyword(socket.characterId!, keyword);
 
   if (matches.length === 0) {
     return { type: MessageType.ERROR, message: `You don't have that.` };
@@ -1452,12 +1496,15 @@ export async function handleLight(
   args: string[],
   currentRoomId: number
 ): Promise<CommandResponse> {
+  const charError = requireCharacter(socket);
+  if (charError) return charError;
+
   if (args.length === 0) {
     return { type: MessageType.ERROR, message: 'Light what?' };
   }
 
   const keyword = args.join(' ');
-  const matches = await itemRepo.findItemsInInventoryByKeyword(socket.playerId, keyword);
+  const matches = await itemRepo.findItemsInCharacterInventoryByKeyword(socket.characterId!, keyword);
 
   if (matches.length === 0) {
     return { type: MessageType.ERROR, message: `You don't have that.` };
@@ -1510,12 +1557,15 @@ export async function handleExtinguish(
   args: string[],
   currentRoomId: number
 ): Promise<CommandResponse> {
+  const charError = requireCharacter(socket);
+  if (charError) return charError;
+
   if (args.length === 0) {
     return { type: MessageType.ERROR, message: 'Extinguish what?' };
   }
 
   const keyword = args.join(' ');
-  const matches = await itemRepo.findItemsInInventoryByKeyword(socket.playerId, keyword);
+  const matches = await itemRepo.findItemsInCharacterInventoryByKeyword(socket.characterId!, keyword);
 
   if (matches.length === 0) {
     return { type: MessageType.ERROR, message: `You don't have that.` };
@@ -1564,12 +1614,15 @@ export async function handleRepair(
   args: string[],
   currentRoomId: number
 ): Promise<CommandResponse> {
+  const charError = requireCharacter(socket);
+  if (charError) return charError;
+
   if (args.length === 0) {
     return { type: MessageType.ERROR, message: 'Repair what?' };
   }
 
   const keyword = args.join(' ');
-  const matches = await itemRepo.findItemsInInventoryByKeyword(socket.playerId, keyword);
+  const matches = await itemRepo.findItemsInCharacterInventoryByKeyword(socket.characterId!, keyword);
 
   if (matches.length === 0) {
     return { type: MessageType.ERROR, message: `You don't have that.` };
@@ -1706,6 +1759,9 @@ export async function handleCraft(
   args: string[],
   currentRoomId: number
 ): Promise<CommandResponse> {
+  const charError = requireCharacter(socket);
+  if (charError) return charError;
+
   if (args.length === 0) {
     return { type: MessageType.ERROR, message: 'Craft what? Use "recipes" to see available recipes.' };
   }
@@ -1719,7 +1775,7 @@ export async function handleCraft(
 
   // Check for required tools (must be in inventory, not consumed)
   if (recipe.tools_required && recipe.tools_required.length > 0) {
-    const inventory = await itemRepo.getPlayerInventory(socket.playerId);
+    const inventory = await itemRepo.getCharacterInventory(socket.characterId!);
     for (const toolId of recipe.tools_required) {
       const hasTool = inventory.some(i => i.template_id === toolId);
       if (!hasTool) {
@@ -1731,7 +1787,7 @@ export async function handleCraft(
   }
 
   // Check for ingredients
-  const inventory = await itemRepo.getPlayerInventory(socket.playerId);
+  const inventory = await itemRepo.getCharacterInventory(socket.characterId!);
   const missingIngredients: string[] = [];
 
   for (const ingredient of recipe.ingredients) {
@@ -1777,7 +1833,7 @@ export async function handleCraft(
     await itemRepo.createInstance({
       template_id: recipe.result_template_id,
       location_type: ItemLocationType.PLAYER,
-      location_id: socket.playerId,
+      location_id: socket.characterId!,
       quantity: recipe.result_quantity,
     });
 
@@ -1827,6 +1883,9 @@ export async function handleEnchant(
   args: string[],
   currentRoomId: number
 ): Promise<CommandResponse> {
+  const charError = requireCharacter(socket);
+  if (charError) return charError;
+
   if (args.length === 0) {
     return { type: MessageType.ERROR, message: 'Enchant what? Usage: enchant <item> with <enchantment>' };
   }
@@ -1843,7 +1902,7 @@ export async function handleEnchant(
   const enchantmentName = withMatch[2].trim();
 
   // Find the item in inventory
-  const itemMatches = await itemRepo.findItemsInInventoryByKeyword(socket.playerId, itemKeyword);
+  const itemMatches = await itemRepo.findItemsInCharacterInventoryByKeyword(socket.characterId!, itemKeyword);
 
   if (itemMatches.length === 0) {
     return { type: MessageType.ERROR, message: `You don't have that.` };
@@ -1895,7 +1954,7 @@ export async function handleEnchant(
 
   // Check reagents first (before consuming anything)
   if (enchantment.reagents && enchantment.reagents.length > 0) {
-    const inventory = await itemRepo.getPlayerInventory(socket.playerId);
+    const inventory = await itemRepo.getCharacterInventory(socket.characterId!);
     
     for (const reagent of enchantment.reagents) {
       const matching = inventory.filter(i => i.template_id === reagent.template_id);
@@ -1932,7 +1991,7 @@ export async function handleEnchant(
 
   // Consume reagents
   if (enchantment.reagents && enchantment.reagents.length > 0) {
-    const inventory = await itemRepo.getPlayerInventory(socket.playerId);
+    const inventory = await itemRepo.getCharacterInventory(socket.characterId!);
     
     for (const reagent of enchantment.reagents) {
       let remaining = reagent.quantity;

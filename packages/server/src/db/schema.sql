@@ -18,6 +18,7 @@ CREATE TABLE IF NOT EXISTS characters (
     id SERIAL PRIMARY KEY,
     player_id INTEGER REFERENCES players(id) ON DELETE CASCADE,
     name VARCHAR(50) UNIQUE NOT NULL,
+    last_name VARCHAR(50),
     race VARCHAR(50) NOT NULL,
     class VARCHAR(50) NOT NULL,
     level INTEGER DEFAULT 1,
@@ -49,7 +50,8 @@ CREATE TABLE IF NOT EXISTS rooms (
     id SERIAL PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
     description TEXT,
-    area VARCHAR(100)
+    area VARCHAR(100),
+    terrain VARCHAR(20) DEFAULT 'indoor'
 );
 
 -- Room exits
@@ -167,8 +169,8 @@ CREATE TABLE IF NOT EXISTS item_instances (
     
     -- Location (polymorphic - references different tables based on location_type)
     -- Note: Traditional FK constraints cannot be used with polymorphic associations.
-    -- Valid location_types: 'room' -> rooms.id, 'player' -> players.id, 
-    --                       'equipped' -> players.id, 'container' -> item_instances.id
+    -- Valid location_types: 'room' -> rooms.id, 'player' -> characters.id (inventory),
+    --                       'equipped' -> characters.id, 'container' -> item_instances.id
     -- Referential integrity is enforced at the application layer.
     location_type VARCHAR(50) NOT NULL CHECK (location_type IN ('room', 'player', 'equipped', 'container')),
     location_id INTEGER NOT NULL,

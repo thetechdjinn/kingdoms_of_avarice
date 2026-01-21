@@ -206,6 +206,9 @@ export function generatePlayerDescription(data: PlayerDescriptionData): string {
   const pronouns = getPronouns(character.gender || 'neutral');
   const stats = character.stats;
 
+  // Build full name (first name + last name)
+  const fullName = character.lastName ? `${character.name} ${character.lastName}` : character.name;
+
   // Build the description parts
   const parts: string[] = [];
 
@@ -218,7 +221,7 @@ export function generatePlayerDescription(data: PlayerDescriptionData): string {
   const eyeDesc = character.eyeColor ? `${character.eyeColor} eyes` : 'dark eyes';
 
   // First sentence: "Name is a [size], [build] [Race] [Class] with [hair] and [eyes]."
-  parts.push(`${character.name} is a ${sizeAdj}, ${buildAdj} ${character.race} ${character.class} with ${hairDesc} and ${eyeDesc}.`);
+  parts.push(`${fullName} is a ${sizeAdj}, ${buildAdj} ${character.race} ${character.class} with ${hairDesc} and ${eyeDesc}.`);
 
   // Movement (dexterity): "[Subject] moves [dexterity adverb]"
   const dexAdj = getStatAdjective(stats.dexterity, DEXTERITY_ADJECTIVES);
@@ -231,7 +234,7 @@ export function generatePlayerDescription(data: PlayerDescriptionData): string {
 
   // Intelligence: "[Name] appears to be [intellect description]"
   const intAdj = getStatAdjective(stats.intelligence, INTELLECT_ADJECTIVES);
-  parts.push(`${character.name} appears to be ${intAdj}`);
+  parts.push(`${fullName} appears to be ${intAdj}`);
 
   // Wisdom: "and [wisdom description]."
   let wisAdj = getStatAdjective(stats.wisdom, WISDOM_ADJECTIVES);
@@ -256,7 +259,7 @@ export function generatePlayerDescription(data: PlayerDescriptionData): string {
   // Combine name header, wrapped description, and equipment
   // Colors: Name bracket = cyan, description = white, "equipped with" = yellow
   const lines: string[] = [];
-  lines.push(colors.cyan(`[ ${character.name} ]`));
+  lines.push(colors.cyan(`[ ${fullName} ]`));
   lines.push(colors.white(wordWrap(description, 80)));
 
   if (equipmentSection) {

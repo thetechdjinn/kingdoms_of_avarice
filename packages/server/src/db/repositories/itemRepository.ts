@@ -361,37 +361,43 @@ export async function getInstancesInRoom(roomId: number): Promise<ItemInstance[]
   });
 }
 
-export async function getPlayerInventory(playerId: number): Promise<ItemInstance[]> {
+export async function getCharacterInventory(characterId: number): Promise<ItemInstance[]> {
   const result = await query<DbItemInstance & DbItemTemplate>(
     `SELECT ii.*, ${TEMPLATE_COLUMNS}
      FROM item_instances ii
      JOIN item_templates it ON ii.template_id = it.id
      WHERE ii.location_type = 'player' AND ii.location_id = $1
      ORDER BY it.name`,
-    [playerId]
+    [characterId]
   );
-  
+
   return result.rows.map(row => {
     const template = dbJoinedToTemplate(row);
     return dbToInstance(row as DbItemInstance, template);
   });
 }
 
-export async function getPlayerEquipped(playerId: number): Promise<ItemInstance[]> {
+/** @deprecated Use getCharacterInventory instead */
+export const getPlayerInventory = getCharacterInventory;
+
+export async function getCharacterEquipped(characterId: number): Promise<ItemInstance[]> {
   const result = await query<DbItemInstance & DbItemTemplate>(
     `SELECT ii.*, ${TEMPLATE_COLUMNS}
      FROM item_instances ii
      JOIN item_templates it ON ii.template_id = it.id
      WHERE ii.location_type = 'equipped' AND ii.location_id = $1
      ORDER BY ii.equipped_slot`,
-    [playerId]
+    [characterId]
   );
-  
+
   return result.rows.map(row => {
     const template = dbJoinedToTemplate(row);
     return dbToInstance(row as DbItemInstance, template);
   });
 }
+
+/** @deprecated Use getCharacterEquipped instead */
+export const getPlayerEquipped = getCharacterEquipped;
 
 export interface CreateInstanceInput {
   template_id: number;
@@ -542,8 +548,8 @@ export async function findItemsInRoomByKeyword(
   });
 }
 
-export async function findItemsInInventoryByKeyword(
-  playerId: number,
+export async function findItemsInCharacterInventoryByKeyword(
+  characterId: number,
   keyword: string
 ): Promise<ItemInstance[]> {
   const searchTerm = keyword.toLowerCase();
@@ -551,21 +557,24 @@ export async function findItemsInInventoryByKeyword(
     `SELECT ii.*, ${TEMPLATE_COLUMNS}
      FROM item_instances ii
      JOIN item_templates it ON ii.template_id = it.id
-     WHERE ii.location_type = 'player' 
+     WHERE ii.location_type = 'player'
        AND ii.location_id = $1
        AND (
          LOWER(it.name) LIKE $2
          OR EXISTS (SELECT 1 FROM unnest(it.keywords) kw WHERE LOWER(kw) LIKE $2)
        )
      ORDER BY ii.id`,
-    [playerId, `${searchTerm}%`]
+    [characterId, `${searchTerm}%`]
   );
-  
+
   return result.rows.map(row => {
     const template = dbJoinedToTemplate(row);
     return dbToInstance(row as DbItemInstance, template);
   });
 }
+
+/** @deprecated Use findItemsInCharacterInventoryByKeyword instead */
+export const findItemsInInventoryByKeyword = findItemsInCharacterInventoryByKeyword;
 
 // ============================================================================
 // Display Helpers
@@ -595,8 +604,8 @@ export async function getRoomItemDisplays(roomId: number): Promise<ItemDisplay[]
     .map(instanceToDisplay);
 }
 
-export async function getInventoryDisplays(playerId: number): Promise<ItemDisplay[]> {
-  const instances = await getPlayerInventory(playerId);
+export async function getInventoryDisplays(characterId: number): Promise<ItemDisplay[]> {
+  const instances = await getCharacterInventory(characterId);
   return instances.map(instanceToDisplay);
 }
 

@@ -338,6 +338,7 @@ async function processAttackerCombat(
   combatConfig: RuntimeCombatConfig = DEFAULT_RUNTIME_CONFIG
 ): Promise<void> {
   if (!connectedPlayersRef) return;
+  if (!attacker.characterId) return;
 
   // Check if using spell combat
   if (attacker.combatState.combatAction === 'spell' && attacker.combatState.activeSpell) {
@@ -356,7 +357,7 @@ async function processAttackerCombat(
   }
 
   // Get attacker's equipment stats
-  const attackerEquipment = await getEquipmentCombatStats(attacker.playerId);
+  const attackerEquipment = await getEquipmentCombatStats(attacker.characterId!);
 
   // Calculate effective stats with equipment modifiers
   const effectiveDex = attacker.characterStats.dexterity + (attackerEquipment.statModifiers.dexterity || 0);
@@ -455,8 +456,9 @@ async function processAttackerCombat(
       continue;
     }
 
-    // Get defender's equipment stats
-    const defenderEquipment = await getEquipmentCombatStats(target.playerId);
+    // Get defender's equipment stats (skip if no character selected)
+    if (!target.characterId) continue;
+    const defenderEquipment = await getEquipmentCombatStats(target.characterId);
     const defenderEquipmentBonus = getEquipmentAccuracyBonus(defenderEquipment.statModifiers);
 
     // Get defender's status effect modifiers

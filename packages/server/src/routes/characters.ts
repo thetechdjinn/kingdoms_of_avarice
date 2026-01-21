@@ -11,7 +11,7 @@ import { CharacterStats } from '@koa/shared';
 // Validation constants
 const MIN_NAME_LENGTH = 3;
 const MAX_NAME_LENGTH = 20;
-const NAME_PATTERN = /^[a-zA-Z][a-zA-Z0-9 ]*$/;
+const NAME_PATTERN = /^[a-zA-Z]+$/;
 
 export function setupCharacterRoutes(app: Express): void {
   // GET /api/characters - List player's characters
@@ -100,7 +100,7 @@ export function setupCharacterRoutes(app: Express): void {
       return;
     }
 
-    const { name, raceId, classId } = req.body;
+    const { name, lastName, raceId, classId, gender, hair, eyeColor } = req.body;
 
     // Validate name
     if (!name || typeof name !== 'string') {
@@ -120,9 +120,69 @@ export function setupCharacterRoutes(app: Express): void {
     if (!NAME_PATTERN.test(trimmedName)) {
       res.status(400).json({
         success: false,
-        message: 'Character name must start with a letter and contain only letters, numbers, and spaces',
+        message: 'Character name must contain only letters',
       });
       return;
+    }
+
+    // Validate lastName if provided
+    if (lastName !== undefined && lastName !== null && lastName !== '') {
+      if (typeof lastName !== 'string') {
+        res.status(400).json({ success: false, message: 'Invalid last name' });
+        return;
+      }
+      const trimmedLastName = lastName.trim();
+      if (trimmedLastName.length > 50) {
+        res.status(400).json({ success: false, message: 'Last name must be 50 characters or less' });
+        return;
+      }
+      if (trimmedLastName.length > 0 && !/^[a-zA-Z][a-zA-Z'-]*$/.test(trimmedLastName)) {
+        res.status(400).json({ success: false, message: 'Last name must start with a letter and contain only letters, hyphens, and apostrophes' });
+        return;
+      }
+    }
+
+    // Validate and trim gender if provided (case-insensitive)
+    const validGenders = ['male', 'female', 'neutral'];
+    let trimmedGender: string | undefined;
+    if (gender !== undefined && gender !== null && gender !== '') {
+      if (typeof gender !== 'string') {
+        res.status(400).json({ success: false, message: 'Invalid gender selection' });
+        return;
+      }
+      trimmedGender = gender.trim().toLowerCase();
+      if (trimmedGender && !validGenders.includes(trimmedGender)) {
+        res.status(400).json({ success: false, message: 'Invalid gender selection' });
+        return;
+      }
+    }
+
+    // Validate and trim hair if provided (max 100 chars per schema)
+    let trimmedHair: string | undefined;
+    if (hair !== undefined && hair !== null && hair !== '') {
+      if (typeof hair !== 'string') {
+        res.status(400).json({ success: false, message: 'Invalid hair selection' });
+        return;
+      }
+      trimmedHair = hair.trim();
+      if (trimmedHair.length > 100) {
+        res.status(400).json({ success: false, message: 'Hair description must be 100 characters or less' });
+        return;
+      }
+    }
+
+    // Validate and trim eyeColor if provided (max 50 chars per schema)
+    let trimmedEyeColor: string | undefined;
+    if (eyeColor !== undefined && eyeColor !== null && eyeColor !== '') {
+      if (typeof eyeColor !== 'string') {
+        res.status(400).json({ success: false, message: 'Invalid eye color selection' });
+        return;
+      }
+      trimmedEyeColor = eyeColor.trim();
+      if (trimmedEyeColor.length > 50) {
+        res.status(400).json({ success: false, message: 'Eye color description must be 50 characters or less' });
+        return;
+      }
     }
 
     // Validate raceId
@@ -209,9 +269,13 @@ export function setupCharacterRoutes(app: Express): void {
         const newCharacter = await characterRepo.createCharacter({
           playerId: payload.playerId,
           name: trimmedName,
+          lastName: lastName?.trim() || undefined,
           race: raceId,
           characterClass: classId,
           stats: finalStats,
+          gender: trimmedGender || 'neutral',
+          hair: trimmedHair || undefined,
+          eyeColor: trimmedEyeColor || undefined,
         }, client);
 
         await progressionRepo.createCharacterProgression(newCharacter.id, classId, client);

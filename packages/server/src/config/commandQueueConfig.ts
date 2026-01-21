@@ -17,7 +17,6 @@ import type {
   CombatQueueConfig,
   EncumbranceConfig,
   TerrainConfig,
-  WeaponSpeedConfig,
   DelaySettings,
   AliasConfig,
   InterruptTrigger,
@@ -67,7 +66,6 @@ function validateConfig(cfg: CommandQueueConfig): void {
     'encumbrance',
     'cooldowns',
     'terrain',
-    'weaponSpeed',
     'delaySettings',
     'aliases',
     'interruptTriggers',
@@ -79,6 +77,10 @@ function validateConfig(cfg: CommandQueueConfig): void {
   for (const section of requiredSections) {
     if (!(section in cfg)) {
       throw new Error(`Missing required configuration section: ${section}`);
+    }
+    const value = cfg[section as keyof CommandQueueConfig];
+    if (value === null || typeof value !== 'object' || Array.isArray(value)) {
+      throw new Error(`Configuration section '${section}' must be an object`);
     }
   }
 
@@ -107,6 +109,18 @@ function validateConfig(cfg: CommandQueueConfig): void {
       `Invalid encumbrance interpolation: '${cfg.encumbrance.interpolation}'. ` +
       `Must be one of: ${validInterpolations.join(', ')}`
     );
+  }
+
+  // Validate encumbrance curve is sorted by percent ascending
+  if (cfg.encumbrance.curve.length > 1) {
+    for (let i = 1; i < cfg.encumbrance.curve.length; i++) {
+      if (cfg.encumbrance.curve[i].percent <= cfg.encumbrance.curve[i - 1].percent) {
+        throw new Error(
+          `Encumbrance curve must be sorted by percent ascending. ` +
+          `Found ${cfg.encumbrance.curve[i - 1].percent} before ${cfg.encumbrance.curve[i].percent}`
+        );
+      }
+    }
   }
 
   // Validate actions have required fields
@@ -237,15 +251,6 @@ export function getTerrainMultiplier(terrainType: string): number {
 }
 
 /**
- * Get the weapon speed multiplier for a weapon type
- */
-export function getWeaponSpeedMultiplier(weaponType: string): number {
-  const cfg = getCommandQueueConfig();
-  const weapon = cfg.weaponSpeed.types[weaponType];
-  return weapon?.multiplier ?? cfg.weaponSpeed.default;
-}
-
-/**
  * Get the encumbrance delay multiplier using curve interpolation
  */
 export function getEncumbranceMultiplier(encumbrancePercent: number): number {
@@ -351,7 +356,6 @@ export {
   CombatQueueConfig,
   EncumbranceConfig,
   TerrainConfig,
-  WeaponSpeedConfig,
   DelaySettings,
   AliasConfig,
   InterruptTrigger,

@@ -6,6 +6,7 @@ export interface DbCharacter {
   id: number;
   player_id: number;
   name: string;
+  last_name: string | null;
   race: string;
   class: string;
   level: number;
@@ -34,9 +35,14 @@ export interface DbCharacter {
 export interface CreateCharacterInput {
   playerId: number;
   name: string;
+  lastName?: string;
   race: string;
   characterClass: string;
   stats: CharacterStats;
+  // Appearance fields
+  gender?: string;
+  hair?: string;
+  eyeColor?: string;
 }
 
 function calculateInitialHealth(constitution: number, characterClass: string): number {
@@ -74,15 +80,17 @@ export async function createCharacter(input: CreateCharacterInput, client?: pg.P
 
   const result = await query<DbCharacter>(
     `INSERT INTO characters (
-      player_id, name, race, class,
+      player_id, name, last_name, race, class,
       health, max_health, mana, max_mana,
       strength, intelligence, dexterity, constitution, wisdom, charisma,
-      current_room_id, gold, unspent_cp, cp_spent
-    ) VALUES ($1, $2, $3, $4, $5, $5, $6, $6, $7, $8, $9, $10, $11, $12, 1, 100, 100, '{}')
+      current_room_id, gold, unspent_cp, cp_spent,
+      gender, hair, eye_color
+    ) VALUES ($1, $2, $3, $4, $5, $6, $6, $7, $7, $8, $9, $10, $11, $12, $13, 1, 100, 100, '{}', $14, $15, $16)
     RETURNING *`,
     [
       input.playerId,
       input.name,
+      input.lastName || null,
       input.race,
       input.characterClass,
       maxHealth,
@@ -93,6 +101,9 @@ export async function createCharacter(input: CreateCharacterInput, client?: pg.P
       input.stats.constitution,
       input.stats.wisdom,
       input.stats.charisma,
+      input.gender || 'neutral',
+      input.hair || null,
+      input.eyeColor || null,
     ],
     client
   );
@@ -202,6 +213,7 @@ export function toSharedCharacter(dbChar: DbCharacter): Character {
   return {
     id: dbChar.id,
     name: dbChar.name,
+    lastName: dbChar.last_name || undefined,
     race: dbChar.race,
     class: dbChar.class,
     level: dbChar.level,
@@ -237,6 +249,7 @@ export async function toSharedCharacterWithDisplayNames(dbChar: DbCharacter): Pr
   return {
     id: dbChar.id,
     name: dbChar.name,
+    lastName: dbChar.last_name || undefined,
     race: raceDef?.display_name || dbChar.race,
     class: classDef?.display_name || dbChar.class,
     level: dbChar.level,

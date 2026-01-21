@@ -39,6 +39,9 @@ export interface StatusEffectDefinition {
   energyModifier?: number;     // % change to attack energy
   damageModifier?: number;     // % change to damage dealt
 
+  // Speed modifier (affects command queue delays)
+  speedModifier?: number;      // % change to action delays (-20 = 20% faster, +50 = 50% slower)
+
   // Periodic effects (DoT/HoT)
   tickDamage?: string;         // Dice notation for damage per tick (e.g., "1d4")
   tickHealing?: string;        // Dice notation for healing per tick
@@ -75,6 +78,7 @@ export interface EffectModifiers {
   defenseModifier: number;
   energyModifier: number;      // Percentage (e.g., 25 means +25%)
   damageModifier: number;      // Percentage (e.g., -10 means -10%)
+  speedModifier: number;       // Percentage (e.g., -20 means 20% faster, +50 means 50% slower)
   blocksRegen: boolean;
   blocksMovement: boolean;
   isBlind: boolean;

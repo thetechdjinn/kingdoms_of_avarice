@@ -569,15 +569,18 @@ async function showEnterGame(): Promise<void> {
     if (characters.length === 0) {
       characterList.innerHTML = '<p class="no-characters">No characters yet. Create one to begin!</p>';
     } else {
-      characterList.innerHTML = characters.map(char => `
+      characterList.innerHTML = characters.map(char => {
+        const fullName = char.lastName ? `${char.name} ${char.lastName}` : char.name;
+        return `
         <div class="character-card" data-id="${char.id}">
           <div class="character-card-content">
-            <div class="character-name">${escapeHtml(char.name)}</div>
+            <div class="character-name">${escapeHtml(fullName)}</div>
             <div class="character-info">Level ${char.level} ${escapeHtml(char.race)} ${escapeHtml(char.class)}</div>
           </div>
-          <button class="character-delete-btn" data-id="${char.id}" data-name="${escapeHtmlAttr(char.name)}" title="Delete character">X</button>
+          <button class="character-delete-btn" data-id="${char.id}" data-name="${escapeHtmlAttr(fullName)}" title="Delete character">X</button>
         </div>
-      `).join('');
+      `;
+      }).join('');
 
       // Add click handlers for selecting characters
       characterList.querySelectorAll('.character-card-content').forEach(content => {
@@ -619,8 +622,12 @@ async function showCharacterCreate(): Promise<void> {
 
   // Clear form
   (document.getElementById('char-name') as HTMLInputElement).value = '';
+  (document.getElementById('char-last-name') as HTMLInputElement).value = '';
   (document.getElementById('char-race') as HTMLSelectElement).value = '';
   (document.getElementById('char-class') as HTMLSelectElement).value = '';
+  (document.getElementById('char-gender') as HTMLSelectElement).value = 'neutral';
+  (document.getElementById('char-hair') as HTMLSelectElement).value = '';
+  (document.getElementById('char-eye-color') as HTMLSelectElement).value = 'brown eyes';
   document.getElementById('create-error')!.textContent = '';
   document.getElementById('race-description')!.textContent = '';
   document.getElementById('class-description')!.textContent = '';
@@ -871,8 +878,12 @@ async function handleCharacterCreate(event: Event): Promise<void> {
   event.preventDefault();
 
   const name = (document.getElementById('char-name') as HTMLInputElement).value.trim();
+  const lastName = (document.getElementById('char-last-name') as HTMLInputElement).value.trim();
   const raceId = (document.getElementById('char-race') as HTMLSelectElement).value;
   const classId = (document.getElementById('char-class') as HTMLSelectElement).value;
+  const gender = (document.getElementById('char-gender') as HTMLSelectElement).value;
+  const hair = (document.getElementById('char-hair') as HTMLSelectElement).value;
+  const eyeColor = (document.getElementById('char-eye-color') as HTMLSelectElement).value;
   const errorEl = document.getElementById('create-error')!;
 
   errorEl.textContent = '';
@@ -886,7 +897,7 @@ async function handleCharacterCreate(event: Event): Promise<void> {
     const response = await fetch('/api/characters', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, raceId, classId }),
+      body: JSON.stringify({ name, lastName: lastName || undefined, raceId, classId, gender, hair: hair || undefined, eyeColor }),
       credentials: 'include',
     });
 

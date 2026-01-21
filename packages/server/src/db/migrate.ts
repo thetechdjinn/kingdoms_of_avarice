@@ -173,6 +173,44 @@ export async function runMigrations(): Promise<void> {
         ALTER TABLE race_definitions ADD COLUMN IF NOT EXISTS dodge_bonus INTEGER DEFAULT 0
       `);
 
+      // Add terrain column to rooms (for movement speed modifiers)
+      await client.query(`
+        ALTER TABLE rooms ADD COLUMN IF NOT EXISTS terrain VARCHAR(20) DEFAULT 'indoor'
+      `);
+
+      // Add last_name column to characters (for existing databases)
+      await client.query(`
+        ALTER TABLE characters ADD COLUMN IF NOT EXISTS last_name VARCHAR(50)
+      `);
+
+      // Migrate item_instances location_id from players.id to characters.id
+      // For items with location_type 'player' or 'equipped', update location_id
+      // to point to the player's first character instead of the player account
+
+      // First, delete orphaned items belonging to players with no characters
+      // These items would become inaccessible after migration
+      await client.query(`
+        DELETE FROM item_instances ii
+        WHERE ii.location_type IN ('player', 'equipped')
+          AND EXISTS (SELECT 1 FROM players p WHERE p.id = ii.location_id)
+          AND NOT EXISTS (SELECT 1 FROM characters c WHERE c.player_id = ii.location_id)
+      `);
+
+      // Now migrate remaining items to the player's first character
+      await client.query(`
+        WITH player_first_char AS (
+          SELECT DISTINCT ON (player_id) player_id, id AS character_id
+          FROM characters
+          ORDER BY player_id, id
+        )
+        UPDATE item_instances ii
+        SET location_id = pfc.character_id
+        FROM player_first_char pfc
+        WHERE ii.location_type IN ('player', 'equipped')
+          AND ii.location_id = pfc.player_id
+          AND EXISTS (SELECT 1 FROM players p WHERE p.id = ii.location_id)
+      `);
+
       // Purge old classes and races to reseed with new MajorMUD data
       // Check if we need to reseed by looking for old-style class IDs
       const oldClassCheck = await client.query(`

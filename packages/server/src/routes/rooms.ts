@@ -12,6 +12,7 @@ export function setupRoomRoutes(app: Express): void {
         name: room.name,
         description: room.description,
         area: room.area,
+        terrain: room.terrain || 'indoor',
         exits: Object.fromEntries(room.exits),
       }));
       res.json({ success: true, rooms: roomsData });
@@ -43,6 +44,7 @@ export function setupRoomRoutes(app: Express): void {
           name: room.name,
           description: room.description,
           area: room.area,
+          terrain: room.terrain || 'indoor',
           exits: Object.fromEntries(room.exits),
         },
       });
@@ -55,14 +57,14 @@ export function setupRoomRoutes(app: Express): void {
   // Create room (requires Developer role)
   app.post('/api/rooms', requireDeveloper, async (req: Request, res: Response) => {
     try {
-      const { name, description, area } = req.body;
+      const { name, description, area, terrain } = req.body;
 
       if (!name) {
         res.status(400).json({ success: false, message: 'Name is required' });
         return;
       }
 
-      const room = await roomRepo.createRoom({ name, description, area });
+      const room = await roomRepo.createRoom({ name, description, area, terrain });
       res.json({
         success: true,
         room: {
@@ -70,6 +72,7 @@ export function setupRoomRoutes(app: Express): void {
           name: room.name,
           description: room.description,
           area: room.area,
+          terrain: room.terrain || 'indoor',
           exits: {},
         },
       });
@@ -88,8 +91,8 @@ export function setupRoomRoutes(app: Express): void {
         return;
       }
 
-      const { name, description, area } = req.body;
-      const room = await roomRepo.updateRoom(id, { name, description, area });
+      const { name, description, area, terrain } = req.body;
+      const room = await roomRepo.updateRoom(id, { name, description, area, terrain });
 
       if (!room) {
         res.status(404).json({ success: false, message: 'Room not found' });
@@ -104,6 +107,7 @@ export function setupRoomRoutes(app: Express): void {
           name: roomWithExits!.name,
           description: roomWithExits!.description,
           area: roomWithExits!.area,
+          terrain: roomWithExits!.terrain || 'indoor',
           exits: Object.fromEntries(roomWithExits!.exits),
         },
       });
@@ -176,6 +180,7 @@ export function setupRoomRoutes(app: Express): void {
           name: updatedRoom!.name,
           description: updatedRoom!.description,
           area: updatedRoom!.area,
+          terrain: updatedRoom!.terrain || 'indoor',
           exits: Object.fromEntries(updatedRoom!.exits),
         },
       });
@@ -217,6 +222,7 @@ export function setupRoomRoutes(app: Express): void {
           name: updatedRoom.name,
           description: updatedRoom.description,
           area: updatedRoom.area,
+          terrain: updatedRoom.terrain || 'indoor',
           exits: Object.fromEntries(updatedRoom.exits),
         } : null,
       });

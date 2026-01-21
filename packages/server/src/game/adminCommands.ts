@@ -641,6 +641,10 @@ async function handleGive(
   socket: AuthenticatedSocket
 ): Promise<CommandResponse> {
   // @give <template_id|name> [quantity] - Give item to yourself
+  if (!socket.characterId) {
+    return { type: MessageType.ERROR, message: 'No character selected.' };
+  }
+
   if (args.length < 1) {
     return { type: MessageType.ERROR, message: 'Usage: @give <template_id|name> [quantity]' };
   }
@@ -679,7 +683,7 @@ async function handleGive(
     await itemRepo.createInstance({
       template_id: template.id,
       location_type: ItemLocationType.PLAYER,
-      location_id: socket.playerId,
+      location_id: socket.characterId!,
       quantity,
       condition: ItemCondition.PRISTINE,
     });

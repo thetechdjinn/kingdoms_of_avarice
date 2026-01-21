@@ -9,6 +9,7 @@ interface Room {
   name: string;
   description: string | null;
   area: string | null;
+  terrain: string;
   exits: Record<string, number>;
 }
 
@@ -217,6 +218,7 @@ function selectRoom(id: number): void {
 
   (document.getElementById('room-name') as HTMLInputElement).value = room.name;
   (document.getElementById('room-area') as HTMLInputElement).value = room.area || '';
+  (document.getElementById('room-terrain') as HTMLSelectElement).value = room.terrain || 'indoor';
   (document.getElementById('room-description') as HTMLTextAreaElement).value = room.description || '';
 
   renderExits(room);
@@ -287,13 +289,14 @@ async function saveRoom(): Promise<void> {
 
   const name = (document.getElementById('room-name') as HTMLInputElement).value;
   const area = (document.getElementById('room-area') as HTMLInputElement).value;
+  const terrain = (document.getElementById('room-terrain') as HTMLSelectElement).value;
   const description = (document.getElementById('room-description') as HTMLTextAreaElement).value;
 
   try {
     const response = await fetch(`/api/rooms/${selectedRoomId}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, area, description }),
+      body: JSON.stringify({ name, area, terrain, description }),
     });
 
     const data = await response.json();
@@ -305,6 +308,7 @@ async function saveRoom(): Promise<void> {
       // Update form with saved values to ensure consistency
       (document.getElementById('room-name') as HTMLInputElement).value = data.room.name;
       (document.getElementById('room-area') as HTMLInputElement).value = data.room.area || '';
+      (document.getElementById('room-terrain') as HTMLSelectElement).value = data.room.terrain || 'indoor';
       (document.getElementById('room-description') as HTMLTextAreaElement).value = data.room.description || '';
       
       renderRoomList();
