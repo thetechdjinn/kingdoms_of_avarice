@@ -32,6 +32,7 @@ export enum ItemType {
   CONSUMABLE = 'consumable',
   KEY = 'key',
   LIGHT = 'light',
+  CURRENCY = 'currency',
   MISC = 'misc',
 }
 

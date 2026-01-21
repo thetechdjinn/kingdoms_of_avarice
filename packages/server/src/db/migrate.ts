@@ -225,6 +225,21 @@ export async function runMigrations(): Promise<void> {
         ALTER TABLE characters ADD COLUMN IF NOT EXISTS last_name VARCHAR(50)
       `);
 
+      // Add currency columns to characters table (for existing databases)
+      // Note: gold column already exists
+      await client.query(`
+        ALTER TABLE characters ADD COLUMN IF NOT EXISTS copper INTEGER DEFAULT 0
+      `);
+      await client.query(`
+        ALTER TABLE characters ADD COLUMN IF NOT EXISTS silver INTEGER DEFAULT 0
+      `);
+      await client.query(`
+        ALTER TABLE characters ADD COLUMN IF NOT EXISTS platinum INTEGER DEFAULT 0
+      `);
+      await client.query(`
+        ALTER TABLE characters ADD COLUMN IF NOT EXISTS runic INTEGER DEFAULT 0
+      `);
+
       // Migrate item_instances location_id from players.id to characters.id
       // For items with location_type 'player' or 'equipped', update location_id
       // to point to the player's first character instead of the player account
@@ -283,10 +298,36 @@ export async function runMigrations(): Promise<void> {
           ('combat_round_interval_ms', '4000'),
           ('combat_unarmed_speed', '4500'),
           ('combat_level_multipliers', '{"1": 0.6, "2": 0.75, "3": 0.9, "4": 1.0, "5": 1.15}'),
-          ('combat_level_accuracy_bonus', '{"1": 0, "2": 10, "3": 20, "4": 35, "5": 50}')
+          ('combat_level_accuracy_bonus', '{"1": 0, "2": 10, "3": 20, "4": 35, "5": 50}'),
+          ('currency_runic_name', '"runic"'),
+          ('currency_copper_per_enc', '25'),
+          ('currency_silver_per_enc', '25'),
+          ('currency_gold_per_enc', '15'),
+          ('currency_platinum_per_enc', '10'),
+          ('currency_runic_per_enc', '4')
         ON CONFLICT (key) DO NOTHING
       `);
       // NOTE: Never update existing game_settings values - respect user configuration
+
+      // Seed currency item templates (required for drop/get currency commands)
+      // Only insert if they don't already exist
+      const currencyTemplates = [
+        { name: 'copper coins', short_desc: 'copper farthings', long_desc: "The copper farthings look like they've been around forever.", keywords: ['copper', 'coins', 'farthings', 'money', 'currency'], weight: 4, base_value: 1 },
+        { name: 'silver coins', short_desc: 'silver nobles', long_desc: 'The silver nobles glitter with use.', keywords: ['silver', 'coins', 'nobles', 'money', 'currency'], weight: 4, base_value: 10 },
+        { name: 'gold coins', short_desc: 'gold crowns', long_desc: 'The gold crowns are rustic and used.', keywords: ['gold', 'coins', 'crowns', 'money', 'currency'], weight: 7, base_value: 100 },
+        { name: 'platinum coins', short_desc: 'platinum pieces', long_desc: 'The platinum pieces shine as though they were new.', keywords: ['platinum', 'coins', 'pieces', 'money', 'currency'], weight: 10, base_value: 1000 },
+        { name: 'runic coins', short_desc: 'runic coins', long_desc: 'The runic coins glitter like nothing you have ever seen before.', keywords: ['runic', 'coins', 'money', 'currency'], weight: 25, base_value: 100000 },
+      ];
+      for (const ct of currencyTemplates) {
+        const exists = await client.query('SELECT 1 FROM item_templates WHERE LOWER(name) = LOWER($1)', [ct.name]);
+        if (exists.rows.length === 0) {
+          await client.query(
+            `INSERT INTO item_templates (name, short_desc, long_desc, keywords, weight, size, base_value, item_type, flags, max_stack)
+             VALUES ($1, $2, $3, $4, $5, 1, $6, 'currency', '{"takeable": true, "stackable": true}', 9999999)`,
+            [ct.name, ct.short_desc, ct.long_desc, ct.keywords, ct.weight, ct.base_value]
+          );
+        }
+      }
     });
 
     console.log('Database migrations completed successfully');

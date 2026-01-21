@@ -38,6 +38,11 @@ interface DbCharacter {
   charisma: number;
   current_room_id: number;
   gold: number;
+  // Currency fields (nullable for characters created before migration)
+  copper: number | null;
+  silver: number | null;
+  platinum: number | null;
+  runic: number | null;
 }
 
 let currentUser: AuthInfo | null = null;

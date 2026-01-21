@@ -1,6 +1,6 @@
 import pg from 'pg';
 import { query } from '../index.js';
-import { Character, CharacterStats, Gender } from '@koa/shared';
+import { Character, CharacterStats, Gender, Currency } from '@koa/shared';
 
 export interface DbCharacter {
   id: number;
@@ -23,6 +23,11 @@ export interface DbCharacter {
   charisma: number;
   current_room_id: number;
   gold: number;
+  // Currency fields (nullable for characters created before migration)
+  copper: number | null;
+  silver: number | null;
+  platinum: number | null;
+  runic: number | null;
   unspent_cp: number;
   cp_spent: Record<string, number>;
   // Appearance fields
@@ -158,6 +163,7 @@ export async function updateCharacterRoom(characterId: number, roomId: number): 
 // Fields that can be updated via updateCharacterStats
 type UpdatableCharacterFields =
   | 'health' | 'mana' | 'experience' | 'level' | 'gold'
+  | 'copper' | 'silver' | 'platinum' | 'runic'
   | 'strength' | 'intelligence' | 'dexterity' | 'constitution' | 'wisdom' | 'charisma'
   | 'unspent_cp' | 'cp_spent' | 'max_health' | 'max_mana';
 
@@ -230,7 +236,13 @@ export function toSharedCharacter(dbChar: DbCharacter): Character {
       wisdom: dbChar.wisdom,
       charisma: dbChar.charisma,
     },
-    gold: dbChar.gold,
+    currency: {
+      copper: dbChar.copper ?? 0,
+      silver: dbChar.silver ?? 0,
+      gold: dbChar.gold ?? 0,
+      platinum: dbChar.platinum ?? 0,
+      runic: dbChar.runic ?? 0,
+    },
     gender: (dbChar.gender as Gender) || 'neutral',
     hair: dbChar.hair || undefined,
     eyeColor: dbChar.eye_color || undefined,
@@ -266,7 +278,13 @@ export async function toSharedCharacterWithDisplayNames(dbChar: DbCharacter): Pr
       wisdom: dbChar.wisdom,
       charisma: dbChar.charisma,
     },
-    gold: dbChar.gold,
+    currency: {
+      copper: dbChar.copper ?? 0,
+      silver: dbChar.silver ?? 0,
+      gold: dbChar.gold ?? 0,
+      platinum: dbChar.platinum ?? 0,
+      runic: dbChar.runic ?? 0,
+    },
     gender: (dbChar.gender as Gender) || 'neutral',
     hair: dbChar.hair || undefined,
     eyeColor: dbChar.eye_color || undefined,
@@ -295,6 +313,11 @@ export interface UpdateCharacterAdminInput {
   charisma?: number;
   current_room_id?: number;
   gold?: number;
+  // Currency fields
+  copper?: number;
+  silver?: number;
+  platinum?: number;
+  runic?: number;
   // Character Points (CP) system
   unspent_cp?: number;
   cp_spent?: Record<string, number>;
@@ -330,6 +353,10 @@ export async function updateCharacterAdmin(
     charisma: 'charisma',
     current_room_id: 'current_room_id',
     gold: 'gold',
+    copper: 'copper',
+    silver: 'silver',
+    platinum: 'platinum',
+    runic: 'runic',
     unspent_cp: 'unspent_cp',
     cp_spent: 'cp_spent',
   };

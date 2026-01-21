@@ -440,6 +440,65 @@ VALUES
 );
 
 -- ============================================================================
+-- CURRENCY ITEMS
+-- ============================================================================
+
+-- Currency item templates (used when dropping currency in rooms)
+-- Weight values: 25 copper/silver = 1 enc, 15 gold = 1 enc, 10 platinum = 1 enc, 4 runic = 1 enc
+INSERT INTO item_templates (name, short_desc, long_desc, keywords, weight, size, base_value, item_type, flags, max_stack)
+VALUES
+(
+    'copper coins',
+    'copper farthings',
+    'The copper farthings look like they''ve been around forever.',
+    ARRAY['copper', 'coins', 'farthings', 'money', 'currency'],
+    4, 1, 1,
+    'currency',
+    '{"takeable": true, "stackable": true}',
+    9999999
+),
+(
+    'silver coins',
+    'silver nobles',
+    'The silver nobles glitter with use.',
+    ARRAY['silver', 'coins', 'nobles', 'money', 'currency'],
+    4, 1, 10,
+    'currency',
+    '{"takeable": true, "stackable": true}',
+    9999999
+),
+(
+    'gold coins',
+    'gold crowns',
+    'The gold crowns are rustic and used.',
+    ARRAY['gold', 'coins', 'crowns', 'money', 'currency'],
+    7, 1, 100,
+    'currency',
+    '{"takeable": true, "stackable": true}',
+    9999999
+),
+(
+    'platinum coins',
+    'platinum pieces',
+    'The platinum pieces shine as though they were new.',
+    ARRAY['platinum', 'coins', 'pieces', 'money', 'currency'],
+    10, 1, 1000,
+    'currency',
+    '{"takeable": true, "stackable": true}',
+    9999999
+),
+(
+    'runic coins',
+    'runic coins',
+    'The runic coins glitter like nothing you have ever seen before.',
+    ARRAY['runic', 'coins', 'money', 'currency'],
+    25, 1, 100000,
+    'currency',
+    '{"takeable": true, "stackable": true}',
+    9999999
+);
+
+-- ============================================================================
 -- CRAFTING RECIPES (simplified - no dynamic template lookups)
 -- ============================================================================
 

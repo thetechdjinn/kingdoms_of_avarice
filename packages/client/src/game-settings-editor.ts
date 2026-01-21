@@ -113,6 +113,14 @@ function populateSettingsForm(): void {
     (settings.combat_level_multipliers as Record<string, number>) ?? { '1': 0.6, '2': 0.75, '3': 0.9, '4': 1.0, '5': 1.15 });
   renderKeyValueEditor('combat_level_accuracy_bonus',
     (settings.combat_level_accuracy_bonus as Record<string, number>) ?? { '1': 0, '2': 10, '3': 20, '4': 35, '5': 50 });
+
+  // Currency settings
+  setInputValue('currency_runic_name', settings.currency_runic_name ?? 'runic');
+  setInputValue('currency_copper_per_enc', settings.currency_copper_per_enc ?? 25);
+  setInputValue('currency_silver_per_enc', settings.currency_silver_per_enc ?? 25);
+  setInputValue('currency_gold_per_enc', settings.currency_gold_per_enc ?? 15);
+  setInputValue('currency_platinum_per_enc', settings.currency_platinum_per_enc ?? 10);
+  setInputValue('currency_runic_per_enc', settings.currency_runic_per_enc ?? 4);
 }
 
 function setInputValue(key: string, value: unknown): void {
@@ -235,6 +243,15 @@ async function saveSetting(key: string): Promise<void> {
     const select = document.getElementById(`setting-${key}`) as HTMLSelectElement;
     if (!select) return;
     value = select.value;
+  } else if (key === 'currency_runic_name') {
+    // String field
+    const input = document.getElementById(`setting-${key}`) as HTMLInputElement;
+    if (!input) return;
+    value = input.value.trim();
+    if (!value) {
+      showSettingMessage(key, 'Name cannot be empty', 'error');
+      return;
+    }
   } else {
     // Numeric fields
     const input = document.getElementById(`setting-${key}`) as HTMLInputElement;

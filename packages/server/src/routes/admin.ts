@@ -54,10 +54,38 @@ export function setupAdminRoutes(app: Express): void {
         res.status(400).json({ success: false, message: 'IP access mode must be "allowlist" or "blocklist"' });
         return;
       }
+    } else if (key === 'currency_runic_name') {
+      if (typeof value !== 'string') {
+        res.status(400).json({ success: false, message: 'Runic name must be a string' });
+        return;
+      }
+      const trimmedName = value.trim();
+      if (trimmedName.length === 0) {
+        res.status(400).json({ success: false, message: 'Runic name cannot be empty' });
+        return;
+      }
+      if (trimmedName.length > 20) {
+        res.status(400).json({ success: false, message: 'Runic name must be 20 characters or less' });
+        return;
+      }
+      // Only allow letters, spaces, and hyphens
+      if (!/^[a-zA-Z][a-zA-Z\s-]*$/.test(trimmedName)) {
+        res.status(400).json({ success: false, message: 'Runic name must start with a letter and contain only letters, spaces, and hyphens' });
+        return;
+      }
     }
 
     try {
       await settingsRepo.setSetting(key, value);
+
+      // Clear relevant caches when settings are updated
+      if (key.startsWith('combat_')) {
+        settingsRepo.clearCombatSettingsCache();
+      }
+      if (key.startsWith('currency_') && key.endsWith('_per_enc')) {
+        settingsRepo.clearCurrencyEncumbranceCache();
+      }
+
       res.json({ success: true, message: 'Setting updated' });
     } catch (error) {
       console.error('Failed to update setting:', error);
