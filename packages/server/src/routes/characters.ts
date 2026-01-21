@@ -11,7 +11,7 @@ import { CharacterStats } from '@koa/shared';
 // Validation constants
 const MIN_NAME_LENGTH = 3;
 const MAX_NAME_LENGTH = 20;
-const NAME_PATTERN = /^[a-zA-Z][a-zA-Z0-9 ]*$/;
+const NAME_PATTERN = /^[a-zA-Z]+$/;
 
 export function setupCharacterRoutes(app: Express): void {
   // GET /api/characters - List player's characters
@@ -120,7 +120,7 @@ export function setupCharacterRoutes(app: Express): void {
     if (!NAME_PATTERN.test(trimmedName)) {
       res.status(400).json({
         success: false,
-        message: 'Character name must start with a letter and contain only letters, numbers, and spaces',
+        message: 'Character name must contain only letters',
       });
       return;
     }
@@ -142,26 +142,44 @@ export function setupCharacterRoutes(app: Express): void {
       }
     }
 
-    // Validate gender if provided
+    // Validate and trim gender if provided
     const validGenders = ['male', 'female', 'neutral'];
+    let trimmedGender: string | undefined;
     if (gender !== undefined && gender !== null && gender !== '') {
-      if (typeof gender !== 'string' || !validGenders.includes(gender)) {
+      if (typeof gender !== 'string') {
+        res.status(400).json({ success: false, message: 'Invalid gender selection' });
+        return;
+      }
+      trimmedGender = gender.trim();
+      if (trimmedGender && !validGenders.includes(trimmedGender)) {
         res.status(400).json({ success: false, message: 'Invalid gender selection' });
         return;
       }
     }
 
-    // Validate hair if provided (max 100 chars per schema)
+    // Validate and trim hair if provided (max 100 chars per schema)
+    let trimmedHair: string | undefined;
     if (hair !== undefined && hair !== null && hair !== '') {
-      if (typeof hair !== 'string' || hair.length > 100) {
+      if (typeof hair !== 'string') {
+        res.status(400).json({ success: false, message: 'Invalid hair selection' });
+        return;
+      }
+      trimmedHair = hair.trim();
+      if (trimmedHair.length > 100) {
         res.status(400).json({ success: false, message: 'Invalid hair selection' });
         return;
       }
     }
 
-    // Validate eyeColor if provided (max 50 chars per schema)
+    // Validate and trim eyeColor if provided (max 50 chars per schema)
+    let trimmedEyeColor: string | undefined;
     if (eyeColor !== undefined && eyeColor !== null && eyeColor !== '') {
-      if (typeof eyeColor !== 'string' || eyeColor.length > 50) {
+      if (typeof eyeColor !== 'string') {
+        res.status(400).json({ success: false, message: 'Invalid eye color selection' });
+        return;
+      }
+      trimmedEyeColor = eyeColor.trim();
+      if (trimmedEyeColor.length > 50) {
         res.status(400).json({ success: false, message: 'Invalid eye color selection' });
         return;
       }
@@ -255,9 +273,9 @@ export function setupCharacterRoutes(app: Express): void {
           race: raceId,
           characterClass: classId,
           stats: finalStats,
-          gender: gender || 'neutral',
-          hair: hair || undefined,
-          eyeColor: eyeColor || undefined,
+          gender: trimmedGender || 'neutral',
+          hair: trimmedHair || undefined,
+          eyeColor: trimmedEyeColor || undefined,
         }, client);
 
         await progressionRepo.createCharacterProgression(newCharacter.id, classId, client);

@@ -186,6 +186,17 @@ export async function runMigrations(): Promise<void> {
       // Migrate item_instances location_id from players.id to characters.id
       // For items with location_type 'player' or 'equipped', update location_id
       // to point to the player's first character instead of the player account
+
+      // First, delete orphaned items belonging to players with no characters
+      // These items would become inaccessible after migration
+      await client.query(`
+        DELETE FROM item_instances ii
+        WHERE ii.location_type IN ('player', 'equipped')
+          AND EXISTS (SELECT 1 FROM players p WHERE p.id = ii.location_id)
+          AND NOT EXISTS (SELECT 1 FROM characters c WHERE c.player_id = ii.location_id)
+      `);
+
+      // Now migrate remaining items to the player's first character
       await client.query(`
         WITH player_first_char AS (
           SELECT DISTINCT ON (player_id) player_id, id AS character_id
