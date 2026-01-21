@@ -1,6 +1,8 @@
 import { MessageType, GameMessage, Role, hasAnyRole, StatusEffectCategory } from '@koa/shared';
 import { getActiveEffectsDisplay, formatDuration } from './statusEffects.js';
 import { getDelayModifierDescriptions, getStatusEffectDelayMultiplier } from './delayModifiers.js';
+import { getPlayerQueueStatus } from './tickProcessor.js';
+import { getRemainingCooldown, formatAbilityName } from './cooldownTracker.js';
 import { GameWorld } from './world.js';
 import { AuthenticatedSocket, broadcastToRoom } from './socket.js';
 import { colors } from '../utils/colors.js';
@@ -252,6 +254,16 @@ export async function processCommand(
   // Status/character sheet command (st, sta, stat, statu, status)
   if ('status'.startsWith(command) && command.length >= 2) {
     return handleStatus(socket);
+  }
+
+  // Queue status command - shows queued commands and current action
+  if (command === 'queue' || command === 'que' || command === 'q') {
+    return handleQueueStatus(socket);
+  }
+
+  // Cooldowns command - shows active ability cooldowns
+  if (command === 'cooldowns' || command === 'cooldown' || command === 'cd') {
+    return handleCooldowns(socket);
   }
 
   // Check for spell mnemonics (e.g., 'mmis goblin' for Magic Missile)
@@ -631,6 +643,8 @@ function handleHelp(userRoles: Role[], category?: string): CommandResponse {
     '',
     colors.boldCyan('  Information & System:'),
     `    ${colors.white('status')} (st)            - View your character sheet`,
+    `    ${colors.white('queue')} (q)              - Show queued commands`,
+    `    ${colors.white('cooldowns')} (cd)         - Show ability cooldowns`,
     `    ${colors.white('rest')} (re)             - Rest to regenerate faster`,
     `    ${colors.white('who')}                   - See who is online`,
     `    ${colors.white('x')}                     - Meditate and leave the realm`,
@@ -901,6 +915,93 @@ async function handleStatus(socket: AuthenticatedSocket): Promise<CommandRespons
         : colors.red(`+${speedPercent}% action delay`);
       lines.push(`  ${colors.cyan('Speed:')} ${speedText}`);
     }
+  }
+
+  return { type: MessageType.OUTPUT, message: lines.join('\r\n') };
+}
+
+/**
+ * Handle queue status command - shows queued commands and action timing
+ */
+function handleQueueStatus(socket: AuthenticatedSocket): CommandResponse {
+  const queueStatus = getPlayerQueueStatus(socket);
+  const lines: string[] = [];
+
+  lines.push(colors.boldCyan('=== Command Queue ==='));
+  lines.push('');
+
+  // Current action
+  if (queueStatus.currentAction) {
+    const timeUntilComplete = Math.max(0, (socket.queueState.currentAction?.completesAt ?? 0) - Date.now());
+    lines.push(colors.yellow('Current Action:'));
+    lines.push(`  ${colors.white(queueStatus.currentAction)} ${colors.gray(`(${formatDuration(timeUntilComplete)} remaining)`)}`);
+    lines.push('');
+  }
+
+  // Time until ready
+  if (queueStatus.timeUntilReady > 0) {
+    lines.push(`${colors.cyan('Ready in:')} ${formatDuration(queueStatus.timeUntilReady)}`);
+  } else if (!queueStatus.currentAction) {
+    lines.push(`${colors.green('Status:')} Ready for commands`);
+  }
+
+  // Queued commands
+  if (queueStatus.queueLength > 0) {
+    lines.push('');
+    lines.push(colors.yellow(`Queued Commands (${queueStatus.queueLength}):`));
+    const queue = socket.queueState.commandQueue;
+    const maxToShow = Math.min(queue.length, 5);
+    for (let i = 0; i < maxToShow; i++) {
+      lines.push(`  ${i + 1}. ${colors.white(queue[i])}`);
+    }
+    if (queue.length > 5) {
+      lines.push(colors.gray(`  ... and ${queue.length - 5} more`));
+    }
+  } else if (!queueStatus.currentAction) {
+    lines.push('');
+    lines.push(colors.gray('No commands queued.'));
+  }
+
+  return { type: MessageType.OUTPUT, message: lines.join('\r\n') };
+}
+
+/**
+ * Handle cooldowns command - shows active ability cooldowns
+ */
+function handleCooldowns(socket: AuthenticatedSocket): CommandResponse {
+  const lines: string[] = [];
+  const cooldowns = socket.queueState.cooldowns;
+  const now = Date.now();
+
+  lines.push(colors.boldCyan('=== Active Cooldowns ==='));
+  lines.push('');
+
+  // Filter to only active cooldowns and sort by remaining time
+  const activeCooldowns: Array<{ name: string; remaining: number }> = [];
+  for (const [name, cooldown] of Object.entries(cooldowns)) {
+    const remaining = cooldown.readyAt - now;
+    if (remaining > 0) {
+      activeCooldowns.push({ name, remaining });
+    }
+  }
+
+  if (activeCooldowns.length === 0) {
+    lines.push(colors.green('All abilities are ready.'));
+    return { type: MessageType.OUTPUT, message: lines.join('\r\n') };
+  }
+
+  // Sort by remaining time (shortest first)
+  activeCooldowns.sort((a, b) => a.remaining - b.remaining);
+
+  for (const cd of activeCooldowns) {
+    // Skip shared cooldown groups (they show as individual abilities)
+    if (cd.name.includes('_group') || cd.name === 'meleeSpecial') {
+      continue;
+    }
+
+    const timeText = formatDuration(cd.remaining);
+    const abilityName = formatAbilityName(cd.name);
+    lines.push(`  ${colors.yellow(abilityName)}: ${colors.white(timeText)} remaining`);
   }
 
   return { type: MessageType.OUTPUT, message: lines.join('\r\n') };

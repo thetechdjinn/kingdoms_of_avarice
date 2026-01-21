@@ -14,10 +14,14 @@
     "build:shared": "npm run build --workspace=@koa/shared",
     "build:client": "npm run build --workspace=@koa/client",
     "build:server": "npm run build --workspace=@koa/server",
-    "migrate": "npm run migrate --workspace=@koa/server"
+    "migrate": "npm run migrate --workspace=@koa/server",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
   },
   "devDependencies": {
     "concurrently": "^8.2.2",
-    "typescript": "^5.3.3"
+    "typescript": "^5.3.3",
+    "vitest": "^4.0.17"
   }
 }
