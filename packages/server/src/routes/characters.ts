@@ -142,7 +142,7 @@ export function setupCharacterRoutes(app: Express): void {
       }
     }
 
-    // Validate and trim gender if provided
+    // Validate and trim gender if provided (case-insensitive)
     const validGenders = ['male', 'female', 'neutral'];
     let trimmedGender: string | undefined;
     if (gender !== undefined && gender !== null && gender !== '') {
@@ -150,7 +150,7 @@ export function setupCharacterRoutes(app: Express): void {
         res.status(400).json({ success: false, message: 'Invalid gender selection' });
         return;
       }
-      trimmedGender = gender.trim();
+      trimmedGender = gender.trim().toLowerCase();
       if (trimmedGender && !validGenders.includes(trimmedGender)) {
         res.status(400).json({ success: false, message: 'Invalid gender selection' });
         return;
@@ -166,7 +166,7 @@ export function setupCharacterRoutes(app: Express): void {
       }
       trimmedHair = hair.trim();
       if (trimmedHair.length > 100) {
-        res.status(400).json({ success: false, message: 'Invalid hair selection' });
+        res.status(400).json({ success: false, message: 'Hair description must be 100 characters or less' });
         return;
       }
     }
@@ -180,7 +180,7 @@ export function setupCharacterRoutes(app: Express): void {
       }
       trimmedEyeColor = eyeColor.trim();
       if (trimmedEyeColor.length > 50) {
-        res.status(400).json({ success: false, message: 'Invalid eye color selection' });
+        res.status(400).json({ success: false, message: 'Eye color description must be 50 characters or less' });
         return;
       }
     }
