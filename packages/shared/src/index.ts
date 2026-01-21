@@ -146,3 +146,6 @@ export * from "./statusEffects.js";
 
 // Re-export character points system
 export * from "./characterPoints.js";
+
+// Re-export command queue system
+export * from "./commandQueue.js";
