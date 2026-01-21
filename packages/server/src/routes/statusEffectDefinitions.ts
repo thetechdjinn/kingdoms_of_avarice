@@ -46,6 +46,23 @@ function validateDefinitionInput(def: Record<string, unknown>): string | null {
     }
   }
 
+  // Validate range ordering (min <= max) when both are provided
+  const tickDamageMin = def.tickDamageMin as number | undefined;
+  const tickDamageMax = def.tickDamageMax as number | undefined;
+  const tickHealingMin = def.tickHealingMin as number | undefined;
+  const tickHealingMax = def.tickHealingMax as number | undefined;
+
+  if (tickDamageMin !== undefined && tickDamageMax !== undefined &&
+      tickDamageMin !== null && tickDamageMax !== null &&
+      tickDamageMin > tickDamageMax) {
+    return 'tickDamageMin must be less than or equal to tickDamageMax';
+  }
+  if (tickHealingMin !== undefined && tickHealingMax !== undefined &&
+      tickHealingMin !== null && tickHealingMax !== null &&
+      tickHealingMin > tickHealingMax) {
+    return 'tickHealingMin must be less than or equal to tickHealingMax';
+  }
+
   // Optional string fields - validate type if provided
   const stringFields = ['description', 'tickMessage', 'wearOffMessage'];
   for (const field of stringFields) {
@@ -215,6 +232,20 @@ export function setupStatusEffectDefinitionRoutes(app: Express): void {
           res.status(400).json({ success: false, message: `${field} must be a number` });
           return;
         }
+      }
+
+      // Validate range ordering (min <= max) when both are provided
+      if (tickDamageMin !== undefined && tickDamageMax !== undefined &&
+          tickDamageMin !== null && tickDamageMax !== null &&
+          tickDamageMin > tickDamageMax) {
+        res.status(400).json({ success: false, message: 'tickDamageMin must be less than or equal to tickDamageMax' });
+        return;
+      }
+      if (tickHealingMin !== undefined && tickHealingMax !== undefined &&
+          tickHealingMin !== null && tickHealingMax !== null &&
+          tickHealingMin > tickHealingMax) {
+        res.status(400).json({ success: false, message: 'tickHealingMin must be less than or equal to tickHealingMax' });
+        return;
       }
 
       // Validate string fields if provided

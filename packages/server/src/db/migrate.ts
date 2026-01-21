@@ -196,15 +196,19 @@ export async function runMigrations(): Promise<void> {
           ADD COLUMN IF NOT EXISTS tick_healing_min INTEGER,
           ADD COLUMN IF NOT EXISTS tick_healing_max INTEGER
         `);
-        // Convert existing dice notation to ranges (e.g., '1d4' -> min=1, max=4)
+        // Convert existing dice notation to ranges (e.g., '2d6' -> min=2, max=12)
+        // Dice notation 'NdM' means roll N dice with M sides each
+        // min = N (all dice roll 1), max = N * M (all dice roll max)
         await client.query(`
           UPDATE status_effect_definitions
-          SET tick_damage_min = 1, tick_damage_max = NULLIF(SPLIT_PART(tick_damage, 'd', 2), '')::INTEGER
+          SET tick_damage_min = NULLIF(SPLIT_PART(tick_damage, 'd', 1), '')::INTEGER,
+              tick_damage_max = NULLIF(SPLIT_PART(tick_damage, 'd', 1), '')::INTEGER * NULLIF(SPLIT_PART(tick_damage, 'd', 2), '')::INTEGER
           WHERE tick_damage IS NOT NULL AND tick_damage LIKE '%d%'
         `);
         await client.query(`
           UPDATE status_effect_definitions
-          SET tick_healing_min = 1, tick_healing_max = NULLIF(SPLIT_PART(tick_healing, 'd', 2), '')::INTEGER
+          SET tick_healing_min = NULLIF(SPLIT_PART(tick_healing, 'd', 1), '')::INTEGER,
+              tick_healing_max = NULLIF(SPLIT_PART(tick_healing, 'd', 1), '')::INTEGER * NULLIF(SPLIT_PART(tick_healing, 'd', 2), '')::INTEGER
           WHERE tick_healing IS NOT NULL AND tick_healing LIKE '%d%'
         `);
         // Drop old columns
