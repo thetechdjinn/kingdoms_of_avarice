@@ -18,6 +18,22 @@ import { parseDiceString } from './combatCalculations.js';
 import { AuthenticatedSocket } from './socket.js';
 import { colors } from '../utils/colors.js';
 import { MessageType } from '@koa/shared';
+import { handleInterruptTrigger } from './interruptHandler.js';
+
+// ============================================================================
+// Effect-to-Interrupt Mapping
+// ============================================================================
+
+/**
+ * Maps effect IDs to interrupt trigger types.
+ * When these effects are applied, they trigger the corresponding interrupt.
+ */
+const EFFECT_INTERRUPT_TRIGGERS: Record<string, string> = {
+  stunned: 'stun',
+  silenced: 'silence',
+  knockdown: 'knockdown',
+  // Note: 'bash' is triggered directly by the bash ability, not by an effect
+};
 
 // ============================================================================
 // Effect Registry - Loaded from database with fallback to defaults
@@ -305,6 +321,12 @@ export async function applyEffect(
   // Update legacy isPoisoned flag for regen system compatibility
   if (effectId === 'poisoned') {
     socket.regenState.isPoisoned = true;
+  }
+
+  // Check if this effect should trigger an interrupt
+  const interruptTrigger = EFFECT_INTERRUPT_TRIGGERS[effectId];
+  if (interruptTrigger) {
+    handleInterruptTrigger(socket, interruptTrigger);
   }
 
   const stackInfo = effect.stacks > 1 ? ` (${effect.stacks} stacks)` : '';
