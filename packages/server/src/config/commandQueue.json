@@ -20,12 +20,11 @@
     "cast": {
       "baseDelay": 0,
       "modifierCategories": [],
-      "canInterrupt": false,
+      "canInterrupt": true,
       "clearQueueOnFail": false,
       "combatBehavior": {
         "onlyInCombat": false,
-        "usesCombatRound": false,
-        "interruptibleByDamage": true
+        "usesCombatRound": false
       }
     },
     "look": {
@@ -215,11 +214,6 @@
     "da": "drop all"
   },
   "interruptTriggers": {
-    "takeDamage": {
-      "interrupts": ["cast"],
-      "chance": 0.75,
-      "message": "Your concentration is broken!"
-    },
     "bash": {
       "interrupts": ["cast", "attack"],
       "chance": 1.0,
@@ -248,10 +242,6 @@
     }
   },
   "interruptDelayBehavior": {
-    "takeDamage": {
-      "delayMode": "partial",
-      "delayPercent": 0.5
-    },
     "bash": {
       "delayMode": "fixed",
       "delayMs": 1500

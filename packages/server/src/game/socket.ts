@@ -21,6 +21,7 @@ import { checkWebSocketIp } from '../middleware/ipAccess.js';
 import { startGameLoop, stopGameLoop } from './gameLoop.js';
 import { initializeTickProcessor, startQueuedAction, executeQueuedCommand, handlePlayerInput } from './tickProcessor.js';
 import { getCommandQueueConfig } from '../config/commandQueueConfig.js';
+import { initializeInterruptHandler } from './interruptHandler.js';
 
 // Combat state tracked per-player in memory
 interface CombatState {
@@ -119,6 +120,9 @@ export async function initializeGameWorld(): Promise<void> {
 
     // Initialize the tick processor with references
     initializeTickProcessor(gameWorld, connectedPlayers, sendMessage, sendVitals);
+
+    // Initialize the interrupt handler
+    initializeInterruptHandler(sendMessage);
 
     // Start the game loop for command queue processing
     startGameLoop(connectedPlayers, startQueuedAction, executeQueuedCommand);
