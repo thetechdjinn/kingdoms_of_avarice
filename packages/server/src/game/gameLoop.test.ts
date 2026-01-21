@@ -381,6 +381,7 @@ describe('gameLoop', () => {
       await vi.advanceTimersByTimeAsync(100);
 
       expect(startProcessor).toHaveBeenCalledTimes(2);
+      expect(executeProcessor).not.toHaveBeenCalled();
       expect(player1.queueState.commandQueue).toEqual([]);
       expect(player2.queueState.commandQueue).toEqual([]);
     });

@@ -180,6 +180,20 @@ describe('cooldownTracker', () => {
       expect(player.queueState.cooldowns.heal).toEqual({ readyAt: 15000 });
     });
 
+    it('does not start cooldown in "complete" mode when startOnComplete is false', () => {
+      const player = createMockPlayer();
+      vi.mocked(getCooldownConfig).mockReturnValue({
+        cooldownMs: 5000,
+        sharedCooldownGroup: null,
+        startOnUse: true,
+        startOnComplete: false,
+      });
+
+      startCooldown(player, 'bash', 'complete');
+
+      expect(player.queueState.cooldowns.bash).toBeUndefined();
+    });
+
     it('triggers shared cooldown group', () => {
       const player = createMockPlayer();
       vi.mocked(getCooldownConfig).mockImplementation((ability: string) => {
