@@ -17,9 +17,11 @@ CREATE TABLE IF NOT EXISTS status_effect_definitions (
     energy_modifier INTEGER DEFAULT 0,      -- Percentage
     damage_modifier INTEGER DEFAULT 0,      -- Percentage
 
-    -- Periodic effects (DoT/HoT)
-    tick_damage VARCHAR(20),                -- Dice notation e.g., '1d4'
-    tick_healing VARCHAR(20),
+    -- Periodic effects (DoT/HoT) - damage/healing ranges
+    tick_damage_min INTEGER,                -- Minimum damage per tick
+    tick_damage_max INTEGER,                -- Maximum damage per tick
+    tick_healing_min INTEGER,               -- Minimum healing per tick
+    tick_healing_max INTEGER,               -- Maximum healing per tick
 
     -- Messages
     tick_message VARCHAR(255),              -- Custom tick message

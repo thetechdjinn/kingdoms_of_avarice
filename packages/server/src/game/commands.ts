@@ -1,5 +1,6 @@
 import { MessageType, GameMessage, Role, hasAnyRole, StatusEffectCategory } from '@koa/shared';
 import { getActiveEffectsDisplay, formatDuration } from './statusEffects.js';
+import { getDelayModifierDescriptions, getStatusEffectDelayMultiplier } from './delayModifiers.js';
 import { GameWorld } from './world.js';
 import { AuthenticatedSocket, broadcastToRoom } from './socket.js';
 import { colors } from '../utils/colors.js';
@@ -889,6 +890,16 @@ async function handleStatus(socket: AuthenticatedSocket): Promise<CommandRespons
       }
 
       lines.push(`  ${effectColor(effect.name)}${stackInfo} ${colors.gray(`(${timeLeft})`)}`);
+    }
+
+    // Show overall speed modifier if any
+    const speedMultiplier = getStatusEffectDelayMultiplier(socket);
+    if (speedMultiplier !== 1.0) {
+      const speedPercent = Math.round((speedMultiplier - 1) * 100);
+      const speedText = speedPercent < 0
+        ? colors.green(`${speedPercent}% action delay`)
+        : colors.red(`+${speedPercent}% action delay`);
+      lines.push(`  ${colors.cyan('Speed:')} ${speedText}`);
     }
   }
 

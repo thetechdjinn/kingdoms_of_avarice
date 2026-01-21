@@ -6,6 +6,16 @@ import { AuthenticatedSocket, connectedPlayers, sendVitals, sendMessage } from '
 import { colors } from '../utils/colors.js';
 import * as itemRepo from '../db/repositories/itemRepository.js';
 import { isProgressionCommand, processProgressionCommand, getProgressionHelpText } from './progressionCommands.js';
+import {
+  applyEffect,
+  removeEffect,
+  getActiveEffectsDisplay,
+  formatDuration,
+  getAllEffectIds,
+  getEffectDefinition,
+} from './statusEffects.js';
+import { getDelayModifierDescriptions } from './delayModifiers.js';
+import { StatusEffectCategory } from '@koa/shared';
 
 interface CommandResponse {
   type: MessageType;
@@ -26,7 +36,7 @@ export function setPlayerLocation(playerId: number, roomId: number): void {
 const developerCommands = ['create', 'link', 'unlink', 'edit', 'delete', 'reload', 'spawn', 'purge', 'items', 'iteminfo'];
 
 // Commands that any staff can use (Moderator+)
-const staffCommands = ['goto', 'rooms', 'roominfo', 'help', 'give', 'hurt', 'drain', 'learn', 'spells'];
+const staffCommands = ['goto', 'rooms', 'roominfo', 'help', 'give', 'hurt', 'drain', 'learn', 'spells', 'effect', 'cleareffect', 'effects'];
 
 export async function processAdminCommand(
   input: string,
@@ -98,6 +108,12 @@ export async function processAdminCommand(
       return handleLearn(args, socket);
     case 'spells':
       return handleListSpells();
+    case 'effect':
+      return handleApplyEffect(args, socket);
+    case 'cleareffect':
+      return handleClearEffect(args, socket);
+    case 'effects':
+      return handleListEffects(socket);
     case 'help':
       return handleAdminHelp(userRoles);
     default:
@@ -949,6 +965,9 @@ function handleAdminHelp(userRoles: Role[]): CommandResponse {
   lines.push(`  ${colors.boldCyan('@drain [amount] [player]')} - Drain mana (for testing regen)`);
   lines.push(`  ${colors.boldCyan('@spells')}                 - List all spells in the game`);
   lines.push(`  ${colors.boldCyan('@learn <mnemonic>')}       - Learn a spell for your character`);
+  lines.push(`  ${colors.boldCyan('@effect <id> [duration]')} - Apply a status effect (default 60s)`);
+  lines.push(`  ${colors.boldCyan('@cleareffect <id|all>')}  - Remove a status effect`);
+  lines.push(`  ${colors.boldCyan('@effects')}                - List available effects`);
   lines.push(`  ${colors.boldCyan('@help')}                   - Show this help`);
 
   // Developer commands
@@ -973,6 +992,158 @@ function handleAdminHelp(userRoles: Role[]): CommandResponse {
     
     // Add progression commands help
     lines.push(getProgressionHelpText());
+  }
+
+  return { type: MessageType.OUTPUT, message: lines.join('\r\n') };
+}
+
+/**
+ * Apply a status effect to the current character
+ * Usage: @effect <effectId> [durationSeconds]
+ */
+async function handleApplyEffect(
+  args: string[],
+  socket: AuthenticatedSocket
+): Promise<CommandResponse> {
+  if (args.length < 1) {
+    const availableEffects = getAllEffectIds().join(', ');
+    return {
+      type: MessageType.ERROR,
+      message: `Usage: @effect <effectId> [durationSeconds]\r\nAvailable effects: ${availableEffects}`,
+    };
+  }
+
+  const effectId = args[0].toLowerCase();
+  const durationSeconds = args[1] ? parseInt(args[1]) : 60; // Default 60 seconds
+
+  if (isNaN(durationSeconds) || durationSeconds <= 0) {
+    return { type: MessageType.ERROR, message: 'Duration must be a positive number of seconds.' };
+  }
+
+  const definition = getEffectDefinition(effectId);
+  if (!definition) {
+    const availableEffects = getAllEffectIds().join(', ');
+    return {
+      type: MessageType.ERROR,
+      message: `Unknown effect: ${effectId}\r\nAvailable effects: ${availableEffects}`,
+    };
+  }
+
+  const durationMs = durationSeconds * 1000;
+  const result = await applyEffect(socket, effectId, durationMs);
+
+  if (result.success) {
+    // Show delay modifier info if applicable
+    const delayModifiers = getDelayModifierDescriptions(socket);
+    let message = `${colors.green('Applied effect:')} ${result.message} (${formatDuration(durationMs)})`;
+    if (delayModifiers.length > 0) {
+      message += `\r\n${colors.cyan('Active delay modifiers:')} ${delayModifiers.join(', ')}`;
+    }
+    return { type: MessageType.SYSTEM, message };
+  }
+
+  return { type: MessageType.ERROR, message: result.message };
+}
+
+/**
+ * Remove a status effect from the current character
+ * Usage: @cleareffect <effectId|all>
+ */
+async function handleClearEffect(
+  args: string[],
+  socket: AuthenticatedSocket
+): Promise<CommandResponse> {
+  if (args.length < 1) {
+    return { type: MessageType.ERROR, message: 'Usage: @cleareffect <effectId|all>' };
+  }
+
+  const effectId = args[0].toLowerCase();
+
+  if (effectId === 'all') {
+    // Clear all effects
+    if (!socket.activeEffects || socket.activeEffects.size === 0) {
+      return { type: MessageType.SYSTEM, message: 'No active effects to clear.' };
+    }
+
+    const effectIds = Array.from(socket.activeEffects.keys());
+    for (const id of effectIds) {
+      await removeEffect(socket, id);
+    }
+
+    return {
+      type: MessageType.SYSTEM,
+      message: colors.green(`Cleared ${effectIds.length} effect(s).`),
+    };
+  }
+
+  // Clear specific effect
+  const removed = await removeEffect(socket, effectId);
+  if (removed) {
+    const definition = getEffectDefinition(effectId);
+    return {
+      type: MessageType.SYSTEM,
+      message: colors.green(`Removed effect: ${definition?.name || effectId}`),
+    };
+  }
+
+  return { type: MessageType.ERROR, message: `Effect not active: ${effectId}` };
+}
+
+/**
+ * List all available status effects
+ * Usage: @effects
+ */
+function handleListEffects(socket: AuthenticatedSocket): CommandResponse {
+  const effectIds = getAllEffectIds();
+  const lines = [colors.boldYellow('Available Status Effects:'), ''];
+
+  // Group by category
+  const byCategory = new Map<StatusEffectCategory, Array<{ id: string; name: string; description: string; speedMod?: number }>>();
+
+  for (const effectId of effectIds) {
+    const def = getEffectDefinition(effectId);
+    if (!def) continue;
+
+    const category = def.category;
+    if (!byCategory.has(category)) {
+      byCategory.set(category, []);
+    }
+    byCategory.get(category)!.push({
+      id: effectId,
+      name: def.name,
+      description: def.description || '',
+      speedMod: def.speedModifier,
+    });
+  }
+
+  // Display grouped effects
+  for (const [category, effects] of byCategory) {
+    const categoryColor = category === StatusEffectCategory.BUFF || category === StatusEffectCategory.HOT
+      ? colors.green
+      : category === StatusEffectCategory.DEBUFF || category === StatusEffectCategory.DOT
+      ? colors.red
+      : colors.yellow;
+
+    lines.push(categoryColor(`[${category}]`));
+    for (const effect of effects) {
+      let speedInfo = '';
+      if (effect.speedMod) {
+        const sign = effect.speedMod < 0 ? '' : '+';
+        speedInfo = colors.cyan(` (${sign}${effect.speedMod}% speed)`);
+      }
+      lines.push(`  ${colors.white(effect.id.padEnd(15))} ${effect.name}${speedInfo}`);
+    }
+    lines.push('');
+  }
+
+  // Show currently active effects
+  const activeEffects = getActiveEffectsDisplay(socket);
+  if (activeEffects.length > 0) {
+    lines.push(colors.boldCyan('Your Active Effects:'));
+    for (const effect of activeEffects) {
+      const stackInfo = effect.stacks > 1 ? ` (x${effect.stacks})` : '';
+      lines.push(`  ${colors.yellow(effect.name)}${stackInfo} - ${formatDuration(effect.remainingMs)} remaining`);
+    }
   }
 
   return { type: MessageType.OUTPUT, message: lines.join('\r\n') };

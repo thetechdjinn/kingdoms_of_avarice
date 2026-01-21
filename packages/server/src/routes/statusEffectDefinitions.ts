@@ -38,8 +38,33 @@ function validateDefinitionInput(def: Record<string, unknown>): string | null {
     }
   }
 
+  // Optional numeric range fields - validate type if provided
+  const rangeFields = ['tickDamageMin', 'tickDamageMax', 'tickHealingMin', 'tickHealingMax'];
+  for (const field of rangeFields) {
+    if (def[field] !== undefined && def[field] !== null && typeof def[field] !== 'number') {
+      return `${field} must be a number`;
+    }
+  }
+
+  // Validate range ordering (min <= max) when both are provided
+  const tickDamageMin = def.tickDamageMin as number | undefined;
+  const tickDamageMax = def.tickDamageMax as number | undefined;
+  const tickHealingMin = def.tickHealingMin as number | undefined;
+  const tickHealingMax = def.tickHealingMax as number | undefined;
+
+  if (tickDamageMin !== undefined && tickDamageMax !== undefined &&
+      tickDamageMin !== null && tickDamageMax !== null &&
+      tickDamageMin > tickDamageMax) {
+    return 'tickDamageMin must be less than or equal to tickDamageMax';
+  }
+  if (tickHealingMin !== undefined && tickHealingMax !== undefined &&
+      tickHealingMin !== null && tickHealingMax !== null &&
+      tickHealingMin > tickHealingMax) {
+    return 'tickHealingMin must be less than or equal to tickHealingMax';
+  }
+
   // Optional string fields - validate type if provided
-  const stringFields = ['description', 'tickDamage', 'tickHealing', 'tickMessage', 'wearOffMessage'];
+  const stringFields = ['description', 'tickMessage', 'wearOffMessage'];
   for (const field of stringFields) {
     if (def[field] !== undefined && def[field] !== null && typeof def[field] !== 'string') {
       return `${field} must be a string`;
@@ -95,7 +120,8 @@ export function setupStatusEffectDefinitionRoutes(app: Express): void {
       const {
         id, name, description, category, stackingBehavior, maxStacks,
         accuracyModifier, defenseModifier, energyModifier, damageModifier,
-        tickDamage, tickHealing, tickMessage, silentTick, wearOffMessage,
+        tickDamageMin, tickDamageMax, tickHealingMin, tickHealingMax,
+        tickMessage, silentTick, wearOffMessage,
         blocksRegen, blocksMovement, isBlind
       } = req.body;
 
@@ -127,8 +153,10 @@ export function setupStatusEffectDefinitionRoutes(app: Express): void {
         defenseModifier: defenseModifier ?? 0,
         energyModifier: energyModifier ?? 0,
         damageModifier: damageModifier ?? 0,
-        tickDamage,
-        tickHealing,
+        tickDamageMin,
+        tickDamageMax,
+        tickHealingMin,
+        tickHealingMax,
         tickMessage,
         silentTick: silentTick ?? false,
         wearOffMessage,
@@ -163,7 +191,8 @@ export function setupStatusEffectDefinitionRoutes(app: Express): void {
       const {
         name, description, category, stackingBehavior, maxStacks,
         accuracyModifier, defenseModifier, energyModifier, damageModifier,
-        tickDamage, tickHealing, tickMessage, silentTick, wearOffMessage,
+        tickDamageMin, tickDamageMax, tickHealingMin, tickHealingMax,
+        tickMessage, silentTick, wearOffMessage,
         blocksRegen, blocksMovement, isBlind
       } = req.body;
 
@@ -196,8 +225,31 @@ export function setupStatusEffectDefinitionRoutes(app: Express): void {
         }
       }
 
+      // Validate numeric range fields if provided
+      const rangeFields = { tickDamageMin, tickDamageMax, tickHealingMin, tickHealingMax };
+      for (const [field, value] of Object.entries(rangeFields)) {
+        if (value !== undefined && value !== null && typeof value !== 'number') {
+          res.status(400).json({ success: false, message: `${field} must be a number` });
+          return;
+        }
+      }
+
+      // Validate range ordering (min <= max) when both are provided
+      if (tickDamageMin !== undefined && tickDamageMax !== undefined &&
+          tickDamageMin !== null && tickDamageMax !== null &&
+          tickDamageMin > tickDamageMax) {
+        res.status(400).json({ success: false, message: 'tickDamageMin must be less than or equal to tickDamageMax' });
+        return;
+      }
+      if (tickHealingMin !== undefined && tickHealingMax !== undefined &&
+          tickHealingMin !== null && tickHealingMax !== null &&
+          tickHealingMin > tickHealingMax) {
+        res.status(400).json({ success: false, message: 'tickHealingMin must be less than or equal to tickHealingMax' });
+        return;
+      }
+
       // Validate string fields if provided
-      const stringFields = { name, description, tickDamage, tickHealing, tickMessage, wearOffMessage };
+      const stringFields = { name, description, tickMessage, wearOffMessage };
       for (const [field, value] of Object.entries(stringFields)) {
         if (value !== undefined && value !== null && typeof value !== 'string') {
           res.status(400).json({ success: false, message: `${field} must be a string` });
@@ -225,8 +277,10 @@ export function setupStatusEffectDefinitionRoutes(app: Express): void {
       if (defenseModifier !== undefined) updateData.defenseModifier = defenseModifier;
       if (energyModifier !== undefined) updateData.energyModifier = energyModifier;
       if (damageModifier !== undefined) updateData.damageModifier = damageModifier;
-      if (tickDamage !== undefined) updateData.tickDamage = tickDamage;
-      if (tickHealing !== undefined) updateData.tickHealing = tickHealing;
+      if (tickDamageMin !== undefined) updateData.tickDamageMin = tickDamageMin;
+      if (tickDamageMax !== undefined) updateData.tickDamageMax = tickDamageMax;
+      if (tickHealingMin !== undefined) updateData.tickHealingMin = tickHealingMin;
+      if (tickHealingMax !== undefined) updateData.tickHealingMax = tickHealingMax;
       if (tickMessage !== undefined) updateData.tickMessage = tickMessage;
       if (silentTick !== undefined) updateData.silentTick = silentTick;
       if (wearOffMessage !== undefined) updateData.wearOffMessage = wearOffMessage;
@@ -358,8 +412,10 @@ export function setupStatusEffectDefinitionRoutes(app: Express): void {
             defenseModifier: def.defenseModifier ?? 0,
             energyModifier: def.energyModifier ?? 0,
             damageModifier: def.damageModifier ?? 0,
-            tickDamage: def.tickDamage,
-            tickHealing: def.tickHealing,
+            tickDamageMin: def.tickDamageMin,
+            tickDamageMax: def.tickDamageMax,
+            tickHealingMin: def.tickHealingMin,
+            tickHealingMax: def.tickHealingMax,
             tickMessage: def.tickMessage,
             silentTick: def.silentTick ?? false,
             wearOffMessage: def.wearOffMessage,

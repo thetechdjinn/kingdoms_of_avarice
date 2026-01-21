@@ -178,6 +178,48 @@ export async function runMigrations(): Promise<void> {
         ALTER TABLE rooms ADD COLUMN IF NOT EXISTS terrain VARCHAR(20) DEFAULT 'indoor'
       `);
 
+      // Migrate status_effect_definitions from dice notation to damage/healing ranges
+      // Check if old columns exist and migrate if needed
+      const oldDiceColumnsCheck = await client.query(`
+        SELECT column_name FROM information_schema.columns
+        WHERE table_name = 'status_effect_definitions'
+        AND column_name = 'tick_damage'
+        AND data_type = 'character varying'
+      `);
+      if (oldDiceColumnsCheck.rows.length > 0) {
+        console.log('Migrating status effect definitions from dice notation to ranges...');
+        // Add new columns
+        await client.query(`
+          ALTER TABLE status_effect_definitions
+          ADD COLUMN IF NOT EXISTS tick_damage_min INTEGER,
+          ADD COLUMN IF NOT EXISTS tick_damage_max INTEGER,
+          ADD COLUMN IF NOT EXISTS tick_healing_min INTEGER,
+          ADD COLUMN IF NOT EXISTS tick_healing_max INTEGER
+        `);
+        // Convert existing dice notation to ranges (e.g., '2d6' -> min=2, max=12)
+        // Dice notation 'NdM' means roll N dice with M sides each
+        // min = N (all dice roll 1), max = N * M (all dice roll max)
+        await client.query(`
+          UPDATE status_effect_definitions
+          SET tick_damage_min = NULLIF(SPLIT_PART(tick_damage, 'd', 1), '')::INTEGER,
+              tick_damage_max = NULLIF(SPLIT_PART(tick_damage, 'd', 1), '')::INTEGER * NULLIF(SPLIT_PART(tick_damage, 'd', 2), '')::INTEGER
+          WHERE tick_damage IS NOT NULL AND tick_damage LIKE '%d%'
+        `);
+        await client.query(`
+          UPDATE status_effect_definitions
+          SET tick_healing_min = NULLIF(SPLIT_PART(tick_healing, 'd', 1), '')::INTEGER,
+              tick_healing_max = NULLIF(SPLIT_PART(tick_healing, 'd', 1), '')::INTEGER * NULLIF(SPLIT_PART(tick_healing, 'd', 2), '')::INTEGER
+          WHERE tick_healing IS NOT NULL AND tick_healing LIKE '%d%'
+        `);
+        // Drop old columns
+        await client.query(`
+          ALTER TABLE status_effect_definitions
+          DROP COLUMN IF EXISTS tick_damage,
+          DROP COLUMN IF EXISTS tick_healing
+        `);
+        console.log('Status effect definitions migrated to range-based damage/healing');
+      }
+
       // Add last_name column to characters (for existing databases)
       await client.query(`
         ALTER TABLE characters ADD COLUMN IF NOT EXISTS last_name VARCHAR(50)
@@ -371,56 +413,69 @@ async function seedStatusEffectDefinitions(): Promise<void> {
 
   try {
     // Seed the default status effect definitions from code registry
+    // Uses damage/healing ranges instead of dice notation for easier scaling
     await getPool().query(`
       INSERT INTO status_effect_definitions (
         id, name, description, category, stacking_behavior, max_stacks,
         accuracy_modifier, defense_modifier, energy_modifier, damage_modifier,
-        tick_damage, tick_healing, tick_message, silent_tick, wear_off_message,
+        tick_damage_min, tick_damage_max, tick_healing_min, tick_healing_max,
+        tick_message, silent_tick, wear_off_message,
         blocks_regen, blocks_movement, is_blind
       ) VALUES
       ('blessed', 'Blessed', 'Divine favor grants improved accuracy', 'buff', 'refresh', 1,
        10, 0, 0, 0,
-       NULL, NULL, NULL, TRUE, 'The divine blessing fades.',
+       NULL, NULL, NULL, NULL,
+       NULL, TRUE, 'The divine blessing fades.',
        FALSE, FALSE, FALSE),
       ('shielded', 'Shielded', 'A magical barrier provides extra protection', 'buff', 'refresh', 1,
        0, 15, 0, 0,
-       NULL, NULL, NULL, TRUE, 'Your magical shield dissipates.',
+       NULL, NULL, NULL, NULL,
+       NULL, TRUE, 'Your magical shield dissipates.',
        FALSE, FALSE, FALSE),
       ('hasted', 'Hasted', 'Magical speed increases combat energy regeneration', 'buff', 'refresh', 1,
        0, 0, 25, 0,
-       NULL, NULL, NULL, TRUE, 'The haste spell wears off.',
+       NULL, NULL, NULL, NULL,
+       NULL, TRUE, 'The haste spell wears off.',
        FALSE, FALSE, FALSE),
       ('empowered', 'Empowered', 'Raw magical power increases damage dealt', 'buff', 'refresh', 1,
        0, 0, 0, 20,
-       NULL, NULL, NULL, TRUE, 'The empowerment fades.',
+       NULL, NULL, NULL, NULL,
+       NULL, TRUE, 'The empowerment fades.',
        FALSE, FALSE, FALSE),
       ('cursed', 'Cursed', 'A dark curse hampers combat effectiveness', 'debuff', 'refresh', 1,
        -10, -10, 0, 0,
-       NULL, NULL, NULL, TRUE, 'The curse lifts.',
+       NULL, NULL, NULL, NULL,
+       NULL, TRUE, 'The curse lifts.',
        FALSE, FALSE, FALSE),
       ('weakened', 'Weakened', 'Magical weakness reduces damage dealt', 'debuff', 'refresh', 1,
        0, 0, 0, -25,
-       NULL, NULL, NULL, TRUE, 'Your strength returns.',
+       NULL, NULL, NULL, NULL,
+       NULL, TRUE, 'Your strength returns.',
        FALSE, FALSE, FALSE),
       ('blinded', 'Blinded', 'Unable to see, suffering major accuracy penalties', 'debuff', 'refresh', 1,
        0, 0, 0, 0,
-       NULL, NULL, NULL, TRUE, 'Your vision clears.',
+       NULL, NULL, NULL, NULL,
+       NULL, TRUE, 'Your vision clears.',
        FALSE, FALSE, TRUE),
       ('poisoned', 'Poisoned', 'Venom courses through your veins', 'dot', 'refresh', 1,
        0, 0, 0, 0,
-       '1d4', NULL, 'The poison burns through your veins.', FALSE, 'The poison runs its course.',
+       1, 4, NULL, NULL,
+       'The poison burns through your veins.', FALSE, 'The poison runs its course.',
        TRUE, FALSE, FALSE),
       ('burning', 'Burning', 'Magical flames sear your flesh', 'dot', 'refresh', 1,
        0, 0, 0, 0,
-       '1d6', NULL, 'The flames sear your flesh!', FALSE, 'The flames die out.',
+       1, 6, NULL, NULL,
+       'The flames sear your flesh!', FALSE, 'The flames die out.',
        FALSE, FALSE, FALSE),
       ('regenerating', 'Regenerating', 'Healing magic mends your wounds over time', 'hot', 'refresh', 1,
        0, 0, 0, 0,
-       NULL, '1d6', 'Healing energy flows through you.', FALSE, 'The regeneration effect fades.',
+       NULL, NULL, 1, 6,
+       'Healing energy flows through you.', FALSE, 'The regeneration effect fades.',
        FALSE, FALSE, FALSE),
       ('entangled', 'Entangled', 'Magical vines restrict your movement', 'control', 'refresh', 1,
        0, -5, 0, 0,
-       NULL, NULL, 'The vines tighten around you.', FALSE, 'The vines wither and release you.',
+       NULL, NULL, NULL, NULL,
+       'The vines tighten around you.', FALSE, 'The vines wither and release you.',
        FALSE, TRUE, FALSE)
       ON CONFLICT (id) DO NOTHING
     `);
