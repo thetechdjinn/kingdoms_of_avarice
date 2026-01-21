@@ -201,7 +201,7 @@ async function handleOffensiveSpell(
 
   return {
     type: MessageType.OUTPUT,
-    message: `${colors.boldRed('*COMBAT ENGAGED*')} You begin casting ${colors.cyan(spell.name.toLowerCase())} at ${colors.combatDefender(target.username)}!`,
+    message: `${colors.yellow('*COMBAT ENGAGED*')} You begin casting ${colors.cyan(spell.name.toLowerCase())} at ${colors.combatDefender(target.username)}!`,
   };
 }
 

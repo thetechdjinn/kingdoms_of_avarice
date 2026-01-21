@@ -95,7 +95,7 @@ export function handleAttack(
 
   return {
     type: MessageType.OUTPUT,
-    message: colors.boldRed('*COMBAT ENGAGED*'),
+    message: colors.yellow('*COMBAT ENGAGED*'),
   };
 }
 
@@ -123,13 +123,13 @@ export function handleBreak(
   // Broadcast to room
   broadcastToRoom(
     currentRoomId,
-    `${socket.username} breaks off combat.`,
+    colors.yellow(`${socket.username} breaks off combat.`),
     socket.playerId
   );
 
   return {
     type: MessageType.OUTPUT,
-    message: colors.boldYellow('*COMBAT OFF*'),
+    message: colors.yellow('*COMBAT OFF*'),
   };
 }
 

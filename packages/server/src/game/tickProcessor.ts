@@ -23,6 +23,7 @@ import {
   clampDelay,
   getEncumbranceMultiplier,
   getTerrainMultiplier,
+  isCombatOnlyAction,
 } from '../config/commandQueueConfig.js';
 import { enqueueCommand, setPlayerReadyAt } from './gameLoop.js';
 import { getEquipmentCombatStats, calculateEncumbranceRatio } from './combatStats.js';
@@ -174,6 +175,11 @@ async function calculateDelay(player: AuthenticatedSocket, actionType: string): 
     delay *= Math.max(0.1, speedMultiplier); // Minimum 10% of base delay
   }
 
+  // Apply combat delay modifier if player is in combat
+  if (player.regenState.inCombat && config.combat.combatDelayModifier !== 1.0) {
+    delay *= config.combat.combatDelayModifier;
+  }
+
   return clampDelay(delay);
 }
 
@@ -196,6 +202,21 @@ export async function startQueuedAction(
     if (effectModifiers.blocksMovement) {
       if (sendMessageFn) {
         sendMessageFn(player, MessageType.ERROR, 'You cannot move!');
+      }
+      return;
+    }
+  }
+
+  // Validate combat state for queued commands (state may have changed since queuing)
+  // Only restrict if player has active targets, not just being attacked
+  const config = getCommandQueueConfig();
+  const hasActiveTargets = player.combatState.targets.size > 0;
+  if (hasActiveTargets) {
+    // Player is actively engaged in combat - check if this action is allowed
+    if (!config.combat.allowedCommandsInCombat.includes(commandName) &&
+        !config.combat.allowedCommandsInCombat.includes(actionType)) {
+      if (sendMessageFn) {
+        sendMessageFn(player, MessageType.ERROR, 'You must break combat before doing that!');
       }
       return;
     }
@@ -315,6 +336,18 @@ export async function handlePlayerInput(
     // Priority commands affect readyAt
     setPlayerReadyAt(player, Date.now() + delay);
     return;
+  }
+
+  // Check combat command filtering (only if player has active targets, not just being attacked)
+  const actionType = getActionTypeForCommand(commandName);
+  const hasActiveTargets = player.combatState.targets.size > 0;
+  if (hasActiveTargets) {
+    // Player is actively engaged in combat - check if command is allowed
+    if (!config.combat.allowedCommandsInCombat.includes(commandName) &&
+        !config.combat.allowedCommandsInCombat.includes(actionType)) {
+      sendMessageFn(player, MessageType.ERROR, 'You must break combat before doing that!');
+      return;
+    }
   }
 
   // Normal command - add to queue

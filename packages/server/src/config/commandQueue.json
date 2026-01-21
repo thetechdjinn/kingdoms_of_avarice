@@ -86,13 +86,7 @@
       "baseDelay": 0,
       "modifierCategories": [],
       "canInterrupt": false,
-      "clearQueueOnFail": false,
-      "combatOnly": true,
-      "combatBehavior": {
-        "onlyInCombat": true,
-        "usesCombatRound": true,
-        "sharedCooldownWith": ["kick", "trip"]
-      }
+      "clearQueueOnFail": false
     }
   },
   "queue": {
@@ -117,7 +111,7 @@
     "roundDurationMs": 2000,
     "autoAttack": true,
     "queuePausedDuringCombat": false,
-    "allowedCommandsInCombat": ["attack", "cast", "use", "say", "look", "inventory", "equipment", "score", "who"],
+    "allowedCommandsInCombat": ["attack", "cast", "use", "say", "look", "inventory", "equipment", "score", "who", "break", "bre", "brea"],
     "exitCombatCommands": ["recall"],
     "combatDelayModifier": 1.0,
     "exitConditions": {
