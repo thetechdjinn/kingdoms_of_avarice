@@ -266,7 +266,7 @@ async function processSpellCombat(
   if ((attacker.vitals.resource ?? 0) < spell.manaCost) {
     // Not enough mana - break combat
     sendToSocket(attacker, MessageType.SYSTEM, colors.red(`You don't have enough mana to cast ${spell.spellName}!`));
-    sendToSocket(attacker, MessageType.SYSTEM, 'Combat has ended.');
+    sendToSocket(attacker, MessageType.SYSTEM, colors.yellow('*COMBAT OFF*'));
 
     // Clear combat state
     clearCombatState(attacker, connectedPlayersRef);
@@ -351,7 +351,7 @@ async function processAttackerCombat(
       attacker.regenState.inCombat = false;
       attacker.combatState.combatAction = 'melee';
       attacker.combatState.activeSpell = null;
-      sendToSocket(attacker, MessageType.SYSTEM, 'Combat has ended.');
+      sendToSocket(attacker, MessageType.SYSTEM, colors.yellow('*COMBAT OFF*'));
     }
     return;
   }
@@ -593,7 +593,7 @@ async function processAttackerCombat(
   // If no targets remain, clear combat state
   if (attacker.combatState.targets.size === 0) {
     attacker.regenState.inCombat = false;
-    sendToSocket(attacker, MessageType.SYSTEM, 'Combat has ended.');
+    sendToSocket(attacker, MessageType.SYSTEM, colors.yellow('*COMBAT OFF*'));
   }
 }
 

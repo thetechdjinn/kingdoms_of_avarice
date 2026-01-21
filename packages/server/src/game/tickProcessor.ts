@@ -174,6 +174,11 @@ async function calculateDelay(player: AuthenticatedSocket, actionType: string): 
     delay *= Math.max(0.1, speedMultiplier); // Minimum 10% of base delay
   }
 
+  // Apply combat delay modifier if player is in combat
+  if (player.regenState.inCombat && config.combat.combatDelayModifier !== 1.0) {
+    delay *= config.combat.combatDelayModifier;
+  }
+
   return clampDelay(delay);
 }
 
@@ -201,6 +206,21 @@ export async function startQueuedAction(
     }
   }
 
+  // Validate combat state for queued commands (state may have changed since queuing)
+  // Only restrict if player has active targets, not just being attacked
+  const config = getCommandQueueConfig();
+  const hasActiveTargets = player.combatState.targets.size > 0;
+  if (hasActiveTargets) {
+    // Player is actively engaged in combat - check if this action is allowed
+    if (!config.combat.allowedCommandsInCombat.includes(commandName) &&
+        !config.combat.allowedCommandsInCombat.includes(actionType)) {
+      if (sendMessageFn) {
+        sendMessageFn(player, MessageType.ERROR, 'You must break combat before doing that!');
+      }
+      return;
+    }
+  }
+
   // Get action configuration
   const actionConfig = getActionConfig(actionType) || getDefaultActionConfig();
 
@@ -210,7 +230,6 @@ export async function startQueuedAction(
 
   // Check if action is blocked (e.g., over-encumbered)
   if (delay === Infinity) {
-    const config = getCommandQueueConfig();
     if (sendMessageFn) {
       sendMessageFn(player, MessageType.ERROR, config.encumbrance.overEncumbered.message);
     }
@@ -317,6 +336,18 @@ export async function handlePlayerInput(
     return;
   }
 
+  // Check combat command filtering (only if player has active targets, not just being attacked)
+  const actionType = getActionTypeForCommand(commandName);
+  const hasActiveTargets = player.combatState.targets.size > 0;
+  if (hasActiveTargets) {
+    // Player is actively engaged in combat - check if command is allowed
+    if (!config.combat.allowedCommandsInCombat.includes(commandName) &&
+        !config.combat.allowedCommandsInCombat.includes(actionType)) {
+      sendMessageFn(player, MessageType.ERROR, 'You must break combat before doing that!');
+      return;
+    }
+  }
+
   // Normal command - add to queue
   const enqueued = enqueueCommand(player, resolvedCommand);
 
@@ -346,14 +377,6 @@ export function handleQueueClearEvent(
     player.queueState.currentAction = null;
     console.log(`[TickProcessor] Cleared queue for player ${player.playerId} due to ${eventType}`);
   }
-}
-
-/**
- * Check if a player can perform a combat-only action
- */
-export function canPerformCombatAction(player: AuthenticatedSocket): boolean {
-  // Check if player is in combat based on regenState
-  return player.regenState.inCombat;
 }
 
 /**
