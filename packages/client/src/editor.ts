@@ -276,11 +276,12 @@ function selectRoom(id: number): void {
   (document.getElementById('room-training-max-level') as HTMLInputElement).value =
     String(room.features?.training?.maxLevel ?? 999);
 
-  // Set class checkboxes
-  const allowedClasses = room.features?.training?.allowedClasses || [];
+  // Set class checkboxes (null = all classes allowed, empty array = no classes allowed)
+  const allowedClasses = room.features?.training?.allowedClasses;
+  const allClassesAllowed = allowedClasses === null || allowedClasses === undefined;
   document.querySelectorAll('.training-class-checkbox').forEach((checkbox) => {
     const input = checkbox as HTMLInputElement;
-    input.checked = allowedClasses.length > 0 && allowedClasses.includes(input.value);
+    input.checked = allClassesAllowed || (Array.isArray(allowedClasses) && allowedClasses.includes(input.value));
   });
 
   renderExits(room);
@@ -356,8 +357,10 @@ async function saveRoom(): Promise<void> {
 
   // Build training configuration
   const trainingEnabled = (document.getElementById('room-training-enabled') as HTMLInputElement).checked;
-  const minLevel = parseInt((document.getElementById('room-training-min-level') as HTMLInputElement).value) || 1;
-  const maxLevel = parseInt((document.getElementById('room-training-max-level') as HTMLInputElement).value) || 999;
+  const minLevelStr = (document.getElementById('room-training-min-level') as HTMLInputElement).value;
+  const maxLevelStr = (document.getElementById('room-training-max-level') as HTMLInputElement).value;
+  const minLevel = minLevelStr === '' ? 1 : (parseInt(minLevelStr, 10) || 1);
+  const maxLevel = maxLevelStr === '' ? 999 : (parseInt(maxLevelStr, 10) || 999);
 
   const allowedClasses: string[] = [];
   document.querySelectorAll('.training-class-checkbox:checked').forEach((checkbox) => {

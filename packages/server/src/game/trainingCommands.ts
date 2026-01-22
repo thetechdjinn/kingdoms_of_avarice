@@ -5,7 +5,7 @@
  * Supports both text-based training and ANSI form-based training in training rooms.
  */
 
-import { MessageType, CPStatName, CP_STAT_NAMES, CP_STAT_ABBREVIATIONS, getCPCostForNextPoint, getTotalCPCost, getMaxPointsAffordable, DEFAULT_STARTING_CP, TrainingFormPayload, TrainingSubmitPayload, getCpEarnedForLevel, formatCurrency } from '@koa/shared';
+import { MessageType, CPStatName, CP_STAT_NAMES, CP_STAT_ABBREVIATIONS, getCPCostForNextPoint, getTotalCPCost, getMaxPointsAffordable, DEFAULT_STARTING_CP, TrainingFormPayload, TrainingSubmitPayload, getCpEarnedForLevel, formatCurrency, HairStyle, HairColor, EyeColor, HAIR_STYLES, HAIR_COLORS, EYE_COLORS, Gender } from '@koa/shared';
 import { AuthenticatedSocket } from './socket.js';
 import { CommandResponse } from './commands.js';
 import { colors } from '../utils/colors.js';
@@ -357,18 +357,37 @@ function buildTrainingFormPayload(
     };
   }
 
+  // Parse hair field (stored as "style color", e.g., "short black")
+  let hairStyle: HairStyle | undefined;
+  let hairColor: HairColor | undefined;
+  if (character.hair) {
+    const hairParts = character.hair.split(' ');
+    if (hairParts.length >= 2) {
+      const style = hairParts[0] as HairStyle;
+      const color = hairParts.slice(1).join(' ') as HairColor;
+      if (HAIR_STYLES.includes(style)) hairStyle = style;
+      if (HAIR_COLORS.includes(color)) hairColor = color;
+    } else if (hairParts.length === 1) {
+      // Single word - could be style or color
+      const word = hairParts[0];
+      if (HAIR_STYLES.includes(word as HairStyle)) hairStyle = word as HairStyle;
+      else if (HAIR_COLORS.includes(word as HairColor)) hairColor = word as HairColor;
+    }
+  }
+
   return {
     characterName: character.name,
     familyName: character.last_name || undefined,
-    race: raceDisplayName,
-    class: classDisplayName,
+    race: raceDisplayName as TrainingFormPayload['race'],
+    class: classDisplayName as TrainingFormPayload['class'],
     level: character.level,
     stats,
     unspentCp,
     appearance: {
-      gender: character.gender || undefined,
-      hairColour: character.hair || undefined,
-      eyeColour: character.eye_color || undefined,
+      gender: character.gender as Gender | undefined,
+      hairStyle,
+      hairColor,
+      eyeColor: character.eye_color as EyeColor | undefined,
     },
     isNewCharacter,
   };
@@ -472,9 +491,37 @@ export async function handleTrainingSubmit(
     return { type: MessageType.ERROR, message: 'Not enough CP for these changes.' };
   }
 
+  // Build appearance update object
+  const appearanceUpdates: Record<string, string | null> = {};
+
+  // Handle family name update
+  if (payload.familyName !== undefined) {
+    appearanceUpdates.last_name = payload.familyName || null;
+  }
+
+  // Handle appearance updates (hair stored as "style color", e.g., "short black")
+  if (payload.appearance) {
+    const { hairStyle, hairColor, eyeColor } = payload.appearance;
+
+    // Validate and combine hair fields
+    if (hairStyle || hairColor) {
+      const validStyle = hairStyle && HAIR_STYLES.includes(hairStyle) ? hairStyle : 'none';
+      const validColor = hairColor && HAIR_COLORS.includes(hairColor) ? hairColor : 'black';
+      appearanceUpdates.hair = `${validStyle} ${validColor}`;
+    }
+
+    // Validate and set eye color
+    if (eyeColor) {
+      if (EYE_COLORS.includes(eyeColor)) {
+        appearanceUpdates.eye_color = eyeColor;
+      }
+    }
+  }
+
   // Apply the changes
   await characterRepo.updateCharacterStats(characterId, {
     ...statUpdates,
+    ...appearanceUpdates,
     unspent_cp: newUnspentCp,
     cp_spent: newCpSpent,
   });

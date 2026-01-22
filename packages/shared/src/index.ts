@@ -86,12 +86,24 @@ export interface RoomFeatures {
   training?: RoomTrainingConfig;
 }
 
+// Hair style options for character appearance
+export const HAIR_STYLES = ['none', 'short', 'long', 'braided', 'ponytail', 'mohawk'] as const;
+export type HairStyle = (typeof HAIR_STYLES)[number];
+
+// Hair color options
+export const HAIR_COLORS = ['black', 'brown', 'blonde', 'red', 'white', 'gray', 'auburn'] as const;
+export type HairColor = (typeof HAIR_COLORS)[number];
+
+// Eye color options
+export const EYE_COLORS = ['brown', 'blue', 'green', 'hazel', 'gray', 'amber', 'black'] as const;
+export type EyeColor = (typeof EYE_COLORS)[number];
+
 // Training form data sent from server to client
 export interface TrainingFormPayload {
   characterName: string;
   familyName?: string;
-  race: string;
-  class: string;
+  race: Race;
+  class: CharacterClass;
   level: number;
   stats: Record<string, {
     current: number;
@@ -101,10 +113,10 @@ export interface TrainingFormPayload {
   }>;
   unspentCp: number;
   appearance?: {
-    gender?: string;
-    hairLength?: string;
-    hairColour?: string;
-    eyeColour?: string;
+    gender?: Gender;
+    hairStyle?: HairStyle;
+    hairColor?: HairColor;
+    eyeColor?: EyeColor;
   };
   isNewCharacter?: boolean;  // True if this is shown after character creation
 }
@@ -114,6 +126,12 @@ export interface TrainingSubmitPayload {
   stats: Record<string, number>;     // New stat values
   cpSpent: Record<string, number>;   // CP spent per stat
   cancelled: boolean;                 // True if user cancelled without saving
+  familyName?: string;               // Updated family name
+  appearance?: {
+    hairStyle?: HairStyle;
+    hairColor?: HairColor;
+    eyeColor?: EyeColor;
+  };
 }
 
 // Character stats (6 primary attributes)

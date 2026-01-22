@@ -5,7 +5,17 @@
 import { Terminal } from 'xterm';
 import { AnsiForm, FormConfig, FormSection } from './AnsiForm.js';
 import { FormField, FieldValue, FormFieldConfig } from './FormField.js';
-import { CPStatName, CP_STAT_ABBREVIATIONS, getCPCostForNextPoint } from '@koa/shared';
+import {
+  CPStatName,
+  CP_STAT_ABBREVIATIONS,
+  getCPCostForNextPoint,
+  HAIR_STYLES,
+  HAIR_COLORS,
+  EYE_COLORS,
+  HairStyle,
+  HairColor,
+  EyeColor,
+} from '@koa/shared';
 
 export interface TrainingStat {
   current: number;
@@ -24,9 +34,9 @@ export interface TrainingFormData {
   unspentCp: number;
   appearance?: {
     gender?: string;
-    hairLength?: string;
-    hairColour?: string;
-    eyeColour?: string;
+    hairStyle?: HairStyle;
+    hairColor?: HairColor;
+    eyeColor?: EyeColor;
   };
 }
 
@@ -34,6 +44,12 @@ export interface TrainingFormResult {
   stats: Record<CPStatName, number>;  // Current values
   cpSpent: Record<CPStatName, number>;  // Spent per stat
   cancelled: boolean;
+  familyName?: string;
+  appearance?: {
+    hairStyle?: HairStyle;
+    hairColor?: HairColor;
+    eyeColor?: EyeColor;
+  };
 }
 
 export class TrainingForm extends AnsiForm {
@@ -64,12 +80,14 @@ export class TrainingForm extends AnsiForm {
   private static buildConfig(data: TrainingFormData): FormConfig {
     const sections: FormSection[] = [];
 
-    // Character Info Section (read-only)
+    // Character Info Section with editable family name
     const infoFields: FormFieldConfig[] = [
-      { type: 'label', name: 'name_label', label: `Name: ${data.characterName}${data.familyName ? ' ' + data.familyName : ''}`, row: 0, col: 2 },
-      { type: 'label', name: 'race_label', label: `Race: ${data.race}`, row: 1, col: 2 },
-      { type: 'label', name: 'class_label', label: `Class: ${data.class}`, row: 1, col: 25 },
-      { type: 'label', name: 'level_label', label: `Level: ${data.level}`, row: 1, col: 45 },
+      { type: 'label', name: 'given_name_label', label: 'Given Name', row: 0, col: 2 },
+      { type: 'label', name: 'given_name_value', label: data.characterName, row: 0, col: 16 },
+      { type: 'text', name: 'family_name', label: 'Family Name', value: data.familyName || '', row: 1, col: 16, width: 20, editable: true },
+      { type: 'label', name: 'race_label', label: `Race: ${data.race}`, row: 2, col: 2 },
+      { type: 'label', name: 'class_label', label: `Class: ${data.class}`, row: 2, col: 25 },
+      { type: 'label', name: 'level_label', label: `Level: ${data.level}`, row: 2, col: 45 },
     ];
 
     sections.push({ title: 'Character', fields: infoFields });
@@ -100,6 +118,50 @@ export class TrainingForm extends AnsiForm {
     });
 
     sections.push({ title: 'Stats (Use ←→ to adjust)', fields: statFields });
+
+    // Appearance Section
+    const hairStyleOptions = [...HAIR_STYLES];
+    const hairColorOptions = [...HAIR_COLORS];
+    const eyeColorOptions = [...EYE_COLORS];
+
+    const currentHairStyle = data.appearance?.hairStyle || 'none';
+    const currentHairColor = data.appearance?.hairColor || 'black';
+    const currentEyeColor = data.appearance?.eyeColor || 'brown';
+
+    const appearanceFields: FormFieldConfig[] = [
+      {
+        type: 'toggle',
+        name: 'hair_style',
+        label: 'Hair Style',
+        value: hairStyleOptions.indexOf(currentHairStyle),
+        options: hairStyleOptions,
+        row: 0,
+        col: 16,
+        editable: true,
+      },
+      {
+        type: 'toggle',
+        name: 'hair_color',
+        label: 'Hair Color',
+        value: hairColorOptions.indexOf(currentHairColor),
+        options: hairColorOptions,
+        row: 1,
+        col: 16,
+        editable: true,
+      },
+      {
+        type: 'toggle',
+        name: 'eye_color',
+        label: 'Eye Color',
+        value: eyeColorOptions.indexOf(currentEyeColor),
+        options: eyeColorOptions,
+        row: 2,
+        col: 16,
+        editable: true,
+      },
+    ];
+
+    sections.push({ title: 'Appearance (Use Space to toggle)', fields: appearanceFields });
 
     // CP Display Section
     const cpFields: FormFieldConfig[] = [
@@ -253,6 +315,14 @@ export class TrainingForm extends AnsiForm {
       return;
     }
 
+    // For toggle fields, left/right also works
+    if (currentField?.type === 'toggle' && (key === 'ArrowLeft' || key === 'ArrowRight')) {
+      if (currentField.handleInput(key)) {
+        this.render();
+      }
+      return;
+    }
+
     // Default handling for other keys
     super.handleKey(key, event);
   }
@@ -281,12 +351,25 @@ export class TrainingForm extends AnsiForm {
   private buildResult(cancelled: boolean): TrainingFormResult {
     const stats: Record<string, number> = {};
     const cpSpent: Record<string, number> = {};
+    let familyName: string | undefined;
+    const appearance: TrainingFormResult['appearance'] = {};
 
     for (const field of this.fields) {
       if (field.type === 'stat') {
         const stat = field.value as FieldValue;
         stats[field.name] = stat.current;
         cpSpent[field.name] = stat.spent;
+      } else if (field.name === 'family_name') {
+        familyName = String(field.value).trim() || undefined;
+      } else if (field.name === 'hair_style') {
+        const index = typeof field.value === 'number' ? field.value : 0;
+        appearance.hairStyle = HAIR_STYLES[index] || 'none';
+      } else if (field.name === 'hair_color') {
+        const index = typeof field.value === 'number' ? field.value : 0;
+        appearance.hairColor = HAIR_COLORS[index] || 'black';
+      } else if (field.name === 'eye_color') {
+        const index = typeof field.value === 'number' ? field.value : 0;
+        appearance.eyeColor = EYE_COLORS[index] || 'brown';
       }
     }
 
@@ -294,6 +377,8 @@ export class TrainingForm extends AnsiForm {
       stats: stats as Record<CPStatName, number>,
       cpSpent: cpSpent as Record<CPStatName, number>,
       cancelled,
+      familyName,
+      appearance,
     };
   }
 
@@ -310,7 +395,7 @@ export class TrainingForm extends AnsiForm {
    * Get training-specific instructions
    */
   protected getInstructions(): string {
-    return '\x1b[90m↑↓ Navigate fields  ←→ Adjust stats  Enter Save/Exit  Esc Cancel\x1b[0m';
+    return '\x1b[90m↑↓ Navigate  ←→ Adjust stats/toggle  Space Toggle  Enter Save/Exit  Esc Cancel\x1b[0m';
   }
 }
 

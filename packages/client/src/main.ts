@@ -1086,10 +1086,8 @@ function handleTrainingComplete(result: TrainingFormResult): void {
     terminal.clear();
   }
 
-  // If not cancelled, send a command to refresh the room display
-  if (!result.cancelled) {
-    sendCommand('glance');
-  }
+  // Send a command to refresh the room display (terminal was cleared in both cases)
+  sendCommand('glance');
 }
 
 /**
@@ -1102,6 +1100,8 @@ function sendTrainingSubmit(result: TrainingFormResult): void {
     stats: result.stats,
     cpSpent: result.cpSpent,
     cancelled: result.cancelled,
+    familyName: result.familyName,
+    appearance: result.appearance,
   };
 
   const message: GameMessage = {

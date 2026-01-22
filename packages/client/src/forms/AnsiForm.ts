@@ -24,13 +24,11 @@ export abstract class AnsiForm {
   protected fields: FormField[] = [];
   protected editableFields: FormField[] = [];
   protected selectedIndex: number = 0;
-  protected startRow: number = 0;
   protected isActive: boolean = false;
   protected config: FormConfig;
 
   // Keyboard handler reference for cleanup
   private keyHandler: ((event: KeyboardEvent) => void) | null = null;
-  private originalInputDisabled: boolean = true;
 
   constructor(terminal: Terminal, config: FormConfig) {
     this.terminal = terminal;
