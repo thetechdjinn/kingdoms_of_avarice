@@ -95,6 +95,9 @@ export abstract class AnsiForm {
    * Set up keyboard event handler
    */
   private setupKeyboardHandler(): void {
+    // Remove any existing handler first to prevent duplicates
+    this.removeKeyboardHandler();
+
     this.keyHandler = (event: KeyboardEvent) => {
       if (!this.isActive) return;
 

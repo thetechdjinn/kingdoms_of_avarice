@@ -496,7 +496,7 @@ export async function handleTrainingSubmit(
       return { type: MessageType.ERROR, message: 'Family name too long (max 20 characters).' };
     }
     // Allow only letters, hyphens, apostrophes, and spaces
-    if (trimmedName && !/^[a-zA-Z'-\s]+$/.test(trimmedName)) {
+    if (trimmedName && !/^[a-zA-Z'\s-]+$/.test(trimmedName)) {
       return { type: MessageType.ERROR, message: 'Family name contains invalid characters.' };
     }
     appearanceUpdates.last_name = trimmedName || null;

@@ -359,8 +359,17 @@ async function saveRoom(): Promise<void> {
   const trainingEnabled = (document.getElementById('room-training-enabled') as HTMLInputElement).checked;
   const minLevelStr = (document.getElementById('room-training-min-level') as HTMLInputElement).value;
   const maxLevelStr = (document.getElementById('room-training-max-level') as HTMLInputElement).value;
-  const minLevel = minLevelStr === '' ? 1 : (parseInt(minLevelStr, 10) || 1);
-  const maxLevel = maxLevelStr === '' ? 999 : (parseInt(maxLevelStr, 10) || 999);
+  const minLevelRaw = minLevelStr === '' ? 1 : (parseInt(minLevelStr, 10) || 1);
+  const maxLevelRaw = maxLevelStr === '' ? 999 : (parseInt(maxLevelStr, 10) || 999);
+  // Clamp to valid range
+  const minLevel = Math.max(1, Math.min(999, minLevelRaw));
+  const maxLevel = Math.max(1, Math.min(999, maxLevelRaw));
+
+  // Validate min <= max
+  if (trainingEnabled && minLevel > maxLevel) {
+    showToast('Minimum training level cannot exceed maximum training level.', 'error');
+    return;
+  }
 
   const allowedClasses: string[] = [];
   document.querySelectorAll('.training-class-checkbox:checked').forEach((checkbox) => {

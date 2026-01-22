@@ -84,20 +84,22 @@ export class FormField {
         }
         return `${labelColor}${this.label}: ${reset}${highlightBg}${valueColor}${this.value}${reset}`;
 
-      case 'toggle':
+      case 'toggle': {
         const toggleValue = this.options[Number(this.value) || 0] || String(this.value);
         if (!this.editable) {
           return `${labelColor}${this.label}: ${reset}${readonlyColor}${toggleValue}${reset}`;
         }
         return `${labelColor}${this.label}: ${reset}${highlightBg}${valueColor}${toggleValue}${reset}`;
+      }
 
       case 'stat':
         return this.renderStatField(selected);
 
-      case 'button':
+      case 'button': {
         const brackets = selected ? `${buttonColor}[${reset}` : '[';
         const bracketsEnd = selected ? `${buttonColor}]${reset}` : ']';
         return `${brackets}${highlightBg}${buttonColor}${this.label}${reset}${bracketsEnd}`;
+      }
 
       default:
         return `${this.label}: ${this.value}`;
@@ -123,7 +125,7 @@ export class FormField {
     const rightArrow = canIncrease ? `${arrowColor}>${reset}` : ' ';
 
     // Format: "STR: <45> (40-65)"
-    const valueStr = `${highlightBg}${leftArrow}${valueColor}${stat.current.toString().padStart(2)}${reset}${highlightBg}${rightArrow}${reset}`;
+    const valueStr = `${highlightBg}${leftArrow}${valueColor}${stat.current}${reset}${highlightBg}${rightArrow}${reset}`;
     const rangeStr = `${minColor}(${stat.min}-${stat.max})${reset}`;
 
     return `${labelColor}${this.label}:${reset} ${valueStr} ${rangeStr}`;
