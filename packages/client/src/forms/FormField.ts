@@ -174,10 +174,12 @@ export class FormField {
   private handleToggleInput(key: string): boolean {
     if (key === ' ' || key === 'Enter' || key === 'ArrowUp' || key === 'ArrowDown') {
       const currentIndex = typeof this.value === 'number' ? this.value : 0;
-      if (key === 'ArrowDown') {
-        this.value = (currentIndex + 1) % this.options.length;
-      } else {
+      if (key === 'ArrowUp') {
+        // ArrowUp goes to previous option
         this.value = (currentIndex - 1 + this.options.length) % this.options.length;
+      } else {
+        // ArrowDown, Space, Enter go to next option
+        this.value = (currentIndex + 1) % this.options.length;
       }
       return true;
     }

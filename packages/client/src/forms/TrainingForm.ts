@@ -303,28 +303,34 @@ export class TrainingForm extends AnsiForm {
   protected handleKey(key: string, event: KeyboardEvent): void {
     const currentField = this.editableFields[this.selectedIndex];
 
-    // For stat fields, up/down adjusts the value with CP and saved-value limits
-    if (currentField?.type === 'stat' && (key === 'ArrowUp' || key === 'ArrowDown')) {
-      const stat = currentField.value as FieldValue;
+    // For stat fields, handle all stat adjustment keys with CP and saved-value limits
+    // This includes ArrowUp/Down and +/-/= to prevent bypassing CP enforcement
+    if (currentField?.type === 'stat') {
+      const isIncrease = key === 'ArrowUp' || key === '+' || key === '=';
+      const isDecrease = key === 'ArrowDown' || key === '-';
 
-      if (key === 'ArrowUp') {
-        // Increase: check if we can afford it and not at racial max
-        if (this.canAffordStatIncrease(currentField)) {
-          stat.current++;
-          stat.spent++;
-          this.updateCpDisplay();
-          this.render();
+      if (isIncrease || isDecrease) {
+        const stat = currentField.value as FieldValue;
+
+        if (isIncrease) {
+          // Increase: check if we can afford it and not at racial max
+          if (this.canAffordStatIncrease(currentField)) {
+            stat.current++;
+            stat.spent++;
+            this.updateCpDisplay();
+            this.render();
+          }
+        } else {
+          // Decrease: can only go back to saved value, not below
+          if (this.canDecreaseStat(currentField)) {
+            stat.current--;
+            stat.spent--;
+            this.updateCpDisplay();
+            this.render();
+          }
         }
-      } else {
-        // Decrease: can only go back to saved value, not below
-        if (this.canDecreaseStat(currentField)) {
-          stat.current--;
-          stat.spent--;
-          this.updateCpDisplay();
-          this.render();
-        }
+        return;
       }
-      return;
     }
 
     // For toggle fields, up/down cycles options
