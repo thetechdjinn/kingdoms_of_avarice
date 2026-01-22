@@ -38,6 +38,28 @@ let combatSettingsCacheTime: number = 0;
 const COMBAT_SETTINGS_CACHE_TTL = 60000; // 1 minute cache
 
 /**
+ * Training-related settings stored in the database
+ * These control level-up costs and initial character points
+ */
+export interface TrainingSettings {
+  training_base_cost: number;      // Base cost in copper to train to level 2
+  training_cost_multiplier: number; // Exponential multiplier per level
+  initial_character_points: number; // CP given to new characters
+}
+
+// Default training settings (used as fallbacks if DB values missing)
+const DEFAULT_TRAINING_SETTINGS: TrainingSettings = {
+  training_base_cost: 28,
+  training_cost_multiplier: 1.8,
+  initial_character_points: 100,
+};
+
+// Cache for training settings
+let trainingSettingsCache: TrainingSettings | null = null;
+let trainingSettingsCacheTime: number = 0;
+const TRAINING_SETTINGS_CACHE_TTL = 60000; // 1 minute cache
+
+/**
  * Parse a JSONB value, handling both pre-parsed objects and JSON strings.
  * Falls back to returning the raw string if JSON parsing fails (for legacy data).
  */
@@ -337,6 +359,56 @@ export async function setCombatSetting(
   const dbKey = `combat_${key.replace(/([A-Z])/g, '_$1').toLowerCase()}`;
   await setSetting(dbKey, value);
   clearCombatSettingsCache();
+}
+
+// ============================================================================
+// TRAINING SETTINGS
+// ============================================================================
+
+/**
+ * Get all training settings with caching
+ * Settings are cached for 1 minute to avoid DB hits during training operations
+ */
+export async function getTrainingSettings(): Promise<TrainingSettings> {
+  const now = Date.now();
+
+  // Return cached settings if still valid
+  if (trainingSettingsCache && (now - trainingSettingsCacheTime) < TRAINING_SETTINGS_CACHE_TTL) {
+    return trainingSettingsCache;
+  }
+
+  // Fetch all training settings from DB in parallel
+  const [baseCost, multiplier, initialCp] = await Promise.all([
+    getSetting<number>('training_base_cost'),
+    getSetting<number>('training_cost_multiplier'),
+    getSetting<number>('initial_character_points'),
+  ]);
+
+  const settings: TrainingSettings = { ...DEFAULT_TRAINING_SETTINGS };
+
+  if (typeof baseCost === 'number' && baseCost > 0) {
+    settings.training_base_cost = baseCost;
+  }
+  if (typeof multiplier === 'number' && multiplier > 0) {
+    settings.training_cost_multiplier = multiplier;
+  }
+  if (typeof initialCp === 'number' && initialCp >= 0) {
+    settings.initial_character_points = initialCp;
+  }
+
+  // Update cache
+  trainingSettingsCache = settings;
+  trainingSettingsCacheTime = now;
+
+  return settings;
+}
+
+/**
+ * Clear the training settings cache (call after updating settings)
+ */
+export function clearTrainingSettingsCache(): void {
+  trainingSettingsCache = null;
+  trainingSettingsCacheTime = 0;
 }
 
 /**

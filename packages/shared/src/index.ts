@@ -4,6 +4,7 @@
 export enum MessageType {
   // Client -> Server
   COMMAND = "command",
+  TRAINING_SUBMIT = "training_submit",  // Submit training form data
 
   // Server -> Client
   OUTPUT = "output",
@@ -11,6 +12,7 @@ export enum MessageType {
   SYSTEM = "system",
   VITALS = "vitals",
   LOGOUT = "logout",
+  TRAINING_FORM = "training_form",  // Open training form with character data
 }
 
 // WebSocket message structure
@@ -69,6 +71,67 @@ export interface RoomData {
   players: string[];
   npcs: string[];
   items: string[];
+}
+
+// Room training configuration
+export interface RoomTrainingConfig {
+  enabled: boolean;
+  allowedClasses?: string[] | null;  // null = all classes allowed
+  minLevel?: number;                  // default 1
+  maxLevel?: number;                  // default 999
+}
+
+// Room features (extensible for future features like portals, quests, etc.)
+export interface RoomFeatures {
+  training?: RoomTrainingConfig;
+}
+
+// Hair style options for character appearance
+export const HAIR_STYLES = ['none', 'short', 'long', 'braided', 'ponytail', 'mohawk'] as const;
+export type HairStyle = (typeof HAIR_STYLES)[number];
+
+// Hair color options
+export const HAIR_COLORS = ['black', 'brown', 'blonde', 'red', 'white', 'gray', 'auburn'] as const;
+export type HairColor = (typeof HAIR_COLORS)[number];
+
+// Eye color options
+export const EYE_COLORS = ['brown', 'blue', 'green', 'hazel', 'gray', 'amber', 'black'] as const;
+export type EyeColor = (typeof EYE_COLORS)[number];
+
+// Training form data sent from server to client
+export interface TrainingFormPayload {
+  characterName: string;
+  familyName?: string;
+  race: string;    // Display name, not Race type (may differ from internal ID)
+  class: string;   // Display name, not CharacterClass type
+  level: number;
+  stats: Record<string, {
+    current: number;
+    min: number;
+    max: number;
+    spent: number;
+  }>;
+  unspentCp: number;
+  appearance?: {
+    gender?: Gender;
+    hairStyle?: HairStyle;
+    hairColor?: HairColor;
+    eyeColor?: EyeColor;
+  };
+  isNewCharacter?: boolean;  // True if this is shown after character creation
+}
+
+// Training form submission data from client to server
+export interface TrainingSubmitPayload {
+  stats: Record<string, number>;     // New stat values
+  cpSpent: Record<string, number>;   // CP spent per stat
+  cancelled: boolean;                 // True if user cancelled without saving
+  familyName?: string;               // Updated family name
+  appearance?: {
+    hairStyle?: HairStyle;
+    hairColor?: HairColor;
+    eyeColor?: EyeColor;
+  };
 }
 
 // Character stats (6 primary attributes)

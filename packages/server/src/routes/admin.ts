@@ -85,6 +85,9 @@ export function setupAdminRoutes(app: Express): void {
       if (key.startsWith('currency_') && key.endsWith('_per_enc')) {
         settingsRepo.clearCurrencyEncumbranceCache();
       }
+      if (key.startsWith('training_') || key === 'initial_character_points') {
+        settingsRepo.clearTrainingSettingsCache();
+      }
 
       res.json({ success: true, message: 'Setting updated' });
     } catch (error) {

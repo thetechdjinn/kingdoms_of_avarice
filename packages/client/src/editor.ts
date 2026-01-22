@@ -4,6 +4,17 @@
 const ROLE_ADMIN = 'admin';
 const ROLE_DEVELOPER = 'developer';
 
+interface RoomTrainingConfig {
+  enabled: boolean;
+  allowedClasses?: string[] | null;
+  minLevel?: number;
+  maxLevel?: number;
+}
+
+interface RoomFeatures {
+  training?: RoomTrainingConfig;
+}
+
 interface Room {
   id: number;
   name: string;
@@ -11,6 +22,7 @@ interface Room {
   area: string | null;
   terrain: string;
   exits: Record<string, number>;
+  features: RoomFeatures;
 }
 
 interface AuthInfo {
@@ -25,6 +37,7 @@ let selectedRoomId: number | null = null;
 let areas: string[] = [];
 let currentUser: AuthInfo | null = null;
 let mapViewMode: 'room' | 'area' = 'room';
+let availableClasses: string[] = [];
 
 // ============================================================================
 // Toast Notifications
@@ -133,6 +146,34 @@ async function fetchAreas(): Promise<void> {
   }
 }
 
+async function fetchClasses(): Promise<void> {
+  try {
+    const response = await fetch('/api/progression/classes');
+    const data = await response.json();
+    if (data.success && Array.isArray(data.classes)) {
+      availableClasses = data.classes.map((c: { name: string }) => c.name);
+      populateTrainingClassCheckboxes();
+    }
+  } catch (error) {
+    console.error('Failed to fetch classes:', error);
+    // Fallback to default classes if API fails
+    availableClasses = ['Warrior', 'Mage', 'Rogue', 'Cleric', 'Ranger', 'Paladin'];
+    populateTrainingClassCheckboxes();
+  }
+}
+
+function populateTrainingClassCheckboxes(): void {
+  const container = document.getElementById('training-class-checkboxes');
+  if (!container) return;
+
+  container.innerHTML = availableClasses.map(className => `
+    <label class="checkbox-label">
+      <input type="checkbox" class="training-class-checkbox" value="${escapeHtml(className)}" />
+      ${escapeHtml(className)}
+    </label>
+  `).join('');
+}
+
 function renderRoomList(): void {
   const list = document.getElementById('room-list')!;
   const filterArea = (document.getElementById('area-select') as HTMLSelectElement).value;
@@ -221,6 +262,28 @@ function selectRoom(id: number): void {
   (document.getElementById('room-terrain') as HTMLSelectElement).value = room.terrain || 'indoor';
   (document.getElementById('room-description') as HTMLTextAreaElement).value = room.description || '';
 
+  // Populate training settings
+  const trainingEnabled = room.features?.training?.enabled === true;
+  (document.getElementById('room-training-enabled') as HTMLInputElement).checked = trainingEnabled;
+
+  const trainingOptions = document.getElementById('training-options');
+  if (trainingOptions) {
+    trainingOptions.style.display = trainingEnabled ? 'block' : 'none';
+  }
+
+  (document.getElementById('room-training-min-level') as HTMLInputElement).value =
+    String(room.features?.training?.minLevel ?? 1);
+  (document.getElementById('room-training-max-level') as HTMLInputElement).value =
+    String(room.features?.training?.maxLevel ?? 999);
+
+  // Set class checkboxes (null = all classes allowed, empty array = no classes allowed)
+  const allowedClasses = room.features?.training?.allowedClasses;
+  const allClassesAllowed = allowedClasses === null || allowedClasses === undefined;
+  document.querySelectorAll('.training-class-checkbox').forEach((checkbox) => {
+    const input = checkbox as HTMLInputElement;
+    input.checked = allClassesAllowed || (Array.isArray(allowedClasses) && allowedClasses.includes(input.value));
+  });
+
   renderExits(room);
   updateTargetRoomSelect();
   renderRoomList();
@@ -292,11 +355,47 @@ async function saveRoom(): Promise<void> {
   const terrain = (document.getElementById('room-terrain') as HTMLSelectElement).value;
   const description = (document.getElementById('room-description') as HTMLTextAreaElement).value;
 
+  // Build training configuration
+  const trainingEnabled = (document.getElementById('room-training-enabled') as HTMLInputElement).checked;
+  const minLevelStr = (document.getElementById('room-training-min-level') as HTMLInputElement).value;
+  const maxLevelStr = (document.getElementById('room-training-max-level') as HTMLInputElement).value;
+  const minLevelRaw = minLevelStr === '' ? 1 : (parseInt(minLevelStr, 10) || 1);
+  const maxLevelRaw = maxLevelStr === '' ? 999 : (parseInt(maxLevelStr, 10) || 999);
+  // Clamp to valid range
+  const minLevel = Math.max(1, Math.min(999, minLevelRaw));
+  const maxLevel = Math.max(1, Math.min(999, maxLevelRaw));
+
+  // Validate min <= max
+  if (trainingEnabled && minLevel > maxLevel) {
+    showToast('Minimum training level cannot exceed maximum training level.', 'error');
+    return;
+  }
+
+  const allowedClasses: string[] = [];
+  document.querySelectorAll('.training-class-checkbox:checked').forEach((checkbox) => {
+    allowedClasses.push((checkbox as HTMLInputElement).value);
+  });
+
+  // Get current features and merge with training settings
+  const currentRoom = rooms.find(r => r.id === selectedRoomId);
+  const features: RoomFeatures = { ...(currentRoom?.features || {}) };
+
+  if (trainingEnabled) {
+    features.training = {
+      enabled: true,
+      minLevel,
+      maxLevel,
+      allowedClasses: allowedClasses.length > 0 ? allowedClasses : null,
+    };
+  } else {
+    delete features.training;
+  }
+
   try {
     const response = await fetch(`/api/rooms/${selectedRoomId}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, area, terrain, description }),
+      body: JSON.stringify({ name, area, terrain, description, features }),
     });
 
     const data = await response.json();
@@ -935,8 +1034,34 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   await fetchRooms();
   await fetchAreas();
+  await fetchClasses();
 
   document.getElementById('new-room-btn')!.addEventListener('click', createRoom);
+
+  // Training section toggle
+  const trainingSectionHeader = document.getElementById('training-section-header');
+  const trainingSectionContent = document.getElementById('training-section-content');
+  const collapseIcon = trainingSectionHeader?.querySelector('.collapse-icon');
+
+  if (trainingSectionHeader && trainingSectionContent) {
+    trainingSectionHeader.addEventListener('click', () => {
+      const isExpanded = trainingSectionContent.style.display !== 'none';
+      trainingSectionContent.style.display = isExpanded ? 'none' : 'block';
+      if (collapseIcon) {
+        collapseIcon.textContent = isExpanded ? '▶' : '▼';
+      }
+    });
+  }
+
+  // Training enabled checkbox toggle
+  const trainingEnabledCheckbox = document.getElementById('room-training-enabled');
+  const trainingOptions = document.getElementById('training-options');
+  if (trainingEnabledCheckbox && trainingOptions) {
+    trainingEnabledCheckbox.addEventListener('change', () => {
+      const isEnabled = (trainingEnabledCheckbox as HTMLInputElement).checked;
+      trainingOptions.style.display = isEnabled ? 'block' : 'none';
+    });
+  }
   document.getElementById('room-form')!.addEventListener('submit', (e) => {
     e.preventDefault();
     saveRoom();

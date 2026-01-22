@@ -13,6 +13,7 @@ export function setupRoomRoutes(app: Express): void {
         description: room.description,
         area: room.area,
         terrain: room.terrain || 'indoor',
+        features: room.features || {},
         exits: Object.fromEntries(room.exits),
       }));
       res.json({ success: true, rooms: roomsData });
@@ -45,6 +46,7 @@ export function setupRoomRoutes(app: Express): void {
           description: room.description,
           area: room.area,
           terrain: room.terrain || 'indoor',
+          features: room.features || {},
           exits: Object.fromEntries(room.exits),
         },
       });
@@ -57,14 +59,14 @@ export function setupRoomRoutes(app: Express): void {
   // Create room (requires Developer role)
   app.post('/api/rooms', requireDeveloper, async (req: Request, res: Response) => {
     try {
-      const { name, description, area, terrain } = req.body;
+      const { name, description, area, terrain, features } = req.body;
 
       if (!name) {
         res.status(400).json({ success: false, message: 'Name is required' });
         return;
       }
 
-      const room = await roomRepo.createRoom({ name, description, area, terrain });
+      const room = await roomRepo.createRoom({ name, description, area, terrain, features });
       res.json({
         success: true,
         room: {
@@ -73,6 +75,7 @@ export function setupRoomRoutes(app: Express): void {
           description: room.description,
           area: room.area,
           terrain: room.terrain || 'indoor',
+          features: room.features || {},
           exits: {},
         },
       });
@@ -91,8 +94,8 @@ export function setupRoomRoutes(app: Express): void {
         return;
       }
 
-      const { name, description, area, terrain } = req.body;
-      const room = await roomRepo.updateRoom(id, { name, description, area, terrain });
+      const { name, description, area, terrain, features } = req.body;
+      const room = await roomRepo.updateRoom(id, { name, description, area, terrain, features });
 
       if (!room) {
         res.status(404).json({ success: false, message: 'Room not found' });
@@ -108,6 +111,7 @@ export function setupRoomRoutes(app: Express): void {
           description: roomWithExits!.description,
           area: roomWithExits!.area,
           terrain: roomWithExits!.terrain || 'indoor',
+          features: roomWithExits!.features || {},
           exits: Object.fromEntries(roomWithExits!.exits),
         },
       });
@@ -181,6 +185,7 @@ export function setupRoomRoutes(app: Express): void {
           description: updatedRoom!.description,
           area: updatedRoom!.area,
           terrain: updatedRoom!.terrain || 'indoor',
+          features: updatedRoom!.features || {},
           exits: Object.fromEntries(updatedRoom!.exits),
         },
       });
@@ -223,6 +228,7 @@ export function setupRoomRoutes(app: Express): void {
           description: updatedRoom.description,
           area: updatedRoom.area,
           terrain: updatedRoom.terrain || 'indoor',
+          features: updatedRoom.features || {},
           exits: Object.fromEntries(updatedRoom.exits),
         } : null,
       });

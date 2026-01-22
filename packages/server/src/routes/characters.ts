@@ -303,6 +303,7 @@ export function setupCharacterRoutes(app: Express): void {
       res.json({
         success: true,
         character: await characterRepo.toSharedCharacterWithDisplayNames(character),
+        showTrainingForm: true,  // New character should be shown the training form
       });
     } catch (error) {
       // Handle specific validation errors from transaction

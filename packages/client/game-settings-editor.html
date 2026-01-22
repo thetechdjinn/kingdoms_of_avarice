@@ -294,6 +294,7 @@
               <button class="settings-tab active" data-tab="general">General</button>
               <button class="settings-tab" data-tab="combat">Combat</button>
               <button class="settings-tab" data-tab="currency">Currency</button>
+              <button class="settings-tab" data-tab="training">Training</button>
             </div>
 
             <!-- General Settings -->
@@ -546,6 +547,54 @@
                   <button class="btn-primary" data-save="currency_runic_per_enc">Save</button>
                 </div>
                 <div class="setting-message" id="msg-currency_runic_per_enc" style="display: none;"></div>
+              </div>
+            </div>
+
+            <!-- Training Settings -->
+            <div id="tab-training" class="settings-section">
+              <div class="setting-item" data-key="training_base_cost">
+                <div class="setting-header">
+                  <div>
+                    <div class="setting-label">Training Base Cost</div>
+                    <div class="setting-key">training_base_cost</div>
+                  </div>
+                </div>
+                <div class="setting-description">Base cost in copper to train from level 1 to level 2. Higher levels cost exponentially more based on the multiplier. Default: 28</div>
+                <div class="setting-controls">
+                  <input type="number" id="setting-training_base_cost" min="1" max="10000" />
+                  <button class="btn-primary" data-save="training_base_cost">Save</button>
+                </div>
+                <div class="setting-message" id="msg-training_base_cost" style="display: none;"></div>
+              </div>
+
+              <div class="setting-item" data-key="training_cost_multiplier">
+                <div class="setting-header">
+                  <div>
+                    <div class="setting-label">Training Cost Multiplier</div>
+                    <div class="setting-key">training_cost_multiplier</div>
+                  </div>
+                </div>
+                <div class="setting-description">Exponential multiplier applied per level. E.g., at 1.8x, level 3 costs 1.8x the base, level 4 costs 3.24x (1.8^2). Default: 1.8</div>
+                <div class="setting-controls">
+                  <input type="number" id="setting-training_cost_multiplier" min="1" max="5" step="0.1" />
+                  <button class="btn-primary" data-save="training_cost_multiplier">Save</button>
+                </div>
+                <div class="setting-message" id="msg-training_cost_multiplier" style="display: none;"></div>
+              </div>
+
+              <div class="setting-item" data-key="initial_character_points">
+                <div class="setting-header">
+                  <div>
+                    <div class="setting-label">Initial Character Points</div>
+                    <div class="setting-key">initial_character_points</div>
+                  </div>
+                </div>
+                <div class="setting-description">Number of Character Points (CP) given to new characters for allocating stats. Default: 100</div>
+                <div class="setting-controls">
+                  <input type="number" id="setting-initial_character_points" min="0" max="1000" />
+                  <button class="btn-primary" data-save="initial_character_points">Save</button>
+                </div>
+                <div class="setting-message" id="msg-initial_character_points" style="display: none;"></div>
               </div>
             </div>
           </div>
