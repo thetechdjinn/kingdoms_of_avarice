@@ -138,6 +138,11 @@ export async function runMigrations(): Promise<void> {
         ALTER TABLE characters ADD COLUMN IF NOT EXISTS eye_color VARCHAR(50)
       `);
 
+      // Update column default for existing databases that had 'neutral' as default
+      await client.query(`
+        ALTER TABLE characters ALTER COLUMN gender SET DEFAULT 'male'
+      `);
+
       // Update existing characters with neutral or null gender to male
       await client.query(`
         UPDATE characters SET gender = 'male' WHERE gender IS NULL OR gender = 'neutral'

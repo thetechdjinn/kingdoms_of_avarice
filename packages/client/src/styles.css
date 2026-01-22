@@ -385,9 +385,13 @@ button:hover {
   padding: 4px;
 }
 
-/* Add padding for xterm.js scrollbar so 80 chars aren't covered */
+/* Reserve space for scrollbar so 80 chars aren't covered */
+#terminal .xterm-viewport {
+  scrollbar-gutter: stable;
+}
+
 #terminal .xterm-screen {
-  padding-right: 20px;
+  padding-right: 16px;
 }
 
 #command-bar {
