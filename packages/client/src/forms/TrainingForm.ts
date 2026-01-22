@@ -226,10 +226,27 @@ export class TrainingForm extends AnsiForm {
   }
 
   /**
-   * Override field change to track CP usage
+   * Override field change to track and validate CP usage
    */
   protected onFieldChange(field: FormField): void {
     if (field.type === 'stat') {
+      // Validate CP - revert if over budget or below saved value
+      const stat = field.value as FieldValue;
+      const original = field.originalValue as FieldValue;
+      const totalCpUsed = this.calculateTotalCpUsed();
+      const cpRemaining = this.originalUnspentCp - totalCpUsed;
+
+      // Revert if CP is negative (over budget)
+      if (cpRemaining < 0) {
+        stat.current = original.current;
+        stat.spent = original.spent;
+      }
+      // Revert if below saved value
+      if (stat.current < original.current) {
+        stat.current = original.current;
+        stat.spent = original.spent;
+      }
+
       this.updateCpDisplay();
     }
   }
