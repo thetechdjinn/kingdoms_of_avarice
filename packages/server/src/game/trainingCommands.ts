@@ -169,11 +169,6 @@ export async function handleTrain(
     return showTrainingStatus(character, race.display_name, raceBaseStats, cpSpent, unspentCp);
   }
 
-  // No arguments - show training status
-  if (!statArg) {
-    return showTrainingStatus(character, race.display_name, raceBaseStats, cpSpent, unspentCp);
-  }
-
   // Look up the stat
   const statName = STAT_ALIASES[statArg];
   if (!statName) {
@@ -378,8 +373,8 @@ function buildTrainingFormPayload(
   return {
     characterName: character.name,
     familyName: character.last_name || undefined,
-    race: raceDisplayName as TrainingFormPayload['race'],
-    class: classDisplayName as TrainingFormPayload['class'],
+    race: raceDisplayName,
+    class: classDisplayName,
     level: character.level,
     stats,
     unspentCp,
@@ -494,9 +489,17 @@ export async function handleTrainingSubmit(
   // Build appearance update object
   const appearanceUpdates: Record<string, string | null> = {};
 
-  // Handle family name update
+  // Handle family name update with validation
   if (payload.familyName !== undefined) {
-    appearanceUpdates.last_name = payload.familyName || null;
+    const trimmedName = (payload.familyName || '').trim();
+    if (trimmedName.length > 20) {
+      return { type: MessageType.ERROR, message: 'Family name too long (max 20 characters).' };
+    }
+    // Allow only letters, hyphens, apostrophes, and spaces
+    if (trimmedName && !/^[a-zA-Z'-\s]+$/.test(trimmedName)) {
+      return { type: MessageType.ERROR, message: 'Family name contains invalid characters.' };
+    }
+    appearanceUpdates.last_name = trimmedName || null;
   }
 
   // Handle appearance updates (hair stored as "style color", e.g., "short black")
@@ -542,17 +545,32 @@ export async function handleTrainingSubmit(
     }
   }
 
-  if (changedStats.length === 0) {
+  // Track appearance changes
+  const changedAppearance: string[] = [];
+  if (appearanceUpdates.last_name !== undefined) {
+    changedAppearance.push(`Family name: ${appearanceUpdates.last_name || '(removed)'}`);
+  }
+  if (appearanceUpdates.hair) {
+    changedAppearance.push(`Hair: ${appearanceUpdates.hair}`);
+  }
+  if (appearanceUpdates.eye_color) {
+    changedAppearance.push(`Eye color: ${appearanceUpdates.eye_color}`);
+  }
+
+  if (changedStats.length === 0 && changedAppearance.length === 0) {
     return { type: MessageType.OUTPUT, message: 'No changes made.' };
   }
 
-  const message = [
-    'Training complete!',
-    changedStats.join(', '),
-    `CP remaining: ${colors.green(String(newUnspentCp))}`,
-  ].join('\r\n');
+  const messageLines: string[] = ['Training complete!'];
+  if (changedStats.length > 0) {
+    messageLines.push(changedStats.join(', '));
+    messageLines.push(`CP remaining: ${colors.green(String(newUnspentCp))}`);
+  }
+  if (changedAppearance.length > 0) {
+    messageLines.push(changedAppearance.join(', '));
+  }
 
-  return { type: MessageType.OUTPUT, message };
+  return { type: MessageType.OUTPUT, message: messageLines.join('\r\n') };
 }
 
 /**

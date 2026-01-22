@@ -1100,8 +1100,11 @@ function sendTrainingSubmit(result: TrainingFormResult): void {
     stats: result.stats,
     cpSpent: result.cpSpent,
     cancelled: result.cancelled,
-    familyName: result.familyName,
-    appearance: result.appearance,
+    // Only include appearance data when saving (not when cancelled)
+    ...(result.cancelled ? {} : {
+      familyName: result.familyName,
+      appearance: result.appearance,
+    }),
   };
 
   const message: GameMessage = {

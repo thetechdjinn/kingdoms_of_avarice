@@ -102,8 +102,8 @@ export type EyeColor = (typeof EYE_COLORS)[number];
 export interface TrainingFormPayload {
   characterName: string;
   familyName?: string;
-  race: Race;
-  class: CharacterClass;
+  race: string;    // Display name, not Race type (may differ from internal ID)
+  class: string;   // Display name, not CharacterClass type
   level: number;
   stats: Record<string, {
     current: number;
