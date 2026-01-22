@@ -162,6 +162,11 @@ async function fetchClasses(): Promise<void> {
         display_name: c.display_name
       }));
       populateTrainingClassSelect();
+    } else {
+      console.error('Failed to fetch classes:', data.message || 'Unknown error');
+      availableClassesData = [];
+      populateTrainingClassSelect();
+      showToast('Failed to load classes for training room settings', 'error');
     }
   } catch (error) {
     console.error('Failed to fetch classes:', error);

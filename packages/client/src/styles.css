@@ -385,6 +385,11 @@ button:hover {
   padding: 4px;
 }
 
+/* Add padding for xterm.js scrollbar so 80 chars aren't covered */
+#terminal .xterm-screen {
+  padding-right: 20px;
+}
+
 #command-bar {
   display: flex;
   align-items: center;

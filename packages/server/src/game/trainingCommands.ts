@@ -6,7 +6,7 @@
  * - train stats : Open ANSI form to allocate CP to stats
  */
 
-import { MessageType, CPStatName, CP_STAT_NAMES, CP_STAT_ABBREVIATIONS, getCPCostForNextPoint, getTotalCPCost, DEFAULT_STARTING_CP, TrainingFormPayload, TrainingSubmitPayload, formatCurrency, HairStyle, HairColor, EyeColor, HAIR_STYLES, HAIR_COLORS, EYE_COLORS, Gender } from '@koa/shared';
+import { MessageType, CPStatName, CP_STAT_NAMES, getCPCostForNextPoint, getTotalCPCost, DEFAULT_STARTING_CP, TrainingFormPayload, TrainingSubmitPayload, formatCurrency, HairStyle, HairColor, EyeColor, HAIR_STYLES, HAIR_COLORS, EYE_COLORS, Gender } from '@koa/shared';
 import { AuthenticatedSocket } from './socket.js';
 import { CommandResponse } from './commands.js';
 import { colors } from '../utils/colors.js';
@@ -343,48 +343,8 @@ export async function handleTrainingSubmit(
     cp_spent: newCpSpent,
   });
 
-  // Build success message
-  const changedStats: string[] = [];
-  for (const statName of CP_STAT_NAMES) {
-    const oldSpent = oldCpSpent[statName] ?? 0;
-    const newSpent = newCpSpent[statName] ?? 0;
-    if (oldSpent !== newSpent) {
-      const baseStats = raceBaseStats[statName];
-      if (baseStats) {
-        const oldValue = baseStats.min + oldSpent;
-        const newValue = baseStats.min + newSpent;
-        const abbr = CP_STAT_ABBREVIATIONS[statName];
-        changedStats.push(`${abbr}: ${oldValue} -> ${colors.green(String(newValue))}`);
-      }
-    }
-  }
-
-  // Track appearance changes
-  const changedAppearance: string[] = [];
-  if (appearanceUpdates.last_name !== undefined) {
-    changedAppearance.push(`Family name: ${appearanceUpdates.last_name || '(removed)'}`);
-  }
-  if (appearanceUpdates.hair) {
-    changedAppearance.push(`Hair: ${appearanceUpdates.hair}`);
-  }
-  if (appearanceUpdates.eye_color) {
-    changedAppearance.push(`Eye color: ${appearanceUpdates.eye_color}`);
-  }
-
-  if (changedStats.length === 0 && changedAppearance.length === 0) {
-    return { type: MessageType.OUTPUT, message: 'No changes made.' };
-  }
-
-  const messageLines: string[] = ['Training complete!'];
-  if (changedStats.length > 0) {
-    messageLines.push(changedStats.join(', '));
-    messageLines.push(`CP remaining: ${colors.green(String(newUnspentCp))}`);
-  }
-  if (changedAppearance.length > 0) {
-    messageLines.push(changedAppearance.join(', '));
-  }
-
-  return { type: MessageType.OUTPUT, message: messageLines.join('\r\n') };
+  // Silently complete - client refreshes the room display
+  return { type: MessageType.OUTPUT, message: '' };
 }
 
 /**

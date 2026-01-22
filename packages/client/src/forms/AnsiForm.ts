@@ -101,8 +101,8 @@ export abstract class AnsiForm {
     this.keyHandler = (event: KeyboardEvent) => {
       if (!this.isActive) return;
 
-      // Prevent default for navigation keys
-      if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Tab', 'Enter', 'Escape', ' '].includes(event.key)) {
+      // Prevent default for navigation and editing keys
+      if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Tab', 'Enter', 'Escape', ' ', 'Backspace'].includes(event.key)) {
         event.preventDefault();
       }
 

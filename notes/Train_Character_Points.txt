@@ -1,0 +1,44 @@
+  .                                     .  .
+   /  Character Creation               /    \        Point Cost Chart
+                                             .
+      Given Name     Slaughter             ___\_/    1st 10 points: 1 CP each
+      Family Name    Machine                         2nd 10 points: 2 CP each
+      Race           Elf                             3rd 10 points: 3 CP each
+      Class          Warrior                             ... and so on ...
+
+      Strength     (  35 to   90)    65 « │        │ +10 to base stat:  10 CP │
+  │ » Intellect    (  50 to  120)    50 « │  ──────┤ +20 to base stat:  30 CP │
+  │ » Wisdom       (  40 to  100)    40 « │        │ +30 to base stat:  60 CP │
+  │ » Dexterity    (  50 to  120)    70 «            +40 to base stat: 100 CP
+      Constitution (  30 to   80)    70              +50 to base stat: 150 CP
+      Charisma     (  50 to  120)    50                  ... and so on ...
+
+      Hair Length   none                              Use the arrow keys to
+      Hair Color    black                           toggle between choices for
+      Eye Color     black                           your physical description
+                                                            and stats
+       Exit: SAVE      CP Left:    0               SAVE your character or EXIT
+ ⌐┴───────────────────────────────.     │
+ \_________________________________\___/\
+
+ -------------------------------------------------------------------------------
+                                             .
+      Given Name     Scum           ___\_/            1st 10 points: 1 CP each
+      Family Name  > Bob        <                    2nd 10 points: 2 CP each
+      Race           Dark Elf                         3rd 10 points: 3 CP each
+      Class          Ninja                            ... and so on ...
+
+      Strength     (  40 to   90)    60 «   │        │ +10 to base stat:  10 CP │
+      Intellect    (  50 to  120)    50 «   │  ──────┤ +20 to base stat:  30 CP │
+      Wisdom       (  30 to  100)    30 «   │        │ +30 to base stat:  60 CP │
+      Dexterity    (  50 to  120)    60 «              +40 to base stat: 100 CP
+      Constitution (  30 to   90)    60 «              +50 to base stat: 150 CP
+      Charisma     (  40 to  110)    40 «                  ... and so on ...
+
+      Hair Length  braided                            Use the arrow keys to
+      Hair Color   black                              toggle between choices for
+      Eye Color    brown                              your physical description
+                                                             and stats
+       Exit: SAVE      CP Left:    0               SAVE your character or EXIT
+ ⌐┴───────────────────────────────.     │
+ \_________________________________\___/

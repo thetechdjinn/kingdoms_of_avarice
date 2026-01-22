@@ -156,13 +156,13 @@ export class FormField {
   private handleStatInput(key: string): boolean {
     const stat = this.value as FieldValue;
 
-    if ((key === 'ArrowLeft' || key === '-') && stat.current > stat.min) {
+    if ((key === 'ArrowDown' || key === '-') && stat.current > stat.min) {
       stat.current--;
       stat.spent--;
       return true;
     }
 
-    if ((key === 'ArrowRight' || key === '+' || key === '=') && stat.current < stat.max) {
+    if ((key === 'ArrowUp' || key === '+' || key === '=') && stat.current < stat.max) {
       stat.current++;
       stat.spent++;
       return true;
@@ -172,9 +172,9 @@ export class FormField {
   }
 
   private handleToggleInput(key: string): boolean {
-    if (key === ' ' || key === 'Enter' || key === 'ArrowLeft' || key === 'ArrowRight') {
+    if (key === ' ' || key === 'Enter' || key === 'ArrowUp' || key === 'ArrowDown') {
       const currentIndex = typeof this.value === 'number' ? this.value : 0;
-      if (key === 'ArrowLeft') {
+      if (key === 'ArrowDown') {
         this.value = (currentIndex - 1 + this.options.length) % this.options.length;
       } else {
         this.value = (currentIndex + 1) % this.options.length;
