@@ -175,9 +175,9 @@ export class FormField {
     if (key === ' ' || key === 'Enter' || key === 'ArrowUp' || key === 'ArrowDown') {
       const currentIndex = typeof this.value === 'number' ? this.value : 0;
       if (key === 'ArrowDown') {
-        this.value = (currentIndex - 1 + this.options.length) % this.options.length;
-      } else {
         this.value = (currentIndex + 1) % this.options.length;
+      } else {
+        this.value = (currentIndex - 1 + this.options.length) % this.options.length;
       }
       return true;
     }

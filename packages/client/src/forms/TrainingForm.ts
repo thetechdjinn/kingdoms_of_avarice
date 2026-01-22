@@ -243,7 +243,7 @@ export class TrainingForm extends AnsiForm {
   /**
    * Check if we can decrease a stat (can't go below saved/original value)
    */
-  private canDecreasestat(field: FormField): boolean {
+  private canDecreaseStat(field: FormField): boolean {
     const stat = field.value as FieldValue;
     const originalStat = field.originalValue as FieldValue;
 
@@ -317,7 +317,7 @@ export class TrainingForm extends AnsiForm {
         }
       } else {
         // Decrease: can only go back to saved value, not below
-        if (this.canDecreasestat(currentField)) {
+        if (this.canDecreaseStat(currentField)) {
           stat.current--;
           stat.spent--;
           this.updateCpDisplay();
