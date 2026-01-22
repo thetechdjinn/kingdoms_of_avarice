@@ -167,6 +167,7 @@ async function fetchClasses(): Promise<void> {
     console.error('Failed to fetch classes:', error);
     availableClassesData = [];
     populateTrainingClassSelect();
+    showToast('Failed to load classes for training room settings', 'error');
   }
 }
 

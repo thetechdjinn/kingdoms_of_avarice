@@ -140,7 +140,7 @@ export function getProgression(characterId: number): CharacterProgression | unde
  * Load a character's progression from the database into the in-memory map.
  * Call this when a character enters the game.
  */
-export async function loadCharacterProgression(characterId: number, classId: string, level: number): Promise<CharacterProgression | null> {
+export async function loadCharacterProgression(characterId: number, classId: string): Promise<CharacterProgression | null> {
   // Try to load from database
   const dbProgression = await progressionRepo.getCharacterProgression(characterId);
 

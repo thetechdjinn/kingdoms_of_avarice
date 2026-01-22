@@ -6,7 +6,7 @@
  * - train stats : Open ANSI form to allocate CP to stats
  */
 
-import { MessageType, CPStatName, CP_STAT_NAMES, CP_STAT_ABBREVIATIONS, getCPCostForNextPoint, getTotalCPCost, getMaxPointsAffordable, DEFAULT_STARTING_CP, TrainingFormPayload, TrainingSubmitPayload, getCpEarnedForLevel, formatCurrency, HairStyle, HairColor, EyeColor, HAIR_STYLES, HAIR_COLORS, EYE_COLORS, Gender } from '@koa/shared';
+import { MessageType, CPStatName, CP_STAT_NAMES, CP_STAT_ABBREVIATIONS, getCPCostForNextPoint, getTotalCPCost, DEFAULT_STARTING_CP, TrainingFormPayload, TrainingSubmitPayload, formatCurrency, HairStyle, HairColor, EyeColor, HAIR_STYLES, HAIR_COLORS, EYE_COLORS, Gender } from '@koa/shared';
 import { AuthenticatedSocket } from './socket.js';
 import { CommandResponse } from './commands.js';
 import { colors } from '../utils/colors.js';
@@ -521,11 +521,10 @@ async function handleImmediateLevelUp(
     socket.characterLevel = result.newLevel;
 
     // Success message
-    const cpReward = getCpEarnedForLevel(targetLevel);
     const successLines: string[] = [];
     successLines.push(colors.green(`You pay ${currencyStr} to the trainer.`));
     successLines.push(colors.green(`You have trained to level ${result.newLevel}!`));
-    successLines.push(colors.green(`You gained ${cpReward} CP to allocate to your stats.`));
+    successLines.push(colors.green(`You gained ${result.cpEarned} CP to allocate to your stats.`));
     successLines.push('');
     successLines.push(`Type ${colors.cyan("'train stats'")} to allocate your stats.`);
 
