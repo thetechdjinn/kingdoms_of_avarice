@@ -569,7 +569,7 @@ export class TrainingForm extends AnsiForm {
       return `${padToColumn(leftPart, visibleLen, 53)}${DIM}${helpText}${RESET}`;
     };
 
-    lines.push(renderAppearanceLine('Hair Length', hairStyleValue, hairStyleSelected, 'Use the arrow keys to'));
+    lines.push(renderAppearanceLine('Hair Style', hairStyleValue, hairStyleSelected, 'Use the arrow keys to'));
     lines.push(renderAppearanceLine('Hair Color', hairColorValue, hairColorSelected, 'toggle between choices for'));
     lines.push(renderAppearanceLine('Eye Color', eyeColorValue, eyeColorSelected, 'your physical description'));
     lines.push(`${' '.repeat(60)}${DIM}and stats${RESET}`);
