@@ -145,7 +145,7 @@ export interface CharacterStats {
 }
 
 // Gender type for character appearance
-export type Gender = 'male' | 'female' | 'neutral';
+export type Gender = 'male' | 'female';
 
 // Currency data for characters
 export interface Currency {

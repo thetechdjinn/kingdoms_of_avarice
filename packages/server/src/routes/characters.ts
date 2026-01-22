@@ -143,7 +143,7 @@ export function setupCharacterRoutes(app: Express): void {
     }
 
     // Validate and trim gender if provided (case-insensitive)
-    const validGenders = ['male', 'female', 'neutral'];
+    const validGenders = ['male', 'female'];
     let trimmedGender: string | undefined;
     if (gender !== undefined && gender !== null && gender !== '') {
       if (typeof gender !== 'string') {
@@ -273,7 +273,7 @@ export function setupCharacterRoutes(app: Express): void {
           race: raceId,
           characterClass: classId,
           stats: finalStats,
-          gender: trimmedGender || 'neutral',
+          gender: trimmedGender || 'male',
           hair: trimmedHair || undefined,
           eyeColor: trimmedEyeColor || undefined,
         }, client);

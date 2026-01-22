@@ -640,7 +640,7 @@ async function showCharacterCreate(): Promise<void> {
   (document.getElementById('char-last-name') as HTMLInputElement).value = '';
   (document.getElementById('char-race') as HTMLSelectElement).value = '';
   (document.getElementById('char-class') as HTMLSelectElement).value = '';
-  (document.getElementById('char-gender') as HTMLSelectElement).value = 'neutral';
+  (document.getElementById('char-gender') as HTMLSelectElement).value = 'male';
   (document.getElementById('char-hair') as HTMLSelectElement).value = '';
   (document.getElementById('char-eye-color') as HTMLSelectElement).value = 'brown eyes';
   document.getElementById('create-error')!.textContent = '';
