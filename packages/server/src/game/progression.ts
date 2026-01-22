@@ -137,6 +137,53 @@ export function getProgression(characterId: number): CharacterProgression | unde
 }
 
 /**
+ * Load a character's progression from the database into the in-memory map.
+ * Call this when a character enters the game.
+ */
+export async function loadCharacterProgression(characterId: number, classId: string): Promise<CharacterProgression | null> {
+  // Try to load from database
+  const dbProgression = await progressionRepo.getCharacterProgression(characterId);
+
+  if (dbProgression) {
+    // Store in memory
+    characterProgressions.set(characterId, dbProgression);
+
+    // Initialize activity tracker (not persisted, reset each session)
+    const tracker: CharacterActivityTracker = {
+      character_id: characterId,
+      activity_counts: [],
+      last_reset_level: dbProgression.level,
+    };
+    activityTrackers.set(characterId, tracker);
+
+    return dbProgression;
+  }
+
+  // No progression in DB - create a new one
+  const newProgression = await progressionRepo.createCharacterProgression(characterId, classId);
+  if (newProgression) {
+    characterProgressions.set(characterId, newProgression);
+
+    const tracker: CharacterActivityTracker = {
+      character_id: characterId,
+      activity_counts: [],
+      last_reset_level: newProgression.level,
+    };
+    activityTrackers.set(characterId, tracker);
+  }
+
+  return newProgression;
+}
+
+/**
+ * Unload a character's progression from memory (when they disconnect)
+ */
+export function unloadCharacterProgression(characterId: number): void {
+  characterProgressions.delete(characterId);
+  activityTrackers.delete(characterId);
+}
+
+/**
  * Get activity tracker for a character
  */
 export function getActivityTracker(characterId: number): CharacterActivityTracker | undefined {

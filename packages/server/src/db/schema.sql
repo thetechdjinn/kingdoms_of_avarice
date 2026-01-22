@@ -39,7 +39,7 @@ CREATE TABLE IF NOT EXISTS characters (
     unspent_cp INTEGER DEFAULT 100,  -- CP available to spend on stats
     cp_spent JSONB DEFAULT '{}',     -- Points spent per stat: {"strength": 10, "agility": 5, ...}
     -- Appearance fields
-    gender VARCHAR(10) DEFAULT 'neutral',
+    gender VARCHAR(10) DEFAULT 'male',
     hair VARCHAR(100),
     eye_color VARCHAR(50),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP

@@ -121,11 +121,11 @@ export class FormField {
     const canDecrease = stat.current > stat.min;
     const canIncrease = stat.current < stat.max;
 
-    const leftArrow = canDecrease ? `${arrowColor}<${reset}` : ' ';
-    const rightArrow = canIncrease ? `${arrowColor}>${reset}` : ' ';
+    const upArrow = canIncrease ? `${arrowColor}▲${reset}` : ' ';
+    const downArrow = canDecrease ? `${arrowColor}▼${reset}` : ' ';
 
-    // Format: "STR: <45> (40-65)"
-    const valueStr = `${highlightBg}${leftArrow}${valueColor}${stat.current}${reset}${highlightBg}${rightArrow}${reset}`;
+    // Format: "STR: ▲45▼ (40-65)" - up arrow to increase, down arrow to decrease
+    const valueStr = `${highlightBg}${upArrow}${valueColor}${stat.current}${reset}${highlightBg}${downArrow}${reset}`;
     const rangeStr = `${minColor}(${stat.min}-${stat.max})${reset}`;
 
     return `${labelColor}${this.label}:${reset} ${valueStr} ${rangeStr}`;
@@ -156,13 +156,13 @@ export class FormField {
   private handleStatInput(key: string): boolean {
     const stat = this.value as FieldValue;
 
-    if ((key === 'ArrowLeft' || key === '-') && stat.current > stat.min) {
+    if ((key === 'ArrowDown' || key === '-') && stat.current > stat.min) {
       stat.current--;
       stat.spent--;
       return true;
     }
 
-    if ((key === 'ArrowRight' || key === '+' || key === '=') && stat.current < stat.max) {
+    if ((key === 'ArrowUp' || key === '+' || key === '=') && stat.current < stat.max) {
       stat.current++;
       stat.spent++;
       return true;
@@ -172,11 +172,13 @@ export class FormField {
   }
 
   private handleToggleInput(key: string): boolean {
-    if (key === ' ' || key === 'Enter' || key === 'ArrowLeft' || key === 'ArrowRight') {
+    if (key === ' ' || key === 'Enter' || key === 'ArrowUp' || key === 'ArrowDown') {
       const currentIndex = typeof this.value === 'number' ? this.value : 0;
-      if (key === 'ArrowLeft') {
+      if (key === 'ArrowUp') {
+        // ArrowUp goes to previous option
         this.value = (currentIndex - 1 + this.options.length) % this.options.length;
       } else {
+        // ArrowDown, Space, Enter go to next option
         this.value = (currentIndex + 1) % this.options.length;
       }
       return true;

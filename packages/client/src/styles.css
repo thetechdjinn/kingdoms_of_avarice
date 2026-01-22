@@ -385,6 +385,15 @@ button:hover {
   padding: 4px;
 }
 
+/* Reserve space for scrollbar so 80 chars aren't covered */
+#terminal .xterm-viewport {
+  scrollbar-gutter: stable;
+}
+
+#terminal .xterm-screen {
+  padding-right: 16px;
+}
+
 #command-bar {
   display: flex;
   align-items: center;

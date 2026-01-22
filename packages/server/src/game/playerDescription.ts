@@ -142,13 +142,11 @@ export interface Pronouns {
  */
 export function getPronouns(gender: Gender): Pronouns {
   switch (gender) {
-    case 'male':
-      return { subject: 'He', object: 'him', possessive: 'his' };
     case 'female':
       return { subject: 'She', object: 'her', possessive: 'her' };
-    case 'neutral':
+    case 'male':
     default:
-      return { subject: 'They', object: 'them', possessive: 'their' };
+      return { subject: 'He', object: 'him', possessive: 'his' };
   }
 }
 
@@ -203,7 +201,7 @@ export interface PlayerDescriptionData {
  */
 export function generatePlayerDescription(data: PlayerDescriptionData): string {
   const { character, currentHp, maxHp, equippedItems } = data;
-  const pronouns = getPronouns(character.gender || 'neutral');
+  const pronouns = getPronouns(character.gender || 'male');
   const stats = character.stats;
 
   // Build full name (first name + last name)

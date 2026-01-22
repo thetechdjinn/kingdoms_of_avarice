@@ -220,6 +220,8 @@ function getStatColor(current: number, max: number): string {
 // Clear the statline from the terminal
 function clearStatline(): void {
   if (!terminal || !statlineDisplayed) return;
+  // Don't manipulate terminal while training form is active
+  if (activeTrainingForm) return;
   // Move to beginning of line and clear it
   terminal.write('\r\x1b[K');
   statlineDisplayed = false;
@@ -228,6 +230,8 @@ function clearStatline(): void {
 // Render the statline at the current cursor position
 function renderStatline(): void {
   if (!terminal || !currentVitals) return;
+  // Don't render statline while training form is active
+  if (activeTrainingForm) return;
 
   const hpColor = getStatColor(currentVitals.hp, currentVitals.maxHp);
   const reset = '\x1b[0m';
@@ -636,7 +640,7 @@ async function showCharacterCreate(): Promise<void> {
   (document.getElementById('char-last-name') as HTMLInputElement).value = '';
   (document.getElementById('char-race') as HTMLSelectElement).value = '';
   (document.getElementById('char-class') as HTMLSelectElement).value = '';
-  (document.getElementById('char-gender') as HTMLSelectElement).value = 'neutral';
+  (document.getElementById('char-gender') as HTMLSelectElement).value = 'male';
   (document.getElementById('char-hair') as HTMLSelectElement).value = '';
   (document.getElementById('char-eye-color') as HTMLSelectElement).value = 'brown eyes';
   document.getElementById('create-error')!.textContent = '';

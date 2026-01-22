@@ -12,6 +12,7 @@ import * as playerRepo from '../db/repositories/playerRepository.js';
 import * as characterRepo from '../db/repositories/characterRepository.js';
 import * as progressionRepo from '../db/repositories/progressionRepository.js';
 import { initializeProgressionData } from './progressionLoader.js';
+import { loadCharacterProgression, unloadCharacterProgression } from './progression.js';
 import { initializeDefaultRegenConfigs, startRegenLoops } from './regeneration.js';
 import { startCombatLoop } from './combat.js';
 import { initializeSpellMnemonics } from './spellCommands.js';
@@ -313,6 +314,13 @@ export function setupGameSocket(wss: WebSocketServer): void {
       authWs.briefMode = false;
     }
 
+    // Load character progression into memory for level-up checks
+    try {
+      await loadCharacterProgression(character.id, character.class);
+    } catch (error) {
+      console.error('Failed to load character progression:', error);
+    }
+
     connectedPlayers.set(payload.playerId, authWs);
 
     // Use character's room location (default to room 1 if invalid)
@@ -440,6 +448,9 @@ export function setupGameSocket(wss: WebSocketServer): void {
         } catch (error) {
           console.error(`Failed to save vitals for character ${authWs.characterId}:`, error);
         }
+
+        // Unload character progression from memory
+        unloadCharacterProgression(authWs.characterId);
       }
 
       // Broadcast appropriate message based on how they disconnected

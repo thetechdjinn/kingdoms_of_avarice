@@ -129,13 +129,23 @@ export async function runMigrations(): Promise<void> {
 
       // Add appearance columns to characters table (for existing databases)
       await client.query(`
-        ALTER TABLE characters ADD COLUMN IF NOT EXISTS gender VARCHAR(10) DEFAULT 'neutral'
+        ALTER TABLE characters ADD COLUMN IF NOT EXISTS gender VARCHAR(10) DEFAULT 'male'
       `);
       await client.query(`
         ALTER TABLE characters ADD COLUMN IF NOT EXISTS hair VARCHAR(100)
       `);
       await client.query(`
         ALTER TABLE characters ADD COLUMN IF NOT EXISTS eye_color VARCHAR(50)
+      `);
+
+      // Update column default for existing databases that had 'neutral' as default
+      await client.query(`
+        ALTER TABLE characters ALTER COLUMN gender SET DEFAULT 'male'
+      `);
+
+      // Update existing characters with neutral or null gender to male
+      await client.query(`
+        UPDATE characters SET gender = 'male' WHERE gender IS NULL OR gender = 'neutral'
       `);
 
       // Add new class fields (combat_level, magic_level, etc.)

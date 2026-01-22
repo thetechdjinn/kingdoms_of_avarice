@@ -52,6 +52,18 @@ export interface TrainingFormResult {
   };
 }
 
+// ANSI color constants
+const ANSI = {
+  CYAN: '\x1b[36m',
+  WHITE: '\x1b[37m',
+  BRIGHT_WHITE: '\x1b[1;37m',
+  YELLOW: '\x1b[33m',
+  GREEN: '\x1b[32m',
+  RED: '\x1b[31m',
+  RESET: '\x1b[0m',
+  DIM: '\x1b[2m',
+} as const;
+
 export class TrainingForm extends AnsiForm {
   private formData: TrainingFormData;
   private originalUnspentCp: number;
@@ -92,9 +104,9 @@ export class TrainingForm extends AnsiForm {
 
     sections.push({ title: 'Character', fields: infoFields });
 
-    // Stats Section
+    // Stats Section - order determines navigation order
     const statFields: FormFieldConfig[] = [];
-    const stats: CPStatName[] = ['strength', 'agility', 'constitution', 'intellect', 'wisdom', 'charisma'];
+    const stats: CPStatName[] = ['strength', 'intellect', 'wisdom', 'agility', 'constitution', 'charisma'];
 
     stats.forEach((stat, index) => {
       const row = Math.floor(index / 2);
@@ -170,13 +182,21 @@ export class TrainingForm extends AnsiForm {
 
     sections.push({ title: 'Character Points', fields: cpFields });
 
-    // Buttons Section
-    const buttonFields: FormFieldConfig[] = [
-      { type: 'button', name: 'save_btn', label: 'SAVE', row: 0, col: 15, action: 'save', editable: true },
-      { type: 'button', name: 'exit_btn', label: 'EXIT', row: 0, col: 35, action: 'exit', editable: true },
+    // Exit Toggle Section (SAVE or EXIT)
+    const exitFields: FormFieldConfig[] = [
+      {
+        type: 'toggle',
+        name: 'exit_toggle',
+        label: 'Exit',
+        value: 0,  // Default to SAVE
+        options: ['SAVE', 'EXIT'],
+        row: 0,
+        col: 7,
+        editable: true,
+      },
     ];
 
-    sections.push({ title: '', fields: buttonFields });
+    sections.push({ title: '', fields: exitFields });
 
     return {
       title: 'Character Training',
@@ -206,53 +226,58 @@ export class TrainingForm extends AnsiForm {
   }
 
   /**
-   * Override field change to track CP usage
+   * Override field change to track and validate CP usage
    */
   protected onFieldChange(field: FormField): void {
     if (field.type === 'stat') {
+      // Validate CP - revert if over budget or below saved value
+      const stat = field.value as FieldValue;
+      const original = field.originalValue as FieldValue;
+      const totalCpUsed = this.calculateTotalCpUsed();
+      const cpRemaining = this.originalUnspentCp - totalCpUsed;
+
+      // Revert if CP is negative (over budget)
+      if (cpRemaining < 0) {
+        stat.current = original.current;
+        stat.spent = original.spent;
+      }
+      // Revert if below saved value
+      if (stat.current < original.current) {
+        stat.current = original.current;
+        stat.spent = original.spent;
+      }
+
       this.updateCpDisplay();
-      this.enforceStatLimits(field);
     }
   }
 
   /**
-   * Enforce stat min/max based on available CP
+   * Check if we can afford to increase a stat by one point
    */
-  private enforceStatLimits(changedField: FormField): void {
+  private canAffordStatIncrease(field: FormField): boolean {
+    const stat = field.value as FieldValue;
+    const baseStat = this.formData.stats[field.name as CPStatName];
+
+    // Check if already at racial max
+    if (stat.current >= baseStat.max) return false;
+
+    // Calculate current CP usage and check if we can afford the next point
     const totalCpUsed = this.calculateTotalCpUsed();
     const cpRemaining = this.originalUnspentCp - totalCpUsed;
+    const costForNextPoint = getCPCostForNextPoint(stat.spent);
 
-    // If we're over budget, revert the last change
-    if (cpRemaining < 0) {
-      const stat = changedField.value as FieldValue;
-      if (stat.spent > (changedField.originalValue?.spent ?? 0)) {
-        stat.current--;
-        stat.spent--;
-      }
-      this.updateCpDisplay();
-    }
+    return cpRemaining >= costForNextPoint;
+  }
 
-    // Update the effective max for each stat based on remaining CP
-    for (const field of this.fields) {
-      if (field.type === 'stat') {
-        const stat = field.value as FieldValue;
-        const baseStat = this.formData.stats[field.name as CPStatName];
+  /**
+   * Check if we can decrease a stat (can't go below saved/original value)
+   */
+  private canDecreaseStat(field: FormField): boolean {
+    const stat = field.value as FieldValue;
+    const originalStat = field.originalValue as FieldValue;
 
-        // Calculate how many more points can be afforded
-        let affordableIncrease = 0;
-        let testSpent = stat.spent;
-        let testCp = cpRemaining;
-
-        while (testCp >= getCPCostForNextPoint(testSpent) && stat.current + affordableIncrease < baseStat.max) {
-          testCp -= getCPCostForNextPoint(testSpent);
-          testSpent++;
-          affordableIncrease++;
-        }
-
-        // Effective max is current + what we can afford
-        stat.max = Math.min(baseStat.max, stat.current + affordableIncrease);
-      }
-    }
+    // Can only lower back to the saved value, not below
+    return stat.current > originalStat.current;
   }
 
   /**
@@ -301,29 +326,77 @@ export class TrainingForm extends AnsiForm {
   }
 
   /**
-   * Override to handle stat-specific left/right behavior
+   * Override to handle training form navigation
+   * Up/Down arrows adjust values, Left/Right arrows navigate between fields
    */
   protected handleKey(key: string, event: KeyboardEvent): void {
     const currentField = this.editableFields[this.selectedIndex];
 
-    // For stat fields, left/right adjusts the value
-    if (currentField?.type === 'stat' && (key === 'ArrowLeft' || key === 'ArrowRight')) {
+    // For stat fields, handle all stat adjustment keys with CP and saved-value limits
+    // This includes ArrowUp/Down and +/-/= to prevent bypassing CP enforcement
+    if (currentField?.type === 'stat') {
+      const isIncrease = key === 'ArrowUp' || key === '+' || key === '=';
+      const isDecrease = key === 'ArrowDown' || key === '-';
+
+      if (isIncrease || isDecrease) {
+        const stat = currentField.value as FieldValue;
+
+        if (isIncrease) {
+          // Increase: check if we can afford it and not at racial max
+          if (this.canAffordStatIncrease(currentField)) {
+            stat.current++;
+            stat.spent++;
+            this.updateCpDisplay();
+            this.render();
+          }
+        } else {
+          // Decrease: can only go back to saved value, not below
+          if (this.canDecreaseStat(currentField)) {
+            stat.current--;
+            stat.spent--;
+            this.updateCpDisplay();
+            this.render();
+          }
+        }
+        return;
+      }
+    }
+
+    // For toggle fields, up/down cycles options
+    if (currentField?.type === 'toggle' && (key === 'ArrowUp' || key === 'ArrowDown')) {
       if (currentField.handleInput(key)) {
-        this.onFieldChange(currentField);
         this.render();
       }
       return;
     }
 
-    // For toggle fields, left/right also works
-    if (currentField?.type === 'toggle' && (key === 'ArrowLeft' || key === 'ArrowRight')) {
-      if (currentField.handleInput(key)) {
-        this.render();
+    // Left/right navigates between fields
+    if (key === 'ArrowLeft') {
+      this.movePrevious();
+      return;
+    }
+    if (key === 'ArrowRight') {
+      this.moveNext();
+      return;
+    }
+
+    // Enter on the exit toggle triggers save or exit
+    if (key === 'Enter' && currentField?.name === 'exit_toggle') {
+      const toggleValue = currentField.options[Number(currentField.value) || 0];
+      if (toggleValue === 'SAVE') {
+        this.handleSave();
+      } else {
+        this.handleCancel();
       }
       return;
     }
 
-    // Default handling for other keys
+    // Ignore Escape key - must use SAVE/EXIT toggle to leave the form
+    if (key === 'Escape') {
+      return;
+    }
+
+    // Default handling for other keys (text input, etc.)
     super.handleKey(key, event);
   }
 
@@ -383,12 +456,164 @@ export class TrainingForm extends AnsiForm {
   }
 
   /**
-   * Override render to show training-specific layout
+   * Override render to show training-specific ANSI layout
    */
   protected render(): void {
-    // Update CP display before rendering
     this.updateCpDisplay();
-    super.render();
+    this.terminal.clear();
+
+    const lines: string[] = [
+      ...this.renderTitleSection(),
+      ...this.renderCharacterInfoSection(),
+      '',
+      ...this.renderStatsSection(),
+      '',
+      ...this.renderAppearanceSection(),
+      ...this.renderFooterSection(),
+    ];
+
+    for (const line of lines) {
+      this.terminal.write(line + '\r\n');
+    }
+  }
+
+  /** Render title area with decorative border */
+  private renderTitleSection(): string[] {
+    return [
+      `${ANSI.DIM} .                                     .  .${ANSI.RESET}`,
+      `${ANSI.CYAN}  /  Character Creation               /${ANSI.RESET}    ${ANSI.DIM}\\${ANSI.RESET}        ${ANSI.YELLOW}Point Cost Chart${ANSI.RESET}`,
+      `${ANSI.DIM}                                            .${ANSI.RESET}`,
+    ];
+  }
+
+  /** Render character info section (name, race, class) */
+  private renderCharacterInfoSection(): string[] {
+    const lines: string[] = [];
+    const familyNameField = this.fields.find(f => f.name === 'family_name');
+    const familyName = familyNameField ? String(familyNameField.value || '') : '';
+    const familyNameSelected = this.editableFields[this.selectedIndex] === familyNameField;
+
+    // Given Name with decoration
+    const givenNameLeft = `     ${ANSI.CYAN}Given Name${ANSI.RESET}     ${ANSI.BRIGHT_WHITE}${this.formData.characterName.padEnd(13)}${ANSI.RESET}  ${ANSI.DIM}___\\_/${ANSI.RESET}`;
+    lines.push(`${this.padToColumn(givenNameLeft, 53)}${ANSI.DIM}1st 10 points: 1 CP each${ANSI.RESET}`);
+
+    // Family name - editable (both states same width: 15 chars)
+    const familyNameDisplay = familyNameSelected
+      ? `${ANSI.GREEN}>${ANSI.RESET} ${ANSI.BRIGHT_WHITE}${familyName.padEnd(12)}${ANSI.RESET}${ANSI.GREEN}<${ANSI.RESET}`
+      : `  ${ANSI.WHITE}${familyName.padEnd(13)}${ANSI.RESET}`;
+    const familyNameLeft = `     ${ANSI.CYAN}Family Name${ANSI.RESET}  ${familyNameDisplay}`;
+    lines.push(`${this.padToColumn(familyNameLeft, 53)}${ANSI.DIM}2nd 10 points: 2 CP each${ANSI.RESET}`);
+
+    // Race
+    const raceLeft = `     ${ANSI.CYAN}Race${ANSI.RESET}           ${ANSI.WHITE}${this.formData.race.padEnd(13)}${ANSI.RESET}`;
+    lines.push(`${this.padToColumn(raceLeft, 53)}${ANSI.DIM}3rd 10 points: 3 CP each${ANSI.RESET}`);
+
+    // Class
+    const classLeft = `     ${ANSI.CYAN}Class${ANSI.RESET}          ${ANSI.WHITE}${this.formData.class.padEnd(13)}${ANSI.RESET}`;
+    lines.push(`${this.padToColumn(classLeft, 53)}${ANSI.DIM}... and so on ...${ANSI.RESET}`);
+
+    return lines;
+  }
+
+  /** Render stats section with CP cost chart */
+  private renderStatsSection(): string[] {
+    const lines: string[] = [];
+    const stats: CPStatName[] = ['strength', 'intellect', 'wisdom', 'agility', 'constitution', 'charisma'];
+    const statLabels: Record<string, string> = {
+      strength: 'Strength', intellect: 'Intellect', wisdom: 'Wisdom',
+      agility: 'Dexterity', constitution: 'Constitution', charisma: 'Charisma'
+    };
+    const costLines = [
+      '│        │ +10 to base stat:  10 CP',
+      '│  ──────┤ +20 to base stat:  30 CP',
+      '│        │ +30 to base stat:  60 CP',
+      '           +40 to base stat: 100 CP',
+      '           +50 to base stat: 150 CP',
+      '               ... and so on ...'
+    ];
+
+    stats.forEach((stat, index) => {
+      const field = this.fields.find(f => f.name === stat);
+      const isSelected = this.editableFields[this.selectedIndex] === field;
+      const statData = field?.value as { current: number; min: number; max: number; spent: number } | undefined;
+      if (!statData) return;
+
+      const label = statLabels[stat].padEnd(12);
+      const minStr = String(statData.min).padStart(4);
+      const maxStr = String(statData.max).padStart(4);
+      const currentStr = String(statData.current).padStart(4);
+      const editMarker = isSelected ? `${ANSI.GREEN}│ »${ANSI.RESET}` : '   ';
+      const valueMarker = isSelected ? `${ANSI.GREEN}«${ANSI.RESET}` : `${ANSI.DIM}«${ANSI.RESET}`;
+      const statColor = isSelected ? ANSI.YELLOW : ANSI.WHITE;
+
+      const statLeft = ` ${editMarker} ${ANSI.CYAN}${label}${ANSI.RESET} (${minStr} to ${maxStr})  ${statColor}${currentStr}${ANSI.RESET} ${valueMarker}`;
+      const costRef = index < costLines.length ? `${ANSI.DIM}${costLines[index]}${ANSI.RESET}` : '';
+      lines.push(`${this.padToColumn(statLeft, 43)}${costRef}`);
+    });
+
+    return lines;
+  }
+
+  /** Render appearance section (hair, eye color) */
+  private renderAppearanceSection(): string[] {
+    const lines: string[] = [];
+    const hairStyleField = this.fields.find(f => f.name === 'hair_style');
+    const hairColorField = this.fields.find(f => f.name === 'hair_color');
+    const eyeColorField = this.fields.find(f => f.name === 'eye_color');
+
+    const hairStyleIndex = typeof hairStyleField?.value === 'number' ? hairStyleField.value : 0;
+    const hairColorIndex = typeof hairColorField?.value === 'number' ? hairColorField.value : 0;
+    const eyeColorIndex = typeof eyeColorField?.value === 'number' ? eyeColorField.value : 0;
+
+    const renderLine = (label: string, value: string, field: FormField | undefined, helpText: string): string => {
+      const selected = this.editableFields[this.selectedIndex] === field;
+      const marker = selected ? `${ANSI.GREEN}│ »${ANSI.RESET}` : '   ';
+      const valueColor = selected ? ANSI.BRIGHT_WHITE : ANSI.WHITE;
+      const leftPart = ` ${marker} ${ANSI.CYAN}${label.padEnd(13)}${ANSI.RESET}${valueColor}${value}${ANSI.RESET}`;
+      return `${this.padToColumn(leftPart, 53)}${ANSI.DIM}${helpText}${ANSI.RESET}`;
+    };
+
+    lines.push(renderLine('Hair Style', HAIR_STYLES[hairStyleIndex] || 'none', hairStyleField, 'Use the arrow keys to'));
+    lines.push(renderLine('Hair Color', HAIR_COLORS[hairColorIndex] || 'black', hairColorField, 'toggle between choices for'));
+    lines.push(renderLine('Eye Color', EYE_COLORS[eyeColorIndex] || 'brown', eyeColorField, 'your physical description'));
+    lines.push(`${' '.repeat(60)}${ANSI.DIM}and stats${ANSI.RESET}`);
+
+    return lines;
+  }
+
+  /** Render footer with save/exit toggle and CP display */
+  private renderFooterSection(): string[] {
+    const exitToggleField = this.fields.find(f => f.name === 'exit_toggle');
+    const exitToggleSelected = this.editableFields[this.selectedIndex] === exitToggleField;
+    const exitToggleIndex = typeof exitToggleField?.value === 'number' ? exitToggleField.value : 0;
+    const exitToggleValue = exitToggleField?.options[exitToggleIndex] || 'SAVE';
+
+    const exitDisplay = exitToggleSelected
+      ? `${ANSI.GREEN}[ ${exitToggleValue} ]${ANSI.RESET}`
+      : `  ${ANSI.WHITE}${exitToggleValue}${ANSI.RESET}  `;
+
+    const cpRemaining = this.originalUnspentCp - this.calculateTotalCpUsed();
+    const cpColor = cpRemaining > 0 ? ANSI.GREEN : (cpRemaining === 0 ? ANSI.WHITE : ANSI.RED);
+    const cpDisplay = `${cpColor}${String(cpRemaining).padStart(4)}${ANSI.RESET}`;
+
+    return [
+      `      ${ANSI.CYAN}Exit:${ANSI.RESET} ${exitDisplay}      ${ANSI.CYAN}CP Left:${ANSI.RESET} ${cpDisplay}                   ${ANSI.DIM}SAVE or EXIT${ANSI.RESET}`,
+      `${ANSI.DIM}⌐┴───────────────────────────────.     │${ANSI.RESET}`,
+      `${ANSI.DIM}\\_________________________________\\___/${ANSI.RESET}`,
+    ];
+  }
+
+  /** Strip ANSI escape codes to get visible length */
+  private getVisibleLength(str: string): number {
+    // eslint-disable-next-line no-control-regex
+    return str.replace(/\x1b\[[0-9;]*m/g, '').length;
+  }
+
+  /** Pad a string to reach a target column (auto-calculates visible length) */
+  private padToColumn(str: string, targetCol: number): string {
+    const visibleLen = this.getVisibleLength(str);
+    const padding = Math.max(0, targetCol - visibleLen);
+    return str + ' '.repeat(padding);
   }
 
   /**

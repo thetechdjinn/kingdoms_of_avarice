@@ -106,7 +106,7 @@ export async function createCharacter(input: CreateCharacterInput, client?: pg.P
       input.stats.constitution,
       input.stats.wisdom,
       input.stats.charisma,
-      input.gender || 'neutral',
+      input.gender || 'male',
       input.hair || null,
       input.eyeColor || null,
     ],
@@ -244,7 +244,7 @@ export function toSharedCharacter(dbChar: DbCharacter): Character {
       platinum: dbChar.platinum ?? 0,
       runic: dbChar.runic ?? 0,
     },
-    gender: (dbChar.gender as Gender) || 'neutral',
+    gender: (dbChar.gender as Gender) || 'male',
     hair: dbChar.hair || undefined,
     eyeColor: dbChar.eye_color || undefined,
   };
@@ -286,7 +286,7 @@ export async function toSharedCharacterWithDisplayNames(dbChar: DbCharacter): Pr
       platinum: dbChar.platinum ?? 0,
       runic: dbChar.runic ?? 0,
     },
-    gender: (dbChar.gender as Gender) || 'neutral',
+    gender: (dbChar.gender as Gender) || 'male',
     hair: dbChar.hair || undefined,
     eyeColor: dbChar.eye_color || undefined,
   };
