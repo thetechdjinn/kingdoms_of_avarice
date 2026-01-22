@@ -52,6 +52,18 @@ export interface TrainingFormResult {
   };
 }
 
+// ANSI color constants
+const ANSI = {
+  CYAN: '\x1b[36m',
+  WHITE: '\x1b[37m',
+  BRIGHT_WHITE: '\x1b[1;37m',
+  YELLOW: '\x1b[33m',
+  GREEN: '\x1b[32m',
+  RED: '\x1b[31m',
+  RESET: '\x1b[0m',
+  DIM: '\x1b[2m',
+} as const;
+
 export class TrainingForm extends AnsiForm {
   private formData: TrainingFormData;
   private originalUnspentCp: number;
@@ -362,7 +374,12 @@ export class TrainingForm extends AnsiForm {
       return;
     }
 
-    // Default handling for other keys (text input, Escape, etc.)
+    // Ignore Escape key - must use SAVE/EXIT toggle to leave the form
+    if (key === 'Escape') {
+      return;
+    }
+
+    // Default handling for other keys (text input, etc.)
     super.handleKey(key, event);
   }
 
@@ -425,84 +442,70 @@ export class TrainingForm extends AnsiForm {
    * Override render to show training-specific ANSI layout
    */
   protected render(): void {
-    // Update CP tracking
     this.updateCpDisplay();
-
-    // Clear terminal
     this.terminal.clear();
 
+    const lines: string[] = [
+      ...this.renderTitleSection(),
+      ...this.renderCharacterInfoSection(),
+      '',
+      ...this.renderStatsSection(),
+      '',
+      ...this.renderAppearanceSection(),
+      ...this.renderFooterSection(),
+    ];
+
+    for (const line of lines) {
+      this.terminal.write(line + '\r\n');
+    }
+  }
+
+  /** Render title area with decorative border */
+  private renderTitleSection(): string[] {
+    return [
+      `${ANSI.DIM} .                                     .  .${ANSI.RESET}`,
+      `${ANSI.CYAN}  /  Character Creation               /${ANSI.RESET}    ${ANSI.DIM}\\${ANSI.RESET}        ${ANSI.YELLOW}Point Cost Chart${ANSI.RESET}`,
+      `${ANSI.DIM}                                            .${ANSI.RESET}`,
+    ];
+  }
+
+  /** Render character info section (name, race, class) */
+  private renderCharacterInfoSection(): string[] {
     const lines: string[] = [];
-    const CYAN = '\x1b[36m';
-    const WHITE = '\x1b[37m';
-    const BRIGHT_WHITE = '\x1b[1;37m';
-    const YELLOW = '\x1b[33m';
-    const GREEN = '\x1b[32m';
-    const RESET = '\x1b[0m';
-    const DIM = '\x1b[2m';
-
-    // Helper to get field by name
-    const getField = (name: string) => this.fields.find(f => f.name === name);
-    const isFieldSelected = (name: string): boolean => {
-      const field = getField(name);
-      return field !== undefined && this.editableFields[this.selectedIndex] === field;
-    };
-
-    // Calculate CP remaining
-    const cpUsed = this.calculateTotalCpUsed();
-    const cpRemaining = this.originalUnspentCp - cpUsed;
-
-    // Title area with decorative border (line 1-3)
-    lines.push(`${DIM} .                                     .  .${RESET}`);
-    lines.push(`${CYAN}  /  Character Creation               /${RESET}    ${DIM}\\${RESET}        ${YELLOW}Point Cost Chart${RESET}`);
-    lines.push(`${DIM}                                            .${RESET}`);
-
-    // Helper to pad a string to reach a target column (accounting for visible chars only)
-    const padToColumn = (str: string, visibleLen: number, targetCol: number): string => {
-      const padding = Math.max(0, targetCol - visibleLen);
-      return str + ' '.repeat(padding);
-    };
-
-    // Character info section (lines 4-7) - right side text starts at column 54
-    const givenName = this.formData.characterName;
-    const familyNameField = getField('family_name');
+    const familyNameField = this.fields.find(f => f.name === 'family_name');
     const familyName = familyNameField ? String(familyNameField.value || '') : '';
-    const familyNameSelected = isFieldSelected('family_name');
+    const familyNameSelected = this.editableFields[this.selectedIndex] === familyNameField;
 
-    // Line 4: Given Name with ___\_/ decoration
-    const givenNameLeft = `     ${CYAN}Given Name${RESET}     ${BRIGHT_WHITE}${givenName.padEnd(13)}${RESET}  ${DIM}___\\_/${RESET}`;
-    const givenNameVisLen = 5 + 10 + 5 + 13 + 2 + 6; // 41
-    lines.push(`${padToColumn(givenNameLeft, givenNameVisLen, 53)}${DIM}1st 10 points: 1 CP each${RESET}`);
+    // Given Name with decoration
+    const givenNameLeft = `     ${ANSI.CYAN}Given Name${ANSI.RESET}     ${ANSI.BRIGHT_WHITE}${this.formData.characterName.padEnd(13)}${ANSI.RESET}  ${ANSI.DIM}___\\_/${ANSI.RESET}`;
+    lines.push(`${this.padToColumn(givenNameLeft, 41, 53)}${ANSI.DIM}1st 10 points: 1 CP each${ANSI.RESET}`);
 
-    // Line 5: Family name - editable (both states must be same width: 15 chars)
+    // Family name - editable (both states same width: 15 chars)
     const familyNameDisplay = familyNameSelected
-      ? `${GREEN}>${RESET} ${BRIGHT_WHITE}${familyName.padEnd(12)}${RESET}${GREEN}<${RESET}`  // 1 + 1 + 12 + 1 = 15
-      : `  ${WHITE}${familyName.padEnd(13)}${RESET}`;                                         // 2 + 13 = 15
-    const familyNameLeft = `     ${CYAN}Family Name${RESET}  ${familyNameDisplay}`;
-    // Visible length: 5 + 11 + 2 + 15 = 33
-    lines.push(`${padToColumn(familyNameLeft, 5 + 11 + 2 + 15, 53)}${DIM}2nd 10 points: 2 CP each${RESET}`);
+      ? `${ANSI.GREEN}>${ANSI.RESET} ${ANSI.BRIGHT_WHITE}${familyName.padEnd(12)}${ANSI.RESET}${ANSI.GREEN}<${ANSI.RESET}`
+      : `  ${ANSI.WHITE}${familyName.padEnd(13)}${ANSI.RESET}`;
+    const familyNameLeft = `     ${ANSI.CYAN}Family Name${ANSI.RESET}  ${familyNameDisplay}`;
+    lines.push(`${this.padToColumn(familyNameLeft, 33, 53)}${ANSI.DIM}2nd 10 points: 2 CP each${ANSI.RESET}`);
 
-    // Line 6: Race
-    const raceLeft = `     ${CYAN}Race${RESET}           ${WHITE}${this.formData.race.padEnd(13)}${RESET}`;
-    lines.push(`${padToColumn(raceLeft, 5 + 4 + 11 + 13, 53)}${DIM}3rd 10 points: 3 CP each${RESET}`);
+    // Race
+    const raceLeft = `     ${ANSI.CYAN}Race${ANSI.RESET}           ${ANSI.WHITE}${this.formData.race.padEnd(13)}${ANSI.RESET}`;
+    lines.push(`${this.padToColumn(raceLeft, 33, 53)}${ANSI.DIM}3rd 10 points: 3 CP each${ANSI.RESET}`);
 
-    // Line 7: Class
-    const classLeft = `     ${CYAN}Class${RESET}          ${WHITE}${this.formData.class.padEnd(13)}${RESET}`;
-    // Visible length: 5 + 5 + 10 + 13 = 33
-    lines.push(`${padToColumn(classLeft, 5 + 5 + 10 + 13, 53)}${DIM}... and so on ...${RESET}`);
-    lines.push('');
+    // Class
+    const classLeft = `     ${ANSI.CYAN}Class${ANSI.RESET}          ${ANSI.WHITE}${this.formData.class.padEnd(13)}${ANSI.RESET}`;
+    lines.push(`${this.padToColumn(classLeft, 33, 53)}${ANSI.DIM}... and so on ...${ANSI.RESET}`);
 
-    // Stats section (lines 9-14)
+    return lines;
+  }
+
+  /** Render stats section with CP cost chart */
+  private renderStatsSection(): string[] {
+    const lines: string[] = [];
     const stats: CPStatName[] = ['strength', 'intellect', 'wisdom', 'agility', 'constitution', 'charisma'];
     const statLabels: Record<string, string> = {
-      strength: 'Strength',
-      intellect: 'Intellect',
-      wisdom: 'Wisdom',
-      agility: 'Dexterity',
-      constitution: 'Constitution',
-      charisma: 'Charisma'
+      strength: 'Strength', intellect: 'Intellect', wisdom: 'Wisdom',
+      agility: 'Dexterity', constitution: 'Constitution', charisma: 'Charisma'
     };
-
-    // Cost reference lines (right side) - starts at column 44
     const costLines = [
       '│        │ +10 to base stat:  10 CP',
       '│  ──────┤ +20 to base stat:  30 CP',
@@ -513,89 +516,80 @@ export class TrainingForm extends AnsiForm {
     ];
 
     stats.forEach((stat, index) => {
-      const field = getField(stat);
-      const isSelected = isFieldSelected(stat);
+      const field = this.fields.find(f => f.name === stat);
+      const isSelected = this.editableFields[this.selectedIndex] === field;
       const statData = field?.value as { current: number; min: number; max: number; spent: number } | undefined;
-
       if (!statData) return;
 
       const label = statLabels[stat].padEnd(12);
       const minStr = String(statData.min).padStart(4);
       const maxStr = String(statData.max).padStart(4);
       const currentStr = String(statData.current).padStart(4);
+      const editMarker = isSelected ? `${ANSI.GREEN}│ »${ANSI.RESET}` : '   ';
+      const valueMarker = isSelected ? `${ANSI.GREEN}«${ANSI.RESET}` : `${ANSI.DIM}«${ANSI.RESET}`;
+      const statColor = isSelected ? ANSI.YELLOW : ANSI.WHITE;
 
-      // Editable indicator - │ » is 3 chars, so use 3 spaces when not selected
-      const editMarker = isSelected ? `${GREEN}│ »${RESET}` : '   ';
-      const valueMarker = isSelected ? `${GREEN}«${RESET}` : `${DIM}«${RESET}`;
-      const statColor = isSelected ? YELLOW : WHITE;  // Bright yellow when selected
-
-      // Build left side: 1 + 3 + 1 + 12 + 1 + 1 + 4 + 4 + 4 + 1 + 2 + 4 + 1 + 1 = 40 visible chars
-      const statLeft = ` ${editMarker} ${CYAN}${label}${RESET} (${minStr} to ${maxStr})  ${statColor}${currentStr}${RESET} ${valueMarker}`;
-      const statVisLen = 1 + 3 + 1 + 12 + 1 + 1 + 4 + 4 + 4 + 1 + 2 + 4 + 1 + 1; // 40
-
-      // Right side cost reference - pad to column 43
-      const costRef = index < costLines.length ? `${DIM}${costLines[index]}${RESET}` : '';
-      lines.push(`${padToColumn(statLeft, statVisLen, 43)}${costRef}`);
+      const statLeft = ` ${editMarker} ${ANSI.CYAN}${label}${ANSI.RESET} (${minStr} to ${maxStr})  ${statColor}${currentStr}${ANSI.RESET} ${valueMarker}`;
+      const costRef = index < costLines.length ? `${ANSI.DIM}${costLines[index]}${ANSI.RESET}` : '';
+      lines.push(`${this.padToColumn(statLeft, 40, 43)}${costRef}`);
     });
 
-    lines.push('');
+    return lines;
+  }
 
-    // Appearance section (lines 16-19)
-    const hairStyleField = getField('hair_style');
-    const hairColorField = getField('hair_color');
-    const eyeColorField = getField('eye_color');
+  /** Render appearance section (hair, eye color) */
+  private renderAppearanceSection(): string[] {
+    const lines: string[] = [];
+    const hairStyleField = this.fields.find(f => f.name === 'hair_style');
+    const hairColorField = this.fields.find(f => f.name === 'hair_color');
+    const eyeColorField = this.fields.find(f => f.name === 'eye_color');
 
     const hairStyleIndex = typeof hairStyleField?.value === 'number' ? hairStyleField.value : 0;
     const hairColorIndex = typeof hairColorField?.value === 'number' ? hairColorField.value : 0;
     const eyeColorIndex = typeof eyeColorField?.value === 'number' ? eyeColorField.value : 0;
 
-    const hairStyleValue = HAIR_STYLES[hairStyleIndex] || 'none';
-    const hairColorValue = HAIR_COLORS[hairColorIndex] || 'black';
-    const eyeColorValue = EYE_COLORS[eyeColorIndex] || 'brown';
-
-    const hairStyleSelected = isFieldSelected('hair_style');
-    const hairColorSelected = isFieldSelected('hair_color');
-    const eyeColorSelected = isFieldSelected('eye_color');
-
-    // Appearance fields - format: 5 leading chars + label (13 padded) + value, help text at column 53
-    const renderAppearanceLine = (label: string, value: string, selected: boolean, helpText: string): string => {
-      const marker = selected ? `${GREEN}│ »${RESET}` : '   ';
-      const valueColor = selected ? BRIGHT_WHITE : WHITE;
-      // Build left side: 1 space + marker(3) + space + label(13 padded) + value
-      const leftPart = ` ${marker} ${CYAN}${label.padEnd(13)}${RESET}${valueColor}${value}${RESET}`;
-      // Calculate visible length: 1 + 3 + 1 + 13 + value.length = 18 + value.length
-      const visibleLen = 18 + value.length;
-      // Pad to column 53, then add help text
-      return `${padToColumn(leftPart, visibleLen, 53)}${DIM}${helpText}${RESET}`;
+    const renderLine = (label: string, value: string, field: FormField | undefined, helpText: string): string => {
+      const selected = this.editableFields[this.selectedIndex] === field;
+      const marker = selected ? `${ANSI.GREEN}│ »${ANSI.RESET}` : '   ';
+      const valueColor = selected ? ANSI.BRIGHT_WHITE : ANSI.WHITE;
+      const leftPart = ` ${marker} ${ANSI.CYAN}${label.padEnd(13)}${ANSI.RESET}${valueColor}${value}${ANSI.RESET}`;
+      return `${this.padToColumn(leftPart, 18 + value.length, 53)}${ANSI.DIM}${helpText}${ANSI.RESET}`;
     };
 
-    lines.push(renderAppearanceLine('Hair Style', hairStyleValue, hairStyleSelected, 'Use the arrow keys to'));
-    lines.push(renderAppearanceLine('Hair Color', hairColorValue, hairColorSelected, 'toggle between choices for'));
-    lines.push(renderAppearanceLine('Eye Color', eyeColorValue, eyeColorSelected, 'your physical description'));
-    lines.push(`${' '.repeat(60)}${DIM}and stats${RESET}`);
+    lines.push(renderLine('Hair Style', HAIR_STYLES[hairStyleIndex] || 'none', hairStyleField, 'Use the arrow keys to'));
+    lines.push(renderLine('Hair Color', HAIR_COLORS[hairColorIndex] || 'black', hairColorField, 'toggle between choices for'));
+    lines.push(renderLine('Eye Color', EYE_COLORS[eyeColorIndex] || 'brown', eyeColorField, 'your physical description'));
+    lines.push(`${' '.repeat(60)}${ANSI.DIM}and stats${ANSI.RESET}`);
 
-    // Footer with SAVE/EXIT toggle and CP (line 20)
-    const exitToggleField = getField('exit_toggle');
-    const exitToggleSelected = isFieldSelected('exit_toggle');
+    return lines;
+  }
+
+  /** Render footer with save/exit toggle and CP display */
+  private renderFooterSection(): string[] {
+    const exitToggleField = this.fields.find(f => f.name === 'exit_toggle');
+    const exitToggleSelected = this.editableFields[this.selectedIndex] === exitToggleField;
     const exitToggleIndex = typeof exitToggleField?.value === 'number' ? exitToggleField.value : 0;
     const exitToggleValue = exitToggleField?.options[exitToggleIndex] || 'SAVE';
 
-    // Both states must be same width: 8 chars ([ SAVE ] or   SAVE  )
     const exitDisplay = exitToggleSelected
-      ? `${GREEN}[ ${exitToggleValue} ]${RESET}`   // 8 chars: [ + space + 4 + space + ]
-      : `  ${WHITE}${exitToggleValue}${RESET}  `;  // 8 chars: 2 spaces + 4 + 2 spaces
+      ? `${ANSI.GREEN}[ ${exitToggleValue} ]${ANSI.RESET}`
+      : `  ${ANSI.WHITE}${exitToggleValue}${ANSI.RESET}  `;
 
-    const cpColor = cpRemaining > 0 ? GREEN : (cpRemaining === 0 ? WHITE : '\x1b[31m');
-    const cpDisplay = `${cpColor}${String(cpRemaining).padStart(4)}${RESET}`;
+    const cpRemaining = this.originalUnspentCp - this.calculateTotalCpUsed();
+    const cpColor = cpRemaining > 0 ? ANSI.GREEN : (cpRemaining === 0 ? ANSI.WHITE : ANSI.RED);
+    const cpDisplay = `${cpColor}${String(cpRemaining).padStart(4)}${ANSI.RESET}`;
 
-    lines.push(`      ${CYAN}Exit:${RESET} ${exitDisplay}      ${CYAN}CP Left:${RESET} ${cpDisplay}                   ${DIM}SAVE or EXIT${RESET}`);
-    lines.push(`${DIM}⌐┴───────────────────────────────.     │${RESET}`);
-    lines.push(`${DIM}\\_________________________________\\___/${RESET}`);
+    return [
+      `      ${ANSI.CYAN}Exit:${ANSI.RESET} ${exitDisplay}      ${ANSI.CYAN}CP Left:${ANSI.RESET} ${cpDisplay}                   ${ANSI.DIM}SAVE or EXIT${ANSI.RESET}`,
+      `${ANSI.DIM}⌐┴───────────────────────────────.     │${ANSI.RESET}`,
+      `${ANSI.DIM}\\_________________________________\\___/${ANSI.RESET}`,
+    ];
+  }
 
-    // Write to terminal
-    for (const line of lines) {
-      this.terminal.write(line + '\r\n');
-    }
+  /** Pad a string to reach a target column */
+  private padToColumn(str: string, visibleLen: number, targetCol: number): string {
+    const padding = Math.max(0, targetCol - visibleLen);
+    return str + ' '.repeat(padding);
   }
 
   /**

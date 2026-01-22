@@ -121,11 +121,11 @@ export class FormField {
     const canDecrease = stat.current > stat.min;
     const canIncrease = stat.current < stat.max;
 
-    const downArrow = canDecrease ? `${arrowColor}▼${reset}` : ' ';
     const upArrow = canIncrease ? `${arrowColor}▲${reset}` : ' ';
+    const downArrow = canDecrease ? `${arrowColor}▼${reset}` : ' ';
 
-    // Format: "STR: ▼45▲ (40-65)" - arrows indicate up/down to adjust
-    const valueStr = `${highlightBg}${downArrow}${valueColor}${stat.current}${reset}${highlightBg}${upArrow}${reset}`;
+    // Format: "STR: ▲45▼ (40-65)" - up arrow to increase, down arrow to decrease
+    const valueStr = `${highlightBg}${upArrow}${valueColor}${stat.current}${reset}${highlightBg}${downArrow}${reset}`;
     const rangeStr = `${minColor}(${stat.min}-${stat.max})${reset}`;
 
     return `${labelColor}${this.label}:${reset} ${valueStr} ${rangeStr}`;
