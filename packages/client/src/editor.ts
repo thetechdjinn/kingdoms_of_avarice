@@ -285,11 +285,12 @@ function selectRoom(id: number): void {
   (document.getElementById('room-training-max-level') as HTMLInputElement).value =
     String(room.features?.training?.maxLevel ?? 999);
 
-  // Set class checkboxes (null/undefined = all classes allowed, so none checked)
+  // Set class checkboxes (null/undefined = all classes allowed, so all checked)
   const allowedClasses = room.features?.training?.allowedClasses;
+  const allClassesAllowed = allowedClasses === null || allowedClasses === undefined;
   document.querySelectorAll('.training-class-checkbox').forEach((checkbox) => {
     const input = checkbox as HTMLInputElement;
-    input.checked = Array.isArray(allowedClasses) && allowedClasses.includes(input.value);
+    input.checked = allClassesAllowed || (Array.isArray(allowedClasses) && allowedClasses.includes(input.value));
   });
 
   renderExits(room);
