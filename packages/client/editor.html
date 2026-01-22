@@ -126,7 +126,7 @@
                     <input type="checkbox" id="room-training-enabled" />
                     Enable Training Room
                   </label>
-                  <p class="hint">When enabled, players can use the 'train' command here to allocate stats and level up.</p>
+                  <p class="hint">When enabled, players can use 'train' (level up) and 'train stats' (allocate CP) here.</p>
                 </div>
 
                 <div id="training-options" style="display: none;">
@@ -142,8 +142,8 @@
                   </div>
 
                   <div class="form-group">
-                    <label for="room-training-classes">Allowed Classes <span class="hint-inline">(empty = all classes)</span></label>
-                    <div id="training-class-checkboxes" class="checkbox-grid">
+                    <label>Allowed Classes <span class="hint-inline">(none selected = all classes)</span></label>
+                    <div id="room-training-classes" class="class-select-list">
                       <!-- Populated by JavaScript -->
                     </div>
                   </div>

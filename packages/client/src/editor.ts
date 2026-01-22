@@ -37,7 +37,6 @@ let selectedRoomId: number | null = null;
 let areas: string[] = [];
 let currentUser: AuthInfo | null = null;
 let mapViewMode: 'room' | 'area' = 'room';
-let availableClasses: string[] = [];
 
 // ============================================================================
 // Toast Notifications
@@ -146,30 +145,39 @@ async function fetchAreas(): Promise<void> {
   }
 }
 
+interface ClassInfo {
+  class_id: string;
+  display_name: string;
+}
+
+let availableClassesData: ClassInfo[] = [];
+
 async function fetchClasses(): Promise<void> {
   try {
     const response = await fetch('/api/progression/classes');
     const data = await response.json();
     if (data.success && Array.isArray(data.classes)) {
-      availableClasses = data.classes.map((c: { name: string }) => c.name);
-      populateTrainingClassCheckboxes();
+      availableClassesData = data.classes.map((c: { class_id: string; display_name: string }) => ({
+        class_id: c.class_id,
+        display_name: c.display_name
+      }));
+      populateTrainingClassSelect();
     }
   } catch (error) {
     console.error('Failed to fetch classes:', error);
-    // Fallback to default classes if API fails
-    availableClasses = ['Warrior', 'Mage', 'Rogue', 'Cleric', 'Ranger', 'Paladin'];
-    populateTrainingClassCheckboxes();
+    availableClassesData = [];
+    populateTrainingClassSelect();
   }
 }
 
-function populateTrainingClassCheckboxes(): void {
-  const container = document.getElementById('training-class-checkboxes');
+function populateTrainingClassSelect(): void {
+  const container = document.getElementById('room-training-classes');
   if (!container) return;
 
-  container.innerHTML = availableClasses.map(className => `
-    <label class="checkbox-label">
-      <input type="checkbox" class="training-class-checkbox" value="${escapeHtml(className)}" />
-      ${escapeHtml(className)}
+  container.innerHTML = availableClassesData.map(c => `
+    <label class="class-select-item">
+      <input type="checkbox" class="training-class-checkbox" value="${escapeHtml(c.class_id)}" />
+      <span class="class-name">${escapeHtml(c.display_name)}</span>
     </label>
   `).join('');
 }
@@ -276,12 +284,11 @@ function selectRoom(id: number): void {
   (document.getElementById('room-training-max-level') as HTMLInputElement).value =
     String(room.features?.training?.maxLevel ?? 999);
 
-  // Set class checkboxes (null = all classes allowed, empty array = no classes allowed)
+  // Set class checkboxes (null/undefined = all classes allowed, so none checked)
   const allowedClasses = room.features?.training?.allowedClasses;
-  const allClassesAllowed = allowedClasses === null || allowedClasses === undefined;
   document.querySelectorAll('.training-class-checkbox').forEach((checkbox) => {
     const input = checkbox as HTMLInputElement;
-    input.checked = allClassesAllowed || (Array.isArray(allowedClasses) && allowedClasses.includes(input.value));
+    input.checked = Array.isArray(allowedClasses) && allowedClasses.includes(input.value);
   });
 
   renderExits(room);
