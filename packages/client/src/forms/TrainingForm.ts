@@ -478,22 +478,22 @@ export class TrainingForm extends AnsiForm {
 
     // Given Name with decoration
     const givenNameLeft = `     ${ANSI.CYAN}Given Name${ANSI.RESET}     ${ANSI.BRIGHT_WHITE}${this.formData.characterName.padEnd(13)}${ANSI.RESET}  ${ANSI.DIM}___\\_/${ANSI.RESET}`;
-    lines.push(`${this.padToColumn(givenNameLeft, 41, 53)}${ANSI.DIM}1st 10 points: 1 CP each${ANSI.RESET}`);
+    lines.push(`${this.padToColumn(givenNameLeft, 53)}${ANSI.DIM}1st 10 points: 1 CP each${ANSI.RESET}`);
 
     // Family name - editable (both states same width: 15 chars)
     const familyNameDisplay = familyNameSelected
       ? `${ANSI.GREEN}>${ANSI.RESET} ${ANSI.BRIGHT_WHITE}${familyName.padEnd(12)}${ANSI.RESET}${ANSI.GREEN}<${ANSI.RESET}`
       : `  ${ANSI.WHITE}${familyName.padEnd(13)}${ANSI.RESET}`;
     const familyNameLeft = `     ${ANSI.CYAN}Family Name${ANSI.RESET}  ${familyNameDisplay}`;
-    lines.push(`${this.padToColumn(familyNameLeft, 33, 53)}${ANSI.DIM}2nd 10 points: 2 CP each${ANSI.RESET}`);
+    lines.push(`${this.padToColumn(familyNameLeft, 53)}${ANSI.DIM}2nd 10 points: 2 CP each${ANSI.RESET}`);
 
     // Race
     const raceLeft = `     ${ANSI.CYAN}Race${ANSI.RESET}           ${ANSI.WHITE}${this.formData.race.padEnd(13)}${ANSI.RESET}`;
-    lines.push(`${this.padToColumn(raceLeft, 33, 53)}${ANSI.DIM}3rd 10 points: 3 CP each${ANSI.RESET}`);
+    lines.push(`${this.padToColumn(raceLeft, 53)}${ANSI.DIM}3rd 10 points: 3 CP each${ANSI.RESET}`);
 
     // Class
     const classLeft = `     ${ANSI.CYAN}Class${ANSI.RESET}          ${ANSI.WHITE}${this.formData.class.padEnd(13)}${ANSI.RESET}`;
-    lines.push(`${this.padToColumn(classLeft, 33, 53)}${ANSI.DIM}... and so on ...${ANSI.RESET}`);
+    lines.push(`${this.padToColumn(classLeft, 53)}${ANSI.DIM}... and so on ...${ANSI.RESET}`);
 
     return lines;
   }
@@ -531,7 +531,7 @@ export class TrainingForm extends AnsiForm {
 
       const statLeft = ` ${editMarker} ${ANSI.CYAN}${label}${ANSI.RESET} (${minStr} to ${maxStr})  ${statColor}${currentStr}${ANSI.RESET} ${valueMarker}`;
       const costRef = index < costLines.length ? `${ANSI.DIM}${costLines[index]}${ANSI.RESET}` : '';
-      lines.push(`${this.padToColumn(statLeft, 40, 43)}${costRef}`);
+      lines.push(`${this.padToColumn(statLeft, 43)}${costRef}`);
     });
 
     return lines;
@@ -553,7 +553,7 @@ export class TrainingForm extends AnsiForm {
       const marker = selected ? `${ANSI.GREEN}│ »${ANSI.RESET}` : '   ';
       const valueColor = selected ? ANSI.BRIGHT_WHITE : ANSI.WHITE;
       const leftPart = ` ${marker} ${ANSI.CYAN}${label.padEnd(13)}${ANSI.RESET}${valueColor}${value}${ANSI.RESET}`;
-      return `${this.padToColumn(leftPart, 18 + value.length, 53)}${ANSI.DIM}${helpText}${ANSI.RESET}`;
+      return `${this.padToColumn(leftPart, 53)}${ANSI.DIM}${helpText}${ANSI.RESET}`;
     };
 
     lines.push(renderLine('Hair Style', HAIR_STYLES[hairStyleIndex] || 'none', hairStyleField, 'Use the arrow keys to'));
@@ -586,8 +586,15 @@ export class TrainingForm extends AnsiForm {
     ];
   }
 
-  /** Pad a string to reach a target column */
-  private padToColumn(str: string, visibleLen: number, targetCol: number): string {
+  /** Strip ANSI escape codes to get visible length */
+  private getVisibleLength(str: string): number {
+    // eslint-disable-next-line no-control-regex
+    return str.replace(/\x1b\[[0-9;]*m/g, '').length;
+  }
+
+  /** Pad a string to reach a target column (auto-calculates visible length) */
+  private padToColumn(str: string, targetCol: number): string {
+    const visibleLen = this.getVisibleLength(str);
     const padding = Math.max(0, targetCol - visibleLen);
     return str + ' '.repeat(padding);
   }
