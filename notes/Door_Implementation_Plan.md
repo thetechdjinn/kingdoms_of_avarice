@@ -451,18 +451,32 @@ else:
 
 ---
 
-### Phase 10: Permission System
+### Phase 10: Permission System ✓ COMPLETE
 
 **Goal**: Restrict door access based on player attributes.
 
 **Tasks**:
-- [ ] Add columns: `required_level`, `required_class`, `required_quest_flag`, `required_item_tag`, `denial_message`
-- [ ] Create permission check function
-- [ ] Apply permission check before any door interaction (open, pick, bash, pass through)
-- [ ] Display denial message on failed permission check
+- [x] Add columns: `required_level`, `required_classes`, `required_quest_flag`, `required_item_tag`, `denial_message`
+- [x] Create permission check function
+- [x] Apply permission check before any door interaction (open, close, unlock, lock, pick, bash, pass through, portal spawn)
+- [x] Display denial message on failed permission check
 
-**Files Changed**: ~2-3 files
-**Acceptance**: Door with level requirement blocks low-level players with custom message
+**Files Changed**: 6 files
+- `packages/server/src/db/schema.sql` (MODIFIED - added permission columns)
+- `packages/shared/src/doors.ts` (MODIFIED - added requiredLevel, requiredClasses, requiredQuestFlag, requiredItemTag, denialMessage to Door interface)
+- `packages/server/src/db/repositories/doorRepository.ts` (MODIFIED - added DbDoor fields, dbToDoor mapping, CreateDoorInput fields, createDoor/updateDoor handling)
+- `packages/server/src/db/migrate.ts` (MODIFIED - added ALTER TABLE for existing databases)
+- `packages/server/src/services/doorStateManager.ts` (MODIFIED - added PermissionCheckCharacter interface, PermissionCheckResult interface, checkDoorPermissions function, doorHasPermissionRequirements helper)
+- `packages/server/src/game/commands.ts` (MODIFIED - added playerHasItemWithTag, checkDoorPermissionsForPlayer, permission checks in handleMove, handleDoorAction, handleUnlockDoor, handleLockDoor, handlePickDoor, handleBashDoor, handleSpecialDoorTrigger, handlePortalSpawn)
+
+**Acceptance**: ✓ All criteria met
+- Doors can have level requirements (requiredLevel)
+- Doors can have class restrictions (requiredClasses array)
+- Doors can have quest flag requirements (requiredQuestFlag - placeholder for future quest system)
+- Doors can have item requirements (requiredItemTag - uses key_tag field)
+- Custom denial messages supported (denialMessage)
+- Permission checks occur BEFORE lock checks per design doc
+- Players who don't meet requirements cannot even attempt to pick or bash
 
 ---
 

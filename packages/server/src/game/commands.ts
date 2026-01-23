@@ -217,11 +217,11 @@ export async function processCommand(
   }
 
   if (command === 'open') {
-    return handleOpenDoor(socket, args, currentRoomId);
+    return await handleOpenDoor(socket, args, currentRoomId);
   }
 
   if (command === 'close') {
-    return handleCloseDoor(socket, args, currentRoomId);
+    return await handleCloseDoor(socket, args, currentRoomId);
   }
 
   if (command === 'unlock') {
@@ -320,7 +320,7 @@ export async function processCommand(
   // This spawns inactive portals, making them visible and usable
   const portalToSpawn = doorStateManager.findPortalBySpawnTrigger(currentRoomId, lowerTrimmed);
   if (portalToSpawn) {
-    return handlePortalSpawn(socket, portalToSpawn, currentRoomId);
+    return await handlePortalSpawn(socket, portalToSpawn, currentRoomId);
   }
 
   // Check for special door triggers (e.g., "go portal", "climb rope")
@@ -594,6 +594,12 @@ async function handleMove(
   // Check if there's a door in this direction
   const door = doorStateManager.getDoorByRoomAndDirection(currentRoomId, fullDirection);
   if (door) {
+    // Check door permissions first (before passage checks)
+    const permissionError = await checkDoorPermissionsForPlayer(door, socket);
+    if (permissionError) {
+      return permissionError;
+    }
+
     const passageCheck = doorStateManager.canPassThrough(door.id, currentRoomId);
     if (!passageCheck.allowed) {
       return { type: MessageType.ERROR, message: passageCheck.reason || 'You cannot go that way.' };
@@ -629,12 +635,12 @@ async function handleMove(
 
 type DoorAction = 'open' | 'close';
 
-function handleDoorAction(
+async function handleDoorAction(
   socket: AuthenticatedSocket,
   args: string[],
   currentRoomId: number,
   action: DoorAction
-): CommandResponse {
+): Promise<CommandResponse> {
   const verb = action;
   const verbs = action === 'open' ? 'opens' : 'closes';
   const capitalVerb = action.charAt(0).toUpperCase() + action.slice(1);
@@ -654,6 +660,12 @@ function handleDoorAction(
       return { type: MessageType.ERROR, message: `${capitalVerb} what?` };
     }
     return { type: MessageType.ERROR, message: `There is no door to the ${direction}.` };
+  }
+
+  // Check door permissions first (before any other checks)
+  const permissionError = await checkDoorPermissionsForPlayer(door, socket);
+  if (permissionError) {
+    return permissionError;
   }
 
   // Only physical doors can be opened/closed
@@ -692,28 +704,68 @@ function handleDoorAction(
   return { type: MessageType.OUTPUT, message: `You ${verb} the ${door.name}.` };
 }
 
-function handleOpenDoor(
+async function handleOpenDoor(
   socket: AuthenticatedSocket,
   args: string[],
   currentRoomId: number
-): CommandResponse {
+): Promise<CommandResponse> {
   return handleDoorAction(socket, args, currentRoomId, 'open');
 }
 
-function handleCloseDoor(
+async function handleCloseDoor(
   socket: AuthenticatedSocket,
   args: string[],
   currentRoomId: number
-): CommandResponse {
+): Promise<CommandResponse> {
   return handleDoorAction(socket, args, currentRoomId, 'close');
 }
 
 /**
- * Check if a player has a key with the specified tag in their inventory
+ * Check if a player has an item with the specified tag (key_tag) in their inventory
+ * Used for both door lock keys and door permission requirements
+ * The item is not consumed when used for permission checks
  */
-async function playerHasKey(characterId: number, keyTag: string): Promise<boolean> {
+async function playerHasItemWithTag(characterId: number, itemTag: string): Promise<boolean> {
   const inventory = await itemRepo.getCharacterInventory(characterId);
-  return inventory.some(item => item.template?.flags?.key_tag === keyTag);
+  return inventory.some(item => item.template?.flags?.key_tag === itemTag);
+}
+
+/**
+ * Check door permissions for a character
+ * Returns null if allowed, or an error CommandResponse if not allowed
+ */
+async function checkDoorPermissionsForPlayer(
+  door: Door,
+  socket: AuthenticatedSocket
+): Promise<CommandResponse | null> {
+  // Fast path: no permission requirements
+  if (!doorStateManager.doorHasPermissionRequirements(door)) {
+    return null;
+  }
+
+  // Get character data for permission check
+  const character = await characterRepo.findCharacterById(socket.characterId!);
+  if (!character) {
+    return { type: MessageType.ERROR, message: 'Character not found.' };
+  }
+
+  // Check if player has the required item (if any)
+  let hasRequiredItem = true;
+  if (door.requiredItemTag) {
+    hasRequiredItem = await playerHasItemWithTag(socket.characterId!, door.requiredItemTag);
+  }
+
+  const permissionCheck = doorStateManager.checkDoorPermissions(
+    door,
+    { level: character.level, class: character.class },
+    hasRequiredItem
+  );
+
+  if (!permissionCheck.allowed) {
+    return { type: MessageType.ERROR, message: permissionCheck.reason || 'You cannot use this door.' };
+  }
+
+  return null;
 }
 
 async function handleUnlockDoor(
@@ -738,6 +790,12 @@ async function handleUnlockDoor(
     return { type: MessageType.ERROR, message: `There is no door to the ${direction}.` };
   }
 
+  // Check door permissions first (before any other checks)
+  const permissionError = await checkDoorPermissionsForPlayer(door, socket);
+  if (permissionError) {
+    return permissionError;
+  }
+
   // Only physical doors can be unlocked
   if (door.doorType !== DoorType.PHYSICAL) {
     return { type: MessageType.ERROR, message: `You cannot unlock the ${door.name}.` };
@@ -756,7 +814,7 @@ async function handleUnlockDoor(
 
   // Check if player has the right key
   if (door.keyItemTag) {
-    const hasKey = await playerHasKey(socket.characterId!, door.keyItemTag);
+    const hasKey = await playerHasItemWithTag(socket.characterId!, door.keyItemTag);
     if (!hasKey) {
       return { type: MessageType.ERROR, message: `You don't have the right key.` };
     }
@@ -799,6 +857,12 @@ async function handleLockDoor(
     return { type: MessageType.ERROR, message: `There is no door to the ${direction}.` };
   }
 
+  // Check door permissions first (before any other checks)
+  const permissionError = await checkDoorPermissionsForPlayer(door, socket);
+  if (permissionError) {
+    return permissionError;
+  }
+
   // Only physical doors can be locked
   if (door.doorType !== DoorType.PHYSICAL) {
     return { type: MessageType.ERROR, message: `You cannot lock the ${door.name}.` };
@@ -820,7 +884,7 @@ async function handleLockDoor(
 
   // Check if player has the right key
   if (door.keyItemTag) {
-    const hasKey = await playerHasKey(socket.characterId!, door.keyItemTag);
+    const hasKey = await playerHasItemWithTag(socket.characterId!, door.keyItemTag);
     if (!hasKey) {
       return { type: MessageType.ERROR, message: `You don't have the right key.` };
     }
@@ -936,6 +1000,13 @@ async function handlePickDoor(
     return { type: MessageType.ERROR, message: `There is no door to the ${direction}.` };
   }
 
+  // Check door permissions first (before any other checks)
+  // Permission checks occur before lock checks per design doc
+  const permissionError = await checkDoorPermissionsForPlayer(door, socket);
+  if (permissionError) {
+    return permissionError;
+  }
+
   // Only physical doors can be picked
   if (door.doorType !== DoorType.PHYSICAL) {
     return { type: MessageType.ERROR, message: `You cannot pick the ${door.name}.` };
@@ -1032,6 +1103,13 @@ async function handleBashDoor(
     return { type: MessageType.ERROR, message: `There is no door to the ${direction}.` };
   }
 
+  // Check door permissions first (before any other checks)
+  // Permission checks occur before lock checks per design doc
+  const permissionError = await checkDoorPermissionsForPlayer(door, socket);
+  if (permissionError) {
+    return permissionError;
+  }
+
   // Only physical doors can be bashed
   if (door.doorType !== DoorType.PHYSICAL) {
     return { type: MessageType.ERROR, message: `You cannot bash the ${door.name}.` };
@@ -1113,6 +1191,12 @@ async function handleSpecialDoorTrigger(
   world: GameWorld,
   connectedPlayers: Map<number, AuthenticatedSocket>
 ): Promise<CommandResponse> {
+  // Check door permissions first (before passage checks)
+  const permissionError = await checkDoorPermissionsForPlayer(door, socket);
+  if (permissionError) {
+    return permissionError;
+  }
+
   // Check if door can be passed through (validates room connection, one-way rules, etc.)
   const passageCheck = doorStateManager.canPassThrough(door.id, currentRoomId);
   if (!passageCheck.allowed) {
@@ -1173,11 +1257,17 @@ async function handleSpecialDoorTrigger(
  * Handle spawning a temporary portal when player speaks the spawn trigger text
  * The portal appears in the room and becomes usable for its duration
  */
-function handlePortalSpawn(
+async function handlePortalSpawn(
   socket: AuthenticatedSocket,
   door: Door,
   currentRoomId: number
-): CommandResponse {
+): Promise<CommandResponse> {
+  // Check door permissions first (before allowing portal spawn)
+  const permissionError = await checkDoorPermissionsForPlayer(door, socket);
+  if (permissionError) {
+    return permissionError;
+  }
+
   // Check if portal is already active
   if (doorStateManager.isPortalActive(door.id)) {
     // Portal already exists - don't spawn again, just acknowledge

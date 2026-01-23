@@ -28,6 +28,11 @@ interface DbDoor {
   duration_seconds: number | null;
   appear_message: string | null;
   disappear_message: string | null;
+  required_level: number | null;
+  required_classes: string[] | null;
+  required_quest_flag: string | null;
+  required_item_tag: string | null;
+  denial_message: string | null;
   created_at: Date;
   updated_at: Date;
 }
@@ -60,6 +65,11 @@ function dbToDoor(row: DbDoor): Door {
     durationSeconds: row.duration_seconds,
     appearMessage: row.appear_message,
     disappearMessage: row.disappear_message,
+    requiredLevel: row.required_level,
+    requiredClasses: row.required_classes,
+    requiredQuestFlag: row.required_quest_flag,
+    requiredItemTag: row.required_item_tag,
+    denialMessage: row.denial_message,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -198,6 +208,11 @@ export interface CreateDoorInput {
   durationSeconds?: number | null;
   appearMessage?: string;
   disappearMessage?: string;
+  requiredLevel?: number | null;
+  requiredClasses?: string[] | null;
+  requiredQuestFlag?: string | null;
+  requiredItemTag?: string | null;
+  denialMessage?: string | null;
 }
 
 export async function createDoor(input: CreateDoorInput): Promise<Door> {
@@ -213,8 +228,10 @@ export async function createDoor(input: CreateDoorInput): Promise<Door> {
       trigger_text, passage_message_self, passage_message_room,
       item_display_name,
       is_temporary, spawn_trigger_text, duration_seconds,
-      appear_message, disappear_message
-    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24)
+      appear_message, disappear_message,
+      required_level, required_classes, required_quest_flag,
+      required_item_tag, denial_message
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29)
     RETURNING *`,
     [
       input.name,
@@ -241,6 +258,11 @@ export async function createDoor(input: CreateDoorInput): Promise<Door> {
       input.durationSeconds ?? null,
       input.appearMessage ?? null,
       input.disappearMessage ?? null,
+      input.requiredLevel ?? null,
+      input.requiredClasses ?? null,
+      input.requiredQuestFlag ?? null,
+      input.requiredItemTag ?? null,
+      input.denialMessage ?? null,
     ]
   );
   return dbToDoor(result.rows[0]);
@@ -349,6 +371,26 @@ export async function updateDoor(
   if (updates.disappearMessage !== undefined) {
     setClauses.push(`disappear_message = $${paramIndex++}`);
     values.push(updates.disappearMessage);
+  }
+  if (updates.requiredLevel !== undefined) {
+    setClauses.push(`required_level = $${paramIndex++}`);
+    values.push(updates.requiredLevel);
+  }
+  if (updates.requiredClasses !== undefined) {
+    setClauses.push(`required_classes = $${paramIndex++}`);
+    values.push(updates.requiredClasses);
+  }
+  if (updates.requiredQuestFlag !== undefined) {
+    setClauses.push(`required_quest_flag = $${paramIndex++}`);
+    values.push(updates.requiredQuestFlag);
+  }
+  if (updates.requiredItemTag !== undefined) {
+    setClauses.push(`required_item_tag = $${paramIndex++}`);
+    values.push(updates.requiredItemTag);
+  }
+  if (updates.denialMessage !== undefined) {
+    setClauses.push(`denial_message = $${paramIndex++}`);
+    values.push(updates.denialMessage);
   }
 
   if (setClauses.length === 0) {
