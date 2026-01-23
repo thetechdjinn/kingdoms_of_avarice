@@ -254,6 +254,10 @@ export function setupDoorRoutes(app: Express): void {
       }
 
       if (entryRoomId !== undefined) {
+        if (typeof entryRoomId !== 'number') {
+          res.status(400).json({ success: false, message: 'Entry room ID must be a number' });
+          return;
+        }
         const entryRoom = await roomRepo.getRoomById(entryRoomId);
         if (!entryRoom) {
           res.status(400).json({ success: false, message: 'Entry room does not exist' });
@@ -267,6 +271,10 @@ export function setupDoorRoutes(app: Express): void {
       }
 
       if (exitRoomId !== undefined && exitRoomId !== null) {
+        if (typeof exitRoomId !== 'number') {
+          res.status(400).json({ success: false, message: 'Exit room ID must be a number' });
+          return;
+        }
         const exitRoom = await roomRepo.getRoomById(exitRoomId);
         if (!exitRoom) {
           res.status(400).json({ success: false, message: 'Exit room does not exist' });
@@ -279,8 +287,44 @@ export function setupDoorRoutes(app: Express): void {
         return;
       }
 
-      if (defaultState !== undefined && !VALID_DOOR_STATES.includes(defaultState)) {
+      if (defaultState !== undefined && defaultState !== null && !VALID_DOOR_STATES.includes(defaultState)) {
         res.status(400).json({ success: false, message: 'Invalid default state' });
+        return;
+      }
+
+      // Validate numeric fields
+      if (autoCloseSeconds !== undefined && autoCloseSeconds !== null && (typeof autoCloseSeconds !== 'number' || autoCloseSeconds <= 0)) {
+        res.status(400).json({ success: false, message: 'Auto close seconds must be a positive number' });
+        return;
+      }
+
+      if (autoLockSeconds !== undefined && autoLockSeconds !== null && (typeof autoLockSeconds !== 'number' || autoLockSeconds <= 0)) {
+        res.status(400).json({ success: false, message: 'Auto lock seconds must be a positive number' });
+        return;
+      }
+
+      if (pickDifficulty !== undefined && (typeof pickDifficulty !== 'number' || pickDifficulty < 0)) {
+        res.status(400).json({ success: false, message: 'Pick difficulty must be a non-negative number' });
+        return;
+      }
+
+      if (bashDifficulty !== undefined && (typeof bashDifficulty !== 'number' || bashDifficulty < 0)) {
+        res.status(400).json({ success: false, message: 'Bash difficulty must be a non-negative number' });
+        return;
+      }
+
+      if (durationSeconds !== undefined && durationSeconds !== null && (typeof durationSeconds !== 'number' || durationSeconds <= 0)) {
+        res.status(400).json({ success: false, message: 'Duration seconds must be a positive number' });
+        return;
+      }
+
+      if (requiredLevel !== undefined && requiredLevel !== null && (typeof requiredLevel !== 'number' || requiredLevel < 0)) {
+        res.status(400).json({ success: false, message: 'Required level must be a non-negative number' });
+        return;
+      }
+
+      if (requiredClasses !== undefined && requiredClasses !== null && !Array.isArray(requiredClasses)) {
+        res.status(400).json({ success: false, message: 'Required classes must be an array' });
         return;
       }
 
