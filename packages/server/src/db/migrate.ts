@@ -327,6 +327,22 @@ export async function runMigrations(): Promise<void> {
         ALTER TABLE doors ADD COLUMN IF NOT EXISTS disappear_message TEXT
       `);
 
+      // Add constraints for temporary portal data integrity
+      await client.query(`
+        ALTER TABLE doors DROP CONSTRAINT IF EXISTS doors_duration_seconds_check
+      `);
+      await client.query(`
+        ALTER TABLE doors ADD CONSTRAINT doors_duration_seconds_check
+        CHECK (duration_seconds IS NULL OR duration_seconds > 0)
+      `);
+      await client.query(`
+        ALTER TABLE doors DROP CONSTRAINT IF EXISTS temporary_portal_requires_spawn_trigger
+      `);
+      await client.query(`
+        ALTER TABLE doors ADD CONSTRAINT temporary_portal_requires_spawn_trigger
+        CHECK (is_temporary = FALSE OR spawn_trigger_text IS NOT NULL)
+      `);
+
       // Seed default game settings (only if they don't exist)
       await client.query(`
         INSERT INTO game_settings (key, value) VALUES

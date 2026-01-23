@@ -831,8 +831,8 @@ export function findPortalBySpawnTrigger(
         return false;
       }
 
-      // Match spawn trigger text (case-insensitive)
-      return door.spawnTriggerText.toLowerCase() === normalizedTrigger;
+      // Match spawn trigger text (case-insensitive, trimmed)
+      return door.spawnTriggerText.toLowerCase().trim() === normalizedTrigger;
     }) ?? null
   );
 }
