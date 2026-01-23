@@ -64,6 +64,51 @@ CREATE TABLE IF NOT EXISTS room_exits (
     UNIQUE(from_room_id, direction)
 );
 
+-- Doors (connections between rooms with various mechanics)
+CREATE TABLE IF NOT EXISTS doors (
+    id SERIAL PRIMARY KEY,
+
+    -- Identity
+    name VARCHAR(100) NOT NULL,
+    door_type VARCHAR(50) NOT NULL CHECK (door_type IN (
+        'open_passageway',
+        'physical',
+        'special',
+        'triggered_passageway',
+        'temporary_portal'
+    )),
+    description TEXT,
+
+    -- Connection (entry side is required, exit side is optional for one-way doors)
+    entry_room_id INTEGER NOT NULL REFERENCES rooms(id) ON DELETE CASCADE,
+    entry_direction VARCHAR(20) NOT NULL,
+    exit_room_id INTEGER REFERENCES rooms(id) ON DELETE CASCADE,
+    exit_direction VARCHAR(20),
+
+    -- State (for physical doors)
+    default_state VARCHAR(20) DEFAULT 'closed' CHECK (default_state IN ('open', 'closed', 'locked')),
+
+    -- Visibility
+    is_hidden BOOLEAN DEFAULT FALSE,
+
+    -- Trigger text (for special doors, triggered passageways, temporary portals)
+    trigger_text VARCHAR(100),
+
+    -- Passage messages
+    passage_message_self TEXT,
+    passage_message_room TEXT,
+
+    -- Special door display (how it appears on "Also here:" line)
+    item_display_name VARCHAR(100),
+
+    -- Timestamps
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+    -- Ensure entry direction is unique per room (one door per direction)
+    UNIQUE(entry_room_id, entry_direction)
+);
+
 -- Item templates (blueprints for items)
 CREATE TABLE IF NOT EXISTS item_templates (
     id SERIAL PRIMARY KEY,
@@ -270,3 +315,6 @@ CREATE INDEX IF NOT EXISTS idx_player_roles_player ON player_roles(player_id);
 CREATE INDEX IF NOT EXISTS idx_player_roles_role ON player_roles(role_id);
 CREATE INDEX IF NOT EXISTS idx_ip_access_list_type ON ip_access(list_type);
 CREATE INDEX IF NOT EXISTS idx_ip_access_entry_type ON ip_access(entry_type);
+CREATE INDEX IF NOT EXISTS idx_doors_entry_room ON doors(entry_room_id);
+CREATE INDEX IF NOT EXISTS idx_doors_exit_room ON doors(exit_room_id);
+CREATE INDEX IF NOT EXISTS idx_doors_type ON doors(door_type);

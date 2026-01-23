@@ -222,3 +222,6 @@ export * from "./characterPoints.js";
 
 // Re-export command queue system
 export * from "./commandQueue.js";
+
+// Re-export door system
+export * from "./doors.js";
