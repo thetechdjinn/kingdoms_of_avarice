@@ -1,4 +1,4 @@
-import { MessageType, GameMessage, Role, hasAnyRole, StatusEffectCategory } from '@koa/shared';
+import { MessageType, GameMessage, Role, hasAnyRole, StatusEffectCategory, DoorType, DoorState } from '@koa/shared';
 import { getActiveEffectsDisplay, formatDuration } from './statusEffects.js';
 import { getDelayModifierDescriptions, getStatusEffectDelayMultiplier } from './delayModifiers.js';
 import { getPlayerQueueStatus } from './tickProcessor.js';
@@ -7,6 +7,7 @@ import { GameWorld } from './world.js';
 import { AuthenticatedSocket, broadcastToRoom } from './socket.js';
 import { colors } from '../utils/colors.js';
 import { processAdminCommand, getPlayerLocation, setPlayerLocation } from './adminCommands.js';
+import * as doorStateManager from '../services/doorStateManager.js';
 import * as playerRepo from '../db/repositories/playerRepository.js';
 import { handleGet, handleDrop, handleInventory, handleExamine, getRoomItemsDescription, handleWield, handleWear, handleRemove, handleEquipment, handlePut, handleGetFrom, handleLookIn, handleUse, handleLight, handleExtinguish, handleRepair, handleSearch, handleRecipes, handleCraft, handleEnchantments, handleEnchant, handleDropCurrency, handleGetCurrency } from './itemCommands.js';
 import { handleAttack, handleFlee, handleBreak } from './combatCommands.js';
@@ -208,6 +209,14 @@ export async function processCommand(
   if (DIRECTION_ALIASES[command] || isDirection(command)) {
     const direction = DIRECTION_ALIASES[command] || command;
     return await handleMove(socket, currentRoomId, direction, world, _connectedPlayers);
+  }
+
+  if (command === 'open') {
+    return handleOpenDoor(socket, args, currentRoomId);
+  }
+
+  if (command === 'close') {
+    return handleCloseDoor(socket, args, currentRoomId);
   }
 
   if (command === 'help' || command === '?') {
@@ -412,6 +421,16 @@ async function handleLookDirection(
     return { type: MessageType.ERROR, message: `There is no exit ${direction}.` };
   }
 
+  // Check if there's a door blocking the view
+  const door = doorStateManager.getDoorByRoomAndDirection(currentRoomId, direction);
+  if (door && door.doorType === DoorType.PHYSICAL) {
+    const doorState = doorStateManager.getDoorState(door.id);
+    if (doorState !== DoorState.OPEN) {
+      // Can't see through a closed door
+      return { type: MessageType.OUTPUT, message: `The ${door.name} to the ${direction} is closed.` };
+    }
+  }
+
   // Notify players in the target room that someone is peeking in
   const oppositeDir = OPPOSITE_DIRECTIONS[direction] || direction;
   broadcastToRoom(targetRoom.id, `${socket.username} peeks in from the ${oppositeDir}.`, socket.playerId);
@@ -523,6 +542,16 @@ async function handleMove(
   }
 
   const fullDirection = DIRECTION_ALIASES[direction] || direction;
+
+  // Check if there's a door in this direction
+  const door = doorStateManager.getDoorByRoomAndDirection(currentRoomId, fullDirection);
+  if (door) {
+    const passageCheck = doorStateManager.canPassThrough(door.id, currentRoomId);
+    if (!passageCheck.allowed) {
+      return { type: MessageType.ERROR, message: passageCheck.reason || 'You cannot go that way.' };
+    }
+  }
+
   const newRoom = world.getRoomInDirection(currentRoomId, fullDirection);
 
   if (!newRoom) {
@@ -548,6 +577,87 @@ async function handleMove(
   const otherPlayers = getOtherPlayersInRoom(newRoom.id, socket.playerId, connectedPlayers);
   const itemDescriptions = await getRoomItemsDescription(newRoom.id);
   return { type: MessageType.OUTPUT, message: world.formatRoomDescription(newRoom, otherPlayers, socket.briefMode, itemDescriptions) };
+}
+
+type DoorAction = 'open' | 'close';
+
+function handleDoorAction(
+  socket: AuthenticatedSocket,
+  args: string[],
+  currentRoomId: number,
+  action: DoorAction
+): CommandResponse {
+  const verb = action;
+  const verbs = action === 'open' ? 'opens' : 'closes';
+  const capitalVerb = action.charAt(0).toUpperCase() + action.slice(1);
+
+  if (args.length === 0) {
+    return { type: MessageType.ERROR, message: `${capitalVerb} what?` };
+  }
+
+  // Parse direction from args
+  const directionArg = args[0].toLowerCase();
+  const direction = DIRECTION_ALIASES[directionArg] || directionArg;
+
+  // Find door in the specified direction
+  const door = doorStateManager.getDoorByRoomAndDirection(currentRoomId, direction);
+  if (!door) {
+    if (!isDirection(direction)) {
+      return { type: MessageType.ERROR, message: `${capitalVerb} what?` };
+    }
+    return { type: MessageType.ERROR, message: `There is no door to the ${direction}.` };
+  }
+
+  // Only physical doors can be opened/closed
+  if (door.doorType !== DoorType.PHYSICAL) {
+    return { type: MessageType.ERROR, message: `You cannot ${verb} the ${door.name}.` };
+  }
+
+  // Get current state (null treated as closed)
+  const currentState = doorStateManager.getDoorState(door.id);
+
+  // Validate state and perform action
+  if (action === 'open') {
+    if (currentState === DoorState.OPEN) {
+      return { type: MessageType.ERROR, message: `The ${door.name} is already open.` };
+    }
+    if (currentState === DoorState.LOCKED) {
+      return { type: MessageType.ERROR, message: `The ${door.name} is locked.` };
+    }
+    doorStateManager.openDoor(door.id);
+  } else {
+    if (currentState !== DoorState.OPEN) {
+      return { type: MessageType.ERROR, message: `The ${door.name} is already closed.` };
+    }
+    doorStateManager.closeDoor(door.id);
+  }
+
+  // Broadcast to current room
+  broadcastToRoom(currentRoomId, `${socket.username} ${verbs} the ${door.name}.`, socket.playerId);
+
+  // Broadcast to the other side (if two-way door)
+  const otherRoomId = doorStateManager.getDestinationRoom(door.id, currentRoomId);
+  if (otherRoomId) {
+    broadcastToRoom(otherRoomId, `The ${door.name} ${verbs} from the other side.`);
+  }
+
+  return { type: MessageType.OUTPUT, message: `You ${verb} the ${door.name}.` };
+}
+
+function handleOpenDoor(
+  socket: AuthenticatedSocket,
+  args: string[],
+  currentRoomId: number
+): CommandResponse {
+  return handleDoorAction(socket, args, currentRoomId, 'open');
+}
+
+function handleCloseDoor(
+  socket: AuthenticatedSocket,
+  args: string[],
+  currentRoomId: number
+): CommandResponse {
+  return handleDoorAction(socket, args, currentRoomId, 'close');
 }
 
 function handleSay(
@@ -619,6 +729,8 @@ function handleHelp(userRoles: Role[], category?: string): CommandResponse {
     `    ${colors.white('look <item>')}           - Examine an item`,
     `    ${colors.white('look in <container>')}   - View container contents`,
     `    ${colors.white('<direction>')}           - Move (n, s, e, w, ne, nw, se, sw, u, d)`,
+    `    ${colors.white('open <direction>')}      - Open a door`,
+    `    ${colors.white('close <direction>')}     - Close a door`,
     `    ${colors.white('brief')}                 - Toggle brief mode`,
     '',
     colors.boldCyan('  Items & Inventory:'),
