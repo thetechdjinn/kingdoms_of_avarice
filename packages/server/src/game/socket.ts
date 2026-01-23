@@ -92,7 +92,8 @@ export async function initializeGameWorld(): Promise<void> {
   await gameWorld.initialize();
 
   // Initialize door state manager (loads doors and sets default states)
-  await initializeDoorStates();
+  // Pass broadcastToRoom callback for auto-close timer notifications
+  await initializeDoorStates(broadcastToRoom);
 
   // Initialize progression system from JSON data files
   try {

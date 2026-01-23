@@ -62,6 +62,8 @@ export interface Door {
   // State (for physical doors)
   /** The state the door resets to (on server restart or after events) */
   defaultState: DoorState;
+  /** Seconds until door auto-closes after being opened (null = no auto-close) */
+  autoCloseSeconds: number | null;
 
   // Visibility
   /** If true, door doesn't appear on "Obvious exits" line */

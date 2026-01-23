@@ -26,16 +26,38 @@ const doorsById = new Map<number, Door>();
 // Key: room ID, Value: array of Door objects
 const doorsByRoomId = new Map<number, Door[]>();
 
+// Active auto-close timers for open doors
+// Key: door ID, Value: NodeJS.Timeout
+const autoCloseTimers = new Map<number, NodeJS.Timeout>();
+
+// Callback for broadcasting messages to rooms (set during initialization)
+// This avoids circular dependency with socket.ts
+let broadcastCallback: ((roomId: number, message: string) => void) | null = null;
+
 /**
  * Initialize the door state manager by loading all doors from the database
  * Call this during server startup after database connection is established
+ * @param broadcast - Callback function to broadcast messages to a room (avoids circular dependency)
  */
-export async function initializeDoorStates(): Promise<void> {
+export async function initializeDoorStates(
+  broadcast?: (roomId: number, message: string) => void
+): Promise<void> {
   const allDoors = await doorRepo.getAllDoors();
+
+  // Clear any existing timers
+  for (const timer of autoCloseTimers.values()) {
+    clearTimeout(timer);
+  }
+  autoCloseTimers.clear();
 
   doorStates.clear();
   doorsById.clear();
   doorsByRoomId.clear();
+
+  // Set the broadcast callback
+  if (broadcast) {
+    broadcastCallback = broadcast;
+  }
 
   for (const door of allDoors) {
     // Store door definition
@@ -75,6 +97,9 @@ export async function reloadDoor(doorId: number): Promise<Door | null> {
     if (oldDoor) {
       doorsById.delete(doorId);
       doorStates.delete(doorId);
+
+      // Cancel any active timer for this door
+      cancelAutoCloseTimer(doorId);
 
       // Remove from room index
       const entryDoors = doorsByRoomId.get(oldDoor.entryRoomId);
@@ -167,6 +192,15 @@ export async function reloadDoor(doorId: number): Promise<Door | null> {
         const idx = exitDoors.findIndex((d) => d.id === doorId);
         if (idx >= 0) exitDoors[idx] = door;
       }
+    }
+  }
+
+  // If door is currently open and autoCloseSeconds changed, restart timer
+  const currentState = doorStates.get(doorId);
+  if (currentState === DoorState.OPEN) {
+    if (oldDoor && oldDoor.autoCloseSeconds !== door.autoCloseSeconds) {
+      // Timer settings changed - restart with new duration
+      startAutoCloseTimer(door);
     }
   }
 
@@ -263,6 +297,68 @@ export function setDoorState(doorId: number, state: DoorState): boolean {
 }
 
 /**
+ * Start the auto-close timer for a door
+ */
+function startAutoCloseTimer(door: Door): void {
+  // Cancel any existing timer
+  cancelAutoCloseTimer(door.id);
+
+  // Only start timer if auto-close is enabled
+  if (door.autoCloseSeconds === null || door.autoCloseSeconds <= 0) {
+    return;
+  }
+
+  const doorId = door.id;
+  const timer = setTimeout(() => {
+    autoCloseTimers.delete(doorId);
+    // Fetch fresh door data to avoid stale references if door was edited
+    const currentDoor = doorsById.get(doorId);
+    if (currentDoor) {
+      autoCloseDoor(currentDoor);
+    }
+  }, door.autoCloseSeconds * 1000);
+
+  autoCloseTimers.set(door.id, timer);
+}
+
+/**
+ * Cancel the auto-close timer for a door
+ */
+function cancelAutoCloseTimer(doorId: number): void {
+  const timer = autoCloseTimers.get(doorId);
+  if (timer) {
+    clearTimeout(timer);
+    autoCloseTimers.delete(doorId);
+  }
+}
+
+/**
+ * Called when auto-close timer expires
+ */
+function autoCloseDoor(door: Door): void {
+  const currentState = doorStates.get(door.id);
+  if (currentState !== DoorState.OPEN) {
+    // Door was already closed (manually or otherwise)
+    return;
+  }
+
+  // Close the door
+  doorStates.set(door.id, DoorState.CLOSED);
+
+  // Broadcast to both rooms with consistent message format
+  // Uses "just closed" to indicate automatic closure vs player action
+  if (broadcastCallback) {
+    const entryMessage = `The ${door.name} to the ${door.entryDirection} just closed.`;
+    broadcastCallback(door.entryRoomId, entryMessage);
+
+    if (door.exitRoomId && door.exitDirection) {
+      const exitMessage = `The ${door.name} to the ${door.exitDirection} just closed.`;
+      broadcastCallback(door.exitRoomId, exitMessage);
+    }
+  }
+}
+
+/**
  * Open a door (set state to OPEN)
  * Only works for physical doors that are closed or locked.
  * Note: This is a low-level state change. Callers should verify unlock
@@ -278,6 +374,10 @@ export function openDoor(doorId: number): boolean {
     return false; // Already open
   }
   doorStates.set(doorId, DoorState.OPEN);
+
+  // Start auto-close timer
+  startAutoCloseTimer(door);
+
   return true;
 }
 
@@ -295,6 +395,10 @@ export function closeDoor(doorId: number): boolean {
     return false; // Not open
   }
   doorStates.set(doorId, DoorState.CLOSED);
+
+  // Cancel auto-close timer since door was manually closed
+  cancelAutoCloseTimer(doorId);
+
   return true;
 }
 
@@ -389,4 +493,18 @@ export function getDoorCount(): number {
  */
 export function isInitialized(): boolean {
   return initialized;
+}
+
+/**
+ * Get count of active auto-close timers (for debugging)
+ */
+export function getActiveTimerCount(): number {
+  return autoCloseTimers.size;
+}
+
+/**
+ * Check if a door has an active auto-close timer
+ */
+export function hasActiveTimer(doorId: number): boolean {
+  return autoCloseTimers.has(doorId);
 }

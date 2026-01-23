@@ -237,19 +237,25 @@ This implementation is broken into small, focused phases to minimize context win
 
 ---
 
-### Phase 4: Auto-Close Timer
+### Phase 4: Auto-Close Timer ✓ COMPLETE
 
 **Goal**: Doors automatically close after a period of time.
 
 **Tasks**:
-- [ ] Add `auto_close_seconds` column to doors table (nullable, default 120)
-- [ ] Create door timer service to track open doors
-- [ ] When door opens, register timer
-- [ ] When timer expires, close door and broadcast to room
-- [ ] Cancel timer if door is manually closed
+- [x] Add `auto_close_seconds` column to doors table (nullable, default 120)
+- [x] Create door timer service to track open doors
+- [x] When door opens, register timer
+- [x] When timer expires, close door and broadcast to room
+- [x] Cancel timer if door is manually closed
 
-**Files Changed**: ~2-3 files
-**Acceptance**: Open a door, wait 2 minutes, door closes automatically with room message
+**Files Changed**: 5 files
+- `packages/server/src/db/schema.sql` (MODIFIED - added auto_close_seconds column)
+- `packages/shared/src/doors.ts` (MODIFIED - added autoCloseSeconds to Door interface)
+- `packages/server/src/db/repositories/doorRepository.ts` (MODIFIED - added autoCloseSeconds handling)
+- `packages/server/src/services/doorStateManager.ts` (MODIFIED - added timer system)
+- `packages/server/src/game/socket.ts` (MODIFIED - pass broadcast callback to doorStateManager)
+
+**Acceptance**: ✓ Open a door, wait for configured time (default 2 minutes), door closes automatically with room message
 
 ---
 
