@@ -393,18 +393,28 @@ else:
 
 ---
 
-### Phase 8: Triggered Passageways
+### Phase 8: Triggered Passageways ✓ COMPLETE
 
 **Goal**: Hidden exits activated by text.
 
 **Tasks**:
-- [ ] Ensure `is_hidden` flag works (door not shown anywhere)
-- [ ] Implement trigger text parsing for hidden passages
-- [ ] Display custom passage messages (self and room)
-- [ ] Triggered passageways work like normal exits once triggered
+- [x] Ensure `is_hidden` flag works (door not shown anywhere)
+- [x] Implement trigger text parsing for hidden passages
+- [x] Display custom passage messages (self and room)
+- [x] Triggered passageways work like normal exits once triggered
 
-**Files Changed**: ~2 files
-**Acceptance**: Hidden passage not visible, player types trigger, passes through with custom message
+**Files Changed**: 1 file
+- `packages/server/src/game/world.ts` (MODIFIED - exclude TRIGGERED_PASSAGEWAY from obvious exits)
+
+**Note**: Most Phase 8 functionality was already implemented in Phase 7:
+- `findSpecialDoorByTrigger()` in doorStateManager.ts handles TRIGGERED_PASSAGEWAY
+- `handleSpecialDoorTrigger()` in commands.ts handles passage with custom messages
+- `canPassThrough()` in doorStateManager.ts allows triggered passageways
+
+**Acceptance**: ✓ All criteria met
+- Hidden passage not visible on "Obvious exits" or "Also here:" lines
+- Player types trigger text and passes through
+- Custom passage messages displayed to player and room
 
 ---
 
