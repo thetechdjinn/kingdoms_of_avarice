@@ -95,6 +95,8 @@ CREATE TABLE IF NOT EXISTS doors (
     has_lock BOOLEAN DEFAULT FALSE,
     key_item_tag VARCHAR(100),  -- Tag that matches item's key_tag in flags to unlock
     auto_lock_seconds INTEGER,  -- NULL = no auto-lock, otherwise seconds until door locks after unlock
+    pick_difficulty INTEGER DEFAULT 0,  -- 0-500+, difficulty to pick lock (500+ = unpickable)
+    bash_difficulty INTEGER DEFAULT 0,  -- 0-500+, difficulty to bash door (500+ = unbashable)
 
     -- Visibility
     is_hidden BOOLEAN DEFAULT FALSE,

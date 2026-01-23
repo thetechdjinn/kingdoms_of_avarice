@@ -4,7 +4,7 @@ import { getDelayModifierDescriptions, getStatusEffectDelayMultiplier } from './
 import { getPlayerQueueStatus } from './tickProcessor.js';
 import { getRemainingCooldown, formatAbilityName } from './cooldownTracker.js';
 import { GameWorld } from './world.js';
-import { AuthenticatedSocket, broadcastToRoom } from './socket.js';
+import { AuthenticatedSocket, broadcastToRoom, sendVitals } from './socket.js';
 import { colors } from '../utils/colors.js';
 import { processAdminCommand, getPlayerLocation, setPlayerLocation } from './adminCommands.js';
 import * as doorStateManager from '../services/doorStateManager.js';
@@ -225,6 +225,14 @@ export async function processCommand(
 
   if (command === 'lock') {
     return await handleLockDoor(socket, args, currentRoomId);
+  }
+
+  if (command === 'pick') {
+    return await handlePickDoor(socket, args, currentRoomId);
+  }
+
+  if (command === 'bash') {
+    return await handleBashDoor(socket, args, currentRoomId);
   }
 
   if (command === 'help' || command === '?') {
@@ -799,6 +807,267 @@ async function handleLockDoor(
   }
 
   return { type: MessageType.OUTPUT, message: `You lock the ${door.name}.` };
+}
+
+/**
+ * Check if a character has the lockpicking ability
+ * Characters can pick locks if their class has thievery=true or 'lockpicking' in special_abilities
+ */
+async function characterHasLockpickingAbility(characterClass: string): Promise<boolean> {
+  const classDef = await progressionRepo.getClassById(characterClass);
+  if (!classDef) return false;
+
+  // Class has thievery skill (thief, bard, gypsy, missionary)
+  if (classDef.thievery) return true;
+
+  // Class has lockpicking in special_abilities (ninja)
+  if (classDef.special_abilities?.includes('lockpicking')) return true;
+
+  return false;
+}
+
+/**
+ * Calculate a character's lockpicking stat
+ * Based on: intellect, dexterity, level, race/class bonuses, equipment bonuses
+ * For now, simplified formula: (intellect + dexterity) / 2 + level * 2
+ * TODO: Add race bonuses, class bonuses, equipment bonuses, quest bonuses
+ */
+function calculateLockpickingStat(character: {
+  dexterity: number;
+  intelligence: number;
+  level: number;
+}): number {
+  // Base lockpicking from stats: average of intellect and dexterity
+  const statBonus = Math.floor((character.intelligence + character.dexterity) / 2);
+
+  // Level bonus: 2 points per level
+  const levelBonus = character.level * 2;
+
+  // TODO: Add race/class bonuses from definitions
+  // TODO: Add equipment bonuses from equipped items
+  // TODO: Add quest completion bonuses
+
+  return statBonus + levelBonus;
+}
+
+/**
+ * Calculate a character's bash stat (for bashing doors)
+ * Based primarily on strength with some level bonus
+ */
+function calculateBashStat(character: {
+  strength: number;
+  level: number;
+}): number {
+  // Base bash from strength
+  const strengthBonus = character.strength;
+
+  // Level bonus: 1 point per level
+  const levelBonus = character.level;
+
+  // TODO: Add race/class bonuses
+  // TODO: Add equipment bonuses
+
+  return strengthBonus + levelBonus;
+}
+
+async function handlePickDoor(
+  socket: AuthenticatedSocket,
+  args: string[],
+  currentRoomId: number
+): Promise<CommandResponse> {
+  if (args.length === 0) {
+    return { type: MessageType.ERROR, message: 'Pick what?' };
+  }
+
+  // Get character data
+  const character = await characterRepo.findCharacterById(socket.characterId!);
+  if (!character) {
+    return { type: MessageType.ERROR, message: 'Character not found.' };
+  }
+
+  // Check if character has lockpicking ability
+  const hasAbility = await characterHasLockpickingAbility(character.class);
+  if (!hasAbility) {
+    return { type: MessageType.ERROR, message: `You don't know how to pick locks.` };
+  }
+
+  // Parse direction from args
+  const directionArg = args[0].toLowerCase();
+  const direction = DIRECTION_ALIASES[directionArg] || directionArg;
+
+  // Find door in the specified direction
+  const door = doorStateManager.getDoorByRoomAndDirection(currentRoomId, direction);
+  if (!door) {
+    if (!isDirection(direction)) {
+      return { type: MessageType.ERROR, message: 'Pick what?' };
+    }
+    return { type: MessageType.ERROR, message: `There is no door to the ${direction}.` };
+  }
+
+  // Only physical doors can be picked
+  if (door.doorType !== DoorType.PHYSICAL) {
+    return { type: MessageType.ERROR, message: `You cannot pick the ${door.name}.` };
+  }
+
+  // Check if door has a lock
+  if (!door.hasLock) {
+    return { type: MessageType.ERROR, message: `The ${door.name} has no lock to pick.` };
+  }
+
+  // Check current state
+  const currentState = doorStateManager.getDoorState(door.id);
+  if (currentState !== DoorState.LOCKED) {
+    return { type: MessageType.ERROR, message: `The ${door.name} is not locked.` };
+  }
+
+  // Check pick difficulty - 0 means unpickable for this implementation
+  // Actually, high values like 500+ mean unpickable
+  if (door.pickDifficulty <= 0) {
+    // No pick difficulty set means it can't be picked (must use key)
+    return { type: MessageType.ERROR, message: `The ${door.name} cannot be picked.` };
+  }
+
+  // Calculate lockpicking stat
+  const lockpickingStat = calculateLockpickingStat(character);
+
+  // Roll 0-100
+  const roll = Math.floor(Math.random() * 101);
+
+  // Roll of 0 is automatic failure (fumble)
+  if (roll === 0) {
+    broadcastToRoom(currentRoomId, `${socket.username} fumbles while trying to pick the ${door.name}.`, socket.playerId);
+    return { type: MessageType.OUTPUT, message: `You fumble the lockpick! The ${door.name} remains locked.` };
+  }
+
+  // Calculate total: roll + lockpicking stat
+  const total = roll + lockpickingStat;
+
+  // Check against difficulty
+  if (total < door.pickDifficulty) {
+    // Failed attempt - broadcast to room
+    broadcastToRoom(currentRoomId, `${socket.username} fails to pick the ${door.name}.`, socket.playerId);
+    return {
+      type: MessageType.OUTPUT,
+      message: `You fail to pick the lock on the ${door.name}. (Roll: ${roll} + Skill: ${lockpickingStat} = ${total} vs Difficulty: ${door.pickDifficulty})`,
+    };
+  }
+
+  // Success! Unlock the door (which sets it to CLOSED state)
+  doorStateManager.unlockDoor(door.id);
+
+  // Now open it
+  doorStateManager.openDoor(door.id);
+
+  // Broadcast success to current room
+  broadcastToRoom(currentRoomId, `${socket.username} picks the lock on the ${door.name}!`, socket.playerId);
+
+  // Broadcast to the other side (if two-way door)
+  const otherRoomId = doorStateManager.getDestinationRoom(door.id, currentRoomId);
+  if (otherRoomId) {
+    broadcastToRoom(otherRoomId, `The ${door.name} clicks and swings open.`);
+  }
+
+  return {
+    type: MessageType.OUTPUT,
+    message: `You skillfully pick the lock on the ${door.name}! (Roll: ${roll} + Skill: ${lockpickingStat} = ${total} vs Difficulty: ${door.pickDifficulty})`,
+  };
+}
+
+async function handleBashDoor(
+  socket: AuthenticatedSocket,
+  args: string[],
+  currentRoomId: number
+): Promise<CommandResponse> {
+  if (args.length === 0) {
+    return { type: MessageType.ERROR, message: 'Bash what?' };
+  }
+
+  // Get character data
+  const character = await characterRepo.findCharacterById(socket.characterId!);
+  if (!character) {
+    return { type: MessageType.ERROR, message: 'Character not found.' };
+  }
+
+  // Parse direction from args
+  const directionArg = args[0].toLowerCase();
+  const direction = DIRECTION_ALIASES[directionArg] || directionArg;
+
+  // Find door in the specified direction
+  const door = doorStateManager.getDoorByRoomAndDirection(currentRoomId, direction);
+  if (!door) {
+    if (!isDirection(direction)) {
+      return { type: MessageType.ERROR, message: 'Bash what?' };
+    }
+    return { type: MessageType.ERROR, message: `There is no door to the ${direction}.` };
+  }
+
+  // Only physical doors can be bashed
+  if (door.doorType !== DoorType.PHYSICAL) {
+    return { type: MessageType.ERROR, message: `You cannot bash the ${door.name}.` };
+  }
+
+  // Check current state - can bash closed or locked doors
+  const currentState = doorStateManager.getDoorState(door.id);
+  if (currentState === DoorState.OPEN) {
+    return { type: MessageType.ERROR, message: `The ${door.name} is already open.` };
+  }
+
+  // Check bash difficulty - 0 means unbashable for this implementation
+  if (door.bashDifficulty <= 0) {
+    return { type: MessageType.ERROR, message: `The ${door.name} cannot be bashed open.` };
+  }
+
+  // Calculate bash stat
+  const bashStat = calculateBashStat(character);
+
+  // Roll 0-100
+  const roll = Math.floor(Math.random() * 101);
+
+  // Calculate total: roll + bash stat
+  const total = roll + bashStat;
+
+  // Check against difficulty
+  if (total < door.bashDifficulty) {
+    // Failed attempt - deal damage to player (1-2% of max HP)
+    const damagePercent = 1 + Math.random(); // 1-2%
+    const damage = Math.max(1, Math.floor(character.max_health * damagePercent / 100));
+
+    // Update character health
+    const newHealth = Math.max(1, character.health - damage); // Don't kill from bash damage
+    await characterRepo.updateCharacterStats(socket.characterId!, { health: newHealth });
+
+    // Update socket's cached vitals and send to client
+    socket.vitals.hp = newHealth;
+    sendVitals(socket);
+
+    // Broadcast failed attempt to room
+    broadcastToRoom(currentRoomId, `${socket.username} slams into the ${door.name} and bounces off!`, socket.playerId);
+
+    return {
+      type: MessageType.OUTPUT,
+      message: `You slam into the ${door.name} but it doesn't budge! You take ${colors.red(damage.toString())} damage. (Roll: ${roll} + Strength: ${bashStat} = ${total} vs Difficulty: ${door.bashDifficulty})`,
+    };
+  }
+
+  // Success! If locked, unlock first, then open
+  if (currentState === DoorState.LOCKED) {
+    doorStateManager.unlockDoor(door.id);
+  }
+  doorStateManager.openDoor(door.id);
+
+  // Broadcast success to current room
+  broadcastToRoom(currentRoomId, `${socket.username} bashes open the ${door.name}!`, socket.playerId);
+
+  // Broadcast to the other side (if two-way door)
+  const otherRoomId = doorStateManager.getDestinationRoom(door.id, currentRoomId);
+  if (otherRoomId) {
+    broadcastToRoom(otherRoomId, `The ${door.name} bursts open with a crash!`);
+  }
+
+  return {
+    type: MessageType.OUTPUT,
+    message: `You bash open the ${door.name}! (Roll: ${roll} + Strength: ${bashStat} = ${total} vs Difficulty: ${door.bashDifficulty})`,
+  };
 }
 
 function handleSay(

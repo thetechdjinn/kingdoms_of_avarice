@@ -302,6 +302,14 @@ export async function runMigrations(): Promise<void> {
       // weapon cost reduction based on level and combat rating.
       // Weapon speeds should now be in the 800-2000 range (dagger ~900, greatsword ~1800).
 
+      // Add pick_difficulty and bash_difficulty columns to doors (for existing databases)
+      await client.query(`
+        ALTER TABLE doors ADD COLUMN IF NOT EXISTS pick_difficulty INTEGER DEFAULT 0
+      `);
+      await client.query(`
+        ALTER TABLE doors ADD COLUMN IF NOT EXISTS bash_difficulty INTEGER DEFAULT 0
+      `);
+
       // Seed default game settings (only if they don't exist)
       await client.query(`
         INSERT INTO game_settings (key, value) VALUES
