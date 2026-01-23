@@ -23,6 +23,11 @@ interface DbDoor {
   passage_message_self: string | null;
   passage_message_room: string | null;
   item_display_name: string | null;
+  is_temporary: boolean;
+  spawn_trigger_text: string | null;
+  duration_seconds: number | null;
+  appear_message: string | null;
+  disappear_message: string | null;
   created_at: Date;
   updated_at: Date;
 }
@@ -50,6 +55,11 @@ function dbToDoor(row: DbDoor): Door {
     passageMessageSelf: row.passage_message_self,
     passageMessageRoom: row.passage_message_room,
     itemDisplayName: row.item_display_name,
+    isTemporary: row.is_temporary,
+    spawnTriggerText: row.spawn_trigger_text,
+    durationSeconds: row.duration_seconds,
+    appearMessage: row.appear_message,
+    disappearMessage: row.disappear_message,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -183,6 +193,11 @@ export interface CreateDoorInput {
   passageMessageSelf?: string;
   passageMessageRoom?: string;
   itemDisplayName?: string;
+  isTemporary?: boolean;
+  spawnTriggerText?: string;
+  durationSeconds?: number | null;
+  appearMessage?: string;
+  disappearMessage?: string;
 }
 
 export async function createDoor(input: CreateDoorInput): Promise<Door> {
@@ -196,8 +211,10 @@ export async function createDoor(input: CreateDoorInput): Promise<Door> {
       pick_difficulty, bash_difficulty,
       is_hidden,
       trigger_text, passage_message_self, passage_message_room,
-      item_display_name
-    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
+      item_display_name,
+      is_temporary, spawn_trigger_text, duration_seconds,
+      appear_message, disappear_message
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24)
     RETURNING *`,
     [
       input.name,
@@ -219,6 +236,11 @@ export async function createDoor(input: CreateDoorInput): Promise<Door> {
       input.passageMessageSelf ?? null,
       input.passageMessageRoom ?? null,
       input.itemDisplayName ?? null,
+      input.isTemporary ?? false,
+      input.spawnTriggerText ?? null,
+      input.durationSeconds ?? null,
+      input.appearMessage ?? null,
+      input.disappearMessage ?? null,
     ]
   );
   return dbToDoor(result.rows[0]);
@@ -307,6 +329,26 @@ export async function updateDoor(
   if (updates.itemDisplayName !== undefined) {
     setClauses.push(`item_display_name = $${paramIndex++}`);
     values.push(updates.itemDisplayName);
+  }
+  if (updates.isTemporary !== undefined) {
+    setClauses.push(`is_temporary = $${paramIndex++}`);
+    values.push(updates.isTemporary);
+  }
+  if (updates.spawnTriggerText !== undefined) {
+    setClauses.push(`spawn_trigger_text = $${paramIndex++}`);
+    values.push(updates.spawnTriggerText);
+  }
+  if (updates.durationSeconds !== undefined) {
+    setClauses.push(`duration_seconds = $${paramIndex++}`);
+    values.push(updates.durationSeconds);
+  }
+  if (updates.appearMessage !== undefined) {
+    setClauses.push(`appear_message = $${paramIndex++}`);
+    values.push(updates.appearMessage);
+  }
+  if (updates.disappearMessage !== undefined) {
+    setClauses.push(`disappear_message = $${paramIndex++}`);
+    values.push(updates.disappearMessage);
   }
 
   if (setClauses.length === 0) {

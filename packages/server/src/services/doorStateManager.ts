@@ -30,6 +30,14 @@ const doorsByRoomId = new Map<number, Door[]>();
 // Key: door ID, Value: NodeJS.Timeout
 const autoCloseTimers = new Map<number, NodeJS.Timeout>();
 
+// Active temporary portals (spawned and not yet expired)
+// Key: door ID, Value: timestamp when portal was spawned
+const activePortals = new Map<number, number>();
+
+// Expiration timers for temporary portals
+// Key: door ID, Value: NodeJS.Timeout
+const portalExpirationTimers = new Map<number, NodeJS.Timeout>();
+
 // Callback for broadcasting messages to rooms (set during initialization)
 // This avoids circular dependency with socket.ts
 let broadcastCallback: ((roomId: number, message: string) => void) | null = null;
@@ -49,6 +57,13 @@ export async function initializeDoorStates(
     clearTimeout(timer);
   }
   autoCloseTimers.clear();
+
+  // Clear portal expiration timers
+  for (const timer of portalExpirationTimers.values()) {
+    clearTimeout(timer);
+  }
+  portalExpirationTimers.clear();
+  activePortals.clear();
 
   doorStates.clear();
   doorsById.clear();
@@ -98,8 +113,10 @@ export async function reloadDoor(doorId: number): Promise<Door | null> {
       doorsById.delete(doorId);
       doorStates.delete(doorId);
 
-      // Cancel any active timer for this door
+      // Cancel any active timers for this door
       cancelAutoCloseTimer(doorId);
+      cancelPortalExpirationTimer(doorId);
+      activePortals.delete(doorId);
 
       // Remove from room index
       const entryDoors = doorsByRoomId.get(oldDoor.entryRoomId);
@@ -501,7 +518,21 @@ export function canPassThrough(
   }
 
   // Special doors and triggered passageways are always passable (no state check needed)
-  // Temporary portals will need an "active" check when Phase 9 is implemented
+  if (door.doorType === DoorType.SPECIAL || door.doorType === DoorType.TRIGGERED_PASSAGEWAY) {
+    return { allowed: true };
+  }
+
+  // Temporary portals must be active (spawned and not expired)
+  if (door.doorType === DoorType.TEMPORARY_PORTAL) {
+    if (door.isTemporary && !isPortalActive(doorId)) {
+      return {
+        allowed: false,
+        reason: 'There is nothing there.',
+      };
+    }
+    return { allowed: true };
+  }
+
   return { allowed: true };
 }
 
@@ -574,13 +605,18 @@ export function findSpecialDoorByTrigger(
 
   return (
     doors.find((door) => {
-      // Only match special doors and triggered passageways
+      // Only match special doors, triggered passageways, and temporary portals
       if (
         door.doorType !== DoorType.SPECIAL &&
         door.doorType !== DoorType.TRIGGERED_PASSAGEWAY &&
         door.doorType !== DoorType.TEMPORARY_PORTAL
       ) {
         return false;
+      }
+
+      // Temporary portals must be active to respond to trigger text
+      if (door.doorType === DoorType.TEMPORARY_PORTAL && door.isTemporary) {
+        if (!activePortals.has(door.id)) return false;
       }
 
       // Must have trigger text defined
@@ -625,6 +661,11 @@ export function findSpecialDoorByDisplayName(
       // Hidden doors cannot be looked at by name
       if (door.isHidden) return false;
 
+      // Temporary portals must be active to be looked at
+      if (door.doorType === DoorType.TEMPORARY_PORTAL && door.isTemporary) {
+        if (!activePortals.has(door.id)) return false;
+      }
+
       // Match display name (case-insensitive, partial from start)
       // Remove article if present for matching (e.g., "a whirling vortex" -> "whirling vortex")
       const displayName = door.itemDisplayName.toLowerCase();
@@ -638,4 +679,174 @@ export function findSpecialDoorByDisplayName(
       );
     }) ?? null
   );
+}
+
+// ============================================================================
+// Temporary Portal Functions
+// ============================================================================
+
+/**
+ * Check if a temporary portal is currently active (spawned and not expired)
+ */
+export function isPortalActive(doorId: number): boolean {
+  return activePortals.has(doorId);
+}
+
+/**
+ * Spawn a temporary portal, making it visible and usable
+ * Starts the expiration timer based on the door's durationSeconds
+ * @returns true if portal was spawned, false if door doesn't exist or isn't a temporary portal
+ */
+export function spawnPortal(doorId: number): boolean {
+  const door = doorsById.get(doorId);
+  if (!door) return false;
+
+  // Only temporary portals can be spawned
+  if (door.doorType !== DoorType.TEMPORARY_PORTAL || !door.isTemporary) {
+    return false;
+  }
+
+  // Cancel any existing expiration timer (in case portal is being re-spawned)
+  cancelPortalExpirationTimer(doorId);
+
+  // Mark portal as active
+  activePortals.set(doorId, Date.now());
+
+  // Start expiration timer if duration is set
+  if (door.durationSeconds && door.durationSeconds > 0) {
+    startPortalExpirationTimer(door);
+  }
+
+  return true;
+}
+
+/**
+ * Despawn a temporary portal, making it invisible and unusable
+ * Called when expiration timer fires or manually
+ */
+export function despawnPortal(doorId: number): boolean {
+  const door = doorsById.get(doorId);
+  if (!door) return false;
+
+  if (!activePortals.has(doorId)) {
+    return false; // Portal wasn't active
+  }
+
+  // Remove from active portals
+  activePortals.delete(doorId);
+
+  // Cancel expiration timer
+  cancelPortalExpirationTimer(doorId);
+
+  return true;
+}
+
+/**
+ * Start the expiration timer for a temporary portal
+ */
+function startPortalExpirationTimer(door: Door): void {
+  if (!door.durationSeconds || door.durationSeconds <= 0) return;
+
+  const doorId = door.id;
+  const timer = setTimeout(() => {
+    portalExpirationTimers.delete(doorId);
+
+    // Fetch fresh door data
+    const currentDoor = doorsById.get(doorId);
+    if (currentDoor && activePortals.has(doorId)) {
+      expirePortal(currentDoor);
+    }
+  }, door.durationSeconds * 1000);
+
+  portalExpirationTimers.set(doorId, timer);
+}
+
+/**
+ * Cancel the expiration timer for a portal
+ */
+function cancelPortalExpirationTimer(doorId: number): void {
+  const timer = portalExpirationTimers.get(doorId);
+  if (timer) {
+    clearTimeout(timer);
+    portalExpirationTimers.delete(doorId);
+  }
+}
+
+/**
+ * Called when a portal's expiration timer fires
+ */
+function expirePortal(door: Door): void {
+  // Remove from active portals
+  activePortals.delete(door.id);
+
+  // Broadcast disappearance to the room
+  if (broadcastCallback) {
+    // Use custom disappear message if set, otherwise generate default
+    let message: string;
+    if (door.disappearMessage) {
+      message = door.disappearMessage;
+    } else {
+      // Use the display name as-is (it already has an article like "a whirling vortex")
+      // Capitalize first letter for sentence start
+      const portalName = door.itemDisplayName || 'the portal';
+      const capitalizedName = portalName.charAt(0).toUpperCase() + portalName.slice(1);
+      message = `${capitalizedName} vanishes!`;
+    }
+    broadcastCallback(door.entryRoomId, message);
+
+    // Also broadcast to exit room if it's a two-way portal
+    if (door.exitRoomId) {
+      broadcastCallback(door.exitRoomId, message);
+    }
+  }
+}
+
+/**
+ * Find a temporary portal by its spawn trigger text
+ * Used when a player speaks the spawn phrase
+ * @param roomId - The room to search in
+ * @param spawnText - The text the player spoke
+ * @returns The matching door or null if not found
+ */
+export function findPortalBySpawnTrigger(
+  roomId: number,
+  spawnText: string
+): Door | null {
+  const doors = doorsByRoomId.get(roomId);
+  if (!doors) return null;
+
+  const normalizedTrigger = spawnText.toLowerCase().trim();
+
+  // Don't match empty trigger text
+  if (!normalizedTrigger) return null;
+
+  return (
+    doors.find((door) => {
+      // Only match temporary portals with spawn trigger text
+      if (
+        door.doorType !== DoorType.TEMPORARY_PORTAL ||
+        !door.isTemporary ||
+        !door.spawnTriggerText
+      ) {
+        return false;
+      }
+
+      // Match spawn trigger text (case-insensitive, trimmed)
+      return door.spawnTriggerText.toLowerCase().trim() === normalizedTrigger;
+    }) ?? null
+  );
+}
+
+/**
+ * Get count of active temporary portals (for debugging)
+ */
+export function getActivePortalCount(): number {
+  return activePortals.size;
+}
+
+/**
+ * Get count of portal expiration timers (for debugging)
+ */
+export function getPortalTimerCount(): number {
+  return portalExpirationTimers.size;
 }

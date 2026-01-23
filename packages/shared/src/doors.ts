@@ -95,6 +95,18 @@ export interface Door {
   /** How the door appears on "Also here:" line (for special doors) */
   itemDisplayName: string | null;
 
+  // Temporary portal properties
+  /** If true, this portal must be spawned before it can be used */
+  isTemporary: boolean;
+  /** Text player speaks to spawn the portal (e.g., "Valar Morghulis") */
+  spawnTriggerText: string | null;
+  /** How long the portal remains active after spawning (in seconds) */
+  durationSeconds: number | null;
+  /** Custom message when portal spawns (e.g., "A portal tears open reality!") */
+  appearMessage: string | null;
+  /** Custom message when portal expires (e.g., "The portal collapses!") */
+  disappearMessage: string | null;
+
   // Timestamps
   createdAt: Date;
   updatedAt: Date;

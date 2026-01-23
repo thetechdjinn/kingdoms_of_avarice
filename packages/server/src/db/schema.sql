@@ -111,6 +111,18 @@ CREATE TABLE IF NOT EXISTS doors (
     -- Special door display (how it appears on "Also here:" line)
     item_display_name VARCHAR(100),
 
+    -- Temporary portal properties
+    is_temporary BOOLEAN DEFAULT FALSE,           -- If true, portal must be spawned before use
+    spawn_trigger_text VARCHAR(100),              -- Text to speak to spawn the portal (e.g., "Valar Morghulis")
+    duration_seconds INTEGER CHECK (duration_seconds IS NULL OR duration_seconds > 0),
+    appear_message TEXT,                          -- Custom message when portal spawns (e.g., "A portal tears open reality!")
+    disappear_message TEXT,                       -- Custom message when portal expires (e.g., "The portal collapses!")
+
+    -- Ensure temporary portals have required spawn trigger text
+    CONSTRAINT temporary_portal_requires_spawn_trigger CHECK (
+        is_temporary = FALSE OR spawn_trigger_text IS NOT NULL
+    ),
+
     -- Timestamps
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

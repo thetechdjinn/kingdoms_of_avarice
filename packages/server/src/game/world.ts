@@ -233,9 +233,13 @@ export class GameWorld {
     // Add special doors that appear as items (only if not hidden)
     // These are added first so they always appear before player names
     for (const door of doors) {
-      if ((door.doorType === DoorType.SPECIAL || door.doorType === DoorType.TEMPORARY_PORTAL) &&
-          door.itemDisplayName && !door.isHidden) {
+      if (door.doorType === DoorType.SPECIAL && door.itemDisplayName && !door.isHidden) {
         alsoHereItems.push(colors.cyan(door.itemDisplayName));
+      } else if (door.doorType === DoorType.TEMPORARY_PORTAL && door.itemDisplayName && !door.isHidden) {
+        // Temporary portals only show if they're active (spawned and not expired)
+        if (!door.isTemporary || doorStateManager.isPortalActive(door.id)) {
+          alsoHereItems.push(colors.cyan(door.itemDisplayName));
+        }
       }
     }
 
