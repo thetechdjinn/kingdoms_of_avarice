@@ -88,6 +88,9 @@ CREATE TABLE IF NOT EXISTS doors (
     -- State (for physical doors)
     default_state VARCHAR(20) DEFAULT 'closed' CHECK (default_state IN ('open', 'closed', 'locked')),
 
+    -- Auto-close timer (NULL = no auto-close, otherwise seconds until door closes)
+    auto_close_seconds INTEGER DEFAULT 120,
+
     -- Visibility
     is_hidden BOOLEAN DEFAULT FALSE,
 

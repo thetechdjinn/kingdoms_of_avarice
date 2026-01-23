@@ -12,6 +12,7 @@ interface DbDoor {
   exit_room_id: number | null;
   exit_direction: string | null;
   default_state: string;
+  auto_close_seconds: number | null;
   is_hidden: boolean;
   trigger_text: string | null;
   passage_message_self: string | null;
@@ -33,6 +34,7 @@ function dbToDoor(row: DbDoor): Door {
     exitRoomId: row.exit_room_id,
     exitDirection: row.exit_direction,
     defaultState: row.default_state as DoorState,
+    autoCloseSeconds: row.auto_close_seconds,
     isHidden: row.is_hidden,
     triggerText: row.trigger_text,
     passageMessageSelf: row.passage_message_self,
@@ -159,6 +161,7 @@ export interface CreateDoorInput {
   exitRoomId?: number;
   exitDirection?: string;
   defaultState?: DoorState;
+  autoCloseSeconds?: number | null;
   isHidden?: boolean;
   triggerText?: string;
   passageMessageSelf?: string;
@@ -172,10 +175,10 @@ export async function createDoor(input: CreateDoorInput): Promise<Door> {
       name, door_type, description,
       entry_room_id, entry_direction,
       exit_room_id, exit_direction,
-      default_state, is_hidden,
+      default_state, auto_close_seconds, is_hidden,
       trigger_text, passage_message_self, passage_message_room,
       item_display_name
-    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
     RETURNING *`,
     [
       input.name,
@@ -186,6 +189,7 @@ export async function createDoor(input: CreateDoorInput): Promise<Door> {
       input.exitRoomId ?? null,
       input.exitDirection?.toLowerCase() ?? null,
       input.defaultState ?? DoorState.CLOSED,
+      input.autoCloseSeconds === undefined ? 120 : input.autoCloseSeconds,
       input.isHidden ?? false,
       input.triggerText ?? null,
       input.passageMessageSelf ?? null,
@@ -235,6 +239,10 @@ export async function updateDoor(
   if (updates.defaultState !== undefined) {
     setClauses.push(`default_state = $${paramIndex++}`);
     values.push(updates.defaultState);
+  }
+  if (updates.autoCloseSeconds !== undefined) {
+    setClauses.push(`auto_close_seconds = $${paramIndex++}`);
+    values.push(updates.autoCloseSeconds);
   }
   if (updates.isHidden !== undefined) {
     setClauses.push(`is_hidden = $${paramIndex++}`);
