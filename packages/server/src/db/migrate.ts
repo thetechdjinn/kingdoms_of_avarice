@@ -302,12 +302,39 @@ export async function runMigrations(): Promise<void> {
       // weapon cost reduction based on level and combat rating.
       // Weapon speeds should now be in the 800-2000 range (dagger ~900, greatsword ~1800).
 
-      // Add pick_difficulty and bash_difficulty columns to doors (for existing databases)
+      // Add missing door columns (for existing databases created before full door schema)
+      await client.query(`
+        ALTER TABLE doors ADD COLUMN IF NOT EXISTS auto_close_seconds INTEGER DEFAULT 120
+      `);
+      await client.query(`
+        ALTER TABLE doors ADD COLUMN IF NOT EXISTS has_lock BOOLEAN DEFAULT FALSE
+      `);
+      await client.query(`
+        ALTER TABLE doors ADD COLUMN IF NOT EXISTS key_item_tag VARCHAR(100)
+      `);
+      await client.query(`
+        ALTER TABLE doors ADD COLUMN IF NOT EXISTS auto_lock_seconds INTEGER
+      `);
       await client.query(`
         ALTER TABLE doors ADD COLUMN IF NOT EXISTS pick_difficulty INTEGER DEFAULT 0
       `);
       await client.query(`
         ALTER TABLE doors ADD COLUMN IF NOT EXISTS bash_difficulty INTEGER DEFAULT 0
+      `);
+      await client.query(`
+        ALTER TABLE doors ADD COLUMN IF NOT EXISTS is_hidden BOOLEAN DEFAULT FALSE
+      `);
+      await client.query(`
+        ALTER TABLE doors ADD COLUMN IF NOT EXISTS trigger_text VARCHAR(100)
+      `);
+      await client.query(`
+        ALTER TABLE doors ADD COLUMN IF NOT EXISTS passage_message_self TEXT
+      `);
+      await client.query(`
+        ALTER TABLE doors ADD COLUMN IF NOT EXISTS passage_message_room TEXT
+      `);
+      await client.query(`
+        ALTER TABLE doors ADD COLUMN IF NOT EXISTS item_display_name VARCHAR(100)
       `);
 
       // Add temporary portal columns to doors (for existing databases)

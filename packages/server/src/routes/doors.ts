@@ -1,6 +1,7 @@
 import { Express, Request, Response } from 'express';
 import * as doorRepo from '../db/repositories/doorRepository.js';
 import * as roomRepo from '../db/repositories/roomRepository.js';
+import * as doorStateManager from '../services/doorStateManager.js';
 import { requireDeveloper } from '../middleware/auth.js';
 import { DoorType, DoorState } from '@koa/shared';
 
@@ -156,6 +157,11 @@ export function setupDoorRoutes(app: Express): void {
         return;
       }
 
+      if (requiredClasses !== undefined && requiredClasses !== null && !Array.isArray(requiredClasses)) {
+        res.status(400).json({ success: false, message: 'Required classes must be an array' });
+        return;
+      }
+
       const door = await doorRepo.createDoor({
         name: name.trim(),
         doorType,
@@ -165,7 +171,7 @@ export function setupDoorRoutes(app: Express): void {
         exitRoomId: exitRoomId || undefined,
         exitDirection: exitDirection?.toLowerCase() || undefined,
         defaultState: defaultState || DoorState.CLOSED,
-        autoCloseSeconds: autoCloseSeconds ?? null,
+        autoCloseSeconds,
         hasLock: hasLock || false,
         keyItemTag: keyItemTag || undefined,
         autoLockSeconds: autoLockSeconds ?? null,
@@ -188,9 +194,17 @@ export function setupDoorRoutes(app: Express): void {
         denialMessage: denialMessage || null,
       });
 
+      // Reload door into in-memory state manager
+      await doorStateManager.reloadDoor(door.id);
+
       res.json({ success: true, door });
     } catch (error) {
       console.error('Failed to create door:', error);
+      // Check for unique constraint violation
+      if (error instanceof Error && error.message.includes('duplicate key') && error.message.includes('entry_room_id')) {
+        res.status(400).json({ success: false, message: 'A door already exists in that direction for the entry room' });
+        return;
+      }
       res.status(500).json({ success: false, message: 'Failed to create door' });
     }
   });
@@ -336,8 +350,8 @@ export function setupDoorRoutes(app: Express): void {
       if (description !== undefined) updates.description = description || null;
       if (entryRoomId !== undefined) updates.entryRoomId = entryRoomId;
       if (entryDirection !== undefined) updates.entryDirection = entryDirection.toLowerCase();
-      if (exitRoomId !== undefined) updates.exitRoomId = exitRoomId || undefined;
-      if (exitDirection !== undefined) updates.exitDirection = exitDirection?.toLowerCase() || undefined;
+      if (exitRoomId !== undefined) updates.exitRoomId = exitRoomId;
+      if (exitDirection !== undefined) updates.exitDirection = exitDirection?.toLowerCase() ?? null;
       if (defaultState !== undefined) updates.defaultState = defaultState;
       if (autoCloseSeconds !== undefined) updates.autoCloseSeconds = autoCloseSeconds;
       if (hasLock !== undefined) updates.hasLock = hasLock;
@@ -362,9 +376,18 @@ export function setupDoorRoutes(app: Express): void {
       if (denialMessage !== undefined) updates.denialMessage = denialMessage || null;
 
       const door = await doorRepo.updateDoor(id, updates);
+
+      // Reload door into in-memory state manager
+      await doorStateManager.reloadDoor(id);
+
       res.json({ success: true, door });
     } catch (error) {
       console.error('Failed to update door:', error);
+      // Check for unique constraint violation
+      if (error instanceof Error && error.message.includes('duplicate key') && error.message.includes('entry_room_id')) {
+        res.status(400).json({ success: false, message: 'A door already exists in that direction for the entry room' });
+        return;
+      }
       res.status(500).json({ success: false, message: 'Failed to update door' });
     }
   });
@@ -383,6 +406,9 @@ export function setupDoorRoutes(app: Express): void {
         res.status(404).json({ success: false, message: 'Door not found' });
         return;
       }
+
+      // Remove door from in-memory state manager
+      await doorStateManager.reloadDoor(id);
 
       res.json({ success: true });
     } catch (error) {
