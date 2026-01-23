@@ -285,19 +285,83 @@ This implementation is broken into small, focused phases to minimize context win
 
 ---
 
-### Phase 6: Lock Mechanics - Pick & Bash
+### Phase 6: Lock Mechanics - Pick & Bash ✓ COMPLETE
 
 **Goal**: Alternative ways to bypass locks.
 
-**Tasks**:
-- [ ] Add columns: `pick_difficulty` (0-100, 100=unpickable), `bash_difficulty` (0-100, 100=unbashable)
-- [ ] Add `pick <direction>` command with skill check
-- [ ] Add `bash <direction>` command with strength/skill check
-- [ ] Failed pick/bash attempts broadcast to room
-- [ ] Successful pick/bash opens door (starts auto-close/lock timer)
+#### Lockpicking Mechanics
 
-**Files Changed**: ~2-3 files
-**Acceptance**: Thief can pick locks, warrior can bash doors (based on difficulty settings)
+**Requirements:**
+- Player must have the "lockpicking" ability (class/skill requirement)
+- Player's lockpicking stat is calculated from multiple sources:
+  - Base stats: Intellect, Dexterity
+  - Character level
+  - Race or class lockpicking bonuses
+  - Equipment bonuses
+  - Quest completion bonuses
+
+**Success Formula:**
+```
+roll = random(0-100)
+if roll == 0:
+    automatic failure (fumble)
+else:
+    total = roll + player_lockpicking_stat
+    if total >= lock_difficulty:
+        success
+    else:
+        failure
+```
+
+**Difficulty Guidelines:**
+- Easy lock: 50-75
+- Medium lock: 76-125
+- Hard lock: 126-200
+- Very hard lock: 201-350
+- Impossible (unpickable): 500+ (ensures no player can ever pick it)
+
+**Future Enhancement:** Lockpick items that:
+- Provide bonus to lockpicking ability
+- Have a chance to break on use
+- Better quality picks = more expensive, higher bonus, lower break chance
+
+#### Bash Mechanics
+
+**Requirements:**
+- Player's bash ability calculated from strength and possibly other factors
+
+**Success Formula:**
+- Similar roll-based system comparing bash stat vs door bash_difficulty
+
+**Failure Consequences:**
+- Failed bash attempts deal damage to the player
+- Damage: Random 1-2% of player's max HP
+- This represents injury from slamming into a solid door
+
+**Tasks**:
+- [x] Add columns: `pick_difficulty` (INTEGER, 0-500+), `bash_difficulty` (INTEGER, 0-500+)
+- [x] Add `pick <direction>` command with lockpicking skill check
+- [x] Add `bash <direction>` command with strength-based check
+- [x] Implement lockpicking ability check (player must have ability)
+- [x] Failed pick/bash attempts broadcast to room
+- [x] Failed bash attempts deal 1-2% max HP damage to player
+- [x] Successful pick/bash opens door (starts auto-close/lock timer)
+- [x] Handle roll of 0 as automatic failure for picking
+
+**Files Changed**: 4 files
+- `packages/server/src/db/schema.sql` (add pick_difficulty, bash_difficulty columns)
+- `packages/server/src/db/migrate.ts` (add ALTER TABLE for existing databases)
+- `packages/shared/src/doors.ts` (add pickDifficulty, bashDifficulty to Door interface)
+- `packages/server/src/db/repositories/doorRepository.ts` (handle new fields)
+- `packages/server/src/game/commands.ts` (add pick/bash command handlers)
+
+**Acceptance**: ✓ All criteria met
+- Player with lockpicking ability can attempt to pick locks
+- Pick success based on roll + lockpicking stat vs difficulty
+- Roll of 0 always fails (fumble)
+- Player can bash doors, taking damage on failure
+- Both actions broadcast to room
+- Successful pick/bash opens door and starts auto-close/lock timer
 
 ---
 
