@@ -121,7 +121,7 @@ CREATE TABLE IF NOT EXISTS doors (
     -- Ensure temporary portals have required spawn trigger text
     CONSTRAINT temporary_portal_requires_spawn_trigger CHECK (
         is_temporary = FALSE OR spawn_trigger_text IS NOT NULL
-    )
+    ),
 
     -- Timestamps
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
