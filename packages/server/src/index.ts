@@ -24,6 +24,7 @@ import { setupProfileRoutes } from './routes/profile.js';
 import { setupAdminRoutes } from './routes/admin.js';
 import { setupSpellRoutes } from './routes/spells.js';
 import { setupStatusEffectDefinitionRoutes } from './routes/statusEffectDefinitions.js';
+import { setupDoorRoutes } from './routes/doors.js';
 import { setupGameSocket, initializeGameWorld } from './game/socket.js';
 import { testConnection } from './db/index.js';
 import { runMigrations, seedInitialData } from './db/migrate.js';
@@ -53,6 +54,7 @@ setupProfileRoutes(app);
 setupAdminRoutes(app);
 setupSpellRoutes(app);
 setupStatusEffectDefinitionRoutes(app);
+setupDoorRoutes(app);
 
 const server = createServer(app);
 

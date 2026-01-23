@@ -214,4 +214,5 @@ Six levels: PENDING, PLAYER, MODERATOR, DEVELOPER, SYSOP, ADMIN. JWT tokens in h
 ## Git Conventions
 
 - **Never** include `Co-Authored-By` lines in commits or pull requests
+- **Never** amend a commit without explicit user approval
 - Keep commit messages concise with a summary line and optional bullet points for details

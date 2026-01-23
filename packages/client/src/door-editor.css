@@ -1,0 +1,362 @@
+/* Door Editor Specific Styles */
+
+#door-list-panel {
+  width: 280px;
+  min-width: 250px;
+  display: flex;
+  flex-direction: column;
+  background: #1a1a2e;
+  border-right: 1px solid #333;
+}
+
+#door-filters {
+  padding: 0.5rem 1rem;
+  border-bottom: 1px solid #333;
+}
+
+#door-filters .filter-row {
+  margin-bottom: 0.5rem;
+}
+
+#door-filters .filter-row:last-child {
+  margin-bottom: 0;
+}
+
+#door-filters label {
+  display: block;
+  font-size: 0.8rem;
+  color: #888;
+  margin-bottom: 0.2rem;
+}
+
+#door-filters select,
+#door-filters input {
+  width: 100%;
+}
+
+#view-toggle {
+  display: flex;
+  border-bottom: 1px solid #333;
+}
+
+#view-toggle .view-btn {
+  flex: 1;
+  padding: 0.5rem;
+  background: transparent;
+  border: none;
+  color: #888;
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: all 0.2s;
+}
+
+#view-toggle .view-btn:hover {
+  background: #16213e;
+  color: #ccc;
+}
+
+#view-toggle .view-btn.active {
+  background: #0f3460;
+  color: #00ff00;
+}
+
+#door-count {
+  padding: 0.4rem 1rem;
+  font-size: 0.8rem;
+  color: #888;
+  border-bottom: 1px solid #333;
+  background: #16213e;
+}
+
+/* Room exit list items */
+#door-list .exit-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+#door-list .exit-info {
+  flex: 1;
+}
+
+#door-list .exit-direction {
+  font-weight: bold;
+  color: #00ff00;
+  text-transform: capitalize;
+}
+
+#door-list .exit-rooms {
+  font-size: 0.8rem;
+  color: #888;
+  margin-top: 0.25rem;
+}
+
+#door-list .exit-has-door {
+  font-size: 0.75rem;
+  color: #e94560;
+  margin-top: 0.25rem;
+}
+
+#door-list .btn-small {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+  background: #0f3460;
+  border: 1px solid #333;
+  color: #ccc;
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+#door-list .btn-small:hover {
+  background: #16213e;
+  color: #00ff00;
+}
+
+#door-list {
+  flex: 1;
+  overflow-y: auto;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+#door-list li {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid #333;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+#door-list li:hover {
+  background: #16213e;
+}
+
+#door-list li.selected {
+  background: #0f3460;
+  border-left: 3px solid #00ff00;
+}
+
+#door-list .door-id {
+  font-size: 0.8125rem;
+  color: #666;
+  margin-right: 0.5rem;
+}
+
+#door-list .door-name {
+  font-weight: bold;
+  color: #e94560;
+}
+
+#door-list .door-type {
+  font-size: 0.8125rem;
+  color: #888;
+  margin-top: 0.25rem;
+}
+
+#door-list .door-rooms {
+  font-size: 0.8125rem;
+  color: #666;
+  margin-top: 0.25rem;
+}
+
+#door-editor-panel {
+  flex: 1;
+  padding: 1.5rem;
+  overflow-y: auto;
+}
+
+#no-door-selected {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: #888;
+}
+
+#door-form {
+  max-width: 800px;
+}
+
+#preview-panel {
+  width: 300px;
+  min-width: 280px;
+  background: #1a1a2e;
+  border-left: 1px solid #333;
+  display: flex;
+  flex-direction: column;
+}
+
+#door-preview {
+  flex: 1;
+  padding: 1rem;
+  overflow-y: auto;
+}
+
+#preview-content {
+  font-size: 0.9rem;
+}
+
+#preview-content .preview-name {
+  font-size: 1.1rem;
+  font-weight: bold;
+  color: #e94560;
+  margin-bottom: 0.5rem;
+}
+
+#preview-content .preview-type {
+  color: #888;
+  font-size: 0.85rem;
+  margin-bottom: 1rem;
+}
+
+#preview-content .preview-section {
+  margin-top: 1rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid #333;
+}
+
+#preview-content .preview-section-title {
+  font-weight: bold;
+  color: #00ff00;
+  margin-bottom: 0.5rem;
+  font-size: 0.9rem;
+}
+
+#preview-content .preview-desc {
+  color: #aaa;
+  font-style: italic;
+  margin-bottom: 0.5rem;
+}
+
+#preview-content .preview-property {
+  margin: 0.25rem 0;
+  color: #ccc;
+}
+
+#preview-content .preview-property .label {
+  color: #888;
+}
+
+/* Connection diagram */
+#connection-preview {
+  padding: 1rem;
+  border-top: 1px solid #333;
+}
+
+#connection-diagram {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.connection-room {
+  flex: 1;
+  background: #16213e;
+  border: 1px solid #333;
+  border-radius: 4px;
+  padding: 0.5rem;
+  text-align: center;
+}
+
+.connection-room .room-label {
+  display: block;
+  font-size: 0.75rem;
+  color: #666;
+  text-transform: uppercase;
+}
+
+.connection-room .room-name {
+  display: block;
+  font-size: 0.875rem;
+  color: #00ff00;
+  margin-top: 0.25rem;
+  overflow-wrap: break-word;
+}
+
+.connection-arrow {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  color: #888;
+  min-width: 60px;
+}
+
+.connection-arrow .direction-label {
+  font-size: 0.75rem;
+  color: #666;
+}
+
+.connection-arrow .arrow-icon {
+  font-size: 1.2rem;
+  color: #e94560;
+  margin: 0.25rem 0;
+}
+
+/* Lock options visibility */
+#lock-options {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid #333;
+}
+
+/* Form row for consistent spacing */
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+@media (max-width: 600px) {
+  .form-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Type badge colors */
+.door-type-badge {
+  display: inline-block;
+  padding: 0.15rem 0.4rem;
+  border-radius: 3px;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+}
+
+.door-type-badge.open_passageway {
+  background: #2d5a27;
+  color: #8fbc8f;
+}
+
+.door-type-badge.physical {
+  background: #5a4027;
+  color: #deb887;
+}
+
+.door-type-badge.special {
+  background: #4a2783;
+  color: #da70d6;
+}
+
+.door-type-badge.triggered_passageway {
+  background: #275a5a;
+  color: #5f9ea0;
+}
+
+.door-type-badge.temporary_portal {
+  background: #832727;
+  color: #fa8072;
+}
+
+/* Focus styles for accessibility */
+#door-list li:focus,
+#door-list li:focus-visible {
+  outline: 2px solid #00ff00;
+  outline-offset: -2px;
+}
+
+.door-type-badge:focus,
+.door-type-badge:focus-visible {
+  outline: 2px solid #00ff00;
+  outline-offset: 2px;
+}

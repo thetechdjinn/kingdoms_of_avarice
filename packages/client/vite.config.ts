@@ -8,7 +8,7 @@ const __dirname = dirname(__filename);
 
 // Plugin to serve additional HTML files and documentation in dev mode
 function multiPagePlugin(): Plugin {
-  const htmlFiles = ['editor.html', 'item-editor.html', 'spell-editor.html', 'status-editor.html', 'progression-editor.html', 'admin.html', 'docs.html', 'game-settings-editor.html', 'user-editor.html', 'swing-calculator.html'];
+  const htmlFiles = ['editor.html', 'item-editor.html', 'spell-editor.html', 'status-editor.html', 'progression-editor.html', 'admin.html', 'docs.html', 'game-settings-editor.html', 'user-editor.html', 'swing-calculator.html', 'door-editor.html'];
   const docsPath = resolve(__dirname, '..', '..', 'Documentation');
 
   return {
@@ -82,6 +82,7 @@ export default defineConfig({
         gameSettingsEditor: resolve(__dirname, 'game-settings-editor.html'),
         userEditor: resolve(__dirname, 'user-editor.html'),
         swingCalculator: resolve(__dirname, 'swing-calculator.html'),
+        doorEditor: resolve(__dirname, 'door-editor.html'),
       },
     },
   },

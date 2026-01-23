@@ -4,6 +4,9 @@
 const ROLE_ADMIN = 'admin';
 const ROLE_DEVELOPER = 'developer';
 
+// Door type (mirrors @koa/shared DoorType enum values)
+type DoorType = 'open_passageway' | 'physical' | 'special' | 'triggered_passageway' | 'temporary_portal';
+
 interface RoomTrainingConfig {
   enabled: boolean;
   allowedClasses?: string[] | null;
@@ -32,7 +35,20 @@ interface AuthInfo {
   roles?: string[];
 }
 
+interface Door {
+  id: number;
+  name: string;
+  doorType: DoorType;
+  entryRoomId: number;
+  entryDirection: string;
+  exitRoomId: number | null;
+  exitDirection: string | null;
+  triggerText: string | null;
+  isHidden: boolean;
+}
+
 let rooms: Room[] = [];
+let doors: Door[] = [];
 let selectedRoomId: number | null = null;
 let areas: string[] = [];
 let currentUser: AuthInfo | null = null;
@@ -127,6 +143,18 @@ async function fetchRooms(): Promise<void> {
     }
   } catch (error) {
     console.error('Failed to fetch rooms:', error);
+  }
+}
+
+async function fetchDoors(): Promise<void> {
+  try {
+    const response = await fetch('/api/doors');
+    const data = await response.json();
+    if (data.success) {
+      doors = data.doors;
+    }
+  } catch (error) {
+    console.error('Failed to fetch doors:', error);
   }
 }
 
@@ -255,9 +283,12 @@ function updateTargetRoomSelect(): void {
       .join('');
 }
 
-function selectRoom(id: number): void {
+async function selectRoom(id: number): Promise<void> {
   selectedRoomId = id;
   const room = rooms.find(r => r.id === id);
+
+  // Refresh doors to get latest data (in case they were edited in door editor)
+  await fetchDoors();
 
   if (!room) {
     document.getElementById('no-room-selected')!.style.display = 'flex';
@@ -299,6 +330,7 @@ function selectRoom(id: number): void {
   });
 
   renderExits(room);
+  renderDoors(room);
   updateTargetRoomSelect();
   renderRoomList();
   drawMap();
@@ -331,6 +363,62 @@ function renderExits(room: Room): void {
     btn.addEventListener('click', async () => {
       const direction = (btn as HTMLElement).dataset.direction!;
       await deleteExit(room.id, direction);
+    });
+  });
+}
+
+function renderDoors(room: Room): void {
+  const container = document.getElementById('doors-list')!;
+
+  // Find all doors connected to this room (either as entry or exit)
+  const roomDoors = doors.filter(d => d.entryRoomId === room.id || d.exitRoomId === room.id);
+
+  if (roomDoors.length === 0) {
+    container.innerHTML = '<p class="no-doors">No doors for this room</p>';
+    return;
+  }
+
+  container.innerHTML = roomDoors
+    .map(door => {
+      // Determine the direction from this room's perspective
+      const isEntry = door.entryRoomId === room.id;
+      const direction = isEntry ? door.entryDirection : door.exitDirection;
+      const otherRoomId = isEntry ? door.exitRoomId : door.entryRoomId;
+      const otherRoom = otherRoomId ? rooms.find(r => r.id === otherRoomId) : null;
+
+      const typeDisplay = door.doorType.replace(/_/g, ' ');
+      const directionDisplay = direction || '—';
+      const connectionDisplay = otherRoom ? `→ ${escapeHtml(otherRoom.name)}` : (otherRoomId ? `→ Room #${otherRoomId}` : '(one-way)');
+
+      return `
+        <div class="door-item" data-door-id="${door.id}" title="Click to edit in Door Editor">
+          <div class="door-info">
+            <span class="door-direction">${directionDisplay}</span>
+            <span class="door-name">${escapeHtml(door.name)}</span>
+            <span class="door-type-badge ${door.doorType}">${typeDisplay}</span>
+          </div>
+          <span style="color: #888; font-size: 0.85rem;">${connectionDisplay}</span>
+          <button class="edit-door-btn" data-door-id="${door.id}">Edit</button>
+        </div>
+      `;
+    })
+    .join('');
+
+  // Add click handlers
+  container.querySelectorAll('.door-item').forEach(item => {
+    item.addEventListener('click', (e) => {
+      // Don't trigger if clicking the edit button (it has its own handler)
+      if ((e.target as HTMLElement).classList.contains('edit-door-btn')) return;
+      const doorId = (item as HTMLElement).dataset.doorId;
+      window.location.href = `/door-editor.html?doorId=${doorId}`;
+    });
+  });
+
+  container.querySelectorAll('.edit-door-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const doorId = (btn as HTMLElement).dataset.doorId;
+      window.location.href = `/door-editor.html?doorId=${doorId}`;
     });
   });
 }
@@ -1049,8 +1137,18 @@ document.addEventListener('DOMContentLoaded', async () => {
   await fetchRooms();
   await fetchAreas();
   await fetchClasses();
+  await fetchDoors();
 
   document.getElementById('new-room-btn')!.addEventListener('click', createRoom);
+
+  // Add door button - redirects to door editor with room pre-selected
+  document.getElementById('add-door-btn')!.addEventListener('click', () => {
+    if (selectedRoomId) {
+      window.location.href = `/door-editor.html?newDoorForRoom=${selectedRoomId}`;
+    } else {
+      showToast('Please select a room first', 'warning');
+    }
+  });
 
   // Training section toggle
   const trainingSectionHeader = document.getElementById('training-section-header');

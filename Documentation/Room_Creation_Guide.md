@@ -150,6 +150,29 @@ Access the visual room editor at: `http://localhost:3000/editor.html`
 2. View all areas with room counts
 3. Click **Rename** to rename an area (updates all rooms)
 
+### Managing Doors
+
+The Room Editor includes a **Doors** section that shows all doors connected to the currently selected room. Doors add mechanics (locks, triggers, permissions) on top of regular exits.
+
+**Viewing Doors:**
+- The Doors section appears below the Exits section
+- Shows door name, direction, type, and connection
+
+**Editing a Door:**
+- Click any door in the list to open it in the Door Editor
+- The door will be pre-selected for editing
+
+**Creating a New Door:**
+1. Click **+ New Door for This Room**
+2. Enter a door name when prompted
+3. You'll be taken to the Door Editor with the door created and entry room pre-filled
+4. Configure the door type, exit room, direction, and other settings
+
+**Quick Access:**
+- Click **Open Door Editor** to access the full Door Editor for bulk management
+
+For detailed door configuration options, see [Door_System_Guide.md](./Door_System_Guide.md).
+
 ---
 
 ## REST API

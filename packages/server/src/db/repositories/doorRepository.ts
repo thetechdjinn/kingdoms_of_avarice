@@ -189,8 +189,8 @@ export interface CreateDoorInput {
   description?: string;
   entryRoomId: number;
   entryDirection: string;
-  exitRoomId?: number;
-  exitDirection?: string;
+  exitRoomId?: number | null;
+  exitDirection?: string | null;
   defaultState?: DoorState;
   autoCloseSeconds?: number | null;
   hasLock?: boolean;
