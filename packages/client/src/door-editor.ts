@@ -185,15 +185,20 @@ async function fetchRooms(): Promise<void> {
     const response = await fetch('/api/rooms');
     if (!response.ok) {
       console.error('Failed to fetch rooms: HTTP', response.status);
+      showError('Failed to load rooms: HTTP ' + response.status);
       return;
     }
     const data = await response.json();
     if (data.success && Array.isArray(data.rooms)) {
       rooms = data.rooms;
       populateRoomDropdowns();
+    } else {
+      console.error('Failed to fetch rooms: Invalid response');
+      showError('Failed to load rooms: ' + (data.message || 'Invalid response'));
     }
   } catch (error) {
     console.error('Failed to fetch rooms:', error);
+    showError('Failed to connect to server. Please check your connection.');
   }
 }
 

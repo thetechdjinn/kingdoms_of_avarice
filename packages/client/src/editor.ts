@@ -420,10 +420,6 @@ function renderDoors(room: Room): void {
   });
 }
 
-function formatDoorType(type: string): string {
-  return type.replace(/_/g, ' ');
-}
-
 async function createRoom(): Promise<void> {
   const name = prompt('Enter room name:');
   if (!name) return;
