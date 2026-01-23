@@ -18,6 +18,7 @@ npm run build            # Build all packages
 ```
 
 **Database:**
+
 ```bash
 npm run migrate                                    # Run migrations and seed data
 cd packages/server && npx tsx src/db/create-admin.ts <username>  # Grant admin role
@@ -28,11 +29,13 @@ cd packages/server && npx tsx src/db/create-admin.ts <username>  # Grant admin r
 ## Architecture
 
 ### Monorepo Structure (npm workspaces)
+
 - `packages/shared` - TypeScript types and enums (`@koa/shared`)
 - `packages/client` - Vite + xterm.js frontend (`@koa/client`)
 - `packages/server` - Express + WebSocket backend (`@koa/server`)
 
 ### Communication Flow
+
 ```
 Client (xterm.js) <--WebSocket--> Server (Express/ws) <--pg--> PostgreSQL
 ```
@@ -44,53 +47,63 @@ Client (xterm.js) <--WebSocket--> Server (Express/ws) <--pg--> PostgreSQL
 ### Key Layers
 
 **Database (Repository Pattern):**
+
 - `packages/server/src/db/repositories/` - playerRepository, roomRepository, itemRepository, etc.
 - `packages/server/src/db/migrate.ts` - Auto-runs on server startup
 - Use `withTransaction()` helper for ACID compliance
 
 **Game Logic:**
+
 - `packages/server/src/game/world.ts` - Game state management
 - `packages/server/src/game/commands.ts` - Core command processor
 - `packages/server/src/game/socket.ts` - WebSocket connection handler
 - Additional: `itemCommands.ts`, `adminCommands.ts`, `progressionCommands.ts`
 
 **Shared Types:**
+
 - Enums: `MessageType`, `Role`, `ItemType`, `EquipmentSlot`, `ResourceType`
 - Interfaces: `GameMessage`, `VitalsData`, `Character`, `RoomData`
 
 ### Multiple Entry Points
+
 Vite serves multiple pages: `index.html` (game), `editor.html` (rooms), `item-editor.html`, `progression-editor.html`, `admin.html`, `docs.html`
 
 ## Code Conventions
 
 ### Text Output
+
 - Use `\r\n` for line endings in MUD output
 - Word-wrap to 80 characters using `wordWrap()` from `utils/textFormat.js`
 - Use `.join('\r\n')` when combining lines
 
 ### Items
+
 - Names lowercase, no articles: `"iron sword"` not `"Iron Sword"` or `"an iron sword"`
 - Use `withArticle(name)` when displaying: `"You pick up an iron sword"`
 
 ### Colors (from `utils/colors.js`)
-| Function | Usage |
-|----------|-------|
-| `colors.cyan()` | Room items ("You notice...") |
-| `colors.item()` | Item names in messages |
-| `colors.green()` | Success, healing |
-| `colors.red()` | Errors, damage |
-| `colors.gold()` | Currency |
+
+| Function         | Usage                        |
+| ---------------- | ---------------------------- |
+| `colors.cyan()`  | Room items ("You notice...") |
+| `colors.item()`  | Item names in messages       |
+| `colors.green()` | Success, healing             |
+| `colors.red()`   | Errors, damage               |
+| `colors.gold()`  | Currency                     |
 
 ### Imports
+
 - Use `.js` extension for local imports (ESM requirement)
 - Group: external packages first, then internal modules
 
 ### Command Handlers
+
 Return `CommandResponse` objects:
+
 ```typescript
 return {
   type: MessageType.OUTPUT,
-  message: `You pick up ${colors.item(withArticle(itemName))}.`
+  message: `You pick up ${colors.item(withArticle(itemName))}.`,
 };
 ```
 
@@ -99,6 +112,7 @@ Use `broadcastToRoom(roomId, message, excludePlayerId)` for room-visible actions
 ## Database
 
 **Environment variables (.env):**
+
 ```
 DB_NAME=kingdoms_of_avarice
 DB_USER=koa
@@ -124,12 +138,15 @@ Login → Hub Landing Page
 ```
 
 ### Profile Page
+
 Players can manage their account:
+
 - View username and character count
 - Update email address
 - Change password (requires current password)
 
 ### Character Limits
+
 - **Global default**: Set in Admin > Settings (default: 3)
 - **Per-player override**: Set in Admin > Users tab for individual players
 - Players cannot create characters beyond their limit
@@ -140,10 +157,12 @@ Players can manage their account:
 Access via Hub > Admin Tools (requires ADMIN role). Three tabs:
 
 ### Users Tab
+
 - **Pending Approval**: Approve new player registrations
 - **All Players**: View/edit per-player character limits
 
 ### IP Access Tab
+
 - Add/remove IP access entries
 - Supports two entry types:
   - **IP Address**: Direct IP matching (e.g., `192.168.1.100`)
@@ -152,35 +171,42 @@ Access via Hub > Admin Tools (requires ADMIN role). Three tabs:
 - Each entry can be set to **allow** or **block**
 
 ### Settings Tab
+
 - **Max Characters Per Player**: Global default character limit
 - **IP Access Mode**: Blocklist (allow all, block specific) or Allowlist (block all, allow specific)
 
 ## IP Access Control
 
 The server supports allowlist/blocklist modes for IP access control:
+
 - **Blocklist mode** (default): Allow all IPs except those explicitly blocked
 - **Allowlist mode**: Block all IPs except those explicitly allowed
 
 **Hostname DNS Resolution:**
+
 - Hostnames are resolved on creation and every 5 minutes thereafter
 - Both IPv4 (A records) and IPv6 (AAAA records) are resolved
 - Resolved IPs are cached in the `resolved_ips` column
 
 **Always allowed:**
+
 - Localhost IPs are always bypassed regardless of mode:
   - `127.0.0.1`, `::1`, `::ffff:127.0.0.1`
   - Any IP starting with `127.`
 
 **Emergency access:** If locked out, set `EMERGENCY_ACCESS_TOKEN` in .env and pass it via:
+
 - HTTP Header: `X-Emergency-Token: <token>`
 - Query parameter: `?emergencyToken=<token>`
 - Works for both HTTP requests and WebSocket connections
 
 **Key files:**
+
 - `packages/server/src/middleware/ipAccess.ts` - IP check middleware
 - `packages/server/src/services/dnsResolver.ts` - DNS resolution service
 - `packages/server/src/db/repositories/ipAccessRepository.ts` - IP access queries
 - `packages/server/src/db/repositories/settingsRepository.ts` - Settings queries
 
 ## Role System
+
 Six levels: PENDING, PLAYER, MODERATOR, DEVELOPER, SYSOP, ADMIN. JWT tokens in httpOnly cookies.
