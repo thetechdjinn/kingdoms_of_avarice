@@ -198,14 +198,13 @@ export class GameWorld {
         if (door.doorType === DoorType.PHYSICAL && state) {
           const displayState = state === DoorState.LOCKED ? DoorState.CLOSED : state;
           formattedExits.push(`${exit} (${displayState})`);
-        } else if (door.doorType === DoorType.SPECIAL || door.doorType === DoorType.TEMPORARY_PORTAL) {
-          // Special doors and temporary portals don't show on obvious exits
-          // They appear on the "Also here:" line instead
-          continue;
-        } else {
-          // Open passageways and triggered passageways show as normal exits
+        } else if (door.doorType === DoorType.OPEN_PASSAGEWAY) {
+          // Open passageways show as normal exits
           formattedExits.push(exit);
         }
+        // All other door types don't show on obvious exits:
+        // - SPECIAL/TEMPORARY_PORTAL: appear on "Also here:" line instead
+        // - TRIGGERED_PASSAGEWAY: completely hidden, only accessible via trigger text
       } else {
         // No door - just show the direction
         formattedExits.push(exit);
