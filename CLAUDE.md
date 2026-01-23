@@ -210,3 +210,8 @@ The server supports allowlist/blocklist modes for IP access control:
 ## Role System
 
 Six levels: PENDING, PLAYER, MODERATOR, DEVELOPER, SYSOP, ADMIN. JWT tokens in httpOnly cookies.
+
+## Git Conventions
+
+- **Never** include `Co-Authored-By` lines in commits or pull requests
+- Keep commit messages concise with a summary line and optional bullet points for details
