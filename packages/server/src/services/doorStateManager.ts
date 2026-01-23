@@ -500,9 +500,8 @@ export function canPassThrough(
     };
   }
 
-  // Special doors, triggered passageways, and temporary portals
-  // will be handled by their respective mechanics in later phases
-  // For now, allow passage if door exists
+  // Special doors and triggered passageways are always passable (no state check needed)
+  // Temporary portals will need an "active" check when Phase 9 is implemented
   return { allowed: true };
 }
 
@@ -552,4 +551,91 @@ export function getActiveTimerCount(): number {
  */
 export function hasActiveTimer(doorId: number): boolean {
   return autoCloseTimers.has(doorId);
+}
+
+/**
+ * Find a special door in a room by its trigger text
+ * Trigger text matching is case-insensitive
+ * @param roomId - The room to search in
+ * @param triggerText - The text the player typed (e.g., "go portal", "climb rope")
+ * @returns The matching door or null if not found
+ */
+export function findSpecialDoorByTrigger(
+  roomId: number,
+  triggerText: string
+): Door | null {
+  const doors = doorsByRoomId.get(roomId);
+  if (!doors) return null;
+
+  const normalizedTrigger = triggerText.toLowerCase().trim();
+
+  // Don't match empty trigger text
+  if (!normalizedTrigger) return null;
+
+  return (
+    doors.find((door) => {
+      // Only match special doors and triggered passageways
+      if (
+        door.doorType !== DoorType.SPECIAL &&
+        door.doorType !== DoorType.TRIGGERED_PASSAGEWAY &&
+        door.doorType !== DoorType.TEMPORARY_PORTAL
+      ) {
+        return false;
+      }
+
+      // Must have trigger text defined
+      if (!door.triggerText) return false;
+
+      // Match trigger text (case-insensitive)
+      return door.triggerText.toLowerCase() === normalizedTrigger;
+    }) ?? null
+  );
+}
+
+/**
+ * Find a special door in a room by its display name (for "look" command)
+ * Matches against itemDisplayName, case-insensitive partial match from start
+ * @param roomId - The room to search in
+ * @param targetName - The name the player typed (e.g., "portal", "vortex")
+ * @returns The matching door or null if not found
+ */
+export function findSpecialDoorByDisplayName(
+  roomId: number,
+  targetName: string
+): Door | null {
+  const doors = doorsByRoomId.get(roomId);
+  if (!doors) return null;
+
+  const normalizedTarget = targetName.toLowerCase().trim();
+
+  // Don't match empty target name
+  if (!normalizedTarget) return null;
+
+  return (
+    doors.find((door) => {
+      // Only match special doors and temporary portals that have a display name
+      if (
+        (door.doorType !== DoorType.SPECIAL &&
+          door.doorType !== DoorType.TEMPORARY_PORTAL) ||
+        !door.itemDisplayName
+      ) {
+        return false;
+      }
+
+      // Hidden doors cannot be looked at by name
+      if (door.isHidden) return false;
+
+      // Match display name (case-insensitive, partial from start)
+      // Remove article if present for matching (e.g., "a whirling vortex" -> "whirling vortex")
+      const displayName = door.itemDisplayName.toLowerCase();
+      const nameWithoutArticle = displayName
+        .replace(/^(a |an |the )/, '')
+        .trim();
+
+      return (
+        displayName.startsWith(normalizedTarget) ||
+        nameWithoutArticle.startsWith(normalizedTarget)
+      );
+    }) ?? null
+  );
 }

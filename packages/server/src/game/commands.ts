@@ -1,4 +1,4 @@
-import { MessageType, GameMessage, Role, hasAnyRole, StatusEffectCategory, DoorType, DoorState } from '@koa/shared';
+import { MessageType, GameMessage, Role, hasAnyRole, StatusEffectCategory, DoorType, DoorState, Door } from '@koa/shared';
 import { getActiveEffectsDisplay, formatDuration } from './statusEffects.js';
 import { getDelayModifierDescriptions, getStatusEffectDelayMultiplier } from './delayModifiers.js';
 import { getPlayerQueueStatus } from './tickProcessor.js';
@@ -103,6 +103,11 @@ export async function processCommand(
       const targetPlayer = findPlayerInRoom(targetName, currentRoomId, _connectedPlayers, socket.playerId);
       if (targetPlayer) {
         return await handleLookAtPlayer(targetPlayer);
+      }
+      // Check if looking at a special door (e.g., "look portal", "look vortex")
+      const specialDoor = doorStateManager.findSpecialDoorByDisplayName(currentRoomId, targetName);
+      if (specialDoor) {
+        return handleLookAtSpecialDoor(specialDoor);
       }
       // Otherwise, examine an item
       return handleExamine(socket, args, currentRoomId);
@@ -311,6 +316,13 @@ export async function processCommand(
     return handleSpellCommand(socket, command, args, _connectedPlayers);
   }
 
+  // Check for special door triggers (e.g., "go portal", "climb rope")
+  // This is checked before the default say handler so trigger text takes priority
+  const specialDoor = doorStateManager.findSpecialDoorByTrigger(currentRoomId, lowerTrimmed);
+  if (specialDoor) {
+    return await handleSpecialDoorTrigger(socket, specialDoor, currentRoomId, world, _connectedPlayers);
+  }
+
   // Default: treat as speech
   return handleSay(socket, trimmed, _connectedPlayers);
 }
@@ -402,6 +414,19 @@ async function handleLookAtPlayer(
   });
 
   return { type: MessageType.OUTPUT, message: description };
+}
+
+/**
+ * Handle looking at a special door (portal, vortex, etc.)
+ * Returns the door's description
+ */
+function handleLookAtSpecialDoor(door: Door): CommandResponse {
+  if (door.description) {
+    return { type: MessageType.OUTPUT, message: door.description };
+  }
+  // If no description, show a generic message using the display name
+  const displayName = door.itemDisplayName || door.name;
+  return { type: MessageType.OUTPUT, message: `You see ${displayName}.` };
 }
 
 async function handleLook(
@@ -1067,6 +1092,73 @@ async function handleBashDoor(
   return {
     type: MessageType.OUTPUT,
     message: `You bash open the ${door.name}! (Roll: ${roll} + Strength: ${bashStat} = ${total} vs Difficulty: ${door.bashDifficulty})`,
+  };
+}
+
+/**
+ * Handle passing through a special door via trigger text (e.g., "go portal", "climb rope")
+ * Special doors appear on the "Also here:" line and require specific text to activate
+ */
+async function handleSpecialDoorTrigger(
+  socket: AuthenticatedSocket,
+  door: Door,
+  currentRoomId: number,
+  world: GameWorld,
+  connectedPlayers: Map<number, AuthenticatedSocket>
+): Promise<CommandResponse> {
+  // Check if door can be passed through (validates room connection, one-way rules, etc.)
+  const passageCheck = doorStateManager.canPassThrough(door.id, currentRoomId);
+  if (!passageCheck.allowed) {
+    return { type: MessageType.ERROR, message: passageCheck.reason || 'You cannot go that way.' };
+  }
+
+  // Get the destination room
+  const destinationRoomId = doorStateManager.getDestinationRoom(door.id, currentRoomId);
+  if (!destinationRoomId) {
+    return { type: MessageType.ERROR, message: 'The passage leads nowhere.' };
+  }
+
+  const newRoom = world.getRoom(destinationRoomId);
+  if (!newRoom) {
+    return { type: MessageType.ERROR, message: 'Something prevents you from passing through.' };
+  }
+
+  // Save room location to database first
+  try {
+    await characterRepo.updateCharacterRoom(socket.characterId!, newRoom.id);
+  } catch (error) {
+    console.error('Failed to save room location:', error);
+    return { type: MessageType.ERROR, message: 'Something prevents you from moving.' };
+  }
+
+  // Database succeeded, now update in-memory state and broadcast
+
+  // Broadcast departure message to current room (custom or default)
+  const departureMessage = door.passageMessageRoom
+    ? door.passageMessageRoom.replace('{player}', socket.username)
+    : `${socket.username} passes through ${door.itemDisplayName || door.name}.`;
+  broadcastToRoom(currentRoomId, departureMessage, socket.playerId);
+
+  // Update player location
+  setPlayerLocation(socket.playerId, newRoom.id);
+
+  // Broadcast arrival to new room
+  const arrivalMessage = `${socket.username} arrives.`;
+  broadcastToRoom(newRoom.id, arrivalMessage, socket.playerId);
+
+  // Build player's passage message (custom or default)
+  const playerMessage = door.passageMessageSelf
+    ? door.passageMessageSelf
+    : `You pass through ${door.itemDisplayName || door.name}.`;
+
+  // Get the new room display
+  const otherPlayers = getOtherPlayersInRoom(newRoom.id, socket.playerId, connectedPlayers);
+  const itemDescriptions = await getRoomItemsDescription(newRoom.id);
+  const roomDisplay = world.formatRoomDescription(newRoom, otherPlayers, socket.briefMode, itemDescriptions);
+
+  return {
+    type: MessageType.OUTPUT,
+    message: `${playerMessage}\r\n\r\n${roomDisplay}`,
   };
 }
 

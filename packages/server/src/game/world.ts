@@ -228,9 +228,11 @@ export class GameWorld {
     }
 
     // Build "Also here:" line content
+    // IMPORTANT: Special doors are added FIRST, before players, to ensure consistent display order
     const alsoHereItems: string[] = [];
 
     // Add special doors that appear as items (only if not hidden)
+    // These are added first so they always appear before player names
     for (const door of doors) {
       if ((door.doorType === DoorType.SPECIAL || door.doorType === DoorType.TEMPORARY_PORTAL) &&
           door.itemDisplayName && !door.isHidden) {
