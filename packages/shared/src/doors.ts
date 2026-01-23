@@ -65,6 +65,14 @@ export interface Door {
   /** Seconds until door auto-closes after being opened (null = no auto-close) */
   autoCloseSeconds: number | null;
 
+  // Lock properties (for physical doors)
+  /** Whether this door has a lock */
+  hasLock: boolean;
+  /** Tag that matches an item's key_tag in flags to unlock this door */
+  keyItemTag: string | null;
+  /** Seconds until door auto-locks after being unlocked (null = no auto-lock) */
+  autoLockSeconds: number | null;
+
   // Visibility
   /** If true, door doesn't appear on "Obvious exits" line */
   isHidden: boolean;
@@ -101,4 +109,6 @@ export interface DoorData {
   isHidden: boolean;
   triggerText: string | null;
   itemDisplayName: string | null;
+  /** Whether this door has a lock (client may show different UI) */
+  hasLock: boolean;
 }

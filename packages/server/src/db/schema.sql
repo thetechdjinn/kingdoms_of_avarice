@@ -91,6 +91,11 @@ CREATE TABLE IF NOT EXISTS doors (
     -- Auto-close timer (NULL = no auto-close, otherwise seconds until door closes)
     auto_close_seconds INTEGER DEFAULT 120,
 
+    -- Lock properties (for physical doors)
+    has_lock BOOLEAN DEFAULT FALSE,
+    key_item_tag VARCHAR(100),  -- Tag that matches item's key_tag in flags to unlock
+    auto_lock_seconds INTEGER,  -- NULL = no auto-lock, otherwise seconds until door locks after unlock
+
     -- Visibility
     is_hidden BOOLEAN DEFAULT FALSE,
 

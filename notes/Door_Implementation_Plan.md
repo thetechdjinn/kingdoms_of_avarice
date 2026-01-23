@@ -259,22 +259,29 @@ This implementation is broken into small, focused phases to minimize context win
 
 ---
 
-### Phase 5: Door Locks - Basic Locking
+### Phase 5: Door Locks - Basic Locking ✓ COMPLETE
 
 **Goal**: Doors can be locked and unlocked.
 
 **Tasks**:
-- [ ] Add lock columns to doors table:
+- [x] Add lock columns to doors table:
   - `has_lock` (boolean)
   - `key_item_tag` (string, matches item tag)
   - `auto_lock_seconds` (nullable)
-- [ ] Add `unlock <direction>` command - checks for key in inventory
-- [ ] Add `lock <direction>` command - checks for key in inventory
-- [ ] Modify auto-close to auto-lock for locked doors
-- [ ] Update "bump" message for locked vs just closed doors
+- [x] Add `unlock <direction>` command - checks for key in inventory
+- [x] Add `lock <direction>` command - checks for key in inventory
+- [x] Modify auto-close to auto-lock for locked doors
+- [x] Update "bump" message for locked vs just closed doors
 
-**Files Changed**: ~2-3 files
-**Acceptance**: Door with lock requires key to unlock. Auto-relocks after timer.
+**Files Changed**: 6 files
+- `packages/server/src/db/schema.sql` (MODIFIED - added lock columns)
+- `packages/shared/src/doors.ts` (MODIFIED - added hasLock, keyItemTag, autoLockSeconds to Door interface)
+- `packages/shared/src/items.ts` (MODIFIED - added key_tag to ItemFlags interface)
+- `packages/server/src/db/repositories/doorRepository.ts` (MODIFIED - added lock field handling)
+- `packages/server/src/services/doorStateManager.ts` (MODIFIED - added lockDoor, unlockDoor, auto-lock logic)
+- `packages/server/src/game/commands.ts` (MODIFIED - added lock/unlock commands)
+
+**Acceptance**: ✓ Door with lock requires key to unlock. Auto-relocks after timer expires.
 
 ---
 
