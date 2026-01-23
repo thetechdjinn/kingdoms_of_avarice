@@ -920,10 +920,9 @@ async function handlePickDoor(
     return { type: MessageType.ERROR, message: `The ${door.name} is not locked.` };
   }
 
-  // Check pick difficulty - 0 means unpickable for this implementation
-  // Actually, high values like 500+ mean unpickable
-  if (door.pickDifficulty <= 0) {
-    // No pick difficulty set means it can't be picked (must use key)
+  // Check pick difficulty - negative means unpickable (must use key)
+  // High values (500+) are mathematically unpickable but allow attempts
+  if (door.pickDifficulty < 0) {
     return { type: MessageType.ERROR, message: `The ${door.name} cannot be picked.` };
   }
 
@@ -1012,8 +1011,9 @@ async function handleBashDoor(
     return { type: MessageType.ERROR, message: `The ${door.name} is already open.` };
   }
 
-  // Check bash difficulty - 0 means unbashable for this implementation
-  if (door.bashDifficulty <= 0) {
+  // Check bash difficulty - negative means unbashable
+  // High values (500+) are mathematically unbashable but allow attempts
+  if (door.bashDifficulty < 0) {
     return { type: MessageType.ERROR, message: `The ${door.name} cannot be bashed open.` };
   }
 
