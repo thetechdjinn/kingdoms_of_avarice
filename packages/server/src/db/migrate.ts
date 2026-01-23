@@ -310,6 +310,23 @@ export async function runMigrations(): Promise<void> {
         ALTER TABLE doors ADD COLUMN IF NOT EXISTS bash_difficulty INTEGER DEFAULT 0
       `);
 
+      // Add temporary portal columns to doors (for existing databases)
+      await client.query(`
+        ALTER TABLE doors ADD COLUMN IF NOT EXISTS is_temporary BOOLEAN DEFAULT FALSE
+      `);
+      await client.query(`
+        ALTER TABLE doors ADD COLUMN IF NOT EXISTS spawn_trigger_text VARCHAR(100)
+      `);
+      await client.query(`
+        ALTER TABLE doors ADD COLUMN IF NOT EXISTS duration_seconds INTEGER
+      `);
+      await client.query(`
+        ALTER TABLE doors ADD COLUMN IF NOT EXISTS appear_message TEXT
+      `);
+      await client.query(`
+        ALTER TABLE doors ADD COLUMN IF NOT EXISTS disappear_message TEXT
+      `);
+
       // Seed default game settings (only if they don't exist)
       await client.query(`
         INSERT INTO game_settings (key, value) VALUES

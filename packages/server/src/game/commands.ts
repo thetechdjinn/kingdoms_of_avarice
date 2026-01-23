@@ -316,6 +316,13 @@ export async function processCommand(
     return handleSpellCommand(socket, command, args, _connectedPlayers);
   }
 
+  // Check for temporary portal spawn triggers (e.g., "Valar Morghulis")
+  // This spawns inactive portals, making them visible and usable
+  const portalToSpawn = doorStateManager.findPortalBySpawnTrigger(currentRoomId, lowerTrimmed);
+  if (portalToSpawn) {
+    return handlePortalSpawn(socket, portalToSpawn, currentRoomId);
+  }
+
   // Check for special door triggers (e.g., "go portal", "climb rope")
   // This is checked before the default say handler so trigger text takes priority
   const specialDoor = doorStateManager.findSpecialDoorByTrigger(currentRoomId, lowerTrimmed);
@@ -1159,6 +1166,62 @@ async function handleSpecialDoorTrigger(
   return {
     type: MessageType.OUTPUT,
     message: `${playerMessage}\r\n\r\n${roomDisplay}`,
+  };
+}
+
+/**
+ * Handle spawning a temporary portal when player speaks the spawn trigger text
+ * The portal appears in the room and becomes usable for its duration
+ */
+function handlePortalSpawn(
+  socket: AuthenticatedSocket,
+  door: Door,
+  currentRoomId: number
+): CommandResponse {
+  // Check if portal is already active
+  if (doorStateManager.isPortalActive(door.id)) {
+    // Portal already exists - don't spawn again, just acknowledge
+    // This prevents spamming the spawn trigger to extend duration
+    return {
+      type: MessageType.OUTPUT,
+      message: `You speak the words, but nothing new happens.`,
+    };
+  }
+
+  // Spawn the portal
+  const spawned = doorStateManager.spawnPortal(door.id);
+  if (!spawned) {
+    return {
+      type: MessageType.ERROR,
+      message: 'Nothing happens.',
+    };
+  }
+
+  // Build the appearance message
+  // Use custom appear message if set, otherwise generate default
+  let appearanceMessage: string;
+  if (door.appearMessage) {
+    appearanceMessage = door.appearMessage;
+  } else {
+    // Use the display name as-is (it already has an article like "a whirling vortex")
+    // Capitalize first letter for sentence start
+    const portalName = door.itemDisplayName || door.name || 'a portal';
+    const capitalizedName = portalName.charAt(0).toUpperCase() + portalName.slice(1);
+    appearanceMessage = `${capitalizedName} appears out of thin air!`;
+  }
+
+  // Broadcast to room (including the player who spawned it)
+  broadcastToRoom(currentRoomId, appearanceMessage);
+
+  // Also broadcast to exit room if it's a two-way portal
+  if (door.exitRoomId && door.exitRoomId !== currentRoomId) {
+    broadcastToRoom(door.exitRoomId, appearanceMessage);
+  }
+
+  // Return empty response since the broadcast already notified everyone
+  return {
+    type: MessageType.OUTPUT,
+    message: '',
   };
 }
 

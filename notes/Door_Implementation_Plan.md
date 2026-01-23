@@ -418,20 +418,36 @@ else:
 
 ---
 
-### Phase 9: Temporary Portals
+### Phase 9: Temporary Portals ✓ COMPLETE
 
 **Goal**: Doors that appear temporarily when triggered.
 
 **Tasks**:
-- [ ] Add columns: `is_temporary`, `spawn_trigger_text`, `duration_seconds`
-- [ ] Add portal spawn tracking (in-memory map of active portals)
-- [ ] When spawn trigger spoken, portal appears and timer starts
-- [ ] Portal shows on "Also here" line while active
-- [ ] When timer expires, portal disappears with room broadcast
-- [ ] Inactive portals cannot be used
+- [x] Add columns: `is_temporary`, `spawn_trigger_text`, `duration_seconds`
+- [x] Add portal spawn tracking (in-memory map of active portals)
+- [x] When spawn trigger spoken, portal appears and timer starts
+- [x] Portal shows on "Also here" line while active
+- [x] When timer expires, portal disappears with room broadcast
+- [x] Inactive portals cannot be used
 
-**Files Changed**: ~3-4 files
-**Acceptance**: Player speaks trigger, portal appears, usable for X seconds, then vanishes
+**Files Changed**: 7 files
+- `packages/server/src/db/schema.sql` (MODIFIED - added is_temporary, spawn_trigger_text, duration_seconds, appear_message, disappear_message columns)
+- `packages/shared/src/doors.ts` (MODIFIED - added isTemporary, spawnTriggerText, durationSeconds, appearMessage, disappearMessage to Door interface)
+- `packages/server/src/db/repositories/doorRepository.ts` (MODIFIED - added new field handling in DbDoor, dbToDoor, CreateDoorInput, createDoor, updateDoor)
+- `packages/server/src/db/migrate.ts` (MODIFIED - added ALTER TABLE for existing databases)
+- `packages/server/src/services/doorStateManager.ts` (MODIFIED - added activePortals map, portalExpirationTimers, isPortalActive, spawnPortal, despawnPortal, findPortalBySpawnTrigger, updated canPassThrough/findSpecialDoorByTrigger/findSpecialDoorByDisplayName for portal active checks, portal cleanup on door delete)
+- `packages/server/src/game/commands.ts` (MODIFIED - added handlePortalSpawn function, spawn trigger check in processCommand)
+- `packages/server/src/game/world.ts` (MODIFIED - updated formatRoomDescription to only show active temporary portals)
+
+**Acceptance**: ✓ All criteria met
+- Player speaks spawn trigger text (e.g., "Valar Morghulis")
+- Portal appears in room with broadcast message (custom or default)
+- Portal shows on "Also here:" line while active
+- Player can use trigger text (e.g., "go portal") to pass through
+- Player can look at active portal to see description
+- Inactive portals are not visible and cannot be used
+- Portal vanishes after duration_seconds with room broadcast (custom or default)
+- Custom appear_message and disappear_message supported for thematic portals
 
 ---
 
