@@ -4,6 +4,9 @@
 const ROLE_ADMIN = 'admin';
 const ROLE_DEVELOPER = 'developer';
 
+// Door type (mirrors @koa/shared DoorType enum values)
+type DoorType = 'open_passageway' | 'physical' | 'special' | 'triggered_passageway' | 'temporary_portal';
+
 interface RoomTrainingConfig {
   enabled: boolean;
   allowedClasses?: string[] | null;
@@ -35,7 +38,7 @@ interface AuthInfo {
 interface Door {
   id: number;
   name: string;
-  doorType: string;
+  doorType: DoorType;
   entryRoomId: number;
   entryDirection: string;
   exitRoomId: number | null;
