@@ -1,6 +1,7 @@
-import { RoomData } from '@koa/shared';
+import { RoomData, DoorData, DoorType, DoorState } from '@koa/shared';
 import { colors } from '../utils/colors.js';
 import * as roomRepo from '../db/repositories/roomRepository.js';
+import * as doorStateManager from '../services/doorStateManager.js';
 
 export interface Room {
   id: number;
@@ -163,30 +164,92 @@ export class GameWorld {
   }
 
   formatRoomDescription(room: Room, otherPlayers: string[] = [], briefMode: boolean = false, itemDescriptions: string | null = null): string {
+    // Get doors in this room
+    const doors = doorStateManager.getDoorsInRoom(room.id);
+    const doorsByDirection = new Map<string, { door: typeof doors[0]; state: DoorState | null }>();
+
+    for (const door of doors) {
+      const direction = doorStateManager.getDoorDirection(door, room.id);
+      if (direction) {
+        doorsByDirection.set(direction, {
+          door,
+          state: doorStateManager.getDoorState(door.id),
+        });
+      }
+    }
+
+    // Format exits with door states
     const exits = Array.from(room.exits.keys());
-    const exitStr = exits.length > 0 ? exits.join(', ') : 'none';
+    const formattedExits: string[] = [];
+
+    for (const exit of exits) {
+      const doorInfo = doorsByDirection.get(exit);
+
+      if (doorInfo) {
+        // This exit has a door
+        const { door, state } = doorInfo;
+
+        // Skip hidden doors (they don't appear on obvious exits)
+        if (door.isHidden) {
+          continue;
+        }
+
+        // For physical doors, show the state (but hide "locked" - show as "closed")
+        if (door.doorType === DoorType.PHYSICAL && state) {
+          const displayState = state === DoorState.LOCKED ? DoorState.CLOSED : state;
+          formattedExits.push(`${exit} (${displayState})`);
+        } else if (door.doorType === DoorType.SPECIAL || door.doorType === DoorType.TEMPORARY_PORTAL) {
+          // Special doors and temporary portals don't show on obvious exits
+          // They appear on the "Also here:" line instead
+          continue;
+        } else {
+          // Open passageways and triggered passageways show as normal exits
+          formattedExits.push(exit);
+        }
+      } else {
+        // No door - just show the direction
+        formattedExits.push(exit);
+      }
+    }
+
+    const exitStr = formattedExits.length > 0 ? formattedExits.join(', ') : 'none';
 
     let output = `${colors.roomName(room.name)}\r\n`;
-    
+
     // Only show description if not in brief mode
     if (!briefMode) {
       const wrappedDesc = this.wordWrap(room.description, 80);
       output += `${colors.roomDesc(wrappedDesc)}\r\n`;
     }
-    
+
     // Show items on the ground
     if (itemDescriptions) {
       output += `${itemDescriptions}\r\n`;
     }
-    
-    // Add "Also here:" line if there are other players
-    if (otherPlayers.length > 0) {
-      const playerNames = otherPlayers.map(name => colors.playerInRoom(name)).join(', ');
-      output += `${colors.alsoHereLabel('Also here:')} ${playerNames}\r\n`;
+
+    // Build "Also here:" line content
+    const alsoHereItems: string[] = [];
+
+    // Add special doors that appear as items (only if not hidden)
+    for (const door of doors) {
+      if ((door.doorType === DoorType.SPECIAL || door.doorType === DoorType.TEMPORARY_PORTAL) &&
+          door.itemDisplayName && !door.isHidden) {
+        alsoHereItems.push(colors.cyan(door.itemDisplayName));
+      }
     }
-    
+
+    // Add other players
+    for (const name of otherPlayers) {
+      alsoHereItems.push(colors.playerInRoom(name));
+    }
+
+    // Show "Also here:" line if there's anything to show
+    if (alsoHereItems.length > 0) {
+      output += `${colors.alsoHereLabel('Also here:')} ${alsoHereItems.join(', ')}\r\n`;
+    }
+
     output += `${colors.exitLabel('Obvious exits:')} ${colors.exits(exitStr)}`;
-    
+
     return output;
   }
 
@@ -214,6 +277,9 @@ export class GameWorld {
   }
 
   getRoomData(room: Room): RoomData {
+    // Get doors for this room with current states
+    const doorsData: DoorData[] = doorStateManager.getDoorsDataForRoom(room.id);
+
     return {
       id: room.id,
       name: room.name,
@@ -222,6 +288,7 @@ export class GameWorld {
       players: [],
       npcs: [],
       items: [],
+      doors: doorsData,
     };
   }
 

@@ -21,6 +21,7 @@ import { colors } from '../utils/colors.js';
 import { checkWebSocketIp } from '../middleware/ipAccess.js';
 import { startGameLoop, stopGameLoop } from './gameLoop.js';
 import { initializeTickProcessor, startQueuedAction, executeQueuedCommand, handlePlayerInput } from './tickProcessor.js';
+import { initializeDoorStates } from '../services/doorStateManager.js';
 import { getCommandQueueConfig } from '../config/commandQueueConfig.js';
 import { initializeInterruptHandler } from './interruptHandler.js';
 
@@ -89,6 +90,9 @@ function getWebSocketEmergencyToken(req: IncomingMessage): string | undefined {
 export async function initializeGameWorld(): Promise<void> {
   if (worldInitialized) return;
   await gameWorld.initialize();
+
+  // Initialize door state manager (loads doors and sets default states)
+  await initializeDoorStates();
 
   // Initialize progression system from JSON data files
   try {

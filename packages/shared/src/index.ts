@@ -1,5 +1,9 @@
 // Shared types and constants for Kingdoms of Avarice
 
+// Re-export door system types (needed before RoomData definition)
+export * from "./doors.js";
+import type { DoorData } from "./doors.js";
+
 // Message types for WebSocket communication
 export enum MessageType {
   // Client -> Server
@@ -71,6 +75,7 @@ export interface RoomData {
   players: string[];
   npcs: string[];
   items: string[];
+  doors: DoorData[];
 }
 
 // Room training configuration
@@ -222,6 +227,3 @@ export * from "./characterPoints.js";
 
 // Re-export command queue system
 export * from "./commandQueue.js";
-
-// Re-export door system
-export * from "./doors.js";
