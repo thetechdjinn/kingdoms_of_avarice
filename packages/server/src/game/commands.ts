@@ -219,6 +219,14 @@ export async function processCommand(
     return handleCloseDoor(socket, args, currentRoomId);
   }
 
+  if (command === 'unlock') {
+    return await handleUnlockDoor(socket, args, currentRoomId);
+  }
+
+  if (command === 'lock') {
+    return await handleLockDoor(socket, args, currentRoomId);
+  }
+
   if (command === 'help' || command === '?') {
     return handleHelp(socket.roles, args[0]);
   }
@@ -660,6 +668,139 @@ function handleCloseDoor(
   return handleDoorAction(socket, args, currentRoomId, 'close');
 }
 
+/**
+ * Check if a player has a key with the specified tag in their inventory
+ */
+async function playerHasKey(characterId: number, keyTag: string): Promise<boolean> {
+  const inventory = await itemRepo.getCharacterInventory(characterId);
+  return inventory.some(item => item.template?.flags?.key_tag === keyTag);
+}
+
+async function handleUnlockDoor(
+  socket: AuthenticatedSocket,
+  args: string[],
+  currentRoomId: number
+): Promise<CommandResponse> {
+  if (args.length === 0) {
+    return { type: MessageType.ERROR, message: 'Unlock what?' };
+  }
+
+  // Parse direction from args
+  const directionArg = args[0].toLowerCase();
+  const direction = DIRECTION_ALIASES[directionArg] || directionArg;
+
+  // Find door in the specified direction
+  const door = doorStateManager.getDoorByRoomAndDirection(currentRoomId, direction);
+  if (!door) {
+    if (!isDirection(direction)) {
+      return { type: MessageType.ERROR, message: 'Unlock what?' };
+    }
+    return { type: MessageType.ERROR, message: `There is no door to the ${direction}.` };
+  }
+
+  // Only physical doors can be unlocked
+  if (door.doorType !== DoorType.PHYSICAL) {
+    return { type: MessageType.ERROR, message: `You cannot unlock the ${door.name}.` };
+  }
+
+  // Check if door has a lock
+  if (!door.hasLock) {
+    return { type: MessageType.ERROR, message: `The ${door.name} has no lock.` };
+  }
+
+  // Check current state
+  const currentState = doorStateManager.getDoorState(door.id);
+  if (currentState !== DoorState.LOCKED) {
+    return { type: MessageType.ERROR, message: `The ${door.name} is not locked.` };
+  }
+
+  // Check if player has the right key
+  if (door.keyItemTag) {
+    const hasKey = await playerHasKey(socket.characterId!, door.keyItemTag);
+    if (!hasKey) {
+      return { type: MessageType.ERROR, message: `You don't have the right key.` };
+    }
+  }
+
+  // Unlock the door
+  doorStateManager.unlockDoor(door.id);
+
+  // Broadcast to current room
+  broadcastToRoom(currentRoomId, `${socket.username} unlocks the ${door.name}.`, socket.playerId);
+
+  // Broadcast to the other side (if two-way door)
+  const otherRoomId = doorStateManager.getDestinationRoom(door.id, currentRoomId);
+  if (otherRoomId) {
+    broadcastToRoom(otherRoomId, `The ${door.name} unlocks from the other side.`);
+  }
+
+  return { type: MessageType.OUTPUT, message: `You unlock the ${door.name}.` };
+}
+
+async function handleLockDoor(
+  socket: AuthenticatedSocket,
+  args: string[],
+  currentRoomId: number
+): Promise<CommandResponse> {
+  if (args.length === 0) {
+    return { type: MessageType.ERROR, message: 'Lock what?' };
+  }
+
+  // Parse direction from args
+  const directionArg = args[0].toLowerCase();
+  const direction = DIRECTION_ALIASES[directionArg] || directionArg;
+
+  // Find door in the specified direction
+  const door = doorStateManager.getDoorByRoomAndDirection(currentRoomId, direction);
+  if (!door) {
+    if (!isDirection(direction)) {
+      return { type: MessageType.ERROR, message: 'Lock what?' };
+    }
+    return { type: MessageType.ERROR, message: `There is no door to the ${direction}.` };
+  }
+
+  // Only physical doors can be locked
+  if (door.doorType !== DoorType.PHYSICAL) {
+    return { type: MessageType.ERROR, message: `You cannot lock the ${door.name}.` };
+  }
+
+  // Check if door has a lock
+  if (!door.hasLock) {
+    return { type: MessageType.ERROR, message: `The ${door.name} has no lock.` };
+  }
+
+  // Check current state
+  const currentState = doorStateManager.getDoorState(door.id);
+  if (currentState === DoorState.LOCKED) {
+    return { type: MessageType.ERROR, message: `The ${door.name} is already locked.` };
+  }
+  if (currentState === DoorState.OPEN) {
+    return { type: MessageType.ERROR, message: `You need to close the ${door.name} first.` };
+  }
+
+  // Check if player has the right key
+  if (door.keyItemTag) {
+    const hasKey = await playerHasKey(socket.characterId!, door.keyItemTag);
+    if (!hasKey) {
+      return { type: MessageType.ERROR, message: `You don't have the right key.` };
+    }
+  }
+
+  // Lock the door
+  doorStateManager.lockDoor(door.id);
+
+  // Broadcast to current room
+  broadcastToRoom(currentRoomId, `${socket.username} locks the ${door.name}.`, socket.playerId);
+
+  // Broadcast to the other side (if two-way door)
+  const otherRoomId = doorStateManager.getDestinationRoom(door.id, currentRoomId);
+  if (otherRoomId) {
+    broadcastToRoom(otherRoomId, `The ${door.name} locks from the other side.`);
+  }
+
+  return { type: MessageType.OUTPUT, message: `You lock the ${door.name}.` };
+}
+
 function handleSay(
   socket: AuthenticatedSocket,
   message: string,
@@ -731,6 +872,8 @@ function handleHelp(userRoles: Role[], category?: string): CommandResponse {
     `    ${colors.white('<direction>')}           - Move (n, s, e, w, ne, nw, se, sw, u, d)`,
     `    ${colors.white('open <direction>')}      - Open a door`,
     `    ${colors.white('close <direction>')}     - Close a door`,
+    `    ${colors.white('unlock <direction>')}    - Unlock a locked door (requires key)`,
+    `    ${colors.white('lock <direction>')}      - Lock an unlocked door (requires key)`,
     `    ${colors.white('brief')}                 - Toggle brief mode`,
     '',
     colors.boldCyan('  Items & Inventory:'),

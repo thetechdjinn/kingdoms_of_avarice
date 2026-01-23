@@ -334,6 +334,7 @@ function cancelAutoCloseTimer(doorId: number): void {
 
 /**
  * Called when auto-close timer expires
+ * For doors with locks, this will auto-LOCK the door (not just close)
  */
 function autoCloseDoor(door: Door): void {
   const currentState = doorStates.get(door.id);
@@ -342,17 +343,19 @@ function autoCloseDoor(door: Door): void {
     return;
   }
 
-  // Close the door
-  doorStates.set(door.id, DoorState.CLOSED);
+  // For doors with locks, auto-lock instead of just closing
+  const newState = door.hasLock ? DoorState.LOCKED : DoorState.CLOSED;
+  const actionVerb = door.hasLock ? 'locked' : 'closed';
+
+  doorStates.set(door.id, newState);
 
   // Broadcast to both rooms with consistent message format
-  // Uses "just closed" to indicate automatic closure vs player action
   if (broadcastCallback) {
-    const entryMessage = `The ${door.name} to the ${door.entryDirection} just closed.`;
+    const entryMessage = `The ${door.name} to the ${door.entryDirection} just ${actionVerb}.`;
     broadcastCallback(door.entryRoomId, entryMessage);
 
     if (door.exitRoomId && door.exitDirection) {
-      const exitMessage = `The ${door.name} to the ${door.exitDirection} just closed.`;
+      const exitMessage = `The ${door.name} to the ${door.exitDirection} just ${actionVerb}.`;
       broadcastCallback(door.exitRoomId, exitMessage);
     }
   }
@@ -360,9 +363,8 @@ function autoCloseDoor(door: Door): void {
 
 /**
  * Open a door (set state to OPEN)
- * Only works for physical doors that are closed or locked.
- * Note: This is a low-level state change. Callers should verify unlock
- * requirements (keys, picking, bashing) before calling this function.
+ * Only works for physical doors that are closed (not locked).
+ * Locked doors must be unlocked first before opening.
  */
 export function openDoor(doorId: number): boolean {
   const door = doorsById.get(doorId);
@@ -372,6 +374,9 @@ export function openDoor(doorId: number): boolean {
   const currentState = doorStates.get(doorId);
   if (currentState === DoorState.OPEN) {
     return false; // Already open
+  }
+  if (currentState === DoorState.LOCKED) {
+    return false; // Must unlock first
   }
   doorStates.set(doorId, DoorState.OPEN);
 
@@ -399,6 +404,47 @@ export function closeDoor(doorId: number): boolean {
   // Cancel auto-close timer since door was manually closed
   cancelAutoCloseTimer(doorId);
 
+  return true;
+}
+
+/**
+ * Lock a door (set state to LOCKED)
+ * Only works for physical doors with locks that are currently closed
+ */
+export function lockDoor(doorId: number): boolean {
+  const door = doorsById.get(doorId);
+  if (!door || door.doorType !== DoorType.PHYSICAL) {
+    return false;
+  }
+  if (!door.hasLock) {
+    return false; // Door doesn't have a lock
+  }
+  const currentState = doorStates.get(doorId);
+  if (currentState !== DoorState.CLOSED) {
+    return false; // Can only lock a closed door
+  }
+  doorStates.set(doorId, DoorState.LOCKED);
+  return true;
+}
+
+/**
+ * Unlock a door (set state to CLOSED, not OPEN)
+ * Only works for physical doors with locks that are currently locked
+ * Note: This just unlocks - caller should call openDoor() separately if player wants to open it
+ */
+export function unlockDoor(doorId: number): boolean {
+  const door = doorsById.get(doorId);
+  if (!door || door.doorType !== DoorType.PHYSICAL) {
+    return false;
+  }
+  if (!door.hasLock) {
+    return false; // Door doesn't have a lock
+  }
+  const currentState = doorStates.get(doorId);
+  if (currentState !== DoorState.LOCKED) {
+    return false; // Can only unlock a locked door
+  }
+  doorStates.set(doorId, DoorState.CLOSED);
   return true;
 }
 
@@ -440,18 +486,17 @@ export function canPassThrough(
     if (state === DoorState.OPEN) {
       return { allowed: true };
     }
+    const direction = isEntryRoom ? door.entryDirection : door.exitDirection;
     if (state === DoorState.LOCKED) {
-      const direction = isEntryRoom ? door.entryDirection : door.exitDirection;
       return {
         allowed: false,
-        reason: `The door to the ${direction} is locked.`,
+        reason: `The ${door.name} to the ${direction} is locked!`,
       };
     }
-    // Closed
-    const direction = isEntryRoom ? door.entryDirection : door.exitDirection;
+    // Closed - bump into door message
     return {
       allowed: false,
-      reason: `The door to the ${direction} is closed.`,
+      reason: `You run into the ${door.name} to the ${direction}!`,
     };
   }
 
