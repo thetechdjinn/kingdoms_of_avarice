@@ -118,6 +118,13 @@ CREATE TABLE IF NOT EXISTS doors (
     appear_message TEXT,                          -- Custom message when portal spawns (e.g., "A portal tears open reality!")
     disappear_message TEXT,                       -- Custom message when portal expires (e.g., "The portal collapses!")
 
+    -- Permission requirements (Phase 10)
+    required_level INTEGER,                       -- Minimum character level to use this door (NULL = no requirement)
+    required_classes TEXT[],                      -- Array of class IDs that can use this door (NULL/empty = no restriction)
+    required_quest_flag VARCHAR(100),             -- Quest flag that must be completed (NULL = no requirement)
+    required_item_tag VARCHAR(100),               -- Item tag that must be in inventory (NULL = no requirement, item not consumed)
+    denial_message TEXT,                          -- Custom message when permission check fails
+
     -- Ensure temporary portals have required spawn trigger text
     CONSTRAINT temporary_portal_requires_spawn_trigger CHECK (
         is_temporary = FALSE OR spawn_trigger_text IS NOT NULL

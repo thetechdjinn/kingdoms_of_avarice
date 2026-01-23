@@ -850,3 +850,93 @@ export function getActivePortalCount(): number {
 export function getPortalTimerCount(): number {
   return portalExpirationTimers.size;
 }
+
+// ============================================================================
+// Permission System (Phase 10)
+// ============================================================================
+
+/**
+ * Character data needed for permission checks
+ */
+export interface PermissionCheckCharacter {
+  level: number;
+  class: string;
+  // For quest flags - not implemented yet, but reserve the interface
+  // questFlags?: string[];
+}
+
+/**
+ * Result of a permission check
+ */
+export interface PermissionCheckResult {
+  allowed: boolean;
+  reason?: string;
+}
+
+/**
+ * Check if a character meets the permission requirements to interact with a door
+ * This check occurs BEFORE lock checks - a player who doesn't meet requirements
+ * cannot even attempt to pick or bash the door.
+ *
+ * @param door - The door to check permissions for
+ * @param character - The character's data (level, class)
+ * @param hasRequiredItem - Whether the character has the required item (if any)
+ * @returns { allowed: true } or { allowed: false, reason: string }
+ */
+export function checkDoorPermissions(
+  door: Door,
+  character: PermissionCheckCharacter,
+  hasRequiredItem: boolean = true
+): PermissionCheckResult {
+  // Check level requirement
+  if (door.requiredLevel !== null && character.level < door.requiredLevel) {
+    const message =
+      door.denialMessage ||
+      `You must be at least level ${door.requiredLevel} to use this passage.`;
+    return { allowed: false, reason: message };
+  }
+
+  // Check class requirement
+  if (door.requiredClasses && door.requiredClasses.length > 0) {
+    const characterClass = character.class.toLowerCase();
+    const allowedClasses = door.requiredClasses.map((c) => c.toLowerCase());
+    if (!allowedClasses.includes(characterClass)) {
+      const message =
+        door.denialMessage || 'Only certain classes may use this passage.';
+      return { allowed: false, reason: message };
+    }
+  }
+
+  // Check quest flag requirement (placeholder for future implementation)
+  if (door.requiredQuestFlag) {
+    // TODO: Implement quest system check
+    // For now, quest flags always pass (no quest system yet)
+    // When implemented:
+    // if (!character.questFlags?.includes(door.requiredQuestFlag)) {
+    //   const message = door.denialMessage || 'You have not completed the required quest.';
+    //   return { allowed: false, reason: message };
+    // }
+  }
+
+  // Check item requirement (item must be in inventory, not consumed)
+  if (door.requiredItemTag && !hasRequiredItem) {
+    const message =
+      door.denialMessage || 'You do not have the required item to use this passage.';
+    return { allowed: false, reason: message };
+  }
+
+  return { allowed: true };
+}
+
+/**
+ * Check if a door has any permission requirements
+ * Useful for determining if we need to fetch character data for checks
+ */
+export function doorHasPermissionRequirements(door: Door): boolean {
+  return (
+    door.requiredLevel !== null ||
+    (door.requiredClasses !== null && door.requiredClasses.length > 0) ||
+    door.requiredQuestFlag !== null ||
+    door.requiredItemTag !== null
+  );
+}

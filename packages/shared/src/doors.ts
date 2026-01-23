@@ -107,6 +107,18 @@ export interface Door {
   /** Custom message when portal expires (e.g., "The portal collapses!") */
   disappearMessage: string | null;
 
+  // Permission requirements (Phase 10)
+  /** Minimum character level required to use this door (null = no requirement) */
+  requiredLevel: number | null;
+  /** Array of class IDs that can use this door (null/empty = no restriction) */
+  requiredClasses: string[] | null;
+  /** Quest flag that must be completed to use this door (null = no requirement) */
+  requiredQuestFlag: string | null;
+  /** Item tag that must be in inventory to use this door (null = no requirement, item not consumed) */
+  requiredItemTag: string | null;
+  /** Custom message shown when player fails permission check */
+  denialMessage: string | null;
+
   // Timestamps
   createdAt: Date;
   updatedAt: Date;

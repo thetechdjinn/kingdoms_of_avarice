@@ -343,6 +343,23 @@ export async function runMigrations(): Promise<void> {
         CHECK (is_temporary = FALSE OR spawn_trigger_text IS NOT NULL)
       `);
 
+      // Add permission columns to doors (Phase 10 - for existing databases)
+      await client.query(`
+        ALTER TABLE doors ADD COLUMN IF NOT EXISTS required_level INTEGER
+      `);
+      await client.query(`
+        ALTER TABLE doors ADD COLUMN IF NOT EXISTS required_classes TEXT[]
+      `);
+      await client.query(`
+        ALTER TABLE doors ADD COLUMN IF NOT EXISTS required_quest_flag VARCHAR(100)
+      `);
+      await client.query(`
+        ALTER TABLE doors ADD COLUMN IF NOT EXISTS required_item_tag VARCHAR(100)
+      `);
+      await client.query(`
+        ALTER TABLE doors ADD COLUMN IF NOT EXISTS denial_message TEXT
+      `);
+
       // Seed default game settings (only if they don't exist)
       await client.query(`
         INSERT INTO game_settings (key, value) VALUES
