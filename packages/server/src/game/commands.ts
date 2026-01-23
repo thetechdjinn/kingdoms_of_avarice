@@ -579,13 +579,20 @@ async function handleMove(
   return { type: MessageType.OUTPUT, message: world.formatRoomDescription(newRoom, otherPlayers, socket.briefMode, itemDescriptions) };
 }
 
-function handleOpenDoor(
+type DoorAction = 'open' | 'close';
+
+function handleDoorAction(
   socket: AuthenticatedSocket,
   args: string[],
-  currentRoomId: number
+  currentRoomId: number,
+  action: DoorAction
 ): CommandResponse {
+  const verb = action;
+  const verbs = action === 'open' ? 'opens' : 'closes';
+  const capitalVerb = action.charAt(0).toUpperCase() + action.slice(1);
+
   if (args.length === 0) {
-    return { type: MessageType.ERROR, message: 'Open what?' };
+    return { type: MessageType.ERROR, message: `${capitalVerb} what?` };
   }
 
   // Parse direction from args
@@ -595,44 +602,54 @@ function handleOpenDoor(
   // Find door in the specified direction
   const door = doorStateManager.getDoorByRoomAndDirection(currentRoomId, direction);
   if (!door) {
-    // Check if it's even a valid direction before giving specific error
     if (!isDirection(direction)) {
-      return { type: MessageType.ERROR, message: 'Open what?' };
+      return { type: MessageType.ERROR, message: `${capitalVerb} what?` };
     }
     return { type: MessageType.ERROR, message: `There is no door to the ${direction}.` };
   }
 
   // Only physical doors can be opened/closed
   if (door.doorType !== DoorType.PHYSICAL) {
-    return { type: MessageType.ERROR, message: `You cannot open the ${door.name}.` };
+    return { type: MessageType.ERROR, message: `You cannot ${verb} the ${door.name}.` };
   }
 
-  // Get current state
+  // Get current state (null treated as closed)
   const currentState = doorStateManager.getDoorState(door.id);
 
-  // Check if already open
-  if (currentState === DoorState.OPEN) {
-    return { type: MessageType.ERROR, message: `The ${door.name} is already open.` };
+  // Validate state and perform action
+  if (action === 'open') {
+    if (currentState === DoorState.OPEN) {
+      return { type: MessageType.ERROR, message: `The ${door.name} is already open.` };
+    }
+    if (currentState === DoorState.LOCKED) {
+      return { type: MessageType.ERROR, message: `The ${door.name} is locked.` };
+    }
+    doorStateManager.openDoor(door.id);
+  } else {
+    if (currentState !== DoorState.OPEN) {
+      return { type: MessageType.ERROR, message: `The ${door.name} is already closed.` };
+    }
+    doorStateManager.closeDoor(door.id);
   }
 
-  // Check if locked (treat null state as closed)
-  if (currentState === DoorState.LOCKED) {
-    return { type: MessageType.ERROR, message: `The ${door.name} is locked.` };
-  }
+  // Broadcast to current room
+  broadcastToRoom(currentRoomId, `${socket.username} ${verbs} the ${door.name}.`, socket.playerId);
 
-  // Open the door
-  doorStateManager.openDoor(door.id);
-
-  // Broadcast to the room
-  broadcastToRoom(currentRoomId, `${socket.username} opens the ${door.name}.`, socket.playerId);
-
-  // Also broadcast to the other side of the door (if it's a two-way door)
+  // Broadcast to the other side (if two-way door)
   const otherRoomId = doorStateManager.getDestinationRoom(door.id, currentRoomId);
   if (otherRoomId) {
-    broadcastToRoom(otherRoomId, `The ${door.name} opens from the other side.`);
+    broadcastToRoom(otherRoomId, `The ${door.name} ${verbs} from the other side.`);
   }
 
-  return { type: MessageType.OUTPUT, message: `You open the ${door.name}.` };
+  return { type: MessageType.OUTPUT, message: `You ${verb} the ${door.name}.` };
+}
+
+function handleOpenDoor(
+  socket: AuthenticatedSocket,
+  args: string[],
+  currentRoomId: number
+): CommandResponse {
+  return handleDoorAction(socket, args, currentRoomId, 'open');
 }
 
 function handleCloseDoor(
@@ -640,50 +657,7 @@ function handleCloseDoor(
   args: string[],
   currentRoomId: number
 ): CommandResponse {
-  if (args.length === 0) {
-    return { type: MessageType.ERROR, message: 'Close what?' };
-  }
-
-  // Parse direction from args
-  const directionArg = args[0].toLowerCase();
-  const direction = DIRECTION_ALIASES[directionArg] || directionArg;
-
-  // Find door in the specified direction
-  const door = doorStateManager.getDoorByRoomAndDirection(currentRoomId, direction);
-  if (!door) {
-    // Check if it's even a valid direction before giving specific error
-    if (!isDirection(direction)) {
-      return { type: MessageType.ERROR, message: 'Close what?' };
-    }
-    return { type: MessageType.ERROR, message: `There is no door to the ${direction}.` };
-  }
-
-  // Only physical doors can be opened/closed
-  if (door.doorType !== DoorType.PHYSICAL) {
-    return { type: MessageType.ERROR, message: `You cannot close the ${door.name}.` };
-  }
-
-  // Get current state (treat null as closed)
-  const currentState = doorStateManager.getDoorState(door.id);
-
-  // Check if already closed (null state also counts as not open)
-  if (currentState !== DoorState.OPEN) {
-    return { type: MessageType.ERROR, message: `The ${door.name} is already closed.` };
-  }
-
-  // Close the door
-  doorStateManager.closeDoor(door.id);
-
-  // Broadcast to the room
-  broadcastToRoom(currentRoomId, `${socket.username} closes the ${door.name}.`, socket.playerId);
-
-  // Also broadcast to the other side of the door (if it's a two-way door)
-  const otherRoomId = doorStateManager.getDestinationRoom(door.id, currentRoomId);
-  if (otherRoomId) {
-    broadcastToRoom(otherRoomId, `The ${door.name} closes from the other side.`);
-  }
-
-  return { type: MessageType.OUTPUT, message: `You close the ${door.name}.` };
+  return handleDoorAction(socket, args, currentRoomId, 'close');
 }
 
 function handleSay(
