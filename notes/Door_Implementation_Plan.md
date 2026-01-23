@@ -365,19 +365,31 @@ else:
 
 ---
 
-### Phase 7: Special Doors
+### Phase 7: Special Doors ✓ COMPLETE
 
 **Goal**: Doors that appear as items and use text triggers.
 
 **Tasks**:
-- [ ] Add `item_display_name` column (how it appears on "Also here" line)
-- [ ] Modify room display to show special doors on "Also here" line
-- [ ] Implement text trigger parsing for special doors (e.g., "go portal", "climb rope")
-- [ ] Add `look <door>` support to view door description
-- [ ] Ensure special doors don't appear on "Obvious exits"
+- [x] Add `item_display_name` column (how it appears on "Also here" line) - Already in schema from Phase 1
+- [x] Modify room display to show special doors on "Also here" line
+- [x] Implement text trigger parsing for special doors (e.g., "go portal", "climb rope")
+- [x] Add `look <door>` support to view door description
+- [x] Ensure special doors don't appear on "Obvious exits"
 
-**Files Changed**: ~3-4 files
-**Acceptance**: Special door shows as item, player types trigger text, passes through
+**Display Order**: Special doors always appear **first** in the "Also here:" line, before other players. This ensures consistent, predictable display order.
+
+**Files Changed**: 3 files
+- `packages/server/src/services/doorStateManager.ts` (MODIFIED - added findSpecialDoorByTrigger, findSpecialDoorByDisplayName)
+- `packages/server/src/game/commands.ts` (MODIFIED - added handleSpecialDoorTrigger, handleLookAtSpecialDoor, trigger text handling)
+- `packages/server/src/game/world.ts` (existing code already handles special door display order correctly)
+
+**Acceptance**: ✓ All criteria met
+- Special door shows on "Also here:" line with itemDisplayName
+- Special doors appear first before players in "Also here:" line
+- Player types trigger text (e.g., "go portal") and passes through
+- Custom passage messages shown to player and room
+- Player can look at special doors to see description
+- Special doors do not appear on "Obvious exits" line
 
 ---
 
