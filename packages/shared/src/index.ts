@@ -33,6 +33,9 @@ export enum ResourceType {
   NONE = "NONE",  // Warriors, Rogues (no secondary resource)
 }
 
+// Player status for statline display
+export type PlayerStatus = 'normal' | 'resting' | 'meditating';
+
 // Vitals data sent to client for statline display
 export interface VitalsData {
   hp: number;
@@ -40,6 +43,7 @@ export interface VitalsData {
   resource?: number;      // Current mana/kai/etc
   maxResource?: number;   // Max mana/kai/etc
   resourceType: ResourceType;
+  status?: PlayerStatus;  // Current player status (resting, meditating, etc.)
 }
 
 // Generic resource regeneration configuration

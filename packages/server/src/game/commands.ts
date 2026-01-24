@@ -59,6 +59,7 @@ export async function processCommand(
     socket.exitTimer = undefined;
     // Don't cancel if they're typing 'x' again (let it fall through to handle below)
     if (trimmed.toLowerCase() !== 'x') {
+      sendVitals(socket); // Update statline to remove meditating status
       return { type: MessageType.SYSTEM, message: 'You stop meditating and return to the realm.' };
     }
   }
@@ -75,9 +76,10 @@ export async function processCommand(
   const args = parts.slice(1);
 
   // Clear enhanced regen state when any command other than 'rest' is entered
-  // This breaks the resting/meditating state when the player takes any action
+  // This breaks the resting state when the player takes any action
   if (command !== 'rest' && command !== 're' && socket.regenState.enhancedRegen.size > 0) {
     socket.regenState.enhancedRegen.clear();
+    sendVitals(socket); // Update statline to remove resting status
   }
 
   const currentRoomId = getPlayerLocation(socket.playerId);
@@ -594,6 +596,17 @@ async function handleMove(
   // Check if there's a door in this direction
   const door = doorStateManager.getDoorByRoomAndDirection(currentRoomId, fullDirection);
   if (door) {
+    // Special doors, triggered passageways, and temporary portals cannot be entered by direction
+    // They require trigger text (e.g., "go portal", "enter hole", "climb rope")
+    if (
+      door.doorType === DoorType.SPECIAL ||
+      door.doorType === DoorType.TRIGGERED_PASSAGEWAY ||
+      door.doorType === DoorType.TEMPORARY_PORTAL
+    ) {
+      broadcastToRoom(currentRoomId, colors.yellow(`${socket.username} ran into the wall to the ${fullDirection}.`), socket.playerId);
+      return { type: MessageType.OUTPUT, message: colors.yellow(`You cannot go ${fullDirection}.`) };
+    }
+
     // Check door permissions first (before passage checks)
     const permissionError = await checkDoorPermissionsForPlayer(door, socket);
     if (permissionError) {
@@ -602,14 +615,17 @@ async function handleMove(
 
     const passageCheck = doorStateManager.canPassThrough(door.id, currentRoomId);
     if (!passageCheck.allowed) {
-      return { type: MessageType.ERROR, message: passageCheck.reason || 'You cannot go that way.' };
+      // Broadcast that player ran into the door
+      broadcastToRoom(currentRoomId, colors.yellow(`${socket.username} ran into the ${door.name} to the ${fullDirection}.`), socket.playerId);
+      return { type: MessageType.OUTPUT, message: colors.yellow(passageCheck.reason || 'You cannot go that way.') };
     }
   }
 
   const newRoom = world.getRoomInDirection(currentRoomId, fullDirection);
 
   if (!newRoom) {
-    return { type: MessageType.ERROR, message: `You cannot go ${fullDirection}.` };
+    broadcastToRoom(currentRoomId, colors.yellow(`${socket.username} ran into the wall to the ${fullDirection}.`), socket.playerId);
+    return { type: MessageType.OUTPUT, message: colors.yellow(`You cannot go ${fullDirection}.`) };
   }
 
   // Save room location to database first
@@ -1507,7 +1523,7 @@ function getDeveloperHelp(): CommandResponse {
     `    ${colors.white('@events')}                 - List essence events`,
     '',
     colors.boldCyan('  System:'),
-    `    ${colors.white('@reload [rooms|all]')}     - Reload data from database`,
+    `    ${colors.white('@reload [type]')}              - Reload data from database`,
     '',
     `Type ${colors.boldCyan('@help')} for the full admin command reference.`,
   ];

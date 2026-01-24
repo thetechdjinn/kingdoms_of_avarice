@@ -235,18 +235,25 @@ function renderStatline(): void {
 
   const hpColor = getStatColor(currentVitals.hp, currentVitals.maxHp);
   const reset = '\x1b[0m';
-  
+
   let statline = `[HP=${hpColor}${currentVitals.hp}${reset}`;
 
   // Add secondary resource if applicable
-  if (currentVitals.resourceType !== ResourceType.NONE && 
-      currentVitals.resource !== undefined && 
+  if (currentVitals.resourceType !== ResourceType.NONE &&
+      currentVitals.resource !== undefined &&
       currentVitals.maxResource !== undefined) {
     const resourceColor = getStatColor(currentVitals.resource, currentVitals.maxResource);
     statline += `/${currentVitals.resourceType}=${resourceColor}${currentVitals.resource}${reset}`;
   }
 
   statline += ']: ';
+
+  // Add status indicator if resting or meditating
+  if (currentVitals.status === 'resting') {
+    statline += '(resting) ';
+  } else if (currentVitals.status === 'meditating') {
+    statline += '(meditating) ';
+  }
 
   terminal.write(statline);
   statlineDisplayed = true;
@@ -642,7 +649,7 @@ async function showCharacterCreate(): Promise<void> {
   (document.getElementById('char-class') as HTMLSelectElement).value = '';
   (document.getElementById('char-gender') as HTMLSelectElement).value = 'male';
   (document.getElementById('char-hair') as HTMLSelectElement).value = '';
-  (document.getElementById('char-eye-color') as HTMLSelectElement).value = 'brown eyes';
+  (document.getElementById('char-eye-color') as HTMLSelectElement).value = 'brown';
   document.getElementById('create-error')!.textContent = '';
   document.getElementById('race-description')!.textContent = '';
   document.getElementById('class-description')!.textContent = '';

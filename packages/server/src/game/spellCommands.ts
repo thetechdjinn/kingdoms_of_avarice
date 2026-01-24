@@ -190,6 +190,20 @@ async function handleOffensiveSpell(
   socket.regenState.enhancedRegen.clear();
   target.regenState.enhancedRegen.clear();
 
+  // Cancel meditation for both players if they were meditating
+  if (socket.exitTimer) {
+    clearTimeout(socket.exitTimer);
+    socket.exitTimer = undefined;
+  }
+  if (target.exitTimer) {
+    clearTimeout(target.exitTimer);
+    target.exitTimer = undefined;
+  }
+
+  // Update vitals to reflect status change (removes resting/meditating from statline)
+  sendVitals(socket);
+  sendVitals(target);
+
   // Broadcast to room (exclude both caster and target - they get personalized messages)
   broadcastToRoom(
     currentRoomId,

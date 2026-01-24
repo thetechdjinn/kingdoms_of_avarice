@@ -739,6 +739,24 @@ export async function processEffectsTick(
       socket.vitals.hp = Math.max(0, socket.vitals.hp - totalDamage);
       vitalsChanged = true;
 
+      // Cancel resting/meditation when taking damage
+      const wasResting = socket.regenState.enhancedRegen.size > 0;
+      const wasMeditating = !!socket.exitTimer;
+
+      if (wasResting) {
+        socket.regenState.enhancedRegen.clear();
+      }
+      if (wasMeditating) {
+        clearTimeout(socket.exitTimer);
+        socket.exitTimer = undefined;
+      }
+
+      // Notify player if their rest/meditation was interrupted
+      if (wasResting || wasMeditating) {
+        const action = wasMeditating ? 'meditation' : 'rest';
+        sendMessage(socket, MessageType.SYSTEM, colors.yellow(`The damage interrupts your ${action}!`));
+      }
+
       // Show tick message unless silentTick is true
       if (!definition.silentTick) {
         if (definition.tickMessage) {

@@ -6,7 +6,7 @@
 
 import { MessageType } from '@koa/shared';
 import { CommandResponse } from './commands.js';
-import { AuthenticatedSocket, broadcastToRoom } from './socket.js';
+import { AuthenticatedSocket, broadcastToRoom, sendVitals } from './socket.js';
 import { getPlayerLocation } from './adminCommands.js';
 import { colors } from '../utils/colors.js';
 
@@ -77,6 +77,20 @@ export function handleAttack(
   // Clear resting state for both players
   socket.regenState.enhancedRegen.clear();
   target.regenState.enhancedRegen.clear();
+
+  // Cancel meditation for both players if they were meditating
+  if (socket.exitTimer) {
+    clearTimeout(socket.exitTimer);
+    socket.exitTimer = undefined;
+  }
+  if (target.exitTimer) {
+    clearTimeout(target.exitTimer);
+    target.exitTimer = undefined;
+  }
+
+  // Update vitals to reflect status change (removes resting/meditating from statline)
+  sendVitals(socket);
+  sendVitals(target);
 
   // Broadcast to room (exclude attacker and target - they get personalized messages)
   broadcastToRoom(

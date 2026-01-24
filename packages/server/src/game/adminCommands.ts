@@ -6,6 +6,7 @@ import { AuthenticatedSocket, connectedPlayers, sendVitals, sendMessage } from '
 import { colors } from '../utils/colors.js';
 import * as itemRepo from '../db/repositories/itemRepository.js';
 import { isProgressionCommand, processProgressionCommand, getProgressionHelpText } from './progressionCommands.js';
+import { initializeDoorStates } from '../services/doorStateManager.js';
 import {
   applyEffect,
   removeEffect,
@@ -13,6 +14,7 @@ import {
   formatDuration,
   getAllEffectIds,
   getEffectDefinition,
+  initializeEffectDefinitions,
 } from './statusEffects.js';
 import { getDelayModifierDescriptions } from './delayModifiers.js';
 import { StatusEffectCategory } from '@koa/shared';
@@ -402,10 +404,10 @@ async function handleReload(
   args: string[],
   world: GameWorld
 ): Promise<CommandResponse> {
-  // @reload [rooms|items|mobs|all]
+  // @reload [rooms|items|mobs|effects|doors|all]
   const target = args[0]?.toLowerCase() || 'all';
 
-  const validTargets = ['rooms', 'items', 'mobs', 'all'];
+  const validTargets = ['rooms', 'items', 'mobs', 'effects', 'doors', 'all'];
   if (!validTargets.includes(target)) {
     return { type: MessageType.ERROR, message: `Usage: @reload [${validTargets.join('|')}]` };
   }
@@ -428,6 +430,16 @@ async function handleReload(
     if (target === 'mobs' || target === 'all') {
       // TODO: Implement mob reload when mobs are added
       results.push(`${colors.yellow('○')} Mobs reload not yet implemented`);
+    }
+
+    if (target === 'effects' || target === 'all') {
+      await initializeEffectDefinitions();
+      results.push(`${colors.green('✓')} Reloaded status effect definitions`);
+    }
+
+    if (target === 'doors' || target === 'all') {
+      await initializeDoorStates();
+      results.push(`${colors.green('✓')} Reloaded door definitions and states`);
     }
 
     return {
@@ -988,7 +1000,7 @@ function handleAdminHelp(userRoles: Role[]): CommandResponse {
     lines.push(`  ${colors.boldCyan('@purge item <id>')}        - Remove specific item instance`);
     lines.push('');
     lines.push(colors.boldYellow('Developer Commands (System):'));
-    lines.push(`  ${colors.boldCyan('@reload [rooms|all]')}     - Reload data from database`);
+    lines.push(`  ${colors.boldCyan('@reload [type]')}     - Reload data from database`);
     
     // Add progression commands help
     lines.push(getProgressionHelpText());
