@@ -2,9 +2,63 @@ import { defineConfig, Plugin } from 'vite';
 import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs';
+import http from 'http';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
+
+// Cache for IP check results (5 second TTL to avoid hammering the backend)
+const ipCheckCache = new Map<string, { allowed: boolean; timestamp: number }>();
+const IP_CHECK_CACHE_TTL = 5000;
+
+/**
+ * Get client IP from request headers or socket
+ */
+function getClientIp(req: http.IncomingMessage): string {
+  const forwarded = req.headers['x-forwarded-for'];
+  if (forwarded) {
+    const forwardedValue = Array.isArray(forwarded) ? forwarded[0] : forwarded;
+    const firstIp = forwardedValue?.split(',')[0]?.trim();
+    if (firstIp) return firstIp;
+  }
+  return req.socket.remoteAddress || '127.0.0.1';
+}
+
+/**
+ * Check if IP is localhost (always allowed)
+ */
+function isLocalhost(ip: string): boolean {
+  const normalized = ip.startsWith('::ffff:') ? ip.slice(7) : ip;
+  return ip === '127.0.0.1' || ip === '::1' || ip === '::ffff:127.0.0.1' ||
+         normalized === '127.0.0.1' || normalized.startsWith('127.') || ip === 'localhost';
+}
+
+/**
+ * Check with backend if IP is allowed
+ */
+async function checkIpAllowed(clientIp: string): Promise<boolean> {
+  // Check cache first
+  const cached = ipCheckCache.get(clientIp);
+  if (cached && Date.now() - cached.timestamp < IP_CHECK_CACHE_TTL) {
+    return cached.allowed;
+  }
+
+  try {
+    const response = await fetch(`http://localhost:3001/api/ip-check`, {
+      headers: { 'X-Forwarded-For': clientIp },
+    });
+    const data = await response.json();
+    const allowed = data.allowed === true;
+
+    // Cache the result
+    ipCheckCache.set(clientIp, { allowed, timestamp: Date.now() });
+    return allowed;
+  } catch (error) {
+    // If backend is unavailable, fail open (allow access)
+    console.warn('[Vite IP Check] Backend unavailable, allowing access');
+    return true;
+  }
+}
 
 // Plugin to serve additional HTML files and documentation in dev mode
 function multiPagePlugin(): Plugin {
@@ -14,6 +68,29 @@ function multiPagePlugin(): Plugin {
   return {
     name: 'multi-page-plugin',
     configureServer(server) {
+      // IP access control middleware - runs before all other middleware
+      server.middlewares.use(async (req, res, next) => {
+        const clientIp = getClientIp(req);
+
+        // Always allow localhost
+        if (isLocalhost(clientIp)) {
+          return next();
+        }
+
+        // Check with backend if IP is allowed
+        const allowed = await checkIpAllowed(clientIp);
+        if (!allowed) {
+          console.log(`[Vite IP Access] Blocked: ${clientIp}`);
+          res.statusCode = 403;
+          res.setHeader('Content-Type', 'text/html');
+          res.end('<html><body><h1>403 Forbidden</h1><p>Access denied. Your IP address is not allowed.</p></body></html>');
+          return;
+        }
+
+        next();
+      });
+
+      // Multi-page and docs serving middleware
       server.middlewares.use(async (req, res, next) => {
         const url = req.url || '';
         const urlPath = url.split('?')[0];
@@ -90,6 +167,7 @@ export default defineConfig({
   server: {
     port: 3000,
     host: true,
+    allowedHosts: true, // Allow all hostnames - we have our own IP-based access control
     proxy: {
       '/api': {
         target: 'http://localhost:3001',

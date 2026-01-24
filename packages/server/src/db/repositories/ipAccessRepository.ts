@@ -3,6 +3,17 @@ import { query } from '../index.js';
 export type EntryType = 'ip' | 'hostname';
 export type ListType = 'allow' | 'block';
 
+/**
+ * Normalize an IP address by stripping IPv6-mapped IPv4 prefix
+ * e.g., '::ffff:192.168.1.100' becomes '192.168.1.100'
+ */
+function normalizeIp(ip: string): string {
+  if (ip.startsWith('::ffff:')) {
+    return ip.slice(7);
+  }
+  return ip;
+}
+
 export interface IpAccessEntry {
   id: number;
   entry: string;
@@ -61,36 +72,50 @@ export async function getHostnameEntries(): Promise<IpAccessEntry[]> {
 
 /**
  * Check if an IP is in the allow list (either directly or via resolved hostname)
+ * Handles both raw and IPv6-mapped IPv4 addresses
  */
 export async function isIpAllowed(ip: string): Promise<boolean> {
+  const normalized = normalizeIp(ip);
+  // Check both the original IP and the normalized version
+  const ipsToCheck = ip !== normalized ? [ip, normalized] : [ip];
+
   const result = await query<{ exists: boolean }>(
     `SELECT EXISTS(
        SELECT 1 FROM ip_access
        WHERE list_type = 'allow'
        AND (
-         (entry_type = 'ip' AND entry = $1)
-         OR (entry_type = 'hostname' AND $1 = ANY(resolved_ips))
+         (entry_type = 'ip' AND entry = ANY($1))
+         OR (entry_type = 'hostname' AND (
+           $1 && resolved_ips
+         ))
        )
      ) as exists`,
-    [ip]
+    [ipsToCheck]
   );
   return result.rows[0].exists;
 }
 
 /**
  * Check if an IP is in the block list (either directly or via resolved hostname)
+ * Handles both raw and IPv6-mapped IPv4 addresses
  */
 export async function isIpBlocked(ip: string): Promise<boolean> {
+  const normalized = normalizeIp(ip);
+  // Check both the original IP and the normalized version
+  const ipsToCheck = ip !== normalized ? [ip, normalized] : [ip];
+
   const result = await query<{ exists: boolean }>(
     `SELECT EXISTS(
        SELECT 1 FROM ip_access
        WHERE list_type = 'block'
        AND (
-         (entry_type = 'ip' AND entry = $1)
-         OR (entry_type = 'hostname' AND $1 = ANY(resolved_ips))
+         (entry_type = 'ip' AND entry = ANY($1))
+         OR (entry_type = 'hostname' AND (
+           $1 && resolved_ips
+         ))
        )
      ) as exists`,
-    [ip]
+    [ipsToCheck]
   );
   return result.rows[0].exists;
 }
@@ -119,7 +144,7 @@ export async function createEntry(
 ): Promise<IpAccessEntry> {
   const result = await query<DbIpAccess>(
     `INSERT INTO ip_access (entry, entry_type, list_type, reason, created_by, resolved_ips, resolved_at)
-     VALUES ($1, $2, $3, $4, $5, $6, CASE WHEN $6 IS NOT NULL THEN NOW() ELSE NULL END)
+     VALUES ($1, $2, $3, $4, $5, $6::TEXT[], CASE WHEN $6 IS NOT NULL THEN NOW() ELSE NULL END)
      RETURNING *`,
     [
       entry,

@@ -11,10 +11,23 @@ const LOCALHOST_IPS = new Set([
 ]);
 
 /**
+ * Normalize an IP address by stripping IPv6-mapped IPv4 prefix
+ * e.g., '::ffff:192.168.1.100' becomes '192.168.1.100'
+ */
+function normalizeIp(ip: string): string {
+  if (ip.startsWith('::ffff:')) {
+    return ip.slice(7);
+  }
+  return ip;
+}
+
+/**
  * Check if an IP is localhost
  */
 function isLocalhost(ip: string): boolean {
-  return LOCALHOST_IPS.has(ip) || ip.startsWith('127.') || ip === '::1';
+  const normalized = normalizeIp(ip);
+  return LOCALHOST_IPS.has(ip) || LOCALHOST_IPS.has(normalized) ||
+         normalized.startsWith('127.') || ip === '::1';
 }
 
 /**
@@ -64,6 +77,13 @@ export async function ipAccessMiddleware(
   next: NextFunction
 ): Promise<void> {
   try {
+    // Skip IP check for the /api/ip-check endpoint (used by Vite to check IP access)
+    // This endpoint handles its own IP logic
+    if (req.path === '/ip-check') {
+      next();
+      return;
+    }
+
     const clientIp = getClientIp(req);
 
     // Always allow localhost connections
@@ -85,6 +105,7 @@ export async function ipAccessMiddleware(
       // In allowlist mode, block everything unless explicitly allowed
       const isAllowed = await ipAccessRepo.isIpAllowed(clientIp);
       if (!isAllowed) {
+        console.log(`[IP Access] Blocked (allowlist mode): ${clientIp}`);
         res.status(403).json({
           success: false,
           message: 'Access denied. Your IP address is not in the allowlist.',
@@ -95,6 +116,7 @@ export async function ipAccessMiddleware(
       // In blocklist mode, allow everything unless explicitly blocked
       const isBlocked = await ipAccessRepo.isIpBlocked(clientIp);
       if (isBlocked) {
+        console.log(`[IP Access] Blocked (blocklist mode): ${clientIp}`);
         res.status(403).json({
           success: false,
           message: 'Access denied. Your IP address has been blocked.',
@@ -141,6 +163,7 @@ export async function checkWebSocketIp(
     if (mode === 'allowlist') {
       const isAllowed = await ipAccessRepo.isIpAllowed(ip);
       if (!isAllowed) {
+        console.log(`[IP Access] WebSocket blocked (allowlist mode): ${ip}`);
         return {
           allowed: false,
           message: 'Access denied. Your IP address is not in the allowlist.',
@@ -149,6 +172,7 @@ export async function checkWebSocketIp(
     } else {
       const isBlocked = await ipAccessRepo.isIpBlocked(ip);
       if (isBlocked) {
+        console.log(`[IP Access] WebSocket blocked (blocklist mode): ${ip}`);
         return {
           allowed: false,
           message: 'Access denied. Your IP address has been blocked.',

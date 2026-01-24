@@ -10,6 +10,49 @@ import { resolveHostnameImmediate } from '../services/dnsResolver.js';
 import { Role } from '@koa/shared';
 
 export function setupAdminRoutes(app: Express): void {
+  // GET /api/ip-check - Check if caller's IP is allowed (used by Vite dev server)
+  // This endpoint does NOT require authentication - it just checks IP access rules
+  app.get('/api/ip-check', async (req: Request, res: Response) => {
+    try {
+      // Get client IP (may come from X-Forwarded-For if proxied from Vite)
+      const forwarded = req.headers['x-forwarded-for'];
+      let clientIp: string;
+      if (forwarded) {
+        const forwardedValue = Array.isArray(forwarded) ? forwarded[0] : forwarded;
+        clientIp = forwardedValue?.split(',')[0]?.trim() || req.socket.remoteAddress || '127.0.0.1';
+      } else {
+        clientIp = req.socket.remoteAddress || req.ip || '127.0.0.1';
+      }
+
+      // Normalize IPv6-mapped IPv4 addresses
+      const normalizedIp = clientIp.startsWith('::ffff:') ? clientIp.slice(7) : clientIp;
+
+      // Always allow localhost
+      const isLocalhost = clientIp === '127.0.0.1' || clientIp === '::1' ||
+                          clientIp === '::ffff:127.0.0.1' || normalizedIp === '127.0.0.1' ||
+                          normalizedIp.startsWith('127.');
+      if (isLocalhost) {
+        res.json({ allowed: true });
+        return;
+      }
+
+      // Check IP access mode and rules
+      const mode = await settingsRepo.getIpAccessMode();
+
+      if (mode === 'allowlist') {
+        const isAllowed = await ipAccessRepo.isIpAllowed(clientIp);
+        res.json({ allowed: isAllowed });
+      } else {
+        const isBlocked = await ipAccessRepo.isIpBlocked(clientIp);
+        res.json({ allowed: !isBlocked });
+      }
+    } catch (error) {
+      console.error('Failed to check IP access:', error);
+      // Fail open on error
+      res.json({ allowed: true });
+    }
+  });
+
   // GET /api/admin/settings - Get all settings
   app.get('/api/admin/settings', requireAdmin, async (_req: Request, res: Response) => {
     try {
@@ -118,7 +161,7 @@ export function setupAdminRoutes(app: Express): void {
     }
 
     // Normalize entry: trim whitespace, lowercase (IPs and hostnames are case-insensitive)
-    const normalizedEntry = entry.trim().toLowerCase();
+    let normalizedEntry = entry.trim().toLowerCase();
 
     if (!normalizedEntry) {
       res.status(400).json({ success: false, message: 'Entry cannot be empty' });
@@ -135,8 +178,13 @@ export function setupAdminRoutes(app: Express): void {
       return;
     }
 
-    // Validate IP format using Node.js net module (handles both IPv4 and IPv6)
+    // Validate and normalize IP format
     if (entryType === 'ip') {
+      // Strip IPv6-mapped IPv4 prefix if present (e.g., ::ffff:192.168.1.1 -> 192.168.1.1)
+      if (normalizedEntry.startsWith('::ffff:')) {
+        normalizedEntry = normalizedEntry.slice(7);
+      }
+
       const ipVersion = net.isIP(normalizedEntry);
       if (ipVersion === 0) {
         res.status(400).json({ success: false, message: 'Invalid IP address format' });
@@ -174,7 +222,12 @@ export function setupAdminRoutes(app: Express): void {
       res.json({ success: true, entry: newEntry });
     } catch (error) {
       console.error('Failed to create IP access entry:', error);
-      res.status(500).json({ success: false, message: 'Failed to create IP access entry' });
+      // Provide more specific error message if available
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      res.status(500).json({
+        success: false,
+        message: `Failed to create IP access entry: ${errorMessage}`,
+      });
     }
   });
 
