@@ -1373,8 +1373,11 @@ function handleHelp(userRoles: Role[], category?: string): CommandResponse {
       return { type: MessageType.SYSTEM, message: 'Use @help for the full admin command reference.' };
     }
     
-    // Unknown category - show player help with note
-    return { type: MessageType.ERROR, message: `Unknown help category: ${category}. Try: help, help staff, help developer, or @help` };
+    // Unknown category - show player help with note (only suggest staff options if user has access)
+    const suggestions = isStaff
+      ? 'Try: help, help staff, help developer, or @help'
+      : 'Try: help';
+    return { type: MessageType.ERROR, message: `Unknown help category: ${category}. ${suggestions}` };
   }
   
   // Default: show player commands

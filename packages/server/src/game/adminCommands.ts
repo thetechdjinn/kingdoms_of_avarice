@@ -1031,7 +1031,8 @@ async function handleApplyEffect(
         durationSeconds = parsedDuration;
         playerNameArgs = args.slice(2);
       } else {
-        playerNameArgs = args.slice(1);
+        // Duration is 0 or negative - this is an error, not a player name
+        return { type: MessageType.ERROR, message: 'Duration must be a positive number of seconds.' };
       }
     } else {
       // Second arg is not numeric, treat remaining args as player name
