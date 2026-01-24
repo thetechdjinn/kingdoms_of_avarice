@@ -27,6 +27,10 @@ import { setupStatusEffectDefinitionRoutes } from './routes/statusEffectDefiniti
 import { setupDoorRoutes } from './routes/doors.js';
 import { setupGameSocket, initializeGameWorld } from './game/socket.js';
 import { stopCharacterSaveLoop } from './game/characterSaveLoop.js';
+import { stopCombatLoop } from './game/combat.js';
+import { stopGameLoop } from './game/gameLoop.js';
+import { stopRegenLoops } from './game/regeneration.js';
+import { stopDnsResolver } from './services/dnsResolver.js';
 import { testConnection } from './db/index.js';
 import { runMigrations, seedInitialData } from './db/migrate.js';
 import { ipAccessMiddleware } from './middleware/ipAccess.js';
@@ -88,8 +92,12 @@ start().catch(console.error);
 function shutdown(signal: string) {
   console.log(`\n${signal} received, shutting down gracefully...`);
 
-  // Stop periodic save loop
+  // Stop all game loops and services
   stopCharacterSaveLoop();
+  stopCombatLoop();
+  stopGameLoop();
+  stopRegenLoops();
+  stopDnsResolver();
 
   // Close HTTP server (stops accepting new connections)
   server.close(() => {
