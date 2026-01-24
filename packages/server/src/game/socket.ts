@@ -61,6 +61,13 @@ const gameWorld = new GameWorld();
 let worldInitialized = false;
 
 /**
+ * Get the GameWorld instance for external access (e.g., from API routes)
+ */
+export function getGameWorld(): GameWorld {
+  return gameWorld;
+}
+
+/**
  * Get the client IP address from a WebSocket request
  */
 function getWebSocketClientIp(req: IncomingMessage): string {

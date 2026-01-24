@@ -152,6 +152,38 @@
               </div>
             </div>
 
+            <div class="form-section collapsible">
+              <h3 class="section-header" id="respawn-section-header">
+                <span class="collapse-icon">▶</span>
+                Respawn Point Settings
+              </h3>
+              <div class="section-content" id="respawn-section-content" style="display: none;">
+                <div class="form-group">
+                  <label class="checkbox-label">
+                    <input type="checkbox" id="room-respawn-enabled" />
+                    Mark as Respawn Point
+                  </label>
+                  <p class="hint">Players who die in this area will respawn here. Only one respawn point per area is used.</p>
+                </div>
+
+                <div id="respawn-options" style="display: none;">
+                  <div class="form-group">
+                    <label for="room-respawn-priority">Priority</label>
+                    <input type="number" id="room-respawn-priority" min="0" max="999" value="0" />
+                    <p class="hint">Lower value = higher priority. If multiple respawn rooms serve the same area, the lowest priority is used.</p>
+                  </div>
+
+                  <div class="form-group">
+                    <label>Served Areas <span class="hint-inline">(select additional areas this respawn point covers)</span></label>
+                    <div id="room-respawn-areas" class="area-select-list">
+                      <!-- Populated by JavaScript -->
+                    </div>
+                    <p class="hint">This room automatically serves its own area. Check additional areas that should also respawn here.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
             <div class="form-section">
               <h3>Exits</h3>
               <div id="exits-list"></div>

@@ -437,6 +437,76 @@ importRooms();
 
 ---
 
+## Room Features
+
+Rooms can have special features that enable specific gameplay mechanics. These are configured in the Room Editor under collapsible sections.
+
+### Training Rooms
+
+Training rooms allow players to level up their characters and allocate character points.
+
+**Configuration Options:**
+
+| Field | Description |
+|-------|-------------|
+| Enable Training Room | Activates training functionality for this room |
+| Min Level | Minimum level required to train here (default: 1) |
+| Max Level | Maximum level this room can train up to (default: 999) |
+| Allowed Classes | Which classes can train here (all if none selected) |
+
+**Example Use Cases:**
+- Guild halls that only train their respective class
+- Newbie training areas with level caps
+- End-game training facilities with minimum level requirements
+
+### Respawn Points
+
+Respawn points determine where players appear after death. When a player dies, the system finds the appropriate respawn point using this fallback chain:
+
+1. **Area Respawn Room** - A designated respawn point for the area where they died
+2. **Global Default** - Configurable in game settings (`default_respawn_room_id`)
+3. **Room 1** - Hardcoded last resort fallback
+
+**Configuration Options:**
+
+| Field | Description |
+|-------|-------------|
+| Mark as Respawn Point | Enables this room as a respawn location |
+| Priority | Lower number = higher priority (default: 0). If multiple respawn rooms serve the same area, the lowest priority wins |
+| Served Areas | Additional areas (besides this room's own area) that should respawn here |
+
+**How It Works:**
+
+A respawn room automatically serves its own area. Use the "Served Areas" option to make it serve additional areas. This is useful for:
+
+- **Dungeon respawns**: Make the dungeon entrance (in the town) also serve the dungeon area
+- **Regional hubs**: A central town serves multiple surrounding wilderness areas
+- **Hierarchical areas**: Sub-areas respawn at a main area's respawn point
+
+**Example Configuration:**
+
+| Room | Area | Respawn Enabled | Served Areas | Priority |
+|------|------|-----------------|--------------|----------|
+| Town Square | Arindale | Yes | Arindale Sewers, Arindale Forest | 0 |
+| Sewer Entrance | Arindale Sewers | Yes | | 10 |
+
+With this setup:
+- Die in **Arindale** → respawn at Town Square
+- Die in **Arindale Sewers** → respawn at Town Square (priority 0 beats 10)
+- Die in **Arindale Forest** → respawn at Town Square
+
+If you wanted Arindale Sewers to have its own respawn (Sewer Entrance), remove "Arindale Sewers" from Town Square's served areas.
+
+**Setting a Global Default:**
+
+To configure the fallback respawn room (used when an area has no designated respawn point):
+
+1. Go to **Admin Panel** → **Game Settings**
+2. Add setting: `default_respawn_room_id` with the room ID value
+3. Save
+
+---
+
 ## Best Practices
 
 1. **Plan your areas** - Group related rooms into areas for easier navigation and filtering

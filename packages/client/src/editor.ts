@@ -14,8 +14,15 @@ interface RoomTrainingConfig {
   maxLevel?: number;
 }
 
+interface RoomRespawnConfig {
+  enabled: boolean;
+  priority?: number;
+  servedAreas?: string[];
+}
+
 interface RoomFeatures {
   training?: RoomTrainingConfig;
+  respawn?: RoomRespawnConfig;
 }
 
 interface Room {
@@ -216,6 +223,26 @@ function populateTrainingClassSelect(): void {
   `).join('');
 }
 
+function populateRespawnAreasSelect(currentRoomArea: string | null): void {
+  const container = document.getElementById('room-respawn-areas');
+  if (!container) return;
+
+  // Filter out the current room's area (it's automatically served)
+  const otherAreas = areas.filter(a => a !== currentRoomArea);
+
+  if (otherAreas.length === 0) {
+    container.innerHTML = '<p style="color: #666; font-size: 0.9rem;">No other areas available</p>';
+    return;
+  }
+
+  container.innerHTML = otherAreas.map(area => `
+    <label class="class-select-item">
+      <input type="checkbox" class="respawn-area-checkbox" value="${escapeHtml(area)}" />
+      <span class="class-name">${escapeHtml(area)}</span>
+    </label>
+  `).join('');
+}
+
 function renderRoomList(): void {
   const list = document.getElementById('room-list')!;
   const filterArea = (document.getElementById('area-select') as HTMLSelectElement).value;
@@ -271,10 +298,11 @@ function updateExitAreaFilter(): void {
 function updateTargetRoomSelect(): void {
   const select = document.getElementById('exit-target') as HTMLSelectElement;
   const areaFilter = (document.getElementById('exit-area-filter') as HTMLSelectElement).value;
-  
+
+  // Include rooms with no area when filter is active (so new rooms are visible)
   const filteredRooms = rooms
     .filter(r => r.id !== selectedRoomId)
-    .filter(r => !areaFilter || r.area === areaFilter)
+    .filter(r => !areaFilter || r.area === areaFilter || !r.area)
     .sort((a, b) => a.id - b.id);
 
   select.innerHTML = '<option value="">Select target room...</option>' +
@@ -285,6 +313,25 @@ function updateTargetRoomSelect(): void {
 
 async function selectRoom(id: number): Promise<void> {
   selectedRoomId = id;
+
+  // Fetch fresh room data from API instead of using stale cache
+  try {
+    const response = await fetch(`/api/rooms/${id}`);
+    const data = await response.json();
+    if (data.success) {
+      // Update local cache with fresh data
+      const index = rooms.findIndex(r => r.id === id);
+      if (index !== -1) {
+        rooms[index] = data.room;
+      } else {
+        // Room not in cache (newly created) - add it
+        rooms.push(data.room);
+      }
+    }
+  } catch (error) {
+    console.error('Failed to fetch room:', error);
+  }
+
   const room = rooms.find(r => r.id === id);
 
   // Refresh doors to get latest data (in case they were edited in door editor)
@@ -327,6 +374,28 @@ async function selectRoom(id: number): Promise<void> {
   document.querySelectorAll('.training-class-checkbox').forEach((checkbox) => {
     const input = checkbox as HTMLInputElement;
     input.checked = allClassesAllowed || (Array.isArray(allowedClasses) && allowedClasses.includes(input.value));
+  });
+
+  // Populate respawn settings
+  const respawnEnabled = room.features?.respawn?.enabled === true;
+  (document.getElementById('room-respawn-enabled') as HTMLInputElement).checked = respawnEnabled;
+
+  const respawnOptions = document.getElementById('respawn-options');
+  if (respawnOptions) {
+    respawnOptions.style.display = respawnEnabled ? 'block' : 'none';
+  }
+
+  (document.getElementById('room-respawn-priority') as HTMLInputElement).value =
+    String(room.features?.respawn?.priority ?? 0);
+
+  // Populate served areas checkboxes (excluding current room's area)
+  populateRespawnAreasSelect(room.area);
+
+  // Set served areas checkboxes
+  const servedAreas = room.features?.respawn?.servedAreas || [];
+  document.querySelectorAll('.respawn-area-checkbox').forEach((checkbox) => {
+    const input = checkbox as HTMLInputElement;
+    input.checked = servedAreas.includes(input.value);
   });
 
   renderExits(room);
@@ -491,6 +560,27 @@ async function saveRoom(): Promise<void> {
     };
   } else {
     delete features.training;
+  }
+
+  // Build respawn configuration
+  const respawnEnabled = (document.getElementById('room-respawn-enabled') as HTMLInputElement).checked;
+  const respawnPriorityStr = (document.getElementById('room-respawn-priority') as HTMLInputElement).value;
+  const respawnPriority = respawnPriorityStr === '' ? 0 : (parseInt(respawnPriorityStr, 10) || 0);
+
+  // Collect served areas
+  const servedAreas: string[] = [];
+  document.querySelectorAll('.respawn-area-checkbox:checked').forEach((checkbox) => {
+    servedAreas.push((checkbox as HTMLInputElement).value);
+  });
+
+  if (respawnEnabled) {
+    features.respawn = {
+      enabled: true,
+      priority: Math.max(0, Math.min(999, respawnPriority)),
+      servedAreas: servedAreas.length > 0 ? servedAreas : undefined,
+    };
+  } else {
+    delete features.respawn;
   }
 
   try {
@@ -1174,6 +1264,32 @@ document.addEventListener('DOMContentLoaded', async () => {
       trainingOptions.style.display = isEnabled ? 'block' : 'none';
     });
   }
+
+  // Respawn section toggle
+  const respawnSectionHeader = document.getElementById('respawn-section-header');
+  const respawnSectionContent = document.getElementById('respawn-section-content');
+  const respawnCollapseIcon = respawnSectionHeader?.querySelector('.collapse-icon');
+
+  if (respawnSectionHeader && respawnSectionContent) {
+    respawnSectionHeader.addEventListener('click', () => {
+      const isExpanded = respawnSectionContent.style.display !== 'none';
+      respawnSectionContent.style.display = isExpanded ? 'none' : 'block';
+      if (respawnCollapseIcon) {
+        respawnCollapseIcon.textContent = isExpanded ? '▶' : '▼';
+      }
+    });
+  }
+
+  // Respawn enabled checkbox toggle
+  const respawnEnabledCheckbox = document.getElementById('room-respawn-enabled');
+  const respawnOptions = document.getElementById('respawn-options');
+  if (respawnEnabledCheckbox && respawnOptions) {
+    respawnEnabledCheckbox.addEventListener('change', () => {
+      const isEnabled = (respawnEnabledCheckbox as HTMLInputElement).checked;
+      respawnOptions.style.display = isEnabled ? 'block' : 'none';
+    });
+  }
+
   document.getElementById('room-form')!.addEventListener('submit', (e) => {
     e.preventDefault();
     saveRoom();

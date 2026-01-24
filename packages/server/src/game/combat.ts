@@ -31,6 +31,7 @@ import {
 } from './combatStats.js';
 import * as characterRepo from '../db/repositories/characterRepository.js';
 import * as progressionRepo from '../db/repositories/progressionRepository.js';
+import { getRespawnRoomId } from '../services/respawnService.js';
 
 /**
  * Get character stat value based on spell scaling stat
@@ -620,17 +621,20 @@ async function handlePlayerDeath(
   // Clear combat state for victim
   clearCombatState(victim, connectedPlayersRef);
 
-  // Respawn victim at room 1 with full HP and mana
+  // Restore vitals to full
   victim.vitals.hp = victim.vitals.maxHp;
   if (victim.vitals.maxResource) {
     victim.vitals.resource = victim.vitals.maxResource;
   }
   sendVitals(victim);
 
+  // Determine respawn location (area respawn room > global default > room 1)
+  const respawnRoomId = await getRespawnRoomId(roomId, victim.characterId ?? undefined);
+
   // Update victim's room in database and memory
   try {
     if (victim.characterId) {
-      await characterRepo.updateCharacterRoom(victim.characterId, 1);
+      await characterRepo.updateCharacterRoom(victim.characterId, respawnRoomId);
     }
   } catch (error) {
     console.error('[Combat] Failed to update death room:', error);
@@ -638,9 +642,9 @@ async function handlePlayerDeath(
 
   // Import setPlayerLocation dynamically to avoid circular dependency
   const { setPlayerLocation } = await import('./adminCommands.js');
-  setPlayerLocation(victim.playerId, 1);
+  setPlayerLocation(victim.playerId, respawnRoomId);
 
-  sendToSocket(victim, MessageType.SYSTEM, 'You wake up at the starting area...');
+  sendToSocket(victim, MessageType.SYSTEM, 'You wake up at a safe location...');
 }
 
 /**
