@@ -7,6 +7,8 @@ const ROLE_DEVELOPER = 'developer';
 // Door type (mirrors @koa/shared DoorType enum values)
 type DoorType = 'open_passageway' | 'physical' | 'special' | 'triggered_passageway' | 'temporary_portal';
 
+// These interfaces mirror @koa/shared types for client-side use
+// Keep in sync with packages/shared/src/index.ts
 interface RoomTrainingConfig {
   enabled: boolean;
   allowedClasses?: string[] | null;
@@ -23,6 +25,44 @@ interface RoomRespawnConfig {
 interface RoomFeatures {
   training?: RoomTrainingConfig;
   respawn?: RoomRespawnConfig;
+}
+
+// ============================================================================
+// UI Helper Functions
+// ============================================================================
+
+/**
+ * Set up a collapsible section with header click toggle
+ */
+function setupCollapsibleSection(headerId: string, contentId: string): void {
+  const header = document.getElementById(headerId);
+  const content = document.getElementById(contentId);
+  const collapseIcon = header?.querySelector('.collapse-icon');
+
+  if (header && content) {
+    header.addEventListener('click', () => {
+      const isExpanded = content.style.display !== 'none';
+      content.style.display = isExpanded ? 'none' : 'block';
+      if (collapseIcon) {
+        collapseIcon.textContent = isExpanded ? '▶' : '▼';
+      }
+    });
+  }
+}
+
+/**
+ * Set up a checkbox that toggles visibility of an options container
+ */
+function setupCheckboxToggle(checkboxId: string, optionsId: string): void {
+  const checkbox = document.getElementById(checkboxId);
+  const options = document.getElementById(optionsId);
+
+  if (checkbox && options) {
+    checkbox.addEventListener('change', () => {
+      const isEnabled = (checkbox as HTMLInputElement).checked;
+      options.style.display = isEnabled ? 'block' : 'none';
+    });
+  }
 }
 
 interface Room {
@@ -1240,55 +1280,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
-  // Training section toggle
-  const trainingSectionHeader = document.getElementById('training-section-header');
-  const trainingSectionContent = document.getElementById('training-section-content');
-  const collapseIcon = trainingSectionHeader?.querySelector('.collapse-icon');
-
-  if (trainingSectionHeader && trainingSectionContent) {
-    trainingSectionHeader.addEventListener('click', () => {
-      const isExpanded = trainingSectionContent.style.display !== 'none';
-      trainingSectionContent.style.display = isExpanded ? 'none' : 'block';
-      if (collapseIcon) {
-        collapseIcon.textContent = isExpanded ? '▶' : '▼';
-      }
-    });
-  }
-
-  // Training enabled checkbox toggle
-  const trainingEnabledCheckbox = document.getElementById('room-training-enabled');
-  const trainingOptions = document.getElementById('training-options');
-  if (trainingEnabledCheckbox && trainingOptions) {
-    trainingEnabledCheckbox.addEventListener('change', () => {
-      const isEnabled = (trainingEnabledCheckbox as HTMLInputElement).checked;
-      trainingOptions.style.display = isEnabled ? 'block' : 'none';
-    });
-  }
-
-  // Respawn section toggle
-  const respawnSectionHeader = document.getElementById('respawn-section-header');
-  const respawnSectionContent = document.getElementById('respawn-section-content');
-  const respawnCollapseIcon = respawnSectionHeader?.querySelector('.collapse-icon');
-
-  if (respawnSectionHeader && respawnSectionContent) {
-    respawnSectionHeader.addEventListener('click', () => {
-      const isExpanded = respawnSectionContent.style.display !== 'none';
-      respawnSectionContent.style.display = isExpanded ? 'none' : 'block';
-      if (respawnCollapseIcon) {
-        respawnCollapseIcon.textContent = isExpanded ? '▶' : '▼';
-      }
-    });
-  }
-
-  // Respawn enabled checkbox toggle
-  const respawnEnabledCheckbox = document.getElementById('room-respawn-enabled');
-  const respawnOptions = document.getElementById('respawn-options');
-  if (respawnEnabledCheckbox && respawnOptions) {
-    respawnEnabledCheckbox.addEventListener('change', () => {
-      const isEnabled = (respawnEnabledCheckbox as HTMLInputElement).checked;
-      respawnOptions.style.display = isEnabled ? 'block' : 'none';
-    });
-  }
+  // Set up collapsible sections and checkbox toggles
+  setupCollapsibleSection('training-section-header', 'training-section-content');
+  setupCheckboxToggle('room-training-enabled', 'training-options');
+  setupCollapsibleSection('respawn-section-header', 'respawn-section-content');
+  setupCheckboxToggle('room-respawn-enabled', 'respawn-options');
 
   document.getElementById('room-form')!.addEventListener('submit', (e) => {
     e.preventDefault();
