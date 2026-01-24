@@ -965,7 +965,7 @@ function handleAdminHelp(userRoles: Role[]): CommandResponse {
   lines.push(`  ${colors.boldCyan('@drain [amount] [player]')} - Drain mana (for testing regen)`);
   lines.push(`  ${colors.boldCyan('@spells')}                 - List all spells in the game`);
   lines.push(`  ${colors.boldCyan('@learn <mnemonic>')}       - Learn a spell for your character`);
-  lines.push(`  ${colors.boldCyan('@effect <id> [duration]')} - Apply a status effect (default 60s)`);
+  lines.push(`  ${colors.boldCyan('@effect <id> [duration] [player]')} - Apply effect (default 60s, self)`);
   lines.push(`  ${colors.boldCyan('@cleareffect <id|all>')}  - Remove a status effect`);
   lines.push(`  ${colors.boldCyan('@effects')}                - List available effects`);
   lines.push(`  ${colors.boldCyan('@help')}                   - Show this help`);
@@ -998,8 +998,8 @@ function handleAdminHelp(userRoles: Role[]): CommandResponse {
 }
 
 /**
- * Apply a status effect to the current character
- * Usage: @effect <effectId> [durationSeconds]
+ * Apply a status effect to a character
+ * Usage: @effect <effectId> [duration] [player]
  */
 async function handleApplyEffect(
   args: string[],
@@ -1009,14 +1009,55 @@ async function handleApplyEffect(
     const availableEffects = getAllEffectIds().join(', ');
     return {
       type: MessageType.ERROR,
-      message: `Usage: @effect <effectId> [durationSeconds]\r\nAvailable effects: ${availableEffects}`,
+      message: `Usage: @effect <effectId> [duration] [player]\r\nAvailable effects: ${availableEffects}`,
     };
   }
 
   const effectId = args[0].toLowerCase();
-  const durationSeconds = args[1] ? parseInt(args[1]) : 60; // Default 60 seconds
 
-  if (isNaN(durationSeconds) || durationSeconds <= 0) {
+  // Parse duration and player name
+  // Format: @effect <id> [duration] [player]
+  // Duration is numeric, player name is everything else after
+  let durationSeconds = 60; // Default 60 seconds
+  let targetSocket: AuthenticatedSocket = socket;
+  let targetName = socket.username;
+  let playerNameArgs: string[] = [];
+
+  if (args.length >= 2) {
+    // Check if second arg is a number (duration)
+    if (/^\d+$/.test(args[1])) {
+      const parsedDuration = parseInt(args[1]);
+      if (parsedDuration > 0) {
+        durationSeconds = parsedDuration;
+        playerNameArgs = args.slice(2);
+      } else {
+        // Duration is 0 or negative - this is an error, not a player name
+        return { type: MessageType.ERROR, message: 'Duration must be a positive number of seconds.' };
+      }
+    } else {
+      // Second arg is not numeric, treat remaining args as player name
+      playerNameArgs = args.slice(1);
+    }
+  }
+
+  // Find target player if specified
+  if (playerNameArgs.length > 0) {
+    const playerName = playerNameArgs.join(' ').toLowerCase();
+    let found = false;
+    for (const [, playerSocket] of connectedPlayers) {
+      if (playerSocket.username.toLowerCase() === playerName) {
+        targetSocket = playerSocket;
+        targetName = playerSocket.username;
+        found = true;
+        break;
+      }
+    }
+    if (!found) {
+      return { type: MessageType.ERROR, message: `Player not found: ${playerNameArgs.join(' ')}` };
+    }
+  }
+
+  if (durationSeconds <= 0) {
     return { type: MessageType.ERROR, message: 'Duration must be a positive number of seconds.' };
   }
 
@@ -1030,16 +1071,25 @@ async function handleApplyEffect(
   }
 
   const durationMs = durationSeconds * 1000;
-  const result = await applyEffect(socket, effectId, durationMs);
+  const result = await applyEffect(targetSocket, effectId, durationMs);
 
   if (result.success) {
-    // Show delay modifier info if applicable
-    const delayModifiers = getDelayModifierDescriptions(socket);
-    let message = `${colors.green('Applied effect:')} ${result.message} (${formatDuration(durationMs)})`;
-    if (delayModifiers.length > 0) {
-      message += `\r\n${colors.cyan('Active delay modifiers:')} ${delayModifiers.join(', ')}`;
+    if (targetSocket === socket) {
+      // Applied to self
+      const delayModifiers = getDelayModifierDescriptions(socket);
+      let message = `${colors.green('Applied effect:')} ${result.message} (${formatDuration(durationMs)})`;
+      if (delayModifiers.length > 0) {
+        message += `\r\n${colors.cyan('Active delay modifiers:')} ${delayModifiers.join(', ')}`;
+      }
+      return { type: MessageType.SYSTEM, message };
+    } else {
+      // Applied to another player - notify them
+      sendMessage(targetSocket, MessageType.SYSTEM, `${colors.yellow('Effect applied:')} ${result.message} (${formatDuration(durationMs)})`);
+      return {
+        type: MessageType.SYSTEM,
+        message: `${colors.green('Applied effect to')} ${colors.player(targetName)}: ${result.message} (${formatDuration(durationMs)})`,
+      };
     }
-    return { type: MessageType.SYSTEM, message };
   }
 
   return { type: MessageType.ERROR, message: result.message };

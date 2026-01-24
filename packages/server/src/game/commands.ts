@@ -1367,11 +1367,17 @@ function handleHelp(userRoles: Role[], category?: string): CommandResponse {
     }
     
     if (cat === 'admin') {
-      return { type: MessageType.SYSTEM, message: 'Admin commands are not yet implemented.' };
+      if (!isStaff) {
+        return { type: MessageType.ERROR, message: 'You do not have access to admin commands.' };
+      }
+      return { type: MessageType.SYSTEM, message: 'Use @help for the full admin command reference.' };
     }
     
-    // Unknown category - show player help with note
-    return { type: MessageType.ERROR, message: `Unknown help category: ${category}. Try: help, help staff, help developer` };
+    // Unknown category - show player help with note (only suggest staff options if user has access)
+    const suggestions = isStaff
+      ? 'Try: help, help staff, help developer, or @help'
+      : 'Try: help';
+    return { type: MessageType.ERROR, message: `Unknown help category: ${category}. ${suggestions}` };
   }
   
   // Default: show player commands
@@ -1388,6 +1394,8 @@ function handleHelp(userRoles: Role[], category?: string): CommandResponse {
     `    ${colors.white('close <direction>')}     - Close a door`,
     `    ${colors.white('unlock <direction>')}    - Unlock a locked door (requires key)`,
     `    ${colors.white('lock <direction>')}      - Lock an unlocked door (requires key)`,
+    `    ${colors.white('pick <direction>')}      - Pick the lock on a door (thief skills)`,
+    `    ${colors.white('bash <direction>')}      - Bash a door open (uses strength)`,
     `    ${colors.white('brief')}                 - Toggle brief mode`,
     '',
     colors.boldCyan('  Items & Inventory:'),
@@ -1448,6 +1456,9 @@ function handleHelp(userRoles: Role[], category?: string): CommandResponse {
     }
     if (isDeveloper) {
       lines.push(`  ${colors.white('help developer')}       - View developer commands`);
+    }
+    if (isStaff) {
+      lines.push(`  ${colors.white('@help')}                - Full admin command reference`);
     }
   }
 
