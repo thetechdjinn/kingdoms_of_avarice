@@ -1,5 +1,5 @@
 import { query } from '../index.js';
-import { RoomFeatures, RoomTrainingConfig } from '@koa/shared';
+import { RoomFeatures, RoomTrainingConfig, RoomRespawnConfig } from '@koa/shared';
 
 export interface DbRoom {
   id: number;
@@ -342,4 +342,78 @@ export async function canTrainInRoom(
   }
 
   return { allowed: true };
+}
+
+// ============================================================================
+// RESPAWN ROOM FEATURES
+// ============================================================================
+
+/**
+ * Get the respawn room for a given area.
+ * Checks both rooms in the same area AND rooms that list this area in their servedAreas.
+ * If multiple rooms are marked as respawn points for the same area,
+ * returns the one with the lowest priority value.
+ * @param area - The area name to search for respawn rooms
+ * @returns The room ID of the respawn room, or null if none exists
+ */
+export async function getRespawnRoomForArea(area: string): Promise<number | null> {
+  // Find respawn rooms that serve this area:
+  // 1. Room is in the same area, OR
+  // 2. Room's servedAreas array contains this area
+  const result = await query<{ id: number; features: RoomFeatures }>(
+    `SELECT id, features FROM rooms
+     WHERE (features->>'respawn')::jsonb->>'enabled' = 'true'
+     AND (
+       area = $1
+       OR (features->'respawn'->'servedAreas') ? $1
+     )
+     ORDER BY COALESCE(((features->>'respawn')::jsonb->>'priority')::int, 0) ASC
+     LIMIT 1`,
+    [area]
+  );
+
+  if (result.rows.length === 0) {
+    return null;
+  }
+
+  return result.rows[0].id;
+}
+
+/**
+ * Get all rooms marked as respawn points (for admin/debugging)
+ * @returns Array of rooms with their respawn configurations
+ */
+export async function getAllRespawnRooms(): Promise<Array<{ id: number; name: string; area: string | null; respawn: RoomRespawnConfig }>> {
+  const result = await query<{ id: number; name: string; area: string | null; features: RoomFeatures }>(
+    `SELECT id, name, area, features FROM rooms
+     WHERE (features->>'respawn')::jsonb->>'enabled' = 'true'
+     ORDER BY area, COALESCE(((features->>'respawn')::jsonb->>'priority')::int, 0) ASC`
+  );
+
+  return result.rows.map(row => ({
+    id: row.id,
+    name: row.name,
+    area: row.area,
+    respawn: row.features.respawn!,
+  }));
+}
+
+/**
+ * Check if a room is a respawn room
+ */
+export async function isRespawnRoom(roomId: number): Promise<boolean> {
+  const features = await getRoomFeatures(roomId);
+  return features.respawn?.enabled === true;
+}
+
+/**
+ * Get respawn configuration for a room
+ * Returns null if the room is not a respawn room
+ */
+export async function getRespawnConfig(roomId: number): Promise<RoomRespawnConfig | null> {
+  const features = await getRoomFeatures(roomId);
+  if (!features.respawn?.enabled) {
+    return null;
+  }
+  return features.respawn;
 }

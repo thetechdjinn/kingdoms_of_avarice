@@ -90,9 +90,17 @@ export interface RoomTrainingConfig {
   maxLevel?: number;                  // default 999
 }
 
+// Room respawn configuration
+export interface RoomRespawnConfig {
+  enabled: boolean;
+  priority?: number;  // Lower = higher priority (default: 0)
+  servedAreas?: string[];  // Additional areas this respawn room serves (besides its own)
+}
+
 // Room features (extensible for future features like portals, quests, etc.)
 export interface RoomFeatures {
   training?: RoomTrainingConfig;
+  respawn?: RoomRespawnConfig;
 }
 
 // Hair style options for character appearance

@@ -1,6 +1,7 @@
 import { Express, Request, Response } from 'express';
 import * as roomRepo from '../db/repositories/roomRepository.js';
 import { requireDeveloper } from '../middleware/auth.js';
+import { getGameWorld } from '../game/socket.js';
 
 export function setupRoomRoutes(app: Express): void {
   // Get all rooms (requires Developer role)
@@ -67,6 +68,10 @@ export function setupRoomRoutes(app: Express): void {
       }
 
       const room = await roomRepo.createRoom({ name, description, area, terrain, features });
+
+      // Sync with in-memory GameWorld
+      await getGameWorld().reloadRoom(room.id);
+
       res.json({
         success: true,
         room: {
@@ -101,6 +106,9 @@ export function setupRoomRoutes(app: Express): void {
         res.status(404).json({ success: false, message: 'Room not found' });
         return;
       }
+
+      // Sync with in-memory GameWorld
+      await getGameWorld().reloadRoom(id);
 
       const roomWithExits = await roomRepo.getRoomWithExits(id);
       res.json({
@@ -141,6 +149,9 @@ export function setupRoomRoutes(app: Express): void {
         return;
       }
 
+      // Sync with in-memory GameWorld (removes deleted room from memory)
+      await getGameWorld().reloadRoom(id);
+
       res.json({ success: true });
     } catch (error) {
       console.error('Failed to delete room:', error);
@@ -174,6 +185,12 @@ export function setupRoomRoutes(app: Express): void {
         await roomRepo.createBidirectionalExit(fromRoomId, toRoomId, direction);
       } else {
         await roomRepo.createExit({ fromRoomId, toRoomId, direction });
+      }
+
+      // Sync with in-memory GameWorld
+      await getGameWorld().reloadRoom(fromRoomId);
+      if (bidirectional) {
+        await getGameWorld().reloadRoom(toRoomId);
       }
 
       const updatedRoom = await roomRepo.getRoomWithExits(fromRoomId);
@@ -218,6 +235,9 @@ export function setupRoomRoutes(app: Express): void {
         res.status(404).json({ success: false, message: 'Exit not found' });
         return;
       }
+
+      // Sync with in-memory GameWorld (reload all for bidirectional to ensure both rooms are updated)
+      await getGameWorld().reloadAllRooms();
 
       const updatedRoom = await roomRepo.getRoomWithExits(fromRoomId);
       res.json({
@@ -273,9 +293,12 @@ export function setupRoomRoutes(app: Express): void {
         await roomRepo.updateRoom(room.id, { area: newName.trim() });
       }
 
-      res.json({ 
-        success: true, 
-        message: `Renamed area "${oldName}" to "${newName.trim()}" (${roomsToUpdate.length} rooms updated)` 
+      // Sync with in-memory GameWorld
+      await getGameWorld().reloadAllRooms();
+
+      res.json({
+        success: true,
+        message: `Renamed area "${oldName}" to "${newName.trim()}" (${roomsToUpdate.length} rooms updated)`
       });
     } catch (error) {
       console.error('Failed to rename area:', error);
