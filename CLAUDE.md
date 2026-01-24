@@ -211,6 +211,55 @@ The server supports allowlist/blocklist modes for IP access control:
 
 Six levels: PENDING, PLAYER, MODERATOR, DEVELOPER, SYSOP, ADMIN. JWT tokens in httpOnly cookies.
 
+## In-Game Commands
+
+### Help System
+
+Players can access different help categories based on their role:
+
+- `help` - Player commands (all users)
+- `help staff` - Staff commands (MODERATOR+)
+- `help developer` - Developer commands (DEVELOPER+)
+- `@help` - Full admin command reference (MODERATOR+)
+
+### Staff Commands (MODERATOR+)
+
+| Command | Description |
+| ------- | ----------- |
+| `@goto <id>` | Teleport to a room |
+| `@rooms` | List all rooms |
+| `@roominfo [id]` | Show room details |
+| `@give <id\|name> [qty]` | Give yourself an item |
+| `@hurt [amount] [player]` | Damage HP (testing) |
+| `@drain [amount] [player]` | Drain mana (testing) |
+| `@learn <mnemonic>` | Learn a spell |
+| `@spells` | List all spells |
+| `@effect <id> [duration] [player]` | Apply status effect (default 60s, self) |
+| `@cleareffect <id\|all>` | Remove status effect |
+| `@effects` | List available effects |
+
+### Developer Commands (DEVELOPER+)
+
+| Command | Description |
+| ------- | ----------- |
+| `@create room <name>` | Create a new room |
+| `@link <dir> <id> [oneway]` | Link rooms |
+| `@unlink <dir> [oneway]` | Remove an exit |
+| `@edit <field> <value>` | Edit current room |
+| `@delete room <id>` | Delete a room |
+| `@items` | List item templates |
+| `@iteminfo <id\|name>` | Show item details |
+| `@spawn <id\|name> [qty]` | Spawn item in room |
+| `@purge items` | Remove all room items |
+| `@reload [rooms\|all]` | Reload data |
+
+### Player Door Commands
+
+| Command | Description |
+| ------- | ----------- |
+| `pick <direction>` | Pick lock (requires thief skills) |
+| `bash <direction>` | Bash door open (uses strength) |
+
 ## Git Conventions
 
 - **Never** include `Co-Authored-By` lines in commits or pull requests
