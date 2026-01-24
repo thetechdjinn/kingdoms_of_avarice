@@ -15,6 +15,7 @@ import { initializeProgressionData } from './progressionLoader.js';
 import { loadCharacterProgression, unloadCharacterProgression } from './progression.js';
 import { initializeDefaultRegenConfigs, startRegenLoops } from './regeneration.js';
 import { startCombatLoop } from './combat.js';
+import { startCharacterSaveLoop } from './characterSaveLoop.js';
 import { initializeSpellMnemonics } from './spellCommands.js';
 import { loadEffectsFromDb, processEffectsTick, initializeEffectDefinitions } from './statusEffects.js';
 import { colors } from '../utils/colors.js';
@@ -112,6 +113,9 @@ export async function initializeGameWorld(): Promise<void> {
 
   // Start combat loop
   startCombatLoop(connectedPlayers);
+
+  // Start periodic character save loop (saves HP/mana at configurable interval)
+  await startCharacterSaveLoop(connectedPlayers);
 
   // Initialize status effect definitions from database
   await initializeEffectDefinitions();

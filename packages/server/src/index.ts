@@ -26,6 +26,7 @@ import { setupSpellRoutes } from './routes/spells.js';
 import { setupStatusEffectDefinitionRoutes } from './routes/statusEffectDefinitions.js';
 import { setupDoorRoutes } from './routes/doors.js';
 import { setupGameSocket, initializeGameWorld } from './game/socket.js';
+import { stopCharacterSaveLoop } from './game/characterSaveLoop.js';
 import { testConnection } from './db/index.js';
 import { runMigrations, seedInitialData } from './db/migrate.js';
 import { ipAccessMiddleware } from './middleware/ipAccess.js';
@@ -82,3 +83,26 @@ async function start() {
 }
 
 start().catch(console.error);
+
+// Graceful shutdown handler
+function shutdown(signal: string) {
+  console.log(`\n${signal} received, shutting down gracefully...`);
+
+  // Stop periodic save loop
+  stopCharacterSaveLoop();
+
+  // Close HTTP server (stops accepting new connections)
+  server.close(() => {
+    console.log('HTTP server closed');
+    process.exit(0);
+  });
+
+  // Force exit after 10 seconds if graceful shutdown fails
+  setTimeout(() => {
+    console.error('Forced shutdown after timeout');
+    process.exit(1);
+  }, 10000);
+}
+
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('SIGINT', () => shutdown('SIGINT'));

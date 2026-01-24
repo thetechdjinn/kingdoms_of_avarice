@@ -100,6 +100,7 @@ function populateSettingsForm(): void {
   // General settings
   setInputValue('max_characters_per_player', settings.max_characters_per_player ?? 3);
   setSelectValue('ip_access_mode', (settings.ip_access_mode as string) ?? 'blocklist');
+  setInputValue('character_save_interval_ms', settings.character_save_interval_ms ?? 60000);
 
   // Combat settings
   setInputValue('combat_base_energy', settings.combat_base_energy ?? 20000);

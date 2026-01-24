@@ -116,6 +116,12 @@ export function setupAdminRoutes(app: Express): void {
         res.status(400).json({ success: false, message: 'Runic name must start with a letter and contain only letters, spaces, and hyphens' });
         return;
       }
+    } else if (key === 'character_save_interval_ms') {
+      const numValue = Number(value);
+      if (isNaN(numValue) || numValue < 10000 || numValue > 600000) {
+        res.status(400).json({ success: false, message: 'Save interval must be between 10000ms (10s) and 600000ms (10min)' });
+        return;
+      }
     }
 
     try {
@@ -130,6 +136,16 @@ export function setupAdminRoutes(app: Express): void {
       }
       if (key.startsWith('training_') || key === 'initial_character_points') {
         settingsRepo.clearTrainingSettingsCache();
+      }
+      if (key === 'character_save_interval_ms') {
+        settingsRepo.clearCharacterSaveSettingsCache();
+        // Dynamically update the running save loop
+        try {
+          const { restartCharacterSaveLoopWithNewInterval } = await import('../game/characterSaveLoop.js');
+          restartCharacterSaveLoopWithNewInterval(Number(value));
+        } catch (error) {
+          console.error('Failed to update character save loop interval:', error);
+        }
       }
 
       res.json({ success: true, message: 'Setting updated' });
