@@ -215,8 +215,29 @@ export function generatePlayerDescription(data: PlayerDescriptionData): string {
   const buildAdj = getStatAdjective(stats.strength, STRENGTH_ADJECTIVES);
 
   // Hair and eye description
-  const hairDesc = character.hair ? character.hair : 'no hair';
-  const eyeDesc = character.eyeColor ? `${character.eyeColor} eyes` : 'dark eyes';
+  // character.hair is stored as "style color" (e.g., "short black", "long white", "none black")
+  let hairDesc = '';
+  if (character.hair) {
+    const hairParts = character.hair.split(' ');
+    const style = hairParts[0];
+    const color = hairParts.slice(1).join(' ') || '';
+
+    if (style === 'none') {
+      // Bald character - use "a bald head"
+      hairDesc = 'a bald head';
+    } else {
+      // Has hair - format as "long white hair"
+      hairDesc = color ? `${style} ${color} hair` : `${style} hair`;
+    }
+  } else {
+    hairDesc = 'a bald head';
+  }
+  // Handle eye color - strip " eyes" suffix if present (legacy format)
+  let eyeColorValue = character.eyeColor || '';
+  if (eyeColorValue.endsWith(' eyes')) {
+    eyeColorValue = eyeColorValue.slice(0, -5); // Remove " eyes" suffix
+  }
+  const eyeDesc = eyeColorValue ? `${eyeColorValue} eyes` : 'dark eyes';
 
   // First sentence: "Name is a [size], [build] [Race] [Class] with [hair] and [eyes]."
   parts.push(`${fullName} is a ${sizeAdj}, ${buildAdj} ${character.race} ${character.class} with ${hairDesc} and ${eyeDesc}.`);

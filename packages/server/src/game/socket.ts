@@ -2,7 +2,7 @@ import { WebSocketServer, WebSocket } from 'ws';
 import { IncomingMessage } from 'http';
 import { URL } from 'url';
 import { parse as parseCookie } from 'cookie';
-import { MessageType, GameMessage, Role, VitalsData, ResourceType, PlayerRegenState, ActiveStatusEffect, PlayerQueueState, createPlayerQueueState } from '@koa/shared';
+import { MessageType, GameMessage, Role, VitalsData, ResourceType, PlayerRegenState, ActiveStatusEffect, PlayerQueueState, createPlayerQueueState, PlayerStatus } from '@koa/shared';
 import type { CharacterStats, CombatActionType, SpellCastingState } from '@koa/shared';
 import { verifyToken, COOKIE_NAME } from '../routes/auth.js';
 import { GameWorld } from './world.js';
@@ -480,9 +480,22 @@ function sendMessage(ws: AuthenticatedSocket, type: MessageType, payload: string
 }
 
 function sendVitals(ws: AuthenticatedSocket): void {
+  // Determine player status
+  let status: PlayerStatus = 'normal';
+  if (ws.exitTimer) {
+    status = 'meditating';
+  } else if (ws.regenState.enhancedRegen.has('mana') && ws.regenState.enhancedRegen.has('health')) {
+    status = 'resting';
+  }
+
+  const vitalsWithStatus: VitalsData = {
+    ...ws.vitals,
+    status,
+  };
+
   const message: GameMessage = {
     type: MessageType.VITALS,
-    payload: JSON.stringify(ws.vitals),
+    payload: JSON.stringify(vitalsWithStatus),
     timestamp: Date.now(),
   };
   ws.send(JSON.stringify(message));
