@@ -332,6 +332,21 @@
                 </div>
                 <div class="setting-message" id="msg-ip_access_mode" style="display: none;"></div>
               </div>
+
+              <div class="setting-item" data-key="character_save_interval_ms">
+                <div class="setting-header">
+                  <div>
+                    <div class="setting-label">Character Auto-Save Interval</div>
+                    <div class="setting-key">character_save_interval_ms</div>
+                  </div>
+                </div>
+                <div class="setting-description">How often connected players' vitals (HP, mana) are automatically saved to the database in milliseconds. Lower values provide more protection against data loss from crashes but increase database load. Valid range: 10000-600000ms (10 seconds to 10 minutes). Default: 60000ms (60 seconds)</div>
+                <div class="setting-controls">
+                  <input type="number" id="setting-character_save_interval_ms" min="10000" max="600000" step="1000" />
+                  <button class="btn-primary" data-save="character_save_interval_ms">Save</button>
+                </div>
+                <div class="setting-message" id="msg-character_save_interval_ms" style="display: none;"></div>
+              </div>
             </div>
 
             <!-- Combat Settings -->

@@ -59,6 +59,12 @@ let trainingSettingsCache: TrainingSettings | null = null;
 let trainingSettingsCacheTime: number = 0;
 const TRAINING_SETTINGS_CACHE_TTL = 60000; // 1 minute cache
 
+// Cache for character save settings
+let characterSaveIntervalCache: number | null = null;
+let characterSaveIntervalCacheTime: number = 0;
+const CHARACTER_SAVE_CACHE_TTL = 60000; // 1 minute cache
+const DEFAULT_CHARACTER_SAVE_INTERVAL_MS = 60000; // 60 seconds default
+
 /**
  * Parse a JSONB value, handling both pre-parsed objects and JSON strings.
  * Falls back to returning the raw string if JSON parsing fails (for legacy data).
@@ -409,6 +415,50 @@ export async function getTrainingSettings(): Promise<TrainingSettings> {
 export function clearTrainingSettingsCache(): void {
   trainingSettingsCache = null;
   trainingSettingsCacheTime = 0;
+}
+
+// ============================================================================
+// CHARACTER SAVE SETTINGS
+// ============================================================================
+
+/**
+ * Get the character auto-save interval in milliseconds.
+ * This controls how often connected players' vitals (HP, mana) are
+ * automatically saved to the database.
+ *
+ * Default: 60000ms (60 seconds)
+ * Valid range: 10000ms (10s) to 600000ms (10min)
+ */
+export async function getCharacterSaveIntervalMs(): Promise<number> {
+  const now = Date.now();
+
+  // Return cached value if still valid
+  if (characterSaveIntervalCache !== null && (now - characterSaveIntervalCacheTime) < CHARACTER_SAVE_CACHE_TTL) {
+    return characterSaveIntervalCache;
+  }
+
+  // Fetch from database
+  const value = await getSetting<number>('character_save_interval_ms');
+
+  // Validate and use default if invalid
+  let interval = DEFAULT_CHARACTER_SAVE_INTERVAL_MS;
+  if (typeof value === 'number' && value >= 10000 && value <= 600000) {
+    interval = value;
+  }
+
+  // Update cache
+  characterSaveIntervalCache = interval;
+  characterSaveIntervalCacheTime = now;
+
+  return interval;
+}
+
+/**
+ * Clear the character save settings cache (call after updating settings)
+ */
+export function clearCharacterSaveSettingsCache(): void {
+  characterSaveIntervalCache = null;
+  characterSaveIntervalCacheTime = 0;
 }
 
 /**
