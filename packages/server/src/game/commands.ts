@@ -1944,7 +1944,7 @@ async function handleRespawn(
 
   // Restore HP and mana to full
   socket.vitals.hp = socket.vitals.maxHp;
-  if (socket.vitals.maxResource) {
+  if (socket.vitals.maxResource !== undefined) {
     socket.vitals.resource = socket.vitals.maxResource;
   }
 
@@ -1976,7 +1976,6 @@ async function handleRespawn(
   }
 
   const otherPlayers = getOtherPlayersInRoom(respawnRoomId, socket.playerId, connectedPlayers);
-  const { getRoomItemsDescription } = await import('./itemCommands.js');
   const itemDescriptions = await getRoomItemsDescription(respawnRoomId);
 
   const roomDesc = world.formatRoomDescription(room, otherPlayers, socket.briefMode, itemDescriptions);
