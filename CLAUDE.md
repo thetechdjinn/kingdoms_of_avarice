@@ -57,7 +57,7 @@ Client (xterm.js) <--WebSocket--> Server (Express/ws) <--pg--> PostgreSQL
 - `packages/server/src/game/world.ts` - Game state management
 - `packages/server/src/game/commands.ts` - Core command processor
 - `packages/server/src/game/socket.ts` - WebSocket connection handler
-- Additional: `itemCommands.ts`, `adminCommands.ts`, `progressionCommands.ts`
+- Additional: `itemCommands.ts`, `adminCommands.ts`, `progressionCommands.ts`, `actionCommands.ts`
 
 **Shared Types:**
 
@@ -66,7 +66,7 @@ Client (xterm.js) <--WebSocket--> Server (Express/ws) <--pg--> PostgreSQL
 
 ### Multiple Entry Points
 
-Vite serves multiple pages: `index.html` (game), `editor.html` (rooms), `item-editor.html`, `progression-editor.html`, `admin.html`, `docs.html`
+Vite serves multiple pages: `index.html` (game), `editor.html` (rooms), `item-editor.html`, `spell-editor.html`, `status-editor.html`, `progression-editor.html`, `door-editor.html`, `action-editor.html`, `admin.html`, `docs.html`
 
 ## Code Conventions
 
@@ -123,7 +123,7 @@ JWT_SECRET=<secret>
 EMERGENCY_ACCESS_TOKEN=<optional-secret>  # For emergency IP bypass
 ```
 
-**Key tables:** `players`, `rooms`, `room_exits`, `item_templates`, `item_instances`, `character_progression`, `talent_unlocks`, `game_settings`, `ip_access`
+**Key tables:** `players`, `rooms`, `room_exits`, `item_templates`, `item_instances`, `character_progression`, `talent_unlocks`, `game_settings`, `ip_access`, `actions`
 
 ## Page Flow
 
@@ -220,6 +220,7 @@ Six levels: PENDING, PLAYER, MODERATOR, DEVELOPER, SYSOP, ADMIN. JWT tokens in h
 Players can access different help categories based on their role:
 
 - `help` - Player commands (all users)
+- `help actions` - List all available social actions (all users)
 - `help staff` - Staff commands (MODERATOR+)
 - `help developer` - Developer commands (DEVELOPER+)
 - `@help` - Full admin command reference (MODERATOR+)
@@ -253,7 +254,7 @@ Players can access different help categories based on their role:
 | `@iteminfo <id\|name>` | Show item details |
 | `@spawn <id\|name> [qty]` | Spawn item in room |
 | `@purge items` | Remove all room items |
-| `@reload [rooms\|all]` | Reload data |
+| `@reload [type]` | Reload data (rooms, items, effects, doors, actions, all) |
 
 ### Player Door Commands
 
@@ -261,6 +262,16 @@ Players can access different help categories based on their role:
 | ------- | ----------- |
 | `pick <direction>` | Pick lock (requires thief skills) |
 | `bash <direction>` | Bash door open (uses strength) |
+
+### Social Commands
+
+| Command | Description |
+| ------- | ----------- |
+| `/me <text>` | Custom emote (e.g., `/me waves goodbye`) |
+| `<action>` | Perform a social action (e.g., `dance`, `bow`, `wave`) |
+| `<action> <player>` | Target a player with an action (e.g., `wave bob`) |
+
+**Default Actions:** `bow`, `cackle`, `cheer`, `clap`, `cry`, `dance`, `grin`, `grovel`, `hug`, `laugh`, `nod`, `poke`, `salute`, `shrug`, `sigh`, `smirk`, `wave`, `wink`, `yawn`
 
 ### Death System Commands
 

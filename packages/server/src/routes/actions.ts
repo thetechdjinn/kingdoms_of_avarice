@@ -63,10 +63,12 @@ export function setupActionRoutes(app: Express): void {
         firstPersonWithTarget, targetPerspective, roomWithTarget
       } = req.body;
 
-      if (!command || !firstPersonNoTarget || !roomNoTarget) {
+      if (!command || typeof command !== 'string' ||
+          !firstPersonNoTarget || typeof firstPersonNoTarget !== 'string' ||
+          !roomNoTarget || typeof roomNoTarget !== 'string') {
         res.status(400).json({
           success: false,
-          message: 'command, firstPersonNoTarget, and roomNoTarget are required'
+          message: 'command, firstPersonNoTarget, and roomNoTarget are required and must be strings'
         });
         return;
       }
@@ -115,7 +117,7 @@ export function setupActionRoutes(app: Express): void {
 
       // Check for duplicate command if command is being changed
       const { command } = req.body;
-      if (command && command.toLowerCase() !== existing.command.toLowerCase()) {
+      if (command && typeof command === 'string' && command.toLowerCase() !== existing.command.toLowerCase()) {
         const existingCommand = await actionRepo.getActionByCommand(command);
         if (existingCommand) {
           res.status(400).json({ success: false, message: `Command "${command}" is already in use` });

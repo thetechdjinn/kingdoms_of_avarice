@@ -378,6 +378,10 @@ interface Action {
   document.getElementById('export-btn')?.addEventListener('click', async () => {
     try {
       const res = await fetch('/api/actions/export/all', { credentials: 'include' });
+      if (!res.ok) {
+        alert(`Export failed: ${res.status} ${res.statusText}`);
+        return;
+      }
       const data = await res.json();
 
       const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
