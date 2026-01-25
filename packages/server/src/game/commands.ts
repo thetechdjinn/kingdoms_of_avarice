@@ -12,6 +12,7 @@ import * as playerRepo from '../db/repositories/playerRepository.js';
 import { handleGet, handleDrop, handleInventory, handleExamine, getRoomItemsDescription, handleWield, handleWear, handleRemove, handleEquipment, handlePut, handleGetFrom, handleLookIn, handleUse, handleLight, handleExtinguish, handleRepair, handleSearch, handleRecipes, handleCraft, handleEnchantments, handleEnchant, handleDropCurrency, handleGetCurrency } from './itemCommands.js';
 import { handleAttack, handleFlee, handleBreak } from './combatCommands.js';
 import { isSpellMnemonic, handleSpellCommand, handleSpellbook } from './spellCommands.js';
+import { isActionCommand, handleActionCommand, handleEmoteCommand, getActionHelpList } from './actionCommands.js';
 import { handleTrain } from './trainingCommands.js';
 import * as characterRepo from '../db/repositories/characterRepository.js';
 import * as progressionRepo from '../db/repositories/progressionRepository.js';
@@ -91,10 +92,11 @@ export async function processCommand(
       return { type: MessageType.ERROR, message: 'You are dead. Type "respawn" to return to life.' };
     }
   }
-  // Dropped state - limited commands
+  // Dropped state - limited commands (but allow actions/emotes for roleplay)
   else if (isPlayerDropped(socket)) {
-    const allowedDropped = ['look', 'l', 'inventory', 'inv', 'i', 'who', 'say', "'", 'quit', 'x', 'help', '?', 'status', 'st', 'sta', 'stat', 'statu'];
-    if (!allowedDropped.includes(command)) {
+    const allowedDropped = ['look', 'l', 'inventory', 'inv', 'i', 'who', 'say', "'", 'quit', 'x', 'help', '?', 'status', 'st', 'sta', 'stat', 'statu', 'me', '/me'];
+    // Also allow action commands while dropped
+    if (!allowedDropped.includes(command) && !isActionCommand(command)) {
       return { type: MessageType.ERROR, message: 'You cannot do that while on the ground. Wait for aid or bleed out.' };
     }
   }
@@ -364,6 +366,16 @@ export async function processCommand(
   const specialDoor = doorStateManager.findSpecialDoorByTrigger(currentRoomId, lowerTrimmed);
   if (specialDoor) {
     return await handleSpecialDoorTrigger(socket, specialDoor, currentRoomId, world, _connectedPlayers);
+  }
+
+  // Handle emote command (/me or me)
+  if (command === 'me' || command === '/me') {
+    return handleEmoteCommand(socket, args, _connectedPlayers);
+  }
+
+  // Check for action commands (dance, bow, wave, etc.)
+  if (isActionCommand(command)) {
+    return handleActionCommand(socket, command, args, _connectedPlayers);
   }
 
   // Default: treat as speech
@@ -1430,11 +1442,15 @@ function handleHelp(userRoles: Role[], category?: string): CommandResponse {
       }
       return { type: MessageType.SYSTEM, message: 'Use @help for the full admin command reference.' };
     }
-    
+
+    if (cat === 'actions' || cat === 'action' || cat === 'emotes' || cat === 'emote') {
+      return getActionsHelp();
+    }
+
     // Unknown category - show player help with note (only suggest staff options if user has access)
     const suggestions = isStaff
-      ? 'Try: help, help staff, help developer, or @help'
-      : 'Try: help';
+      ? 'Try: help, help actions, help staff, help developer, or @help'
+      : 'Try: help, help actions';
     return { type: MessageType.ERROR, message: `Unknown help category: ${category}. ${suggestions}` };
   }
   
@@ -1500,6 +1516,12 @@ function handleHelp(userRoles: Role[], category?: string): CommandResponse {
     colors.boldCyan('  Progression:'),
     `    ${colors.white('train')} (tr)            - Level up (in training room)`,
     `    ${colors.white('train stats')}           - Allocate CP to stats (in training room)`,
+    '',
+    colors.boldCyan('  Social:'),
+    `    ${colors.white('/me <text>')}            - Custom emote (e.g., /me waves)`,
+    `    ${colors.white('<action>')}              - Social actions (dance, bow, wave, etc.)`,
+    `    ${colors.white('<action> <player>')}     - Target a player (e.g., wave bob)`,
+    `    ${colors.white('help actions')}          - List all available social actions`,
     '',
     colors.boldCyan('  Information & System:'),
     `    ${colors.white('status')} (st)            - View your character sheet`,
@@ -1575,6 +1597,42 @@ function getDeveloperHelp(): CommandResponse {
     '',
     `Type ${colors.boldCyan('@help')} for the full admin command reference.`,
   ];
+
+  return { type: MessageType.OUTPUT, message: lines.join('\r\n') };
+}
+
+function getActionsHelp(): CommandResponse {
+  const actions = getActionHelpList();
+
+  if (actions.length === 0) {
+    return {
+      type: MessageType.OUTPUT,
+      message: colors.yellow('No social actions are currently available.'),
+    };
+  }
+
+  const lines = [
+    colors.boldYellow('Social Actions:'),
+    '',
+    'Perform actions by typing their name. Add a player\'s name to target them.',
+    '',
+  ];
+
+  // Find the longest command for padding
+  const maxLen = Math.max(...actions.map(a => a.command.length));
+
+  for (const action of actions) {
+    const paddedCmd = action.command.padEnd(maxLen + 2);
+    const desc = action.description || '(no description)';
+    lines.push(`  ${colors.white(paddedCmd)} - ${desc}`);
+  }
+
+  lines.push('');
+  lines.push(colors.boldCyan('Examples:'));
+  lines.push(`  ${colors.white('dance')}             - You dance a little jig!`);
+  lines.push(`  ${colors.white('wave bob')}          - You wave at Bob.`);
+  lines.push('');
+  lines.push(colors.gray('Tip: Use /me <text> for custom emotes (e.g., /me stretches)'));
 
   return { type: MessageType.OUTPUT, message: lines.join('\r\n') };
 }

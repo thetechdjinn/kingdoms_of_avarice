@@ -25,6 +25,7 @@ import {
   formatDroppedMessage,
   formatDeathMessage,
 } from './damageHandler.js';
+import { initializeActionCommands } from './actionCommands.js';
 
 interface CommandResponse {
   type: MessageType;
@@ -411,10 +412,10 @@ async function handleReload(
   args: string[],
   world: GameWorld
 ): Promise<CommandResponse> {
-  // @reload [rooms|items|mobs|effects|doors|all]
+  // @reload [rooms|items|mobs|effects|doors|actions|all]
   const target = args[0]?.toLowerCase() || 'all';
 
-  const validTargets = ['rooms', 'items', 'mobs', 'effects', 'doors', 'all'];
+  const validTargets = ['rooms', 'items', 'mobs', 'effects', 'doors', 'actions', 'all'];
   if (!validTargets.includes(target)) {
     return { type: MessageType.ERROR, message: `Usage: @reload [${validTargets.join('|')}]` };
   }
@@ -447,6 +448,11 @@ async function handleReload(
     if (target === 'doors' || target === 'all') {
       await initializeDoorStates();
       results.push(`${colors.green('✓')} Reloaded door definitions and states`);
+    }
+
+    if (target === 'actions' || target === 'all') {
+      await initializeActionCommands();
+      results.push(`${colors.green('✓')} Reloaded action commands`);
     }
 
     return {

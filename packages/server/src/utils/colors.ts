@@ -90,6 +90,7 @@ export const colors = {
   system: (text: string) => applyStyle(text, 'yellow'),
   say: (text: string) => applyStyle(text, 'green'),
   sayName: (text: string) => applyStyle(text, 'bold', 'green'),
+  emote: (text: string) => applyStyle(text, 'magenta'),
   npc: (text: string) => applyStyle(text, 'magenta'),
   item: (text: string) => applyStyle(text, 'brightBlue'),
   player: (text: string) => applyStyle(text, 'brightCyan'),

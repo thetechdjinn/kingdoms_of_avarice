@@ -40,6 +40,11 @@ export async function runMigrations(): Promise<void> {
       const spellsSchema = readFileSync(spellsSchemaPath, 'utf-8');
       await client.query(spellsSchema);
 
+      // Run actions schema
+      const actionsSchemaPath = join(sqlDir, 'schema_actions.sql');
+      const actionsSchema = readFileSync(actionsSchemaPath, 'utf-8');
+      await client.query(actionsSchema);
+
       // Run status effect definitions schema (must be before status_effects due to FK)
       const statusEffectDefsSchemaPath = join(sqlDir, 'schema_status_effect_definitions.sql');
       const statusEffectDefsSchema = readFileSync(statusEffectDefsSchemaPath, 'utf-8');
@@ -483,6 +488,16 @@ export async function seedInitialData(): Promise<void> {
   } else {
     await seedStatusEffectDefinitions();
   }
+
+  // Check if actions already exist
+  const actionCheck = await getPool().query('SELECT COUNT(*) FROM actions');
+  const actionsExist = parseInt(actionCheck.rows[0].count) > 0;
+
+  if (actionsExist) {
+    console.log('Action seed data already exists, skipping actions...');
+  } else {
+    await seedActions();
+  }
 }
 
 async function seedRooms(): Promise<void> {
@@ -629,6 +644,20 @@ async function seedStatusEffectDefinitions(): Promise<void> {
     console.log('Status effect definitions seeded successfully');
   } catch (error) {
     console.error('Failed to seed status effect definitions:', error);
+  }
+}
+
+async function seedActions(): Promise<void> {
+  console.log('Seeding default action data...');
+
+  try {
+    const seedPath = join(sqlDir, 'seed_actions.sql');
+    const seedSql = readFileSync(seedPath, 'utf-8');
+    await getPool().query(seedSql);
+    console.log('Action seed data inserted successfully');
+  } catch (error) {
+    console.error('Failed to seed actions:', error);
+    // Don't throw - actions are optional, game can run without them
   }
 }
 

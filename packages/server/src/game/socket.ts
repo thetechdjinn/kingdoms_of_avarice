@@ -17,6 +17,7 @@ import { initializeDefaultRegenConfigs, startRegenLoops } from './regeneration.j
 import { startCombatLoop } from './combat.js';
 import { startCharacterSaveLoop } from './characterSaveLoop.js';
 import { initializeSpellMnemonics } from './spellCommands.js';
+import { initializeActionCommands } from './actionCommands.js';
 import { loadEffectsFromDb, processEffectsTick, initializeEffectDefinitions } from './statusEffects.js';
 import { colors } from '../utils/colors.js';
 import { checkWebSocketIp } from '../middleware/ipAccess.js';
@@ -137,6 +138,9 @@ export async function initializeGameWorld(): Promise<void> {
 
   // Initialize spell system
   await initializeSpellMnemonics();
+
+  // Initialize action commands
+  await initializeActionCommands();
 
   // Initialize command queue system
   try {

@@ -62,7 +62,7 @@ async function checkIpAllowed(clientIp: string): Promise<boolean> {
 
 // Plugin to serve additional HTML files and documentation in dev mode
 function multiPagePlugin(): Plugin {
-  const htmlFiles = ['editor.html', 'item-editor.html', 'spell-editor.html', 'status-editor.html', 'progression-editor.html', 'admin.html', 'docs.html', 'game-settings-editor.html', 'user-editor.html', 'swing-calculator.html', 'door-editor.html'];
+  const htmlFiles = ['editor.html', 'item-editor.html', 'spell-editor.html', 'status-editor.html', 'progression-editor.html', 'admin.html', 'docs.html', 'game-settings-editor.html', 'user-editor.html', 'swing-calculator.html', 'door-editor.html', 'action-editor.html'];
   const docsPath = resolve(__dirname, '..', '..', 'Documentation');
 
   return {
@@ -160,6 +160,7 @@ export default defineConfig({
         userEditor: resolve(__dirname, 'user-editor.html'),
         swingCalculator: resolve(__dirname, 'swing-calculator.html'),
         doorEditor: resolve(__dirname, 'door-editor.html'),
+        actionEditor: resolve(__dirname, 'action-editor.html'),
       },
     },
   },
