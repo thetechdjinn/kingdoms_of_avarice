@@ -80,16 +80,6 @@ export async function getAllActions(): Promise<Action[]> {
   return result.rows.map(dbToAction);
 }
 
-/**
- * Get all action commands (for command registration)
- */
-export async function getAllCommands(): Promise<string[]> {
-  const result = await query<{ command: string }>(
-    'SELECT command FROM actions ORDER BY command'
-  );
-  return result.rows.map(row => row.command.toLowerCase());
-}
-
 // ============================================================================
 // Action CRUD Operations
 // ============================================================================

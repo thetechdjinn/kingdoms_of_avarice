@@ -3,7 +3,7 @@ import * as actionRepo from '../db/repositories/actionRepository.js';
 import { requireDeveloper } from '../middleware/auth.js';
 import { initializeActionCommands } from '../game/actionCommands.js';
 
-// Validate action object structure and field values
+// Validate action object structure and field values for creation (required fields)
 function validateActionInput(action: Record<string, unknown>): string | null {
   if (!action.command || typeof action.command !== 'string') {
     return 'command is required and must be a string';
@@ -13,6 +13,20 @@ function validateActionInput(action: Record<string, unknown>): string | null {
   }
   if (!action.roomNoTarget || typeof action.roomNoTarget !== 'string') {
     return 'roomNoTarget is required and must be a string';
+  }
+  return null;
+}
+
+// Validate optional string fields in update payload
+function validateUpdateFields(body: Record<string, unknown>): string | null {
+  const stringFields = [
+    'command', 'description', 'firstPersonNoTarget', 'roomNoTarget',
+    'firstPersonWithTarget', 'targetPerspective', 'roomWithTarget'
+  ];
+  for (const field of stringFields) {
+    if (body[field] !== undefined && body[field] !== null && typeof body[field] !== 'string') {
+      return `${field} must be a string`;
+    }
   }
   return null;
 }
@@ -58,20 +72,16 @@ export function setupActionRoutes(app: Express): void {
   // Create action
   app.post('/api/actions', requireDeveloper, async (req: Request, res: Response) => {
     try {
+      const validationError = validateActionInput(req.body);
+      if (validationError) {
+        res.status(400).json({ success: false, message: validationError });
+        return;
+      }
+
       const {
         command, description, firstPersonNoTarget, roomNoTarget,
         firstPersonWithTarget, targetPerspective, roomWithTarget
       } = req.body;
-
-      if (!command || typeof command !== 'string' ||
-          !firstPersonNoTarget || typeof firstPersonNoTarget !== 'string' ||
-          !roomNoTarget || typeof roomNoTarget !== 'string') {
-        res.status(400).json({
-          success: false,
-          message: 'command, firstPersonNoTarget, and roomNoTarget are required and must be strings'
-        });
-        return;
-      }
 
       // Check for duplicate command
       const existingCommand = await actionRepo.getActionByCommand(command);
@@ -115,9 +125,16 @@ export function setupActionRoutes(app: Express): void {
         return;
       }
 
+      // Validate field types
+      const validationError = validateUpdateFields(req.body);
+      if (validationError) {
+        res.status(400).json({ success: false, message: validationError });
+        return;
+      }
+
       // Check for duplicate command if command is being changed
       const { command } = req.body;
-      if (command && typeof command === 'string' && command.toLowerCase() !== existing.command.toLowerCase()) {
+      if (command && command.toLowerCase() !== existing.command.toLowerCase()) {
         const existingCommand = await actionRepo.getActionByCommand(command);
         if (existingCommand) {
           res.status(400).json({ success: false, message: `Command "${command}" is already in use` });

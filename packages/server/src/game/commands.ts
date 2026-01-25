@@ -1599,7 +1599,12 @@ function getActionsHelp(): CommandResponse {
 
   for (const action of actions) {
     const paddedCmd = action.command.padEnd(maxLen + 2);
-    const desc = action.description || '(no description)';
+    let desc = action.description || '(no description)';
+    // Truncate description to fit 80 char width: 2 indent + cmd + 3 " - " = 5 + maxLen + 2
+    const maxDescLen = 80 - 5 - maxLen - 2;
+    if (desc.length > maxDescLen) {
+      desc = desc.slice(0, maxDescLen - 3) + '...';
+    }
     lines.push(`  ${colors.white(paddedCmd)} - ${desc}`);
   }
 

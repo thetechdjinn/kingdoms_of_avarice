@@ -39,7 +39,8 @@ export function isActionCommand(command: string): boolean {
  * {player} -> actor's name
  * {target} -> target's name
  */
-function replacePlaceholders(template: string, playerName: string, targetName?: string): string {
+function replacePlaceholders(template: string | null | undefined, playerName: string, targetName?: string): string {
+  if (!template) return '';
   let result = template.replace(/\{player\}/gi, playerName);
   if (targetName) {
     result = result.replace(/\{target\}/gi, targetName);

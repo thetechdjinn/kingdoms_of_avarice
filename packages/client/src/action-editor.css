@@ -6,13 +6,13 @@
   flex-direction: column;
   min-width: 250px;
   max-width: 300px;
-  background: var(--panel-bg);
-  border-right: 1px solid var(--border-color);
+  background: #1a1a2e;
+  border-right: 1px solid #333;
 }
 
 #action-search {
   padding: 0.5rem 1rem;
-  border-bottom: 1px solid var(--border-color);
+  border-bottom: 1px solid #333;
 }
 
 #action-search input {
@@ -30,7 +30,7 @@
 .action-list-item {
   padding: 0.75rem 1rem;
   cursor: pointer;
-  border-bottom: 1px solid var(--border-color);
+  border-bottom: 1px solid #333;
   transition: background-color 0.2s;
 }
 
@@ -75,7 +75,7 @@
 .form-section {
   margin-bottom: 1.5rem;
   padding-bottom: 1.5rem;
-  border-bottom: 1px solid var(--border-color);
+  border-bottom: 1px solid #333;
 }
 
 .form-section:last-of-type {
@@ -97,8 +97,8 @@
 #preview-panel {
   min-width: 280px;
   max-width: 350px;
-  background: var(--panel-bg);
-  border-left: 1px solid var(--border-color);
+  background: #1a1a2e;
+  border-left: 1px solid #333;
   display: flex;
   flex-direction: column;
 }
