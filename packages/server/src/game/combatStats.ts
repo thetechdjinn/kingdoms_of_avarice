@@ -110,7 +110,8 @@ function getWeaponStats(
 }
 
 /**
- * Calculate total armor class from all equipped armor pieces
+ * Calculate total armor class and damage resistance from all equipped armor pieces
+ * Only equipped items (not inventory) contribute to armor stats
  */
 function calculateArmorStats(equippedItems: ItemInstance[]): ArmorStats {
   let totalAC = 10; // Base AC
@@ -122,7 +123,8 @@ function calculateArmorStats(equippedItems: ItemInstance[]): ArmorStats {
       // Add armor class on top of base 10
       totalAC += armorData.armor_class || 0;
 
-      // Future: could calculate damage reduction from heavy armor
+      // Sum damage resistance from all armor pieces
+      damageReduction += armorData.damage_resistance || 0;
     }
   }
 

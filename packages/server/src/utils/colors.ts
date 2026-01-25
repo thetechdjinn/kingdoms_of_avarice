@@ -70,6 +70,7 @@ export const colors = {
   gray: (text: string) => applyStyle(text, 'brightBlack'),
   grey: (text: string) => applyStyle(text, 'brightBlack'),
   orange: (text: string) => applyStyle(text, 'yellow'), // ANSI doesn't have orange, use yellow
+  brown: (text: string) => `\x1b[38;5;130m${text}${RESET}`, // 256-color brown
   
   // Bold variants
   boldCyan: (text: string) => applyStyle(text, 'bold', 'cyan'),

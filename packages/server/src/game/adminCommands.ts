@@ -24,6 +24,10 @@ import {
   initializeDeadState,
   formatDroppedMessage,
   formatDeathMessage,
+  clearDeathState,
+  isPlayerDropped,
+  isPlayerDead,
+  getDeathRoomId,
 } from './damageHandler.js';
 import { initializeActionCommands } from './actionCommands.js';
 
@@ -46,7 +50,7 @@ export function setPlayerLocation(playerId: number, roomId: number): void {
 const developerCommands = ['create', 'link', 'unlink', 'edit', 'delete', 'reload', 'spawn', 'purge', 'items', 'iteminfo'];
 
 // Commands that any staff can use (Moderator+)
-const staffCommands = ['goto', 'rooms', 'roominfo', 'help', 'give', 'hurt', 'drain', 'learn', 'spells', 'effect', 'cleareffect', 'effects'];
+const staffCommands = ['goto', 'rooms', 'roominfo', 'help', 'give', 'hurt', 'heal', 'drain', 'revive', 'teleport', 'learn', 'spells', 'effect', 'cleareffect', 'effects'];
 
 export async function processAdminCommand(
   input: string,
@@ -112,8 +116,14 @@ export async function processAdminCommand(
       return handleGive(args, socket);
     case 'hurt':
       return await handleHurt(args, socket);
+    case 'heal':
+      return await handleHeal(args, socket);
     case 'drain':
       return handleDrain(args, socket);
+    case 'revive':
+      return await handleRevive(args, socket, world);
+    case 'teleport':
+      return await handleTeleport(args, socket, world);
     case 'learn':
       return handleLearn(args, socket);
     case 'spells':
@@ -783,10 +793,14 @@ async function handleHurt(
 
   // Apply damage using centralized handler (allows negative HP and state transitions)
   const damageResult = await applyDamage(targetSocket, amount, 'environmental');
-  const newHp = damageResult.newHp;
 
   // Handle state transitions
   const roomId = getPlayerLocation(targetSocket.playerId);
+
+  // Send damage notification first (before state change messages), but only if not dying
+  if (targetSocket !== socket && damageResult.stateChange !== 'death') {
+    sendMessage(targetSocket, MessageType.SYSTEM, `${colors.boldRed('Ouch!')} You take ${amount} damage from an unknown force.`);
+  }
 
   if (damageResult.stateChange === 'dropped') {
     initializeDroppedState(targetSocket, roomId);
@@ -807,22 +821,300 @@ async function handleHurt(
     broadcastToRoom(roomId, colors.boldRed(`${targetName} has died!`), targetSocket.playerId);
   }
 
+  // Send updated vitals to target (but not if dead - avoids duplicate message)
+  if (damageResult.stateChange !== 'death') {
+    sendVitals(targetSocket);
+  }
+
+  if (targetSocket === socket) {
+    if (damageResult.stateChange === 'death') {
+      return { type: MessageType.SYSTEM, message: '' }; // Death message already sent
+    }
+    return {
+      type: MessageType.SYSTEM,
+      message: `${colors.boldRed('Ouch!')} You take ${amount} damage.`,
+    };
+  } else {
+    return {
+      type: MessageType.SYSTEM,
+      message: `${colors.boldGreen('Hurt:')} ${targetName} takes ${amount} damage.`,
+    };
+  }
+}
+
+async function handleHeal(
+  args: string[],
+  socket: AuthenticatedSocket
+): Promise<CommandResponse> {
+  // @heal [amount] [player] OR @heal [player] - Restore HP
+  // Default: heal self by 10
+  let amount = 10;
+  let targetSocket: AuthenticatedSocket = socket;
+  let targetName = socket.username;
+  let playerNameArgs: string[] = [];
+
+  if (args.length >= 1) {
+    // Only treat as amount if the first arg is purely numeric
+    if (/^\d+$/.test(args[0])) {
+      const parsedAmount = parseInt(args[0]);
+      if (parsedAmount > 0) {
+        amount = parsedAmount;
+        playerNameArgs = args.slice(1);
+      } else {
+        playerNameArgs = args;
+      }
+    } else {
+      // First arg is not purely numeric, treat all args as player name
+      playerNameArgs = args;
+    }
+  }
+
+  if (playerNameArgs.length > 0) {
+    const playerName = playerNameArgs.join(' ').toLowerCase();
+    let found = false;
+    for (const [, playerSocket] of connectedPlayers) {
+      if (playerSocket.username.toLowerCase() === playerName) {
+        targetSocket = playerSocket;
+        targetName = playerSocket.username;
+        found = true;
+        break;
+      }
+    }
+    if (!found) {
+      return { type: MessageType.ERROR, message: `Player not found: ${playerNameArgs.join(' ')}` };
+    }
+  }
+
+  // Cannot heal dead players - they must respawn
+  if (isPlayerDead(targetSocket)) {
+    return { type: MessageType.ERROR, message: `${targetName} is dead. They need to respawn, not be healed.` };
+  }
+
+  // Track if target is dropped (for recovery check after healing)
+  const wasDropped = isPlayerDropped(targetSocket);
+  const roomId = getPlayerLocation(targetSocket.playerId);
+
+  // Apply healing (cap at max HP)
+  const oldHp = targetSocket.vitals.hp;
+  targetSocket.vitals.hp = Math.min(targetSocket.vitals.hp + amount, targetSocket.vitals.maxHp);
+  const newHp = targetSocket.vitals.hp;
+  const actualHeal = newHp - oldHp;
+
+  // Check if healing brought a dropped player back to consciousness
+  if (wasDropped && targetSocket.vitals.hp > 0) {
+    clearDeathState(targetSocket);
+    broadcastToRoom(
+      roomId,
+      `${targetName} regains consciousness and rises to their feet!`,
+      targetSocket.playerId
+    );
+    sendMessage(targetSocket, MessageType.SYSTEM, colors.boldGreen('You regain consciousness and rise to your feet!'));
+  }
+
+  // Persist HP to database
+  if (targetSocket.characterId) {
+    await characterRepo.updateCharacterStats(targetSocket.characterId, { health: newHp });
+  }
+
   // Send updated vitals to target
   sendVitals(targetSocket);
 
   if (targetSocket === socket) {
     return {
       type: MessageType.SYSTEM,
-      message: `${colors.boldRed('Ouch!')} You take ${amount} damage. HP: ${newHp}/${targetSocket.vitals.maxHp}`,
+      message: `${colors.boldGreen('Healed!')} You restore ${actualHeal} HP.`,
     };
   } else {
     // Notify the target player
-    sendMessage(targetSocket, MessageType.SYSTEM, `${colors.boldRed('Ouch!')} You take ${amount} damage from an unknown force. HP: ${newHp}/${targetSocket.vitals.maxHp}`);
+    sendMessage(targetSocket, MessageType.SYSTEM, `${colors.boldGreen('Healed!')} You are healed for ${actualHeal} HP by a divine force.`);
     return {
       type: MessageType.SYSTEM,
-      message: `${colors.boldRed('Hurt:')} ${targetName} takes ${amount} damage. HP: ${newHp}/${targetSocket.vitals.maxHp}`,
+      message: `${colors.boldGreen('Heal:')} ${targetName} is healed for ${actualHeal} HP.`,
     };
   }
+}
+
+async function handleRevive(
+  args: string[],
+  socket: AuthenticatedSocket,
+  world: GameWorld
+): Promise<CommandResponse> {
+  // @revive <player> - Revive a dead player in the room they died in
+  if (args.length < 1) {
+    return { type: MessageType.ERROR, message: 'Usage: @revive <player>' };
+  }
+
+  const playerName = args.join(' ').toLowerCase();
+  let targetSocket: AuthenticatedSocket | null = null;
+  let targetName = '';
+
+  for (const [, playerSocket] of connectedPlayers) {
+    if (playerSocket.username.toLowerCase() === playerName) {
+      targetSocket = playerSocket;
+      targetName = playerSocket.username;
+      break;
+    }
+  }
+
+  if (!targetSocket) {
+    return { type: MessageType.ERROR, message: `Player not found: ${args.join(' ')}` };
+  }
+
+  // Check if player is dead
+  if (!isPlayerDead(targetSocket)) {
+    // Also check if they're dropped
+    if (isPlayerDropped(targetSocket)) {
+      // Just heal them and clear dropped state
+      const roomId = getPlayerLocation(targetSocket.playerId);
+      targetSocket.vitals.hp = targetSocket.vitals.maxHp;
+      if (targetSocket.vitals.maxResource !== undefined) {
+        targetSocket.vitals.resource = targetSocket.vitals.maxResource;
+      }
+      clearDeathState(targetSocket);
+
+      if (targetSocket.characterId) {
+        await characterRepo.updateCharacterStats(targetSocket.characterId, {
+          health: targetSocket.vitals.hp,
+          mana: targetSocket.vitals.resource ?? 0,
+        });
+      }
+
+      sendVitals(targetSocket);
+      broadcastToRoom(roomId, `${targetName} is revived by divine intervention!`, targetSocket.playerId);
+      sendMessage(targetSocket, MessageType.SYSTEM, colors.boldGreen('You feel divine energy flow through you! You are revived!'));
+
+      return {
+        type: MessageType.SYSTEM,
+        message: `${colors.boldGreen('Revived:')} ${targetName} has been revived from dropped state.`,
+      };
+    }
+    return { type: MessageType.ERROR, message: `${targetName} is not dead or dropped.` };
+  }
+
+  // Get the room where they died
+  const deathRoomId = getDeathRoomId(targetSocket);
+  const reviveRoomId = deathRoomId ?? getPlayerLocation(targetSocket.playerId);
+  const currentRoomId = getPlayerLocation(targetSocket.playerId);
+
+  // Clear death state
+  clearDeathState(targetSocket);
+
+  // Restore HP and mana to full
+  targetSocket.vitals.hp = targetSocket.vitals.maxHp;
+  if (targetSocket.vitals.maxResource !== undefined) {
+    targetSocket.vitals.resource = targetSocket.vitals.maxResource;
+  }
+
+  // Update character in database
+  if (targetSocket.characterId) {
+    await characterRepo.updateCharacterStats(targetSocket.characterId, {
+      health: targetSocket.vitals.hp,
+      mana: targetSocket.vitals.resource ?? 0,
+    });
+    await characterRepo.updateCharacterRoom(targetSocket.characterId, reviveRoomId);
+  }
+
+  // Move to revive room
+  setPlayerLocation(targetSocket.playerId, reviveRoomId);
+
+  // Send vitals
+  sendVitals(targetSocket);
+
+  // Broadcast departure from current room (if different)
+  if (currentRoomId !== reviveRoomId) {
+    broadcastToRoom(currentRoomId, colors.green(`${colors.red(targetName)}'s spirit fades away...`), targetSocket.playerId);
+  }
+
+  // Broadcast arrival at revive room
+  broadcastToRoom(reviveRoomId, colors.green(`${colors.red(targetName)} is revived by divine intervention!`), targetSocket.playerId);
+
+  // Send room description to revived player
+  const room = world.getRoom(reviveRoomId);
+  if (room) {
+    const { getRoomItemsDescription } = await import('./itemCommands.js');
+    const itemDescriptions = await getRoomItemsDescription(reviveRoomId);
+    sendMessage(targetSocket, MessageType.SYSTEM, colors.boldGreen('You feel divine energy flow through you! You are revived!'));
+    sendMessage(targetSocket, MessageType.OUTPUT, world.formatRoomDescription(room, [], false, itemDescriptions));
+  }
+
+  return {
+    type: MessageType.SYSTEM,
+    message: `${colors.boldGreen('Revived:')} ${targetName} has been revived in room ${reviveRoomId}.`,
+  };
+}
+
+async function handleTeleport(
+  args: string[],
+  socket: AuthenticatedSocket,
+  world: GameWorld
+): Promise<CommandResponse> {
+  // @teleport <player> <room_id> - Teleport a player to a specific room
+  if (args.length < 2) {
+    return { type: MessageType.ERROR, message: 'Usage: @teleport <player> <room_id>' };
+  }
+
+  // Last argument is the room ID
+  const roomIdStr = args[args.length - 1];
+  const roomId = parseInt(roomIdStr);
+  if (isNaN(roomId)) {
+    return { type: MessageType.ERROR, message: `Invalid room ID: ${roomIdStr}` };
+  }
+
+  // Everything else is the player name
+  const playerName = args.slice(0, -1).join(' ').toLowerCase();
+
+  let targetSocket: AuthenticatedSocket | null = null;
+  let targetName = '';
+
+  for (const [, playerSocket] of connectedPlayers) {
+    if (playerSocket.username.toLowerCase() === playerName) {
+      targetSocket = playerSocket;
+      targetName = playerSocket.username;
+      break;
+    }
+  }
+
+  if (!targetSocket) {
+    return { type: MessageType.ERROR, message: `Player not found: ${args.slice(0, -1).join(' ')}` };
+  }
+
+  // Verify target room exists
+  const room = world.getRoom(roomId);
+  if (!room) {
+    return { type: MessageType.ERROR, message: `Room ${roomId} does not exist.` };
+  }
+
+  const currentRoomId = getPlayerLocation(targetSocket.playerId);
+
+  // Don't teleport if already there
+  if (currentRoomId === roomId) {
+    return { type: MessageType.ERROR, message: `${targetName} is already in that room.` };
+  }
+
+  // Update character in database
+  if (targetSocket.characterId) {
+    await characterRepo.updateCharacterRoom(targetSocket.characterId, roomId);
+  }
+
+  // Broadcast departure from current room
+  broadcastToRoom(currentRoomId, colors.green(`${colors.red(targetName)} vanishes in a flash of light!`), targetSocket.playerId);
+
+  // Move player
+  setPlayerLocation(targetSocket.playerId, roomId);
+
+  // Broadcast arrival at new room
+  broadcastToRoom(roomId, colors.green(`${colors.red(targetName)} appears in a flash of light!`), targetSocket.playerId);
+
+  // Send room description to teleported player
+  const { getRoomItemsDescription } = await import('./itemCommands.js');
+  const itemDescriptions = await getRoomItemsDescription(roomId);
+  sendMessage(targetSocket, MessageType.SYSTEM, colors.yellow('You feel a strange pull as you are teleported...'));
+  sendMessage(targetSocket, MessageType.OUTPUT, world.formatRoomDescription(room, [], false, itemDescriptions));
+
+  return {
+    type: MessageType.SYSTEM,
+    message: `${colors.boldGreen('Teleported:')} ${targetName} has been teleported to ${room.name} (ID: ${roomId}).`,
+  };
 }
 
 function handleDrain(
@@ -1007,7 +1299,10 @@ function handleAdminHelp(userRoles: Role[]): CommandResponse {
   lines.push(`  ${colors.boldCyan('@roominfo [id]')}          - Show room details`);
   lines.push(`  ${colors.boldCyan('@give <id|name> [quantity]')} - Give yourself an item`);
   lines.push(`  ${colors.boldCyan('@hurt [amount] [player]')} - Damage HP (for testing regen)`);
+  lines.push(`  ${colors.boldCyan('@heal [amount] [player]')} - Restore HP (heals self or player)`);
   lines.push(`  ${colors.boldCyan('@drain [amount] [player]')} - Drain mana (for testing regen)`);
+  lines.push(`  ${colors.boldCyan('@revive <player>')}        - Revive a dead/dropped player`);
+  lines.push(`  ${colors.boldCyan('@teleport <player> <room>')} - Teleport player to a room`);
   lines.push(`  ${colors.boldCyan('@spells')}                 - List all spells in the game`);
   lines.push(`  ${colors.boldCyan('@learn <mnemonic>')}       - Learn a spell for your character`);
   lines.push(`  ${colors.boldCyan('@effect <id> [duration] [player]')} - Apply effect (default 60s, self)`);
