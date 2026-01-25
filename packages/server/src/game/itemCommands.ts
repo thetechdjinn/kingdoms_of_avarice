@@ -2428,7 +2428,7 @@ export async function dropAllItemsOnDeath(characterId: number, roomId: number): 
           await itemRepo.addToInstanceQuantity(existingStack.id, currency.amount);
         } else {
           // Create currency item in room - need to find the template for this currency type
-          const template = await itemRepo.getTemplateByName(`${currency.type} coin`);
+          const template = await itemRepo.getTemplateByName(`${currency.type} coins`);
           if (template) {
             await itemRepo.createInstance({
               template_id: template.id,
