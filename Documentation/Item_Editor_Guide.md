@@ -67,6 +67,7 @@ Shows fields specific to the selected item type:
 **Armor:**
 
 - Armor Class
+- Damage Resistance (flat damage reduction)
 - Weight Class (light/medium/heavy)
 
 **Containers:**
@@ -238,12 +239,13 @@ Protective equipment. Requires `equipment_slot` and `armor_data`.
   "equipment_slot": "body",
   "armor_data": {
     "armor_class": 5,
+    "damage_resistance": 2,
     "weight_class": "medium"
   }
 }
 ```
 
-**Equipment Slots:** head, face, neck, back, body, arms, hands, wrist_left, wrist_right, finger_left, finger_right, waist, legs, feet, main_hand, off_hand, shield, held
+**Equipment Slots:** head, face, neck, back, body, arms, hands, wrist_left, wrist_right, finger_left, finger_right, waist, legs, feet, main_hand, off_hand, held
 
 ### Container
 

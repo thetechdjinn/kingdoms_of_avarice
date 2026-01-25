@@ -34,14 +34,13 @@ This document outlines the architecture for the item system in Kingdoms of Avari
 
 ### Combat Slots
 
-| Slot        | Description                                 |
-| ----------- | ------------------------------------------- |
-| `main_hand` | Primary weapon (swords, axes, maces)        |
-| `off_hand`  | Secondary weapon (dual-wield) or held items |
-| `shield`    | Defensive off-hand items                    |
-| `held`      | Special held items (not weapons/shields)    |
+| Slot        | Description                                      |
+| ----------- | ------------------------------------------------ |
+| `main_hand` | Primary weapon (swords, axes, maces)             |
+| `off_hand`  | Secondary weapon (dual-wield) or shields         |
+| `held`      | Readied items (light sources)                    |
 
-**Total: 18 equipment slots**
+**Total: 17 equipment slots**
 
 ---
 
@@ -103,6 +102,7 @@ CREATE TABLE IF NOT EXISTS item_templates (
     armor_data JSONB,
     -- Structure:
     --   armor_class: integer
+    --   damage_resistance: number (flat damage reduction)
     --   weight_class: string (light, medium, heavy)
     --   resistances: object (fire: 10, ice: 5, etc.)
 
@@ -240,7 +240,6 @@ export enum EquipmentSlot {
   FEET = "feet",
   MAIN_HAND = "main_hand",
   OFF_HAND = "off_hand",
-  SHIELD = "shield",
   HELD = "held",
 }
 
@@ -310,6 +309,7 @@ export interface WeaponData {
 // Armor data
 export interface ArmorData {
   armor_class: number;
+  damage_resistance?: number; // Flat damage reduction (the "/3" in "50/3" AC display)
   weight_class?: "light" | "medium" | "heavy";
   resistances?: Partial<Record<DamageType, number>>;
 }
