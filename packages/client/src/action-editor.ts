@@ -424,6 +424,11 @@ interface Action {
         }),
       });
 
+      if (!res.ok) {
+        alert(`Import failed: ${res.status} ${res.statusText}`);
+        return;
+      }
+
       const result = await res.json();
       if (result.success) {
         const { created, updated, errors } = result.results;

@@ -51,7 +51,7 @@
 
 .action-list-item .action-desc {
   display: block;
-  font-size: 0.85rem;
+  font-size: 0.9rem;
   color: var(--text-secondary);
   margin-top: 0.25rem;
 }

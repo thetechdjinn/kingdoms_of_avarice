@@ -149,9 +149,8 @@ export function handleEmoteCommand(
 
   const currentRoomId = getPlayerLocation(socket.playerId);
 
-  // Message to self: "You <emoteText>"
-  // We use the emote text as-is without adjusting verb tense
-  const selfMsg = colors.emote(`${socket.username} ${emoteText}`);
+  // Message to self shows "You", room sees player's name
+  const selfMsg = colors.emote(`You ${emoteText}`);
   const roomMsg = colors.emote(`${socket.username} ${emoteText}`);
 
   // Broadcast to room (excluding self)
