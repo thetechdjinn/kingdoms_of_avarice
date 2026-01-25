@@ -499,3 +499,81 @@ export async function getDefaultRespawnRoomId(): Promise<number | null> {
   }
   return null;
 }
+
+// ============================================================================
+// DEATH MECHANIC SETTINGS
+// ============================================================================
+
+// Default death settings
+const DEFAULT_MAX_NEGATIVE_HP_PERCENT = 50;  // 50% of maxHp for death threshold
+const DEFAULT_DROPPED_TICK_INTERVAL_MS = 5000; // 5 seconds between bleed/recovery ticks
+
+// Cache for death settings
+let deathSettingsCache: { maxNegativeHpPercent: number; droppedTickIntervalMs: number } | null = null;
+let deathSettingsCacheTime: number = 0;
+const DEATH_SETTINGS_CACHE_TTL = 60000; // 1 minute cache
+
+/**
+ * Get the maximum negative HP percentage threshold for death.
+ * When a player's HP falls below -(maxHp * percent / 100), they die.
+ * Default: 50 (at 100 maxHp, death occurs at -50 HP)
+ */
+export async function getMaxNegativeHpPercent(): Promise<number> {
+  const now = Date.now();
+
+  if (deathSettingsCache && (now - deathSettingsCacheTime) < DEATH_SETTINGS_CACHE_TTL) {
+    return deathSettingsCache.maxNegativeHpPercent;
+  }
+
+  const value = await getSetting<number>('max_negative_hp_percent');
+  const result = (typeof value === 'number' && value > 0 && value <= 100)
+    ? value
+    : DEFAULT_MAX_NEGATIVE_HP_PERCENT;
+
+  // Update cache
+  if (!deathSettingsCache) {
+    deathSettingsCache = { maxNegativeHpPercent: result, droppedTickIntervalMs: DEFAULT_DROPPED_TICK_INTERVAL_MS };
+  } else {
+    deathSettingsCache.maxNegativeHpPercent = result;
+  }
+  deathSettingsCacheTime = now;
+
+  return result;
+}
+
+/**
+ * Get the interval between dropped state ticks in milliseconds.
+ * During each tick, dropped players either lose HP (bleeding) or gain HP (if aided).
+ * Default: 5000ms (5 seconds)
+ * Valid range: 1000ms (1s) to 30000ms (30s)
+ */
+export async function getDroppedTickIntervalMs(): Promise<number> {
+  const now = Date.now();
+
+  if (deathSettingsCache && (now - deathSettingsCacheTime) < DEATH_SETTINGS_CACHE_TTL) {
+    return deathSettingsCache.droppedTickIntervalMs;
+  }
+
+  const value = await getSetting<number>('dropped_tick_interval_ms');
+  const result = (typeof value === 'number' && value >= 1000 && value <= 30000)
+    ? value
+    : DEFAULT_DROPPED_TICK_INTERVAL_MS;
+
+  // Update cache
+  if (!deathSettingsCache) {
+    deathSettingsCache = { maxNegativeHpPercent: DEFAULT_MAX_NEGATIVE_HP_PERCENT, droppedTickIntervalMs: result };
+  } else {
+    deathSettingsCache.droppedTickIntervalMs = result;
+  }
+  deathSettingsCacheTime = now;
+
+  return result;
+}
+
+/**
+ * Clear the death settings cache (call after updating settings)
+ */
+export function clearDeathSettingsCache(): void {
+  deathSettingsCache = null;
+  deathSettingsCacheTime = 0;
+}

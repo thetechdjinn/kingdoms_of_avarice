@@ -25,6 +25,15 @@ import {
 import { getCombatSettings } from '../db/repositories/settingsRepository.js';
 import { clearCombatState } from './combatCommands.js';
 import {
+  applyDamage,
+  initializeDroppedState,
+  initializeDeadState,
+  isPlayerDropped,
+  isPlayerDead,
+  formatDroppedMessage,
+  formatDeathMessage,
+} from './damageHandler.js';
+import {
   getEquipmentCombatStats,
   calculateEncumbranceRatio,
   getEquipmentAccuracyBonus,
@@ -317,13 +326,15 @@ async function processSpellCombat(
     sendToSocket(target, MessageType.OUTPUT, defenderMsg);
     broadcastToRoomExcept(attackerRoomId, roomMsg, [attacker.playerId, targetId]);
 
-    // Apply damage
-    target.vitals.hp = Math.max(0, target.vitals.hp - damage);
+    // Apply damage using centralized handler
+    const damageResult = await applyDamage(target, damage, 'spell');
     sendVitals(target);
 
-    // Check for death
-    if (target.vitals.hp <= 0) {
-      await handlePlayerDeath(target, attacker);
+    // Handle state changes
+    if (damageResult.stateChange === 'dropped') {
+      await handlePlayerDropped(target, attacker, attackerRoomId);
+    } else if (damageResult.stateChange === 'death') {
+      await handleActualDeath(target, attacker, attackerRoomId);
     }
   }
 
@@ -579,14 +590,16 @@ async function processAttackerCombat(
       broadcastToRoomExcept(attackerRoomId, roomMessages.join('\r\n'), [attacker.playerId, targetId]);
     }
 
-    // Apply damage to target
+    // Apply damage to target using centralized handler
     if (combatResult.totalDamage > 0) {
-      target.vitals.hp = Math.max(0, target.vitals.hp - combatResult.totalDamage);
+      const damageResult = await applyDamage(target, combatResult.totalDamage, 'melee');
       sendVitals(target);
 
-      // Check for death
-      if (target.vitals.hp <= 0) {
-        await handlePlayerDeath(target, attacker);
+      // Handle state changes
+      if (damageResult.stateChange === 'dropped') {
+        await handlePlayerDropped(target, attacker, attackerRoomId);
+      } else if (damageResult.stateChange === 'death') {
+        await handleActualDeath(target, attacker, attackerRoomId);
       }
     }
   }
@@ -599,53 +612,83 @@ async function processAttackerCombat(
 }
 
 /**
- * Handle player death
+ * Handle player dropping to the ground (HP <= 0, but above death threshold)
+ * Player is incapacitated but can be saved by allies
  */
-async function handlePlayerDeath(
+async function handlePlayerDropped(
   victim: AuthenticatedSocket,
-  killer: AuthenticatedSocket
+  attacker: AuthenticatedSocket,
+  roomId: number
 ): Promise<void> {
   if (!connectedPlayersRef) return;
 
-  const roomId = getPlayerLocation(victim.playerId);
+  // Initialize dropped state
+  initializeDroppedState(victim, roomId);
 
-  // Broadcast death message
-  sendToSocket(victim, MessageType.SYSTEM, colors.boldRed(`You have been slain by ${killer.username}!`));
-  sendToSocket(killer, MessageType.SYSTEM, colors.boldGreen(`You have slain ${victim.username}!`));
+  // Clear combat state for victim (they can't fight while dropped)
+  clearCombatState(victim, connectedPlayersRef);
+
+  // Broadcast dropped message
+  sendToSocket(victim, MessageType.SYSTEM, formatDroppedMessage());
+  sendToSocket(attacker, MessageType.SYSTEM, colors.boldGreen(`${victim.username} collapses to the ground!`));
   broadcastToRoomExcept(
     roomId,
-    colors.boldRed(`${victim.username} has been slain by ${killer.username}!`),
-    [victim.playerId, killer.playerId]
+    colors.boldRed(`${victim.username} collapses to the ground!`),
+    [victim.playerId, attacker.playerId]
   );
+
+  sendVitals(victim);
+}
+
+/**
+ * Handle actual player death (HP below death threshold)
+ * Player enters purgatory state, drops all items, must respawn
+ */
+async function handleActualDeath(
+  victim: AuthenticatedSocket,
+  attacker: AuthenticatedSocket | null,
+  roomId: number
+): Promise<void> {
+  if (!connectedPlayersRef) return;
+
+  // Initialize dead state
+  initializeDeadState(victim, roomId);
 
   // Clear combat state for victim
   clearCombatState(victim, connectedPlayersRef);
 
-  // Restore vitals to full
-  victim.vitals.hp = victim.vitals.maxHp;
-  if (victim.vitals.maxResource) {
-    victim.vitals.resource = victim.vitals.maxResource;
-  }
-  sendVitals(victim);
-
-  // Determine respawn location (area respawn room > global default > room 1)
-  const respawnRoomId = await getRespawnRoomId(roomId, victim.characterId ?? undefined);
-
-  // Update victim's room in database and memory
+  // Drop all items on death
   try {
-    if (victim.characterId) {
-      await characterRepo.updateCharacterRoom(victim.characterId, respawnRoomId);
-    }
+    const { dropAllItemsOnDeath } = await import('./itemCommands.js');
+    await dropAllItemsOnDeath(victim.characterId!, roomId);
   } catch (error) {
-    console.error('[Combat] Failed to update death room:', error);
+    console.error('[Combat] Failed to drop items on death:', error);
   }
 
-  // Import setPlayerLocation dynamically to avoid circular dependency
-  const { setPlayerLocation } = await import('./adminCommands.js');
-  setPlayerLocation(victim.playerId, respawnRoomId);
+  // Broadcast death message
+  sendToSocket(victim, MessageType.SYSTEM, formatDeathMessage());
 
-  sendToSocket(victim, MessageType.SYSTEM, 'You wake up at a safe location...');
+  if (attacker) {
+    sendToSocket(attacker, MessageType.SYSTEM, colors.boldGreen(`You have slain ${victim.username}!`));
+    broadcastToRoomExcept(
+      roomId,
+      colors.boldRed(`${victim.username} has been slain by ${attacker.username}!`),
+      [victim.playerId, attacker.playerId]
+    );
+  } else {
+    // Death without attacker (e.g., from DoT, environmental)
+    broadcastToRoomExcept(
+      roomId,
+      colors.boldRed(`${victim.username} has died!`),
+      [victim.playerId]
+    );
+  }
+
+  sendVitals(victim);
 }
+
+// Export for use by droppedStateManager
+export { handleActualDeath };
 
 /**
  * Process a single combat round for all players in combat

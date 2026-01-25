@@ -15,6 +15,7 @@ import * as characterRepo from '../db/repositories/characterRepository.js';
 import { parseDiceString } from './combatCalculations.js';
 import { applyEffect, getEffectDefinition, formatDuration } from './statusEffects.js';
 import { isOnCooldown, startCooldown, getCooldownMessage } from './cooldownTracker.js';
+import { isPlayerDropped, isPlayerDead, clearDeathState } from './damageHandler.js';
 
 /**
  * Cache of all spell mnemonics for quick lookup
@@ -258,6 +259,15 @@ async function handleHealingSpell(
     }
   }
 
+  // Check death state restrictions
+  if (isPlayerDead(targetSocket)) {
+    // Cannot heal dead players - they must respawn
+    return { type: MessageType.ERROR, message: `${targetName} is dead. They need to respawn, not be healed.` };
+  }
+
+  // Track if target is dropped (for recovery check after healing)
+  const wasDropped = isPlayerDropped(targetSocket);
+
   // Deduct mana
   socket.vitals.resource = (socket.vitals.resource ?? 0) - spell.manaCost;
 
@@ -269,6 +279,19 @@ async function handleHealingSpell(
   const oldHp = targetSocket.vitals.hp;
   targetSocket.vitals.hp = Math.min(targetSocket.vitals.hp + healAmount, targetSocket.vitals.maxHp);
   const actualHeal = targetSocket.vitals.hp - oldHp;
+
+  // Check if healing brought a dropped player back to consciousness
+  if (wasDropped && targetSocket.vitals.hp > 0) {
+    clearDeathState(targetSocket);
+    // Broadcast recovery
+    broadcastToRoom(
+      currentRoomId,
+      `${targetName} regains consciousness and rises to their feet!`,
+      targetSocket.playerId
+    );
+    // Notify the recovered player
+    sendMessage(targetSocket, MessageType.SYSTEM, colors.boldGreen('You regain consciousness and rise to your feet!'));
+  }
 
   // Persist HP to database
   if (targetSocket.characterId) {

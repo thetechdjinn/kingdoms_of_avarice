@@ -2,7 +2,7 @@ import { WebSocketServer, WebSocket } from 'ws';
 import { IncomingMessage } from 'http';
 import { URL } from 'url';
 import { parse as parseCookie } from 'cookie';
-import { MessageType, GameMessage, Role, VitalsData, ResourceType, PlayerRegenState, ActiveStatusEffect, PlayerQueueState, createPlayerQueueState, PlayerStatus } from '@koa/shared';
+import { MessageType, GameMessage, Role, VitalsData, ResourceType, PlayerRegenState, ActiveStatusEffect, PlayerQueueState, createPlayerQueueState, PlayerStatus, DeathState } from '@koa/shared';
 import type { CharacterStats, CombatActionType, SpellCastingState } from '@koa/shared';
 import { verifyToken, COOKIE_NAME } from '../routes/auth.js';
 import { GameWorld } from './world.js';
@@ -25,6 +25,9 @@ import { initializeTickProcessor, startQueuedAction, executeQueuedCommand, handl
 import { initializeDoorStates } from '../services/doorStateManager.js';
 import { getCommandQueueConfig } from '../config/commandQueueConfig.js';
 import { initializeInterruptHandler } from './interruptHandler.js';
+import { startDroppedStateLoop, stopDroppedStateLoop, handleDroppedDisconnect } from './droppedStateManager.js';
+import { isPlayerDropped, isPlayerDead, clearDeathState } from './damageHandler.js';
+import { getRespawnRoomId } from '../services/respawnService.js';
 
 // Combat state tracked per-player in memory
 interface CombatState {
@@ -54,6 +57,8 @@ interface AuthenticatedSocket extends WebSocket {
   activeEffects: Map<string, ActiveStatusEffect>;
   // Command queue state
   queueState: PlayerQueueState;
+  // Death state (dropped/purgatory)
+  deathState: DeathState | null;
 }
 
 const connectedPlayers = new Map<number, AuthenticatedSocket>();
@@ -120,6 +125,9 @@ export async function initializeGameWorld(): Promise<void> {
 
   // Start combat loop
   startCombatLoop(connectedPlayers);
+
+  // Start dropped state processing loop (bleed/recovery for downed players)
+  await startDroppedStateLoop(connectedPlayers, sendMessage, sendVitals, broadcastToRoom);
 
   // Start periodic character save loop (saves HP/mana at configurable interval)
   await startCharacterSaveLoop(connectedPlayers);
@@ -238,6 +246,26 @@ export function setupGameSocket(wss: WebSocketServer): void {
       existingSocket.close(1000, 'Logged in from another location');
     }
 
+    // Check if character was dead/dropped when they disconnected (HP <= 0)
+    // If so, auto-respawn them at the respawn location with full HP
+    if (character.health <= 0) {
+      const respawnRoomId = await getRespawnRoomId(character.current_room_id, character.id);
+      character.health = character.max_health;
+      character.mana = character.max_mana;
+      character.current_room_id = respawnRoomId;
+
+      // Persist the respawn state
+      try {
+        await characterRepo.updateCharacterStats(character.id, {
+          health: character.health,
+          mana: character.mana,
+        });
+        await characterRepo.updateCharacterRoom(character.id, respawnRoomId);
+      } catch (error) {
+        console.error('Failed to auto-respawn character:', error);
+      }
+    }
+
     // Determine resource type based on class
     let resourceType = ResourceType.NONE;
     try {
@@ -321,6 +349,9 @@ export function setupGameSocket(wss: WebSocketServer): void {
 
     // Initialize command queue state
     authWs.queueState = createPlayerQueueState();
+
+    // Initialize death state (null means alive/normal)
+    authWs.deathState = null;
 
     // Load brief mode from database (default to false on error)
     try {
@@ -454,11 +485,19 @@ export function setupGameSocket(wss: WebSocketServer): void {
         authWs.exitTimer = undefined;
       }
 
+      // Handle disconnect while in dropped or dead state
+      if (isPlayerDropped(authWs)) {
+        // Player disconnected while dropped - they die and items drop
+        await handleDroppedDisconnect(authWs);
+      }
+
       // Save character vitals (HP, mana) on disconnect
+      // If dead/dropped, save with 0 HP so they auto-respawn on reconnect
       if (authWs.characterId) {
         try {
+          const hpToSave = isPlayerDead(authWs) ? 0 : authWs.vitals.hp;
           await characterRepo.updateCharacterStats(authWs.characterId, {
-            health: authWs.vitals.hp,
+            health: hpToSave,
             mana: authWs.vitals.resource ?? 0,
           });
         } catch (error) {
@@ -491,9 +530,13 @@ function sendMessage(ws: AuthenticatedSocket, type: MessageType, payload: string
 }
 
 function sendVitals(ws: AuthenticatedSocket): void {
-  // Determine player status
+  // Determine player status (death states take priority)
   let status: PlayerStatus = 'normal';
-  if (ws.exitTimer) {
+  if (ws.deathState?.isDead) {
+    status = 'dead';
+  } else if (ws.deathState?.isDropped) {
+    status = ws.deathState.isAided ? 'aided' : 'dropped';
+  } else if (ws.exitTimer) {
     status = 'meditating';
   } else if (ws.regenState.enhancedRegen.has('mana') && ws.regenState.enhancedRegen.has('health')) {
     status = 'resting';

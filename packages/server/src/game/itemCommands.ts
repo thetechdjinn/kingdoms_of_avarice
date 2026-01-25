@@ -98,13 +98,35 @@ export async function handleGet(
     return { type: MessageType.ERROR, message: formatDisambiguation(matches) };
   }
 
+  const item = matches[0];
+
+  // Check if this is a currency item - if so, route to currency handler
+  if (item.template?.item_type === ItemType.CURRENCY) {
+    // Determine currency type from template name
+    const templateName = item.template.name?.toLowerCase() ?? '';
+    let currencyType: string | null = null;
+    for (const type of ['copper', 'silver', 'gold', 'platinum', 'runic']) {
+      if (templateName.includes(type)) {
+        currencyType = type;
+        break;
+      }
+    }
+    if (currencyType) {
+      // Route to currency handler with the quantity
+      // Always pass the quantity to ensure consistent behavior (get 1 = get 1, not get all)
+      const currencyArgs = [String(quantity), currencyType];
+      const currencyResult = await handleGetCurrency(socket, currencyArgs, currentRoomId);
+      if (currencyResult) {
+        return currencyResult;
+      }
+    }
+  }
+
   // If quantity > 1 requested, we may need to pick up from multiple instances
   if (quantity > 1) {
     return pickUpMultipleItems(socket, matches, currentRoomId, quantity);
   }
-  
-  const item = matches[0];
-  
+
   // Handle stacked items (pick up 1 from stack)
   if (item.quantity > 1) {
     return pickUpItemQuantity(socket, item, currentRoomId, 1);
@@ -2359,4 +2381,89 @@ export async function handleGetCurrency(
  */
 export function isCurrencyItem(item: ItemInstance): boolean {
   return item.template?.item_type === ItemType.CURRENCY;
+}
+
+/**
+ * Drop all items and currency when a player dies.
+ * Items with no_drop flag are kept in inventory.
+ * Currency is converted to ground item stacks.
+ *
+ * @param characterId - The character ID of the dead player
+ * @param roomId - The room where items should be dropped
+ */
+export async function dropAllItemsOnDeath(characterId: number, roomId: number): Promise<void> {
+  // Get all inventory items (including equipped)
+  const inventoryItems = await itemRepo.getCharacterInventory(characterId);
+  const equippedItems = await itemRepo.getPlayerEquipped(characterId);
+
+  // Combine all items
+  const allItems = [...inventoryItems, ...equippedItems];
+
+  for (const item of allItems) {
+    // Skip items with no_drop flag
+    if (item.template?.flags?.no_drop) {
+      continue;
+    }
+
+    // Move item to room (unequip if equipped)
+    await itemRepo.updateInstanceLocation(item.id, ItemLocationType.ROOM, roomId);
+  }
+
+  // Get character currency and drop it
+  const character = await characterRepo.findCharacterById(characterId);
+  if (character) {
+    const currencyTypes: Array<{ type: string; amount: number }> = [
+      { type: 'copper', amount: character.copper ?? 0 },
+      { type: 'silver', amount: character.silver ?? 0 },
+      { type: 'gold', amount: character.gold ?? 0 },
+      { type: 'platinum', amount: character.platinum ?? 0 },
+      { type: 'runic', amount: character.runic ?? 0 },
+    ];
+
+    for (const currency of currencyTypes) {
+      if (currency.amount > 0) {
+        // Find existing currency stack in room or create new
+        const existingStack = await findCurrencyInRoom(roomId, currency.type);
+        if (existingStack) {
+          await itemRepo.addToInstanceQuantity(existingStack.id, currency.amount);
+        } else {
+          // Create currency item in room - need to find the template for this currency type
+          const template = await itemRepo.getTemplateByName(`${currency.type} coins`);
+          if (template) {
+            await itemRepo.createInstance({
+              template_id: template.id,
+              location_type: ItemLocationType.ROOM,
+              location_id: roomId,
+              quantity: currency.amount,
+            });
+          }
+        }
+      }
+    }
+
+    // Clear character's currency
+    await characterRepo.updateCharacterStats(characterId, {
+      copper: 0,
+      silver: 0,
+      gold: 0,
+      platinum: 0,
+      runic: 0,
+    });
+  }
+}
+
+/**
+ * Find a currency item stack in a room
+ */
+async function findCurrencyInRoom(roomId: number, currencyType: string): Promise<ItemInstance | null> {
+  const roomItems = await itemRepo.getInstancesInRoom(roomId);
+  for (const item of roomItems) {
+    if (item.template?.item_type === ItemType.CURRENCY) {
+      const itemName = item.template?.name?.toLowerCase() ?? '';
+      if (itemName.includes(currencyType)) {
+        return item;
+      }
+    }
+  }
+  return null;
 }
