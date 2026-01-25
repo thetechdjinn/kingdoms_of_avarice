@@ -15,6 +15,7 @@ Welcome to the Kingdoms of Avarice documentation. This guide covers all aspects 
 - [Items Architecture](Items_Architecture.md) - Technical item system details
 - [Progression System Guide](Progression_System_Guide.md) - Classes, races, abilities, and talents
 - [Spell and Effects Guide](Spell_and_Effects_Guide.md) - Spells and status effects
+- [Actions and Emotes Guide](Actions_and_Emotes_Guide.md) - Social actions and custom emotes
 
 ### Combat System
 

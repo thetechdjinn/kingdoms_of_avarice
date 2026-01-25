@@ -1,3 +1,12 @@
+:root {
+  --primary-color: #00ff00;
+  --text-primary: #eee;
+  --text-secondary: #888;
+  --input-bg: #0f0f23;
+  --hover-bg: #1f2b47;
+  --selected-bg: #0e4429;
+}
+
 * {
   margin: 0;
   padding: 0;

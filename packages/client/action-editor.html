@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Action Editor - Kingdoms of Avarice</title>
+    <link rel="stylesheet" href="/src/editor.css" />
+    <link rel="stylesheet" href="/src/action-editor.css" />
+  </head>
+  <body>
+    <div id="editor-app">
+      <nav id="main-nav">
+        <div class="nav-brand">Kingdoms of Avarice</div>
+        <div class="nav-links">
+          <a href="/" class="nav-link">Game</a>
+          <div class="nav-dropdown" id="nav-dev-dropdown">
+            <button class="nav-link nav-dropdown-btn active">Developer</button>
+            <div class="nav-dropdown-menu">
+              <a href="/editor.html" class="nav-dropdown-item">Room Editor</a>
+              <a href="/item-editor.html" class="nav-dropdown-item">Item Editor</a>
+              <a href="/spell-editor.html" class="nav-dropdown-item">Spell Editor</a>
+              <a href="/status-editor.html" class="nav-dropdown-item">Status Effects Editor</a>
+              <a href="/progression-editor.html" class="nav-dropdown-item">Progression Editor</a>
+              <a href="/door-editor.html" class="nav-dropdown-item">Door Editor</a>
+              <a href="/action-editor.html" class="nav-dropdown-item active">Action Editor</a>
+              <a href="/swing-calculator.html" class="nav-dropdown-item">Swing Calculator</a>
+            </div>
+          </div>
+          <div class="nav-dropdown" id="nav-admin-dropdown" style="display: none;">
+            <button class="nav-link nav-dropdown-btn">Admin</button>
+            <div class="nav-dropdown-menu">
+              <a href="/admin.html" class="nav-dropdown-item">Admin Panel</a>
+              <a href="/game-settings-editor.html" class="nav-dropdown-item">Game Settings</a>
+              <a href="/user-editor.html" class="nav-dropdown-item">User Editor</a>
+            </div>
+          </div>
+        </div>
+        <div class="nav-spacer"></div>
+        <a href="/docs.html?file=Actions_and_Emotes_Guide.md" class="help-link nav-help" title="View Documentation" target="_blank" rel="noopener noreferrer">?</a>
+        <div class="nav-user-menu">
+          <button class="nav-user-btn" id="nav-username">User</button>
+          <div class="dropdown-menu" id="user-dropdown">
+            <button class="dropdown-item" id="logout-btn">Logout</button>
+          </div>
+        </div>
+      </nav>
+
+      <div id="editor-layout">
+        <aside id="action-list-panel">
+          <div class="panel-header">
+            <h2>Actions</h2>
+            <button id="new-action-btn" class="btn-primary">+ New Action</button>
+          </div>
+          <div id="action-search">
+            <input type="text" id="search-input" placeholder="Search actions..." />
+          </div>
+          <ul id="action-list"></ul>
+
+          <div class="panel-footer">
+            <button id="import-btn" class="btn-small">Import</button>
+            <button id="export-btn" class="btn-small">Export</button>
+          </div>
+        </aside>
+
+        <main id="action-editor-panel">
+          <div id="no-action-selected">
+            <p>Select an action from the list or create a new one.</p>
+          </div>
+
+          <form id="action-form" style="display: none;">
+            <div class="form-header">
+              <h2 id="action-form-title">Edit Action</h2>
+              <span id="action-id-display"></span>
+            </div>
+
+            <!-- Basic Info -->
+            <div class="form-section">
+              <h3>Basic Info</h3>
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="action-command">Command</label>
+                  <input type="text" id="action-command" required placeholder="dance" />
+                  <span class="hint-inline">What the player types (e.g., dance, bow, wave)</span>
+                </div>
+                <div class="form-group">
+                  <label for="action-description">Description</label>
+                  <input type="text" id="action-description" placeholder="Dance a jig" />
+                  <span class="hint-inline">Brief description for help listings</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- No Target Messages -->
+            <div class="form-section">
+              <h3>No Target Messages</h3>
+              <p class="section-hint">Messages shown when the action is used without specifying a target.</p>
+              <div class="form-group">
+                <label for="action-first-person-no-target">Self Message</label>
+                <input type="text" id="action-first-person-no-target" required placeholder="You dance a little jig!" />
+                <span class="hint-inline">Shown to the player performing the action</span>
+              </div>
+              <div class="form-group">
+                <label for="action-room-no-target">Room Message</label>
+                <input type="text" id="action-room-no-target" required placeholder="{player} dances a little jig!" />
+                <span class="hint-inline">Shown to others in the room. Use {player} for the actor's name.</span>
+              </div>
+            </div>
+
+            <!-- With Target Messages -->
+            <div class="form-section">
+              <h3>With Target Messages (Optional)</h3>
+              <p class="section-hint">Messages shown when the action is directed at another player. Leave empty to disable targeting.</p>
+              <div class="form-group">
+                <label for="action-first-person-with-target">Self Message</label>
+                <input type="text" id="action-first-person-with-target" placeholder="You dance with {target}!" />
+                <span class="hint-inline">Shown to the player performing the action</span>
+              </div>
+              <div class="form-group">
+                <label for="action-target-perspective">Target Message</label>
+                <input type="text" id="action-target-perspective" placeholder="{player} dances with you!" />
+                <span class="hint-inline">Shown to the target player</span>
+              </div>
+              <div class="form-group">
+                <label for="action-room-with-target">Room Message</label>
+                <input type="text" id="action-room-with-target" placeholder="{player} dances with {target}!" />
+                <span class="hint-inline">Shown to others (excluding actor and target)</span>
+              </div>
+            </div>
+
+            <div class="form-actions">
+              <button type="submit" class="btn-primary">Save Action</button>
+              <button type="button" id="duplicate-action-btn" class="btn-secondary">Duplicate</button>
+              <button type="button" id="delete-action-btn" class="btn-danger">Delete Action</button>
+            </div>
+          </form>
+        </main>
+
+        <aside id="preview-panel">
+          <div class="panel-header">
+            <h2>Preview</h2>
+          </div>
+          <div id="action-preview">
+            <div id="preview-content">
+              <p class="hint">Select an action to see preview</p>
+            </div>
+          </div>
+
+          <div class="panel-section">
+            <h3>Placeholders</h3>
+            <ul class="placeholder-list">
+              <li><code>{player}</code> - The actor's name</li>
+              <li><code>{target}</code> - The target's name</li>
+            </ul>
+          </div>
+
+          <div class="panel-section">
+            <h3>Emotes</h3>
+            <p class="hint">Players can also use <code>/me &lt;text&gt;</code> for custom emotes.</p>
+            <p class="hint">Example: <code>/me waves goodbye</code></p>
+          </div>
+        </aside>
+      </div>
+    </div>
+
+    <!-- Import Modal -->
+    <div id="import-modal" class="modal" style="display: none;">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>Import Actions</h3>
+          <button id="close-import-modal" class="close-btn" aria-label="Close">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label for="import-file">Select JSON file:</label>
+            <input type="file" id="import-file" accept=".json" />
+          </div>
+          <label class="checkbox-label">
+            <input type="checkbox" id="import-merge" checked />
+            Merge with existing (update if command matches)
+          </label>
+        </div>
+        <div class="modal-footer">
+          <button id="do-import-btn" class="btn-primary">Import</button>
+        </div>
+      </div>
+    </div>
+
+    <script type="module" src="/src/action-editor.ts"></script>
+  </body>
+</html>

@@ -25,6 +25,7 @@ import { setupAdminRoutes } from './routes/admin.js';
 import { setupSpellRoutes } from './routes/spells.js';
 import { setupStatusEffectDefinitionRoutes } from './routes/statusEffectDefinitions.js';
 import { setupDoorRoutes } from './routes/doors.js';
+import { setupActionRoutes } from './routes/actions.js';
 import { setupGameSocket, initializeGameWorld } from './game/socket.js';
 import { stopCharacterSaveLoop } from './game/characterSaveLoop.js';
 import { stopCombatLoop } from './game/combat.js';
@@ -61,6 +62,7 @@ setupAdminRoutes(app);
 setupSpellRoutes(app);
 setupStatusEffectDefinitionRoutes(app);
 setupDoorRoutes(app);
+setupActionRoutes(app);
 
 const server = createServer(app);
 

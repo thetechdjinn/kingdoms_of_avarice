@@ -16,6 +16,7 @@ import { parseDiceString } from './combatCalculations.js';
 import { applyEffect, getEffectDefinition, formatDuration } from './statusEffects.js';
 import { isOnCooldown, startCooldown, getCooldownMessage } from './cooldownTracker.js';
 import { isPlayerDropped, isPlayerDead, clearDeathState } from './damageHandler.js';
+import { findPlayerInRoom } from './playerUtils.js';
 
 /**
  * Cache of all spell mnemonics for quick lookup
@@ -42,30 +43,6 @@ export async function initializeSpellMnemonics(): Promise<void> {
  */
 export function isSpellMnemonic(command: string): boolean {
   return cachedMnemonics.has(command.toLowerCase());
-}
-
-/**
- * Find a player in the same room by name (case-insensitive partial match)
- */
-function findPlayerInRoom(
-  targetName: string,
-  roomId: number,
-  connectedPlayers: Map<number, AuthenticatedSocket>,
-  excludePlayerId: number
-): AuthenticatedSocket | null {
-  const lowerTarget = targetName.toLowerCase();
-
-  for (const [playerId, socket] of connectedPlayers) {
-    if (playerId === excludePlayerId) continue;
-    if (getPlayerLocation(playerId) !== roomId) continue;
-
-    const playerName = socket.username.toLowerCase();
-    if (playerName === lowerTarget || playerName.startsWith(lowerTarget)) {
-      return socket;
-    }
-  }
-
-  return null;
 }
 
 /**

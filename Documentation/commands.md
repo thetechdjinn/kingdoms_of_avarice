@@ -9,6 +9,7 @@ This document lists all available commands in Kingdoms of Avarice.
 | Command | Description |
 | ------- | ----------- |
 | `help` | Show player commands |
+| `help actions` | List all available social actions |
 | `help staff` | View staff commands (MODERATOR+) |
 | `help developer` | View developer commands (DEVELOPER+) |
 | `@help` | Full admin command reference (MODERATOR+) |
@@ -116,6 +117,19 @@ This document lists all available commands in Kingdoms of Avarice.
 | `train stats` | | Allocate CP to stats (in training room) |
 | `status` | `st`, `sta`, `stat`, `statu` | View your character sheet |
 
+### Social
+
+| Command | Aliases | Description |
+| ------- | ------- | ----------- |
+| `/me <text>` | `me` | Custom emote (e.g., `/me waves goodbye`) |
+| `<action>` | | Perform a social action (e.g., `dance`, `bow`, `wave`) |
+| `<action> <player>` | | Target a player with an action (e.g., `wave bob`) |
+| `help actions` | | List all available social actions |
+
+**Default Actions:** `bow`, `cackle`, `cheer`, `clap`, `cry`, `dance`, `grin`, `grovel`, `hug`, `laugh`, `nod`, `poke`, `salute`, `shrug`, `sigh`, `smirk`, `wave`, `wink`, `yawn`
+
+See the [Actions and Emotes Guide](Actions_and_Emotes_Guide.md) for more details.
+
 ### Other
 
 | Command | Aliases | Description |
@@ -210,7 +224,7 @@ These commands require Developer role or higher.
 
 | Command | Description |
 | ------- | ----------- |
-| `@reload [rooms\|items\|all]` | Reload data from database |
+| `@reload [type]` | Reload data from database (rooms, items, effects, doors, actions, all) |
 
 ---
 

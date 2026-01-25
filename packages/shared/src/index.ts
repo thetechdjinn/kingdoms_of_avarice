@@ -248,3 +248,17 @@ export * from "./characterPoints.js";
 
 // Re-export command queue system
 export * from "./commandQueue.js";
+
+// Action (social emote) data
+export interface Action {
+  id: number;
+  command: string;
+  description: string | null;
+  firstPersonNoTarget: string;
+  roomNoTarget: string;
+  firstPersonWithTarget: string | null;
+  targetPerspective: string | null;
+  roomWithTarget: string | null;
+  createdAt: Date | string;
+  updatedAt: Date | string;
+}
