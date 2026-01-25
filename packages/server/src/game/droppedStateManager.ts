@@ -8,7 +8,7 @@
  * - If HP rises above 0, player recovers
  */
 
-import { MessageType, GameMessage } from '@koa/shared';
+import { MessageType } from '@koa/shared';
 import { AuthenticatedSocket } from './socket.js';
 import { getPlayerLocation } from './adminCommands.js';
 import { getDroppedTickIntervalMs, getMaxNegativeHpPercent } from '../db/repositories/settingsRepository.js';
