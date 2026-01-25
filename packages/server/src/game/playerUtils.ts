@@ -11,7 +11,8 @@ export function findPlayerInRoom(
   connectedPlayers: Map<number, AuthenticatedSocket>,
   excludePlayerId: number
 ): AuthenticatedSocket | null {
-  const lowerTarget = targetName.toLowerCase();
+  const lowerTarget = targetName.trim().toLowerCase();
+  if (!lowerTarget) return null;
 
   for (const [playerId, socket] of connectedPlayers) {
     if (playerId === excludePlayerId) continue;
