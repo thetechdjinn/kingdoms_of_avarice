@@ -113,7 +113,8 @@ export async function handleGet(
     }
     if (currencyType) {
       // Route to currency handler with the quantity
-      const currencyArgs = quantity > 1 ? [String(quantity), currencyType] : [currencyType];
+      // Always pass the quantity to ensure consistent behavior (get 1 = get 1, not get all)
+      const currencyArgs = [String(quantity), currencyType];
       const currencyResult = await handleGetCurrency(socket, currencyArgs, currentRoomId);
       if (currencyResult) {
         return currencyResult;

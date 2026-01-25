@@ -77,17 +77,13 @@ export async function applyDamage(
     };
   }
 
-  // Check for death (HP below death threshold)
+  // Check for death (HP at or below death threshold)
   if (newHp <= deathThreshold) {
     stateChange = 'death';
   }
-  // Check for dropped state (HP at or below 0, above death threshold)
-  else if (newHp <= 0 && previousHp > 0 && !socket.deathState?.isDropped) {
+  // Check for dropped state (HP at or below 0, above death threshold, not already dropped)
+  else if (newHp <= 0 && !socket.deathState?.isDropped) {
     stateChange = 'dropped';
-  }
-  // Check for death while already dropped
-  else if (socket.deathState?.isDropped && newHp <= deathThreshold) {
-    stateChange = 'death';
   }
 
   return {
