@@ -34,7 +34,16 @@ export enum ResourceType {
 }
 
 // Player status for statline display
-export type PlayerStatus = 'normal' | 'resting' | 'meditating';
+export type PlayerStatus = 'normal' | 'resting' | 'meditating' | 'dropped' | 'aided' | 'dead';
+
+// Death state tracking for dropped/purgatory mechanics
+export interface DeathState {
+  isDropped: boolean;     // Player is at 0 HP, on the ground
+  isAided: boolean;       // Player has been stabilized by another player
+  isDead: boolean;        // Player has died and is in purgatory
+  deathRoomId?: number;   // Room where player died (for item drops)
+  droppedAt?: number;     // Timestamp when player dropped
+}
 
 // Vitals data sent to client for statline display
 export interface VitalsData {

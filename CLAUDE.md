@@ -174,6 +174,8 @@ Access via Hub > Admin Tools (requires ADMIN role). Three tabs:
 
 - **Max Characters Per Player**: Global default character limit
 - **IP Access Mode**: Blocklist (allow all, block specific) or Allowlist (block all, allow specific)
+- **Max Negative HP Percent**: Death threshold as percentage of max HP (default: 50%)
+- **Dropped Tick Interval**: Milliseconds between bleed/recovery ticks (default: 5000ms)
 
 ## IP Access Control
 
@@ -259,6 +261,21 @@ Players can access different help categories based on their role:
 | ------- | ----------- |
 | `pick <direction>` | Pick lock (requires thief skills) |
 | `bash <direction>` | Bash door open (uses strength) |
+
+### Death System Commands
+
+| Command | Description |
+| ------- | ----------- |
+| `aid <player>` | Stabilize a fallen ally (prevents bleed-out) |
+| `respawn` | Return to life at respawn room (when dead) |
+
+**Death Mechanics:**
+- When HP drops to 0, players collapse and enter "dropped" state
+- Dropped players bleed out over time (-1 HP per tick)
+- Allies can use `aid` to stabilize dropped players (+1 HP recovery per tick)
+- If HP falls below the death threshold (default: -50% of max HP), the player dies
+- Dead players drop all items and currency, then must `respawn`
+- Respawning restores full HP/mana at the designated respawn room
 
 ## Git Conventions
 

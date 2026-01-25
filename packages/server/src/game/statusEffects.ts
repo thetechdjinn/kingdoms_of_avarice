@@ -18,6 +18,16 @@ import { AuthenticatedSocket } from './socket.js';
 import { colors } from '../utils/colors.js';
 import { MessageType } from '@koa/shared';
 import { handleInterruptTrigger } from './interruptHandler.js';
+import {
+  applyDamage,
+  initializeDroppedState,
+  initializeDeadState,
+  isPlayerDropped,
+  isPlayerDead,
+  formatDroppedMessage,
+  formatDeathMessage,
+} from './damageHandler.js';
+import { getPlayerLocation } from './adminCommands.js';
 
 // ============================================================================
 // Utility Functions
@@ -732,11 +742,17 @@ export async function processEffectsTick(
 
     // Process DoT damage (using min/max range)
     if (definition.tickDamageMin !== undefined && definition.tickDamageMax !== undefined) {
+      // Skip DoT processing if player is already dead
+      if (isPlayerDead(socket)) {
+        continue;
+      }
+
       // Roll random value in range, multiplied by stack count
       const baseDamage = rollRange(definition.tickDamageMin, definition.tickDamageMax);
       const totalDamage = baseDamage * effect.stacks;
 
-      socket.vitals.hp = Math.max(0, socket.vitals.hp - totalDamage);
+      // Apply damage using centralized handler (allows negative HP and state transitions)
+      const damageResult = await applyDamage(socket, totalDamage, 'dot');
       vitalsChanged = true;
 
       // Cancel resting/meditation when taking damage
@@ -773,7 +789,19 @@ export async function processEffectsTick(
         }
       }
 
-      // Note: Death from DoT is handled by the caller after all effects are processed
+      // Handle state changes from DoT damage
+      const roomId = getPlayerLocation(socket.playerId);
+      if (damageResult.stateChange === 'dropped') {
+        initializeDroppedState(socket, roomId);
+        sendMessage(socket, MessageType.SYSTEM, formatDroppedMessage());
+        // Broadcast to room
+        const { broadcastToRoom } = await import('./socket.js');
+        broadcastToRoom(roomId, colors.boldRed(`${socket.username} collapses to the ground!`), socket.playerId);
+      } else if (damageResult.stateChange === 'death') {
+        // Import handleActualDeath from combat to handle death with item dropping
+        const { handleActualDeath } = await import('./combat.js');
+        await handleActualDeath(socket, null, roomId);
+      }
     }
 
     // Process HoT healing (only if player is still alive to prevent unintended revival)

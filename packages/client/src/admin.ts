@@ -27,6 +27,8 @@ interface IpAccessEntry {
 interface GameSettings {
   max_characters_per_player: number;
   ip_access_mode: 'allowlist' | 'blocklist';
+  max_negative_hp_percent?: number;
+  dropped_tick_interval_ms?: number;
 }
 
 // ============================================================================
@@ -511,6 +513,10 @@ async function loadSettings(): Promise<void> {
         String(settings.max_characters_per_player);
       (document.getElementById('setting-ip-mode') as HTMLSelectElement).value =
         settings.ip_access_mode;
+      (document.getElementById('setting-max-negative-hp') as HTMLInputElement).value =
+        String(settings.max_negative_hp_percent ?? 50);
+      (document.getElementById('setting-dropped-tick') as HTMLInputElement).value =
+        String(settings.dropped_tick_interval_ms ?? 5000);
     }
   } catch (error) {
     console.error('Failed to load settings:', error);
@@ -579,6 +585,74 @@ async function saveIpModeSetting(): Promise<void> {
   }
 }
 
+async function saveMaxNegativeHpSetting(): Promise<void> {
+  const value = parseInt((document.getElementById('setting-max-negative-hp') as HTMLInputElement).value);
+  const messageEl = document.getElementById('settings-message')!;
+
+  if (isNaN(value) || value < 10 || value > 100) {
+    messageEl.textContent = 'Please enter a value between 10 and 100';
+    messageEl.className = 'message error';
+    return;
+  }
+
+  try {
+    const response = await fetch('/api/admin/settings/max_negative_hp_percent', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ value }),
+      credentials: 'include',
+    });
+
+    const data = await response.json();
+
+    if (data.success) {
+      messageEl.textContent = 'Setting saved successfully';
+      messageEl.className = 'message success';
+    } else {
+      messageEl.textContent = data.message || 'Failed to save';
+      messageEl.className = 'message error';
+    }
+  } catch (error) {
+    console.error('Failed to save setting:', error);
+    messageEl.textContent = 'Connection error';
+    messageEl.className = 'message error';
+  }
+}
+
+async function saveDroppedTickSetting(): Promise<void> {
+  const value = parseInt((document.getElementById('setting-dropped-tick') as HTMLInputElement).value);
+  const messageEl = document.getElementById('settings-message')!;
+
+  if (isNaN(value) || value < 1000 || value > 30000) {
+    messageEl.textContent = 'Please enter a value between 1000 and 30000 ms';
+    messageEl.className = 'message error';
+    return;
+  }
+
+  try {
+    const response = await fetch('/api/admin/settings/dropped_tick_interval_ms', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ value }),
+      credentials: 'include',
+    });
+
+    const data = await response.json();
+
+    if (data.success) {
+      messageEl.textContent = 'Setting saved successfully';
+      messageEl.className = 'message success';
+    } else {
+      messageEl.textContent = data.message || 'Failed to save';
+      messageEl.className = 'message error';
+    }
+  } catch (error) {
+    console.error('Failed to save setting:', error);
+    messageEl.textContent = 'Connection error';
+    messageEl.className = 'message error';
+  }
+}
+
 function escapeHtml(text: string): string {
   const div = document.createElement('div');
   div.textContent = text;
@@ -625,6 +699,16 @@ document.addEventListener('DOMContentLoaded', async () => {
   const saveIpModeBtn = document.getElementById('save-ip-mode-btn');
   if (saveIpModeBtn) {
     saveIpModeBtn.addEventListener('click', saveIpModeSetting);
+  }
+
+  const saveMaxNegativeHpBtn = document.getElementById('save-max-negative-hp-btn');
+  if (saveMaxNegativeHpBtn) {
+    saveMaxNegativeHpBtn.addEventListener('click', saveMaxNegativeHpSetting);
+  }
+
+  const saveDroppedTickBtn = document.getElementById('save-dropped-tick-btn');
+  if (saveDroppedTickBtn) {
+    saveDroppedTickBtn.addEventListener('click', saveDroppedTickSetting);
   }
 
   // User menu dropdown toggle

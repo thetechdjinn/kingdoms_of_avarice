@@ -17,6 +17,14 @@ import * as characterRepo from '../db/repositories/characterRepository.js';
 import * as progressionRepo from '../db/repositories/progressionRepository.js';
 import * as itemRepo from '../db/repositories/itemRepository.js';
 import { generatePlayerDescription } from './playerDescription.js';
+import {
+  isPlayerDropped,
+  isPlayerDead,
+  isPlayerAided,
+  setPlayerAided,
+  clearDeathState,
+} from './damageHandler.js';
+import { getRespawnRoomId } from '../services/respawnService.js';
 
 export interface CommandResponse {
   type: MessageType;
@@ -74,6 +82,22 @@ export async function processCommand(
   const parts = lowerTrimmed.split(/\s+/);
   const command = parts[0];
   const args = parts.slice(1);
+
+  // Death state command restrictions
+  // Dead state - very limited commands
+  if (isPlayerDead(socket)) {
+    const allowedDead = ['respawn', 'look', 'l', 'who', 'say', "'", 'help', '?'];
+    if (!allowedDead.includes(command)) {
+      return { type: MessageType.ERROR, message: 'You are dead. Type "respawn" to return to life.' };
+    }
+  }
+  // Dropped state - limited commands
+  else if (isPlayerDropped(socket)) {
+    const allowedDropped = ['look', 'l', 'inventory', 'inv', 'i', 'who', 'say', "'", 'quit', 'x', 'help', '?', 'status', 'st', 'sta', 'stat', 'statu'];
+    if (!allowedDropped.includes(command)) {
+      return { type: MessageType.ERROR, message: 'You cannot do that while on the ground. Wait for aid or bleed out.' };
+    }
+  }
 
   // Clear enhanced regen state when any command other than 'rest' is entered
   // This breaks the resting state when the player takes any action
@@ -262,6 +286,16 @@ export async function processCommand(
     return handleRest(socket);
   }
 
+  // Aid command - stabilize a fallen ally
+  if (command === 'aid') {
+    return handleAid(socket, args, currentRoomId, _connectedPlayers);
+  }
+
+  // Respawn command - return to life after death
+  if (command === 'respawn') {
+    return await handleRespawn(socket, world, _connectedPlayers);
+  }
+
   // Combat commands
   if (command === 'attack' || command === 'att' || command === 'kill' || command === 'k' || command === 'a') {
     return handleAttack(socket, args, _connectedPlayers);
@@ -342,6 +376,7 @@ function isDirection(cmd: string): boolean {
 }
 
 // Get names of other players in the same room (excluding the current player)
+// Includes status indicators for dropped/dead players
 function getOtherPlayersInRoom(
   roomId: number,
   excludePlayerId: number,
@@ -350,7 +385,14 @@ function getOtherPlayersInRoom(
   const otherPlayers: string[] = [];
   for (const [playerId, socket] of connectedPlayers) {
     if (playerId !== excludePlayerId && getPlayerLocation(playerId) === roomId) {
-      otherPlayers.push(socket.username);
+      let displayName = socket.username;
+      // Add status indicator
+      if (isPlayerDead(socket)) {
+        displayName = `corpse of ${socket.username}`;
+      } else if (isPlayerDropped(socket)) {
+        displayName += ' (on the ground)';
+      }
+      otherPlayers.push(displayName);
     }
   }
   return otherPlayers;
@@ -1444,6 +1486,12 @@ function handleHelp(userRoles: Role[], category?: string): CommandResponse {
     colors.boldCyan('  Combat:'),
     `    ${colors.white('attack <player>')} (k)   - Attack another player`,
     `    ${colors.white('flee')} (fl)             - Attempt to flee from combat`,
+    `    ${colors.white('aid <player>')}          - Stabilize a fallen ally`,
+    '',
+    colors.boldCyan('  Death & Revival:'),
+    `    ${colors.white('respawn')}               - Return to life at a safe location (when dead)`,
+    `    ${colors.gray('When you drop to 0 HP, you collapse. Allies can "aid" you.')}`,
+    `    ${colors.gray('If you die, your items drop. Type "respawn" to return.')}`,'',
     '',
     colors.boldCyan('  Magic:'),
     `    ${colors.white('spells')} (sp)           - View your spellbook`,
@@ -1820,4 +1868,121 @@ function handleCooldowns(socket: AuthenticatedSocket): CommandResponse {
   }
 
   return { type: MessageType.OUTPUT, message: lines.join('\r\n') };
+}
+
+/**
+ * Handle aid command - stabilize a fallen ally
+ */
+function handleAid(
+  socket: AuthenticatedSocket,
+  args: string[],
+  currentRoomId: number,
+  connectedPlayers: Map<number, AuthenticatedSocket>
+): CommandResponse {
+  if (args.length === 0) {
+    return { type: MessageType.ERROR, message: 'Aid who?' };
+  }
+
+  const targetName = args.join(' ').toLowerCase();
+
+  // Find target player in the room
+  const target = findPlayerInRoom(targetName, currentRoomId, connectedPlayers, socket.playerId);
+  if (!target) {
+    return { type: MessageType.ERROR, message: `You don't see ${targetName} here.` };
+  }
+
+  // Check if target is dropped (not dead)
+  if (!isPlayerDropped(target)) {
+    if (isPlayerDead(target)) {
+      return { type: MessageType.ERROR, message: `${target.username} is beyond your help. They must respawn.` };
+    }
+    return { type: MessageType.ERROR, message: `${target.username} doesn't need aid.` };
+  }
+
+  // Check if already aided
+  if (isPlayerAided(target)) {
+    return { type: MessageType.SYSTEM, message: `${target.username} has already been stabilized.` };
+  }
+
+  // Aid the player
+  setPlayerAided(target, true);
+
+  // Notify everyone
+  broadcastToRoom(currentRoomId, `${socket.username} stabilizes ${target.username}!`, socket.playerId);
+
+  // Notify the target
+  const targetMsg = {
+    type: MessageType.SYSTEM,
+    payload: colors.green(`${socket.username} stabilizes you! You begin to recover.`),
+    timestamp: Date.now(),
+  };
+  target.send(JSON.stringify(targetMsg));
+
+  return { type: MessageType.OUTPUT, message: `You stabilize ${colors.player(target.username)}. They will begin to recover.` };
+}
+
+/**
+ * Handle respawn command - return to life after death
+ */
+async function handleRespawn(
+  socket: AuthenticatedSocket,
+  world: GameWorld,
+  connectedPlayers: Map<number, AuthenticatedSocket>
+): Promise<CommandResponse> {
+  // Check if player is dead
+  if (!isPlayerDead(socket)) {
+    return { type: MessageType.ERROR, message: 'You are not dead.' };
+  }
+
+  const currentRoomId = getPlayerLocation(socket.playerId);
+
+  // Get respawn room
+  const respawnRoomId = await getRespawnRoomId(currentRoomId, socket.characterId ?? undefined);
+
+  // Clear death state
+  clearDeathState(socket);
+
+  // Restore HP and mana to full
+  socket.vitals.hp = socket.vitals.maxHp;
+  if (socket.vitals.maxResource) {
+    socket.vitals.resource = socket.vitals.maxResource;
+  }
+
+  // Update character in database
+  if (socket.characterId) {
+    await characterRepo.updateCharacterStats(socket.characterId, {
+      health: socket.vitals.hp,
+      mana: socket.vitals.resource ?? 0,
+    });
+    await characterRepo.updateCharacterRoom(socket.characterId, respawnRoomId);
+  }
+
+  // Update player location
+  setPlayerLocation(socket.playerId, respawnRoomId);
+
+  // Send vitals
+  sendVitals(socket);
+
+  // Broadcast departure from death room
+  broadcastToRoom(currentRoomId, `${socket.username}'s spirit fades away...`, socket.playerId);
+
+  // Broadcast arrival at respawn room
+  broadcastToRoom(respawnRoomId, `${socket.username} appears in a flash of light!`, socket.playerId);
+
+  // Get room description
+  const room = world.getRoom(respawnRoomId);
+  if (!room) {
+    return { type: MessageType.SYSTEM, message: 'You wake up at a safe location...' };
+  }
+
+  const otherPlayers = getOtherPlayersInRoom(respawnRoomId, socket.playerId, connectedPlayers);
+  const { getRoomItemsDescription } = await import('./itemCommands.js');
+  const itemDescriptions = await getRoomItemsDescription(respawnRoomId);
+
+  const roomDesc = world.formatRoomDescription(room, otherPlayers, socket.briefMode, itemDescriptions);
+
+  return {
+    type: MessageType.OUTPUT,
+    message: colors.green('You wake up at a safe location...') + '\r\n\r\n' + roomDesc,
+  };
 }

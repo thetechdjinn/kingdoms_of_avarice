@@ -30,6 +30,7 @@ import { stopCharacterSaveLoop } from './game/characterSaveLoop.js';
 import { stopCombatLoop } from './game/combat.js';
 import { stopGameLoop } from './game/gameLoop.js';
 import { stopRegenLoops } from './game/regeneration.js';
+import { stopDroppedStateLoop } from './game/droppedStateManager.js';
 import { stopDnsResolver } from './services/dnsResolver.js';
 import { testConnection } from './db/index.js';
 import { runMigrations, seedInitialData } from './db/migrate.js';
@@ -97,6 +98,7 @@ function shutdown(signal: string) {
   stopCombatLoop();
   stopGameLoop();
   stopRegenLoops();
+  stopDroppedStateLoop();
   stopDnsResolver();
 
   // Close HTTP server (stops accepting new connections)

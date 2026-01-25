@@ -1,10 +1,11 @@
-import { ResourceRegenConfig, VitalsData, PlayerRegenState } from '@koa/shared';
+import { ResourceRegenConfig, VitalsData, PlayerRegenState, DeathState } from '@koa/shared';
 
 // Interface for the socket with vitals and regen state
 // This is a minimal interface that AuthenticatedSocket implements
 export interface RegenCapableSocket {
   vitals: VitalsData;
   regenState: PlayerRegenState;
+  deathState: DeathState | null;
 }
 
 // Registry of all resource regeneration configs
@@ -102,6 +103,11 @@ function processRegenTick(config: ResourceRegenConfig): void {
   for (const [, socket] of connectedPlayersRef) {
     // Skip sockets without proper regenState (safety check)
     if (!socket.regenState) {
+      continue;
+    }
+
+    // No regeneration while dropped or dead
+    if (socket.deathState?.isDropped || socket.deathState?.isDead) {
       continue;
     }
 

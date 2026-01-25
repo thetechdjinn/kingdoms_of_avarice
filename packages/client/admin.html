@@ -142,6 +142,26 @@
                 <p class="setting-desc">In blocklist mode, all IPs are allowed unless blocked. In allowlist mode, only specified IPs can access.</p>
               </div>
 
+              <h3 style="margin-top: 2rem;">Death Mechanics</h3>
+
+              <div class="form-group">
+                <label for="setting-max-negative-hp">Max Negative HP Percent</label>
+                <div class="setting-row">
+                  <input type="number" id="setting-max-negative-hp" min="10" max="100" />
+                  <button id="save-max-negative-hp-btn" class="btn-small">Save</button>
+                </div>
+                <p class="setting-desc">Percentage of max HP that determines the death threshold. At 50%, a player with 100 max HP dies at -50 HP.</p>
+              </div>
+
+              <div class="form-group">
+                <label for="setting-dropped-tick">Dropped Tick Interval (ms)</label>
+                <div class="setting-row">
+                  <input type="number" id="setting-dropped-tick" min="1000" max="30000" step="1000" />
+                  <button id="save-dropped-tick-btn" class="btn-small">Save</button>
+                </div>
+                <p class="setting-desc">Milliseconds between bleed/recovery ticks for dropped players. Default: 5000 (5 seconds).</p>
+              </div>
+
               <p id="settings-message" class="message"></p>
             </div>
           </section>

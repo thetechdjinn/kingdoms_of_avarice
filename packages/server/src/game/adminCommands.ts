@@ -2,7 +2,7 @@ import { MessageType, Role, hasAnyRole, ItemLocationType, ItemCondition } from '
 import * as spellRepo from '../db/repositories/spellRepository.js';
 import * as characterRepo from '../db/repositories/characterRepository.js';
 import { GameWorld, Room } from './world.js';
-import { AuthenticatedSocket, connectedPlayers, sendVitals, sendMessage } from './socket.js';
+import { AuthenticatedSocket, connectedPlayers, sendVitals, sendMessage, broadcastToRoom } from './socket.js';
 import { colors } from '../utils/colors.js';
 import * as itemRepo from '../db/repositories/itemRepository.js';
 import { isProgressionCommand, processProgressionCommand, getProgressionHelpText } from './progressionCommands.js';
@@ -18,6 +18,13 @@ import {
 } from './statusEffects.js';
 import { getDelayModifierDescriptions } from './delayModifiers.js';
 import { StatusEffectCategory } from '@koa/shared';
+import {
+  applyDamage,
+  initializeDroppedState,
+  initializeDeadState,
+  formatDroppedMessage,
+  formatDeathMessage,
+} from './damageHandler.js';
 
 interface CommandResponse {
   type: MessageType;
@@ -103,7 +110,7 @@ export async function processAdminCommand(
     case 'give':
       return handleGive(args, socket);
     case 'hurt':
-      return handleHurt(args, socket);
+      return await handleHurt(args, socket);
     case 'drain':
       return handleDrain(args, socket);
     case 'learn':
@@ -725,10 +732,10 @@ async function handleGive(
   }
 }
 
-function handleHurt(
+async function handleHurt(
   args: string[],
   socket: AuthenticatedSocket
-): CommandResponse {
+): Promise<CommandResponse> {
   // @hurt [amount] [player] OR @hurt [player] - Reduce HP for testing regen
   // Default: hurt self by 10
   let amount = 10;
@@ -768,11 +775,31 @@ function handleHurt(
     }
   }
 
-  // Apply damage
-  const oldHp = targetSocket.vitals.hp;
-  targetSocket.vitals.hp = Math.max(0, targetSocket.vitals.hp - amount);
-  const newHp = targetSocket.vitals.hp;
-  const actualDamage = oldHp - newHp;
+  // Apply damage using centralized handler (allows negative HP and state transitions)
+  const damageResult = await applyDamage(targetSocket, amount, 'environmental');
+  const newHp = damageResult.newHp;
+
+  // Handle state transitions
+  const roomId = getPlayerLocation(targetSocket.playerId);
+
+  if (damageResult.stateChange === 'dropped') {
+    initializeDroppedState(targetSocket, roomId);
+    sendMessage(targetSocket, MessageType.SYSTEM, formatDroppedMessage());
+    broadcastToRoom(roomId, colors.boldRed(`${targetName} collapses to the ground!`), targetSocket.playerId);
+  } else if (damageResult.stateChange === 'death') {
+    initializeDeadState(targetSocket, roomId);
+
+    // Drop all items on death
+    try {
+      const { dropAllItemsOnDeath } = await import('./itemCommands.js');
+      await dropAllItemsOnDeath(targetSocket.characterId!, roomId);
+    } catch (error) {
+      console.error('[AdminCommands] Failed to drop items on death:', error);
+    }
+
+    sendMessage(targetSocket, MessageType.SYSTEM, formatDeathMessage());
+    broadcastToRoom(roomId, colors.boldRed(`${targetName} has died!`), targetSocket.playerId);
+  }
 
   // Send updated vitals to target
   sendVitals(targetSocket);
@@ -780,14 +807,14 @@ function handleHurt(
   if (targetSocket === socket) {
     return {
       type: MessageType.SYSTEM,
-      message: `${colors.boldRed('Ouch!')} You take ${actualDamage} damage. HP: ${newHp}/${targetSocket.vitals.maxHp}`,
+      message: `${colors.boldRed('Ouch!')} You take ${amount} damage. HP: ${newHp}/${targetSocket.vitals.maxHp}`,
     };
   } else {
     // Notify the target player
-    sendMessage(targetSocket, MessageType.SYSTEM, `${colors.boldRed('Ouch!')} You take ${actualDamage} damage from an unknown force. HP: ${newHp}/${targetSocket.vitals.maxHp}`);
+    sendMessage(targetSocket, MessageType.SYSTEM, `${colors.boldRed('Ouch!')} You take ${amount} damage from an unknown force. HP: ${newHp}/${targetSocket.vitals.maxHp}`);
     return {
       type: MessageType.SYSTEM,
-      message: `${colors.boldRed('Hurt:')} ${targetName} takes ${actualDamage} damage. HP: ${newHp}/${targetSocket.vitals.maxHp}`,
+      message: `${colors.boldRed('Hurt:')} ${targetName} takes ${amount} damage. HP: ${newHp}/${targetSocket.vitals.maxHp}`,
     };
   }
 }
