@@ -1594,11 +1594,17 @@ function getActionsHelp(): CommandResponse {
     '',
   ];
 
-  // Find the longest command for padding
-  const maxLen = Math.max(...actions.map(a => a.command.length));
+  // Find the longest command for padding, capped at 15 to ensure 80-char width
+  const maxCmdLen = 15;
+  const maxLen = Math.min(maxCmdLen, Math.max(...actions.map(a => a.command.length)));
 
   for (const action of actions) {
-    const paddedCmd = action.command.padEnd(maxLen + 2);
+    // Truncate command if too long
+    let cmd = action.command;
+    if (cmd.length > maxCmdLen) {
+      cmd = cmd.slice(0, maxCmdLen - 1) + '…';
+    }
+    const paddedCmd = cmd.padEnd(maxLen + 2);
     let desc = action.description || '(no description)';
     // Truncate description to fit 80 char width: 2 indent + cmd + 3 " - " = 5 + maxLen + 2
     const maxDescLen = 80 - 5 - maxLen - 2;

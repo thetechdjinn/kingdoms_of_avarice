@@ -102,15 +102,7 @@ export async function handleGet(
 
   // Check if this is a currency item - if so, route to currency handler
   if (item.template?.item_type === ItemType.CURRENCY) {
-    // Determine currency type from template name
-    const templateName = item.template.name?.toLowerCase() ?? '';
-    let currencyType: string | null = null;
-    for (const type of ['copper', 'silver', 'gold', 'platinum', 'runic']) {
-      if (templateName.includes(type)) {
-        currencyType = type;
-        break;
-      }
-    }
+    const currencyType = detectCurrencyType(item.template?.name);
     if (currencyType) {
       // Route to currency handler with the quantity
       // Always pass the quantity to ensure consistent behavior (get 1 = get 1, not get all)
@@ -346,25 +338,10 @@ async function handleGetAll(
 
   for (const item of takeableItems) {
     // Check if this is a currency item - add to wallet instead of inventory
-    if (item.template?.item_type === ItemType.CURRENCY) {
-      const templateName = item.template.name?.toLowerCase() ?? '';
-      let currencyType: string | null = null;
-      for (const type of ['copper', 'silver', 'gold', 'platinum', 'runic']) {
-        if (templateName.includes(type)) {
-          currencyType = type;
-          break;
-        }
-      }
-      if (currencyType) {
-        const currencyInfo = CURRENCY_TYPES[currencyType];
-        // Add to character's wallet
-        await characterRepo.addCurrency(socket.characterId!, currencyInfo.field, item.quantity);
-        // Delete the item instance
-        await itemRepo.deleteInstance(item.id);
-        const displayName = item.quantity === 1 ? `1 ${currencyType} coin` : `${item.quantity} ${currencyType} coins`;
-        currencyPickedUp.push(displayName);
-        continue;
-      }
+    const currencyDisplay = await handleCurrencyPickup(item, socket.characterId!);
+    if (currencyDisplay) {
+      currencyPickedUp.push(currencyDisplay);
+      continue;
     }
 
     // Regular item - add to inventory
@@ -1450,23 +1427,10 @@ export async function handleGetFrom(
   const containerName = container.template?.name ?? 'something';
 
   // Check if this is a currency item - add to wallet instead of inventory
-  if (item.template?.item_type === ItemType.CURRENCY) {
-    const templateName = item.template.name?.toLowerCase() ?? '';
-    let currencyType: string | null = null;
-    for (const type of ['copper', 'silver', 'gold', 'platinum', 'runic']) {
-      if (templateName.includes(type)) {
-        currencyType = type;
-        break;
-      }
-    }
-    if (currencyType) {
-      const currencyInfo = CURRENCY_TYPES[currencyType];
-      await characterRepo.addCurrency(socket.characterId!, currencyInfo.field, item.quantity);
-      await itemRepo.deleteInstance(item.id);
-      const displayName = item.quantity === 1 ? `1 ${currencyType} coin` : `${item.quantity} ${currencyType} coins`;
-      broadcastToRoom(currentRoomId, `${socket.username} gets ${displayName} from ${withArticle(containerName)}.`, socket.playerId);
-      return { type: MessageType.OUTPUT, message: `You get ${colors.gold(displayName)} from ${colors.item(withArticle(containerName))}.` };
-    }
+  const currencyDisplay = await handleCurrencyPickup(item, socket.characterId!);
+  if (currencyDisplay) {
+    broadcastToRoom(currentRoomId, `${socket.username} gets ${currencyDisplay} from ${withArticle(containerName)}.`, socket.playerId);
+    return { type: MessageType.OUTPUT, message: `You get ${colors.gold(currencyDisplay)} from ${colors.item(withArticle(containerName))}.` };
   }
 
   // Move item to player inventory
@@ -1496,23 +1460,10 @@ async function handleGetAllFromContainer(
 
   for (const item of items) {
     // Check if this is a currency item - add to wallet instead of inventory
-    if (item.template?.item_type === ItemType.CURRENCY) {
-      const templateName = item.template.name?.toLowerCase() ?? '';
-      let currencyType: string | null = null;
-      for (const type of ['copper', 'silver', 'gold', 'platinum', 'runic']) {
-        if (templateName.includes(type)) {
-          currencyType = type;
-          break;
-        }
-      }
-      if (currencyType) {
-        const currencyInfo = CURRENCY_TYPES[currencyType];
-        await characterRepo.addCurrency(socket.characterId!, currencyInfo.field, item.quantity);
-        await itemRepo.deleteInstance(item.id);
-        const displayName = item.quantity === 1 ? `1 ${currencyType} coin` : `${item.quantity} ${currencyType} coins`;
-        currencyPickedUp.push(displayName);
-        continue;
-      }
+    const currencyDisplay = await handleCurrencyPickup(item, socket.characterId!);
+    if (currencyDisplay) {
+      currencyPickedUp.push(currencyDisplay);
+      continue;
     }
 
     await itemRepo.updateInstanceLocation(item.id, ItemLocationType.PLAYER, socket.characterId!);
@@ -2229,6 +2180,42 @@ const CURRENCY_TYPES: Record<string, { templateName: string; field: keyof Curren
   'platinum': { templateName: 'platinum coins', field: 'platinum' },
   'runic': { templateName: 'runic coins', field: 'runic' },
 };
+
+/**
+ * Detect currency type from an item's template name.
+ * Uses exact template name matching against CURRENCY_TYPES for reliability.
+ * @returns The currency type key (e.g., 'gold') or null if not a currency
+ */
+function detectCurrencyType(templateName: string | undefined | null): string | null {
+  if (!templateName) return null;
+  const lowerName = templateName.toLowerCase();
+  for (const [type, info] of Object.entries(CURRENCY_TYPES)) {
+    if (lowerName === info.templateName) {
+      return type;
+    }
+  }
+  return null;
+}
+
+/**
+ * Handle picking up a currency item - adds to wallet and deletes instance.
+ * @returns Display name for the currency picked up, or null if not a currency item
+ */
+async function handleCurrencyPickup(
+  item: ItemInstance,
+  characterId: number
+): Promise<string | null> {
+  if (item.template?.item_type !== ItemType.CURRENCY) return null;
+
+  const currencyType = detectCurrencyType(item.template?.name);
+  if (!currencyType) return null;
+
+  const currencyInfo = CURRENCY_TYPES[currencyType];
+  await characterRepo.addCurrency(characterId, currencyInfo.field, item.quantity);
+  await itemRepo.deleteInstance(item.id);
+
+  return item.quantity === 1 ? `1 ${currencyType} coin` : `${item.quantity} ${currencyType} coins`;
+}
 
 /**
  * Parse currency type from user input.

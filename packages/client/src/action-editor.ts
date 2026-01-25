@@ -356,6 +356,7 @@ interface Action {
     commandInput.value = commandInput.value + '_copy';
     commandInput.focus();
     renderActionList();
+    updatePreview();
   });
 
   // Search
