@@ -2,18 +2,7 @@
  * Action Editor - IIFE for managing social actions
  */
 
-interface Action {
-  id: number;
-  command: string;
-  description: string | null;
-  firstPersonNoTarget: string;
-  roomNoTarget: string;
-  firstPersonWithTarget: string | null;
-  targetPerspective: string | null;
-  roomWithTarget: string | null;
-  createdAt: string;
-  updatedAt: string;
-}
+import { Action } from '@koa/shared';
 
 (async function () {
   // ============================================================================
@@ -115,6 +104,8 @@ interface Action {
       if (data.success) {
         actions = data.actions;
         renderActionList();
+      } else {
+        console.error('Failed to fetch actions:', data.message || 'Unknown error');
       }
     } catch (error) {
       console.error('Failed to fetch actions:', error);

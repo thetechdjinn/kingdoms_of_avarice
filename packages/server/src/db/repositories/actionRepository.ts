@@ -1,4 +1,8 @@
 import { query } from '../index.js';
+import { Action } from '@koa/shared';
+
+// Re-export Action for convenience
+export type { Action };
 
 // Database row type for actions table
 interface DbAction {
@@ -12,20 +16,6 @@ interface DbAction {
   room_with_target: string | null;
   created_at: Date;
   updated_at: Date;
-}
-
-// Action interface for use in the game
-export interface Action {
-  id: number;
-  command: string;
-  description: string | null;
-  firstPersonNoTarget: string;
-  roomNoTarget: string;
-  firstPersonWithTarget: string | null;
-  targetPerspective: string | null;
-  roomWithTarget: string | null;
-  createdAt: Date;
-  updatedAt: Date;
 }
 
 // Convert database row to Action interface

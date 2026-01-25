@@ -19,11 +19,22 @@ function validateActionInput(action: Record<string, unknown>): string | null {
 
 // Validate optional string fields in update payload
 function validateUpdateFields(body: Record<string, unknown>): string | null {
-  const stringFields = [
-    'command', 'description', 'firstPersonNoTarget', 'roomNoTarget',
-    'firstPersonWithTarget', 'targetPerspective', 'roomWithTarget'
-  ];
-  for (const field of stringFields) {
+  // Required fields cannot be null or empty
+  const requiredFields = ['command', 'firstPersonNoTarget', 'roomNoTarget'];
+  for (const field of requiredFields) {
+    if (body[field] !== undefined) {
+      if (body[field] === null || body[field] === '') {
+        return `${field} cannot be empty`;
+      }
+      if (typeof body[field] !== 'string') {
+        return `${field} must be a string`;
+      }
+    }
+  }
+
+  // Optional fields can be null but must be string if provided
+  const optionalFields = ['description', 'firstPersonWithTarget', 'targetPerspective', 'roomWithTarget'];
+  for (const field of optionalFields) {
     if (body[field] !== undefined && body[field] !== null && typeof body[field] !== 'string') {
       return `${field} must be a string`;
     }
