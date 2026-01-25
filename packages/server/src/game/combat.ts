@@ -617,7 +617,7 @@ async function processAttackerCombat(
  */
 async function handlePlayerDropped(
   victim: AuthenticatedSocket,
-  attacker: AuthenticatedSocket,
+  attacker: AuthenticatedSocket | null,
   roomId: number
 ): Promise<void> {
   if (!connectedPlayersRef) return;
@@ -630,12 +630,22 @@ async function handlePlayerDropped(
 
   // Broadcast dropped message
   sendToSocket(victim, MessageType.SYSTEM, formatDroppedMessage());
-  sendToSocket(attacker, MessageType.SYSTEM, colors.boldGreen(`${victim.username} collapses to the ground!`));
-  broadcastToRoomExcept(
-    roomId,
-    colors.boldRed(`${victim.username} collapses to the ground!`),
-    [victim.playerId, attacker.playerId]
-  );
+
+  if (attacker) {
+    sendToSocket(attacker, MessageType.SYSTEM, colors.boldGreen(`${victim.username} collapses to the ground!`));
+    broadcastToRoomExcept(
+      roomId,
+      colors.boldRed(`${victim.username} collapses to the ground!`),
+      [victim.playerId, attacker.playerId]
+    );
+  } else {
+    // No attacker (DoT, environmental, etc.)
+    broadcastToRoomExcept(
+      roomId,
+      colors.boldRed(`${victim.username} collapses to the ground!`),
+      [victim.playerId]
+    );
+  }
 
   sendVitals(victim);
 }
