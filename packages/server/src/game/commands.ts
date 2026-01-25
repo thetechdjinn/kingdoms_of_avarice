@@ -27,6 +27,7 @@ import {
 } from './damageHandler.js';
 import { getRespawnRoomId } from '../services/respawnService.js';
 import { findPlayerInRoom } from './playerUtils.js';
+import { getEquipmentCombatStats } from './combatStats.js';
 
 export interface CommandResponse {
   type: MessageType;
@@ -80,10 +81,11 @@ export async function processCommand(
     if (adminResponse) return adminResponse;
   }
 
-  const lowerTrimmed = trimmed.toLowerCase();
-  const parts = lowerTrimmed.split(/\s+/);
-  const command = parts[0];
+  // Split into parts preserving original case for args
+  const parts = trimmed.split(/\s+/);
+  const command = parts[0].toLowerCase();
   const args = parts.slice(1);
+  const lowerTrimmed = trimmed.toLowerCase();
 
   // Death state command restrictions
   // Dead state - very limited commands
@@ -309,7 +311,7 @@ export async function processCommand(
     // Check for special flee movement marker
     if (fleeResult.type === MessageType.SYSTEM && fleeResult.message.startsWith('FLEE:')) {
       const direction = fleeResult.message.substring(5);
-      broadcastToRoom(currentRoomId, `${socket.username} flees ${direction}!`, socket.playerId);
+      broadcastToRoom(currentRoomId, colors.green(`${colors.red(socket.username)} flees ${direction}!`), socket.playerId);
       return await handleMove(socket, currentRoomId, direction, world, _connectedPlayers);
     }
     return fleeResult;
@@ -442,7 +444,7 @@ async function handleLookAtPlayer(
   const sharedChar = await characterRepo.toSharedCharacterWithDisplayNames(character);
 
   // Get equipped items
-  const equippedItems = await itemRepo.getPlayerEquipped(targetSocket.playerId);
+  const equippedItems = await itemRepo.getPlayerEquipped(targetSocket.characterId!);
 
   // Generate description
   const description = generatePlayerDescription({
@@ -513,7 +515,7 @@ async function handleLookDirection(
 
   // Notify players in the target room that someone is peeking in
   const oppositeDir = OPPOSITE_DIRECTIONS[direction] || direction;
-  broadcastToRoom(targetRoom.id, `${socket.username} peeks in from the ${oppositeDir}.`, socket.playerId);
+  broadcastToRoom(targetRoom.id, colors.green(`${colors.red(socket.username)} peeks in from the ${oppositeDir}.`), socket.playerId);
 
   // Show the full room including players and exits
   const playersInRoom = getPlayersInRoom(targetRoom.id, connectedPlayers);
@@ -633,7 +635,7 @@ async function handleMove(
       door.doorType === DoorType.TRIGGERED_PASSAGEWAY ||
       door.doorType === DoorType.TEMPORARY_PORTAL
     ) {
-      broadcastToRoom(currentRoomId, colors.yellow(`${socket.username} ran into the wall to the ${fullDirection}.`), socket.playerId);
+      broadcastToRoom(currentRoomId, colors.green(`${colors.red(socket.username)} ran into the wall to the ${fullDirection}.`), socket.playerId);
       return { type: MessageType.OUTPUT, message: colors.yellow(`You cannot go ${fullDirection}.`) };
     }
 
@@ -646,7 +648,7 @@ async function handleMove(
     const passageCheck = doorStateManager.canPassThrough(door.id, currentRoomId);
     if (!passageCheck.allowed) {
       // Broadcast that player ran into the door
-      broadcastToRoom(currentRoomId, colors.yellow(`${socket.username} ran into the ${door.name} to the ${fullDirection}.`), socket.playerId);
+      broadcastToRoom(currentRoomId, colors.green(`${colors.red(socket.username)} ran into the ${door.name} to the ${fullDirection}.`), socket.playerId);
       return { type: MessageType.OUTPUT, message: colors.yellow(passageCheck.reason || 'You cannot go that way.') };
     }
   }
@@ -654,7 +656,7 @@ async function handleMove(
   const newRoom = world.getRoomInDirection(currentRoomId, fullDirection);
 
   if (!newRoom) {
-    broadcastToRoom(currentRoomId, colors.yellow(`${socket.username} ran into the wall to the ${fullDirection}.`), socket.playerId);
+    broadcastToRoom(currentRoomId, colors.green(`${colors.red(socket.username)} ran into the wall to the ${fullDirection}.`), socket.playerId);
     return { type: MessageType.OUTPUT, message: colors.yellow(`You cannot go ${fullDirection}.`) };
   }
 
@@ -667,12 +669,12 @@ async function handleMove(
   }
 
   // Database succeeded, now update in-memory state and broadcast
-  broadcastToRoom(currentRoomId, `${socket.username} left to the ${fullDirection}.`, socket.playerId);
+  broadcastToRoom(currentRoomId, colors.green(`${colors.red(socket.username)} left to the ${fullDirection}.`), socket.playerId);
   setPlayerLocation(socket.playerId, newRoom.id);
 
   // Broadcast to players in the new room that player arrived
   const oppositeDir = OPPOSITE_DIRECTIONS[fullDirection] || fullDirection;
-  broadcastToRoom(newRoom.id, `${socket.username} walks in from the ${oppositeDir}.`, socket.playerId);
+  broadcastToRoom(newRoom.id, colors.green(`${colors.red(socket.username)} walks in from the ${oppositeDir}.`), socket.playerId);
 
   const otherPlayers = getOtherPlayersInRoom(newRoom.id, socket.playerId, connectedPlayers);
   const itemDescriptions = await getRoomItemsDescription(newRoom.id);
@@ -1197,7 +1199,7 @@ async function handleBashDoor(
     sendVitals(socket);
 
     // Broadcast failed attempt to room
-    broadcastToRoom(currentRoomId, `${socket.username} slams into the ${door.name} and bounces off!`, socket.playerId);
+    broadcastToRoom(currentRoomId, colors.green(`${colors.red(socket.username)} slams into the ${door.name} and bounces off!`), socket.playerId);
 
     return {
       type: MessageType.OUTPUT,
@@ -1708,7 +1710,14 @@ async function handleStatus(socket: AuthenticatedSocket): Promise<CommandRespons
   const tracking = 0;
   const martialArts = 0;
   const magicRes = 0;
-  const armourClass = '0/0';
+
+  // Get actual armor stats from equipped items
+  const equipmentStats = await getEquipmentCombatStats(socket.characterId);
+  const ac = equipmentStats.armor.totalArmorClass;
+  const dr = equipmentStats.armor.damageReduction;
+  // Format damage resistance: show as integer if whole number, otherwise show decimal
+  const drDisplay = Number.isInteger(dr) ? dr.toString() : dr.toFixed(1);
+  const armourClass = `${ac}/${drDisplay}`;
 
   // Row 1: Name (spans col1+col2+gap) | Lives/CP
   // Add extra GAP to match the space that would be between col1 and col2 in other rows
@@ -2009,10 +2018,10 @@ async function handleRespawn(
   sendVitals(socket);
 
   // Broadcast departure from death room
-  broadcastToRoom(currentRoomId, `${socket.username}'s spirit fades away...`, socket.playerId);
+  broadcastToRoom(currentRoomId, colors.green(`${colors.red(socket.username)}'s spirit fades away...`), socket.playerId);
 
   // Broadcast arrival at respawn room
-  broadcastToRoom(respawnRoomId, `${socket.username} appears in a flash of light!`, socket.playerId);
+  broadcastToRoom(respawnRoomId, colors.green(`${colors.red(socket.username)} appears in a flash of light!`), socket.playerId);
 
   // Get room description
   const room = world.getRoom(respawnRoomId);

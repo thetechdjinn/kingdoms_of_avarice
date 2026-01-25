@@ -126,8 +126,7 @@ const SLOT_DISPLAY_NAMES: Record<string, string> = {
   [EquipmentSlot.FEET]: 'Feet',
   [EquipmentSlot.MAIN_HAND]: 'Weapon Hand',
   [EquipmentSlot.OFF_HAND]: 'Off Hand',
-  [EquipmentSlot.SHIELD]: 'Shield',
-  [EquipmentSlot.HELD]: 'Held',
+  [EquipmentSlot.HELD]: 'Nowhere',
 };
 
 // Pronoun sets based on gender
@@ -283,7 +282,7 @@ export function generatePlayerDescription(data: PlayerDescriptionData): string {
 
   if (equipmentSection) {
     lines.push('');
-    lines.push(colors.yellow(`${pronouns.subject} is equipped with:`));
+    lines.push(colors.brown(`${pronouns.subject} is equipped with:`));
     lines.push('');
     lines.push(equipmentSection);
   }
@@ -308,7 +307,7 @@ export function formatEquippedItems(items: ItemInstance[]): string {
     const itemName = item.template?.name || 'unknown item';
     const slotName = item.equipped_slot ? SLOT_DISPLAY_NAMES[item.equipped_slot] || item.equipped_slot : 'Unknown';
     const paddedItemName = itemName.padEnd(ITEM_COL_WIDTH);
-    lines.push(colors.green(paddedItemName) + colors.cyan(`(${slotName})`));
+    lines.push(colors.green(paddedItemName) + colors.blue(`(${slotName})`));
   }
 
   return lines.join('\r\n');

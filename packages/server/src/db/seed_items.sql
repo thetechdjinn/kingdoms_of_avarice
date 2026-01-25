@@ -87,7 +87,7 @@ VALUES
     4, 2, 35,
     'armor', 'head',
     '{"takeable": true}',
-    '{"armor_class": 3, "weight_class": "heavy"}'
+    '{"armor_class": 3, "damage_resistance": 1, "weight_class": "heavy"}'
 ),
 (
     'Leather Vest',
@@ -109,7 +109,7 @@ VALUES
     15, 3, 150,
     'armor', 'body',
     '{"takeable": true}',
-    '{"armor_class": 5, "weight_class": "medium"}'
+    '{"armor_class": 5, "damage_resistance": 2, "weight_class": "medium"}'
 ),
 (
     'Wooden Shield',
@@ -118,9 +118,9 @@ VALUES
     'A wooden shield leans against the wall.',
     ARRAY['shield', 'wooden shield'],
     6, 2, 20,
-    'armor', 'shield',
+    'armor', 'off_hand',
     '{"takeable": true}',
-    '{"armor_class": 2, "weight_class": "medium"}'
+    '{"armor_class": 2, "damage_resistance": 0.5, "weight_class": "medium"}'
 ),
 (
     'Leather Gloves',

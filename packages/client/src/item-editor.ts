@@ -32,6 +32,7 @@ interface ItemTemplate {
   };
   armor_data?: {
     armor_class: number;
+    damage_resistance?: number;
     weight_class?: string;
   };
   consumable_data?: {
@@ -384,6 +385,7 @@ function loadWeaponData(template: ItemTemplate): void {
 function loadArmorData(template: ItemTemplate): void {
   const data = template.armor_data;
   (document.getElementById('armor-class') as HTMLInputElement).value = String(data?.armor_class || 0);
+  (document.getElementById('armor-damage-resistance') as HTMLInputElement).value = String(data?.damage_resistance || 0);
   (document.getElementById('armor-weight-class') as HTMLSelectElement).value = data?.weight_class || 'light';
 }
 
@@ -480,10 +482,12 @@ function updatePreview(template: ItemTemplate): void {
   }
 
   if (template.item_type === 'armor' && template.armor_data) {
+    const dr = template.armor_data.damage_resistance || 0;
+    const drDisplay = Number.isInteger(dr) ? dr : dr.toFixed(1);
     html += `
       <div class="preview-section">
         <div class="preview-section-title">Armor</div>
-        <div>AC: ${template.armor_data.armor_class}</div>
+        <div>AC: ${template.armor_data.armor_class}/${drDisplay}</div>
         <div>Class: ${escapeHtml(template.armor_data.weight_class || 'light')}</div>
       </div>
     `;
@@ -733,6 +737,7 @@ function gatherFormData(): Partial<ItemTemplate> {
   if (itemType === 'armor') {
     data.armor_data = {
       armor_class: parseInt((document.getElementById('armor-class') as HTMLInputElement).value) || 0,
+      damage_resistance: parseFloat((document.getElementById('armor-damage-resistance') as HTMLInputElement).value) || 0,
       weight_class: (document.getElementById('armor-weight-class') as HTMLSelectElement).value,
     };
   }

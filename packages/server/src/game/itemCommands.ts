@@ -100,17 +100,52 @@ export async function handleGet(
 
   const item = matches[0];
 
-  // Check if this is a currency item - if so, route to currency handler
+  // Check if this is a currency item - if so, add to wallet directly
+  // We have the item already, so use direct currency pickup instead of re-searching
   if (item.template?.item_type === ItemType.CURRENCY) {
     const currencyType = detectCurrencyType(item.template?.name);
     if (currencyType) {
-      // Route to currency handler with the quantity
-      // Always pass the quantity to ensure consistent behavior (get 1 = get 1, not get all)
-      const currencyArgs = [String(quantity), currencyType];
-      const currencyResult = await handleGetCurrency(socket, currencyArgs, currentRoomId);
-      if (currencyResult) {
-        return currencyResult;
+      const currencyInfo = CURRENCY_TYPES[currencyType];
+      // Calculate how much to pick up
+      // Use the explicit quantity if user specified one, otherwise pick up just 1
+      // (consistent with how stacked items work - "get coins" = 1, "get 50 coins" = 50)
+      const totalAvailable = matches.reduce((sum, m) => sum + m.quantity, 0);
+      const pickupAmount = Math.min(quantity, totalAvailable);
+
+      if (pickupAmount <= 0) {
+        return { type: MessageType.ERROR, message: `There aren't that many ${currencyType} coins here.` };
       }
+
+      // Pick up currency using transaction
+      await withTransaction(async (client) => {
+        // Add currency to character
+        await client.query(
+          `UPDATE characters SET ${currencyInfo.field} = ${currencyInfo.field} + $1 WHERE id = $2`,
+          [pickupAmount, socket.characterId]
+        );
+
+        // Remove currency items from room
+        let remaining = pickupAmount;
+        for (const currencyItem of matches) {
+          if (remaining <= 0) break;
+
+          if (currencyItem.quantity <= remaining) {
+            remaining -= currencyItem.quantity;
+            await client.query('DELETE FROM item_instances WHERE id = $1', [currencyItem.id]);
+          } else {
+            await client.query(
+              'UPDATE item_instances SET quantity = quantity - $1 WHERE id = $2',
+              [remaining, currencyItem.id]
+            );
+            remaining = 0;
+          }
+        }
+      });
+
+      const coinWord = pickupAmount === 1 ? 'coin' : 'coins';
+      const displayAmount = `${pickupAmount} ${currencyType} ${coinWord}`;
+      broadcastToRoom(currentRoomId, colors.green(`${colors.red(socket.username)} picks up ${displayAmount}.`), socket.playerId);
+      return { type: MessageType.OUTPUT, message: `You pick up ${colors.gold(displayAmount)}.` };
     }
   }
 
@@ -163,7 +198,7 @@ async function pickUpItem(
   const itemName = getItemName(item);
   
   // Broadcast to room
-  broadcastToRoom(currentRoomId, `${socket.username} picks up ${withArticle(itemName)}.`, socket.playerId);
+  broadcastToRoom(currentRoomId, colors.green(`${colors.red(socket.username)} picks up ${withArticle(itemName)}.`), socket.playerId);
 
   return { type: MessageType.OUTPUT, message: `You pick up ${colors.item(withArticle(itemName))}.` };
 }
@@ -242,7 +277,7 @@ async function pickUpMultipleItems(
   const displayName = actualQuantity > 1 ? `${actualQuantity} ${itemName}` : withArticle(itemName);
 
   // Broadcast to room
-  broadcastToRoom(currentRoomId, `${socket.username} picks up ${displayName}.`, socket.playerId);
+  broadcastToRoom(currentRoomId, colors.green(`${colors.red(socket.username)} picks up ${displayName}.`), socket.playerId);
 
   return { type: MessageType.OUTPUT, message: `You pick up ${colors.item(displayName)}.` };
 }
@@ -314,7 +349,7 @@ async function pickUpItemQuantity(
   const displayName = actualQuantity > 1 ? `${actualQuantity} ${itemName}` : withArticle(itemName);
 
   // Broadcast to room
-  broadcastToRoom(currentRoomId, `${socket.username} picks up ${displayName}.`, socket.playerId);
+  broadcastToRoom(currentRoomId, colors.green(`${colors.red(socket.username)} picks up ${displayName}.`), socket.playerId);
 
   return { type: MessageType.OUTPUT, message: `You pick up ${colors.item(displayName)}.` };
 }
@@ -376,7 +411,7 @@ async function handleGetAll(
   }
 
   // Broadcast to room
-  broadcastToRoom(currentRoomId, `${socket.username} picks up some items.`, socket.playerId);
+  broadcastToRoom(currentRoomId, colors.green(`${colors.red(socket.username)} picks up some items.`), socket.playerId);
 
   return {
     type: MessageType.OUTPUT,
@@ -516,7 +551,7 @@ async function dropMultipleItems(
   const displayName = actualQuantity > 1 ? `${actualQuantity} ${itemName}` : withArticle(itemName);
 
   // Broadcast to room
-  broadcastToRoom(currentRoomId, `${socket.username} drops ${displayName}.`, socket.playerId);
+  broadcastToRoom(currentRoomId, colors.green(`${colors.red(socket.username)} drops ${displayName}.`), socket.playerId);
 
   return { type: MessageType.OUTPUT, message: `You drop ${colors.item(displayName)}.` };
 }
@@ -556,7 +591,7 @@ async function dropItem(
   const itemName = getItemName(item);
 
   // Broadcast to room
-  broadcastToRoom(currentRoomId, `${socket.username} drops ${withArticle(itemName)}.`, socket.playerId);
+  broadcastToRoom(currentRoomId, colors.green(`${colors.red(socket.username)} drops ${withArticle(itemName)}.`), socket.playerId);
 
   return { type: MessageType.OUTPUT, message: `You drop ${colors.item(withArticle(itemName))}.` };
 }
@@ -628,7 +663,7 @@ async function dropItemQuantity(
   const displayName = actualQuantity > 1 ? `${actualQuantity} ${itemName}` : withArticle(itemName);
 
   // Broadcast to room
-  broadcastToRoom(currentRoomId, `${socket.username} drops ${displayName}.`, socket.playerId);
+  broadcastToRoom(currentRoomId, colors.green(`${colors.red(socket.username)} drops ${displayName}.`), socket.playerId);
 
   return { type: MessageType.OUTPUT, message: `You drop ${colors.item(displayName)}.` };
 }
@@ -672,7 +707,7 @@ async function handleDropAll(
   }
 
   // Broadcast to room
-  broadcastToRoom(currentRoomId, `${socket.username} drops some items.`, socket.playerId);
+  broadcastToRoom(currentRoomId, colors.green(`${colors.red(socket.username)} drops some items.`), socket.playerId);
 
   return {
     type: MessageType.OUTPUT,
@@ -953,6 +988,28 @@ function formatItemExamine(item: ItemInstance): CommandResponse {
   return { type: MessageType.OUTPUT, message: lines.join('\r\n') };
 }
 
+/**
+ * Simple pluralization for item names.
+ * Handles common cases: coin->coins, ruby->rubies, torch->torches
+ */
+function pluralizeName(name: string): string {
+  const lower = name.toLowerCase();
+  // Already plural (ends in 's' but not 'ss')
+  if (lower.endsWith('s') && !lower.endsWith('ss')) {
+    return name;
+  }
+  // Words ending in consonant + y -> ies (ruby -> rubies)
+  if (lower.match(/[bcdfghjklmnpqrstvwxz]y$/)) {
+    return name.slice(0, -1) + 'ies';
+  }
+  // Words ending in s, sh, ch, x, z -> es
+  if (lower.match(/(s|sh|ch|x|z)$/)) {
+    return name + 'es';
+  }
+  // Default: add s
+  return name + 's';
+}
+
 // Get items to display in room description
 export async function getRoomItemsDescription(roomId: number): Promise<string | null> {
   const displays = await itemRepo.getRoomItemDisplays(roomId);
@@ -963,8 +1020,11 @@ export async function getRoomItemsDescription(roomId: number): Promise<string | 
 
   const itemNames = displays.map(d => {
     const name = d.name || d.short_desc;
-    // Format: "sparkling ruby" or "2 sparkling ruby"
-    return d.quantity > 1 ? `${d.quantity} ${name}` : name;
+    // Format: "sparkling ruby" or "2 sparkling rubies"
+    if (d.quantity > 1) {
+      return `${d.quantity} ${pluralizeName(name)}`;
+    }
+    return name;
   });
 
   // "You notice <item1>, <item2>, <item3>." in cyan
@@ -993,8 +1053,7 @@ const SLOT_DISPLAY_NAMES: Record<EquipmentSlot, string> = {
   [EquipmentSlot.FEET]: 'Feet',
   [EquipmentSlot.MAIN_HAND]: 'Main Hand',
   [EquipmentSlot.OFF_HAND]: 'Off Hand',
-  [EquipmentSlot.SHIELD]: 'Shield',
-  [EquipmentSlot.HELD]: 'Held',
+  [EquipmentSlot.HELD]: 'Readied',
 };
 
 // Handle "wield <item>" command - for weapons
@@ -1045,7 +1104,7 @@ export async function handleWield(
         }
         await itemRepo.updateInstanceLocation(equippedItem.id, ItemLocationType.PLAYER, socket.characterId!);
         const unequippedName = getItemName(equippedItem);
-        broadcastToRoom(currentRoomId, `${socket.username} stops using ${unequippedName}.`, socket.playerId);
+        broadcastToRoom(currentRoomId, colors.green(`${colors.red(socket.username)} stops using ${unequippedName}.`), socket.playerId);
       }
     }
   }
@@ -1059,14 +1118,14 @@ export async function handleWield(
     // Unequip current main hand weapon
     await itemRepo.updateInstanceLocation(mainHandItem.id, ItemLocationType.PLAYER, socket.characterId!);
     const unequippedName = getItemName(mainHandItem);
-    broadcastToRoom(currentRoomId, `${socket.username} stops wielding ${unequippedName}.`, socket.playerId);
+    broadcastToRoom(currentRoomId, colors.green(`${colors.red(socket.username)} stops wielding ${unequippedName}.`), socket.playerId);
   }
 
   // Equip the new weapon
   await itemRepo.updateInstanceLocation(item.id, ItemLocationType.EQUIPPED, socket.characterId!, EquipmentSlot.MAIN_HAND);
 
   const itemName = template.name;
-  broadcastToRoom(currentRoomId, `${socket.username} wields ${itemName}.`, socket.playerId);
+  broadcastToRoom(currentRoomId, colors.green(`${colors.red(socket.username)} wields ${itemName}.`), socket.playerId);
 
   return { type: MessageType.OUTPUT, message: `You wield ${colors.item(itemName)}.` };
 }
@@ -1136,7 +1195,7 @@ export async function handleWear(
         // Unequip from primary slot
         await itemRepo.updateInstanceLocation(currentlyInSlot.id, ItemLocationType.PLAYER, socket.characterId!);
         const unequippedName = getItemName(currentlyInSlot);
-        broadcastToRoom(currentRoomId, `${socket.username} removes ${unequippedName}.`, socket.playerId);
+        broadcastToRoom(currentRoomId, colors.green(`${colors.red(socket.username)} removes ${unequippedName}.`), socket.playerId);
       }
     } else {
       // Not a paired slot - check if current item is cursed
@@ -1146,7 +1205,7 @@ export async function handleWear(
       // Unequip current item
       await itemRepo.updateInstanceLocation(currentlyInSlot.id, ItemLocationType.PLAYER, socket.characterId!);
       const unequippedName = getItemName(currentlyInSlot);
-      broadcastToRoom(currentRoomId, `${socket.username} removes ${unequippedName}.`, socket.playerId);
+      broadcastToRoom(currentRoomId, colors.green(`${colors.red(socket.username)} removes ${unequippedName}.`), socket.playerId);
     }
   }
 
@@ -1154,7 +1213,7 @@ export async function handleWear(
   await itemRepo.updateInstanceLocation(item.id, ItemLocationType.EQUIPPED, socket.characterId!, targetSlot);
 
   const itemName = template.name;
-  broadcastToRoom(currentRoomId, `${socket.username} wears ${itemName}.`, socket.playerId);
+  broadcastToRoom(currentRoomId, colors.green(`${colors.red(socket.username)} wears ${itemName}.`), socket.playerId);
 
   return { type: MessageType.OUTPUT, message: `You wear ${colors.item(itemName)}.` };
 }
@@ -1207,7 +1266,7 @@ export async function handleRemove(
   await itemRepo.updateInstanceLocation(item.id, ItemLocationType.PLAYER, socket.characterId!);
 
   const itemName = getItemName(item);
-  broadcastToRoom(currentRoomId, `${socket.username} removes ${itemName}.`, socket.playerId);
+  broadcastToRoom(currentRoomId, colors.green(`${colors.red(socket.username)} removes ${itemName}.`), socket.playerId);
 
   return { type: MessageType.OUTPUT, message: `You remove ${colors.item(itemName)}.` };
 }
@@ -1245,7 +1304,6 @@ export async function handleEquipment(
     EquipmentSlot.FEET,
     EquipmentSlot.MAIN_HAND,
     EquipmentSlot.OFF_HAND,
-    EquipmentSlot.SHIELD,
     EquipmentSlot.HELD,
   ];
 
@@ -2334,7 +2392,7 @@ export async function handleDropCurrency(
   }
 
   const displayName = amount === 1 ? `1 ${currencyType} coin` : `${amount} ${currencyType} coins`;
-  broadcastToRoom(currentRoomId, `${socket.username} drops ${displayName}.`, socket.playerId);
+  broadcastToRoom(currentRoomId, colors.green(`${colors.red(socket.username)} drops ${displayName}.`), socket.playerId);
 
   return { type: MessageType.OUTPUT, message: `You drop ${colors.gold(displayName)}.` };
 }
@@ -2382,15 +2440,20 @@ export async function handleGetCurrency(
 
   const currencyInfo = CURRENCY_TYPES[currencyType];
 
-  // Find the currency template
-  const template = await itemRepo.getTemplateByName(currencyInfo.templateName);
-  if (!template) {
-    return null; // Currency template not set up, fall through to normal get
-  }
-
   // Find currency items of this type in the room
+  // Search by item_type=CURRENCY and detect currency type from template name
+  // This handles both "gold coins" (currency template) and "Gold Coin" (misc template that should be currency)
   const roomItems = await itemRepo.getInstancesInRoom(currentRoomId);
-  const currencyItems = roomItems.filter(i => i.template_id === template.id);
+  const currencyItems = roomItems.filter(i => {
+    // Check if item is explicitly a currency type
+    if (i.template?.item_type === ItemType.CURRENCY) {
+      return detectCurrencyType(i.template?.name) === currencyType;
+    }
+    // Also check for items that match currency keywords (handles legacy "Gold Coin" misc items)
+    const templateName = i.template?.name?.toLowerCase() ?? '';
+    const keywords = i.template?.keywords?.map(k => k.toLowerCase()) ?? [];
+    return templateName.includes(currencyType) || keywords.includes(currencyType);
+  });
 
   if (currencyItems.length === 0) {
     return { type: MessageType.ERROR, message: `You don't see any ${currencyType} coins here.` };
@@ -2438,7 +2501,7 @@ export async function handleGetCurrency(
   }
 
   const displayName = pickupAmount === 1 ? `1 ${currencyType} coin` : `${pickupAmount} ${currencyType} coins`;
-  broadcastToRoom(currentRoomId, `${socket.username} picks up ${displayName}.`, socket.playerId);
+  broadcastToRoom(currentRoomId, colors.green(`${colors.red(socket.username)} picks up ${displayName}.`), socket.playerId);
 
   return { type: MessageType.OUTPUT, message: `You pick up ${colors.gold(displayName)}.` };
 }

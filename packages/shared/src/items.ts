@@ -20,7 +20,6 @@ export enum EquipmentSlot {
   // Combat slots
   MAIN_HAND = 'main_hand',
   OFF_HAND = 'off_hand',
-  SHIELD = 'shield',
   HELD = 'held',
 }
 
@@ -121,6 +120,7 @@ export interface WeaponData {
 // Armor data
 export interface ArmorData {
   armor_class: number;
+  damage_resistance?: number; // Flat damage reduction (the "/3" in "50/3" AC display)
   weight_class?: 'light' | 'medium' | 'heavy';
   resistances?: Partial<Record<DamageType, number>>;
 }
@@ -263,7 +263,6 @@ export function getAlternatePairedSlot(slot: EquipmentSlot): EquipmentSlot | nul
 // Slots blocked by two-handed weapons
 export const TWO_HANDED_BLOCKED_SLOTS = [
   EquipmentSlot.OFF_HAND,
-  EquipmentSlot.SHIELD,
   EquipmentSlot.HELD,
 ];
 
