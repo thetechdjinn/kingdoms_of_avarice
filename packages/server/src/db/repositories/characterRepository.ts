@@ -199,6 +199,20 @@ export async function updateCharacterStats(
   );
 }
 
+/**
+ * Add currency to a character's wallet (atomically increment)
+ */
+export async function addCurrency(
+  characterId: number,
+  currencyField: keyof Currency,
+  amount: number
+): Promise<void> {
+  await query(
+    `UPDATE characters SET ${currencyField} = COALESCE(${currencyField}, 0) + $1 WHERE id = $2`,
+    [amount, characterId]
+  );
+}
+
 export async function deleteCharacter(characterId: number): Promise<boolean> {
   const result = await query(
     'DELETE FROM characters WHERE id = $1',

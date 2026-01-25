@@ -333,7 +333,7 @@ async function handleGetAll(
   currentRoomId: number
 ): Promise<CommandResponse> {
   const items = await itemRepo.getInstancesInRoom(currentRoomId);
-  
+
   // Filter to takeable items only
   const takeableItems = items.filter(i => i.template?.flags?.takeable !== false);
 
@@ -342,8 +342,32 @@ async function handleGetAll(
   }
 
   const pickedUp: string[] = [];
+  const currencyPickedUp: string[] = [];
 
   for (const item of takeableItems) {
+    // Check if this is a currency item - add to wallet instead of inventory
+    if (item.template?.item_type === ItemType.CURRENCY) {
+      const templateName = item.template.name?.toLowerCase() ?? '';
+      let currencyType: string | null = null;
+      for (const type of ['copper', 'silver', 'gold', 'platinum', 'runic']) {
+        if (templateName.includes(type)) {
+          currencyType = type;
+          break;
+        }
+      }
+      if (currencyType) {
+        const currencyInfo = CURRENCY_TYPES[currencyType];
+        // Add to character's wallet
+        await characterRepo.addCurrency(socket.characterId!, currencyInfo.field, item.quantity);
+        // Delete the item instance
+        await itemRepo.deleteInstance(item.id);
+        const displayName = item.quantity === 1 ? `1 ${currencyType} coin` : `${item.quantity} ${currencyType} coins`;
+        currencyPickedUp.push(displayName);
+        continue;
+      }
+    }
+
+    // Regular item - add to inventory
     // Check if we can stack with existing item in inventory
     const existingStack = await itemRepo.findStackableInstance(
       item.template_id,
@@ -365,12 +389,21 @@ async function handleGetAll(
     pickedUp.push(getItemName(item));
   }
 
+  // Build pickup message
+  const parts: string[] = [];
+  if (pickedUp.length > 0) {
+    parts.push(pickedUp.map(n => colors.item(n)).join(', '));
+  }
+  if (currencyPickedUp.length > 0) {
+    parts.push(currencyPickedUp.map(n => colors.gold(n)).join(', '));
+  }
+
   // Broadcast to room
   broadcastToRoom(currentRoomId, `${socket.username} picks up some items.`, socket.playerId);
 
   return {
     type: MessageType.OUTPUT,
-    message: `You pick up: ${pickedUp.map(n => colors.item(n)).join(', ')}.`,
+    message: `You pick up: ${parts.join(', ')}.`,
   };
 }
 
@@ -1414,12 +1447,32 @@ export async function handleGetFrom(
   }
 
   const item = itemMatches[0];
+  const containerName = container.template?.name ?? 'something';
+
+  // Check if this is a currency item - add to wallet instead of inventory
+  if (item.template?.item_type === ItemType.CURRENCY) {
+    const templateName = item.template.name?.toLowerCase() ?? '';
+    let currencyType: string | null = null;
+    for (const type of ['copper', 'silver', 'gold', 'platinum', 'runic']) {
+      if (templateName.includes(type)) {
+        currencyType = type;
+        break;
+      }
+    }
+    if (currencyType) {
+      const currencyInfo = CURRENCY_TYPES[currencyType];
+      await characterRepo.addCurrency(socket.characterId!, currencyInfo.field, item.quantity);
+      await itemRepo.deleteInstance(item.id);
+      const displayName = item.quantity === 1 ? `1 ${currencyType} coin` : `${item.quantity} ${currencyType} coins`;
+      broadcastToRoom(currentRoomId, `${socket.username} gets ${displayName} from ${withArticle(containerName)}.`, socket.playerId);
+      return { type: MessageType.OUTPUT, message: `You get ${colors.gold(displayName)} from ${colors.item(withArticle(containerName))}.` };
+    }
+  }
 
   // Move item to player inventory
   await itemRepo.updateInstanceLocation(item.id, ItemLocationType.PLAYER, socket.characterId!);
 
   const itemName = getItemName(item);
-  const containerName = container.template?.name ?? 'something';
 
   broadcastToRoom(currentRoomId, `${socket.username} gets ${withArticle(itemName)} from ${withArticle(containerName)}.`, socket.playerId);
 
@@ -1439,10 +1492,40 @@ async function handleGetAllFromContainer(
   }
 
   const pickedUp: string[] = [];
+  const currencyPickedUp: string[] = [];
 
   for (const item of items) {
+    // Check if this is a currency item - add to wallet instead of inventory
+    if (item.template?.item_type === ItemType.CURRENCY) {
+      const templateName = item.template.name?.toLowerCase() ?? '';
+      let currencyType: string | null = null;
+      for (const type of ['copper', 'silver', 'gold', 'platinum', 'runic']) {
+        if (templateName.includes(type)) {
+          currencyType = type;
+          break;
+        }
+      }
+      if (currencyType) {
+        const currencyInfo = CURRENCY_TYPES[currencyType];
+        await characterRepo.addCurrency(socket.characterId!, currencyInfo.field, item.quantity);
+        await itemRepo.deleteInstance(item.id);
+        const displayName = item.quantity === 1 ? `1 ${currencyType} coin` : `${item.quantity} ${currencyType} coins`;
+        currencyPickedUp.push(displayName);
+        continue;
+      }
+    }
+
     await itemRepo.updateInstanceLocation(item.id, ItemLocationType.PLAYER, socket.characterId!);
     pickedUp.push(withArticle(getItemName(item)));
+  }
+
+  // Build pickup message
+  const parts: string[] = [];
+  if (pickedUp.length > 0) {
+    parts.push(pickedUp.map(n => colors.item(n)).join(', '));
+  }
+  if (currencyPickedUp.length > 0) {
+    parts.push(currencyPickedUp.map(n => colors.gold(n)).join(', '));
   }
 
   const containerName = container.template?.name ?? 'something';
@@ -1450,7 +1533,7 @@ async function handleGetAllFromContainer(
 
   return {
     type: MessageType.OUTPUT,
-    message: `You get from ${colors.item(withArticle(containerName))}: ${pickedUp.map(n => colors.item(n)).join(', ')}.`,
+    message: `You get from ${colors.item(withArticle(containerName))}: ${parts.join(', ')}.`,
   };
 }
 
