@@ -175,7 +175,7 @@ interface Action {
   // ============================================================================
 
   function renderActionList(): void {
-    const searchTerm = searchInput.value.toLowerCase();
+    const searchTerm = searchInput?.value.toLowerCase() ?? '';
     const filtered = actions.filter(a =>
       a.command.toLowerCase().includes(searchTerm) ||
       (a.description?.toLowerCase().includes(searchTerm) ?? false)
@@ -319,11 +319,32 @@ interface Action {
   actionForm.addEventListener('submit', async (e) => {
     e.preventDefault();
 
+    // Validate required fields
+    const command = commandInput.value.trim();
+    const firstPersonNoTarget = firstPersonNoTargetInput.value.trim();
+    const roomNoTarget = roomNoTargetInput.value.trim();
+
+    if (!command) {
+      alert('Command is required');
+      commandInput.focus();
+      return;
+    }
+    if (!firstPersonNoTarget) {
+      alert('First person no target message is required');
+      firstPersonNoTargetInput.focus();
+      return;
+    }
+    if (!roomNoTarget) {
+      alert('Room no target message is required');
+      roomNoTargetInput.focus();
+      return;
+    }
+
     const actionData = {
-      command: commandInput.value.trim(),
+      command,
       description: descriptionInput.value.trim() || null,
-      firstPersonNoTarget: firstPersonNoTargetInput.value.trim(),
-      roomNoTarget: roomNoTargetInput.value.trim(),
+      firstPersonNoTarget,
+      roomNoTarget,
       firstPersonWithTarget: firstPersonWithTargetInput.value.trim() || null,
       targetPerspective: targetPerspectiveInput.value.trim() || null,
       roomWithTarget: roomWithTargetInput.value.trim() || null,

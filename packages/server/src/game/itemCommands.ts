@@ -2211,10 +2211,11 @@ async function handleCurrencyPickup(
   if (!currencyType) return null;
 
   const currencyInfo = CURRENCY_TYPES[currencyType];
-  await characterRepo.addCurrency(characterId, currencyInfo.field, item.quantity);
-  await itemRepo.deleteInstance(item.id);
-
-  return item.quantity === 1 ? `1 ${currencyType} coin` : `${item.quantity} ${currencyType} coins`;
+  return await withTransaction(async () => {
+    await characterRepo.addCurrency(characterId, currencyInfo.field, item.quantity);
+    await itemRepo.deleteInstance(item.id);
+    return item.quantity === 1 ? `1 ${currencyType} coin` : `${item.quantity} ${currencyType} coins`;
+  });
 }
 
 /**

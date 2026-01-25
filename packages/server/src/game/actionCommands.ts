@@ -76,12 +76,7 @@ export async function handleActionCommand(
 
   // Target specified - check if action supports targeting
   if (!action.firstPersonWithTarget || !action.targetPerspective || !action.roomWithTarget) {
-    // Action doesn't support targeting - just use no-target
-    const selfMsg = replacePlaceholders(action.firstPersonNoTarget, socket.username);
-    const roomMsg = replacePlaceholders(action.roomNoTarget, socket.username);
-
-    broadcastToRoom(currentRoomId, roomMsg, socket.playerId);
-    return { type: MessageType.OUTPUT, message: selfMsg };
+    return { type: MessageType.ERROR, message: `The ${action.command} action doesn't support targeting.` };
   }
 
   // Find the target player
