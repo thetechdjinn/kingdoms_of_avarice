@@ -204,7 +204,7 @@ function formatSwingMessage(
       } else if (isDefender) {
         return `${colors.combatAttacker(attackerName)} ${colors.combatCritical('critically')} ${colors.combatHit(hitVerb3p)} you for ${colors.combatDamage(damage.toString())} damage!`;
       }
-      return `${attackerName} critically ${hitVerb3p} ${defenderName} for ${damage} damage!`;
+      return `${colors.combatAttacker(attackerName)} ${colors.combatCritical('critically')} ${colors.combatHit(hitVerb3p)} ${colors.combatDefender(defenderName)} for ${colors.combatDamage(damage.toString())} damage!`;
 
     case AttackResult.HIT:
       if (isAttacker) {
@@ -212,7 +212,7 @@ function formatSwingMessage(
       } else if (isDefender) {
         return `${colors.combatAttacker(attackerName)} ${colors.combatHit(hitVerb3p)} you for ${colors.combatDamage(damage.toString())} damage.`;
       }
-      return `${attackerName} ${hitVerb3p} ${defenderName} for ${damage} damage.`;
+      return `${colors.combatAttacker(attackerName)} ${colors.combatHit(hitVerb3p)} ${colors.combatDefender(defenderName)} for ${colors.combatDamage(damage.toString())} damage.`;
 
     case AttackResult.MISS:
       if (isUnarmed) {
@@ -222,7 +222,7 @@ function formatSwingMessage(
         } else if (isDefender) {
           return `${colors.combatAttacker(attackerName)} ${colors.combatMiss(missVerb3p)} you, but misses.`;
         }
-        return `${attackerName} ${missVerb3p} ${defenderName}, but misses.`;
+        return `${colors.combatAttacker(attackerName)} ${colors.combatMiss(missVerb3p)} ${colors.combatDefender(defenderName)}, but misses.`;
       } else {
         // Armed: "You swing your battle axe at Goblin, but miss."
         if (isAttacker) {
@@ -230,7 +230,7 @@ function formatSwingMessage(
         } else if (isDefender) {
           return `${colors.combatAttacker(attackerName)} ${colors.combatMiss(missVerb3p)} you with their ${colors.item(weaponName)}, but misses.`;
         }
-        return `${attackerName} ${missVerb3p} ${defenderName} with their ${colors.item(weaponName)}, but misses.`;
+        return `${colors.combatAttacker(attackerName)} ${colors.combatMiss(missVerb3p)} ${colors.combatDefender(defenderName)} with their ${colors.item(weaponName)}, but misses.`;
       }
 
     case AttackResult.DODGE:
@@ -239,19 +239,19 @@ function formatSwingMessage(
       } else if (isDefender) {
         return `You ${colors.combatDodge('dodge')} ${colors.combatAttacker(attackerName)}'s attack!`;
       }
-      return `${defenderName} dodges ${attackerPossessive} attack.`;
+      return `${colors.combatDefender(defenderName)} ${colors.combatDodge('dodges')} ${attackerPossessive} attack.`;
 
     case AttackResult.PARRY:
       if (isDefender) {
         return `You ${colors.combatDodge('parry')} ${colors.combatAttacker(attackerName)}'s attack!`;
       }
-      return `${defenderName} parries ${attackerPossessive} attack.`;
+      return `${colors.combatDefender(defenderName)} ${colors.combatDodge('parries')} ${attackerPossessive} attack.`;
 
     case AttackResult.BLOCK:
       if (isDefender) {
         return `You ${colors.combatDodge('block')} ${colors.combatAttacker(attackerName)}'s attack!`;
       }
-      return `${defenderName} blocks ${attackerPossessive} attack.`;
+      return `${colors.combatDefender(defenderName)} ${colors.combatDodge('blocks')} ${attackerPossessive} attack.`;
 
     default:
       return `${attacker} attacks ${defender}.`;
@@ -320,7 +320,7 @@ async function processSpellCombat(
     // Send spell messages
     const attackerMsg = `You cast ${colors.cyan(spell.spellName)} at ${colors.combatDefender(target.username)} for ${colors.combatDamage(damage.toString())} damage!`;
     const defenderMsg = `${colors.combatAttacker(attacker.username)} casts ${colors.cyan(spell.spellName)} at you for ${colors.combatDamage(damage.toString())} damage!`;
-    const roomMsg = `${attacker.username} casts ${spell.spellName} at ${target.username} for ${damage} damage!`;
+    const roomMsg = `${colors.combatAttacker(attacker.username)} casts ${colors.cyan(spell.spellName)} at ${colors.combatDefender(target.username)} for ${colors.combatDamage(damage.toString())} damage!`;
 
     sendToSocket(attacker, MessageType.OUTPUT, attackerMsg);
     sendToSocket(target, MessageType.OUTPUT, defenderMsg);

@@ -72,7 +72,7 @@ export function handleAttack(
   // Broadcast to room (exclude attacker and target - they get personalized messages)
   broadcastToRoom(
     currentRoomId,
-    `${socket.username} moves to attack ${target.username}.`,
+    `${colors.combatAttacker(socket.username)} moves to attack ${colors.combatDefender(target.username)}.`,
     [socket.playerId, target.playerId]
   );
 

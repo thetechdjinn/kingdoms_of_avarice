@@ -338,7 +338,16 @@ async function handleGoto(
     return { type: MessageType.ERROR, message: `Room ${roomId} does not exist` };
   }
 
+  const currentRoomId = getPlayerLocation(socket.playerId);
+
+  // Broadcast departure from current room
+  broadcastToRoom(currentRoomId, colors.green(`${colors.red(socket.username)} vanishes in a flash of light!`), socket.playerId);
+
   setPlayerLocation(socket.playerId, roomId);
+
+  // Broadcast arrival at new room
+  broadcastToRoom(roomId, colors.green(`${colors.red(socket.username)} appears in a flash of light!`), socket.playerId);
+
   const { getRoomItemsDescription } = await import('./itemCommands.js');
   const itemDescriptions = await getRoomItemsDescription(roomId);
   return {
