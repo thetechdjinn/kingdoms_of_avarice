@@ -741,7 +741,7 @@ async function handleDoorAction(
   }
 
   // Broadcast to current room
-  broadcastToRoom(currentRoomId, `${socket.username} ${verbs} the ${door.name}.`, socket.playerId);
+  broadcastToRoom(currentRoomId, colors.green(`${colors.red(socket.username)} ${verbs} the ${door.name}.`), socket.playerId);
 
   // Broadcast to the other side (if two-way door)
   const otherRoomId = doorStateManager.getDestinationRoom(door.id, currentRoomId);
@@ -872,7 +872,7 @@ async function handleUnlockDoor(
   doorStateManager.unlockDoor(door.id);
 
   // Broadcast to current room
-  broadcastToRoom(currentRoomId, `${socket.username} unlocks the ${door.name}.`, socket.playerId);
+  broadcastToRoom(currentRoomId, colors.green(`${colors.red(socket.username)} unlocks the ${door.name}.`), socket.playerId);
 
   // Broadcast to the other side (if two-way door)
   const otherRoomId = doorStateManager.getDestinationRoom(door.id, currentRoomId);
@@ -942,7 +942,7 @@ async function handleLockDoor(
   doorStateManager.lockDoor(door.id);
 
   // Broadcast to current room
-  broadcastToRoom(currentRoomId, `${socket.username} locks the ${door.name}.`, socket.playerId);
+  broadcastToRoom(currentRoomId, colors.green(`${colors.red(socket.username)} locks the ${door.name}.`), socket.playerId);
 
   // Broadcast to the other side (if two-way door)
   const otherRoomId = doorStateManager.getDestinationRoom(door.id, currentRoomId);
@@ -1085,7 +1085,7 @@ async function handlePickDoor(
 
   // Roll of 0 is automatic failure (fumble)
   if (roll === 0) {
-    broadcastToRoom(currentRoomId, `${socket.username} fumbles while trying to pick the ${door.name}.`, socket.playerId);
+    broadcastToRoom(currentRoomId, colors.green(`${colors.red(socket.username)} fumbles while trying to pick the ${door.name}.`), socket.playerId);
     return { type: MessageType.OUTPUT, message: `You fumble the lockpick! The ${door.name} remains locked.` };
   }
 
@@ -1095,7 +1095,7 @@ async function handlePickDoor(
   // Check against difficulty
   if (total < door.pickDifficulty) {
     // Failed attempt - broadcast to room
-    broadcastToRoom(currentRoomId, `${socket.username} fails to pick the ${door.name}.`, socket.playerId);
+    broadcastToRoom(currentRoomId, colors.green(`${colors.red(socket.username)} fails to pick the ${door.name}.`), socket.playerId);
     return {
       type: MessageType.OUTPUT,
       message: `You fail to pick the lock on the ${door.name}. (Roll: ${roll} + Skill: ${lockpickingStat} = ${total} vs Difficulty: ${door.pickDifficulty})`,
@@ -1109,7 +1109,7 @@ async function handlePickDoor(
   doorStateManager.openDoor(door.id);
 
   // Broadcast success to current room
-  broadcastToRoom(currentRoomId, `${socket.username} picks the lock on the ${door.name}!`, socket.playerId);
+  broadcastToRoom(currentRoomId, colors.green(`${colors.red(socket.username)} picks the lock on the ${door.name}!`), socket.playerId);
 
   // Broadcast to the other side (if two-way door)
   const otherRoomId = doorStateManager.getDestinationRoom(door.id, currentRoomId);
@@ -1214,7 +1214,7 @@ async function handleBashDoor(
   doorStateManager.openDoor(door.id);
 
   // Broadcast success to current room
-  broadcastToRoom(currentRoomId, `${socket.username} bashes open the ${door.name}!`, socket.playerId);
+  broadcastToRoom(currentRoomId, colors.green(`${colors.red(socket.username)} bashes open the ${door.name}!`), socket.playerId);
 
   // Broadcast to the other side (if two-way door)
   const otherRoomId = doorStateManager.getDestinationRoom(door.id, currentRoomId);
@@ -1274,15 +1274,15 @@ async function handleSpecialDoorTrigger(
 
   // Broadcast departure message to current room (custom or default)
   const departureMessage = door.passageMessageRoom
-    ? door.passageMessageRoom.replace('{player}', socket.username)
-    : `${socket.username} passes through ${door.itemDisplayName || door.name}.`;
-  broadcastToRoom(currentRoomId, departureMessage, socket.playerId);
+    ? door.passageMessageRoom.replace('{player}', colors.red(socket.username))
+    : `${colors.red(socket.username)} passes through ${door.itemDisplayName || door.name}.`;
+  broadcastToRoom(currentRoomId, colors.green(departureMessage), socket.playerId);
 
   // Update player location
   setPlayerLocation(socket.playerId, newRoom.id);
 
   // Broadcast arrival to new room
-  const arrivalMessage = `${socket.username} arrives.`;
+  const arrivalMessage = colors.green(`${colors.red(socket.username)} arrives.`);
   broadcastToRoom(newRoom.id, arrivalMessage, socket.playerId);
 
   // Build player's passage message (custom or default)
