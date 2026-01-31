@@ -847,12 +847,12 @@ async function handleMove(
         playerMessage = undefined; // Clear "Sneaking..." since we failed
         breakStealth(socket, 'movement_failed', false); // Don't double-notify room
 
-        // Announce arrival to new room (they heard/saw the player)
-        broadcastToRoom(newRoom.id, colors.green(`${colors.red(socket.username)} walks in from the ${oppositeDir}.`), socket.playerId);
+        // Notify observers they detected someone sneaking in
+        broadcastToRoom(newRoom.id, colors.green(`You notice ${colors.red(socket.username)} sneaking into the room.`), socket.playerId);
 
         // Also announce departure to old room (if they didn't already know)
         if (wasStealthing) {
-          broadcastToRoom(currentRoomId, colors.green(`${colors.red(socket.username)} left to the ${fullDirection}.`), socket.playerId);
+          broadcastToRoom(currentRoomId, colors.green(`You notice ${colors.red(socket.username)} slipping away.`), socket.playerId);
         }
       }
       // If sneak succeeded, no announcements needed (silent entry)
