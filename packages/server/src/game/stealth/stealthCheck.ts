@@ -51,6 +51,10 @@ export function rollStealthCheck(
   stealthValue: number,
   perceptionValue: number
 ): StealthCheckResult {
+  // Validate inputs - ensure they're finite numbers, default to 0 if invalid
+  const stealth = Number.isFinite(stealthValue) ? Math.max(0, stealthValue) : 0;
+  const perception = Number.isFinite(perceptionValue) ? Math.max(0, perceptionValue) : 0;
+
   // Roll 1d100 (1-100)
   const roll = Math.floor(Math.random() * 100) + 1;
 
@@ -59,7 +63,7 @@ export function rollStealthCheck(
   // threshold = 50 + (perception - stealth)
   // If perception > stealth: easier to detect (higher threshold)
   // If stealth > perception: harder to detect (lower threshold)
-  const threshold = Math.min(95, Math.max(5, 50 + (perceptionValue - stealthValue)));
+  const threshold = Math.min(95, Math.max(5, 50 + (perception - stealth)));
 
   // Detected if roll is at or below threshold
   const detected = roll <= threshold;
@@ -70,8 +74,8 @@ export function rollStealthCheck(
 
   return {
     detected,
-    stealthValue,
-    perceptionValue,
+    stealthValue: stealth,
+    perceptionValue: perception,
     roll,
     threshold,
     margin,
@@ -129,7 +133,11 @@ export function getDetectionProbability(
   stealthValue: number,
   perceptionValue: number
 ): number {
-  const threshold = Math.min(95, Math.max(5, 50 + (perceptionValue - stealthValue)));
+  // Validate inputs - ensure they're finite numbers, default to 0 if invalid
+  const stealth = Number.isFinite(stealthValue) ? Math.max(0, stealthValue) : 0;
+  const perception = Number.isFinite(perceptionValue) ? Math.max(0, perceptionValue) : 0;
+
+  const threshold = Math.min(95, Math.max(5, 50 + (perception - stealth)));
   return threshold / 100;
 }
 
