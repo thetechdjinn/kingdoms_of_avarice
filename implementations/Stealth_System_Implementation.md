@@ -346,45 +346,47 @@ Implement a complete stealth system allowing characters with stealth abilities t
 
 ### 6.1 Item Template Updates
 
-- [ ] Add fields to `item_templates` table:
-  - [ ] `stealth_modifier` (can be negative for heavy armor)
-  - [ ] `backstab_min_damage_bonus`
-  - [ ] `backstab_max_damage_bonus`
-- [ ] Create migration for new columns
+- [x] Add fields to `item_templates` table:
+  - [x] `stealth_modifier` (can be negative for heavy armor)
+  - [x] `backstab_min_damage_bonus` (in weapon_data JSONB)
+  - [x] `backstab_max_damage_bonus` (in weapon_data JSONB)
+- [x] Create migration for new columns (migrate.ts and schema.sql updated)
 
 ### 6.2 Stat Aggregation
 
-- [ ] Create `getEquipmentStealthModifier(character)`:
-  - [ ] Sum all equipped items' stealth modifiers
-- [ ] Integrate into `calculateStealth()`:
-  - [ ] Add equipment modifier to total stealth
-- [ ] Create `getBackstabDamageBonuses(character)`:
-  - [ ] Sum all equipped items' backstab damage bonuses
-- [ ] Integrate into `calculateBackstabDamage()`:
-  - [ ] Add equipment bonuses to min/max
+- [x] Create `getEquipmentStealthModifier(equippedItems)`:
+  - [x] Sum all equipped items' stealth modifiers
+- [x] Integrate into stealth commands:
+  - [x] handleHide uses equipment stealth modifier
+  - [x] handleSneak uses equipment stealth modifier
+  - [x] handleBackstab uses equipment stealth modifier
+- [x] Create `getBackstabDamageBonuses(equippedItems)`:
+  - [x] Get backstab damage bonuses from main-hand weapon
+- [x] Integrate into `calculateBackstabDamage()`:
+  - [x] Add equipment bonuses to min/max
 
 ### 6.3 Item Editor Updates
 
-- [ ] Add stealth modifier field to item editor
-- [ ] Add backstab min/max damage bonus fields
-- [ ] Show fields for armor and weapons
+- [x] Add stealth modifier field to item editor (in Modifiers tab)
+- [x] Add backstab min/max damage bonus fields (in Weapon Data section)
+- [x] Show fields for armor and weapons
 
 ### 6.4 Item Display Updates
 
-- [ ] Show stealth modifier in item info/examine
-- [ ] Show backstab modifiers in item info/examine
-- [ ] Format: `Stealth: -5` or `Stealth: +3`
-- [ ] Format: `Backstab Damage: +2 to +5`
+- [x] Show stealth modifier in item info/examine
+- [x] Show backstab modifiers in item info/examine
+- [x] Format: `Stealth: +5` or `Stealth: -10`
+- [x] Format: `Backstab: Accuracy +5, Damage +2 to +5`
 
 ### 6.5 Seed Data
 
-- [ ] Add stealth modifiers to existing armor:
-  - [ ] Heavy armor: negative values (-5 to -15)
-  - [ ] Light armor: small negative or zero (-2 to 0)
-  - [ ] Robes/cloth: zero or positive (0 to +2)
-- [ ] Add backstab accuracy to existing weapons:
-  - [ ] Most weapons: negative (-5 to -15)
-  - [ ] Daggers: less negative or zero (-2 to 0)
+- [x] Add stealth modifiers to existing armor:
+  - [x] Heavy armor: negative values (Iron Helm: -5, Chainmail: -10)
+  - [x] Light armor: small negative or zero (Leather Vest: -2, others: 0)
+  - [x] Special stealth gear: positive (Shadow Cloak: +5, Silent Boots: +3)
+- [x] Add backstab modifiers to weapons:
+  - [x] Swords: negative accuracy (Rusty: -10, Steel: -5)
+  - [x] Daggers: positive bonuses (Iron Dagger: +5 acc, +2 to +4 dmg; Assassin's Stiletto: +15 acc, +5 to +10 dmg)
 
 ### 6.6 Testing
 
@@ -396,12 +398,18 @@ Implement a complete stealth system allowing characters with stealth abilities t
 **Files Modified:**
 | File | Changes |
 |------|---------|
-| `packages/server/src/db/migrations/` | Add new item fields |
-| `packages/server/src/game/stats/secondaryStats.ts` | Equipment modifier integration |
-| `packages/server/src/game/combat/backstabDamage.ts` | Equipment bonus integration |
-| `packages/client/src/item-editor.ts` | Add new fields |
-| `packages/client/item-editor.html` | Add new inputs |
-| `packages/server/src/db/seed/` | Update item seed data |
+| `packages/shared/src/items.ts` | Added stealth_modifier to ItemTemplate, backstab damage bonuses to WeaponData |
+| `packages/server/src/db/schema.sql` | Added stealth_modifier column |
+| `packages/server/src/db/migrate.ts` | Added migration for stealth_modifier |
+| `packages/server/src/db/repositories/itemRepository.ts` | Updated CRUD for stealth_modifier |
+| `packages/server/src/game/stats/secondaryStats.ts` | Added getEquipmentStealthModifier, getBackstabDamageBonuses |
+| `packages/server/src/game/combat/backstabDamage.ts` | Added equipment bonus parameter |
+| `packages/server/src/game/stealth/stealthCommands.ts` | Integrated equipment modifiers |
+| `packages/server/src/game/itemCommands.ts` | Updated formatItemExamine for new fields |
+| `packages/server/src/game/adminCommands.ts` | Updated @iteminfo for new fields |
+| `packages/client/src/item-editor.ts` | Added new fields to interface and load/save |
+| `packages/client/item-editor.html` | Added new form inputs |
+| `packages/server/src/db/seed_items.sql` | Added stealth modifiers and backstab bonuses to items |
 
 ---
 
@@ -529,8 +537,8 @@ Phase 7 (Polish)
 | Phase 2 | **Complete** | Stealth state management, hide/sneak commands implemented |
 | Phase 3 | **Complete** | Detection & search mechanics implemented |
 | Phase 4 | **Complete** | Stealth movement, encumbrance penalties, stealth breaking events |
-| Phase 5 | Not Started | Backstab combat |
-| Phase 6 | Not Started | Equipment integration |
+| Phase 5 | **Complete** | Backstab combat with accuracy/damage formulas |
+| Phase 6 | **Complete** | Equipment integration (stealth modifiers, backstab bonuses) |
 | Phase 7 | Not Started | Polish & balance |
 
 ---
@@ -547,3 +555,4 @@ _Use this section to track progress, decisions, and blockers between development
 | 2026-01-30 | Phase 2 | Implemented stealth state management. Added StealthMode type to shared. Added stealthMode to AuthenticatedSocket. Created stealthState.ts with validation, state transitions, and stealth breaking. Created stealthCommands.ts with hide/sneak/visible commands. Updated room display to filter hidden players. Updated sendVitals to show hidden/sneaking status. | Manual testing of hide/sneak commands. NPC checks deferred until NPCs are implemented. |
 | 2026-01-30 | Phase 3 | Created stealthCheck.ts with stealth vs perception roll mechanics. Enhanced search command to find hidden players (perception vs stealth roll). Updated room display functions (getOtherPlayersInRoom, getPlayersInRoom) to support seeHidden trait - races with see_hidden trait now see hidden players marked with "(hidden)". | Manual testing of search command and seeHidden trait. Monster seeHidden deferred until NPCs are implemented. |
 | 2026-01-31 | Phase 4 | Implemented stealth movement in handleMove() - hidden auto-transitions to sneaking, shows "Sneaking..." message, rolls cumulative detection vs observers on room entry, suppresses announcements on success, breaks stealth on failure. Added getObserversInRoom() and calculatePlayerStealth() helpers. Added stealth breaking to combat (handleAttack), spell casting (handleSpellCommand), and targeted social actions (handleActionCommand). Encumbrance penalty already integrated via getEncumbrancePenalty(). | Manual testing of sneak movement. AoE spell stealth break and NPC attack stealth break deferred. |
+| 2026-01-31 | Phase 6 | Implemented equipment integration for stealth system. Added stealth_modifier column to item_templates (schema + migration). Extended WeaponData with backstab_min_damage_bonus and backstab_max_damage_bonus. Created getEquipmentStealthModifier() and getBackstabDamageBonuses() aggregation functions. Updated stealthCommands.ts to use equipment modifiers in hide/sneak/backstab. Updated calculateBackstabDamage() to accept equipment bonuses. Updated item editor UI (HTML + TypeScript) with new fields. Updated examine and @iteminfo to display new modifiers. Added seed data examples: stealth modifiers for armor (-10 to +5), backstab bonuses for daggers (+5 to +15 accuracy, +2 to +10 damage). | Manual testing of equipment modifiers. Phase 7 (Polish & Balance) next. |

@@ -33,25 +33,37 @@ export function calculateStrengthDamageBonus(strength: number): number {
   return Math.floor(strength / 10);
 }
 
+export interface BackstabEquipmentBonuses {
+  minDamageBonus: number;
+  maxDamageBonus: number;
+}
+
 /**
  * Calculate backstab damage
  *
  * @param weaponMaxDamage - Maximum damage of the equipped weapon
  * @param strengthBonus - Damage bonus from strength
  * @param level - Character's level
+ * @param equipmentBonuses - Optional backstab damage bonuses from equipment
  * @returns BackstabDamageResult with rolled damage and damage range
  */
 export function calculateBackstabDamage(
   weaponMaxDamage: number,
   strengthBonus: number,
-  level: number
+  level: number,
+  equipmentBonuses?: BackstabEquipmentBonuses
 ): BackstabDamageResult {
   // Calculate effective weapon max with strength bonus
   const effectiveWeaponMax = weaponMaxDamage + strengthBonus;
 
+  // Get equipment bonuses (default to 0)
+  const minEquipBonus = equipmentBonuses?.minDamageBonus ?? 0;
+  const maxEquipBonus = equipmentBonuses?.maxDamageBonus ?? 0;
+
   // Calculate backstab damage range
-  const backstabMin = Math.floor(effectiveWeaponMax * BASE_MIN_MULTIPLIER) + Math.floor(level * LEVEL_BONUS_MIN);
-  const backstabMax = Math.floor(effectiveWeaponMax * BASE_MAX_MULTIPLIER) + Math.floor(level * LEVEL_BONUS_MAX);
+  // Equipment bonuses are added after the multiplier calculation
+  const backstabMin = Math.floor(effectiveWeaponMax * BASE_MIN_MULTIPLIER) + Math.floor(level * LEVEL_BONUS_MIN) + minEquipBonus;
+  const backstabMax = Math.floor(effectiveWeaponMax * BASE_MAX_MULTIPLIER) + Math.floor(level * LEVEL_BONUS_MAX) + maxEquipBonus;
 
   // Roll damage within the range
   const damageRange = backstabMax - backstabMin + 1;

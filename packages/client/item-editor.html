@@ -233,10 +233,19 @@
                     </select>
                   </div>
                 </div>
+                <h4>Backstab Modifiers <span class="hint-inline">(for stealth attacks)</span></h4>
                 <div class="form-row">
                   <div class="form-group">
-                    <label for="weapon-backstab-accuracy">Backstab Accuracy <span class="hint-inline">(bonus for stealth attacks)</span></label>
-                    <input type="number" id="weapon-backstab-accuracy" min="0" value="0" />
+                    <label for="weapon-backstab-accuracy">Accuracy Bonus</label>
+                    <input type="number" id="weapon-backstab-accuracy" value="0" />
+                  </div>
+                  <div class="form-group">
+                    <label for="weapon-backstab-min-damage">Min Damage Bonus</label>
+                    <input type="number" id="weapon-backstab-min-damage" value="0" />
+                  </div>
+                  <div class="form-group">
+                    <label for="weapon-backstab-max-damage">Max Damage Bonus</label>
+                    <input type="number" id="weapon-backstab-max-damage" value="0" />
                   </div>
                 </div>
 
@@ -424,6 +433,14 @@
                 <div class="form-group">
                   <label for="mod-max-mana">Max Mana</label>
                   <input type="number" id="mod-max-mana" value="0" />
+                </div>
+              </div>
+
+              <h3>Combat Modifiers</h3>
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="mod-stealth">Stealth <span class="hint-inline">(negative for heavy armor)</span></label>
+                  <input type="number" id="mod-stealth" value="0" />
                 </div>
               </div>
             </div>

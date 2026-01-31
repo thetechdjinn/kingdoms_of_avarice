@@ -116,6 +116,8 @@ export interface WeaponData {
   skill_type?: string;
   attack_verbs?: AttackVerbs;
   backstab_accuracy?: number; // Bonus accuracy for backstab attacks
+  backstab_min_damage_bonus?: number; // Bonus to backstab minimum damage
+  backstab_max_damage_bonus?: number; // Bonus to backstab maximum damage
 }
 
 // Armor data
@@ -198,6 +200,7 @@ export interface ItemTemplate {
   light_data?: LightData;
   requirements?: ItemRequirements;
   stat_modifiers?: StatModifiers;
+  stealth_modifier?: number; // Modifier to stealth when equipped (negative for heavy armor)
   effect_slots: number;
   base_effects?: unknown;
 }

@@ -22,7 +22,7 @@ const TEMPLATE_COLUMNS = `it.name, it.short_desc, it.long_desc, it.room_desc, it
         it.weight, it.size, it.base_value, it.item_type, it.equipment_slot,
         it.flags, it.max_stack, it.container_capacity, it.container_weight_limit,
         it.weapon_data, it.armor_data, it.consumable_data, it.light_data,
-        it.requirements, it.stat_modifiers, it.effect_slots, it.base_effects`;
+        it.requirements, it.stat_modifiers, it.stealth_modifier, it.effect_slots, it.base_effects`;
 
 // Database row types
 interface DbItemTemplate {
@@ -47,6 +47,7 @@ interface DbItemTemplate {
   light_data: LightData | null;
   requirements: ItemRequirements | null;
   stat_modifiers: StatModifiers | null;
+  stealth_modifier: number | null;
   effect_slots: number;
   base_effects: unknown | null;
   created_at: Date;
@@ -92,6 +93,7 @@ function dbToTemplate(row: DbItemTemplate): ItemTemplate {
     light_data: row.light_data ?? undefined,
     requirements: row.requirements ?? undefined,
     stat_modifiers: row.stat_modifiers ?? undefined,
+    stealth_modifier: row.stealth_modifier ?? undefined,
     effect_slots: row.effect_slots,
     base_effects: row.base_effects ?? undefined,
   };
@@ -121,6 +123,7 @@ function dbJoinedToTemplate(row: DbItemInstance & DbItemTemplate): ItemTemplate 
     light_data: row.light_data ?? undefined,
     requirements: row.requirements ?? undefined,
     stat_modifiers: row.stat_modifiers ?? undefined,
+    stealth_modifier: row.stealth_modifier ?? undefined,
     effect_slots: row.effect_slots,
     base_effects: row.base_effects ?? undefined,
   };
@@ -191,6 +194,7 @@ export interface CreateTemplateInput {
   light_data?: LightData;
   requirements?: ItemRequirements;
   stat_modifiers?: StatModifiers;
+  stealth_modifier?: number;
   effect_slots?: number;
   base_effects?: unknown;
 }
@@ -202,13 +206,13 @@ export async function createTemplate(input: CreateTemplateInput): Promise<ItemTe
       weight, size, base_value, item_type, equipment_slot,
       flags, max_stack, container_capacity, container_weight_limit,
       weapon_data, armor_data, consumable_data, light_data,
-      requirements, stat_modifiers, effect_slots, base_effects
+      requirements, stat_modifiers, stealth_modifier, effect_slots, base_effects
     ) VALUES (
       $1, $2, $3, $4, $5,
       $6, $7, $8, $9, $10,
       $11, $12, $13, $14,
       $15, $16, $17, $18,
-      $19, $20, $21, $22
+      $19, $20, $21, $22, $23
     ) RETURNING *`,
     [
       input.name,
@@ -231,6 +235,7 @@ export async function createTemplate(input: CreateTemplateInput): Promise<ItemTe
       input.light_data ? JSON.stringify(input.light_data) : null,
       input.requirements ? JSON.stringify(input.requirements) : null,
       input.stat_modifiers ? JSON.stringify(input.stat_modifiers) : null,
+      input.stealth_modifier ?? 0,
       input.effect_slots ?? 0,
       input.base_effects ? JSON.stringify(input.base_effects) : null,
     ]
@@ -277,10 +282,11 @@ export async function updateTemplate(id: number, updates: Partial<CreateTemplate
       light_data = COALESCE($18, light_data),
       requirements = COALESCE($19, requirements),
       stat_modifiers = COALESCE($20, stat_modifiers),
-      effect_slots = COALESCE($21, effect_slots),
-      base_effects = COALESCE($22, base_effects),
+      stealth_modifier = COALESCE($21, stealth_modifier),
+      effect_slots = COALESCE($22, effect_slots),
+      base_effects = COALESCE($23, base_effects),
       updated_at = CURRENT_TIMESTAMP
-    WHERE id = $23
+    WHERE id = $24
     RETURNING *`,
     [
       updates.name ?? null,
@@ -303,6 +309,7 @@ export async function updateTemplate(id: number, updates: Partial<CreateTemplate
       updates.light_data ? JSON.stringify(updates.light_data) : null,
       updates.requirements ? JSON.stringify(updates.requirements) : null,
       updates.stat_modifiers ? JSON.stringify(updates.stat_modifiers) : null,
+      updates.stealth_modifier ?? null,
       updates.effect_slots ?? null,
       updates.base_effects ? JSON.stringify(updates.base_effects) : null,
       id,

@@ -24,6 +24,8 @@ interface ItemTemplate {
     crit_modifier?: number;
     range?: string;
     backstab_accuracy?: number;
+    backstab_min_damage_bonus?: number;
+    backstab_max_damage_bonus?: number;
     attack_verbs?: {
       hit: string;
       miss: string;
@@ -64,6 +66,7 @@ interface ItemTemplate {
     max_health?: number;
     max_mana?: number;
   };
+  stealth_modifier?: number;
   effect_slots: number;
 }
 
@@ -364,6 +367,8 @@ function loadWeaponData(template: ItemTemplate): void {
   const critModifier = getElement<HTMLInputElement>('weapon-crit-modifier');
   const range = getElement<HTMLSelectElement>('weapon-range');
   const backstabAccuracy = getElement<HTMLInputElement>('weapon-backstab-accuracy');
+  const backstabMinDmgBonus = getElement<HTMLInputElement>('weapon-backstab-min-damage');
+  const backstabMaxDmgBonus = getElement<HTMLInputElement>('weapon-backstab-max-damage');
 
   if (minDamage) minDamage.value = String(data?.min_damage ?? 1);
   if (maxDamage) maxDamage.value = String(data?.max_damage ?? 6);
@@ -372,6 +377,8 @@ function loadWeaponData(template: ItemTemplate): void {
   if (critModifier) critModifier.value = String(data?.crit_modifier || 2);
   if (range) range.value = data?.range || 'melee';
   if (backstabAccuracy) backstabAccuracy.value = String(data?.backstab_accuracy || 0);
+  if (backstabMinDmgBonus) backstabMinDmgBonus.value = String(data?.backstab_min_damage_bonus || 0);
+  if (backstabMaxDmgBonus) backstabMaxDmgBonus.value = String(data?.backstab_max_damage_bonus || 0);
 
   // Attack verbs
   const verbHit = getElement<HTMLInputElement>('weapon-verb-hit');
@@ -431,6 +438,10 @@ function loadModifiers(template: ItemTemplate): void {
   (document.getElementById('mod-intelligence') as HTMLInputElement).value = String(mod.intelligence || 0);
   (document.getElementById('mod-max-health') as HTMLInputElement).value = String(mod.max_health || 0);
   (document.getElementById('mod-max-mana') as HTMLInputElement).value = String(mod.max_mana || 0);
+
+  // Stealth modifier (negative for heavy armor, positive for stealth gear)
+  const stealthModInput = document.getElementById('mod-stealth') as HTMLInputElement;
+  if (stealthModInput) stealthModInput.value = String(template.stealth_modifier || 0);
 }
 
 function updateTypeSections(itemType: string): void {
@@ -710,7 +721,9 @@ function gatherFormData(): Partial<ItemTemplate> {
 
   // Type-specific data
   if (itemType === 'weapon') {
-    const backstabAccuracyValue = parseNumberOrDefault((document.getElementById('weapon-backstab-accuracy') as HTMLInputElement).value, 0);
+    const backstabAccuracyValue = parseNumberOrDefault((document.getElementById('weapon-backstab-accuracy') as HTMLInputElement)?.value, 0);
+    const backstabMinDmgBonus = parseNumberOrDefault((document.getElementById('weapon-backstab-min-damage') as HTMLInputElement)?.value, 0);
+    const backstabMaxDmgBonus = parseNumberOrDefault((document.getElementById('weapon-backstab-max-damage') as HTMLInputElement)?.value, 0);
     const weaponData: NonNullable<ItemTemplate['weapon_data']> = {
       min_damage: parseNumberOrDefault((document.getElementById('weapon-min-damage') as HTMLInputElement).value, 1),
       max_damage: parseNumberOrDefault((document.getElementById('weapon-max-damage') as HTMLInputElement).value, 6),
@@ -718,7 +731,9 @@ function gatherFormData(): Partial<ItemTemplate> {
       attack_speed: parseNumberOrDefault((document.getElementById('weapon-attack-speed') as HTMLInputElement).value, 1500),
       crit_modifier: parseNumberOrDefault((document.getElementById('weapon-crit-modifier') as HTMLInputElement).value, 2),
       range: (document.getElementById('weapon-range') as HTMLSelectElement).value,
-      backstab_accuracy: backstabAccuracyValue > 0 ? backstabAccuracyValue : undefined,
+      backstab_accuracy: backstabAccuracyValue !== 0 ? backstabAccuracyValue : undefined,
+      backstab_min_damage_bonus: backstabMinDmgBonus !== 0 ? backstabMinDmgBonus : undefined,
+      backstab_max_damage_bonus: backstabMaxDmgBonus !== 0 ? backstabMaxDmgBonus : undefined,
     };
 
     // Attack verbs - only include if at least one is filled
@@ -791,6 +806,12 @@ function gatherFormData(): Partial<ItemTemplate> {
     max_health: parseInt((document.getElementById('mod-max-health') as HTMLInputElement).value) || undefined,
     max_mana: parseInt((document.getElementById('mod-max-mana') as HTMLInputElement).value) || undefined,
   };
+
+  // Stealth modifier (negative for heavy armor, positive for stealth gear)
+  const stealthMod = parseInt((document.getElementById('mod-stealth') as HTMLInputElement)?.value) || 0;
+  if (stealthMod !== 0) {
+    data.stealth_modifier = stealthMod;
+  }
 
   return data;
 }

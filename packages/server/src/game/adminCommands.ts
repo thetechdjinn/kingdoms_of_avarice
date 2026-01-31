@@ -678,12 +678,27 @@ async function handleItemInfo(
 
   if (template.weapon_data) {
     lines.push(`  ${colors.boldCyan('Damage:')} ${template.weapon_data.min_damage}-${template.weapon_data.max_damage} ${template.weapon_data.damage_type}`);
+    // Show backstab modifiers if any are non-zero
+    const bsAcc = template.weapon_data.backstab_accuracy ?? 0;
+    const bsMinDmg = template.weapon_data.backstab_min_damage_bonus ?? 0;
+    const bsMaxDmg = template.weapon_data.backstab_max_damage_bonus ?? 0;
+    if (bsAcc !== 0) {
+      lines.push(`  ${colors.boldCyan('Backstab Accuracy:')} ${bsAcc >= 0 ? '+' : ''}${bsAcc}`);
+    }
+    if (bsMinDmg !== 0 || bsMaxDmg !== 0) {
+      lines.push(`  ${colors.boldCyan('Backstab Damage:')} +${bsMinDmg} to +${bsMaxDmg}`);
+    }
   }
   if (template.armor_data) {
     lines.push(`  ${colors.boldCyan('AC:')} ${template.armor_data.armor_class}`);
   }
   if (template.consumable_data) {
     lines.push(`  ${colors.boldCyan('Effect:')} ${template.consumable_data.effect_type} ${template.consumable_data.effect_value}`);
+  }
+  // Show stealth modifier for any equippable item
+  if (template.stealth_modifier && template.stealth_modifier !== 0) {
+    const sign = template.stealth_modifier >= 0 ? '+' : '';
+    lines.push(`  ${colors.boldCyan('Stealth:')} ${sign}${template.stealth_modifier}`);
   }
 
   const flags = Object.entries(template.flags || {})

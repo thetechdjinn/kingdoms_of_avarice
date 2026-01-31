@@ -23,7 +23,7 @@ import {
   isStealthing,
   breakStealth,
 } from './stealthState.js';
-import { calculateStealth, calculatePerception, characterHasStealth } from '../stats/secondaryStats.js';
+import { calculateStealth, calculatePerception, characterHasStealth, getEquipmentStealthModifier, getBackstabDamageBonuses } from '../stats/secondaryStats.js';
 import { findPlayerInRoom } from '../playerUtils.js';
 import { calculateBackstabAccuracy, calculateBackstabDefense, rollBackstabHit } from '../combat/backstabAccuracy.js';
 import { calculateBackstabDamage, calculateStrengthDamageBonus } from '../combat/backstabDamage.js';
@@ -100,6 +100,10 @@ export async function handleHide(socket: AuthenticatedSocket): Promise<CommandRe
     return { type: MessageType.OUTPUT, message: 'You are already hidden.' };
   }
 
+  // Get equipped items for stealth modifier calculation
+  const equippedItems = await itemRepo.getCharacterEquipped(socket.characterId!);
+  const equipmentStealthMod = getEquipmentStealthModifier(equippedItems);
+
   // Calculate stealth value for the roll
   const stealthBreakdown = await calculateStealth(
     {
@@ -111,7 +115,7 @@ export async function handleHide(socket: AuthenticatedSocket): Promise<CommandRe
       race: character.race,
       class: character.class,
     },
-    0, // TODO: Equipment stealth modifier
+    equipmentStealthMod,
     0  // TODO: Encumbrance ratio
   );
 
@@ -183,6 +187,10 @@ export async function handleSneak(socket: AuthenticatedSocket): Promise<CommandR
     return { type: MessageType.OUTPUT, message: 'Attempting to sneak...' };
   }
 
+  // Get equipped items for stealth modifier calculation
+  const equippedItems = await itemRepo.getCharacterEquipped(socket.characterId!);
+  const equipmentStealthMod = getEquipmentStealthModifier(equippedItems);
+
   // Calculate stealth value and make a roll
   // The result is stored internally - success/failure revealed on movement
   const stealthBreakdown = await calculateStealth(
@@ -195,7 +203,7 @@ export async function handleSneak(socket: AuthenticatedSocket): Promise<CommandR
       race: character.race,
       class: character.class,
     },
-    0, // TODO: Equipment stealth modifier
+    equipmentStealthMod,
     0  // TODO: Encumbrance ratio
   );
 
@@ -342,6 +350,10 @@ export async function handleBackstab(
   // Get weapon backstab accuracy bonus
   const weaponBackstabAccuracy = weaponData.backstab_accuracy ?? 0;
 
+  // Get equipment modifiers (stealth and backstab damage bonuses)
+  const equipmentStealthMod = getEquipmentStealthModifier(equipped);
+  const backstabDmgBonuses = getBackstabDamageBonuses(equipped);
+
   // Calculate attacker's stealth value
   const stealthBreakdown = await calculateStealth(
     {
@@ -353,7 +365,7 @@ export async function handleBackstab(
       race: character.race,
       class: character.class,
     },
-    0, // TODO: Equipment stealth modifier
+    equipmentStealthMod,
     0  // TODO: Encumbrance ratio
   );
 
@@ -378,12 +390,16 @@ export async function handleBackstab(
   // Get target's equipment stats for AC
   const targetEquipStats = await getEquipmentCombatStats(target.characterId!);
 
+  // For now, perception modifier from equipment is 0
+  // TODO: Add perception_modifier to equipment if needed
+  const targetEquipPerceptionMod = 0;
+
   // Calculate target's perception
   const targetPerception = calculatePerception(
     targetCharacter.intelligence,
     targetCharacter.wisdom,
     targetCharacter.charisma,
-    0 // TODO: Equipment perception modifier
+    targetEquipPerceptionMod
   );
 
   // Calculate defender's backstab defense
@@ -432,7 +448,11 @@ export async function handleBackstab(
     const damageResult = calculateBackstabDamage(
       weaponData.max_damage,
       strengthBonus,
-      character.level
+      character.level,
+      {
+        minDamageBonus: backstabDmgBonuses.minBonus,
+        maxDamageBonus: backstabDmgBonuses.maxBonus,
+      }
     );
 
     // Apply damage to target

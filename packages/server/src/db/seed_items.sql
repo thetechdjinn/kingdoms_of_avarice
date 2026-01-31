@@ -17,7 +17,7 @@ VALUES
     5, 2, 15,
     'weapon', 'main_hand',
     '{"takeable": true}',
-    '{"min_damage": 1, "max_damage": 6, "damage_type": "slashing", "attack_speed": 1400, "range": "melee", "skill_type": "swords"}'
+    '{"min_damage": 1, "max_damage": 6, "damage_type": "slashing", "attack_speed": 1400, "range": "melee", "skill_type": "swords", "backstab_accuracy": -10}'
 ),
 (
     'Steel Longsword',
@@ -28,7 +28,7 @@ VALUES
     6, 2, 100,
     'weapon', 'main_hand',
     '{"takeable": true}',
-    '{"min_damage": 1, "max_damage": 8, "damage_type": "slashing", "attack_speed": 1300, "range": "melee", "skill_type": "swords"}'
+    '{"min_damage": 1, "max_damage": 8, "damage_type": "slashing", "attack_speed": 1300, "range": "melee", "skill_type": "swords", "backstab_accuracy": -5}'
 ),
 (
     'Iron Dagger',
@@ -39,7 +39,7 @@ VALUES
     1, 1, 10,
     'weapon', 'main_hand',
     '{"takeable": true}',
-    '{"min_damage": 1, "max_damage": 4, "damage_type": "piercing", "attack_speed": 800, "range": "melee", "skill_type": "daggers"}'
+    '{"min_damage": 1, "max_damage": 4, "damage_type": "piercing", "attack_speed": 800, "range": "melee", "skill_type": "daggers", "backstab_accuracy": 5, "backstab_min_damage_bonus": 2, "backstab_max_damage_bonus": 4}'
 ),
 (
     'Wooden Club',
@@ -62,11 +62,22 @@ VALUES
     'weapon', 'main_hand',
     '{"takeable": true, "two_handed": true}',
     '{"min_damage": 4, "max_damage": 12, "damage_type": "slashing", "attack_speed": 1900, "range": "melee", "skill_type": "axes"}'
+),
+(
+    'Assassins Stiletto',
+    'an assassins stiletto',
+    'A slender blade designed for precision strikes. The needle-thin point can find gaps in even the sturdiest armor.',
+    'A thin stiletto blade lies here.',
+    ARRAY['stiletto', 'dagger', 'assassin', 'blade'],
+    1, 1, 250,
+    'weapon', 'main_hand',
+    '{"takeable": true}',
+    '{"min_damage": 2, "max_damage": 5, "damage_type": "piercing", "attack_speed": 700, "range": "melee", "skill_type": "daggers", "backstab_accuracy": 15, "backstab_min_damage_bonus": 5, "backstab_max_damage_bonus": 10}'
 );
 
--- Armor
-INSERT INTO item_templates (name, short_desc, long_desc, room_desc, keywords, weight, size, base_value, item_type, equipment_slot, flags, armor_data)
-VALUES 
+-- Armor (with stealth modifiers: heavy = negative, light = 0 or small negative)
+INSERT INTO item_templates (name, short_desc, long_desc, room_desc, keywords, weight, size, base_value, item_type, equipment_slot, flags, armor_data, stealth_modifier)
+VALUES
 (
     'Leather Cap',
     'a leather cap',
@@ -76,7 +87,8 @@ VALUES
     1, 1, 8,
     'armor', 'head',
     '{"takeable": true}',
-    '{"armor_class": 1, "weight_class": "light"}'
+    '{"armor_class": 1, "weight_class": "light"}',
+    0
 ),
 (
     'Iron Helm',
@@ -87,7 +99,8 @@ VALUES
     4, 2, 35,
     'armor', 'head',
     '{"takeable": true}',
-    '{"armor_class": 3, "damage_resistance": 1, "weight_class": "heavy"}'
+    '{"armor_class": 3, "damage_resistance": 1, "weight_class": "heavy"}',
+    -5
 ),
 (
     'Leather Vest',
@@ -98,7 +111,8 @@ VALUES
     5, 2, 25,
     'armor', 'body',
     '{"takeable": true}',
-    '{"armor_class": 2, "weight_class": "light"}'
+    '{"armor_class": 2, "weight_class": "light"}',
+    -2
 ),
 (
     'Chainmail Shirt',
@@ -109,7 +123,8 @@ VALUES
     15, 3, 150,
     'armor', 'body',
     '{"takeable": true}',
-    '{"armor_class": 5, "damage_resistance": 2, "weight_class": "medium"}'
+    '{"armor_class": 5, "damage_resistance": 2, "weight_class": "medium"}',
+    -10
 ),
 (
     'Wooden Shield',
@@ -120,7 +135,8 @@ VALUES
     6, 2, 20,
     'armor', 'off_hand',
     '{"takeable": true}',
-    '{"armor_class": 2, "damage_resistance": 0.5, "weight_class": "medium"}'
+    '{"armor_class": 2, "damage_resistance": 0.5, "weight_class": "medium"}',
+    -3
 ),
 (
     'Leather Gloves',
@@ -131,7 +147,8 @@ VALUES
     1, 1, 5,
     'armor', 'hands',
     '{"takeable": true}',
-    '{"armor_class": 1, "weight_class": "light"}'
+    '{"armor_class": 1, "weight_class": "light"}',
+    0
 ),
 (
     'Leather Boots',
@@ -142,7 +159,32 @@ VALUES
     2, 1, 12,
     'armor', 'feet',
     '{"takeable": true}',
-    '{"armor_class": 1, "weight_class": "light"}'
+    '{"armor_class": 1, "weight_class": "light"}',
+    0
+),
+(
+    'Shadow Cloak',
+    'a dark shadow cloak',
+    'A flowing cloak woven from shadow-silk. It seems to blend into darkness, helping the wearer move unseen.',
+    'A dark cloak lies crumpled here.',
+    ARRAY['cloak', 'shadow cloak', 'dark cloak'],
+    1, 1, 200,
+    'armor', 'back',
+    '{"takeable": true}',
+    '{"armor_class": 0, "weight_class": "light"}',
+    5
+),
+(
+    'Silent Boots',
+    'a pair of silent boots',
+    'Soft-soled boots designed for stealth. They muffle the sound of footsteps.',
+    'A pair of soft-soled boots sits here.',
+    ARRAY['boots', 'silent boots', 'soft boots', 'thief boots'],
+    1, 1, 150,
+    'armor', 'feet',
+    '{"takeable": true}',
+    '{"armor_class": 0, "weight_class": "light"}',
+    3
 );
 
 -- Containers
