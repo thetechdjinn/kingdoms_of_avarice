@@ -686,7 +686,9 @@ async function handleItemInfo(
       lines.push(`  ${colors.boldCyan('Backstab Accuracy:')} ${bsAcc >= 0 ? '+' : ''}${bsAcc}`);
     }
     if (bsMinDmg !== 0 || bsMaxDmg !== 0) {
-      lines.push(`  ${colors.boldCyan('Backstab Damage:')} +${bsMinDmg} to +${bsMaxDmg}`);
+      const minSign = bsMinDmg >= 0 ? '+' : '';
+      const maxSign = bsMaxDmg >= 0 ? '+' : '';
+      lines.push(`  ${colors.boldCyan('Backstab Damage:')} ${minSign}${bsMinDmg} to ${maxSign}${bsMaxDmg}`);
     }
   }
   if (template.armor_data) {

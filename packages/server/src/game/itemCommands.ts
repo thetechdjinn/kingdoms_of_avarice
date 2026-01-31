@@ -979,7 +979,11 @@ function formatItemExamine(item: ItemInstance): CommandResponse {
     if (bsAcc !== 0 || bsMinDmg !== 0 || bsMaxDmg !== 0) {
       const bsParts: string[] = [];
       if (bsAcc !== 0) bsParts.push(`Accuracy ${bsAcc >= 0 ? '+' : ''}${bsAcc}`);
-      if (bsMinDmg !== 0 || bsMaxDmg !== 0) bsParts.push(`Damage +${bsMinDmg} to +${bsMaxDmg}`);
+      if (bsMinDmg !== 0 || bsMaxDmg !== 0) {
+        const minSign = bsMinDmg >= 0 ? '+' : '';
+        const maxSign = bsMaxDmg >= 0 ? '+' : '';
+        bsParts.push(`Damage ${minSign}${bsMinDmg} to ${maxSign}${bsMaxDmg}`);
+      }
       lines.push(`Backstab: ${bsParts.join(', ')}`);
     }
   }

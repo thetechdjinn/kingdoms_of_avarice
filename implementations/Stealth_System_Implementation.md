@@ -263,58 +263,57 @@ Implement a complete stealth system allowing characters with stealth abilities t
 
 ### 5.1 Weapon Template Updates
 
-- [ ] Add to `item_templates` table:
-  - [ ] `backstab_accuracy` modifier (typically negative)
-- [ ] Update item editor to show backstab accuracy field
-- [ ] Add validation: backstab only with one-handed weapons
+- [x] Add to `item_templates` table:
+  - [x] `backstab_accuracy` modifier (in weapon_data JSONB)
+- [x] Update item editor to show backstab accuracy field
+- [x] Add validation: backstab only with one-handed weapons
 
 ### 5.2 Backstab Accuracy Formula
 
-- [ ] Create `packages/server/src/game/combat/backstabAccuracy.ts`:
-  - [ ] Attacker accuracy = Base stats + Stealth + BS-specific accuracy bonuses
-  - [ ] Defender defense = (AC / 2) + (Perception / 2)
-  - [ ] Secondary AC ignored for backstabs
-  - [ ] `rollBackstabHit(attacker, defender)` → boolean
+- [x] Create `packages/server/src/game/combat/backstabAccuracy.ts`:
+  - [x] Attacker accuracy = Base stats + Stealth + BS-specific accuracy bonuses
+  - [x] Defender defense = (AC / 2) + (Perception / 2)
+  - [x] Secondary AC ignored for backstabs
+  - [x] `rollBackstabHit(attacker, defender)` → boolean
 
 ### 5.3 Backstab Damage Formula
 
-- [ ] Create `packages/server/src/game/combat/backstabDamage.ts`:
-  - [ ] Get effective weapon max (weapon max + strength bonus)
-  - [ ] Load config values from settings
-  - [ ] Calculate:
+- [x] Create `packages/server/src/game/combat/backstabDamage.ts`:
+  - [x] Get effective weapon max (weapon max + strength bonus)
+  - [x] Calculate using hardcoded multipliers (2.0-4.0x, +0.5-1.0 per level):
     ```
     backstabMin = (effectiveMax × BASE_MIN_MULTIPLIER) + (level × LEVEL_BONUS_MIN)
     backstabMax = (effectiveMax × BASE_MAX_MULTIPLIER) + (level × LEVEL_BONUS_MAX)
     ```
-  - [ ] Roll between min and max
-  - [ ] Apply damage resistance AFTER multiplier (unlike bash/smash)
+  - [x] Roll between min and max
+  - [x] Equipment bonuses added after multiplier calculation
 
 ### 5.4 Backstab Command
 
-- [ ] Implement `backstab <target>` command:
-  - [ ] Aliases: `bs`
-  - [ ] Validation:
-    - [ ] Character has stealth ability
-    - [ ] Character is sneaking or hidden
-    - [ ] Weapon equipped is one-handed
-    - [ ] Target exists and is visible
-    - [ ] Target is not already in combat with attacker (no re-backstab mid-fight)
-  - [ ] On attempt:
-    - [ ] Roll accuracy check
-    - [ ] If hit: Calculate and apply damage
-    - [ ] If miss: No damage
-    - [ ] Both cases: Break stealth, engage combat
-  - [ ] Combat messages:
-    - [ ] Hit: `"You backstab <target> for <damage> damage!"`
-    - [ ] Miss: `"You attempt to backstab <target> but miss!"`
-    - [ ] Target sees: `"<attacker> lunges at you from the shadows!"`
+- [x] Implement `backstab <target>` command:
+  - [x] Aliases: `bs`
+  - [x] Validation:
+    - [x] Character has stealth ability
+    - [x] Character is sneaking or hidden
+    - [x] Weapon equipped is one-handed
+    - [x] Target exists and is visible
+    - [x] Target is not already in combat with attacker (no re-backstab mid-fight)
+  - [x] On attempt:
+    - [x] Roll accuracy check
+    - [x] If hit: Calculate and apply damage
+    - [x] If miss: No damage
+    - [x] Both cases: Break stealth, engage combat
+  - [x] Combat messages:
+    - [x] Hit: `"You backstab <target> for <damage> damage!"`
+    - [x] Miss: `"You attempt to backstab <target> but miss!"`
+    - [x] Target sees: `"<attacker> lunges at you from the shadows!"`
 
 ### 5.5 Combat Engagement Rules
 
-- [ ] Cannot `hide` or `sneak` while in combat
-- [ ] Error message: `"You may not hide right now!"` / `"You may not sneak right now!"`
-- [ ] Must break combat (flee or target dies) before re-entering stealth
-- [ ] Even after combat ends, cannot sneak if another entity has engaged you
+- [x] Cannot `hide` or `sneak` while in combat
+- [x] Error message: `"You may not hide right now!"` / `"You may not sneak right now!"`
+- [x] Must break combat (flee or target dies) before re-entering stealth
+- [x] Even after combat ends, cannot sneak if another entity has engaged you
 
 ### 5.6 Testing
 
@@ -329,14 +328,17 @@ Implement a complete stealth system allowing characters with stealth abilities t
 **Files Modified:**
 | File | Changes |
 |------|---------|
-| `packages/server/src/db/migrations/` | Add backstab_accuracy to items |
-| `packages/server/src/game/combat/backstabAccuracy.ts` | New file - accuracy calc |
-| `packages/server/src/game/combat/backstabDamage.ts` | New file - damage calc |
-| `packages/server/src/game/stealth/stealthCommands.ts` | Add backstab command |
-| `packages/server/src/game/commands.ts` | Register backstab command |
-| `packages/server/src/game/combat.ts` | Integration with combat system |
-| `packages/client/src/item-editor.ts` | Add backstab accuracy field |
-| `packages/client/item-editor.html` | Add backstab accuracy input |
+| `packages/shared/src/items.ts` | Added backstab_accuracy to WeaponData interface |
+| `packages/shared/src/progression.ts` | Added backstab_accuracy_bonus to ClassDefinition |
+| `packages/server/src/db/schema_progression.sql` | Added backstab_accuracy_bonus column |
+| `packages/server/src/db/migrate.ts` | Added migration for backstab_accuracy_bonus |
+| `packages/server/src/db/repositories/progressionRepository.ts` | Load backstab_accuracy_bonus |
+| `packages/server/src/game/combat/backstabAccuracy.ts` | New file - accuracy calculation |
+| `packages/server/src/game/combat/backstabDamage.ts` | New file - damage calculation |
+| `packages/server/src/game/stealth/stealthCommands.ts` | Added handleBackstab command |
+| `packages/server/src/game/commands.ts` | Registered backstab/bs command |
+| `packages/client/src/item-editor.ts` | Added backstab accuracy field to weapon data |
+| `packages/client/item-editor.html` | Added backstab accuracy input |
 
 ---
 
@@ -419,12 +421,13 @@ Implement a complete stealth system allowing characters with stealth abilities t
 
 ### 7.1 Class-Specific Backstab Accuracy
 
-- [ ] Add `backstabAccuracyBonus` to class definitions:
+- [x] Add `backstab_accuracy_bonus` field to ClassDefinition (Phase 5)
+- [x] Integrate into backstab accuracy calculation (Phase 5)
+- [ ] Set values for specific classes:
   - [ ] Thief: +15 (highest)
   - [ ] Ninja: +10
   - [ ] Ranger: +5
   - [ ] Others with stealth: +0
-- [ ] Integrate into backstab accuracy calculation
 
 ### 7.2 Staff Testing Commands
 
@@ -476,7 +479,7 @@ Implement a complete stealth system allowing characters with stealth abilities t
 
 ### 7.7 Final Documentation
 
-- [ ] Update CLAUDE.md with new commands
+- [x] Update CLAUDE.md with new commands (done in Phase 5)
 - [ ] Document stealth system in code comments
 - [ ] Add backstab settings to admin documentation
 
@@ -555,4 +558,5 @@ _Use this section to track progress, decisions, and blockers between development
 | 2026-01-30 | Phase 2 | Implemented stealth state management. Added StealthMode type to shared. Added stealthMode to AuthenticatedSocket. Created stealthState.ts with validation, state transitions, and stealth breaking. Created stealthCommands.ts with hide/sneak/visible commands. Updated room display to filter hidden players. Updated sendVitals to show hidden/sneaking status. | Manual testing of hide/sneak commands. NPC checks deferred until NPCs are implemented. |
 | 2026-01-30 | Phase 3 | Created stealthCheck.ts with stealth vs perception roll mechanics. Enhanced search command to find hidden players (perception vs stealth roll). Updated room display functions (getOtherPlayersInRoom, getPlayersInRoom) to support seeHidden trait - races with see_hidden trait now see hidden players marked with "(hidden)". | Manual testing of search command and seeHidden trait. Monster seeHidden deferred until NPCs are implemented. |
 | 2026-01-31 | Phase 4 | Implemented stealth movement in handleMove() - hidden auto-transitions to sneaking, shows "Sneaking..." message, rolls cumulative detection vs observers on room entry, suppresses announcements on success, breaks stealth on failure. Added getObserversInRoom() and calculatePlayerStealth() helpers. Added stealth breaking to combat (handleAttack), spell casting (handleSpellCommand), and targeted social actions (handleActionCommand). Encumbrance penalty already integrated via getEncumbrancePenalty(). | Manual testing of sneak movement. AoE spell stealth break and NPC attack stealth break deferred. |
+| 2026-01-31 | Phase 5 | Created backstabAccuracy.ts with hit formula (DEX/10 + INT/20 + CHA*1.2/10 + Stealth + weapon/class bonuses vs AC/2 + Perception/2). Created backstabDamage.ts with multiplier formula (2-4x weapon max + level bonuses). Implemented handleBackstab command with validations (stealth ability, stealth state, one-handed weapon, target checks). Added backstab_accuracy to WeaponData interface. Added backstab_accuracy_bonus to ClassDefinition for class-specific bonuses. Updated item editor with backstab accuracy field. Combat engagement rules enforce no stealth while in combat. | Manual testing of backstab mechanics. Phase 6 next. |
 | 2026-01-31 | Phase 6 | Implemented equipment integration for stealth system. Added stealth_modifier column to item_templates (schema + migration). Extended WeaponData with backstab_min_damage_bonus and backstab_max_damage_bonus. Created getEquipmentStealthModifier() and getBackstabDamageBonuses() aggregation functions. Updated stealthCommands.ts to use equipment modifiers in hide/sneak/backstab. Updated calculateBackstabDamage() to accept equipment bonuses. Updated item editor UI (HTML + TypeScript) with new fields. Updated examine and @iteminfo to display new modifiers. Added seed data examples: stealth modifiers for armor (-10 to +5), backstab bonuses for daggers (+5 to +15 accuracy, +2 to +10 damage). | Manual testing of equipment modifiers. Phase 7 (Polish & Balance) next. |
