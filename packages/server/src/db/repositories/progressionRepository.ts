@@ -34,6 +34,7 @@ interface DbClassDefinition {
   thievery: boolean;
   crit_bonus: number;
   dodge_bonus: number;
+  backstab_accuracy_bonus: number;
   special_abilities: string[] | null;
   created_at: Date;
   updated_at: Date;
@@ -151,6 +152,7 @@ function dbToClassDefinition(row: DbClassDefinition): ClassDefinition {
     thievery: row.thievery ?? false,
     crit_bonus: row.crit_bonus ?? 0,
     dodge_bonus: row.dodge_bonus ?? 0,
+    backstab_accuracy_bonus: row.backstab_accuracy_bonus ?? 0,
     special_abilities: row.special_abilities ?? [],
   };
 }
@@ -263,8 +265,8 @@ export async function createClass(classDef: ClassDefinition & { resource_type?: 
     `INSERT INTO class_definitions (
       class_id, display_name, description, essence_multiplier,
       subscribed_tags, talent_tree_id, resource_type, playable,
-      combat_level, magic_level, magic_school, stealth, thievery, crit_bonus, dodge_bonus, special_abilities
-    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+      combat_level, magic_level, magic_school, stealth, thievery, crit_bonus, dodge_bonus, backstab_accuracy_bonus, special_abilities
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
     RETURNING *`,
     [
       classDef.class_id,
@@ -282,6 +284,7 @@ export async function createClass(classDef: ClassDefinition & { resource_type?: 
       classDef.thievery ?? false,
       classDef.crit_bonus ?? 0,
       classDef.dodge_bonus ?? 0,
+      classDef.backstab_accuracy_bonus ?? 0,
       classDef.special_abilities ?? [],
     ]
   );
@@ -348,6 +351,10 @@ export async function updateClass(classId: string, updates: Partial<ClassDefinit
   if (updates.dodge_bonus !== undefined) {
     setClauses.push(`dodge_bonus = $${paramIndex++}`);
     values.push(updates.dodge_bonus);
+  }
+  if (updates.backstab_accuracy_bonus !== undefined) {
+    setClauses.push(`backstab_accuracy_bonus = $${paramIndex++}`);
+    values.push(updates.backstab_accuracy_bonus);
   }
   if (updates.special_abilities !== undefined) {
     setClauses.push(`special_abilities = $${paramIndex++}`);

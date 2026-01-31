@@ -23,6 +23,7 @@ interface ItemTemplate {
     attack_speed?: number;
     crit_modifier?: number;
     range?: string;
+    backstab_accuracy?: number;
     attack_verbs?: {
       hit: string;
       miss: string;
@@ -362,6 +363,7 @@ function loadWeaponData(template: ItemTemplate): void {
   const attackSpeed = getElement<HTMLInputElement>('weapon-attack-speed');
   const critModifier = getElement<HTMLInputElement>('weapon-crit-modifier');
   const range = getElement<HTMLSelectElement>('weapon-range');
+  const backstabAccuracy = getElement<HTMLInputElement>('weapon-backstab-accuracy');
 
   if (minDamage) minDamage.value = String(data?.min_damage ?? 1);
   if (maxDamage) maxDamage.value = String(data?.max_damage ?? 6);
@@ -369,6 +371,7 @@ function loadWeaponData(template: ItemTemplate): void {
   if (attackSpeed) attackSpeed.value = String(data?.attack_speed || 1500);
   if (critModifier) critModifier.value = String(data?.crit_modifier || 2);
   if (range) range.value = data?.range || 'melee';
+  if (backstabAccuracy) backstabAccuracy.value = String(data?.backstab_accuracy || 0);
 
   // Attack verbs
   const verbHit = getElement<HTMLInputElement>('weapon-verb-hit');
@@ -707,6 +710,7 @@ function gatherFormData(): Partial<ItemTemplate> {
 
   // Type-specific data
   if (itemType === 'weapon') {
+    const backstabAccuracyValue = parseNumberOrDefault((document.getElementById('weapon-backstab-accuracy') as HTMLInputElement).value, 0);
     const weaponData: NonNullable<ItemTemplate['weapon_data']> = {
       min_damage: parseNumberOrDefault((document.getElementById('weapon-min-damage') as HTMLInputElement).value, 1),
       max_damage: parseNumberOrDefault((document.getElementById('weapon-max-damage') as HTMLInputElement).value, 6),
@@ -714,6 +718,7 @@ function gatherFormData(): Partial<ItemTemplate> {
       attack_speed: parseNumberOrDefault((document.getElementById('weapon-attack-speed') as HTMLInputElement).value, 1500),
       crit_modifier: parseNumberOrDefault((document.getElementById('weapon-crit-modifier') as HTMLInputElement).value, 2),
       range: (document.getElementById('weapon-range') as HTMLSelectElement).value,
+      backstab_accuracy: backstabAccuracyValue > 0 ? backstabAccuracyValue : undefined,
     };
 
     // Attack verbs - only include if at least one is filled

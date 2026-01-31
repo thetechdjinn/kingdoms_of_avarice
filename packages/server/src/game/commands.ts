@@ -26,7 +26,7 @@ import {
   clearDeathState,
 } from './damageHandler.js';
 import { isHidden, isSneaking, isStealthing, setStealthMode, breakStealth } from './stealth/stealthState.js';
-import { handleHide, handleSneak, handleVisible } from './stealth/stealthCommands.js';
+import { handleHide, handleSneak, handleVisible, handleBackstab } from './stealth/stealthCommands.js';
 import { rollCumulativeDetection } from './stealth/stealthCheck.js';
 import { calculateStealth, calculatePerception, characterHasStealth, getEncumbrancePenalty } from './stats/secondaryStats.js';
 import { calculateEncumbranceRatio, getEquipmentCombatStats } from './combatStats.js';
@@ -337,6 +337,10 @@ export async function processCommand(
 
   if (command === 'visible' || command === 'vis') {
     return handleVisible(socket);
+  }
+
+  if (command === 'backstab' || command === 'bs') {
+    return handleBackstab(socket, args, _connectedPlayers);
   }
 
   // Spellbook command
@@ -1680,6 +1684,7 @@ function handleHelp(userRoles: Role[], category?: string): CommandResponse {
     colors.boldCyan('  Stealth:'),
     `    ${colors.white('hide')}                  - Attempt to hide in the shadows`,
     `    ${colors.white('sneak')} (sn)            - Attempt to move stealthily`,
+    `    ${colors.white('backstab <player>')} (bs) - Surprise attack from stealth`,
     `    ${colors.white('visible')} (vis)         - Stop hiding or sneaking`,
     `    ${colors.gray('Stealth requires a race or class with the stealth ability.')}`,
     '',

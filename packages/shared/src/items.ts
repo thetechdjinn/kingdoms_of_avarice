@@ -115,6 +115,7 @@ export interface WeaponData {
   range?: 'melee' | 'ranged' | 'thrown';
   skill_type?: string;
   attack_verbs?: AttackVerbs;
+  backstab_accuracy?: number; // Bonus accuracy for backstab attacks
 }
 
 // Armor data
