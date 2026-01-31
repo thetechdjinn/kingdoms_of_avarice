@@ -125,10 +125,14 @@ export function setupAdminRoutes(app: Express): void {
     } else if (key in settingsRepo.BACKSTAB_SETTING_RANGES) {
       const numValue = Number(value);
       const range = settingsRepo.BACKSTAB_SETTING_RANGES[key as settingsRepo.BackstabSettingKey];
-      if (!settingsRepo.isValidBackstabSetting(key, numValue)) {
+      if (isNaN(numValue)) {
+        res.status(400).json({ success: false, message: 'Value must be a valid number' });
+        return;
+      }
+      if (numValue < range.min || numValue > range.max) {
         res.status(400).json({
           success: false,
-          message: `${key.replace(/_/g, ' ')} must be between ${range.min} and ${range.max}`
+          message: `Value must be between ${range.min} and ${range.max}`
         });
         return;
       }
