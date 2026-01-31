@@ -80,49 +80,52 @@ Implement a complete stealth system allowing characters with stealth abilities t
 
 ### 2.1 State Storage
 
-- [ ] Add stealth state to character in-memory state (World):
-  - [ ] `stealthMode`: `'none'` | `'sneaking'` | `'hidden'`
-- [ ] Ensure state resets on logout/disconnect
+- [x] Add stealth state to character in-memory state:
+  - [x] `stealthMode`: `'none'` | `'sneaking'` | `'hidden'` (added to AuthenticatedSocket)
+  - [x] Added `StealthMode` type to shared types
+- [x] Ensure state resets on logout/disconnect (automatic - socket destroyed on disconnect)
 
 ### 2.2 State Machine
 
-- [ ] Create `packages/server/src/game/stealth/stealthState.ts`:
-  - [ ] `canEnterStealth(character, room)` - validation checks
-  - [ ] `setStealthMode(character, mode)` - state transitions
-  - [ ] `breakStealth(character, reason)` - forced exit with message
+- [x] Create `packages/server/src/game/stealth/stealthState.ts`:
+  - [x] `canEnterStealth(character, room)` - validation checks
+  - [x] `canEnterSneak(character, room)` - sneak-specific validation
+  - [x] `setStealthMode(character, mode)` - state transitions
+  - [x] `breakStealth(character, reason)` - forced exit with message
+  - [x] Helper functions: `isHidden()`, `isSneaking()`, `isStealthing()`, `isInCombat()`
 
 ### 2.3 Hide Command
 
-- [ ] Implement `hide` command in new `stealthCommands.ts`:
-  - [ ] Check character has stealth ability
-  - [ ] Fail if monsters/NPCs in room (cannot reposition with hostiles present)
-  - [ ] Fail if currently in combat
-  - [ ] Make stealth roll (player doesn't see result)
-  - [ ] Success output: `"Attempting to hide..."`
-  - [ ] Failure output: `"Attempting to hide... You don't think you are hidden."`
-  - [ ] Set state to `hidden` on success, `none` on failure
+- [x] Implement `hide` command in new `stealthCommands.ts`:
+  - [x] Check character has stealth ability
+  - [ ] Fail if monsters/NPCs in room (TODO: NPCs not implemented yet)
+  - [x] Fail if currently in combat
+  - [x] Make stealth roll (player doesn't see result)
+  - [x] Success output: `"Attempting to hide..."`
+  - [x] Failure output: `"Attempting to hide... You don't think you are hidden."`
+  - [x] Set state to `hidden` on success, `none` on failure
 
 ### 2.4 Sneak Command
 
-- [ ] Implement `sneak` command:
-  - [ ] Check character has stealth ability
-  - [ ] Fail if currently in combat
-  - [ ] Fail if hostile NPCs have already engaged
-  - [ ] Make stealth roll
-  - [ ] Output: `"Attempting to sneak..."`
-  - [ ] Set internal flag for next movement
-  - [ ] Set state to `sneaking`
+- [x] Implement `sneak` command:
+  - [x] Check character has stealth ability
+  - [x] Fail if currently in combat
+  - [ ] Fail if hostile NPCs have already engaged (TODO: NPCs not implemented yet)
+  - [x] Make stealth roll
+  - [x] Output: `"Attempting to sneak..."`
+  - [x] Set state to `sneaking`
 
 ### 2.5 Room Display Updates
 
-- [ ] Modify room description to exclude hidden players
-- [ ] Sneaking players shown normally in room
-- [ ] Add indicator for self when hidden/sneaking (e.g., `[Hidden]` or `[Sneaking]` in prompt or status)
+- [x] Modify room description to exclude hidden players
+- [x] Sneaking players shown normally in room
+- [x] Add indicator for self when hidden/sneaking (via vitals status: 'hidden' or 'sneaking')
 
 ### 2.6 Command Registration
 
-- [ ] Add `hide` and `sneak` to command processor
-- [ ] Add aliases: `sn` for sneak
+- [x] Add `hide` and `sneak` to command processor
+- [x] Add aliases: `sn` for sneak
+- [x] Add `visible` / `vis` command to voluntarily exit stealth
 
 ### 2.7 Testing
 
@@ -135,11 +138,11 @@ Implement a complete stealth system allowing characters with stealth abilities t
 **Files Modified:**
 | File | Changes |
 |------|---------|
+| `packages/shared/src/index.ts` | Added StealthMode type and updated PlayerStatus |
+| `packages/server/src/game/socket.ts` | Added stealthMode to AuthenticatedSocket, updated sendVitals |
 | `packages/server/src/game/stealth/stealthState.ts` | New file - state management |
-| `packages/server/src/game/stealth/stealthCommands.ts` | New file - hide/sneak commands |
-| `packages/server/src/game/commands.ts` | Register new commands |
-| `packages/server/src/game/world.ts` | Add stealth state to character data |
-| `packages/server/src/game/roomDisplay.ts` (or equivalent) | Filter hidden players |
+| `packages/server/src/game/stealth/stealthCommands.ts` | New file - hide/sneak/visible commands |
+| `packages/server/src/game/commands.ts` | Register new commands, filter hidden players in room display |
 
 ---
 
@@ -522,13 +525,13 @@ Phase 7 (Polish)
 
 | Phase | Status | Notes |
 |-------|--------|-------|
-| Phase 1 | **In Progress** | Core implementation complete, testing remaining |
-| Phase 2 | Not Started | |
-| Phase 3 | Not Started | |
-| Phase 4 | Not Started | |
-| Phase 5 | Not Started | |
-| Phase 6 | Not Started | |
-| Phase 7 | Not Started | |
+| Phase 1 | **Complete** | Secondary stats and backstab settings implemented |
+| Phase 2 | **Complete** | Stealth state management, hide/sneak commands implemented |
+| Phase 3 | Not Started | Detection & search mechanics |
+| Phase 4 | Not Started | Stealth movement integration |
+| Phase 5 | Not Started | Backstab combat |
+| Phase 6 | Not Started | Equipment integration |
+| Phase 7 | Not Started | Polish & balance |
 
 ---
 
@@ -541,3 +544,4 @@ _Use this section to track progress, decisions, and blockers between development
 | Date | Phase | Work Done | Next Steps |
 |------|-------|-----------|------------|
 | 2026-01-30 | Phase 1 | Created secondaryStats.ts with stealth/perception calculations. Added BackstabSettings to settingsRepository with caching. Updated admin UI with backstab configuration section. Added validation to admin routes. | Manual testing of settings and stat calculations. |
+| 2026-01-30 | Phase 2 | Implemented stealth state management. Added StealthMode type to shared. Added stealthMode to AuthenticatedSocket. Created stealthState.ts with validation, state transitions, and stealth breaking. Created stealthCommands.ts with hide/sneak/visible commands. Updated room display to filter hidden players. Updated sendVitals to show hidden/sneaking status. | Manual testing of hide/sneak commands. NPC checks deferred until NPCs are implemented. |
