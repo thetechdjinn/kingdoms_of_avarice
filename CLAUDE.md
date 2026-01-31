@@ -269,6 +269,7 @@ Players can access different help categories based on their role:
 | ------- | ----------- |
 | `hide` | Attempt to hide in the shadows (requires stealth ability) |
 | `sneak` (sn) | Attempt to move stealthily (requires stealth ability) |
+| `backstab <player>` (bs) | Surprise attack from stealth (requires one-handed weapon) |
 | `visible` (vis) | Stop hiding or sneaking |
 
 **Stealth Mechanics:**
@@ -276,6 +277,13 @@ Players can access different help categories based on their role:
 - Hidden players are invisible in the room unless searched
 - Sneaking players are visible but don't trigger entrance/exit announcements
 - Stealth breaks when entering combat, casting spells, or using actions on others
+
+**Backstab Mechanics:**
+- Must be sneaking or hidden to backstab
+- Requires a one-handed weapon (cannot backstab with two-handed weapons)
+- Deals high damage using multiplier: 2-4x weapon max damage + level bonuses
+- Accuracy based on DEX, INT, CHA, stealth, and weapon/class bonuses
+- Always breaks stealth and engages combat (hit or miss)
 
 ### Social Commands
 

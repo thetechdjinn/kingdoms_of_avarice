@@ -47,6 +47,7 @@ export interface ClassDefinition {
   thievery?: boolean; // Can use thief skills (picklocks, traps)
   crit_bonus?: number; // Flat crit chance bonus (e.g., 10 for Ninja/Mystic)
   dodge_bonus?: number; // Flat dodge chance bonus (e.g., 25 for Ninja/Mystic)
+  backstab_accuracy_bonus?: number; // Flat backstab accuracy bonus (e.g., for Thief/Ninja)
   special_abilities?: string[]; // Class-specific abilities
 }
 

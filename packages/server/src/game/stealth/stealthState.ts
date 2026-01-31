@@ -196,7 +196,7 @@ export type StealthBreakReason =
 function getBreakStealthMessage(reason: StealthBreakReason): string {
   switch (reason) {
     case 'attack':
-      return 'You emerge from the shadows to attack!';
+      return 'You emerge from the shadows!';
     case 'attacked':
       return 'You have been spotted!';
     case 'spell_cast':
@@ -242,12 +242,14 @@ export function breakStealth(
   // Notify the player (red for warnings)
   sendMessage(socket, MessageType.OUTPUT, colors.red(message));
 
-  // Notify the room if requested and player was hidden
-  if (notifyRoom && wasHidden) {
+  // Notify the room if requested
+  // For attacks, notify even if sneaking (not just hidden)
+  // For other reasons, only notify if player was hidden
+  if (notifyRoom && (wasHidden || reason === 'attack')) {
     const roomId = getPlayerLocation(socket.playerId);
     broadcastToRoom(
       roomId,
-      colors.green(`${colors.red(socket.username)} emerges from the shadows!`),
+      colors.red(`${socket.username} emerges from the shadows!`),
       socket.playerId
     );
   }
