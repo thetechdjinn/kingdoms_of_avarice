@@ -281,7 +281,8 @@ function getBackstabFlavorText(
   }
 
   // Calculate percentage within the damage range (0.0 to 1.0)
-  const percentage = (damage - minDamage) / (maxDamage - minDamage);
+  // Clamp to 0 minimum in case damage < minDamage (shouldn't happen, but defensive)
+  const percentage = Math.max(0, (damage - minDamage) / (maxDamage - minDamage));
 
   if (percentage >= 0.76) {
     return ` obliterating ${pronoun}`;
