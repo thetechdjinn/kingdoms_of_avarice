@@ -718,7 +718,7 @@ function gatherFormData(): Partial<ItemTemplate> {
       attack_speed: parseNumberOrDefault((document.getElementById('weapon-attack-speed') as HTMLInputElement).value, 1500),
       crit_modifier: parseNumberOrDefault((document.getElementById('weapon-crit-modifier') as HTMLInputElement).value, 2),
       range: (document.getElementById('weapon-range') as HTMLSelectElement).value,
-      backstab_accuracy: backstabAccuracyValue || undefined,
+      backstab_accuracy: backstabAccuracyValue > 0 ? backstabAccuracyValue : undefined,
     };
 
     // Attack verbs - only include if at least one is filled
