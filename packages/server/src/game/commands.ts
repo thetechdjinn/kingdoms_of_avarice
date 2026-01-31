@@ -217,7 +217,7 @@ export async function processCommand(
   }
 
   if (command === 'search') {
-    return handleSearch(socket, currentRoomId);
+    return handleSearch(socket, currentRoomId, _connectedPlayers);
   }
 
   if (command === 'recipes') {
@@ -408,27 +408,34 @@ function isDirection(cmd: string): boolean {
 
 // Get names of other players in the same room (excluding the current player)
 // Includes status indicators for dropped/dead players
-// Hidden players are filtered out (unless viewer has "see hidden" ability - future)
+// Hidden players are filtered out unless viewer has "see hidden" ability
 function getOtherPlayersInRoom(
   roomId: number,
   excludePlayerId: number,
-  connectedPlayers: Map<number, AuthenticatedSocket>
+  connectedPlayers: Map<number, AuthenticatedSocket>,
+  canSeeHidden: boolean = false
 ): string[] {
   const otherPlayers: string[] = [];
   for (const [playerId, socket] of connectedPlayers) {
     if (playerId !== excludePlayerId && getPlayerLocation(playerId) === roomId) {
-      // Skip hidden players - they are invisible in the room
-      // TODO: Add "see hidden" ability check for certain races/classes
-      if (isHidden(socket)) {
+      // Check if player is hidden
+      const playerIsHidden = isHidden(socket);
+
+      // Skip hidden players unless viewer can see them
+      if (playerIsHidden && !canSeeHidden) {
         continue;
       }
 
       let displayName = socket.username;
-      // Add status indicator
+
+      // Add status indicators
       if (isPlayerDead(socket)) {
         displayName = `corpse of ${socket.username}`;
       } else if (isPlayerDropped(socket)) {
         displayName += ' (on the ground)';
+      } else if (playerIsHidden && canSeeHidden) {
+        // Show hidden indicator for those who can see hidden
+        displayName += ' (hidden)';
       }
       otherPlayers.push(displayName);
     }
@@ -437,19 +444,27 @@ function getOtherPlayersInRoom(
 }
 
 // Get names of all players in a room (for looking into adjacent rooms)
-// Hidden players are filtered out
+// Hidden players are filtered out unless viewer can see hidden
 function getPlayersInRoom(
   roomId: number,
-  connectedPlayers: Map<number, AuthenticatedSocket>
+  connectedPlayers: Map<number, AuthenticatedSocket>,
+  canSeeHidden: boolean = false
 ): string[] {
   const players: string[] = [];
   for (const [playerId, socket] of connectedPlayers) {
     if (getPlayerLocation(playerId) === roomId) {
-      // Skip hidden players - they are invisible
-      if (isHidden(socket)) {
+      const playerIsHidden = isHidden(socket);
+
+      // Skip hidden players unless viewer can see them
+      if (playerIsHidden && !canSeeHidden) {
         continue;
       }
-      players.push(socket.username);
+
+      let displayName = socket.username;
+      if (playerIsHidden && canSeeHidden) {
+        displayName += ' (hidden)';
+      }
+      players.push(displayName);
     }
   }
   return players;
@@ -509,7 +524,8 @@ async function handleLook(
   if (!room) {
     return { type: MessageType.ERROR, message: 'You are in an unknown location.' };
   }
-  const otherPlayers = getOtherPlayersInRoom(roomId, socket.playerId, connectedPlayers);
+
+  const otherPlayers = getOtherPlayersInRoom(roomId, socket.playerId, connectedPlayers, socket.canSeeHidden);
   const itemDescriptions = await getRoomItemsDescription(roomId);
   return { type: MessageType.OUTPUT, message: world.formatRoomDescription(room, otherPlayers, useBriefMode, itemDescriptions) };
 }
@@ -546,7 +562,7 @@ async function handleLookDirection(
   broadcastToRoom(targetRoom.id, colors.green(`${colors.red(socket.username)} peeks in from the ${oppositeDir}.`), socket.playerId);
 
   // Show the full room including players and exits
-  const playersInRoom = getPlayersInRoom(targetRoom.id, connectedPlayers);
+  const playersInRoom = getPlayersInRoom(targetRoom.id, connectedPlayers, socket.canSeeHidden);
   const itemDescriptions = await getRoomItemsDescription(targetRoom.id);
   return { type: MessageType.OUTPUT, message: world.formatRoomDescription(targetRoom, playersInRoom, false, itemDescriptions) };
 }
@@ -704,7 +720,7 @@ async function handleMove(
   const oppositeDir = OPPOSITE_DIRECTIONS[fullDirection] || fullDirection;
   broadcastToRoom(newRoom.id, colors.green(`${colors.red(socket.username)} walks in from the ${oppositeDir}.`), socket.playerId);
 
-  const otherPlayers = getOtherPlayersInRoom(newRoom.id, socket.playerId, connectedPlayers);
+  const otherPlayers = getOtherPlayersInRoom(newRoom.id, socket.playerId, connectedPlayers, socket.canSeeHidden);
   const itemDescriptions = await getRoomItemsDescription(newRoom.id);
   return { type: MessageType.OUTPUT, message: world.formatRoomDescription(newRoom, otherPlayers, socket.briefMode, itemDescriptions) };
 }
@@ -1319,7 +1335,7 @@ async function handleSpecialDoorTrigger(
     : `You pass through ${door.itemDisplayName || door.name}.`;
 
   // Get the new room display
-  const otherPlayers = getOtherPlayersInRoom(newRoom.id, socket.playerId, connectedPlayers);
+  const otherPlayers = getOtherPlayersInRoom(newRoom.id, socket.playerId, connectedPlayers, socket.canSeeHidden);
   const itemDescriptions = await getRoomItemsDescription(newRoom.id);
   const roomDisplay = world.formatRoomDescription(newRoom, otherPlayers, socket.briefMode, itemDescriptions);
 
@@ -2090,7 +2106,7 @@ async function handleRespawn(
     return { type: MessageType.SYSTEM, message: 'You wake up at a safe location...' };
   }
 
-  const otherPlayers = getOtherPlayersInRoom(respawnRoomId, socket.playerId, connectedPlayers);
+  const otherPlayers = getOtherPlayersInRoom(respawnRoomId, socket.playerId, connectedPlayers, socket.canSeeHidden);
   const itemDescriptions = await getRoomItemsDescription(respawnRoomId);
 
   const roomDesc = world.formatRoomDescription(room, otherPlayers, socket.briefMode, itemDescriptions);

@@ -152,28 +152,28 @@ Implement a complete stealth system allowing characters with stealth abilities t
 
 ### 3.1 Stealth Check System
 
-- [ ] Create `packages/server/src/game/stealth/stealthCheck.ts`:
-  - [ ] `rollStealthCheck(sneakerStealth, observerPerception)` → boolean
-  - [ ] Factor in number of observers (cumulative detection chance)
-  - [ ] Return detailed result for logging/debugging
+- [x] Create `packages/server/src/game/stealth/stealthCheck.ts`:
+  - [x] `rollStealthCheck(sneakerStealth, observerPerception)` → boolean
+  - [x] Factor in number of observers (cumulative detection chance via `rollCumulativeDetection`)
+  - [x] Return detailed result for logging/debugging (`StealthCheckResult` type)
 
 ### 3.2 Search Command Enhancement
 
-- [ ] Enhance existing `search` command:
-  - [ ] For each hidden character in room:
-    - [ ] Roll perception vs stealth
-    - [ ] If found: reveal character, break their stealth
-    - [ ] Output: `"You spot <player> hiding in the shadows!"`
-  - [ ] Continue finding hidden items (existing functionality)
-  - [ ] Base output: `"You search the area..."`
+- [x] Enhance existing `search` command:
+  - [x] For each hidden character in room:
+    - [x] Roll perception vs stealth
+    - [x] If found: reveal character, break their stealth
+    - [x] Output: `"You spot <player> hiding in the shadows!"`
+  - [x] Continue finding hidden items (existing functionality)
+  - [x] Base output: `"You search the area..."`
 
 ### 3.3 See Hidden Trait
 
-- [ ] Add `seeHidden` trait definition to race/class system
-- [ ] Characters with `seeHidden`:
-  - [ ] Automatically see hidden players in room description
-  - [ ] No search required
-- [ ] Add `seeHidden` to relevant monster definitions (future)
+- [x] Add `seeHidden` trait definition to race/class system (already existed in Phase 1)
+- [x] Characters with `seeHidden`:
+  - [x] Automatically see hidden players in room description (with "(hidden)" indicator)
+  - [x] No search required
+- [ ] Add `seeHidden` to relevant monster definitions (future - when NPCs/monsters implemented)
 
 ### 3.4 Testing
 
@@ -185,9 +185,10 @@ Implement a complete stealth system allowing characters with stealth abilities t
 **Files Modified:**
 | File | Changes |
 |------|---------|
-| `packages/server/src/game/stealth/stealthCheck.ts` | New file - check mechanics |
-| `packages/server/src/game/commands.ts` | Enhance search command |
-| `packages/shared/src/index.ts` | Add seeHidden trait type (if needed) |
+| `packages/server/src/game/stealth/stealthCheck.ts` | New file - stealth vs perception check mechanics |
+| `packages/server/src/game/itemCommands.ts` | Enhanced search command to find hidden players |
+| `packages/server/src/game/commands.ts` | Updated room display functions to support seeHidden trait |
+| `packages/server/src/game/stats/secondaryStats.ts` | Already had `raceCanSeeHidden()` from Phase 1 |
 
 ---
 
@@ -527,7 +528,7 @@ Phase 7 (Polish)
 |-------|--------|-------|
 | Phase 1 | **Complete** | Secondary stats and backstab settings implemented |
 | Phase 2 | **Complete** | Stealth state management, hide/sneak commands implemented |
-| Phase 3 | Not Started | Detection & search mechanics |
+| Phase 3 | **Complete** | Detection & search mechanics implemented |
 | Phase 4 | Not Started | Stealth movement integration |
 | Phase 5 | Not Started | Backstab combat |
 | Phase 6 | Not Started | Equipment integration |
@@ -545,3 +546,4 @@ _Use this section to track progress, decisions, and blockers between development
 |------|-------|-----------|------------|
 | 2026-01-30 | Phase 1 | Created secondaryStats.ts with stealth/perception calculations. Added BackstabSettings to settingsRepository with caching. Updated admin UI with backstab configuration section. Added validation to admin routes. | Manual testing of settings and stat calculations. |
 | 2026-01-30 | Phase 2 | Implemented stealth state management. Added StealthMode type to shared. Added stealthMode to AuthenticatedSocket. Created stealthState.ts with validation, state transitions, and stealth breaking. Created stealthCommands.ts with hide/sneak/visible commands. Updated room display to filter hidden players. Updated sendVitals to show hidden/sneaking status. | Manual testing of hide/sneak commands. NPC checks deferred until NPCs are implemented. |
+| 2026-01-30 | Phase 3 | Created stealthCheck.ts with stealth vs perception roll mechanics. Enhanced search command to find hidden players (perception vs stealth roll). Updated room display functions (getOtherPlayersInRoom, getPlayersInRoom) to support seeHidden trait - races with see_hidden trait now see hidden players marked with "(hidden)". | Manual testing of search command and seeHidden trait. Monster seeHidden deferred until NPCs are implemented. |

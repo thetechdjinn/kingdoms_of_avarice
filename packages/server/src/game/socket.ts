@@ -29,6 +29,8 @@ import { initializeInterruptHandler } from './interruptHandler.js';
 import { startDroppedStateLoop, stopDroppedStateLoop, handleDroppedDisconnect } from './droppedStateManager.js';
 import { isPlayerDropped, isPlayerDead, clearDeathState } from './damageHandler.js';
 import { getRespawnRoomId } from '../services/respawnService.js';
+import { raceCanSeeHidden } from './stats/secondaryStats.js';
+import { isHidden } from './stealth/stealthState.js';
 
 // Combat state tracked per-player in memory
 interface CombatState {
@@ -62,6 +64,8 @@ interface AuthenticatedSocket extends WebSocket {
   deathState: DeathState | null;
   // Stealth state (none/sneaking/hidden)
   stealthMode: StealthMode;
+  // Cached: can this character see hidden players? (from race trait)
+  canSeeHidden: boolean;
 }
 
 const connectedPlayers = new Map<number, AuthenticatedSocket>();
@@ -362,6 +366,14 @@ export function setupGameSocket(wss: WebSocketServer): void {
     // Initialize stealth state (none = not stealthing)
     authWs.stealthMode = 'none';
 
+    // Cache whether this character can see hidden players (race trait)
+    try {
+      authWs.canSeeHidden = await raceCanSeeHidden(character.race);
+    } catch (error) {
+      console.error('Failed to check seeHidden trait:', error);
+      authWs.canSeeHidden = false;
+    }
+
     // Load brief mode from database (default to false on error)
     try {
       authWs.briefMode = await playerRepo.getBriefMode(payload.playerId);
@@ -398,11 +410,28 @@ export function setupGameSocket(wss: WebSocketServer): void {
     
     const room = gameWorld.getRoom(startRoomId);
     if (room) {
-      // Get other players in the room (excluding self)
+      // Get other players in the room (excluding self, respecting hidden/seeHidden)
       const otherPlayers: string[] = [];
-      for (const [playerId, socket] of connectedPlayers) {
+      for (const [playerId, playerSocket] of connectedPlayers) {
         if (playerId !== payload.playerId && getPlayerLocation(playerId) === startRoomId) {
-          otherPlayers.push(socket.username);
+          const playerIsHidden = isHidden(playerSocket);
+
+          // Skip hidden players unless viewer can see them
+          if (playerIsHidden && !authWs.canSeeHidden) {
+            continue;
+          }
+
+          let displayName = playerSocket.username;
+
+          // Add status indicators
+          if (isPlayerDead(playerSocket)) {
+            displayName = `corpse of ${playerSocket.username}`;
+          } else if (isPlayerDropped(playerSocket)) {
+            displayName += ' (on the ground)';
+          } else if (playerIsHidden && authWs.canSeeHidden) {
+            displayName += ' (hidden)';
+          }
+          otherPlayers.push(displayName);
         }
       }
       const { getRoomItemsDescription } = await import('./itemCommands.js');

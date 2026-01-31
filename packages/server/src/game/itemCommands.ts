@@ -1,6 +1,6 @@
 import { MessageType, ItemLocationType, ItemInstance, getItemDisplayName, EquipmentSlot, ItemType, TWO_HANDED_BLOCKED_SLOTS, getAlternatePairedSlot, ItemCondition, CraftingRecipe, AppliedEnchantment, Currency } from '@koa/shared';
 import { CommandResponse } from './commands.js';
-import { AuthenticatedSocket, broadcastToRoom } from './socket.js';
+import { AuthenticatedSocket, broadcastToRoom, sendMessage } from './socket.js';
 import { getPlayerLocation } from './adminCommands.js';
 import { colors } from '../utils/colors.js';
 import { wordWrap } from '../utils/textFormat.js';
@@ -10,6 +10,9 @@ import * as characterRepo from '../db/repositories/characterRepository.js';
 import * as settingsRepo from '../db/repositories/settingsRepository.js';
 import { withTransaction } from '../db/index.js';
 import { calculateEncumbranceRatio } from './combatStats.js';
+import { isHidden, breakStealth } from './stealth/stealthState.js';
+import { rollStealthCheck } from './stealth/stealthCheck.js';
+import { calculateStealth, calculatePerception } from './stats/secondaryStats.js';
 
 // Guard function to check if character is selected
 function requireCharacter(socket: AuthenticatedSocket): CommandResponse | null {
@@ -1874,34 +1877,117 @@ export async function handleRepair(
 }
 
 // ============================================================================
-// SEARCH COMMAND (for hidden items)
+// SEARCH COMMAND (for hidden items and players)
 // ============================================================================
 
 // Handle "search" command
 export async function handleSearch(
   socket: AuthenticatedSocket,
-  currentRoomId: number
+  currentRoomId: number,
+  connectedPlayers: Map<number, AuthenticatedSocket>
 ): Promise<CommandResponse> {
-  // Find hidden items in the room that haven't been revealed yet
+  const results: string[] = [];
+  results.push('You search the area...');
+
+  // Get searcher's character for perception calculation
+  const searcherCharacter = await characterRepo.findCharacterById(socket.characterId!);
+  if (!searcherCharacter) {
+    return { type: MessageType.ERROR, message: 'Character not found.' };
+  }
+
+  // Calculate searcher's perception
+  const perceptionBreakdown = calculatePerception(
+    searcherCharacter.intelligence,
+    searcherCharacter.wisdom,
+    searcherCharacter.charisma
+    // TODO: Add equipment perception modifier when implemented
+  );
+  const searcherPerception = perceptionBreakdown.total;
+
+  // Search for hidden players in the room
+  const hiddenPlayersFound: string[] = [];
+  for (const [playerId, playerSocket] of connectedPlayers) {
+    // Skip self
+    if (playerId === socket.playerId) continue;
+
+    // Skip players not in this room
+    if (getPlayerLocation(playerId) !== currentRoomId) continue;
+
+    // Only check hidden players (sneaking players are visible)
+    if (!isHidden(playerSocket)) continue;
+
+    // Get hidden player's character for stealth calculation
+    const hiddenCharacter = await characterRepo.findCharacterById(playerSocket.characterId!);
+    if (!hiddenCharacter) continue;
+
+    // Calculate hidden player's stealth
+    const stealthBreakdown = await calculateStealth({
+      dexterity: hiddenCharacter.dexterity,
+      intelligence: hiddenCharacter.intelligence,
+      wisdom: hiddenCharacter.wisdom,
+      charisma: hiddenCharacter.charisma,
+      level: hiddenCharacter.level,
+      race: hiddenCharacter.race,
+      class: hiddenCharacter.class,
+    });
+    const hiddenStealth = stealthBreakdown.total;
+
+    // Roll perception vs stealth
+    const checkResult = rollStealthCheck(hiddenStealth, searcherPerception);
+
+    if (checkResult.detected) {
+      // Found! Break their stealth (don't notify room yet - we'll do custom message)
+      hiddenPlayersFound.push(playerSocket.username);
+
+      // Break the hidden player's stealth without room broadcast
+      // (we send a more specific message below)
+      breakStealth(playerSocket, 'searched', false);
+
+      // Tell the hidden player who found them specifically
+      sendMessage(
+        playerSocket,
+        MessageType.OUTPUT,
+        colors.red(`${socket.username} found you!`)
+      );
+    }
+  }
+
+  // Add found players to results
+  if (hiddenPlayersFound.length > 0) {
+    for (const name of hiddenPlayersFound) {
+      results.push(`You spot ${colors.player(name)} hiding in the shadows!`);
+      broadcastToRoom(
+        currentRoomId,
+        `${socket.username} discovers ${colors.player(name)} hiding in the shadows!`,
+        socket.playerId
+      );
+    }
+  }
+
+  // Search for hidden items in the room
   const hiddenItems = await itemRepo.findHiddenItemsInRoom(currentRoomId);
-  
+
   // Filter out already revealed items
   const unrevealed = hiddenItems.filter(item => !item.custom_data?.revealed);
 
-  if (unrevealed.length === 0) {
+  if (unrevealed.length > 0) {
+    // Reveal a random hidden item (could add perception check here later)
+    const foundItem = unrevealed[Math.floor(Math.random() * unrevealed.length)];
+    await itemRepo.revealItem(foundItem.id);
+
+    const itemName = foundItem.template?.name ?? 'something';
+    results.push(`You discover ${colors.item(itemName)}!`);
+    broadcastToRoom(currentRoomId, `${socket.username} discovers something hidden!`, socket.playerId);
+  }
+
+  // If nothing found at all
+  if (hiddenPlayersFound.length === 0 && unrevealed.length === 0) {
     return { type: MessageType.OUTPUT, message: 'You search the area but find nothing hidden.' };
   }
 
-  // Reveal a random hidden item (could add skill check here later)
-  const foundItem = unrevealed[Math.floor(Math.random() * unrevealed.length)];
-  await itemRepo.revealItem(foundItem.id);
-
-  const itemName = foundItem.template?.name ?? 'something';
-  broadcastToRoom(currentRoomId, `${socket.username} discovers something hidden!`, socket.playerId);
-
-  return { 
-    type: MessageType.OUTPUT, 
-    message: `You search carefully and discover ${colors.item(itemName)}!` 
+  return {
+    type: MessageType.OUTPUT,
+    message: results.join('\r\n')
   };
 }
 
