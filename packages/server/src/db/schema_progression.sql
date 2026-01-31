@@ -64,9 +64,6 @@ CREATE TABLE IF NOT EXISTS class_definitions (
     -- Critical hit bonus (flat % bonus, e.g., 10 for Ninja/Mystic)
     crit_bonus INTEGER DEFAULT 0,
 
-    -- Backstab accuracy bonus (flat bonus for stealth classes)
-    backstab_accuracy_bonus INTEGER DEFAULT 0,
-
     -- Display
     playable BOOLEAN DEFAULT TRUE,
     

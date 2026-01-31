@@ -183,11 +183,6 @@ export async function runMigrations(): Promise<void> {
         ALTER TABLE class_definitions ADD COLUMN IF NOT EXISTS dodge_bonus INTEGER DEFAULT 0
       `);
 
-      // Add backstab_accuracy_bonus column to class_definitions (for stealth classes)
-      await client.query(`
-        ALTER TABLE class_definitions ADD COLUMN IF NOT EXISTS backstab_accuracy_bonus INTEGER DEFAULT 0
-      `);
-
       // Add dodge_bonus column to race_definitions (MajorMUD-style race dodge - Halfling gets 10)
       await client.query(`
         ALTER TABLE race_definitions ADD COLUMN IF NOT EXISTS dodge_bonus INTEGER DEFAULT 0

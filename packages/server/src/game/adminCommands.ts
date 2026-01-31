@@ -30,6 +30,19 @@ import {
   getDeathRoomId,
 } from './damageHandler.js';
 import { initializeActionCommands } from './actionCommands.js';
+import {
+  setStealthMode,
+  isHidden,
+  isSneaking,
+} from './stealth/stealthState.js';
+import {
+  calculateStealth,
+  calculatePerception,
+  characterHasStealth,
+  getEquipmentStealthModifier,
+  getBackstabDamageBonuses,
+} from './stats/secondaryStats.js';
+import { StealthMode } from '@koa/shared';
 
 interface CommandResponse {
   type: MessageType;
@@ -47,10 +60,10 @@ export function setPlayerLocation(playerId: number, roomId: number): void {
 }
 
 // Commands that require Developer role
-const developerCommands = ['create', 'link', 'unlink', 'edit', 'delete', 'reload', 'spawn', 'purge', 'items', 'iteminfo'];
+const developerCommands = ['create', 'link', 'unlink', 'edit', 'delete', 'reload', 'spawn', 'purge', 'items', 'iteminfo', 'setstealth', 'testbackstab'];
 
 // Commands that any staff can use (Moderator+)
-const staffCommands = ['goto', 'rooms', 'roominfo', 'help', 'give', 'hurt', 'heal', 'drain', 'revive', 'teleport', 'learn', 'spells', 'effect', 'cleareffect', 'effects'];
+const staffCommands = ['goto', 'rooms', 'roominfo', 'help', 'give', 'hurt', 'heal', 'drain', 'revive', 'teleport', 'learn', 'spells', 'effect', 'cleareffect', 'effects', 'stealth'];
 
 export async function processAdminCommand(
   input: string,
@@ -134,6 +147,12 @@ export async function processAdminCommand(
       return handleClearEffect(args, socket);
     case 'effects':
       return handleListEffects(socket);
+    case 'stealth':
+      return handleStealthInfo(args, socket);
+    case 'setstealth':
+      return handleSetStealth(args, socket);
+    case 'testbackstab':
+      return await handleTestBackstab(args, socket);
     case 'help':
       return handleAdminHelp(userRoles);
     default:
@@ -1334,6 +1353,7 @@ function handleAdminHelp(userRoles: Role[]): CommandResponse {
   lines.push(`  ${colors.boldCyan('@effect <id> [duration] [player]')} - Apply effect (default 60s, self)`);
   lines.push(`  ${colors.boldCyan('@cleareffect <id|all>')}  - Remove a status effect`);
   lines.push(`  ${colors.boldCyan('@effects')}                - List available effects`);
+  lines.push(`  ${colors.boldCyan('@stealth [player]')}       - Show stealth/perception breakdown`);
   lines.push(`  ${colors.boldCyan('@help')}                   - Show this help`);
 
   // Developer commands
@@ -1355,7 +1375,11 @@ function handleAdminHelp(userRoles: Role[]): CommandResponse {
     lines.push('');
     lines.push(colors.boldYellow('Developer Commands (System):'));
     lines.push(`  ${colors.boldCyan('@reload [type]')}     - Reload data from database`);
-    
+    lines.push('');
+    lines.push(colors.boldYellow('Developer Commands (Stealth):'));
+    lines.push(`  ${colors.boldCyan('@setstealth <mode> [player]')} - Force stealth state (none/sneaking/hidden)`);
+    lines.push(`  ${colors.boldCyan('@testbackstab <target>')}  - Test backstab without stealth requirement`);
+
     // Add progression commands help
     lines.push(getProgressionHelpText());
   }
@@ -1563,4 +1587,200 @@ function handleListEffects(socket: AuthenticatedSocket): CommandResponse {
   }
 
   return { type: MessageType.OUTPUT, message: lines.join('\r\n') };
+}
+
+// ============================================================================
+// STEALTH TESTING COMMANDS
+// ============================================================================
+
+/**
+ * Show stealth/perception breakdown for a player
+ * Usage: @stealth [player]
+ */
+async function handleStealthInfo(
+  args: string[],
+  socket: AuthenticatedSocket
+): Promise<CommandResponse> {
+  let targetSocket: AuthenticatedSocket = socket;
+  let targetName = socket.username;
+
+  // Find target player if specified
+  if (args.length > 0) {
+    const playerName = args.join(' ').toLowerCase();
+    let found = false;
+    for (const [, playerSocket] of connectedPlayers) {
+      if (playerSocket.username.toLowerCase() === playerName) {
+        targetSocket = playerSocket;
+        targetName = playerSocket.username;
+        found = true;
+        break;
+      }
+    }
+    if (!found) {
+      return { type: MessageType.ERROR, message: `Player not found: ${args.join(' ')}` };
+    }
+  }
+
+  if (!targetSocket.characterId) {
+    return { type: MessageType.ERROR, message: `${targetName} has no character selected.` };
+  }
+
+  // Get character data
+  const character = await characterRepo.findCharacterById(targetSocket.characterId);
+  if (!character) {
+    return { type: MessageType.ERROR, message: 'Character not found.' };
+  }
+
+  // Check stealth capability
+  const hasStealth = await characterHasStealth(character.race, character.class);
+
+  // Get equipped items
+  const equippedItems = await itemRepo.getCharacterEquipped(targetSocket.characterId);
+  const equipmentStealthMod = getEquipmentStealthModifier(equippedItems);
+  const backstabBonuses = getBackstabDamageBonuses(equippedItems);
+
+  // Calculate stealth
+  const stealthBreakdown = await calculateStealth(
+    {
+      dexterity: character.dexterity,
+      intelligence: character.intelligence,
+      wisdom: character.wisdom,
+      charisma: character.charisma,
+      level: character.level,
+      race: character.race,
+      class: character.class,
+    },
+    equipmentStealthMod,
+    0  // TODO: Get actual encumbrance ratio
+  );
+
+  // Calculate perception
+  const perceptionBreakdown = calculatePerception(
+    character.intelligence,
+    character.wisdom,
+    character.charisma,
+    0  // TODO: Equipment perception modifier
+  );
+
+  // Build output
+  const lines = [
+    colors.boldYellow(`Stealth Info for ${targetName}:`),
+    '',
+    colors.boldCyan('Stealth Capability:'),
+    `  Has Stealth: ${hasStealth ? colors.green('Yes') : colors.red('No')}`,
+    `  Current Mode: ${colors.white(targetSocket.stealthMode || 'none')}`,
+    '',
+    colors.boldCyan('Stealth Calculation:'),
+    `  Base (race/class stealth): ${colors.white(stealthBreakdown.base.toString())}`,
+    `  Stat Bonuses:`,
+    `    DEX ${character.dexterity} × 0.25 = ${colors.white(stealthBreakdown.dexterityBonus.toFixed(1))}`,
+    `    INT ${character.intelligence} × 0.10 = ${colors.white(stealthBreakdown.intellectBonus.toFixed(1))}`,
+    `    CHA ${character.charisma} × 0.25 = ${colors.white(stealthBreakdown.charismaBonus.toFixed(1))}`,
+    `  Threshold Bonuses: ${colors.white(stealthBreakdown.thresholdBonus.toString())}`,
+    `  Level Bonus (Lv ${character.level}): ${colors.white(stealthBreakdown.levelBonus.toString())}`,
+    `  Equipment Modifier: ${equipmentStealthMod >= 0 ? colors.green('+' + equipmentStealthMod) : colors.red(equipmentStealthMod.toString())}`,
+    `  Encumbrance Penalty: ${stealthBreakdown.encumbrancePenalty ? colors.red(stealthBreakdown.encumbrancePenalty.toString()) : colors.white('0')}`,
+    `  ${colors.boldWhite('Total Stealth:')} ${colors.boldGreen(stealthBreakdown.total.toString())}`,
+    '',
+    colors.boldCyan('Perception Calculation:'),
+    `  INT ${character.intelligence} × 0.6 = ${colors.white(perceptionBreakdown.intellectBonus.toFixed(1))}`,
+    `  WIS ${character.wisdom} × 0.2 = ${colors.white(perceptionBreakdown.wisdomBonus.toFixed(1))}`,
+    `  CHA ${character.charisma} × 0.1 = ${colors.white(perceptionBreakdown.charismaBonus.toFixed(1))}`,
+    `  Equipment Modifier: ${colors.white('0')}`,
+    `  ${colors.boldWhite('Total Perception:')} ${colors.boldGreen(perceptionBreakdown.total.toString())}`,
+  ];
+
+  // Add backstab bonuses if they have stealth
+  if (hasStealth) {
+    lines.push('');
+    lines.push(colors.boldCyan('Backstab Equipment Bonuses:'));
+    lines.push(`  Damage: +${backstabBonuses.minBonus} to +${backstabBonuses.maxBonus}`);
+  }
+
+  return { type: MessageType.OUTPUT, message: lines.join('\r\n') };
+}
+
+/**
+ * Force a player's stealth state
+ * Usage: @setstealth <none|sneaking|hidden> [player]
+ */
+async function handleSetStealth(
+  args: string[],
+  socket: AuthenticatedSocket
+): Promise<CommandResponse> {
+  if (args.length < 1) {
+    return { type: MessageType.ERROR, message: 'Usage: @setstealth <none|sneaking|hidden> [player]' };
+  }
+
+  const mode = args[0].toLowerCase() as StealthMode;
+  if (!['none', 'sneaking', 'hidden'].includes(mode)) {
+    return { type: MessageType.ERROR, message: 'Invalid stealth mode. Use: none, sneaking, or hidden' };
+  }
+
+  let targetSocket: AuthenticatedSocket = socket;
+  let targetName = socket.username;
+
+  // Find target player if specified
+  if (args.length > 1) {
+    const playerName = args.slice(1).join(' ').toLowerCase();
+    let found = false;
+    for (const [, playerSocket] of connectedPlayers) {
+      if (playerSocket.username.toLowerCase() === playerName) {
+        targetSocket = playerSocket;
+        targetName = playerSocket.username;
+        found = true;
+        break;
+      }
+    }
+    if (!found) {
+      return { type: MessageType.ERROR, message: `Player not found: ${args.slice(1).join(' ')}` };
+    }
+  }
+
+  const oldMode = targetSocket.stealthMode || 'none';
+  setStealthMode(targetSocket, mode);
+  sendVitals(targetSocket);
+
+  if (targetSocket === socket) {
+    return {
+      type: MessageType.SYSTEM,
+      message: `${colors.boldGreen('Stealth mode changed:')} ${oldMode} -> ${mode}`,
+    };
+  } else {
+    sendMessage(targetSocket, MessageType.SYSTEM, `${colors.yellow('Your stealth mode was changed to:')} ${mode}`);
+    return {
+      type: MessageType.SYSTEM,
+      message: `${colors.boldGreen('Set stealth mode for')} ${targetName}: ${oldMode} -> ${mode}`,
+    };
+  }
+}
+
+/**
+ * Test backstab without stealth requirement
+ * Usage: @testbackstab <target>
+ */
+async function handleTestBackstab(
+  args: string[],
+  socket: AuthenticatedSocket
+): Promise<CommandResponse> {
+  if (args.length < 1) {
+    return { type: MessageType.ERROR, message: 'Usage: @testbackstab <target>' };
+  }
+
+  // Temporarily set to hidden for the backstab, then restore
+  const originalMode = socket.stealthMode || 'none';
+  setStealthMode(socket, 'hidden');
+
+  try {
+    // Import and call the backstab handler
+    const { handleBackstab } = await import('./stealth/stealthCommands.js');
+    const result = await handleBackstab(socket, args, connectedPlayers);
+
+    // The backstab handler will break stealth, so we don't need to restore it
+    return result;
+  } catch (error) {
+    // Restore original mode on error
+    setStealthMode(socket, originalMode);
+    return { type: MessageType.ERROR, message: `Backstab failed: ${error}` };
+  }
 }

@@ -1624,10 +1624,14 @@ function handleHelp(userRoles: Role[], category?: string): CommandResponse {
       return getActionsHelp();
     }
 
+    if (cat === 'stealth') {
+      return getStealthHelp();
+    }
+
     // Unknown category - show player help with note (only suggest staff options if user has access)
     const suggestions = isStaff
-      ? 'Try: help, help actions, help staff, help developer, or @help'
-      : 'Try: help, help actions';
+      ? 'Try: help, help actions, help stealth, help staff, help developer, or @help'
+      : 'Try: help, help actions, help stealth';
     return { type: MessageType.ERROR, message: `Unknown help category: ${category}. ${suggestions}` };
   }
   
@@ -1828,6 +1832,52 @@ function getActionsHelp(): CommandResponse {
   lines.push(`  ${colors.white('wave bob')}          - You wave at Bob.`);
   lines.push('');
   lines.push(colors.gray('Tip: Use /me <text> for custom emotes (e.g., /me stretches)'));
+
+  return { type: MessageType.OUTPUT, message: lines.join('\r\n') };
+}
+
+function getStealthHelp(): CommandResponse {
+  const lines = [
+    colors.boldYellow('Stealth System:'),
+    '',
+    colors.boldCyan('Requirements:'),
+    '  Your race or class must have the stealth trait to use stealth abilities.',
+    '  You cannot use stealth while in combat.',
+    '',
+    colors.boldCyan('Commands:'),
+    `  ${colors.white('hide')}                  - Attempt to hide in the shadows`,
+    `  ${colors.white('sneak')} (sn)            - Attempt to move stealthily`,
+    `  ${colors.white('backstab <target>')} (bs) - Surprise attack from stealth`,
+    `  ${colors.white('visible')} (vis)         - Stop hiding or sneaking`,
+    `  ${colors.white('search')}                - Search for hidden players and items`,
+    '',
+    colors.boldCyan('Stealth Modes:'),
+    `  ${colors.yellow('Hidden')} - You are invisible in the room. Other players must`,
+    '            "search" to find you. Moving transitions to sneaking.',
+    `  ${colors.yellow('Sneaking')} - You are visible but move silently. Entering a`,
+    '              room tests your stealth vs observers\' perception.',
+    '',
+    colors.boldCyan('Backstab Mechanics:'),
+    '  - Must be sneaking or hidden to backstab',
+    '  - Requires a one-handed weapon (cannot backstab with two-handed)',
+    '  - Deals high damage: 2-4x weapon max damage + level bonuses',
+    '  - Accuracy based on DEX, INT, CHA, stealth, and weapon modifiers',
+    '  - Always breaks stealth and engages combat (hit or miss)',
+    '  - Weapon choice matters: daggers have accuracy bonuses, swords have penalties',
+    '',
+    colors.boldCyan('Stealth Breaks When:'),
+    '  - You attack or cast a spell',
+    '  - You are detected while sneaking into a room',
+    '  - You use a social action targeting another player',
+    '  - You use the "visible" command',
+    '',
+    colors.boldCyan('Stealth Modifiers:'),
+    '  - Equipment can add or subtract from stealth (heavy armor = penalty)',
+    '  - Encumbrance affects stealth (heavy load = -25 penalty)',
+    '  - Weapon backstab accuracy varies (daggers +5 to +15, swords -5 to -10)',
+    '',
+    colors.gray('Tip: Use lighter armor and daggers for maximum stealth effectiveness.'),
+  ];
 
   return { type: MessageType.OUTPUT, message: lines.join('\r\n') };
 }
