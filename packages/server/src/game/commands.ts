@@ -25,6 +25,9 @@ import {
   setPlayerAided,
   clearDeathState,
 } from './damageHandler.js';
+import { isHidden } from './stealth/stealthState.js';
+import { handleHide, handleSneak, handleVisible } from './stealth/stealthCommands.js';
+import { calculateStealth, calculatePerception, characterHasStealth } from './stats/secondaryStats.js';
 import { getRespawnRoomId } from '../services/respawnService.js';
 import { findPlayerInRoom } from './playerUtils.js';
 import { getEquipmentCombatStats } from './combatStats.js';
@@ -322,6 +325,19 @@ export async function processCommand(
     return handleBreak(socket, _connectedPlayers);
   }
 
+  // Stealth commands
+  if (command === 'hide') {
+    return handleHide(socket);
+  }
+
+  if (command === 'sneak' || command === 'sn') {
+    return handleSneak(socket);
+  }
+
+  if (command === 'visible' || command === 'vis') {
+    return handleVisible(socket);
+  }
+
   // Spellbook command
   if (command === 'spells' || command === 'spellbook' || command === 'sp') {
     return handleSpellbook(socket);
@@ -392,6 +408,7 @@ function isDirection(cmd: string): boolean {
 
 // Get names of other players in the same room (excluding the current player)
 // Includes status indicators for dropped/dead players
+// Hidden players are filtered out (unless viewer has "see hidden" ability - future)
 function getOtherPlayersInRoom(
   roomId: number,
   excludePlayerId: number,
@@ -400,6 +417,12 @@ function getOtherPlayersInRoom(
   const otherPlayers: string[] = [];
   for (const [playerId, socket] of connectedPlayers) {
     if (playerId !== excludePlayerId && getPlayerLocation(playerId) === roomId) {
+      // Skip hidden players - they are invisible in the room
+      // TODO: Add "see hidden" ability check for certain races/classes
+      if (isHidden(socket)) {
+        continue;
+      }
+
       let displayName = socket.username;
       // Add status indicator
       if (isPlayerDead(socket)) {
@@ -414,6 +437,7 @@ function getOtherPlayersInRoom(
 }
 
 // Get names of all players in a room (for looking into adjacent rooms)
+// Hidden players are filtered out
 function getPlayersInRoom(
   roomId: number,
   connectedPlayers: Map<number, AuthenticatedSocket>
@@ -421,6 +445,10 @@ function getPlayersInRoom(
   const players: string[] = [];
   for (const [playerId, socket] of connectedPlayers) {
     if (getPlayerLocation(playerId) === roomId) {
+      // Skip hidden players - they are invisible
+      if (isHidden(socket)) {
+        continue;
+      }
       players.push(socket.username);
     }
   }
@@ -1482,6 +1510,12 @@ function handleHelp(userRoles: Role[], category?: string): CommandResponse {
     `    ${colors.white('flee')} (fl)             - Attempt to flee from combat`,
     `    ${colors.white('aid <player>')}          - Stabilize a fallen ally`,
     '',
+    colors.boldCyan('  Stealth:'),
+    `    ${colors.white('hide')}                  - Attempt to hide in the shadows`,
+    `    ${colors.white('sneak')} (sn)            - Attempt to move stealthily`,
+    `    ${colors.white('visible')} (vis)         - Stop hiding or sneaking`,
+    `    ${colors.gray('Stealth requires a race or class with the stealth ability.')}`,
+    '',
     colors.boldCyan('  Death & Revival:'),
     `    ${colors.white('respawn')}               - Return to life at a safe location (when dead)`,
     `    ${colors.gray('When you drop to 0 HP, you collapse. Allies can "aid" you.')}`,
@@ -1701,9 +1735,36 @@ async function handleStatus(socket: AuthenticatedSocket): Promise<CommandRespons
   const lives = 0; // Not implemented
   const cp = character.unspent_cp ?? 0;
 
+  // Calculate perception (everyone has it)
+  const perceptionBreakdown = calculatePerception(
+    character.intelligence,
+    character.wisdom,
+    character.charisma,
+    0 // TODO: equipment perception modifier
+  );
+  const perception = perceptionBreakdown.total;
+
+  // Calculate stealth (only if character has stealth ability)
+  const hasStealth = await characterHasStealth(character.race, character.class);
+  let stealth = 0;
+  if (hasStealth) {
+    const stealthBreakdown = await calculateStealth(
+      {
+        dexterity: character.dexterity,
+        intelligence: character.intelligence,
+        wisdom: character.wisdom,
+        charisma: character.charisma,
+        level: character.level,
+        race: character.race,
+        class: character.class,
+      },
+      0, // TODO: equipment stealth modifier
+      0  // TODO: encumbrance ratio
+    );
+    stealth = stealthBreakdown.total;
+  }
+
   // Unimplemented skills (show 0)
-  const perception = 0;
-  const stealth = 0;
   const thievery = 0;
   const traps = 0;
   const picklocks = 0;

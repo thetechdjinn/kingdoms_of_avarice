@@ -34,7 +34,10 @@ export enum ResourceType {
 }
 
 // Player status for statline display
-export type PlayerStatus = 'normal' | 'resting' | 'meditating' | 'dropped' | 'aided' | 'dead';
+export type PlayerStatus = 'normal' | 'resting' | 'meditating' | 'dropped' | 'aided' | 'dead' | 'hidden' | 'sneaking';
+
+// Stealth mode states
+export type StealthMode = 'none' | 'sneaking' | 'hidden';
 
 // Death state tracking for dropped/purgatory mechanics
 export interface DeathState {

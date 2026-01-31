@@ -263,6 +263,20 @@ Players can access different help categories based on their role:
 | `pick <direction>` | Pick lock (requires thief skills) |
 | `bash <direction>` | Bash door open (uses strength) |
 
+### Stealth Commands
+
+| Command | Description |
+| ------- | ----------- |
+| `hide` | Attempt to hide in the shadows (requires stealth ability) |
+| `sneak` (sn) | Attempt to move stealthily (requires stealth ability) |
+| `visible` (vis) | Stop hiding or sneaking |
+
+**Stealth Mechanics:**
+- Characters need a race or class with the `stealth` trait to use stealth commands
+- Hidden players are invisible in the room unless searched
+- Sneaking players are visible but don't trigger entrance/exit announcements
+- Stealth breaks when entering combat, casting spells, or using actions on others
+
 ### Social Commands
 
 | Command | Description |

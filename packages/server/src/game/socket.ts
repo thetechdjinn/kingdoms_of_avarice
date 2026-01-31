@@ -2,7 +2,7 @@ import { WebSocketServer, WebSocket } from 'ws';
 import { IncomingMessage } from 'http';
 import { URL } from 'url';
 import { parse as parseCookie } from 'cookie';
-import { MessageType, GameMessage, Role, VitalsData, ResourceType, PlayerRegenState, ActiveStatusEffect, PlayerQueueState, createPlayerQueueState, PlayerStatus, DeathState } from '@koa/shared';
+import { MessageType, GameMessage, Role, VitalsData, ResourceType, PlayerRegenState, ActiveStatusEffect, PlayerQueueState, createPlayerQueueState, PlayerStatus, DeathState, StealthMode } from '@koa/shared';
 import type { CharacterStats, CombatActionType, SpellCastingState } from '@koa/shared';
 import { verifyToken, COOKIE_NAME } from '../routes/auth.js';
 import { GameWorld } from './world.js';
@@ -60,6 +60,8 @@ interface AuthenticatedSocket extends WebSocket {
   queueState: PlayerQueueState;
   // Death state (dropped/purgatory)
   deathState: DeathState | null;
+  // Stealth state (none/sneaking/hidden)
+  stealthMode: StealthMode;
 }
 
 const connectedPlayers = new Map<number, AuthenticatedSocket>();
@@ -357,6 +359,9 @@ export function setupGameSocket(wss: WebSocketServer): void {
     // Initialize death state (null means alive/normal)
     authWs.deathState = null;
 
+    // Initialize stealth state (none = not stealthing)
+    authWs.stealthMode = 'none';
+
     // Load brief mode from database (default to false on error)
     try {
       authWs.briefMode = await playerRepo.getBriefMode(payload.playerId);
@@ -544,6 +549,10 @@ function sendVitals(ws: AuthenticatedSocket): void {
     status = 'meditating';
   } else if (ws.regenState.enhancedRegen.has('mana') && ws.regenState.enhancedRegen.has('health')) {
     status = 'resting';
+  } else if (ws.stealthMode === 'hidden') {
+    status = 'hidden';
+  } else if (ws.stealthMode === 'sneaking') {
+    status = 'sneaking';
   }
 
   const vitalsWithStatus: VitalsData = {
