@@ -177,7 +177,10 @@ CREATE TABLE IF NOT EXISTS item_templates (
     -- Requirements & Modifiers
     requirements JSONB,
     stat_modifiers JSONB,
-    
+
+    -- Stealth modifier (negative for heavy armor, positive for stealth gear)
+    stealth_modifier INTEGER DEFAULT 0,
+
     -- Future extensibility
     effect_slots INTEGER DEFAULT 0,
     base_effects JSONB,

@@ -397,6 +397,11 @@ export async function runMigrations(): Promise<void> {
         ALTER TABLE doors ADD COLUMN IF NOT EXISTS denial_message TEXT
       `);
 
+      // Add stealth_modifier column to item_templates (Stealth System Phase 6)
+      await client.query(`
+        ALTER TABLE item_templates ADD COLUMN IF NOT EXISTS stealth_modifier INTEGER DEFAULT 0
+      `);
+
       // Seed default game settings (only if they don't exist)
       await client.query(`
         INSERT INTO game_settings (key, value) VALUES

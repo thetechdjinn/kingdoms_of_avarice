@@ -972,6 +972,20 @@ function formatItemExamine(item: ItemInstance): CommandResponse {
     if (template.flags?.two_handed) {
       lines.push('This is a two-handed weapon.');
     }
+    // Backstab modifiers (only show if non-zero)
+    const bsAcc = wd.backstab_accuracy ?? 0;
+    const bsMinDmg = wd.backstab_min_damage_bonus ?? 0;
+    const bsMaxDmg = wd.backstab_max_damage_bonus ?? 0;
+    if (bsAcc !== 0 || bsMinDmg !== 0 || bsMaxDmg !== 0) {
+      const bsParts: string[] = [];
+      if (bsAcc !== 0) bsParts.push(`Accuracy ${bsAcc >= 0 ? '+' : ''}${bsAcc}`);
+      if (bsMinDmg !== 0 || bsMaxDmg !== 0) {
+        const minSign = bsMinDmg >= 0 ? '+' : '';
+        const maxSign = bsMaxDmg >= 0 ? '+' : '';
+        bsParts.push(`Damage ${minSign}${bsMinDmg} to ${maxSign}${bsMaxDmg}`);
+      }
+      lines.push(`Backstab: ${bsParts.join(', ')}`);
+    }
   }
 
   // Armor info
@@ -981,6 +995,12 @@ function formatItemExamine(item: ItemInstance): CommandResponse {
     if (ad.weight_class) {
       lines.push(`Weight Class: ${ad.weight_class}`);
     }
+  }
+
+  // Stealth modifier (for any equippable item)
+  if (template.stealth_modifier && template.stealth_modifier !== 0) {
+    const sign = template.stealth_modifier >= 0 ? '+' : '';
+    lines.push(`Stealth: ${colors.boldWhite(`${sign}${template.stealth_modifier}`)}`);
   }
 
   // Value

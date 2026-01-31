@@ -7,7 +7,7 @@
  * Based on MajorMUD mechanics - see notes/Stealth_Implementation_Plan.md
  */
 
-import { RaceDefinition, ClassDefinition, RacialTrait } from '@koa/shared';
+import { RaceDefinition, ClassDefinition, RacialTrait, ItemInstance } from '@koa/shared';
 import * as progressionRepo from '../../db/repositories/progressionRepository.js';
 
 // ============================================================================
@@ -262,4 +262,45 @@ export async function raceCanSeeHidden(race: string): Promise<boolean> {
     }
   }
   return false;
+}
+
+// ============================================================================
+// EQUIPMENT AGGREGATION
+// ============================================================================
+
+export interface BackstabDamageBonuses {
+  minBonus: number;
+  maxBonus: number;
+}
+
+/**
+ * Calculate total stealth modifier from equipped items
+ * Sums stealth_modifier from all equipped item templates
+ */
+export function getEquipmentStealthModifier(equippedItems: ItemInstance[]): number {
+  return equippedItems.reduce((total, item) => {
+    const modifier = item.template?.stealth_modifier ?? 0;
+    return total + modifier;
+  }, 0);
+}
+
+/**
+ * Calculate total backstab damage bonuses from equipped weapon
+ * Only the main-hand weapon contributes to backstab damage bonuses
+ */
+export function getBackstabDamageBonuses(equippedItems: ItemInstance[]): BackstabDamageBonuses {
+  // Find main-hand weapon
+  const mainHandWeapon = equippedItems.find(
+    item => item.equipped_slot === 'main_hand' && item.template?.weapon_data
+  );
+
+  if (!mainHandWeapon?.template?.weapon_data) {
+    return { minBonus: 0, maxBonus: 0 };
+  }
+
+  const weaponData = mainHandWeapon.template.weapon_data;
+  return {
+    minBonus: weaponData.backstab_min_damage_bonus ?? 0,
+    maxBonus: weaponData.backstab_max_damage_bonus ?? 0,
+  };
 }
