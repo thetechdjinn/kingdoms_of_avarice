@@ -198,42 +198,42 @@ Implement a complete stealth system allowing characters with stealth abilities t
 
 ### 4.1 Movement Integration
 
-- [ ] Modify movement handler to check `stealthMode`:
-  - [ ] If `sneaking`:
-    - [ ] Show `"Sneaking..."` on room exit
-    - [ ] Roll stealth vs each occupant's perception on enter
-    - [ ] Failure: `"You make a sound as you enter the room!"` (red)
-    - [ ] Success: Enter silently (no announcement to others)
-  - [ ] If `hidden`:
-    - [ ] Auto-transition to `sneaking` on move attempt
-    - [ ] Then proceed with sneaking logic
+- [x] Modify movement handler to check `stealthMode`:
+  - [x] If `sneaking`:
+    - [x] Show `"Sneaking..."` on room exit
+    - [x] Roll stealth vs each occupant's perception on enter
+    - [x] Failure: `"You make a sound as you enter the room!"` (red)
+    - [x] Success: Enter silently (no announcement to others)
+  - [x] If `hidden`:
+    - [x] Auto-transition to `sneaking` on move attempt
+    - [x] Then proceed with sneaking logic
 
 ### 4.2 Stealth Breaking Events
 
-- [ ] Break stealth and notify when:
-  - [ ] Failed movement detection check
-  - [ ] Attacked by another player/NPC
-  - [ ] Casting a spell
-  - [ ] Using a social action targeting another player
-  - [ ] Hit by AoE spell in room
-  - [ ] Engaging in combat (attacking someone)
+- [x] Break stealth and notify when:
+  - [x] Failed movement detection check
+  - [ ] Attacked by another player/NPC (TODO: Target side - when NPC attacks)
+  - [x] Casting a spell
+  - [x] Using a social action targeting another player
+  - [ ] Hit by AoE spell in room (TODO: Future - no AoE spells yet)
+  - [x] Engaging in combat (attacking someone)
 
 ### 4.3 Encumbrance Integration
 
-- [ ] Modify stealth calculation to include encumbrance penalty:
-  - [ ] None (0-17%): 0 penalty
-  - [ ] Light (18-33%): 0 penalty
-  - [ ] Medium (34-67%): -10 stealth
-  - [ ] Heavy (68%+): -25 stealth
-- [ ] Recalculate stealth when encumbrance changes
+- [x] Modify stealth calculation to include encumbrance penalty:
+  - [x] None (0-17%): 0 penalty
+  - [x] Light (18-33%): 0 penalty
+  - [x] Medium (34-67%): -10 stealth
+  - [x] Heavy (68%+): -25 stealth
+- [x] Recalculate stealth when encumbrance changes (calculated on-the-fly during movement checks)
 
 ### 4.4 Room Announcement Filtering
 
-- [ ] When player enters room sneaking successfully:
-  - [ ] Do not broadcast arrival message to room
-- [ ] When player leaves room sneaking:
-  - [ ] Do not broadcast departure message to room
-  - [ ] Show "Sneaking..." only to the sneaking player
+- [x] When player enters room sneaking successfully:
+  - [x] Do not broadcast arrival message to room
+- [x] When player leaves room sneaking:
+  - [x] Do not broadcast departure message to room
+  - [x] Show "Sneaking..." only to the sneaking player
 
 ### 4.5 Testing
 
@@ -249,12 +249,11 @@ Implement a complete stealth system allowing characters with stealth abilities t
 **Files Modified:**
 | File | Changes |
 |------|---------|
-| `packages/server/src/game/movement.ts` (or equivalent) | Add stealth logic |
-| `packages/server/src/game/stealth/stealthState.ts` | Add break stealth triggers |
-| `packages/server/src/game/stats/secondaryStats.ts` | Add encumbrance penalty |
-| `packages/server/src/game/combat.ts` | Trigger stealth break on attack |
-| `packages/server/src/game/spellCommands.ts` | Trigger stealth break on cast |
-| `packages/server/src/game/actionCommands.ts` | Trigger stealth break on targeted action |
+| `packages/server/src/game/commands.ts` | Added stealth movement logic to `handleMove()`, added `getObserversInRoom()` and `calculatePlayerStealth()` helpers |
+| `packages/server/src/game/combatCommands.ts` | Added stealth break on attack initiation |
+| `packages/server/src/game/spellCommands.ts` | Added stealth break on spell cast |
+| `packages/server/src/game/actionCommands.ts` | Added stealth break on targeted social action |
+| `packages/server/src/game/stats/secondaryStats.ts` | Encumbrance penalty already implemented via `getEncumbrancePenalty()` |
 
 ---
 
@@ -529,7 +528,7 @@ Phase 7 (Polish)
 | Phase 1 | **Complete** | Secondary stats and backstab settings implemented |
 | Phase 2 | **Complete** | Stealth state management, hide/sneak commands implemented |
 | Phase 3 | **Complete** | Detection & search mechanics implemented |
-| Phase 4 | Not Started | Stealth movement integration |
+| Phase 4 | **Complete** | Stealth movement, encumbrance penalties, stealth breaking events |
 | Phase 5 | Not Started | Backstab combat |
 | Phase 6 | Not Started | Equipment integration |
 | Phase 7 | Not Started | Polish & balance |
@@ -547,3 +546,4 @@ _Use this section to track progress, decisions, and blockers between development
 | 2026-01-30 | Phase 1 | Created secondaryStats.ts with stealth/perception calculations. Added BackstabSettings to settingsRepository with caching. Updated admin UI with backstab configuration section. Added validation to admin routes. | Manual testing of settings and stat calculations. |
 | 2026-01-30 | Phase 2 | Implemented stealth state management. Added StealthMode type to shared. Added stealthMode to AuthenticatedSocket. Created stealthState.ts with validation, state transitions, and stealth breaking. Created stealthCommands.ts with hide/sneak/visible commands. Updated room display to filter hidden players. Updated sendVitals to show hidden/sneaking status. | Manual testing of hide/sneak commands. NPC checks deferred until NPCs are implemented. |
 | 2026-01-30 | Phase 3 | Created stealthCheck.ts with stealth vs perception roll mechanics. Enhanced search command to find hidden players (perception vs stealth roll). Updated room display functions (getOtherPlayersInRoom, getPlayersInRoom) to support seeHidden trait - races with see_hidden trait now see hidden players marked with "(hidden)". | Manual testing of search command and seeHidden trait. Monster seeHidden deferred until NPCs are implemented. |
+| 2026-01-31 | Phase 4 | Implemented stealth movement in handleMove() - hidden auto-transitions to sneaking, shows "Sneaking..." message, rolls cumulative detection vs observers on room entry, suppresses announcements on success, breaks stealth on failure. Added getObserversInRoom() and calculatePlayerStealth() helpers. Added stealth breaking to combat (handleAttack), spell casting (handleSpellCommand), and targeted social actions (handleActionCommand). Encumbrance penalty already integrated via getEncumbrancePenalty(). | Manual testing of sneak movement. AoE spell stealth break and NPC attack stealth break deferred. |

@@ -5,6 +5,7 @@ import { getPlayerLocation } from './adminCommands.js';
 import { colors } from '../utils/colors.js';
 import { CommandResponse } from './commands.js';
 import { findPlayerInRoom } from './playerUtils.js';
+import { isStealthing, breakStealth } from './stealth/stealthState.js';
 
 // In-memory cache of action commands
 let actionCommandSet: Set<string> = new Set();
@@ -79,10 +80,15 @@ export async function handleActionCommand(
     return { type: MessageType.ERROR, message: `The ${action.command} action doesn't support targeting.` };
   }
 
-  // Find the target player
-  const target = findPlayerInRoom(targetName, currentRoomId, connectedPlayers, socket.playerId);
+  // Find the target player (respects stealth - can't target what you can't see)
+  const target = findPlayerInRoom(targetName, currentRoomId, connectedPlayers, socket.playerId, socket.canSeeHidden);
   if (!target) {
     return { type: MessageType.ERROR, message: `You don't see ${targetName} here.` };
+  }
+
+  // Break stealth when using a targeted social action
+  if (isStealthing(socket)) {
+    breakStealth(socket, 'social_action', true);
   }
 
   // Build messages with target
