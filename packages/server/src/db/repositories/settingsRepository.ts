@@ -5,6 +5,34 @@ export type IpAccessMode = 'allowlist' | 'blocklist';
 export interface GameSettings {
   max_characters_per_player: number;
   ip_access_mode: IpAccessMode;
+  max_negative_hp_percent: number;
+  dropped_tick_interval_ms: number;
+  backstab_base_min_multiplier: number;
+  backstab_base_max_multiplier: number;
+  backstab_level_bonus_min: number;
+  backstab_level_bonus_max: number;
+}
+
+// ============================================================================
+// VALIDATION RANGES (single source of truth for validation)
+// ============================================================================
+
+export const BACKSTAB_SETTING_RANGES = {
+  backstab_base_min_multiplier: { min: 1.0, max: 5.0, default: 2.0 },
+  backstab_base_max_multiplier: { min: 1.5, max: 6.0, default: 3.0 },
+  backstab_level_bonus_min: { min: 0.0, max: 1.0, default: 0.20 },
+  backstab_level_bonus_max: { min: 0.0, max: 2.0, default: 0.50 },
+} as const;
+
+export type BackstabSettingKey = keyof typeof BACKSTAB_SETTING_RANGES;
+
+/**
+ * Validate a backstab setting value against its defined range
+ */
+export function isValidBackstabSetting(key: string, value: number): boolean {
+  const range = BACKSTAB_SETTING_RANGES[key as BackstabSettingKey];
+  if (!range) return false;
+  return typeof value === 'number' && !isNaN(value) && value >= range.min && value <= range.max;
 }
 
 /**
@@ -143,16 +171,37 @@ export async function getAllSettings(): Promise<GameSettings> {
   const settings: Partial<GameSettings> = {};
 
   for (const row of result.rows) {
-    if (row.key === 'max_characters_per_player') {
-      const parsed = parseJsonbValue<number>(row.value);
-      if (isValidCharacterLimit(parsed)) {
-        settings.max_characters_per_player = parsed;
-      }
-    } else if (row.key === 'ip_access_mode') {
-      const parsed = parseJsonbValue<IpAccessMode>(row.value);
-      if (isValidIpAccessMode(parsed)) {
-        settings.ip_access_mode = parsed;
-      }
+    const parsed = parseJsonbValue<unknown>(row.value);
+
+    switch (row.key) {
+      case 'max_characters_per_player':
+        if (isValidCharacterLimit(parsed as number)) {
+          settings.max_characters_per_player = parsed as number;
+        }
+        break;
+      case 'ip_access_mode':
+        if (isValidIpAccessMode(parsed)) {
+          settings.ip_access_mode = parsed;
+        }
+        break;
+      case 'max_negative_hp_percent':
+        if (typeof parsed === 'number' && parsed > 0 && parsed <= 100) {
+          settings.max_negative_hp_percent = parsed;
+        }
+        break;
+      case 'dropped_tick_interval_ms':
+        if (typeof parsed === 'number' && parsed >= 1000 && parsed <= 30000) {
+          settings.dropped_tick_interval_ms = parsed;
+        }
+        break;
+      case 'backstab_base_min_multiplier':
+      case 'backstab_base_max_multiplier':
+      case 'backstab_level_bonus_min':
+      case 'backstab_level_bonus_max':
+        if (isValidBackstabSetting(row.key, parsed as number)) {
+          settings[row.key as BackstabSettingKey] = parsed as number;
+        }
+        break;
     }
   }
 
@@ -160,6 +209,12 @@ export async function getAllSettings(): Promise<GameSettings> {
   return {
     max_characters_per_player: settings.max_characters_per_player ?? 3,
     ip_access_mode: settings.ip_access_mode ?? 'blocklist',
+    max_negative_hp_percent: settings.max_negative_hp_percent ?? 50,
+    dropped_tick_interval_ms: settings.dropped_tick_interval_ms ?? 5000,
+    backstab_base_min_multiplier: settings.backstab_base_min_multiplier ?? BACKSTAB_SETTING_RANGES.backstab_base_min_multiplier.default,
+    backstab_base_max_multiplier: settings.backstab_base_max_multiplier ?? BACKSTAB_SETTING_RANGES.backstab_base_max_multiplier.default,
+    backstab_level_bonus_min: settings.backstab_level_bonus_min ?? BACKSTAB_SETTING_RANGES.backstab_level_bonus_min.default,
+    backstab_level_bonus_max: settings.backstab_level_bonus_max ?? BACKSTAB_SETTING_RANGES.backstab_level_bonus_max.default,
   };
 }
 
@@ -576,4 +631,83 @@ export async function getDroppedTickIntervalMs(): Promise<number> {
 export function clearDeathSettingsCache(): void {
   deathSettingsCache = null;
   deathSettingsCacheTime = 0;
+}
+
+// ============================================================================
+// BACKSTAB SETTINGS
+// ============================================================================
+
+/**
+ * Backstab-related settings stored in the database
+ * These control backstab damage calculations and can be tweaked for balance
+ */
+export interface BackstabSettings {
+  base_min_multiplier: number;   // Multiplier for minimum backstab damage (default: 2.0)
+  base_max_multiplier: number;   // Multiplier for maximum backstab damage (default: 3.0)
+  level_bonus_min: number;       // Flat bonus to min damage per level (default: 0.20)
+  level_bonus_max: number;       // Flat bonus to max damage per level (default: 0.50)
+}
+
+// Default backstab settings (derived from centralized ranges)
+const DEFAULT_BACKSTAB_SETTINGS: BackstabSettings = {
+  base_min_multiplier: BACKSTAB_SETTING_RANGES.backstab_base_min_multiplier.default,
+  base_max_multiplier: BACKSTAB_SETTING_RANGES.backstab_base_max_multiplier.default,
+  level_bonus_min: BACKSTAB_SETTING_RANGES.backstab_level_bonus_min.default,
+  level_bonus_max: BACKSTAB_SETTING_RANGES.backstab_level_bonus_max.default,
+};
+
+// Cache for backstab settings
+let backstabSettingsCache: BackstabSettings | null = null;
+let backstabSettingsCacheTime: number = 0;
+const BACKSTAB_SETTINGS_CACHE_TTL = 60000; // 1 minute cache
+
+/**
+ * Get all backstab settings with caching
+ * Settings are cached for 1 minute to avoid DB hits during combat
+ */
+export async function getBackstabSettings(): Promise<BackstabSettings> {
+  const now = Date.now();
+
+  // Return cached settings if still valid
+  if (backstabSettingsCache && (now - backstabSettingsCacheTime) < BACKSTAB_SETTINGS_CACHE_TTL) {
+    return backstabSettingsCache;
+  }
+
+  // Fetch all backstab settings from DB in parallel
+  const [baseMinMult, baseMaxMult, levelBonusMin, levelBonusMax] = await Promise.all([
+    getSetting<number>('backstab_base_min_multiplier'),
+    getSetting<number>('backstab_base_max_multiplier'),
+    getSetting<number>('backstab_level_bonus_min'),
+    getSetting<number>('backstab_level_bonus_max'),
+  ]);
+
+  const settings: BackstabSettings = { ...DEFAULT_BACKSTAB_SETTINGS };
+
+  // Validate and apply each setting using centralized validation
+  if (isValidBackstabSetting('backstab_base_min_multiplier', baseMinMult as number)) {
+    settings.base_min_multiplier = baseMinMult as number;
+  }
+  if (isValidBackstabSetting('backstab_base_max_multiplier', baseMaxMult as number)) {
+    settings.base_max_multiplier = baseMaxMult as number;
+  }
+  if (isValidBackstabSetting('backstab_level_bonus_min', levelBonusMin as number)) {
+    settings.level_bonus_min = levelBonusMin as number;
+  }
+  if (isValidBackstabSetting('backstab_level_bonus_max', levelBonusMax as number)) {
+    settings.level_bonus_max = levelBonusMax as number;
+  }
+
+  // Update cache
+  backstabSettingsCache = settings;
+  backstabSettingsCacheTime = now;
+
+  return settings;
+}
+
+/**
+ * Clear the backstab settings cache (call after updating settings)
+ */
+export function clearBackstabSettingsCache(): void {
+  backstabSettingsCache = null;
+  backstabSettingsCacheTime = 0;
 }

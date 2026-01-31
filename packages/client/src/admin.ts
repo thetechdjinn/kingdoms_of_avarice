@@ -29,6 +29,10 @@ interface GameSettings {
   ip_access_mode: 'allowlist' | 'blocklist';
   max_negative_hp_percent?: number;
   dropped_tick_interval_ms?: number;
+  backstab_base_min_multiplier?: number;
+  backstab_base_max_multiplier?: number;
+  backstab_level_bonus_min?: number;
+  backstab_level_bonus_max?: number;
 }
 
 // ============================================================================
@@ -517,6 +521,15 @@ async function loadSettings(): Promise<void> {
         String(settings.max_negative_hp_percent ?? 50);
       (document.getElementById('setting-dropped-tick') as HTMLInputElement).value =
         String(settings.dropped_tick_interval_ms ?? 5000);
+      // Backstab settings
+      (document.getElementById('setting-bs-min-mult') as HTMLInputElement).value =
+        String(settings.backstab_base_min_multiplier ?? 2.0);
+      (document.getElementById('setting-bs-max-mult') as HTMLInputElement).value =
+        String(settings.backstab_base_max_multiplier ?? 3.0);
+      (document.getElementById('setting-bs-level-min') as HTMLInputElement).value =
+        String(settings.backstab_level_bonus_min ?? 0.20);
+      (document.getElementById('setting-bs-level-max') as HTMLInputElement).value =
+        String(settings.backstab_level_bonus_max ?? 0.50);
     }
   } catch (error) {
     console.error('Failed to load settings:', error);
@@ -653,6 +666,40 @@ async function saveDroppedTickSetting(): Promise<void> {
   }
 }
 
+async function saveBackstabSetting(settingKey: string, inputId: string, min: number, max: number, displayName: string): Promise<void> {
+  const value = parseFloat((document.getElementById(inputId) as HTMLInputElement).value);
+  const messageEl = document.getElementById('settings-message')!;
+
+  if (isNaN(value) || value < min || value > max) {
+    messageEl.textContent = `${displayName} must be between ${min} and ${max}`;
+    messageEl.className = 'message error';
+    return;
+  }
+
+  try {
+    const response = await fetch(`/api/admin/settings/${settingKey}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ value }),
+      credentials: 'include',
+    });
+
+    const data = await response.json();
+
+    if (data.success) {
+      messageEl.textContent = 'Setting saved successfully';
+      messageEl.className = 'message success';
+    } else {
+      messageEl.textContent = data.message || 'Failed to save';
+      messageEl.className = 'message error';
+    }
+  } catch (error) {
+    console.error('Failed to save setting:', error);
+    messageEl.textContent = 'Connection error';
+    messageEl.className = 'message error';
+  }
+}
+
 function escapeHtml(text: string): string {
   const div = document.createElement('div');
   div.textContent = text;
@@ -709,6 +756,31 @@ document.addEventListener('DOMContentLoaded', async () => {
   const saveDroppedTickBtn = document.getElementById('save-dropped-tick-btn');
   if (saveDroppedTickBtn) {
     saveDroppedTickBtn.addEventListener('click', saveDroppedTickSetting);
+  }
+
+  // Backstab settings buttons
+  const saveBsMinMultBtn = document.getElementById('save-bs-min-mult-btn');
+  if (saveBsMinMultBtn) {
+    saveBsMinMultBtn.addEventListener('click', () =>
+      saveBackstabSetting('backstab_base_min_multiplier', 'setting-bs-min-mult', 1.0, 5.0, 'Base Min Multiplier'));
+  }
+
+  const saveBsMaxMultBtn = document.getElementById('save-bs-max-mult-btn');
+  if (saveBsMaxMultBtn) {
+    saveBsMaxMultBtn.addEventListener('click', () =>
+      saveBackstabSetting('backstab_base_max_multiplier', 'setting-bs-max-mult', 1.5, 6.0, 'Base Max Multiplier'));
+  }
+
+  const saveBsLevelMinBtn = document.getElementById('save-bs-level-min-btn');
+  if (saveBsLevelMinBtn) {
+    saveBsLevelMinBtn.addEventListener('click', () =>
+      saveBackstabSetting('backstab_level_bonus_min', 'setting-bs-level-min', 0.0, 1.0, 'Level Bonus Min'));
+  }
+
+  const saveBsLevelMaxBtn = document.getElementById('save-bs-level-max-btn');
+  if (saveBsLevelMaxBtn) {
+    saveBsLevelMaxBtn.addEventListener('click', () =>
+      saveBackstabSetting('backstab_level_bonus_max', 'setting-bs-level-max', 0.0, 2.0, 'Level Bonus Max'));
   }
 
   // User menu dropdown toggle

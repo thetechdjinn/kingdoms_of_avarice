@@ -122,6 +122,16 @@ export function setupAdminRoutes(app: Express): void {
         res.status(400).json({ success: false, message: 'Save interval must be between 10000ms (10s) and 600000ms (10min)' });
         return;
       }
+    } else if (key in settingsRepo.BACKSTAB_SETTING_RANGES) {
+      const numValue = Number(value);
+      const range = settingsRepo.BACKSTAB_SETTING_RANGES[key as settingsRepo.BackstabSettingKey];
+      if (!settingsRepo.isValidBackstabSetting(key, numValue)) {
+        res.status(400).json({
+          success: false,
+          message: `${key.replace(/_/g, ' ')} must be between ${range.min} and ${range.max}`
+        });
+        return;
+      }
     }
 
     try {
@@ -146,6 +156,9 @@ export function setupAdminRoutes(app: Express): void {
         } catch (error) {
           console.error('Failed to update character save loop interval:', error);
         }
+      }
+      if (key.startsWith('backstab_')) {
+        settingsRepo.clearBackstabSettingsCache();
       }
 
       res.json({ success: true, message: 'Setting updated' });

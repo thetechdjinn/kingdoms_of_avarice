@@ -1,0 +1,543 @@
+# Stealth System Implementation
+
+## Overview
+
+Implement a complete stealth system allowing characters with stealth abilities to hide, sneak, and perform backstab attacks. Based on MajorMUD mechanics with configurable balance settings.
+
+**Reference Documents:**
+- `notes/Stealth_Implementation_Plan.md` - Core mechanics design
+- `notes/Backstab_Formula_Mockup.md` - Damage formula and balance tables
+
+---
+
+## Phase 1: Foundation - Secondary Stats & Game Settings
+
+**Goal:** Add the derived stats (Stealth, Perception) and backstab configuration to the database and character system.
+
+### 1.1 Database Changes
+
+- [x] Add backstab settings to `game_settings` table:
+  - [x] `backstab_base_min_multiplier` (default: 2.0)
+  - [x] `backstab_base_max_multiplier` (default: 3.0)
+  - [x] `backstab_level_bonus_min` (default: 0.20)
+  - [x] `backstab_level_bonus_max` (default: 0.50)
+- [x] Create migration file for new settings (using dynamic settings - no migration needed)
+
+### 1.2 Secondary Stat Calculations
+
+- [x] Create `packages/server/src/game/stats/secondaryStats.ts`:
+  - [x] `calculateStealth(character)` function
+    - Dex × 0.25 + Int × 0.1 + Cha × 0.25 per 10 points
+    - Threshold bonuses (+1 each at 60, 75, 90 for Dex/Int/Cha)
+    - Level bonus (+1 per level)
+    - Racial stealth bonus (+1 if race has stealth)
+    - Class stealth bonus (+1 if class has stealth)
+  - [x] `calculatePerception(character)` function
+    - Int × 0.6 + Will × 0.2 + Cha × 0.1 per 10 points
+
+### 1.3 Character Model Updates
+
+- [x] Add stealth trait checking to race/class definitions
+  - [x] `hasStealth` - derived from race OR class having stealth trait (via `characterHasStealth()`)
+  - [x] `hasRacialStealth` - race has stealth trait (via `getStealthCapability()`)
+  - [x] `hasClassStealth` - class has stealth trait (via `getStealthCapability()`)
+- [x] Expose `stealth` and `perception` as computed properties on character (via `calculateStealth()` and `calculatePerception()`)
+
+### 1.4 Settings Repository Updates
+
+- [x] Add getters for backstab settings in `settingsRepository.ts`
+- [x] Add backstab settings to admin settings API endpoint
+
+### 1.5 Admin Settings UI
+
+- [x] Add "Backstab Configuration" section to Admin > Settings tab
+  - [x] BASE_MIN_MULTIPLIER input (range: 1.0-5.0)
+  - [x] BASE_MAX_MULTIPLIER input (range: 1.5-6.0)
+  - [x] LEVEL_BONUS_MIN input (range: 0.0-1.0)
+  - [x] LEVEL_BONUS_MAX input (range: 0.0-2.0)
+
+### 1.6 Testing
+
+- [ ] Verify stealth calculation matches design doc examples
+- [ ] Verify perception calculation
+- [ ] Verify settings save and load correctly
+- [ ] Test settings hot-reload without server restart
+
+**Files Modified:**
+| File | Changes |
+|------|---------|
+| `packages/server/src/db/migrations/` | New migration for backstab settings |
+| `packages/server/src/db/repositories/settingsRepository.ts` | Add backstab setting getters |
+| `packages/server/src/game/stats/secondaryStats.ts` | New file - stat calculations |
+| `packages/client/src/admin.ts` | Add backstab settings UI |
+| `packages/client/admin.html` | Add backstab settings section |
+
+---
+
+## Phase 2: Stealth State Management
+
+**Goal:** Characters can enter/exit sneaking and hidden states.
+
+### 2.1 State Storage
+
+- [ ] Add stealth state to character in-memory state (World):
+  - [ ] `stealthMode`: `'none'` | `'sneaking'` | `'hidden'`
+- [ ] Ensure state resets on logout/disconnect
+
+### 2.2 State Machine
+
+- [ ] Create `packages/server/src/game/stealth/stealthState.ts`:
+  - [ ] `canEnterStealth(character, room)` - validation checks
+  - [ ] `setStealthMode(character, mode)` - state transitions
+  - [ ] `breakStealth(character, reason)` - forced exit with message
+
+### 2.3 Hide Command
+
+- [ ] Implement `hide` command in new `stealthCommands.ts`:
+  - [ ] Check character has stealth ability
+  - [ ] Fail if monsters/NPCs in room (cannot reposition with hostiles present)
+  - [ ] Fail if currently in combat
+  - [ ] Make stealth roll (player doesn't see result)
+  - [ ] Success output: `"Attempting to hide..."`
+  - [ ] Failure output: `"Attempting to hide... You don't think you are hidden."`
+  - [ ] Set state to `hidden` on success, `none` on failure
+
+### 2.4 Sneak Command
+
+- [ ] Implement `sneak` command:
+  - [ ] Check character has stealth ability
+  - [ ] Fail if currently in combat
+  - [ ] Fail if hostile NPCs have already engaged
+  - [ ] Make stealth roll
+  - [ ] Output: `"Attempting to sneak..."`
+  - [ ] Set internal flag for next movement
+  - [ ] Set state to `sneaking`
+
+### 2.5 Room Display Updates
+
+- [ ] Modify room description to exclude hidden players
+- [ ] Sneaking players shown normally in room
+- [ ] Add indicator for self when hidden/sneaking (e.g., `[Hidden]` or `[Sneaking]` in prompt or status)
+
+### 2.6 Command Registration
+
+- [ ] Add `hide` and `sneak` to command processor
+- [ ] Add aliases: `sn` for sneak
+
+### 2.7 Testing
+
+- [ ] Test hide success/failure messages
+- [ ] Test sneak command activation
+- [ ] Verify hidden players not visible in room
+- [ ] Verify state persists across room commands
+- [ ] Verify state resets on logout
+
+**Files Modified:**
+| File | Changes |
+|------|---------|
+| `packages/server/src/game/stealth/stealthState.ts` | New file - state management |
+| `packages/server/src/game/stealth/stealthCommands.ts` | New file - hide/sneak commands |
+| `packages/server/src/game/commands.ts` | Register new commands |
+| `packages/server/src/game/world.ts` | Add stealth state to character data |
+| `packages/server/src/game/roomDisplay.ts` (or equivalent) | Filter hidden players |
+
+---
+
+## Phase 3: Detection & Search
+
+**Goal:** Players can detect hidden characters; perception checks work.
+
+### 3.1 Stealth Check System
+
+- [ ] Create `packages/server/src/game/stealth/stealthCheck.ts`:
+  - [ ] `rollStealthCheck(sneakerStealth, observerPerception)` → boolean
+  - [ ] Factor in number of observers (cumulative detection chance)
+  - [ ] Return detailed result for logging/debugging
+
+### 3.2 Search Command Enhancement
+
+- [ ] Enhance existing `search` command:
+  - [ ] For each hidden character in room:
+    - [ ] Roll perception vs stealth
+    - [ ] If found: reveal character, break their stealth
+    - [ ] Output: `"You spot <player> hiding in the shadows!"`
+  - [ ] Continue finding hidden items (existing functionality)
+  - [ ] Base output: `"You search the area..."`
+
+### 3.3 See Hidden Trait
+
+- [ ] Add `seeHidden` trait definition to race/class system
+- [ ] Characters with `seeHidden`:
+  - [ ] Automatically see hidden players in room description
+  - [ ] No search required
+- [ ] Add `seeHidden` to relevant monster definitions (future)
+
+### 3.4 Testing
+
+- [ ] Test search finding hidden players
+- [ ] Test search miss (high stealth vs low perception)
+- [ ] Test multiple hidden players in room
+- [ ] Verify seeHidden trait works
+
+**Files Modified:**
+| File | Changes |
+|------|---------|
+| `packages/server/src/game/stealth/stealthCheck.ts` | New file - check mechanics |
+| `packages/server/src/game/commands.ts` | Enhance search command |
+| `packages/shared/src/index.ts` | Add seeHidden trait type (if needed) |
+
+---
+
+## Phase 4: Stealth Movement
+
+**Goal:** Sneaking movement works correctly with all detection rules.
+
+### 4.1 Movement Integration
+
+- [ ] Modify movement handler to check `stealthMode`:
+  - [ ] If `sneaking`:
+    - [ ] Show `"Sneaking..."` on room exit
+    - [ ] Roll stealth vs each occupant's perception on enter
+    - [ ] Failure: `"You make a sound as you enter the room!"` (red)
+    - [ ] Success: Enter silently (no announcement to others)
+  - [ ] If `hidden`:
+    - [ ] Auto-transition to `sneaking` on move attempt
+    - [ ] Then proceed with sneaking logic
+
+### 4.2 Stealth Breaking Events
+
+- [ ] Break stealth and notify when:
+  - [ ] Failed movement detection check
+  - [ ] Attacked by another player/NPC
+  - [ ] Casting a spell
+  - [ ] Using a social action targeting another player
+  - [ ] Hit by AoE spell in room
+  - [ ] Engaging in combat (attacking someone)
+
+### 4.3 Encumbrance Integration
+
+- [ ] Modify stealth calculation to include encumbrance penalty:
+  - [ ] None (0-17%): 0 penalty
+  - [ ] Light (18-33%): 0 penalty
+  - [ ] Medium (34-67%): -10 stealth
+  - [ ] Heavy (68%+): -25 stealth
+- [ ] Recalculate stealth when encumbrance changes
+
+### 4.4 Room Announcement Filtering
+
+- [ ] When player enters room sneaking successfully:
+  - [ ] Do not broadcast arrival message to room
+- [ ] When player leaves room sneaking:
+  - [ ] Do not broadcast departure message to room
+  - [ ] Show "Sneaking..." only to the sneaking player
+
+### 4.5 Testing
+
+- [ ] Test successful sneak into empty room
+- [ ] Test successful sneak into occupied room
+- [ ] Test failed sneak detection
+- [ ] Test stealth break on attack
+- [ ] Test stealth break on spell cast
+- [ ] Test stealth break on social action
+- [ ] Test encumbrance penalties
+- [ ] Test hidden → sneaking transition on move
+
+**Files Modified:**
+| File | Changes |
+|------|---------|
+| `packages/server/src/game/movement.ts` (or equivalent) | Add stealth logic |
+| `packages/server/src/game/stealth/stealthState.ts` | Add break stealth triggers |
+| `packages/server/src/game/stats/secondaryStats.ts` | Add encumbrance penalty |
+| `packages/server/src/game/combat.ts` | Trigger stealth break on attack |
+| `packages/server/src/game/spellCommands.ts` | Trigger stealth break on cast |
+| `packages/server/src/game/actionCommands.ts` | Trigger stealth break on targeted action |
+
+---
+
+## Phase 5: Backstab Combat
+
+**Goal:** Backstab attacks work with proper damage and accuracy calculations.
+
+### 5.1 Weapon Template Updates
+
+- [ ] Add to `item_templates` table:
+  - [ ] `backstab_accuracy` modifier (typically negative)
+- [ ] Update item editor to show backstab accuracy field
+- [ ] Add validation: backstab only with one-handed weapons
+
+### 5.2 Backstab Accuracy Formula
+
+- [ ] Create `packages/server/src/game/combat/backstabAccuracy.ts`:
+  - [ ] Attacker accuracy = Base stats + Stealth + BS-specific accuracy bonuses
+  - [ ] Defender defense = (AC / 2) + (Perception / 2)
+  - [ ] Secondary AC ignored for backstabs
+  - [ ] `rollBackstabHit(attacker, defender)` → boolean
+
+### 5.3 Backstab Damage Formula
+
+- [ ] Create `packages/server/src/game/combat/backstabDamage.ts`:
+  - [ ] Get effective weapon max (weapon max + strength bonus)
+  - [ ] Load config values from settings
+  - [ ] Calculate:
+    ```
+    backstabMin = (effectiveMax × BASE_MIN_MULTIPLIER) + (level × LEVEL_BONUS_MIN)
+    backstabMax = (effectiveMax × BASE_MAX_MULTIPLIER) + (level × LEVEL_BONUS_MAX)
+    ```
+  - [ ] Roll between min and max
+  - [ ] Apply damage resistance AFTER multiplier (unlike bash/smash)
+
+### 5.4 Backstab Command
+
+- [ ] Implement `backstab <target>` command:
+  - [ ] Aliases: `bs`
+  - [ ] Validation:
+    - [ ] Character has stealth ability
+    - [ ] Character is sneaking or hidden
+    - [ ] Weapon equipped is one-handed
+    - [ ] Target exists and is visible
+    - [ ] Target is not already in combat with attacker (no re-backstab mid-fight)
+  - [ ] On attempt:
+    - [ ] Roll accuracy check
+    - [ ] If hit: Calculate and apply damage
+    - [ ] If miss: No damage
+    - [ ] Both cases: Break stealth, engage combat
+  - [ ] Combat messages:
+    - [ ] Hit: `"You backstab <target> for <damage> damage!"`
+    - [ ] Miss: `"You attempt to backstab <target> but miss!"`
+    - [ ] Target sees: `"<attacker> lunges at you from the shadows!"`
+
+### 5.5 Combat Engagement Rules
+
+- [ ] Cannot `hide` or `sneak` while in combat
+- [ ] Error message: `"You may not hide right now!"` / `"You may not sneak right now!"`
+- [ ] Must break combat (flee or target dies) before re-entering stealth
+- [ ] Even after combat ends, cannot sneak if another entity has engaged you
+
+### 5.6 Testing
+
+- [ ] Test backstab hit with various weapons
+- [ ] Test backstab miss
+- [ ] Test damage formula at levels 1, 20, 40
+- [ ] Test strength bonus cascade into backstab damage
+- [ ] Test one-handed weapon restriction
+- [ ] Test combat engagement prevents sneaking
+- [ ] Verify stealth breaks after backstab attempt
+
+**Files Modified:**
+| File | Changes |
+|------|---------|
+| `packages/server/src/db/migrations/` | Add backstab_accuracy to items |
+| `packages/server/src/game/combat/backstabAccuracy.ts` | New file - accuracy calc |
+| `packages/server/src/game/combat/backstabDamage.ts` | New file - damage calc |
+| `packages/server/src/game/stealth/stealthCommands.ts` | Add backstab command |
+| `packages/server/src/game/commands.ts` | Register backstab command |
+| `packages/server/src/game/combat.ts` | Integration with combat system |
+| `packages/client/src/item-editor.ts` | Add backstab accuracy field |
+| `packages/client/item-editor.html` | Add backstab accuracy input |
+
+---
+
+## Phase 6: Equipment Integration
+
+**Goal:** Equipment modifiers affect stealth and backstab stats.
+
+### 6.1 Item Template Updates
+
+- [ ] Add fields to `item_templates` table:
+  - [ ] `stealth_modifier` (can be negative for heavy armor)
+  - [ ] `backstab_min_damage_bonus`
+  - [ ] `backstab_max_damage_bonus`
+- [ ] Create migration for new columns
+
+### 6.2 Stat Aggregation
+
+- [ ] Create `getEquipmentStealthModifier(character)`:
+  - [ ] Sum all equipped items' stealth modifiers
+- [ ] Integrate into `calculateStealth()`:
+  - [ ] Add equipment modifier to total stealth
+- [ ] Create `getBackstabDamageBonuses(character)`:
+  - [ ] Sum all equipped items' backstab damage bonuses
+- [ ] Integrate into `calculateBackstabDamage()`:
+  - [ ] Add equipment bonuses to min/max
+
+### 6.3 Item Editor Updates
+
+- [ ] Add stealth modifier field to item editor
+- [ ] Add backstab min/max damage bonus fields
+- [ ] Show fields for armor and weapons
+
+### 6.4 Item Display Updates
+
+- [ ] Show stealth modifier in item info/examine
+- [ ] Show backstab modifiers in item info/examine
+- [ ] Format: `Stealth: -5` or `Stealth: +3`
+- [ ] Format: `Backstab Damage: +2 to +5`
+
+### 6.5 Seed Data
+
+- [ ] Add stealth modifiers to existing armor:
+  - [ ] Heavy armor: negative values (-5 to -15)
+  - [ ] Light armor: small negative or zero (-2 to 0)
+  - [ ] Robes/cloth: zero or positive (0 to +2)
+- [ ] Add backstab accuracy to existing weapons:
+  - [ ] Most weapons: negative (-5 to -15)
+  - [ ] Daggers: less negative or zero (-2 to 0)
+
+### 6.6 Testing
+
+- [ ] Verify equipment stealth modifiers apply
+- [ ] Verify heavy armor reduces stealth significantly
+- [ ] Verify backstab damage bonuses from equipment apply
+- [ ] Test swapping equipment updates stats correctly
+
+**Files Modified:**
+| File | Changes |
+|------|---------|
+| `packages/server/src/db/migrations/` | Add new item fields |
+| `packages/server/src/game/stats/secondaryStats.ts` | Equipment modifier integration |
+| `packages/server/src/game/combat/backstabDamage.ts` | Equipment bonus integration |
+| `packages/client/src/item-editor.ts` | Add new fields |
+| `packages/client/item-editor.html` | Add new inputs |
+| `packages/server/src/db/seed/` | Update item seed data |
+
+---
+
+## Phase 7: Polish & Balance
+
+**Goal:** Final touches, testing commands, documentation, edge cases.
+
+### 7.1 Class-Specific Backstab Accuracy
+
+- [ ] Add `backstabAccuracyBonus` to class definitions:
+  - [ ] Thief: +15 (highest)
+  - [ ] Ninja: +10
+  - [ ] Ranger: +5
+  - [ ] Others with stealth: +0
+- [ ] Integrate into backstab accuracy calculation
+
+### 7.2 Staff Testing Commands
+
+- [ ] `@stealth [player]` - Show stealth/perception breakdown (MODERATOR+)
+  - [ ] Base from stats
+  - [ ] Threshold bonuses
+  - [ ] Level bonus
+  - [ ] Racial/class bonus
+  - [ ] Equipment modifier
+  - [ ] Encumbrance penalty
+  - [ ] Final total
+- [ ] `@setstealth <none|sneaking|hidden> [player]` - Force state (DEVELOPER+)
+- [ ] `@backstab <target>` - Test backstab without stealth requirement (DEVELOPER+)
+
+### 7.3 Help Documentation
+
+- [ ] Add to `help` command output:
+  - [ ] `hide` - Attempt to hide in the shadows
+  - [ ] `sneak` - Attempt to move stealthily
+  - [ ] `backstab <target>` - Attack from hiding (one-handed weapons only)
+  - [ ] `search` - Search for hidden players and items
+- [ ] Add `help stealth` subcommand with detailed mechanics
+
+### 7.4 Balance Testing Checklist
+
+- [ ] Verify damage values match design doc at levels 1, 20, 40
+- [ ] Test with Tier 1-5 weapons from design doc
+- [ ] Confirm strength bonus cascades correctly
+- [ ] Test config changes apply without restart
+- [ ] Stress test at extreme levels (60+, 80+)
+- [ ] Verify no integer overflow at high values
+
+### 7.5 Edge Cases
+
+- [ ] Target dies during backstab resolution
+- [ ] Backstab target that's already in combat with someone else
+- [ ] Two players backstab each other simultaneously
+- [ ] Backstab while target is casting
+- [ ] Disconnect while hidden/sneaking (state cleanup)
+- [ ] Server restart while players hidden (state restoration?)
+
+### 7.6 Message Polish
+
+- [ ] Review all stealth-related messages for consistency
+- [ ] Ensure color coding matches game conventions:
+  - [ ] Red for stealth break warnings
+  - [ ] Combat colors for backstab damage
+- [ ] Add flavor text variations for backstab hits
+
+### 7.7 Final Documentation
+
+- [ ] Update CLAUDE.md with new commands
+- [ ] Document stealth system in code comments
+- [ ] Add backstab settings to admin documentation
+
+**Files Modified:**
+| File | Changes |
+|------|---------|
+| `packages/server/src/game/adminCommands.ts` | Add testing commands |
+| `packages/server/src/game/commands.ts` | Update help text |
+| `CLAUDE.md` | Document new commands and system |
+
+---
+
+## Dependency Graph
+
+```
+Phase 1 (Foundation)
+    │
+    ▼
+Phase 2 (States) ◄──────────────┐
+    │                           │
+    ▼                           │
+Phase 3 (Detection)             │
+    │                           │
+    ▼                           │
+Phase 4 (Movement)              │
+    │                           │
+    ▼                           │
+Phase 5 (Backstab) ─────────────┘
+    │
+    ▼
+Phase 6 (Equipment)
+    │
+    ▼
+Phase 7 (Polish)
+```
+
+---
+
+## Estimated Scope Per Phase
+
+| Phase | New Files | Modified Files | Complexity |
+|-------|-----------|----------------|------------|
+| 1     | 1-2       | 4-5            | Low        |
+| 2     | 2         | 3-4            | Medium     |
+| 3     | 1         | 2-3            | Medium     |
+| 4     | 0         | 4-5            | Medium     |
+| 5     | 2         | 5-6            | High       |
+| 6     | 0         | 5-6            | Medium     |
+| 7     | 0         | 3-4            | Low        |
+
+---
+
+## Progress Summary
+
+| Phase | Status | Notes |
+|-------|--------|-------|
+| Phase 1 | **In Progress** | Core implementation complete, testing remaining |
+| Phase 2 | Not Started | |
+| Phase 3 | Not Started | |
+| Phase 4 | Not Started | |
+| Phase 5 | Not Started | |
+| Phase 6 | Not Started | |
+| Phase 7 | Not Started | |
+
+---
+
+## Session Notes
+
+_Use this section to track progress, decisions, and blockers between development sessions._
+
+### Session Log
+
+| Date | Phase | Work Done | Next Steps |
+|------|-------|-----------|------------|
+| 2026-01-30 | Phase 1 | Created secondaryStats.ts with stealth/perception calculations. Added BackstabSettings to settingsRepository with caching. Updated admin UI with backstab configuration section. Added validation to admin routes. | Manual testing of settings and stat calculations. |

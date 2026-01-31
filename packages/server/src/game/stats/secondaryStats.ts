@@ -1,0 +1,265 @@
+/**
+ * Secondary Stats Module
+ *
+ * Calculates derived stats (Stealth, Perception) from character attributes,
+ * race/class traits, equipment, and encumbrance.
+ *
+ * Based on MajorMUD mechanics - see notes/Stealth_Implementation_Plan.md
+ */
+
+import { RaceDefinition, ClassDefinition, RacialTrait } from '@koa/shared';
+import * as progressionRepo from '../../db/repositories/progressionRepository.js';
+
+// ============================================================================
+// TYPES
+// ============================================================================
+
+export interface CharacterStats {
+  dexterity: number;
+  intelligence: number;
+  wisdom: number;
+  charisma: number;
+  level: number;
+  race: string;
+  class: string;
+}
+
+export interface StealthBreakdown {
+  base: number;           // Racial + class stealth bonuses
+  dexterityBonus: number; // +2.5 per 10 dex
+  intellectBonus: number; // +1 per 10 int
+  charismaBonus: number;  // +2.5 per 10 cha
+  thresholdBonus: number; // +1 per threshold (60, 75, 90) for each stat
+  levelBonus: number;     // +1 per level
+  equipmentModifier: number; // Sum of equipment stealth modifiers
+  encumbrancePenalty: number; // -10 for medium, -25 for heavy
+  total: number;
+}
+
+export interface PerceptionBreakdown {
+  intellectBonus: number; // +6 per 10 int
+  wisdomBonus: number;    // +2 per 10 wis
+  charismaBonus: number;  // +1 per 10 cha
+  equipmentModifier: number; // Sum of equipment perception modifiers
+  total: number;
+}
+
+// ============================================================================
+// STEALTH CALCULATION
+// ============================================================================
+
+/**
+ * Check if a race has the stealth trait
+ */
+function raceHasStealth(race: RaceDefinition): boolean {
+  if (!race.traits) return false;
+
+  for (const trait of race.traits) {
+    if (typeof trait === 'string') {
+      if (trait === 'stealth') return true;
+    } else {
+      const t = trait as RacialTrait;
+      if (t.id === 'stealth' && t.value === true) return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * Check if a class has stealth capability
+ */
+function classHasStealth(classDef: ClassDefinition): boolean {
+  return classDef.stealth === true;
+}
+
+/**
+ * Calculate stat threshold bonuses for stealth
+ * Each stat (Dex, Int, Cha) gives +1 at 60, +1 at 75, +1 at 90
+ * Maximum possible: +9 (3 stats × 3 thresholds)
+ */
+function calculateThresholdBonus(dex: number, int: number, cha: number): number {
+  const thresholds = [60, 75, 90];
+  let bonus = 0;
+
+  for (const stat of [dex, int, cha]) {
+    for (const threshold of thresholds) {
+      if (stat >= threshold) bonus += 1;
+    }
+  }
+
+  return bonus;
+}
+
+/**
+ * Calculate encumbrance penalty for stealth
+ * None (0-17%): 0
+ * Light (18-33%): 0
+ * Medium (34-67%): -10
+ * Heavy (68%+): -25
+ */
+export function getEncumbrancePenalty(encumbranceRatio: number): number {
+  if (encumbranceRatio >= 0.68) return -25;
+  if (encumbranceRatio >= 0.34) return -10;
+  return 0;
+}
+
+/**
+ * Calculate total stealth value for a character
+ *
+ * Formula:
+ * - Base: +1 for racial stealth, +1 for class stealth
+ * - Dexterity: +2.5 per 10 points
+ * - Intellect: +1 per 10 points
+ * - Charisma: +2.5 per 10 points
+ * - Thresholds: +1 per stat reaching 60, 75, 90
+ * - Level: +1 per level
+ * - Equipment: sum of stealth modifiers
+ * - Encumbrance: -10 for medium, -25 for heavy
+ */
+export async function calculateStealth(
+  stats: CharacterStats,
+  equipmentStealthModifier: number = 0,
+  encumbranceRatio: number = 0
+): Promise<StealthBreakdown> {
+  // Fetch race and class definitions
+  const [race, classDef] = await Promise.all([
+    progressionRepo.getRaceById(stats.race),
+    progressionRepo.getClassById(stats.class),
+  ]);
+
+  // Calculate base stealth from race/class
+  let base = 0;
+  if (race && raceHasStealth(race)) base += 1;
+  if (classDef && classHasStealth(classDef)) base += 1;
+
+  // Calculate stat bonuses
+  const dexterityBonus = Math.floor(stats.dexterity / 10) * 2.5;
+  const intellectBonus = Math.floor(stats.intelligence / 10);
+  const charismaBonus = Math.floor(stats.charisma / 10) * 2.5;
+
+  // Calculate threshold bonuses
+  const thresholdBonus = calculateThresholdBonus(
+    stats.dexterity,
+    stats.intelligence,
+    stats.charisma
+  );
+
+  // Level bonus
+  const levelBonus = stats.level;
+
+  // Encumbrance penalty
+  const encumbrancePenalty = getEncumbrancePenalty(encumbranceRatio);
+
+  // Calculate total
+  const total = Math.floor(
+    base +
+    dexterityBonus +
+    intellectBonus +
+    charismaBonus +
+    thresholdBonus +
+    levelBonus +
+    equipmentStealthModifier +
+    encumbrancePenalty
+  );
+
+  return {
+    base,
+    dexterityBonus,
+    intellectBonus,
+    charismaBonus,
+    thresholdBonus,
+    levelBonus,
+    equipmentModifier: equipmentStealthModifier,
+    encumbrancePenalty,
+    total: Math.max(0, total), // Stealth cannot go negative
+  };
+}
+
+/**
+ * Check if a character has stealth capability (from race or class)
+ */
+export async function characterHasStealth(race: string, characterClass: string): Promise<boolean> {
+  const capability = await getStealthCapability(race, characterClass);
+  return capability.hasStealth;
+}
+
+/**
+ * Get detailed stealth capability info for a character
+ */
+export async function getStealthCapability(race: string, characterClass: string): Promise<{
+  hasStealth: boolean;
+  hasRacialStealth: boolean;
+  hasClassStealth: boolean;
+}> {
+  const [raceDef, classDef] = await Promise.all([
+    progressionRepo.getRaceById(race),
+    progressionRepo.getClassById(characterClass),
+  ]);
+
+  const hasRacialStealth = raceDef ? raceHasStealth(raceDef) : false;
+  const hasClassStealth = classDef ? classHasStealth(classDef) : false;
+
+  return {
+    hasStealth: hasRacialStealth || hasClassStealth,
+    hasRacialStealth,
+    hasClassStealth,
+  };
+}
+
+// ============================================================================
+// PERCEPTION CALCULATION
+// ============================================================================
+
+/**
+ * Calculate total perception value for a character
+ *
+ * Formula (per 10 points of each stat):
+ * - Intellect: +6 per 10 points
+ * - Wisdom: +2 per 10 points
+ * - Charisma: +1 per 10 points
+ * - Equipment: sum of perception modifiers
+ */
+export function calculatePerception(
+  intelligence: number,
+  wisdom: number,
+  charisma: number,
+  equipmentPerceptionModifier: number = 0
+): PerceptionBreakdown {
+  // Calculate stat bonuses (per 10 points)
+  const intellectBonus = Math.floor(intelligence / 10) * 6;
+  const wisdomBonus = Math.floor(wisdom / 10) * 2;
+  const charismaBonus = Math.floor(charisma / 10) * 1;
+
+  // Calculate total
+  const total = intellectBonus + wisdomBonus + charismaBonus + equipmentPerceptionModifier;
+
+  return {
+    intellectBonus,
+    wisdomBonus,
+    charismaBonus,
+    equipmentModifier: equipmentPerceptionModifier,
+    total: Math.max(0, total), // Perception cannot go negative
+  };
+}
+
+// ============================================================================
+// SEE HIDDEN TRAIT
+// ============================================================================
+
+/**
+ * Check if a race has the "see hidden" trait (like Gaunt One)
+ */
+export async function raceCanSeeHidden(race: string): Promise<boolean> {
+  const raceDef = await progressionRepo.getRaceById(race);
+  if (!raceDef?.traits) return false;
+
+  for (const trait of raceDef.traits) {
+    if (typeof trait === 'string') {
+      if (trait === 'see_hidden') return true;
+    } else {
+      const t = trait as RacialTrait;
+      if (t.id === 'see_hidden' && t.value === true) return true;
+    }
+  }
+  return false;
+}
