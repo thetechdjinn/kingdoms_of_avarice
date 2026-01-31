@@ -10,6 +10,7 @@ import { AuthenticatedSocket, broadcastToRoom, sendVitals } from './socket.js';
 import { getPlayerLocation } from './adminCommands.js';
 import { colors } from '../utils/colors.js';
 import { findPlayerInRoom } from './playerUtils.js';
+import { isStealthing, breakStealth } from './stealth/stealthState.js';
 
 /**
  * Handle the attack command
@@ -32,8 +33,8 @@ export function handleAttack(
   const targetName = args.join(' ');
   const currentRoomId = getPlayerLocation(socket.playerId);
 
-  // Find the target player
-  const target = findPlayerInRoom(targetName, currentRoomId, connectedPlayers, socket.playerId);
+  // Find the target player (respects stealth - can't attack what you can't see)
+  const target = findPlayerInRoom(targetName, currentRoomId, connectedPlayers, socket.playerId, socket.canSeeHidden);
 
   if (!target) {
     return { type: MessageType.ERROR, message: `You don't see ${targetName} here.` };
@@ -42,6 +43,16 @@ export function handleAttack(
   // Check if already attacking this target
   if (socket.combatState.targets.has(target.playerId)) {
     return { type: MessageType.SYSTEM, message: `You are already attacking ${target.username}!` };
+  }
+
+  // Break stealth when initiating combat
+  if (isStealthing(socket)) {
+    breakStealth(socket, 'attack', true);
+  }
+
+  // Break target's stealth if they're hidden (they've been spotted)
+  if (isStealthing(target)) {
+    breakStealth(target, 'attacked', true);
   }
 
   // Add target to attacker's target list

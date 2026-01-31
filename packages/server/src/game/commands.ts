@@ -25,12 +25,13 @@ import {
   setPlayerAided,
   clearDeathState,
 } from './damageHandler.js';
-import { isHidden } from './stealth/stealthState.js';
+import { isHidden, isSneaking, isStealthing, setStealthMode, breakStealth } from './stealth/stealthState.js';
 import { handleHide, handleSneak, handleVisible } from './stealth/stealthCommands.js';
-import { calculateStealth, calculatePerception, characterHasStealth } from './stats/secondaryStats.js';
+import { rollCumulativeDetection } from './stealth/stealthCheck.js';
+import { calculateStealth, calculatePerception, characterHasStealth, getEncumbrancePenalty } from './stats/secondaryStats.js';
+import { calculateEncumbranceRatio, getEquipmentCombatStats } from './combatStats.js';
 import { getRespawnRoomId } from '../services/respawnService.js';
 import { findPlayerInRoom } from './playerUtils.js';
-import { getEquipmentCombatStats } from './combatStats.js';
 
 export interface CommandResponse {
   type: MessageType;
@@ -133,8 +134,8 @@ export async function processCommand(
       if (socket.username.toLowerCase() === targetName || socket.username.toLowerCase().startsWith(targetName)) {
         return await handleLookAtPlayer(socket);
       }
-      // Try to find another player in the room with that name
-      const targetPlayer = findPlayerInRoom(targetName, currentRoomId, _connectedPlayers, socket.playerId);
+      // Try to find another player in the room with that name (respects stealth visibility)
+      const targetPlayer = findPlayerInRoom(targetName, currentRoomId, _connectedPlayers, socket.playerId, socket.canSeeHidden);
       if (targetPlayer) {
         return await handleLookAtPlayer(targetPlayer);
       }
@@ -477,6 +478,89 @@ function getPlayersInRoom(
 }
 
 /**
+ * Observer data for stealth detection checks
+ */
+interface RoomObserver {
+  name: string;
+  perception: number;
+}
+
+/**
+ * Get all players in a room (excluding one player) with their perception values
+ * Used for stealth movement detection checks
+ */
+async function getObserversInRoom(
+  roomId: number,
+  excludePlayerId: number,
+  connectedPlayers: Map<number, AuthenticatedSocket>
+): Promise<RoomObserver[]> {
+  const observers: RoomObserver[] = [];
+
+  for (const [playerId, socket] of connectedPlayers) {
+    if (playerId !== excludePlayerId && getPlayerLocation(playerId) === roomId) {
+      // Dead/dropped players can't observe
+      if (isPlayerDead(socket) || isPlayerDropped(socket)) {
+        continue;
+      }
+
+      // Hidden players are focused on concealment, not observing
+      if (isHidden(socket)) {
+        continue;
+      }
+
+      // Calculate observer's perception
+      const stats = socket.characterStats;
+      const perceptionBreakdown = calculatePerception(
+        stats.intelligence,
+        stats.wisdom,
+        stats.charisma,
+        0 // TODO: Add equipment perception modifier in Phase 6
+      );
+
+      observers.push({
+        name: socket.username,
+        perception: perceptionBreakdown.total,
+      });
+    }
+  }
+
+  return observers;
+}
+
+/**
+ * Calculate a player's current stealth value including encumbrance
+ */
+async function calculatePlayerStealth(socket: AuthenticatedSocket): Promise<number> {
+  // Get character for race/class info
+  const character = await characterRepo.findCharacterById(socket.characterId!);
+  if (!character) return 0;
+
+  // Calculate encumbrance ratio
+  const equipmentStats = await getEquipmentCombatStats(socket.characterId!);
+  const encumbranceRatio = calculateEncumbranceRatio(
+    equipmentStats.totalWeight,
+    socket.characterStats.strength
+  );
+
+  // Calculate full stealth value
+  const stealthBreakdown = await calculateStealth(
+    {
+      dexterity: socket.characterStats.dexterity,
+      intelligence: socket.characterStats.intelligence,
+      wisdom: socket.characterStats.wisdom,
+      charisma: socket.characterStats.charisma,
+      level: socket.characterLevel,
+      race: character.race,
+      class: character.class,
+    },
+    0, // TODO: Add equipment stealth modifier in Phase 6
+    encumbranceRatio
+  );
+
+  return stealthBreakdown.total;
+}
+
+/**
  * Handle looking at another player
  * Returns their description based on stats, appearance, and equipment
  */
@@ -718,17 +802,78 @@ async function handleMove(
     return { type: MessageType.ERROR, message: 'Something prevents you from moving.' };
   }
 
-  // Database succeeded, now update in-memory state and broadcast
-  broadcastToRoom(currentRoomId, colors.green(`${colors.red(socket.username)} left to the ${fullDirection}.`), socket.playerId);
+  // Database succeeded, now update in-memory state
+
+  // Handle stealth movement
+  const wasStealthing = isStealthing(socket);
+  let playerMessage: string | undefined;
+
+  // If hidden, auto-transition to sneaking for movement
+  if (isHidden(socket)) {
+    setStealthMode(socket, 'sneaking');
+  }
+
+  // Handle exit room announcement based on stealth state
+  if (isSneaking(socket)) {
+    // Sneaking player - no announcement to room, show message to player
+    playerMessage = colors.cyan('Sneaking...');
+  } else {
+    // Normal movement - broadcast to room
+    broadcastToRoom(currentRoomId, colors.green(`${colors.red(socket.username)} left to the ${fullDirection}.`), socket.playerId);
+  }
+
+  // Update player location
   setPlayerLocation(socket.playerId, newRoom.id);
 
-  // Broadcast to players in the new room that player arrived
+  // Handle entry room announcement based on stealth state
   const oppositeDir = OPPOSITE_DIRECTIONS[fullDirection] || fullDirection;
-  broadcastToRoom(newRoom.id, colors.green(`${colors.red(socket.username)} walks in from the ${oppositeDir}.`), socket.playerId);
 
+  if (isSneaking(socket)) {
+    // Get observers in the new room for stealth check
+    const observers = await getObserversInRoom(newRoom.id, socket.playerId, connectedPlayers);
+
+    if (observers.length > 0) {
+      // Calculate player's stealth value
+      const stealthValue = await calculatePlayerStealth(socket);
+
+      // Roll cumulative detection check against all observers
+      const detectionResult = rollCumulativeDetection(
+        stealthValue,
+        observers
+      );
+
+      if (detectionResult.detected) {
+        // Sneak failed - break stealth and announce arrival
+        playerMessage = undefined; // Clear "Sneaking..." since we failed
+        breakStealth(socket, 'movement_failed', false); // Don't double-notify room
+
+        // Notify observers they detected someone sneaking in
+        broadcastToRoom(newRoom.id, colors.green(`You notice ${colors.red(socket.username)} sneaking into the room.`), socket.playerId);
+
+        // Also announce departure to old room (if they didn't already know)
+        if (wasStealthing) {
+          broadcastToRoom(currentRoomId, colors.green(`You notice ${colors.red(socket.username)} slipping away.`), socket.playerId);
+        }
+      }
+      // If sneak succeeded, no announcements needed (silent entry)
+    }
+    // If no observers in new room, sneak auto-succeeds (silent entry)
+  } else {
+    // Normal movement - broadcast arrival to new room
+    broadcastToRoom(newRoom.id, colors.green(`${colors.red(socket.username)} walks in from the ${oppositeDir}.`), socket.playerId);
+  }
+
+  // Build room description
   const otherPlayers = getOtherPlayersInRoom(newRoom.id, socket.playerId, connectedPlayers, socket.canSeeHidden);
   const itemDescriptions = await getRoomItemsDescription(newRoom.id);
-  return { type: MessageType.OUTPUT, message: world.formatRoomDescription(newRoom, otherPlayers, socket.briefMode, itemDescriptions) };
+  let roomDescription = world.formatRoomDescription(newRoom, otherPlayers, socket.briefMode, itemDescriptions);
+
+  // Prepend stealth message if applicable
+  if (playerMessage) {
+    roomDescription = playerMessage + '\r\n' + roomDescription;
+  }
+
+  return { type: MessageType.OUTPUT, message: roomDescription };
 }
 
 type DoorAction = 'open' | 'close';
@@ -2022,8 +2167,8 @@ function handleAid(
 
   const targetName = args.join(' ').toLowerCase();
 
-  // Find target player in the room
-  const target = findPlayerInRoom(targetName, currentRoomId, connectedPlayers, socket.playerId);
+  // Find target player in the room (respects stealth visibility)
+  const target = findPlayerInRoom(targetName, currentRoomId, connectedPlayers, socket.playerId, socket.canSeeHidden);
   if (!target) {
     return { type: MessageType.ERROR, message: `You don't see ${targetName} here.` };
   }

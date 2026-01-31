@@ -17,6 +17,7 @@ import { applyEffect, getEffectDefinition, formatDuration } from './statusEffect
 import { isOnCooldown, startCooldown, getCooldownMessage } from './cooldownTracker.js';
 import { isPlayerDropped, isPlayerDead, clearDeathState } from './damageHandler.js';
 import { findPlayerInRoom } from './playerUtils.js';
+import { isStealthing, breakStealth } from './stealth/stealthState.js';
 
 /**
  * Cache of all spell mnemonics for quick lookup
@@ -97,6 +98,11 @@ export async function handleSpellCommand(
     return { type: MessageType.ERROR, message: `You don't have enough mana to cast ${spell.name}. (Need ${spell.manaCost})` };
   }
 
+  // Break stealth when casting any spell
+  if (isStealthing(socket)) {
+    breakStealth(socket, 'spell_cast', true);
+  }
+
   // Handle different spell types
   switch (spell.spellType) {
     case SpellType.OFFENSIVE:
@@ -137,8 +143,8 @@ async function handleOffensiveSpell(
   const targetName = args.join(' ');
   const currentRoomId = getPlayerLocation(socket.playerId);
 
-  // Find the target
-  const target = findPlayerInRoom(targetName, currentRoomId, connectedPlayers, socket.playerId);
+  // Find the target (respects stealth - can't target what you can't see)
+  const target = findPlayerInRoom(targetName, currentRoomId, connectedPlayers, socket.playerId, socket.canSeeHidden);
   if (!target) {
     return { type: MessageType.ERROR, message: `You don't see ${targetName} here.` };
   }
@@ -225,7 +231,8 @@ async function handleHealingSpell(
   // Check if targeting another player
   if (args.length > 0) {
     const targetArg = args.join(' ');
-    const foundTarget = findPlayerInRoom(targetArg, currentRoomId, connectedPlayers, -1); // Don't exclude anyone
+    // Don't exclude anyone (-1), but respect stealth visibility
+    const foundTarget = findPlayerInRoom(targetArg, currentRoomId, connectedPlayers, -1, socket.canSeeHidden);
 
     if (foundTarget) {
       targetSocket = foundTarget;
@@ -404,8 +411,8 @@ async function handleDebuffSpell(
   const targetName = args.join(' ');
   const currentRoomId = getPlayerLocation(socket.playerId);
 
-  // Find the target player
-  const target = findPlayerInRoom(targetName, currentRoomId, connectedPlayers, socket.playerId);
+  // Find the target player (respects stealth - can't target what you can't see)
+  const target = findPlayerInRoom(targetName, currentRoomId, connectedPlayers, socket.playerId, socket.canSeeHidden);
   if (!target) {
     return { type: MessageType.ERROR, message: `You don't see ${targetName} here.` };
   }
