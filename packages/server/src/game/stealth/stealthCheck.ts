@@ -103,11 +103,10 @@ export function rollCumulativeDetection(
       result,
     });
 
-    // First detection stops further checks
+    // Record first detection (outcome decided, but continue loop to collect all results for logging)
     if (result.detected && !detected) {
       detected = true;
       detectedBy = observer.name;
-      // Continue checking others for logging purposes, but outcome is decided
     }
   }
 

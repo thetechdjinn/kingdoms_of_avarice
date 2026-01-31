@@ -9,7 +9,7 @@ import * as craftingRepo from '../db/repositories/craftingRepository.js';
 import * as characterRepo from '../db/repositories/characterRepository.js';
 import * as settingsRepo from '../db/repositories/settingsRepository.js';
 import { withTransaction } from '../db/index.js';
-import { calculateEncumbranceRatio } from './combatStats.js';
+import { calculateEncumbranceRatio, getEquipmentCombatStats } from './combatStats.js';
 import { isHidden, breakStealth } from './stealth/stealthState.js';
 import { rollStealthCheck } from './stealth/stealthCheck.js';
 import { calculateStealth, calculatePerception } from './stats/secondaryStats.js';
@@ -1920,16 +1920,27 @@ export async function handleSearch(
     const hiddenCharacter = await characterRepo.findCharacterById(playerSocket.characterId!);
     if (!hiddenCharacter) continue;
 
-    // Calculate hidden player's stealth
-    const stealthBreakdown = await calculateStealth({
-      dexterity: hiddenCharacter.dexterity,
-      intelligence: hiddenCharacter.intelligence,
-      wisdom: hiddenCharacter.wisdom,
-      charisma: hiddenCharacter.charisma,
-      level: hiddenCharacter.level,
-      race: hiddenCharacter.race,
-      class: hiddenCharacter.class,
-    });
+    // Calculate hidden player's encumbrance (affects stealth)
+    const hiddenEquipment = await getEquipmentCombatStats(playerSocket.characterId!);
+    const hiddenEncumbrance = calculateEncumbranceRatio(
+      hiddenEquipment.totalWeight,
+      hiddenCharacter.strength
+    );
+
+    // Calculate hidden player's stealth (including encumbrance penalty)
+    const stealthBreakdown = await calculateStealth(
+      {
+        dexterity: hiddenCharacter.dexterity,
+        intelligence: hiddenCharacter.intelligence,
+        wisdom: hiddenCharacter.wisdom,
+        charisma: hiddenCharacter.charisma,
+        level: hiddenCharacter.level,
+        race: hiddenCharacter.race,
+        class: hiddenCharacter.class,
+      },
+      0, // equipmentStealthModifier - TODO: implement when equipment has stealth modifiers
+      hiddenEncumbrance
+    );
     const hiddenStealth = stealthBreakdown.total;
 
     // Roll perception vs stealth

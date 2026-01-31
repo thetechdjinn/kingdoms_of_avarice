@@ -461,7 +461,13 @@ function getPlayersInRoom(
       }
 
       let displayName = socket.username;
-      if (playerIsHidden && canSeeHidden) {
+
+      // Add status indicators (consistent with getOtherPlayersInRoom)
+      if (isPlayerDead(socket)) {
+        displayName = `corpse of ${socket.username}`;
+      } else if (isPlayerDropped(socket)) {
+        displayName += ' (on the ground)';
+      } else if (playerIsHidden && canSeeHidden) {
         displayName += ' (hidden)';
       }
       players.push(displayName);
