@@ -4,7 +4,7 @@
  * Calculates accuracy for backstab attacks.
  *
  * Attacker accuracy formula:
- *   DEX/10 + INT/20 + CHA*1.2/10 + Stealth + weaponBackstabAccuracy + classBonus
+ *   DEX/10 + INT/20 + CHA*1.2/10 + Stealth + weaponBackstabAccuracy
  *
  * Defender defense formula:
  *   (AC / 2) + (Perception / 2)
@@ -28,22 +28,20 @@ export interface AttackerStats {
  *
  * @param stats - Attacker's stats (DEX, INT, CHA)
  * @param stealthValue - Attacker's total stealth stat
- * @param weaponBackstabAccuracy - Backstab accuracy bonus from weapon
- * @param classBackstabBonus - Backstab accuracy bonus from class
+ * @param weaponBackstabAccuracy - Backstab accuracy bonus from weapon (can be negative)
  * @returns Total backstab accuracy value
  */
 export function calculateBackstabAccuracy(
   stats: AttackerStats,
   stealthValue: number,
-  weaponBackstabAccuracy: number,
-  classBackstabBonus: number
+  weaponBackstabAccuracy: number
 ): number {
   // DEX/10 + INT/20 + CHA*1.2/10
   const dexBonus = Math.floor(stats.dexterity / 10);
   const intBonus = Math.floor(stats.intelligence / 20);
   const chaBonus = Math.floor((stats.charisma * 1.2) / 10);
 
-  return dexBonus + intBonus + chaBonus + stealthValue + weaponBackstabAccuracy + classBackstabBonus;
+  return dexBonus + intBonus + chaBonus + stealthValue + weaponBackstabAccuracy;
 }
 
 /**

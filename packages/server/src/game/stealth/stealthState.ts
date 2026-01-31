@@ -191,28 +191,48 @@ export type StealthBreakReason =
   | 'manual';        // Player manually exited stealth
 
 /**
- * Get the message to display when stealth is broken
+ * Break message with color information
  */
-function getBreakStealthMessage(reason: StealthBreakReason): string {
+interface BreakStealthMessage {
+  text: string;
+  isWarning: boolean;  // true = red (danger/warning), false = yellow (neutral action)
+}
+
+/**
+ * Get the message to display when stealth is broken
+ *
+ * Messages are categorized by semantic meaning:
+ * - Warnings (red): External forces breaking your cover (attacked, discovered, failed)
+ * - Neutral (yellow): Voluntary or combat-initiated actions
+ */
+function getBreakStealthMessage(reason: StealthBreakReason): BreakStealthMessage {
   switch (reason) {
     case 'attack':
-      return 'You emerge from the shadows!';
+      // Neutral - you chose to attack
+      return { text: 'You emerge from the shadows!', isWarning: false };
     case 'attacked':
-      return 'You have been spotted!';
+      // Warning - external threat
+      return { text: 'You have been spotted!', isWarning: true };
     case 'spell_cast':
-      return 'Casting a spell breaks your cover!';
+      // Warning - action has consequence
+      return { text: 'Casting a spell breaks your cover!', isWarning: true };
     case 'social_action':
-      return 'Your action reveals your presence!';
+      // Warning - action has consequence
+      return { text: 'Your action reveals your presence!', isWarning: true };
     case 'movement_failed':
-      return 'You make a sound as you enter the room!';
+      // Warning - failed stealth check
+      return { text: 'You make a sound as you enter the room!', isWarning: true };
     case 'searched':
-      return 'You have been discovered!';
+      // Warning - someone found you
+      return { text: 'You have been discovered!', isWarning: true };
     case 'aoe_hit':
-      return 'The spell reveals your position!';
+      // Warning - external spell effect
+      return { text: 'The spell reveals your position!', isWarning: true };
     case 'manual':
-      return 'You step out of the shadows.';
+      // Neutral - voluntary exit
+      return { text: 'You step out of the shadows.', isWarning: false };
     default:
-      return 'You are no longer hidden.';
+      return { text: 'You are no longer hidden.', isWarning: false };
   }
 }
 
@@ -234,13 +254,14 @@ export function breakStealth(
   }
 
   const wasHidden = socket.stealthMode === 'hidden';
-  const message = getBreakStealthMessage(reason);
+  const { text, isWarning } = getBreakStealthMessage(reason);
 
   // Clear stealth mode
   socket.stealthMode = 'none';
 
-  // Notify the player (red for warnings)
-  sendMessage(socket, MessageType.OUTPUT, colors.red(message));
+  // Notify the player - red for warnings, yellow for neutral actions
+  const coloredMessage = isWarning ? colors.red(text) : colors.yellow(text);
+  sendMessage(socket, MessageType.OUTPUT, coloredMessage);
 
   // Notify the room if requested
   // For attacks, notify even if sneaking (not just hidden)

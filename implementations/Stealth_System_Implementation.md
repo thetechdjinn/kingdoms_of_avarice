@@ -329,10 +329,10 @@ Implement a complete stealth system allowing characters with stealth abilities t
 | File | Changes |
 |------|---------|
 | `packages/shared/src/items.ts` | Added backstab_accuracy to WeaponData interface |
-| `packages/shared/src/progression.ts` | Added backstab_accuracy_bonus to ClassDefinition |
-| `packages/server/src/db/schema_progression.sql` | Added backstab_accuracy_bonus column |
-| `packages/server/src/db/migrate.ts` | Added migration for backstab_accuracy_bonus |
-| `packages/server/src/db/repositories/progressionRepository.ts` | Load backstab_accuracy_bonus |
+| `packages/shared/src/progression.ts` | (backstab_accuracy_bonus removed in Phase 7) |
+| `packages/server/src/db/schema_progression.sql` | (backstab_accuracy_bonus removed in Phase 7) |
+| `packages/server/src/db/migrate.ts` | (backstab_accuracy_bonus migration removed in Phase 7) |
+| `packages/server/src/db/repositories/progressionRepository.ts` | (backstab_accuracy_bonus removed in Phase 7) |
 | `packages/server/src/game/combat/backstabAccuracy.ts` | New file - accuracy calculation |
 | `packages/server/src/game/combat/backstabDamage.ts` | New file - damage calculation |
 | `packages/server/src/game/stealth/stealthCommands.ts` | Added handleBackstab command |
@@ -419,37 +419,38 @@ Implement a complete stealth system allowing characters with stealth abilities t
 
 **Goal:** Final touches, testing commands, documentation, edge cases.
 
-### 7.1 Class-Specific Backstab Accuracy
+### 7.1 Backstab Accuracy Sources (Design Clarification)
 
-- [x] Add `backstab_accuracy_bonus` field to ClassDefinition (Phase 5)
-- [x] Integrate into backstab accuracy calculation (Phase 5)
-- [ ] Set values for specific classes:
-  - [ ] Thief: +15 (highest)
-  - [ ] Ninja: +10
-  - [ ] Ranger: +5
-  - [ ] Others with stealth: +0
+Backstab accuracy bonuses do NOT come from race or class. The stealth trait (from race OR class) enables the ability to backstab, but accuracy bonuses come from external sources:
+
+- **Weapons**: `backstab_accuracy` in weapon_data (can be negative for clumsy weapons)
+- **Equipment**: Future - rings, armor with stealth bonuses
+- **Quests**: Future - quest rewards
+- **Magic/Buffs**: Future - temporary effects
+
+This was clarified during Phase 7 - the `backstab_accuracy_bonus` field was removed from ClassDefinition.
 
 ### 7.2 Staff Testing Commands
 
-- [ ] `@stealth [player]` - Show stealth/perception breakdown (MODERATOR+)
-  - [ ] Base from stats
-  - [ ] Threshold bonuses
-  - [ ] Level bonus
-  - [ ] Racial/class bonus
-  - [ ] Equipment modifier
-  - [ ] Encumbrance penalty
-  - [ ] Final total
-- [ ] `@setstealth <none|sneaking|hidden> [player]` - Force state (DEVELOPER+)
-- [ ] `@backstab <target>` - Test backstab without stealth requirement (DEVELOPER+)
+- [x] `@stealth [player]` - Show stealth/perception breakdown (MODERATOR+)
+  - [x] Base from stats (dexterity, intelligence, charisma bonuses)
+  - [x] Threshold bonuses
+  - [x] Level bonus
+  - [x] Racial/class stealth base
+  - [x] Equipment modifier
+  - [x] Encumbrance penalty
+  - [x] Final total
+- [x] `@setstealth <none|sneaking|hidden> [player]` - Force state (DEVELOPER+)
+- [x] `@testbackstab <target>` - Test backstab without stealth requirement (DEVELOPER+)
 
 ### 7.3 Help Documentation
 
-- [ ] Add to `help` command output:
-  - [ ] `hide` - Attempt to hide in the shadows
-  - [ ] `sneak` - Attempt to move stealthily
-  - [ ] `backstab <target>` - Attack from hiding (one-handed weapons only)
-  - [ ] `search` - Search for hidden players and items
-- [ ] Add `help stealth` subcommand with detailed mechanics
+- [x] Add to `help` command output (already present in Stealth section):
+  - [x] `hide` - Attempt to hide in the shadows
+  - [x] `sneak` - Attempt to move stealthily
+  - [x] `backstab <target>` - Attack from hiding (one-handed weapons only)
+  - [x] `search` - Search for hidden players and items
+- [x] Add `help stealth` subcommand with detailed mechanics
 
 ### 7.4 Balance Testing Checklist
 
@@ -471,24 +472,30 @@ Implement a complete stealth system allowing characters with stealth abilities t
 
 ### 7.6 Message Polish
 
-- [ ] Review all stealth-related messages for consistency
-- [ ] Ensure color coding matches game conventions:
-  - [ ] Red for stealth break warnings
-  - [ ] Combat colors for backstab damage
-- [ ] Add flavor text variations for backstab hits
+- [x] Review all stealth-related messages for consistency
+- [x] Ensure color coding matches game conventions:
+  - [x] Red for stealth break warnings (external threats)
+  - [x] Yellow for neutral stealth exits (voluntary actions)
+  - [x] Cyan for status messages (hide/sneak attempts)
+  - [x] Combat colors for backstab damage
+- [x] Add flavor text variations for backstab hits:
+  - [x] Damage-tier based: standard (0-25%), devastating (26-50%), eviscerating (51-75%), obliterating (76-100%)
+  - [x] Miss messages use weapon's miss verb instead of "backstab"
 
 ### 7.7 Final Documentation
 
 - [x] Update CLAUDE.md with new commands (done in Phase 5)
-- [ ] Document stealth system in code comments
-- [ ] Add backstab settings to admin documentation
+- [x] Document stealth system in code comments (comprehensive JSDoc in all stealth files)
+- [x] Add backstab settings to admin documentation (CLAUDE.md Settings Tab section)
 
 **Files Modified:**
 | File | Changes |
 |------|---------|
-| `packages/server/src/game/adminCommands.ts` | Add testing commands |
-| `packages/server/src/game/commands.ts` | Update help text |
-| `CLAUDE.md` | Document new commands and system |
+| `packages/server/src/game/adminCommands.ts` | Added @stealth, @setstealth, @testbackstab commands |
+| `packages/server/src/game/commands.ts` | Added help stealth subcommand, stealth commands in main help |
+| `packages/server/src/game/stealth/stealthState.ts` | Added semantic color coding (red for warnings, yellow for neutral) |
+| `packages/server/src/game/stealth/stealthCommands.ts` | Added cyan color to status messages, fixed visible broadcast |
+| `CLAUDE.md` | Document new commands, backstab settings in Settings Tab section |
 
 ---
 
@@ -542,7 +549,7 @@ Phase 7 (Polish)
 | Phase 4 | **Complete** | Stealth movement, encumbrance penalties, stealth breaking events |
 | Phase 5 | **Complete** | Backstab combat with accuracy/damage formulas |
 | Phase 6 | **Complete** | Equipment integration (stealth modifiers, backstab bonuses) |
-| Phase 7 | Not Started | Polish & balance |
+| Phase 7 | In Progress | Polish & balance |
 
 ---
 
@@ -560,3 +567,6 @@ _Use this section to track progress, decisions, and blockers between development
 | 2026-01-31 | Phase 4 | Implemented stealth movement in handleMove() - hidden auto-transitions to sneaking, shows "Sneaking..." message, rolls cumulative detection vs observers on room entry, suppresses announcements on success, breaks stealth on failure. Added getObserversInRoom() and calculatePlayerStealth() helpers. Added stealth breaking to combat (handleAttack), spell casting (handleSpellCommand), and targeted social actions (handleActionCommand). Encumbrance penalty already integrated via getEncumbrancePenalty(). | Manual testing of sneak movement. AoE spell stealth break and NPC attack stealth break deferred. |
 | 2026-01-31 | Phase 5 | Created backstabAccuracy.ts with hit formula (DEX/10 + INT/20 + CHA*1.2/10 + Stealth + weapon/class bonuses vs AC/2 + Perception/2). Created backstabDamage.ts with multiplier formula (2-4x weapon max + level bonuses). Implemented handleBackstab command with validations (stealth ability, stealth state, one-handed weapon, target checks). Added backstab_accuracy to WeaponData interface. Added backstab_accuracy_bonus to ClassDefinition for class-specific bonuses. Updated item editor with backstab accuracy field. Combat engagement rules enforce no stealth while in combat. | Manual testing of backstab mechanics. Phase 6 next. |
 | 2026-01-31 | Phase 6 | Implemented equipment integration for stealth system. Added stealth_modifier column to item_templates (schema + migration). Extended WeaponData with backstab_min_damage_bonus and backstab_max_damage_bonus. Created getEquipmentStealthModifier() and getBackstabDamageBonuses() aggregation functions. Updated stealthCommands.ts to use equipment modifiers in hide/sneak/backstab. Updated calculateBackstabDamage() to accept equipment bonuses. Updated item editor UI (HTML + TypeScript) with new fields. Updated examine and @iteminfo to display new modifiers. Added seed data examples: stealth modifiers for armor (-10 to +5), backstab bonuses for daggers (+5 to +15 accuracy, +2 to +10 damage). | Manual testing of equipment modifiers. Phase 7 (Polish & Balance) next. |
+| 2026-01-31 | Phase 7 | Design clarification: Backstab accuracy bonuses do NOT come from race/class - only from items, quests, magic. Removed backstab_accuracy_bonus from ClassDefinition interface, schema, migration, repository, and backstabAccuracy.ts. Stealth trait enables backstab capability; weapon backstab_accuracy modifiers provide bonuses/penalties. Implemented staff testing commands: @stealth (shows full stealth/perception breakdown), @setstealth (force stealth mode), @testbackstab (backstab without stealth requirement). Added help stealth subcommand with detailed mechanics documentation. | Balance testing (7.4), edge case review (7.5), message polish (7.6). |
+| 2026-01-31 | Phase 7 | Message polish (7.6): Added semantic color coding to stealth break messages - red for warnings (attacked, discovered, failed), yellow for neutral exits (manual, attack initiation). Added cyan color to hide/sneak status messages. Fixed visible command to use consistent colors (yellow for player message, green for room broadcast). Documentation (7.7): All stealth files already have comprehensive JSDoc. Added backstab configuration settings to CLAUDE.md Settings Tab section. | Balance testing (7.4), edge cases (7.5), flavor text variations remaining. |
+| 2026-01-31 | Phase 7 | Backstab flavor text: Added damage-tier based messages - standard (0-25%), "devastating them" (26-50%), "eviscerating them" (51-75%), "obliterating them" (76-100%). Fixed miss messages to use weapon's miss verb (e.g., "swing at") instead of "backstab". | Balance testing (7.4), edge cases (7.5) remaining - these require manual in-game testing. |

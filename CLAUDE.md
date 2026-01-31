@@ -176,6 +176,11 @@ Access via Hub > Admin Tools (requires ADMIN role). Three tabs:
 - **IP Access Mode**: Blocklist (allow all, block specific) or Allowlist (block all, allow specific)
 - **Max Negative HP Percent**: Death threshold as percentage of max HP (default: 50%)
 - **Dropped Tick Interval**: Milliseconds between bleed/recovery ticks (default: 5000ms)
+- **Backstab Configuration**:
+  - **Base Min Multiplier**: Minimum damage multiplier for backstab (default: 2.0)
+  - **Base Max Multiplier**: Maximum damage multiplier for backstab (default: 4.0)
+  - **Level Bonus Min**: Added to min damage per level (default: 0.5)
+  - **Level Bonus Max**: Added to max damage per level (default: 1.0)
 
 ## IP Access Control
 
@@ -240,6 +245,7 @@ Players can access different help categories based on their role:
 | `@effect <id> [duration] [player]` | Apply status effect (default 60s, self) |
 | `@cleareffect <id\|all>` | Remove status effect |
 | `@effects` | List available effects |
+| `@stealth [player]` | Show stealth/perception breakdown |
 
 ### Developer Commands (DEVELOPER+)
 
@@ -255,6 +261,8 @@ Players can access different help categories based on their role:
 | `@spawn <id\|name> [qty]` | Spawn item in room |
 | `@purge items` | Remove all room items |
 | `@reload [type]` | Reload data (rooms, items, effects, doors, actions, all) |
+| `@setstealth <mode> [player]` | Force stealth state (none/sneaking/hidden) |
+| `@testbackstab <target>` | Test backstab without stealth requirement |
 
 ### Player Door Commands
 

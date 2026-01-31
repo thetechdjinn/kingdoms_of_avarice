@@ -13,7 +13,6 @@ import { getPlayerLocation } from '../adminCommands.js';
 import { colors } from '../../utils/colors.js';
 import * as characterRepo from '../../db/repositories/characterRepository.js';
 import * as itemRepo from '../../db/repositories/itemRepository.js';
-import * as progressionRepo from '../../db/repositories/progressionRepository.js';
 import {
   canEnterStealth,
   canEnterSneak,
@@ -97,7 +96,7 @@ export async function handleHide(socket: AuthenticatedSocket): Promise<CommandRe
 
   // If already hidden, just acknowledge
   if (isHidden(socket)) {
-    return { type: MessageType.OUTPUT, message: 'You are already hidden.' };
+    return { type: MessageType.OUTPUT, message: colors.cyan('You are already hidden.') };
   }
 
   // Get equipped items for stealth modifier calculation
@@ -125,13 +124,13 @@ export async function handleHide(socket: AuthenticatedSocket): Promise<CommandRe
   if (success) {
     // Success - become hidden
     setStealthMode(socket, 'hidden');
-    return { type: MessageType.OUTPUT, message: 'Attempting to hide...' };
+    return { type: MessageType.OUTPUT, message: colors.cyan('Attempting to hide...') };
   } else {
     // Failure - not hidden
     setStealthMode(socket, 'none');
     return {
       type: MessageType.OUTPUT,
-      message: "Attempting to hide... You don't think you are hidden.",
+      message: colors.cyan('Attempting to hide...') + " You don't think you are hidden.",
     };
   }
 }
@@ -177,14 +176,14 @@ export async function handleSneak(socket: AuthenticatedSocket): Promise<CommandR
 
   // If already sneaking, just acknowledge
   if (isSneaking(socket)) {
-    return { type: MessageType.OUTPUT, message: 'You are already sneaking.' };
+    return { type: MessageType.OUTPUT, message: colors.cyan('You are already sneaking.') };
   }
 
   // If hidden, transition to sneaking
   // Note: Per design doc, attempting to sneak while hidden switches to sneaking
   if (isHidden(socket)) {
     setStealthMode(socket, 'sneaking');
-    return { type: MessageType.OUTPUT, message: 'Attempting to sneak...' };
+    return { type: MessageType.OUTPUT, message: colors.cyan('Attempting to sneak...') };
   }
 
   // Get equipped items for stealth modifier calculation
@@ -214,7 +213,7 @@ export async function handleSneak(socket: AuthenticatedSocket): Promise<CommandR
   // Enter sneaking mode
   setStealthMode(socket, 'sneaking');
 
-  return { type: MessageType.OUTPUT, message: 'Attempting to sneak...' };
+  return { type: MessageType.OUTPUT, message: colors.cyan('Attempting to sneak...') };
 }
 
 // ============================================================================
@@ -230,7 +229,7 @@ export async function handleVisible(socket: AuthenticatedSocket): Promise<Comman
   const currentMode = socket.stealthMode;
 
   if (currentMode === 'none') {
-    return { type: MessageType.OUTPUT, message: 'You are not hiding or sneaking.' };
+    return { type: MessageType.OUTPUT, message: colors.gray('You are not hiding or sneaking.') };
   }
 
   const roomId = getPlayerLocation(socket.playerId);
@@ -239,16 +238,61 @@ export async function handleVisible(socket: AuthenticatedSocket): Promise<Comman
   setStealthMode(socket, 'none');
 
   if (currentMode === 'hidden') {
-    // Broadcast emergence to room
+    // Broadcast emergence to room - use green for the message since this is a neutral observation
     broadcastToRoom(
       roomId,
-      colors.green(`${colors.red(socket.username)} emerges from the shadows.`),
+      colors.green(`${socket.username} emerges from the shadows.`),
       socket.playerId
     );
-    return { type: MessageType.OUTPUT, message: 'You step out of the shadows.' };
+    return { type: MessageType.OUTPUT, message: colors.yellow('You step out of the shadows.') };
   } else {
-    return { type: MessageType.OUTPUT, message: 'You stop sneaking.' };
+    return { type: MessageType.OUTPUT, message: colors.yellow('You stop sneaking.') };
   }
+}
+
+// ============================================================================
+// BACKSTAB DAMAGE FLAVOR TEXT
+// ============================================================================
+
+/**
+ * Get flavor text based on where the damage falls in the damage range
+ *
+ * Damage tiers:
+ * - 0-25%: Standard (no extra text)
+ * - 26-50%: "devastating [pronoun]"
+ * - 51-75%: "eviscerating [pronoun]"
+ * - 76-100%: "obliterating [pronoun]"
+ *
+ * @param damage - The actual damage rolled
+ * @param minDamage - Minimum possible backstab damage
+ * @param maxDamage - Maximum possible backstab damage
+ * @param pronoun - The pronoun to use ("them" for third-person, "you" for target)
+ * @returns Flavor text to insert after the target name, or empty string for standard hits
+ */
+function getBackstabFlavorText(
+  damage: number,
+  minDamage: number,
+  maxDamage: number,
+  pronoun: 'them' | 'you' = 'them'
+): string {
+  // Avoid division by zero if min equals max
+  if (maxDamage <= minDamage) {
+    return '';
+  }
+
+  // Calculate percentage within the damage range (0.0 to 1.0)
+  // Clamp to 0 minimum in case damage < minDamage (shouldn't happen, but defensive)
+  const percentage = Math.max(0, (damage - minDamage) / (maxDamage - minDamage));
+
+  if (percentage >= 0.76) {
+    return `, obliterating ${pronoun}`;
+  } else if (percentage >= 0.51) {
+    return `, eviscerating ${pronoun}`;
+  } else if (percentage >= 0.26) {
+    return `, devastating ${pronoun}`;
+  }
+  // 0-25%: standard hit, no extra flavor
+  return '';
 }
 
 // ============================================================================
@@ -341,11 +385,10 @@ export async function handleBackstab(
   const attackVerbs = weaponData.attack_verbs
     || DEFAULT_ATTACK_VERBS[damageType as DamageType]
     || { hit: 'hit', hit_3p: 'hits', miss: 'swing at', miss_3p: 'swings at' };
-  const hitVerb = attackVerbs.hit || 'hit';
-
-  // Get class backstab bonus
-  const classDef = await progressionRepo.getClassById(character.class);
-  const classBackstabBonus = classDef?.backstab_accuracy_bonus ?? 0;
+  const hitVerb = attackVerbs.hit || 'hit';           // First person: "You surprise slash"
+  const hitVerb3p = attackVerbs.hit_3p || 'hits';     // Third person: "Alice surprises slashes"
+  const missVerb = attackVerbs.miss || 'swing at';
+  const missVerb3p = attackVerbs.miss_3p || 'swings at';
 
   // Get weapon backstab accuracy bonus
   const weaponBackstabAccuracy = weaponData.backstab_accuracy ?? 0;
@@ -377,8 +420,7 @@ export async function handleBackstab(
       charisma: character.charisma,
     },
     stealthBreakdown.total,
-    weaponBackstabAccuracy,
-    classBackstabBonus
+    weaponBackstabAccuracy
   );
 
   // Get target's stats for defense calculation
@@ -458,10 +500,15 @@ export async function handleBackstab(
     // Apply damage to target
     const damageApplied = await applyDamage(target, damageResult.damage, 'melee');
 
-    // Build messages with "surprise" + weapon verb
-    const attackerMsg = `You surprise ${hitVerb} ${colors.combatDefender(target.username)} for ${colors.combatDamage(damageResult.damage.toString())} damage!`;
-    const targetMsg = `${colors.combatAttacker(socket.username)} surprises ${hitVerb} you for ${colors.combatDamage(damageResult.damage.toString())} damage!`;
-    const roomMsg = `${colors.combatAttacker(socket.username)} surprises ${hitVerb} ${colors.combatDefender(target.username)} for ${colors.combatDamage(damageResult.damage.toString())} damage!`;
+    // Get flavor text based on damage tier - different pronouns for different perspectives
+    const flavorTextThem = getBackstabFlavorText(damageResult.damage, damageResult.backstabMin, damageResult.backstabMax, 'them');
+    const flavorTextYou = getBackstabFlavorText(damageResult.damage, damageResult.backstabMin, damageResult.backstabMax, 'you');
+
+    // Build messages with "surprise" + weapon verb + optional flavor
+    // First person for attacker ("You surprise slash"), third person for others ("Alice surprises slashes")
+    const attackerMsg = `You surprise ${hitVerb} ${colors.combatDefender(target.username)}${flavorTextThem} for ${colors.combatDamage(damageResult.damage.toString())} damage!`;
+    const targetMsg = `${colors.combatAttacker(socket.username)} surprise ${hitVerb3p} you${flavorTextYou} for ${colors.combatDamage(damageResult.damage.toString())} damage!`;
+    const roomMsg = `${colors.combatAttacker(socket.username)} surprise ${hitVerb3p} ${colors.combatDefender(target.username)}${flavorTextThem} for ${colors.combatDamage(damageResult.damage.toString())} damage!`;
 
     // Broadcast to room (exclude attacker and target)
     broadcastToRoom(currentRoomId, roomMsg, [socket.playerId, target.playerId]);
@@ -495,10 +542,10 @@ export async function handleBackstab(
       message: attackerMsg,
     };
   } else {
-    // Miss messages
-    const attackerMsg = `You attempt to backstab ${colors.combatDefender(target.username)} but miss!`;
-    const targetMsg = `${colors.combatAttacker(socket.username)} lunges at you from the shadows but misses!`;
-    const roomMsg = `${colors.combatAttacker(socket.username)} lunges at ${colors.combatDefender(target.username)} from the shadows but misses!`;
+    // Miss messages - use weapon's miss verb
+    const attackerMsg = `You ${missVerb} ${colors.combatDefender(target.username)}, but miss!`;
+    const targetMsg = `${colors.combatAttacker(socket.username)} ${missVerb3p} you from the shadows, but misses!`;
+    const roomMsg = `${colors.combatAttacker(socket.username)} ${missVerb3p} ${colors.combatDefender(target.username)} from the shadows, but misses!`;
 
     // Broadcast to room (exclude attacker and target)
     broadcastToRoom(currentRoomId, roomMsg, [socket.playerId, target.playerId]);

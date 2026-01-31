@@ -192,6 +192,9 @@ export function clearCombatState(
   socket: AuthenticatedSocket,
   connectedPlayers: Map<number, AuthenticatedSocket>
 ): void {
+  // Save targets before clearing (needed to check if they should exit combat)
+  const previousTargets = new Set(socket.combatState.targets);
+
   // Clear this player's targets
   socket.combatState.targets.clear();
   socket.combatState.energy = 0;
@@ -209,6 +212,27 @@ export function clearCombatState(
       if (otherSocket.combatState.targets.size === 0) {
         otherSocket.regenState.inCombat = false;
       }
+    }
+  }
+
+  // Also check players we were targeting - if no one else is targeting them,
+  // they should exit combat too (fixes backstab victim staying in combat)
+  for (const targetId of previousTargets) {
+    const targetSocket = connectedPlayers.get(targetId);
+    if (!targetSocket) continue;
+
+    // Check if anyone else is still targeting this player
+    let stillTargeted = false;
+    for (const [, otherSocket] of connectedPlayers) {
+      if (otherSocket !== socket && otherSocket.combatState.targets.has(targetId)) {
+        stillTargeted = true;
+        break;
+      }
+    }
+
+    // If no one is targeting them and they have no targets, exit combat
+    if (!stillTargeted && targetSocket.combatState.targets.size === 0) {
+      targetSocket.regenState.inCombat = false;
     }
   }
 
