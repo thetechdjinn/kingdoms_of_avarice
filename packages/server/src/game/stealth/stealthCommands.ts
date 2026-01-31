@@ -285,11 +285,11 @@ function getBackstabFlavorText(
   const percentage = Math.max(0, (damage - minDamage) / (maxDamage - minDamage));
 
   if (percentage >= 0.76) {
-    return ` obliterating ${pronoun}`;
+    return `, obliterating ${pronoun}`;
   } else if (percentage >= 0.51) {
-    return ` eviscerating ${pronoun}`;
+    return `, eviscerating ${pronoun}`;
   } else if (percentage >= 0.26) {
-    return ` devastating ${pronoun}`;
+    return `, devastating ${pronoun}`;
   }
   // 0-25%: standard hit, no extra flavor
   return '';
