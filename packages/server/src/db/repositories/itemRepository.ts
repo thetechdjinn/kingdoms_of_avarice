@@ -860,3 +860,26 @@ export async function findBestLockpickInInventory(characterId: number): Promise<
   const template = dbJoinedToTemplate(row);
   return dbToInstance(row as DbItemInstance, template);
 }
+
+/**
+ * Find a key with the specified key_tag in a character's inventory
+ * Returns null if no matching key found
+ */
+export async function findKeyWithTag(characterId: number, keyTag: string): Promise<ItemInstance | null> {
+  const result = await query<DbItemInstance & DbItemTemplate>(
+    `SELECT ii.*, ${TEMPLATE_COLUMNS}
+     FROM item_instances ii
+     JOIN item_templates it ON ii.template_id = it.id
+     WHERE ii.location_type = 'player'
+       AND ii.location_id = $1
+       AND it.flags->>'key_tag' = $2
+     LIMIT 1`,
+    [characterId, keyTag]
+  );
+
+  if (!result.rows[0]) return null;
+
+  const row = result.rows[0];
+  const template = dbJoinedToTemplate(row);
+  return dbToInstance(row as DbItemInstance, template);
+}

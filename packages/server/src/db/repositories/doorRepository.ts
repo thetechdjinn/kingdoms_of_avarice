@@ -5,6 +5,7 @@ import { Door, DoorType, DoorState, DoorData } from '@koa/shared';
 interface DbDoor {
   id: number;
   name: string;
+  display_name: string | null;
   door_type: string;
   description: string | null;
   entry_room_id: number;
@@ -43,6 +44,7 @@ function dbToDoor(row: DbDoor): Door {
   return {
     id: row.id,
     name: row.name,
+    displayName: row.display_name,
     doorType: row.door_type as DoorType,
     description: row.description,
     entryRoomId: row.entry_room_id,
@@ -86,6 +88,7 @@ export function doorToDoorData(door: Door, fromRoomId: number, currentState?: Do
   return {
     id: door.id,
     name: door.name,
+    displayName: door.displayName,
     doorType: door.doorType,
     direction,
     state: currentState ?? door.defaultState,
@@ -187,6 +190,7 @@ export function getDoorDestination(door: Door, fromRoomId: number): number | nul
 
 export interface CreateDoorInput {
   name: string;
+  displayName?: string | null;
   doorType: DoorType;
   description?: string;
   entryRoomId: number;
@@ -221,7 +225,7 @@ export interface CreateDoorInput {
 export async function createDoor(input: CreateDoorInput): Promise<Door> {
   const result = await query<DbDoor>(
     `INSERT INTO doors (
-      name, door_type, description,
+      name, display_name, door_type, description,
       entry_room_id, entry_direction,
       exit_room_id, exit_direction,
       default_state, auto_close_seconds,
@@ -234,10 +238,11 @@ export async function createDoor(input: CreateDoorInput): Promise<Door> {
       appear_message, disappear_message,
       required_level, required_classes, required_quest_flag,
       required_item_tag, denial_message
-    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30)
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31)
     RETURNING *`,
     [
       input.name,
+      input.displayName ?? null,
       input.doorType,
       input.description ?? null,
       input.entryRoomId,
@@ -283,6 +288,10 @@ export async function updateDoor(
   if (updates.name !== undefined) {
     setClauses.push(`name = $${paramIndex++}`);
     values.push(updates.name);
+  }
+  if (updates.displayName !== undefined) {
+    setClauses.push(`display_name = $${paramIndex++}`);
+    values.push(updates.displayName);
   }
   if (updates.doorType !== undefined) {
     setClauses.push(`door_type = $${paramIndex++}`);

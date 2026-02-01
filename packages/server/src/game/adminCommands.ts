@@ -556,15 +556,15 @@ async function handleSpawn(
   try {
     await itemRepo.createInstance({
       template_id: template.id,
-      location_type: ItemLocationType.ROOM,
-      location_id: currentRoomId,
+      location_type: ItemLocationType.PLAYER,
+      location_id: socket.characterId!,
       quantity,
       condition: ItemCondition.PRISTINE,
     });
 
     return {
       type: MessageType.SYSTEM,
-      message: `${colors.boldGreen('Spawned:')} ${quantity}x ${colors.item(template.name ?? 'item')} in room ${currentRoomId}`,
+      message: `${colors.boldGreen('Spawned:')} ${quantity}x ${colors.item(template.name ?? 'item')} in your inventory`,
     };
   } catch (error) {
     return { type: MessageType.ERROR, message: `Failed to spawn item: ${error}` };
@@ -1374,7 +1374,7 @@ function handleAdminHelp(userRoles: Role[]): CommandResponse {
     lines.push(colors.boldYellow('Developer Commands (Items):'));
     lines.push(`  ${colors.boldCyan('@items')}                  - List all item templates`);
     lines.push(`  ${colors.boldCyan('@iteminfo <id|name>')}     - Show item template details`);
-    lines.push(`  ${colors.boldCyan('@spawn <id|name> [qty]')}  - Spawn item in current room`);
+    lines.push(`  ${colors.boldCyan('@spawn <id|name> [qty]')}  - Spawn item in your inventory`);
     lines.push(`  ${colors.boldCyan('@purge items')}            - Remove all items from room`);
     lines.push(`  ${colors.boldCyan('@purge item <id>')}        - Remove specific item instance`);
     lines.push('');

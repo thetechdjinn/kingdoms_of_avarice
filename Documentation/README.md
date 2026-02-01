@@ -11,6 +11,8 @@ Welcome to the Kingdoms of Avarice documentation. This guide covers all aspects 
 ### Content Creation
 
 - [Room Creation Guide](Room_Creation_Guide.md) - Building rooms and areas
+- [Door System Guide](Door_System_Guide.md) - Door types, triggers, and permissions
+- [Locks, Keys, and Lockpicking Guide](Locks_Keys_and_Lockpicking_Guide.md) - Lock mechanics, keys, and lockpicking
 - [Item Editor Guide](Item_Editor_Guide.md) - Creating items and equipment
 - [Items Architecture](Items_Architecture.md) - Technical item system details
 - [Progression System Guide](Progression_System_Guide.md) - Classes, races, abilities, and talents

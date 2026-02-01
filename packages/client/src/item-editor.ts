@@ -12,7 +12,7 @@ interface ItemTemplate {
   base_value: number;
   item_type: string;
   equipment_slot?: string;
-  flags: Record<string, boolean>;
+  flags: Record<string, boolean | number | string | undefined>;
   max_stack: number;
   container_capacity?: number;
   container_weight_limit?: number;
@@ -345,6 +345,7 @@ function selectTemplate(id: number): void {
   loadConsumableData(template);
   loadLightData(template);
   loadToolData(template);
+  loadKeyData(template);
 
   // Requirements
   loadRequirements(template);
@@ -432,6 +433,13 @@ function loadToolData(template: ItemTemplate): void {
   (document.getElementById('tool-durability') as HTMLInputElement).value = String(data?.durability || 50);
 }
 
+function loadKeyData(template: ItemTemplate): void {
+  const flags = template.flags || {};
+  (document.getElementById('key-tag') as HTMLInputElement).value = String(flags.key_tag || '');
+  (document.getElementById('key-consume-on-use') as HTMLInputElement).checked = flags.consumeOnUse === true;
+  (document.getElementById('key-consume-chance') as HTMLInputElement).value = String(flags.consumeChance || 0);
+}
+
 function loadRequirements(template: ItemTemplate): void {
   const req = template.requirements || {};
   (document.getElementById('req-level') as HTMLInputElement).value = String(req.level || 0);
@@ -482,6 +490,9 @@ function updateTypeSections(itemType: string): void {
       break;
     case 'tool':
       document.getElementById('tool-data-section')!.style.display = 'block';
+      break;
+    case 'key':
+      document.getElementById('key-data-section')!.style.display = 'block';
       break;
     default:
       document.getElementById('no-type-data')!.style.display = 'block';
@@ -549,6 +560,25 @@ function updatePreview(template: ItemTemplate): void {
         <div class="preview-section-title">Tool (${escapeHtml(template.tool_data.toolType)})</div>
         <div>Quality: +${template.tool_data.quality}</div>
         <div>Durability: ${durabilityText}</div>
+      </div>
+    `;
+  }
+
+  if (template.item_type === 'key') {
+    const keyFlags = template.flags;
+    const keyTag = keyFlags?.key_tag as string | undefined;
+    const consumeChance = keyFlags?.consumeChance as number | undefined;
+    let consumeText = 'Permanent';
+    if (keyFlags?.consumeOnUse) {
+      consumeText = 'Consumed on use';
+    } else if (consumeChance && consumeChance > 0) {
+      consumeText = `${consumeChance}% break chance`;
+    }
+    html += `
+      <div class="preview-section">
+        <div class="preview-section-title">Key</div>
+        ${keyTag ? `<div>Tag: ${escapeHtml(keyTag)}</div>` : '<div class="hint">No key tag set</div>'}
+        <div>${consumeText}</div>
       </div>
     `;
   }
@@ -824,6 +854,23 @@ function gatherFormData(): Partial<ItemTemplate> {
       quality: Math.max(1, Math.min(5, qualityValue)),      // Clamp to 1-5
       durability: Math.max(1, Math.min(101, durabilityValue)), // Clamp to 1-101
     };
+  }
+
+  if (itemType === 'key') {
+    const keyTag = (document.getElementById('key-tag') as HTMLInputElement).value.trim();
+    const consumeOnUse = (document.getElementById('key-consume-on-use') as HTMLInputElement).checked;
+    const consumeChance = parseInt((document.getElementById('key-consume-chance') as HTMLInputElement).value) || 0;
+
+    // Add key flags to the flags object
+    if (keyTag) {
+      data.flags!.key_tag = keyTag;
+    }
+    if (consumeOnUse) {
+      data.flags!.consumeOnUse = true;
+    }
+    if (consumeChance > 0) {
+      data.flags!.consumeChance = Math.max(0, Math.min(100, consumeChance));
+    }
   }
 
   // Requirements

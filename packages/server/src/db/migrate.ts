@@ -171,11 +171,20 @@ export async function runMigrations(): Promise<void> {
       `);
       // Migrate thievery=true to special_abilities before dropping column
       // This preserves any custom classes that had thievery enabled
+      // Only run if thievery column still exists (makes migration idempotent)
       await client.query(`
-        UPDATE class_definitions
-        SET special_abilities = special_abilities || '["lockpicking", "traps", "pickpocket"]'::jsonb
-        WHERE thievery = true
-        AND NOT (special_abilities @> '"lockpicking"')
+        DO $$
+        BEGIN
+          IF EXISTS (
+            SELECT 1 FROM information_schema.columns
+            WHERE table_name = 'class_definitions' AND column_name = 'thievery'
+          ) THEN
+            UPDATE class_definitions
+            SET special_abilities = special_abilities || '["lockpicking", "traps", "pickpocket"]'::jsonb
+            WHERE thievery = true
+            AND NOT (special_abilities @> '"lockpicking"');
+          END IF;
+        END $$;
       `);
       // Drop deprecated thievery column (abilities now in special_abilities)
       await client.query(`
@@ -382,6 +391,11 @@ export async function runMigrations(): Promise<void> {
       await client.query(`
         ALTER TABLE doors ADD CONSTRAINT temporary_portal_requires_spawn_trigger
         CHECK (is_temporary = FALSE OR spawn_trigger_text IS NOT NULL)
+      `);
+
+      // Add display_name column to doors (player-facing name separate from internal name)
+      await client.query(`
+        ALTER TABLE doors ADD COLUMN IF NOT EXISTS display_name VARCHAR(100)
       `);
 
       // Add permission columns to doors (Phase 10 - for existing databases)

@@ -258,7 +258,7 @@ Players can access different help categories based on their role:
 | `@delete room <id>` | Delete a room |
 | `@items` | List item templates |
 | `@iteminfo <id\|name>` | Show item details |
-| `@spawn <id\|name> [qty]` | Spawn item in room |
+| `@spawn <id\|name> [qty]` | Spawn item in your inventory |
 | `@purge items` | Remove all room items |
 | `@reload [type]` | Reload data (rooms, items, effects, doors, actions, all) |
 | `@setstealth <mode> [player]` | Force stealth state (none/sneaking/hidden) |
@@ -269,6 +269,8 @@ Players can access different help categories based on their role:
 
 | Command | Description |
 | ------- | ----------- |
+| `use <key> <direction>` | Unlock a door with a key |
+| `lock <direction>` | Lock an unlocked door (requires key) |
 | `pick <direction>` | Pick lock (requires thief skills) |
 | `bash <direction>` | Bash door open (uses strength) |
 

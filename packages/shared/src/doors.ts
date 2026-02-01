@@ -42,8 +42,10 @@ export enum DoorState {
  */
 export interface Door {
   id: number;
-  /** Display name of the door (e.g., "wooden door", "iron gate") */
+  /** Internal name of the door for editors (e.g., "Arindale broken door") */
   name: string;
+  /** Player-facing display name (e.g., "door", "iron gate"). If null, shows "door to the [direction]" */
+  displayName: string | null;
   /** Type determines behavior and display rules */
   doorType: DoorType;
   /** Description shown when player looks at the door */
@@ -132,6 +134,8 @@ export interface Door {
 export interface DoorData {
   id: number;
   name: string;
+  /** Player-facing display name (e.g., "door", "iron gate"). If null, shows "door to the [direction]" */
+  displayName: string | null;
   doorType: DoorType;
   /** Direction of this door from the current room's perspective */
   direction: string;
