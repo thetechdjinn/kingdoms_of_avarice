@@ -613,3 +613,74 @@ SELECT id, 'room', 2, 1, 'pristine' FROM item_templates WHERE name = 'Wooden Shi
 
 INSERT INTO item_instances (template_id, location_type, location_id, quantity, condition)
 SELECT id, 'room', 2, 1, 'damaged' FROM item_templates WHERE name = 'Iron Helm';
+
+-- ============================================================================
+-- LOCKPICKING TOOLS
+-- ============================================================================
+
+INSERT INTO item_templates (name, short_desc, long_desc, room_desc, keywords, weight, size, base_value, item_type, flags, max_stack, tool_data)
+VALUES
+(
+    'crude lockpicks',
+    'a set of crude lockpicks',
+    'A rough set of lockpicks fashioned from bent wire and scrap metal. They look flimsy and prone to breaking.',
+    'A set of crude lockpicks lies here.',
+    ARRAY['lockpicks', 'picks', 'crude', 'tools'],
+    0, 1, 25,
+    'tool',
+    '{"takeable": true, "stackable": true}',
+    99,
+    '{"toolType": "lockpick", "quality": 1, "durability": 30}'
+),
+(
+    'basic lockpicks',
+    'a set of basic lockpicks',
+    'A simple set of lockpicks made from iron. Serviceable for common locks.',
+    'A set of basic lockpicks lies here.',
+    ARRAY['lockpicks', 'picks', 'basic', 'tools'],
+    0, 1, 100,
+    'tool',
+    '{"takeable": true, "stackable": true}',
+    99,
+    '{"toolType": "lockpick", "quality": 2, "durability": 50}'
+),
+(
+    'quality lockpicks',
+    'a set of quality lockpicks',
+    'Well-crafted lockpicks made from tempered steel. A professional thief would appreciate these.',
+    'A set of quality lockpicks lies here.',
+    ARRAY['lockpicks', 'picks', 'quality', 'tools'],
+    0, 1, 500,
+    'tool',
+    '{"takeable": true, "stackable": true}',
+    99,
+    '{"toolType": "lockpick", "quality": 3, "durability": 70}'
+),
+(
+    'masterwork lockpicks',
+    'a set of masterwork lockpicks',
+    'Exquisitely crafted lockpicks with perfectly balanced tension wrenches. The mark of a master locksmith.',
+    'A set of masterwork lockpicks lies here.',
+    ARRAY['lockpicks', 'picks', 'masterwork', 'tools'],
+    0, 1, 2000,
+    'tool',
+    '{"takeable": true, "stackable": true}',
+    99,
+    '{"toolType": "lockpick", "quality": 4, "durability": 90}'
+),
+(
+    'thieves guild lockpicks',
+    'a set of thieves'' guild lockpicks',
+    'An extraordinary set of lockpicks bearing the hidden mark of the Thieves'' Guild. Nearly indestructible and perfectly balanced.',
+    'A set of exquisite lockpicks lies here.',
+    ARRAY['lockpicks', 'picks', 'guild', 'thieves', 'tools'],
+    0, 1, 10000,
+    'tool',
+    '{"takeable": true, "stackable": true}',
+    99,
+    '{"toolType": "lockpick", "quality": 5, "durability": 101}'
+);
+
+-- Place some lockpicks in room 1 for testing
+INSERT INTO item_instances (template_id, location_type, location_id, quantity, condition)
+SELECT id, 'room', 1, 3, 'pristine' FROM item_templates WHERE name = 'basic lockpicks';

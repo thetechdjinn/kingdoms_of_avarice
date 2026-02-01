@@ -406,6 +406,11 @@ export async function runMigrations(): Promise<void> {
         ALTER TABLE item_templates ADD COLUMN IF NOT EXISTS stealth_modifier INTEGER DEFAULT 0
       `);
 
+      // Add tool_data column to item_templates (Lockpicking System Phase 5)
+      await client.query(`
+        ALTER TABLE item_templates ADD COLUMN IF NOT EXISTS tool_data JSONB
+      `);
+
       // Lockpicking System Phase 1: Migrate pick_difficulty to min/max range
       // First add the new columns
       await client.query(`

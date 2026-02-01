@@ -60,6 +60,7 @@
               <option value="container">Containers</option>
               <option value="consumable">Consumables</option>
               <option value="light">Light Sources</option>
+              <option value="tool">Tools</option>
               <option value="key">Keys</option>
               <option value="misc">Miscellaneous</option>
             </select>
@@ -110,6 +111,7 @@
                     <option value="container">Container</option>
                     <option value="consumable">Consumable</option>
                     <option value="light">Light Source</option>
+                    <option value="tool">Tool</option>
                     <option value="key">Key</option>
                     <option value="misc">Miscellaneous</option>
                   </select>
@@ -359,7 +361,28 @@
                   </div>
                 </div>
               </div>
-              
+
+              <!-- Tool Data -->
+              <div id="tool-data-section" class="type-section" style="display: none;">
+                <h3>Tool Data</h3>
+                <div class="form-row">
+                  <div class="form-group">
+                    <label for="tool-type">Tool Type</label>
+                    <select id="tool-type">
+                      <option value="lockpick">Lockpick</option>
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label for="tool-quality">Quality <span class="hint-inline">(1-5, adds to skill)</span></label>
+                    <input type="number" id="tool-quality" min="1" max="5" value="1" />
+                  </div>
+                  <div class="form-group">
+                    <label for="tool-durability">Durability <span class="hint-inline">(1-101, 101 = unbreakable)</span></label>
+                    <input type="number" id="tool-durability" min="1" max="101" value="50" />
+                  </div>
+                </div>
+              </div>
+
               <div id="no-type-data" class="type-section">
                 <p class="hint">This item type has no additional data fields.</p>
               </div>

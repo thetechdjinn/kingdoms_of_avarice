@@ -103,6 +103,8 @@ total = floor(base + levelBonus + dexBonus + intBonus + itemBonus)
 - `packages/server/src/db/schema.sql` - Add `tool_data` JSONB column
 - `packages/server/src/db/repositories/itemRepository.ts` - Handle tool_data
 - `packages/client/src/item-editor.ts` - Add tool editor section
+- `packages/client/item-editor.html` - Add tool type option and data section
+- `packages/server/src/db/migrate.ts` - Add migration for tool_data column
 - `packages/server/src/db/seed_items.sql` - Add sample lockpick sets
 
 **ToolData interface**:
@@ -114,10 +116,21 @@ interface ToolData {
 }
 ```
 
+**Sample lockpicks to seed** (with base_value in copper for shop sales):
+
+| Name | Quality | Durability | Cost (copper) | Notes |
+|------|---------|------------|---------------|-------|
+| crude lockpicks | 1 | 30 | 25 | Cheap, breaks often |
+| basic lockpicks | 2 | 50 | 100 | Common |
+| quality lockpicks | 3 | 70 | 500 | Reliable |
+| masterwork lockpicks | 4 | 90 | 2000 | Professional grade |
+| thieves' guild lockpicks | 5 | 101 | 10000 | Unbreakable, rare |
+
 **Acceptance criteria**:
 - Can create lockpick items in editor
 - Quality and durability stored correctly
-- Sample lockpicks seeded
+- Sample lockpicks seeded with appropriate base_value for shop pricing
+- All lockpicks are stackable and takeable
 
 ---
 

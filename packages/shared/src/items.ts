@@ -31,6 +31,7 @@ export enum ItemType {
   CONSUMABLE = 'consumable',
   KEY = 'key',
   LIGHT = 'light',
+  TOOL = 'tool',
   CURRENCY = 'currency',
   MISC = 'misc',
 }
@@ -143,6 +144,13 @@ export interface LightData {
   fuel_rate?: number;
 }
 
+// Tool data (lockpicks, etc.)
+export interface ToolData {
+  toolType: 'lockpick';
+  quality: number;      // 1-5, adds to lockpicking skill
+  durability: number;   // 1-101, break threshold (101+ = never break)
+}
+
 // Requirements to use/equip
 export interface ItemRequirements {
   level?: number;
@@ -198,6 +206,7 @@ export interface ItemTemplate {
   armor_data?: ArmorData;
   consumable_data?: ConsumableData;
   light_data?: LightData;
+  tool_data?: ToolData;
   requirements?: ItemRequirements;
   stat_modifiers?: StatModifiers;
   stealth_modifier?: number; // Modifier to stealth when equipped (negative for heavy armor)
