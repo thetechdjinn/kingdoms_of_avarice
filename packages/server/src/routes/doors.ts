@@ -48,6 +48,7 @@ export function setupDoorRoutes(app: Express): void {
     try {
       const {
         name,
+        displayName,
         doorType,
         description,
         entryRoomId,
@@ -178,6 +179,7 @@ export function setupDoorRoutes(app: Express): void {
 
       const door = await doorRepo.createDoor({
         name: name.trim(),
+        displayName: displayName || null,
         doorType,
         description: description || null,
         entryRoomId,
@@ -241,6 +243,7 @@ export function setupDoorRoutes(app: Express): void {
 
       const {
         name,
+        displayName,
         doorType,
         description,
         entryRoomId,
@@ -375,6 +378,7 @@ export function setupDoorRoutes(app: Express): void {
       const updates: Parameters<typeof doorRepo.updateDoor>[1] = {};
 
       if (name !== undefined) updates.name = name.trim();
+      if (displayName !== undefined) updates.displayName = displayName || null;
       if (doorType !== undefined) updates.doorType = doorType;
       if (description !== undefined) updates.description = description || null;
       if (entryRoomId !== undefined) updates.entryRoomId = entryRoomId;

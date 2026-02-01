@@ -113,8 +113,8 @@
             <div class="tab-content active" id="tab-basic">
               <div class="form-row">
                 <div class="form-group">
-                  <label for="door-name">Name</label>
-                  <input type="text" id="door-name" required placeholder="wooden door" />
+                  <label for="door-name">Name <span class="hint-inline">(internal, for editors)</span></label>
+                  <input type="text" id="door-name" required placeholder="Arindale broken door" />
                 </div>
                 <div class="form-group">
                   <label for="door-type">Door Type</label>
@@ -125,6 +125,13 @@
                     <option value="triggered_passageway">Triggered Passageway</option>
                     <option value="temporary_portal">Temporary Portal</option>
                   </select>
+                </div>
+              </div>
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="door-display-name">Display Name <span class="hint-inline">(shown to players)</span></label>
+                  <input type="text" id="door-display-name" placeholder="Leave blank for 'door to the [direction]'" />
                 </div>
               </div>
 

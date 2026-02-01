@@ -383,6 +383,32 @@
                 </div>
               </div>
 
+              <!-- Key Data -->
+              <div id="key-data-section" class="type-section" style="display: none;">
+                <h3>Key Data</h3>
+                <div class="form-row">
+                  <div class="form-group">
+                    <label for="key-tag">Key Tag <span class="hint-inline">(must match door's key_item_tag)</span></label>
+                    <input type="text" id="key-tag" placeholder="e.g., dungeon_master_key" />
+                  </div>
+                </div>
+                <div class="form-row">
+                  <div class="form-group">
+                    <label class="checkbox-label">
+                      <input type="checkbox" id="key-consume-on-use" />
+                      Consume On Use <span class="hint-inline">(key crumbles to dust after use)</span>
+                    </label>
+                  </div>
+                </div>
+                <div class="form-row">
+                  <div class="form-group">
+                    <label for="key-consume-chance">Break Chance % <span class="hint-inline">(0 = never, 100 = always)</span></label>
+                    <input type="number" id="key-consume-chance" min="0" max="100" value="0" />
+                  </div>
+                </div>
+                <p class="hint">If "Consume On Use" is checked, the key always crumbles after use. Otherwise, it has a % chance to break based on Break Chance.</p>
+              </div>
+
               <div id="no-type-data" class="type-section">
                 <p class="hint">This item type has no additional data fields.</p>
               </div>

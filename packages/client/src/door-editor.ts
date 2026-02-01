@@ -3,6 +3,7 @@
 interface Door {
   id: number;
   name: string;
+  displayName: string | null;
   doorType: string;
   description: string | null;
   entryRoomId: number;
@@ -563,11 +564,13 @@ function selectDoor(id: number): void {
 
   // Basic fields
   const nameInput = getElement<HTMLInputElement>('door-name');
+  const displayNameInput = getElement<HTMLInputElement>('door-display-name');
   const typeSelect = getElement<HTMLSelectElement>('door-type');
   const descInput = getElement<HTMLTextAreaElement>('door-description');
   const hiddenCheck = getElement<HTMLInputElement>('door-hidden');
 
   if (nameInput) nameInput.value = door.name;
+  if (displayNameInput) displayNameInput.value = door.displayName || '';
   if (typeSelect) typeSelect.value = door.doorType;
   if (descInput) descInput.value = door.description || '';
   if (hiddenCheck) hiddenCheck.checked = door.isHidden;
@@ -962,6 +965,7 @@ function gatherFormData(): Partial<Door> {
 
   const data: Record<string, unknown> = {
     name: getElement<HTMLInputElement>('door-name')?.value || '',
+    displayName: getElement<HTMLInputElement>('door-display-name')?.value || null,
     doorType,
     description: getElement<HTMLTextAreaElement>('door-description')?.value || null,
     isHidden: getElement<HTMLInputElement>('door-hidden')?.checked || false,

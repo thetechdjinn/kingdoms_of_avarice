@@ -104,6 +104,10 @@ export interface ItemFlags {
   throwable?: boolean;
   /** Tag that identifies this item as a key for doors with matching key_item_tag */
   key_tag?: string;
+  /** If true, key is always consumed after successful use */
+  consumeOnUse?: boolean;
+  /** Percentage chance (1-100) that key breaks after use. Only checked if consumeOnUse is false */
+  consumeChance?: number;
 }
 
 // Weapon data

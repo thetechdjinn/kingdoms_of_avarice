@@ -202,6 +202,15 @@ export async function processCommand(
   }
 
   if (command === 'use' || command === 'eat' || command === 'drink' || command === 'quaff') {
+    // Check if this is a key usage: use [key] [direction]
+    if (command === 'use' && args.length >= 2) {
+      const lastArg = args[args.length - 1].toLowerCase();
+      const possibleDirection = DIRECTION_ALIASES[lastArg] || lastArg;
+      if (isDirection(possibleDirection)) {
+        return await handleUseKey(socket, args, currentRoomId);
+      }
+    }
+    // Otherwise handle as normal consumable item
     return handleUse(socket, args, currentRoomId);
   }
 
@@ -257,10 +266,6 @@ export async function processCommand(
 
   if (command === 'close') {
     return await handleCloseDoor(socket, args, currentRoomId);
-  }
-
-  if (command === 'unlock') {
-    return await handleUnlockDoor(socket, args, currentRoomId);
   }
 
   if (command === 'lock') {
@@ -647,7 +652,7 @@ async function handleLookDirection(
     const doorState = doorStateManager.getDoorState(door.id);
     if (doorState !== DoorState.OPEN) {
       // Can't see through a closed door
-      return { type: MessageType.OUTPUT, message: `The ${door.name} to the ${direction} is closed.` };
+      return { type: MessageType.OUTPUT, message: `The ${getDoorDisplayName(door, direction)} is closed.` };
     }
   }
 
@@ -786,7 +791,7 @@ async function handleMove(
     const passageCheck = doorStateManager.canPassThrough(door.id, currentRoomId);
     if (!passageCheck.allowed) {
       // Broadcast that player ran into the door
-      broadcastToRoom(currentRoomId, colors.green(`${colors.red(socket.username)} ran into the ${door.name} to the ${fullDirection}.`), socket.playerId);
+      broadcastToRoom(currentRoomId, colors.green(`${colors.red(socket.username)} ran into the ${getDoorDisplayName(door, fullDirection)}.`), socket.playerId);
       return { type: MessageType.OUTPUT, message: colors.yellow(passageCheck.reason || 'You cannot go that way.') };
     }
   }
@@ -917,38 +922,39 @@ async function handleDoorAction(
 
   // Only physical doors can be opened/closed
   if (door.doorType !== DoorType.PHYSICAL) {
-    return { type: MessageType.ERROR, message: `You cannot ${verb} the ${door.name}.` };
+    return { type: MessageType.ERROR, message: `You cannot ${verb} the ${getDoorDisplayName(door, direction)}.` };
   }
 
   // Get current state (null treated as closed)
   const currentState = doorStateManager.getDoorState(door.id);
+  const doorDisplay = getDoorDisplayName(door, direction);
 
   // Validate state and perform action
   if (action === 'open') {
     if (currentState === DoorState.OPEN) {
-      return { type: MessageType.ERROR, message: `The ${door.name} is already open.` };
+      return { type: MessageType.ERROR, message: `The ${doorDisplay} is already open.` };
     }
     if (currentState === DoorState.LOCKED) {
-      return { type: MessageType.ERROR, message: `The ${door.name} is locked.` };
+      return { type: MessageType.ERROR, message: `The ${doorDisplay} is locked.` };
     }
     doorStateManager.openDoor(door.id);
   } else {
     if (currentState !== DoorState.OPEN) {
-      return { type: MessageType.ERROR, message: `The ${door.name} is already closed.` };
+      return { type: MessageType.ERROR, message: `The ${doorDisplay} is already closed.` };
     }
     doorStateManager.closeDoor(door.id);
   }
 
   // Broadcast to current room
-  broadcastToRoom(currentRoomId, colors.green(`${colors.red(socket.username)} ${verbs} the ${door.name}.`), socket.playerId);
+  broadcastToRoom(currentRoomId, colors.green(`${colors.red(socket.username)} ${verbs} the ${doorDisplay}.`), socket.playerId);
 
   // Broadcast to the other side (if two-way door)
   const otherRoomId = doorStateManager.getDestinationRoom(door.id, currentRoomId);
   if (otherRoomId) {
-    broadcastToRoom(otherRoomId, `The ${door.name} ${verbs} from the other side.`);
+    broadcastToRoom(otherRoomId, `The ${doorDisplay} ${verbs} from the other side.`);
   }
 
-  return { type: MessageType.OUTPUT, message: `You ${verb} the ${door.name}.` };
+  return { type: MessageType.OUTPUT, message: `You ${verb} the ${doorDisplay}.` };
 }
 
 async function handleOpenDoor(
@@ -975,6 +981,45 @@ async function handleCloseDoor(
 async function playerHasItemWithTag(characterId: number, itemTag: string): Promise<boolean> {
   const inventory = await itemRepo.getCharacterInventory(characterId);
   return inventory.some(item => item.template?.flags?.key_tag === itemTag);
+}
+
+/**
+ * Attempt to consume a key after use (for consumable keys)
+ * Returns a message if the key was consumed, null otherwise
+ */
+async function maybeConsumeKey(characterId: number, keyTag: string): Promise<string | null> {
+  const key = await itemRepo.findKeyWithTag(characterId, keyTag);
+  if (!key || !key.template) return null;
+
+  const flags = key.template.flags;
+
+  // Check if key should be consumed
+  let shouldConsume = false;
+  let isIntentionalConsume = false;
+
+  if (flags.consumeOnUse) {
+    // Always consume (intentional single-use key)
+    shouldConsume = true;
+    isIntentionalConsume = true;
+  } else if (flags.consumeChance && flags.consumeChance > 0) {
+    // Roll for break chance (accidental breakage)
+    const roll = Math.floor(Math.random() * 100) + 1;
+    shouldConsume = roll <= flags.consumeChance;
+  }
+
+  if (shouldConsume) {
+    const consumed = await itemRepo.consumeOneFromStack(key.id);
+    if (consumed) {
+      // Different messages for intentional consumption vs accidental breakage
+      if (isIntentionalConsume) {
+        return `Your ${key.template.name} crumbles to dust.`;
+      } else {
+        return `Your ${key.template.name} breaks!`;
+      }
+    }
+  }
+
+  return null;
 }
 
 /**
@@ -1015,71 +1060,15 @@ async function checkDoorPermissionsForPlayer(
   return null;
 }
 
-async function handleUnlockDoor(
-  socket: AuthenticatedSocket,
-  args: string[],
-  currentRoomId: number
-): Promise<CommandResponse> {
-  if (args.length === 0) {
-    return { type: MessageType.ERROR, message: 'Unlock what?' };
+/**
+ * Get the player-facing display name for a door.
+ * Uses displayName if set, otherwise returns "door to the [direction]" or just "door".
+ */
+function getDoorDisplayName(door: Door, direction?: string): string {
+  if (door.displayName) {
+    return direction ? `${door.displayName} to the ${direction}` : door.displayName;
   }
-
-  // Parse direction from args
-  const directionArg = args[0].toLowerCase();
-  const direction = DIRECTION_ALIASES[directionArg] || directionArg;
-
-  // Find door in the specified direction
-  const door = doorStateManager.getDoorByRoomAndDirection(currentRoomId, direction);
-  if (!door) {
-    if (!isDirection(direction)) {
-      return { type: MessageType.ERROR, message: 'Unlock what?' };
-    }
-    return { type: MessageType.ERROR, message: `There is no door to the ${direction}.` };
-  }
-
-  // Check door permissions first (before any other checks)
-  const permissionError = await checkDoorPermissionsForPlayer(door, socket);
-  if (permissionError) {
-    return permissionError;
-  }
-
-  // Only physical doors can be unlocked
-  if (door.doorType !== DoorType.PHYSICAL) {
-    return { type: MessageType.ERROR, message: `You cannot unlock the ${door.name}.` };
-  }
-
-  // Check if door has a lock
-  if (!door.hasLock) {
-    return { type: MessageType.ERROR, message: `The ${door.name} has no lock.` };
-  }
-
-  // Check current state
-  const currentState = doorStateManager.getDoorState(door.id);
-  if (currentState !== DoorState.LOCKED) {
-    return { type: MessageType.ERROR, message: `The ${door.name} is not locked.` };
-  }
-
-  // Check if player has the right key
-  if (door.keyItemTag) {
-    const hasKey = await playerHasItemWithTag(socket.characterId!, door.keyItemTag);
-    if (!hasKey) {
-      return { type: MessageType.ERROR, message: `You don't have the right key.` };
-    }
-  }
-
-  // Unlock the door
-  doorStateManager.unlockDoor(door.id);
-
-  // Broadcast to current room
-  broadcastToRoom(currentRoomId, colors.green(`${colors.red(socket.username)} unlocks the ${door.name}.`), socket.playerId);
-
-  // Broadcast to the other side (if two-way door)
-  const otherRoomId = doorStateManager.getDestinationRoom(door.id, currentRoomId);
-  if (otherRoomId) {
-    broadcastToRoom(otherRoomId, `The ${door.name} unlocks from the other side.`);
-  }
-
-  return { type: MessageType.OUTPUT, message: `You unlock the ${door.name}.` };
+  return direction ? `door to the ${direction}` : 'the door';
 }
 
 async function handleLockDoor(
@@ -1110,23 +1099,25 @@ async function handleLockDoor(
     return permissionError;
   }
 
+  const doorDisplay = getDoorDisplayName(door, direction);
+
   // Only physical doors can be locked
   if (door.doorType !== DoorType.PHYSICAL) {
-    return { type: MessageType.ERROR, message: `You cannot lock the ${door.name}.` };
+    return { type: MessageType.ERROR, message: `You cannot lock the ${doorDisplay}.` };
   }
 
   // Check if door has a lock
   if (!door.hasLock) {
-    return { type: MessageType.ERROR, message: `The ${door.name} has no lock.` };
+    return { type: MessageType.ERROR, message: `The ${doorDisplay} has no lock.` };
   }
 
   // Check current state
   const currentState = doorStateManager.getDoorState(door.id);
   if (currentState === DoorState.LOCKED) {
-    return { type: MessageType.ERROR, message: `The ${door.name} is already locked.` };
+    return { type: MessageType.ERROR, message: `The ${doorDisplay} is already locked.` };
   }
   if (currentState === DoorState.OPEN) {
-    return { type: MessageType.ERROR, message: `You need to close the ${door.name} first.` };
+    return { type: MessageType.ERROR, message: `You need to close the ${doorDisplay} first.` };
   }
 
   // Check if player has the right key
@@ -1141,15 +1132,129 @@ async function handleLockDoor(
   doorStateManager.lockDoor(door.id);
 
   // Broadcast to current room
-  broadcastToRoom(currentRoomId, colors.green(`${colors.red(socket.username)} locks the ${door.name}.`), socket.playerId);
+  broadcastToRoom(currentRoomId, colors.green(`${colors.red(socket.username)} locks the ${doorDisplay}.`), socket.playerId);
 
   // Broadcast to the other side (if two-way door)
   const otherRoomId = doorStateManager.getDestinationRoom(door.id, currentRoomId);
   if (otherRoomId) {
-    broadcastToRoom(otherRoomId, `The ${door.name} locks from the other side.`);
+    broadcastToRoom(otherRoomId, `The ${doorDisplay} locks from the other side.`);
   }
 
-  return { type: MessageType.OUTPUT, message: `You lock the ${door.name}.` };
+  // Check if key should be consumed
+  let message = `You lock the ${doorDisplay}.`;
+  if (door.keyItemTag) {
+    const consumeMessage = await maybeConsumeKey(socket.characterId!, door.keyItemTag);
+    if (consumeMessage) {
+      message += `\r\n${colors.yellow(consumeMessage)}`;
+    }
+  }
+
+  return { type: MessageType.OUTPUT, message };
+}
+
+/**
+ * Handle unlocking a door using a specific key from inventory.
+ * Command: use [key keyword...] [direction]
+ * Example: "use crusty key west" or "use cru west"
+ */
+async function handleUseKey(
+  socket: AuthenticatedSocket,
+  args: string[],
+  currentRoomId: number
+): Promise<CommandResponse> {
+  if (args.length < 2) {
+    return { type: MessageType.ERROR, message: 'Use what key on what?' };
+  }
+
+  // Last arg is direction, all others are the key keyword
+  const directionArg = args[args.length - 1].toLowerCase();
+  const direction = DIRECTION_ALIASES[directionArg] || directionArg;
+  const keyKeyword = args.slice(0, -1).join(' ').toLowerCase();
+
+  // Validate direction
+  if (!isDirection(direction)) {
+    return { type: MessageType.ERROR, message: `"${directionArg}" is not a valid direction. Try: use [key] [direction]` };
+  }
+
+  // Find key in inventory by keyword (must have key_tag flag)
+  const matchingItems = await itemRepo.findItemsInCharacterInventoryByKeyword(socket.characterId!, keyKeyword);
+
+  // Filter to only items with key_tag (keys)
+  const keys = matchingItems.filter(item => item.template?.flags?.key_tag);
+
+  if (keys.length === 0) {
+    // Check if we found items but none were keys
+    if (matchingItems.length > 0) {
+      return { type: MessageType.ERROR, message: `The ${matchingItems[0].template?.name ?? 'item'} is not a key.` };
+    }
+    return { type: MessageType.ERROR, message: `You don't have that.` };
+  }
+
+  if (keys.length > 1) {
+    // Multiple matching keys - need disambiguation
+    const keyNames = keys.map(k => k.template?.name ?? 'key').join(', ');
+    return { type: MessageType.ERROR, message: `Which key do you mean: ${keyNames}?` };
+  }
+
+  const key = keys[0];
+  const keyName = key.template?.name ?? 'key';
+  const keyTag = key.template?.flags?.key_tag as string;
+
+  // Find door in the specified direction
+  const door = doorStateManager.getDoorByRoomAndDirection(currentRoomId, direction);
+  if (!door) {
+    return { type: MessageType.ERROR, message: `There is no door to the ${direction}.` };
+  }
+
+  const doorDisplay = getDoorDisplayName(door, direction);
+
+  // Check door permissions first (before any other checks)
+  const permissionError = await checkDoorPermissionsForPlayer(door, socket);
+  if (permissionError) {
+    return permissionError;
+  }
+
+  // Only physical doors can be unlocked
+  if (door.doorType !== DoorType.PHYSICAL) {
+    return { type: MessageType.ERROR, message: `You cannot unlock the ${doorDisplay}.` };
+  }
+
+  // Check if door has a lock
+  if (!door.hasLock) {
+    return { type: MessageType.ERROR, message: `The ${doorDisplay} has no lock.` };
+  }
+
+  // Check current state
+  const currentState = doorStateManager.getDoorState(door.id);
+  if (currentState !== DoorState.LOCKED) {
+    return { type: MessageType.ERROR, message: `The ${doorDisplay} is not locked.` };
+  }
+
+  // Check if this key matches the door's lock
+  if (!door.keyItemTag || door.keyItemTag !== keyTag) {
+    return { type: MessageType.ERROR, message: `The ${keyName} doesn't fit this lock.` };
+  }
+
+  // Unlock the door
+  doorStateManager.unlockDoor(door.id);
+
+  // Broadcast to current room
+  broadcastToRoom(currentRoomId, colors.green(`${colors.red(socket.username)} unlocks the ${doorDisplay} with a key.`), socket.playerId);
+
+  // Broadcast to the other side (if two-way door)
+  const otherRoomId = doorStateManager.getDestinationRoom(door.id, currentRoomId);
+  if (otherRoomId) {
+    broadcastToRoom(otherRoomId, `The ${doorDisplay} unlocks from the other side.`);
+  }
+
+  // Check if key should be consumed
+  let message = `You unlock the ${doorDisplay} with the ${keyName}.`;
+  const consumeMessage = await maybeConsumeKey(socket.characterId!, keyTag);
+  if (consumeMessage) {
+    message += `\r\n${colors.yellow(consumeMessage)}`;
+  }
+
+  return { type: MessageType.OUTPUT, message };
 }
 
 /**
@@ -1258,26 +1363,27 @@ async function handlePickDoor(
 
   // Get lockpick quality bonus (1-5)
   const lockpickQuality = lockpick.template?.tool_data?.quality ?? 0;
+  const doorDisplay = getDoorDisplayName(door, direction);
 
   // Only physical doors can be picked
   if (door.doorType !== DoorType.PHYSICAL) {
-    return { type: MessageType.ERROR, message: `You cannot pick the ${door.name}.` };
+    return { type: MessageType.ERROR, message: `You cannot pick the ${doorDisplay}.` };
   }
 
   // Check if door has a lock
   if (!door.hasLock) {
-    return { type: MessageType.ERROR, message: `The ${door.name} has no lock to pick.` };
+    return { type: MessageType.ERROR, message: `The ${doorDisplay} has no lock to pick.` };
   }
 
   // Check current state
   const currentState = doorStateManager.getDoorState(door.id);
   if (currentState !== DoorState.LOCKED) {
-    return { type: MessageType.ERROR, message: `The ${door.name} is not locked.` };
+    return { type: MessageType.ERROR, message: `The ${doorDisplay} is not locked.` };
   }
 
   // Check pick difficulty - max of 500+ means unpickable
   if (door.pickDifficultyMax >= 500) {
-    return { type: MessageType.ERROR, message: `The ${door.name} cannot be picked.` };
+    return { type: MessageType.ERROR, message: `The ${doorDisplay} cannot be picked.` };
   }
 
   // Calculate lockpicking stat (includes lockpick quality bonus)
@@ -1302,11 +1408,11 @@ async function handlePickDoor(
 
   // Auto-fail if skill is below minimum
   if (lockpickingStat < minDiff) {
-    broadcastToRoom(currentRoomId, colors.green(`${colors.red(socket.username)} fails to pick the ${door.name}.`), socket.playerId);
+    broadcastToRoom(currentRoomId, colors.green(`${colors.red(socket.username)} fails to pick the ${doorDisplay}.`), socket.playerId);
 
     // Check if lockpick breaks on failure
     const breakMessage = await checkLockpickBreakage(lockpick);
-    const failMessage = `The lock on the ${door.name} is beyond your skill. (Skill: ${lockpickingStat} < Min: ${minDiff})`;
+    const failMessage = `The lock on the ${doorDisplay} is beyond your skill.`;
 
     return {
       type: MessageType.OUTPUT,
@@ -1320,16 +1426,16 @@ async function handlePickDoor(
     doorStateManager.unlockDoor(door.id);
     doorStateManager.openDoor(door.id);
 
-    broadcastToRoom(currentRoomId, colors.green(`${colors.red(socket.username)} easily picks the lock on the ${door.name}!`), socket.playerId);
+    broadcastToRoom(currentRoomId, colors.green(`${colors.red(socket.username)} easily picks the lock on the ${doorDisplay}!`), socket.playerId);
 
     const otherRoomId = doorStateManager.getDestinationRoom(door.id, currentRoomId);
     if (otherRoomId) {
-      broadcastToRoom(otherRoomId, `The ${door.name} clicks and swings open.`);
+      broadcastToRoom(otherRoomId, `The ${doorDisplay} clicks and swings open.`);
     }
 
     return {
       type: MessageType.OUTPUT,
-      message: `You easily pick the lock on the ${door.name}! (Skill: ${lockpickingStat} >= Max: ${maxDiff})`,
+      message: `You easily pick the lock on the ${doorDisplay}!`,
     };
   }
 
@@ -1338,11 +1444,11 @@ async function handlePickDoor(
 
   if (roll > lockpickingStat) {
     // Failed attempt - broadcast to room
-    broadcastToRoom(currentRoomId, colors.green(`${colors.red(socket.username)} fails to pick the ${door.name}.`), socket.playerId);
+    broadcastToRoom(currentRoomId, colors.green(`${colors.red(socket.username)} fails to pick the ${doorDisplay}.`), socket.playerId);
 
     // Check if lockpick breaks on failure
     const breakMessage = await checkLockpickBreakage(lockpick);
-    const failMessage = `You fail to pick the lock on the ${door.name}. (Skill: ${lockpickingStat}, Roll: ${roll}, Range: ${minDiff}-${maxDiff})`;
+    const failMessage = `You fail to pick the lock on the ${doorDisplay}.`;
 
     return {
       type: MessageType.OUTPUT,
@@ -1357,17 +1463,17 @@ async function handlePickDoor(
   doorStateManager.openDoor(door.id);
 
   // Broadcast success to current room
-  broadcastToRoom(currentRoomId, colors.green(`${colors.red(socket.username)} picks the lock on the ${door.name}!`), socket.playerId);
+  broadcastToRoom(currentRoomId, colors.green(`${colors.red(socket.username)} picks the lock on the ${doorDisplay}!`), socket.playerId);
 
   // Broadcast to the other side (if two-way door)
   const otherRoomId = doorStateManager.getDestinationRoom(door.id, currentRoomId);
   if (otherRoomId) {
-    broadcastToRoom(otherRoomId, `The ${door.name} clicks and swings open.`);
+    broadcastToRoom(otherRoomId, `The ${doorDisplay} clicks and swings open.`);
   }
 
   return {
     type: MessageType.OUTPUT,
-    message: `You skillfully pick the lock on the ${door.name}! (Skill: ${lockpickingStat}, Roll: ${roll}, Range: ${minDiff}-${maxDiff})`,
+    message: `You pick the lock on the ${doorDisplay}!`,
   };
 }
 
@@ -1406,21 +1512,23 @@ async function handleBashDoor(
     return permissionError;
   }
 
+  const doorDisplay = getDoorDisplayName(door, direction);
+
   // Only physical doors can be bashed
   if (door.doorType !== DoorType.PHYSICAL) {
-    return { type: MessageType.ERROR, message: `You cannot bash the ${door.name}.` };
+    return { type: MessageType.ERROR, message: `You cannot bash the ${doorDisplay}.` };
   }
 
   // Check current state - can bash closed or locked doors
   const currentState = doorStateManager.getDoorState(door.id);
   if (currentState === DoorState.OPEN) {
-    return { type: MessageType.ERROR, message: `The ${door.name} is already open.` };
+    return { type: MessageType.ERROR, message: `The ${doorDisplay} is already open.` };
   }
 
   // Check bash difficulty - negative means unbashable
   // High values (500+) are mathematically unbashable but allow attempts
   if (door.bashDifficulty < 0) {
-    return { type: MessageType.ERROR, message: `The ${door.name} cannot be bashed open.` };
+    return { type: MessageType.ERROR, message: `The ${doorDisplay} cannot be bashed open.` };
   }
 
   // Calculate bash stat
@@ -1447,11 +1555,11 @@ async function handleBashDoor(
     sendVitals(socket);
 
     // Broadcast failed attempt to room
-    broadcastToRoom(currentRoomId, colors.green(`${colors.red(socket.username)} slams into the ${door.name} and bounces off!`), socket.playerId);
+    broadcastToRoom(currentRoomId, colors.green(`${colors.red(socket.username)} slams into the ${doorDisplay} and bounces off!`), socket.playerId);
 
     return {
       type: MessageType.OUTPUT,
-      message: `You slam into the ${door.name} but it doesn't budge! You take ${colors.red(damage.toString())} damage. (Roll: ${roll} + Strength: ${bashStat} = ${total} vs Difficulty: ${door.bashDifficulty})`,
+      message: `You slam into the ${doorDisplay} but it doesn't budge! You take ${colors.red(damage.toString())} damage.`,
     };
   }
 
@@ -1462,17 +1570,17 @@ async function handleBashDoor(
   doorStateManager.openDoor(door.id);
 
   // Broadcast success to current room
-  broadcastToRoom(currentRoomId, colors.green(`${colors.red(socket.username)} bashes open the ${door.name}!`), socket.playerId);
+  broadcastToRoom(currentRoomId, colors.green(`${colors.red(socket.username)} bashes open the ${doorDisplay}!`), socket.playerId);
 
   // Broadcast to the other side (if two-way door)
   const otherRoomId = doorStateManager.getDestinationRoom(door.id, currentRoomId);
   if (otherRoomId) {
-    broadcastToRoom(otherRoomId, `The ${door.name} bursts open with a crash!`);
+    broadcastToRoom(otherRoomId, `The ${doorDisplay} bursts open with a crash!`);
   }
 
   return {
     type: MessageType.OUTPUT,
-    message: `You bash open the ${door.name}! (Roll: ${roll} + Strength: ${bashStat} = ${total} vs Difficulty: ${door.bashDifficulty})`,
+    message: `You bash open the ${doorDisplay}!`,
   };
 }
 
@@ -1696,7 +1804,7 @@ function handleHelp(userRoles: Role[], category?: string): CommandResponse {
     `    ${colors.white('<direction>')}           - Move (n, s, e, w, ne, nw, se, sw, u, d)`,
     `    ${colors.white('open <direction>')}      - Open a door`,
     `    ${colors.white('close <direction>')}     - Close a door`,
-    `    ${colors.white('unlock <direction>')}    - Unlock a locked door (requires key)`,
+    `    ${colors.white('use <key> <direction>')} - Unlock a door with a key`,
     `    ${colors.white('lock <direction>')}      - Lock an unlocked door (requires key)`,
     `    ${colors.white('pick <direction>')}      - Pick the lock on a door (thief skills)`,
     `    ${colors.white('bash <direction>')}      - Bash a door open (uses strength)`,
@@ -1718,6 +1826,7 @@ function handleHelp(userRoles: Role[], category?: string): CommandResponse {
     '',
     colors.boldCyan('  Using Items:'),
     `    ${colors.white('use <item>')}            - Use a consumable item`,
+    `    ${colors.white('use <key> <direction>')} - Unlock a door with a key`,
     `    ${colors.white('eat/drink/quaff <item>')} - Consume food/drink/potion`,
     `    ${colors.white('light <item>')}          - Light a torch or lantern`,
     `    ${colors.white('extinguish <item>')}     - Put out a light source`,
@@ -1816,7 +1925,7 @@ function getDeveloperHelp(): CommandResponse {
     colors.boldCyan('  Item Management:'),
     `    ${colors.white('@items')}                  - List all item templates`,
     `    ${colors.white('@iteminfo <id|name>')}     - Show item template details`,
-    `    ${colors.white('@spawn <id|name> [qty]')}  - Spawn item in current room`,
+    `    ${colors.white('@spawn <id|name> [qty]')}  - Spawn item in your inventory`,
     `    ${colors.white('@purge items')}            - Remove all items from room`,
     `    ${colors.white('@purge item <id>')}        - Remove specific item instance`,
     '',
