@@ -517,6 +517,9 @@ function selectClass(classId: string): void {
   (document.getElementById('class-magic-level') as HTMLInputElement).value = String(cls.magic_level ?? 0);
   (document.getElementById('class-magic-school') as HTMLSelectElement).value = cls.magic_school || '';
   (document.getElementById('class-stealth') as HTMLInputElement).checked = cls.stealth === true;
+  (document.getElementById('class-lockpicking') as HTMLInputElement).checked = cls.special_abilities?.includes('lockpicking') ?? false;
+  (document.getElementById('class-traps') as HTMLInputElement).checked = cls.special_abilities?.includes('traps') ?? false;
+  (document.getElementById('class-pickpocket') as HTMLInputElement).checked = cls.special_abilities?.includes('pickpocket') ?? false;
   (document.getElementById('class-crit-bonus') as HTMLInputElement).value = String(cls.crit_bonus ?? 0);
   (document.getElementById('class-dodge-bonus') as HTMLInputElement).value = String(cls.dodge_bonus ?? 0);
 
@@ -699,6 +702,11 @@ async function handleClassSubmit(e: Event): Promise<void> {
     magic_level: parseStatValue((document.getElementById('class-magic-level') as HTMLInputElement).value) || 0,
     magic_school: magicSchool || undefined,
     stealth: (document.getElementById('class-stealth') as HTMLInputElement).checked,
+    special_abilities: [
+      (document.getElementById('class-lockpicking') as HTMLInputElement).checked ? 'lockpicking' : null,
+      (document.getElementById('class-traps') as HTMLInputElement).checked ? 'traps' : null,
+      (document.getElementById('class-pickpocket') as HTMLInputElement).checked ? 'pickpocket' : null,
+    ].filter((a): a is string => a !== null),
     crit_bonus: parseStatValue((document.getElementById('class-crit-bonus') as HTMLInputElement).value) || 0,
     dodge_bonus: parseStatValue((document.getElementById('class-dodge-bonus') as HTMLInputElement).value) || 0,
   };

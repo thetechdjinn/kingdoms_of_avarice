@@ -467,6 +467,31 @@ body {
   font-size: 1rem;
 }
 
+.form-section h4 {
+  color: #aaa;
+  margin-bottom: 0.75rem;
+  font-size: 0.9rem;
+  font-weight: normal;
+}
+
+.checkbox-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+}
+
+.checkbox-row label {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  cursor: pointer;
+  color: #ccc;
+}
+
+.checkbox-row label:hover {
+  color: #fff;
+}
+
 #exits-list {
   margin-bottom: 1rem;
 }
