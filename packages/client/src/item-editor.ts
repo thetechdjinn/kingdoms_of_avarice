@@ -812,10 +812,17 @@ function gatherFormData(): Partial<ItemTemplate> {
   }
 
   if (itemType === 'tool') {
+    const toolTypeValue = (document.getElementById('tool-type') as HTMLSelectElement).value;
+    const qualityValue = parseInt((document.getElementById('tool-quality') as HTMLInputElement).value) || 1;
+    const durabilityValue = parseInt((document.getElementById('tool-durability') as HTMLInputElement).value) || 50;
+
+    // Validate toolType is a known value (currently only 'lockpick')
+    const toolType: 'lockpick' = toolTypeValue === 'lockpick' ? 'lockpick' : 'lockpick';
+
     data.tool_data = {
-      toolType: (document.getElementById('tool-type') as HTMLSelectElement).value as 'lockpick',
-      quality: parseInt((document.getElementById('tool-quality') as HTMLInputElement).value) || 1,
-      durability: parseInt((document.getElementById('tool-durability') as HTMLInputElement).value) || 50,
+      toolType,
+      quality: Math.max(1, Math.min(5, qualityValue)),      // Clamp to 1-5
+      durability: Math.max(1, Math.min(101, durabilityValue)), // Clamp to 1-101
     };
   }
 
