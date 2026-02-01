@@ -563,8 +563,26 @@ function selectRace(raceId: string): void {
   (document.getElementById('race-cha-min') as HTMLInputElement).value = String(bs?.charisma?.min ?? 40);
   (document.getElementById('race-cha-max') as HTMLInputElement).value = String(bs?.charisma?.max ?? 100);
 
-  // Format traits for display
-  const traitsValue = race.traits?.map(t => typeof t === 'string' ? t : `${t.id}=${t.value}`).join(', ') || '';
+  // Check for special ability traits
+  const specialAbilityIds = ['stealth', 'picklocks', 'lockpicking', 'see_hidden'];
+  const hasSpecialAbility = (id: string): boolean => {
+    if (!race.traits) return false;
+    return race.traits.some(t => {
+      if (typeof t === 'string') return t === id;
+      return t.id === id && t.value;
+    });
+  };
+
+  (document.getElementById('race-stealth') as HTMLInputElement).checked = hasSpecialAbility('stealth');
+  (document.getElementById('race-lockpicking') as HTMLInputElement).checked = hasSpecialAbility('picklocks') || hasSpecialAbility('lockpicking');
+  (document.getElementById('race-see-hidden') as HTMLInputElement).checked = hasSpecialAbility('see_hidden');
+
+  // Format other traits for display (excluding special abilities)
+  const otherTraits = race.traits?.filter(t => {
+    const id = typeof t === 'string' ? t : t.id;
+    return !specialAbilityIds.includes(id);
+  }) || [];
+  const traitsValue = otherTraits.map(t => typeof t === 'string' ? t : `${t.id}=${t.value}`).join(', ');
   (document.getElementById('race-traits') as HTMLInputElement).value = traitsValue;
   (document.getElementById('race-allowed-classes') as HTMLInputElement).value = race.allowed_classes?.join(', ') || '';
 
@@ -757,9 +775,9 @@ async function handleRaceSubmit(e: Event): Promise<void> {
     return;
   }
 
-  // Parse traits - support both simple strings and id=value format
+  // Parse other traits - support both simple strings and id=value format
   const traitsRaw = raceTraitsEl?.value.split(',').map(t => t.trim()).filter(Boolean) ?? [];
-  const traits = traitsRaw.map(t => {
+  const otherTraits = traitsRaw.map(t => {
     if (t.includes('=')) {
       const [id, val] = t.split('=');
       const numVal = Number(val);
@@ -767,6 +785,20 @@ async function handleRaceSubmit(e: Event): Promise<void> {
     }
     return t;
   });
+
+  // Add special ability traits from checkboxes
+  const specialAbilityTraits: Array<{ id: string; value: number }> = [];
+  if ((document.getElementById('race-stealth') as HTMLInputElement).checked) {
+    specialAbilityTraits.push({ id: 'stealth', value: 1 });
+  }
+  if ((document.getElementById('race-lockpicking') as HTMLInputElement).checked) {
+    specialAbilityTraits.push({ id: 'picklocks', value: 1 });
+  }
+  if ((document.getElementById('race-see-hidden') as HTMLInputElement).checked) {
+    specialAbilityTraits.push({ id: 'see_hidden', value: 1 });
+  }
+
+  const traits = [...otherTraits, ...specialAbilityTraits];
 
   const data: Partial<RaceDefinition> = {
     race_id: raceId,
