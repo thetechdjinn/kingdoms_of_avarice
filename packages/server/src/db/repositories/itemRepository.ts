@@ -790,10 +790,39 @@ export async function updateInstanceCustomData(
   customData: ItemCustomData
 ): Promise<boolean> {
   const result = await query(
-    `UPDATE item_instances 
+    `UPDATE item_instances
      SET custom_data = $1, updated_at = CURRENT_TIMESTAMP
      WHERE id = $2`,
     [JSON.stringify(customData), instanceId]
   );
   return (result.rowCount ?? 0) > 0;
+}
+
+// ============================================================================
+// Lockpick Operations
+// ============================================================================
+
+/**
+ * Find the best lockpick in a character's inventory (highest quality)
+ * Returns null if no lockpicks found
+ */
+export async function findBestLockpickInInventory(characterId: number): Promise<ItemInstance | null> {
+  const result = await query<DbItemInstance & DbItemTemplate>(
+    `SELECT ii.*, ${TEMPLATE_COLUMNS}
+     FROM item_instances ii
+     JOIN item_templates it ON ii.template_id = it.id
+     WHERE ii.location_type = 'player'
+       AND ii.location_id = $1
+       AND it.item_type = 'TOOL'
+       AND it.tool_data->>'toolType' = 'lockpick'
+     ORDER BY (it.tool_data->>'quality')::int DESC
+     LIMIT 1`,
+    [characterId]
+  );
+
+  if (!result.rows[0]) return null;
+
+  const row = result.rows[0];
+  const template = dbJoinedToTemplate(row);
+  return dbToInstance(row as DbItemInstance, template);
 }

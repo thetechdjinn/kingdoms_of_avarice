@@ -28,7 +28,7 @@ import {
 import { isHidden, isSneaking, isStealthing, setStealthMode, breakStealth } from './stealth/stealthState.js';
 import { handleHide, handleSneak, handleVisible, handleBackstab } from './stealth/stealthCommands.js';
 import { rollCumulativeDetection } from './stealth/stealthCheck.js';
-import { calculateStealth, calculatePerception, characterHasStealth, getEncumbrancePenalty, calculateLockpicking, characterHasLockpicking, NO_LOCKPICK_BONUS } from './stats/secondaryStats.js';
+import { calculateStealth, calculatePerception, characterHasStealth, getEncumbrancePenalty, calculateLockpicking, characterHasLockpicking } from './stats/secondaryStats.js';
 import { calculateEncumbranceRatio, getEquipmentCombatStats } from './combatStats.js';
 import { getRespawnRoomId } from '../services/respawnService.js';
 import { findPlayerInRoom } from './playerUtils.js';
@@ -1213,6 +1213,15 @@ async function handlePickDoor(
     return permissionError;
   }
 
+  // Check for lockpicks in inventory
+  const lockpick = await itemRepo.findBestLockpickInInventory(socket.characterId!);
+  if (!lockpick) {
+    return { type: MessageType.ERROR, message: `You don't have any lockpicks.` };
+  }
+
+  // Get lockpick quality bonus (1-5)
+  const lockpickQuality = lockpick.template?.tool_data?.quality ?? 0;
+
   // Only physical doors can be picked
   if (door.doorType !== DoorType.PHYSICAL) {
     return { type: MessageType.ERROR, message: `You cannot pick the ${door.name}.` };
@@ -1234,7 +1243,7 @@ async function handlePickDoor(
     return { type: MessageType.ERROR, message: `The ${door.name} cannot be picked.` };
   }
 
-  // Calculate lockpicking stat
+  // Calculate lockpicking stat (includes lockpick quality bonus)
   const lockpickingBreakdown = await calculateLockpicking(
     {
       dexterity: character.dexterity,
@@ -1243,7 +1252,7 @@ async function handlePickDoor(
       race: character.race,
       class: character.class,
     },
-    NO_LOCKPICK_BONUS
+    lockpickQuality
   );
   const lockpickingStat = lockpickingBreakdown.total;
 
