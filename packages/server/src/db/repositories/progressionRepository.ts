@@ -279,7 +279,7 @@ export async function createClass(classDef: ClassDefinition & { resource_type?: 
       classDef.stealth ?? false,
       classDef.crit_bonus ?? 0,
       classDef.dodge_bonus ?? 0,
-      classDef.special_abilities ?? [],
+      JSON.stringify(classDef.special_abilities ?? []),
     ]
   );
   return dbToClassDefinition(result.rows[0]);
@@ -344,7 +344,7 @@ export async function updateClass(classId: string, updates: Partial<ClassDefinit
   }
   if (updates.special_abilities !== undefined) {
     setClauses.push(`special_abilities = $${paramIndex++}`);
-    values.push(updates.special_abilities);
+    values.push(JSON.stringify(updates.special_abilities));
   }
 
   if (setClauses.length === 0) return getClassById(classId);
