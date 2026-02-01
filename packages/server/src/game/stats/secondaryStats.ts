@@ -44,6 +44,27 @@ export interface PerceptionBreakdown {
   total: number;
 }
 
+export interface LockpickingBreakdown {
+  base: number;             // +1 for race trait, +1 for class ability
+  levelBonus: number;       // +1 per level
+  dexterityBonus: number;   // +2.5 per 10 dex
+  intellectBonus: number;   // +1 per 10 int
+  itemBonus: number;        // From lockpick quality
+  total: number;
+}
+
+/** Stats required for lockpicking calculation (subset of CharacterStats) */
+export interface LockpickingStats {
+  dexterity: number;
+  intelligence: number;
+  level: number;
+  race: string;
+  class: string;
+}
+
+/** Placeholder for lockpick item bonus - lockpick quality items to be added later */
+export const NO_LOCKPICK_BONUS = 0;
+
 // ============================================================================
 // STEALTH CALCULATION
 // ============================================================================
@@ -262,6 +283,116 @@ export async function raceCanSeeHidden(race: string): Promise<boolean> {
     }
   }
   return false;
+}
+
+// ============================================================================
+// LOCKPICKING CALCULATION
+// ============================================================================
+
+/**
+ * Check if a race has the lockpicking trait (e.g., Gnome with 'picklocks')
+ */
+function raceHasLockpicking(race: RaceDefinition): boolean {
+  if (!race.traits) return false;
+
+  for (const trait of race.traits) {
+    if (typeof trait === 'string') {
+      if (trait === 'picklocks' || trait === 'lockpicking') return true;
+    } else {
+      const t = trait as RacialTrait;
+      if ((t.id === 'picklocks' || t.id === 'lockpicking') && t.value === true) return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * Check if a class has lockpicking capability via 'lockpicking' in special_abilities
+ */
+function classHasLockpicking(classDef: ClassDefinition): boolean {
+  return classDef.special_abilities?.includes('lockpicking') ?? false;
+}
+
+/**
+ * Check if a character has lockpicking capability (from race or class)
+ */
+export async function characterHasLockpicking(race: string, characterClass: string): Promise<boolean> {
+  const capability = await getLockpickingCapability(race, characterClass);
+  return capability.hasLockpicking;
+}
+
+/**
+ * Get detailed lockpicking capability info for a character
+ */
+export async function getLockpickingCapability(race: string, characterClass: string): Promise<{
+  hasLockpicking: boolean;
+  hasRacialLockpicking: boolean;
+  hasClassLockpicking: boolean;
+}> {
+  const [raceDef, classDef] = await Promise.all([
+    progressionRepo.getRaceById(race),
+    progressionRepo.getClassById(characterClass),
+  ]);
+
+  const hasRacialLockpicking = raceDef ? raceHasLockpicking(raceDef) : false;
+  const hasClassLockpicking = classDef ? classHasLockpicking(classDef) : false;
+
+  return {
+    hasLockpicking: hasRacialLockpicking || hasClassLockpicking,
+    hasRacialLockpicking,
+    hasClassLockpicking,
+  };
+}
+
+/**
+ * Calculate total lockpicking skill for a character
+ *
+ * Formula:
+ * - Base: +1 for racial lockpicking, +1 for class lockpicking
+ * - Level: +1 per level
+ * - Dexterity: +2.5 per 10 points (stepped, not linear)
+ * - Intellect: +1 per 10 points (stepped, not linear)
+ * - Item bonus: from lockpick quality (0-5)
+ */
+export async function calculateLockpicking(
+  stats: LockpickingStats,
+  itemBonus: number = 0
+): Promise<LockpickingBreakdown> {
+  // Fetch race and class definitions
+  const [race, classDef] = await Promise.all([
+    progressionRepo.getRaceById(stats.race),
+    progressionRepo.getClassById(stats.class),
+  ]);
+
+  // Calculate base from race/class
+  let base = 0;
+  if (race && raceHasLockpicking(race)) base += 1;
+  if (classDef && classHasLockpicking(classDef)) base += 1;
+
+  // Level bonus: +1 per level
+  const levelBonus = stats.level;
+
+  // Stat bonuses
+  const dexterityBonus = Math.floor(stats.dexterity / 10) * 2.5;
+  const intellectBonus = Math.floor(stats.intelligence / 10);
+
+  // Calculate total
+  const total = Math.floor(
+    base +
+    levelBonus +
+    dexterityBonus +
+    intellectBonus +
+    itemBonus
+  );
+
+  return {
+    base,
+    levelBonus,
+    dexterityBonus,
+    intellectBonus,
+    itemBonus,
+    total: Math.max(0, total), // Lockpicking cannot go negative
+  };
 }
 
 // ============================================================================
