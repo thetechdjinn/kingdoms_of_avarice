@@ -72,8 +72,10 @@ export interface Door {
   keyItemTag: string | null;
   /** Seconds until door auto-locks after being unlocked (null = no auto-lock) */
   autoLockSeconds: number | null;
-  /** Difficulty to pick lock (0-500+, 500+ = unpickable). Success: roll(0-100) + lockpicking >= difficulty */
-  pickDifficulty: number;
+  /** Minimum difficulty to pick lock (0-500+). Below this skill level = guaranteed failure */
+  pickDifficultyMin: number;
+  /** Maximum difficulty to pick lock (0-500+). Above this skill level = guaranteed success */
+  pickDifficultyMax: number;
   /** Difficulty to bash door (0-500+, 500+ = unbashable). Failed bash deals 1-2% max HP damage */
   bashDifficulty: number;
 

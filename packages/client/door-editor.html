@@ -241,15 +241,20 @@
 
                 <div class="form-row">
                   <div class="form-group">
-                    <label for="pick-difficulty">Pick Difficulty <span class="hint-inline">(0-500+)</span></label>
-                    <input type="number" id="pick-difficulty" min="0" value="0" />
+                    <label for="pick-difficulty-min">Pick Difficulty Min <span class="hint-inline">(0-500+)</span></label>
+                    <input type="number" id="pick-difficulty-min" min="0" value="0" />
                   </div>
                   <div class="form-group">
-                    <label for="bash-difficulty">Bash Difficulty <span class="hint-inline">(0-500+)</span></label>
-                    <input type="number" id="bash-difficulty" min="0" value="0" />
+                    <label for="pick-difficulty-max">Pick Difficulty Max <span class="hint-inline">(0-500+)</span></label>
+                    <input type="number" id="pick-difficulty-max" min="0" value="0" />
                   </div>
                 </div>
-                <p class="hint">500+ makes the door unpickable/unbashable</p>
+                <p class="hint">Skill below min = auto-fail, skill at/above max = auto-success. 500+ = unpickable.</p>
+
+                <div class="form-group">
+                  <label for="bash-difficulty">Bash Difficulty <span class="hint-inline">(0-500+, 500+ = unbashable)</span></label>
+                  <input type="number" id="bash-difficulty" min="0" value="0" />
+                </div>
               </div>
             </div>
 

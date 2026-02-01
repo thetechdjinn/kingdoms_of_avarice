@@ -59,7 +59,8 @@ export function setupDoorRoutes(app: Express): void {
         hasLock,
         keyItemTag,
         autoLockSeconds,
-        pickDifficulty,
+        pickDifficultyMin,
+        pickDifficultyMax,
         bashDifficulty,
         isHidden,
         triggerText,
@@ -137,8 +138,21 @@ export function setupDoorRoutes(app: Express): void {
         return;
       }
 
-      if (pickDifficulty !== undefined && (typeof pickDifficulty !== 'number' || pickDifficulty < 0)) {
-        res.status(400).json({ success: false, message: 'Pick difficulty must be a non-negative number' });
+      if (pickDifficultyMin !== undefined && (typeof pickDifficultyMin !== 'number' || pickDifficultyMin < 0)) {
+        res.status(400).json({ success: false, message: 'Pick difficulty min must be a non-negative number' });
+        return;
+      }
+
+      if (pickDifficultyMax !== undefined && (typeof pickDifficultyMax !== 'number' || pickDifficultyMax < 0)) {
+        res.status(400).json({ success: false, message: 'Pick difficulty max must be a non-negative number' });
+        return;
+      }
+
+      // Validate min <= max when both are provided
+      const effectiveMin = pickDifficultyMin ?? 0;
+      const effectiveMax = pickDifficultyMax ?? 0;
+      if (effectiveMin > effectiveMax) {
+        res.status(400).json({ success: false, message: 'Pick difficulty min cannot exceed max' });
         return;
       }
 
@@ -175,7 +189,8 @@ export function setupDoorRoutes(app: Express): void {
         hasLock: hasLock || false,
         keyItemTag: keyItemTag || null,
         autoLockSeconds: autoLockSeconds ?? null,
-        pickDifficulty: pickDifficulty ?? 0,
+        pickDifficultyMin: pickDifficultyMin ?? 0,
+        pickDifficultyMax: pickDifficultyMax ?? 0,
         bashDifficulty: bashDifficulty ?? 0,
         isHidden: isHidden || false,
         triggerText: triggerText || null,
@@ -237,7 +252,8 @@ export function setupDoorRoutes(app: Express): void {
         hasLock,
         keyItemTag,
         autoLockSeconds,
-        pickDifficulty,
+        pickDifficultyMin,
+        pickDifficultyMax,
         bashDifficulty,
         isHidden,
         triggerText,
@@ -317,8 +333,21 @@ export function setupDoorRoutes(app: Express): void {
         return;
       }
 
-      if (pickDifficulty !== undefined && (typeof pickDifficulty !== 'number' || pickDifficulty < 0)) {
-        res.status(400).json({ success: false, message: 'Pick difficulty must be a non-negative number' });
+      if (pickDifficultyMin !== undefined && (typeof pickDifficultyMin !== 'number' || pickDifficultyMin < 0)) {
+        res.status(400).json({ success: false, message: 'Pick difficulty min must be a non-negative number' });
+        return;
+      }
+
+      if (pickDifficultyMax !== undefined && (typeof pickDifficultyMax !== 'number' || pickDifficultyMax < 0)) {
+        res.status(400).json({ success: false, message: 'Pick difficulty max must be a non-negative number' });
+        return;
+      }
+
+      // Validate min <= max (use existing values as fallback for partial updates)
+      const effectiveMin = pickDifficultyMin ?? existingDoor.pickDifficultyMin;
+      const effectiveMax = pickDifficultyMax ?? existingDoor.pickDifficultyMax;
+      if (effectiveMin > effectiveMax) {
+        res.status(400).json({ success: false, message: 'Pick difficulty min cannot exceed max' });
         return;
       }
 
@@ -357,7 +386,8 @@ export function setupDoorRoutes(app: Express): void {
       if (hasLock !== undefined) updates.hasLock = hasLock;
       if (keyItemTag !== undefined) updates.keyItemTag = keyItemTag || null;
       if (autoLockSeconds !== undefined) updates.autoLockSeconds = autoLockSeconds;
-      if (pickDifficulty !== undefined) updates.pickDifficulty = pickDifficulty;
+      if (pickDifficultyMin !== undefined) updates.pickDifficultyMin = pickDifficultyMin;
+      if (pickDifficultyMax !== undefined) updates.pickDifficultyMax = pickDifficultyMax;
       if (bashDifficulty !== undefined) updates.bashDifficulty = bashDifficulty;
       if (isHidden !== undefined) updates.isHidden = isHidden;
       if (triggerText !== undefined) updates.triggerText = triggerText || null;

@@ -16,7 +16,8 @@ interface DbDoor {
   has_lock: boolean;
   key_item_tag: string | null;
   auto_lock_seconds: number | null;
-  pick_difficulty: number;
+  pick_difficulty_min: number;
+  pick_difficulty_max: number;
   bash_difficulty: number;
   is_hidden: boolean;
   trigger_text: string | null;
@@ -53,7 +54,8 @@ function dbToDoor(row: DbDoor): Door {
     hasLock: row.has_lock,
     keyItemTag: row.key_item_tag,
     autoLockSeconds: row.auto_lock_seconds,
-    pickDifficulty: row.pick_difficulty,
+    pickDifficultyMin: row.pick_difficulty_min,
+    pickDifficultyMax: row.pick_difficulty_max,
     bashDifficulty: row.bash_difficulty,
     isHidden: row.is_hidden,
     triggerText: row.trigger_text,
@@ -196,7 +198,8 @@ export interface CreateDoorInput {
   hasLock?: boolean;
   keyItemTag?: string;
   autoLockSeconds?: number | null;
-  pickDifficulty?: number;
+  pickDifficultyMin?: number;
+  pickDifficultyMax?: number;
   bashDifficulty?: number;
   isHidden?: boolean;
   triggerText?: string;
@@ -223,7 +226,7 @@ export async function createDoor(input: CreateDoorInput): Promise<Door> {
       exit_room_id, exit_direction,
       default_state, auto_close_seconds,
       has_lock, key_item_tag, auto_lock_seconds,
-      pick_difficulty, bash_difficulty,
+      pick_difficulty_min, pick_difficulty_max, bash_difficulty,
       is_hidden,
       trigger_text, passage_message_self, passage_message_room,
       item_display_name,
@@ -231,7 +234,7 @@ export async function createDoor(input: CreateDoorInput): Promise<Door> {
       appear_message, disappear_message,
       required_level, required_classes, required_quest_flag,
       required_item_tag, denial_message
-    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29)
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30)
     RETURNING *`,
     [
       input.name,
@@ -246,7 +249,8 @@ export async function createDoor(input: CreateDoorInput): Promise<Door> {
       input.hasLock ?? false,
       input.keyItemTag ?? null,
       input.autoLockSeconds ?? null,
-      input.pickDifficulty ?? 0,
+      input.pickDifficultyMin ?? 0,
+      input.pickDifficultyMax ?? 0,
       input.bashDifficulty ?? 0,
       input.isHidden ?? false,
       input.triggerText ?? null,
@@ -324,9 +328,13 @@ export async function updateDoor(
     setClauses.push(`auto_lock_seconds = $${paramIndex++}`);
     values.push(updates.autoLockSeconds);
   }
-  if (updates.pickDifficulty !== undefined) {
-    setClauses.push(`pick_difficulty = $${paramIndex++}`);
-    values.push(updates.pickDifficulty);
+  if (updates.pickDifficultyMin !== undefined) {
+    setClauses.push(`pick_difficulty_min = $${paramIndex++}`);
+    values.push(updates.pickDifficultyMin);
+  }
+  if (updates.pickDifficultyMax !== undefined) {
+    setClauses.push(`pick_difficulty_max = $${paramIndex++}`);
+    values.push(updates.pickDifficultyMax);
   }
   if (updates.bashDifficulty !== undefined) {
     setClauses.push(`bash_difficulty = $${paramIndex++}`);

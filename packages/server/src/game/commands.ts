@@ -1270,34 +1270,58 @@ async function handlePickDoor(
     return { type: MessageType.ERROR, message: `The ${door.name} is not locked.` };
   }
 
-  // Check pick difficulty - negative means unpickable (must use key)
-  // High values (500+) are mathematically unpickable but allow attempts
-  if (door.pickDifficulty < 0) {
+  // Check pick difficulty - max of 500+ means unpickable
+  if (door.pickDifficultyMax >= 500) {
     return { type: MessageType.ERROR, message: `The ${door.name} cannot be picked.` };
   }
 
   // Calculate lockpicking stat
   const lockpickingStat = calculateLockpickingStat(character);
 
-  // Roll 0-100
-  const roll = Math.floor(Math.random() * 101);
+  // Range-based mechanics:
+  // - If skill < min difficulty -> 100% fail
+  // - If skill >= max difficulty -> 100% success
+  // - Otherwise -> roll within range
+  const minDiff = door.pickDifficultyMin;
+  const maxDiff = door.pickDifficultyMax;
 
-  // Roll of 0 is automatic failure (fumble)
-  if (roll === 0) {
-    broadcastToRoom(currentRoomId, colors.green(`${colors.red(socket.username)} fumbles while trying to pick the ${door.name}.`), socket.playerId);
-    return { type: MessageType.OUTPUT, message: `You fumble the lockpick! The ${door.name} remains locked.` };
+  // Auto-fail if skill is below minimum
+  if (lockpickingStat < minDiff) {
+    broadcastToRoom(currentRoomId, colors.green(`${colors.red(socket.username)} fails to pick the ${door.name}.`), socket.playerId);
+    return {
+      type: MessageType.OUTPUT,
+      message: `The lock on the ${door.name} is beyond your skill. (Skill: ${lockpickingStat} < Min: ${minDiff})`,
+    };
   }
 
-  // Calculate total: roll + lockpicking stat
-  const total = roll + lockpickingStat;
+  // Auto-success if skill meets or exceeds maximum
+  if (lockpickingStat >= maxDiff) {
+    // Success! Unlock and open the door
+    doorStateManager.unlockDoor(door.id);
+    doorStateManager.openDoor(door.id);
 
-  // Check against difficulty
-  if (total < door.pickDifficulty) {
+    broadcastToRoom(currentRoomId, colors.green(`${colors.red(socket.username)} easily picks the lock on the ${door.name}!`), socket.playerId);
+
+    const otherRoomId = doorStateManager.getDestinationRoom(door.id, currentRoomId);
+    if (otherRoomId) {
+      broadcastToRoom(otherRoomId, `The ${door.name} clicks and swings open.`);
+    }
+
+    return {
+      type: MessageType.OUTPUT,
+      message: `You easily pick the lock on the ${door.name}! (Skill: ${lockpickingStat} >= Max: ${maxDiff})`,
+    };
+  }
+
+  // Roll within the range: roll between min and max, succeed if roll <= skill
+  const roll = Math.floor(Math.random() * (maxDiff - minDiff + 1)) + minDiff;
+
+  if (roll > lockpickingStat) {
     // Failed attempt - broadcast to room
     broadcastToRoom(currentRoomId, colors.green(`${colors.red(socket.username)} fails to pick the ${door.name}.`), socket.playerId);
     return {
       type: MessageType.OUTPUT,
-      message: `You fail to pick the lock on the ${door.name}. (Roll: ${roll} + Skill: ${lockpickingStat} = ${total} vs Difficulty: ${door.pickDifficulty})`,
+      message: `You fail to pick the lock on the ${door.name}. (Skill: ${lockpickingStat}, Roll: ${roll}, Range: ${minDiff}-${maxDiff})`,
     };
   }
 
@@ -1318,7 +1342,7 @@ async function handlePickDoor(
 
   return {
     type: MessageType.OUTPUT,
-    message: `You skillfully pick the lock on the ${door.name}! (Roll: ${roll} + Skill: ${lockpickingStat} = ${total} vs Difficulty: ${door.pickDifficulty})`,
+    message: `You skillfully pick the lock on the ${door.name}! (Skill: ${lockpickingStat}, Roll: ${roll}, Range: ${minDiff}-${maxDiff})`,
   };
 }
 
