@@ -1172,6 +1172,43 @@ function calculateBashStat(character: {
   return strengthBonus + levelBonus;
 }
 
+/**
+ * Check if a lockpick breaks on a failed pick attempt.
+ * Returns a break message if the lockpick broke, or null if it survived.
+ */
+async function checkLockpickBreakage(
+  lockpick: Awaited<ReturnType<typeof itemRepo.findBestLockpickInInventory>>
+): Promise<string | null> {
+  if (!lockpick || !lockpick.template?.tool_data) {
+    return null;
+  }
+
+  const durability = lockpick.template.tool_data.durability ?? 50;
+
+  // Durability 101+ means unbreakable
+  if (durability >= 101) {
+    return null;
+  }
+
+  // Roll 1-100; if roll > durability, the lockpick breaks
+  const breakRoll = Math.floor(Math.random() * 100) + 1;
+
+  if (breakRoll <= durability) {
+    // Survived
+    return null;
+  }
+
+  // Lockpick breaks - atomically consume one from stack
+  const consumed = await itemRepo.consumeOneFromStack(lockpick.id);
+
+  if (!consumed) {
+    // Item was already consumed or doesn't exist - don't show break message
+    return null;
+  }
+
+  return `Your ${colors.item(lockpick.template.name)} broke!`;
+}
+
 async function handlePickDoor(
   socket: AuthenticatedSocket,
   args: string[],
@@ -1266,9 +1303,14 @@ async function handlePickDoor(
   // Auto-fail if skill is below minimum
   if (lockpickingStat < minDiff) {
     broadcastToRoom(currentRoomId, colors.green(`${colors.red(socket.username)} fails to pick the ${door.name}.`), socket.playerId);
+
+    // Check if lockpick breaks on failure
+    const breakMessage = await checkLockpickBreakage(lockpick);
+    const failMessage = `The lock on the ${door.name} is beyond your skill. (Skill: ${lockpickingStat} < Min: ${minDiff})`;
+
     return {
       type: MessageType.OUTPUT,
-      message: `The lock on the ${door.name} is beyond your skill. (Skill: ${lockpickingStat} < Min: ${minDiff})`,
+      message: breakMessage ? `${failMessage}\r\n${breakMessage}` : failMessage,
     };
   }
 
@@ -1297,9 +1339,14 @@ async function handlePickDoor(
   if (roll > lockpickingStat) {
     // Failed attempt - broadcast to room
     broadcastToRoom(currentRoomId, colors.green(`${colors.red(socket.username)} fails to pick the ${door.name}.`), socket.playerId);
+
+    // Check if lockpick breaks on failure
+    const breakMessage = await checkLockpickBreakage(lockpick);
+    const failMessage = `You fail to pick the lock on the ${door.name}. (Skill: ${lockpickingStat}, Roll: ${roll}, Range: ${minDiff}-${maxDiff})`;
+
     return {
       type: MessageType.OUTPUT,
-      message: `You fail to pick the lock on the ${door.name}. (Skill: ${lockpickingStat}, Roll: ${roll}, Range: ${minDiff}-${maxDiff})`,
+      message: breakMessage ? `${failMessage}\r\n${breakMessage}` : failMessage,
     };
   }
 

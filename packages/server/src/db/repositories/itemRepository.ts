@@ -1,4 +1,4 @@
-import { query } from '../index.js';
+import { query, withTransaction } from '../index.js';
 import {
   ItemTemplate,
   ItemInstance,
@@ -796,6 +796,40 @@ export async function updateInstanceCustomData(
     [JSON.stringify(customData), instanceId]
   );
   return (result.rowCount ?? 0) > 0;
+}
+
+// ============================================================================
+// Stack Operations
+// ============================================================================
+
+/**
+ * Atomically consume one item from a stack.
+ * If quantity > 1, decrements by 1.
+ * If quantity = 1, deletes the item.
+ * Returns true if the item was consumed, false if item didn't exist.
+ */
+export async function consumeOneFromStack(instanceId: number): Promise<boolean> {
+  return withTransaction(async (client) => {
+    // First try to decrement if quantity > 1
+    const updateResult = await client.query(
+      `UPDATE item_instances
+       SET quantity = quantity - 1, updated_at = CURRENT_TIMESTAMP
+       WHERE id = $1 AND quantity > 1`,
+      [instanceId]
+    );
+
+    if ((updateResult.rowCount ?? 0) > 0) {
+      return true;
+    }
+
+    // If no rows updated, try to delete if quantity = 1
+    const deleteResult = await client.query(
+      `DELETE FROM item_instances WHERE id = $1 AND quantity = 1`,
+      [instanceId]
+    );
+
+    return (deleteResult.rowCount ?? 0) > 0;
+  });
 }
 
 // ============================================================================
