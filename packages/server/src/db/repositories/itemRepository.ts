@@ -1,4 +1,4 @@
-import { query } from '../index.js';
+import { query, withTransaction } from '../index.js';
 import {
   ItemTemplate,
   ItemInstance,
@@ -809,25 +809,27 @@ export async function updateInstanceCustomData(
  * Returns true if the item was consumed, false if item didn't exist.
  */
 export async function consumeOneFromStack(instanceId: number): Promise<boolean> {
-  // First try to decrement if quantity > 1
-  const updateResult = await query(
-    `UPDATE item_instances
-     SET quantity = quantity - 1, updated_at = CURRENT_TIMESTAMP
-     WHERE id = $1 AND quantity > 1`,
-    [instanceId]
-  );
+  return withTransaction(async (client) => {
+    // First try to decrement if quantity > 1
+    const updateResult = await client.query(
+      `UPDATE item_instances
+       SET quantity = quantity - 1, updated_at = CURRENT_TIMESTAMP
+       WHERE id = $1 AND quantity > 1`,
+      [instanceId]
+    );
 
-  if ((updateResult.rowCount ?? 0) > 0) {
-    return true;
-  }
+    if ((updateResult.rowCount ?? 0) > 0) {
+      return true;
+    }
 
-  // If no rows updated, try to delete if quantity = 1
-  const deleteResult = await query(
-    `DELETE FROM item_instances WHERE id = $1 AND quantity = 1`,
-    [instanceId]
-  );
+    // If no rows updated, try to delete if quantity = 1
+    const deleteResult = await client.query(
+      `DELETE FROM item_instances WHERE id = $1 AND quantity = 1`,
+      [instanceId]
+    );
 
-  return (deleteResult.rowCount ?? 0) > 0;
+    return (deleteResult.rowCount ?? 0) > 0;
+  });
 }
 
 // ============================================================================
