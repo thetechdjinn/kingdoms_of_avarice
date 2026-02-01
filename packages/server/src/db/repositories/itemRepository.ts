@@ -12,6 +12,7 @@ import {
   ArmorData,
   ConsumableData,
   LightData,
+  ToolData,
   ItemRequirements,
   StatModifiers,
   ItemCustomData,
@@ -21,7 +22,7 @@ import {
 const TEMPLATE_COLUMNS = `it.name, it.short_desc, it.long_desc, it.room_desc, it.keywords,
         it.weight, it.size, it.base_value, it.item_type, it.equipment_slot,
         it.flags, it.max_stack, it.container_capacity, it.container_weight_limit,
-        it.weapon_data, it.armor_data, it.consumable_data, it.light_data,
+        it.weapon_data, it.armor_data, it.consumable_data, it.light_data, it.tool_data,
         it.requirements, it.stat_modifiers, it.stealth_modifier, it.effect_slots, it.base_effects`;
 
 // Database row types
@@ -45,6 +46,7 @@ interface DbItemTemplate {
   armor_data: ArmorData | null;
   consumable_data: ConsumableData | null;
   light_data: LightData | null;
+  tool_data: ToolData | null;
   requirements: ItemRequirements | null;
   stat_modifiers: StatModifiers | null;
   stealth_modifier: number | null;
@@ -91,6 +93,7 @@ function dbToTemplate(row: DbItemTemplate): ItemTemplate {
     armor_data: row.armor_data ?? undefined,
     consumable_data: row.consumable_data ?? undefined,
     light_data: row.light_data ?? undefined,
+    tool_data: row.tool_data ?? undefined,
     requirements: row.requirements ?? undefined,
     stat_modifiers: row.stat_modifiers ?? undefined,
     stealth_modifier: row.stealth_modifier ?? undefined,
@@ -121,6 +124,7 @@ function dbJoinedToTemplate(row: DbItemInstance & DbItemTemplate): ItemTemplate 
     armor_data: row.armor_data ?? undefined,
     consumable_data: row.consumable_data ?? undefined,
     light_data: row.light_data ?? undefined,
+    tool_data: row.tool_data ?? undefined,
     requirements: row.requirements ?? undefined,
     stat_modifiers: row.stat_modifiers ?? undefined,
     stealth_modifier: row.stealth_modifier ?? undefined,
@@ -192,6 +196,7 @@ export interface CreateTemplateInput {
   armor_data?: ArmorData;
   consumable_data?: ConsumableData;
   light_data?: LightData;
+  tool_data?: ToolData;
   requirements?: ItemRequirements;
   stat_modifiers?: StatModifiers;
   stealth_modifier?: number;
@@ -205,14 +210,14 @@ export async function createTemplate(input: CreateTemplateInput): Promise<ItemTe
       name, short_desc, long_desc, room_desc, keywords,
       weight, size, base_value, item_type, equipment_slot,
       flags, max_stack, container_capacity, container_weight_limit,
-      weapon_data, armor_data, consumable_data, light_data,
+      weapon_data, armor_data, consumable_data, light_data, tool_data,
       requirements, stat_modifiers, stealth_modifier, effect_slots, base_effects
     ) VALUES (
       $1, $2, $3, $4, $5,
       $6, $7, $8, $9, $10,
       $11, $12, $13, $14,
-      $15, $16, $17, $18,
-      $19, $20, $21, $22, $23
+      $15, $16, $17, $18, $19,
+      $20, $21, $22, $23, $24
     ) RETURNING *`,
     [
       input.name,
@@ -233,6 +238,7 @@ export async function createTemplate(input: CreateTemplateInput): Promise<ItemTe
       input.armor_data ? JSON.stringify(input.armor_data) : null,
       input.consumable_data ? JSON.stringify(input.consumable_data) : null,
       input.light_data ? JSON.stringify(input.light_data) : null,
+      input.tool_data ? JSON.stringify(input.tool_data) : null,
       input.requirements ? JSON.stringify(input.requirements) : null,
       input.stat_modifiers ? JSON.stringify(input.stat_modifiers) : null,
       input.stealth_modifier ?? 0,
@@ -280,13 +286,14 @@ export async function updateTemplate(id: number, updates: Partial<CreateTemplate
       armor_data = COALESCE($16, armor_data),
       consumable_data = COALESCE($17, consumable_data),
       light_data = COALESCE($18, light_data),
-      requirements = COALESCE($19, requirements),
-      stat_modifiers = COALESCE($20, stat_modifiers),
-      stealth_modifier = COALESCE($21, stealth_modifier),
-      effect_slots = COALESCE($22, effect_slots),
-      base_effects = COALESCE($23, base_effects),
+      tool_data = COALESCE($19, tool_data),
+      requirements = COALESCE($20, requirements),
+      stat_modifiers = COALESCE($21, stat_modifiers),
+      stealth_modifier = COALESCE($22, stealth_modifier),
+      effect_slots = COALESCE($23, effect_slots),
+      base_effects = COALESCE($24, base_effects),
       updated_at = CURRENT_TIMESTAMP
-    WHERE id = $24
+    WHERE id = $25
     RETURNING *`,
     [
       updates.name ?? null,
@@ -307,6 +314,7 @@ export async function updateTemplate(id: number, updates: Partial<CreateTemplate
       updates.armor_data ? JSON.stringify(updates.armor_data) : null,
       updates.consumable_data ? JSON.stringify(updates.consumable_data) : null,
       updates.light_data ? JSON.stringify(updates.light_data) : null,
+      updates.tool_data ? JSON.stringify(updates.tool_data) : null,
       updates.requirements ? JSON.stringify(updates.requirements) : null,
       updates.stat_modifiers ? JSON.stringify(updates.stat_modifiers) : null,
       updates.stealth_modifier ?? null,

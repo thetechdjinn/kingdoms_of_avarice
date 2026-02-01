@@ -174,6 +174,7 @@ CREATE TABLE IF NOT EXISTS item_templates (
     armor_data JSONB,
     consumable_data JSONB,
     light_data JSONB,
+    tool_data JSONB,
     
     -- Requirements & Modifiers
     requirements JSONB,

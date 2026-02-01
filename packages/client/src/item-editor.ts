@@ -49,6 +49,11 @@ interface ItemTemplate {
     fuel_max?: number;
     fuel_rate?: number;
   };
+  tool_data?: {
+    toolType: 'lockpick';
+    quality: number;
+    durability: number;
+  };
   requirements?: {
     level?: number;
     strength?: number;
@@ -339,6 +344,7 @@ function selectTemplate(id: number): void {
   loadContainerData(template);
   loadConsumableData(template);
   loadLightData(template);
+  loadToolData(template);
 
   // Requirements
   loadRequirements(template);
@@ -419,6 +425,13 @@ function loadLightData(template: ItemTemplate): void {
   (document.getElementById('light-fuel-rate') as HTMLInputElement).value = String(data?.fuel_rate || 1);
 }
 
+function loadToolData(template: ItemTemplate): void {
+  const data = template.tool_data;
+  (document.getElementById('tool-type') as HTMLSelectElement).value = data?.toolType || 'lockpick';
+  (document.getElementById('tool-quality') as HTMLInputElement).value = String(data?.quality || 1);
+  (document.getElementById('tool-durability') as HTMLInputElement).value = String(data?.durability || 50);
+}
+
 function loadRequirements(template: ItemTemplate): void {
   const req = template.requirements || {};
   (document.getElementById('req-level') as HTMLInputElement).value = String(req.level || 0);
@@ -466,6 +479,9 @@ function updateTypeSections(itemType: string): void {
       break;
     case 'light':
       document.getElementById('light-data-section')!.style.display = 'block';
+      break;
+    case 'tool':
+      document.getElementById('tool-data-section')!.style.display = 'block';
       break;
     default:
       document.getElementById('no-type-data')!.style.display = 'block';
@@ -522,6 +538,17 @@ function updatePreview(template: ItemTemplate): void {
         <div class="preview-section-title">Light</div>
         <div>Radius: ${template.light_data.radius}</div>
         ${template.light_data.fuel_max ? `<div>Fuel: ${template.light_data.fuel_max}</div>` : ''}
+      </div>
+    `;
+  }
+
+  if (template.item_type === 'tool' && template.tool_data) {
+    const durabilityText = template.tool_data.durability >= 101 ? 'Unbreakable' : `${template.tool_data.durability}%`;
+    html += `
+      <div class="preview-section">
+        <div class="preview-section-title">Tool (${escapeHtml(template.tool_data.toolType)})</div>
+        <div>Quality: +${template.tool_data.quality}</div>
+        <div>Durability: ${durabilityText}</div>
       </div>
     `;
   }
@@ -781,6 +808,14 @@ function gatherFormData(): Partial<ItemTemplate> {
       radius: parseInt((document.getElementById('light-radius') as HTMLInputElement).value) || 2,
       fuel_max: parseInt((document.getElementById('light-fuel-max') as HTMLInputElement).value) || undefined,
       fuel_rate: parseInt((document.getElementById('light-fuel-rate') as HTMLInputElement).value) || undefined,
+    };
+  }
+
+  if (itemType === 'tool') {
+    data.tool_data = {
+      toolType: (document.getElementById('tool-type') as HTMLSelectElement).value as 'lockpick',
+      quality: parseInt((document.getElementById('tool-quality') as HTMLInputElement).value) || 1,
+      durability: parseInt((document.getElementById('tool-durability') as HTMLInputElement).value) || 50,
     };
   }
 
