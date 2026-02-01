@@ -263,6 +263,7 @@ Players can access different help categories based on their role:
 | `@reload [type]` | Reload data (rooms, items, effects, doors, actions, all) |
 | `@setstealth <mode> [player]` | Force stealth state (none/sneaking/hidden) |
 | `@testbackstab <target>` | Test backstab without stealth requirement |
+| `@lockpicking [player]` | Show lockpicking skill breakdown |
 
 ### Player Door Commands
 

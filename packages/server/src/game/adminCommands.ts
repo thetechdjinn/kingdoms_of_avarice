@@ -41,6 +41,9 @@ import {
   characterHasStealth,
   getEquipmentStealthModifier,
   getBackstabDamageBonuses,
+  calculateLockpicking,
+  getLockpickingCapability,
+  NO_LOCKPICK_BONUS,
 } from './stats/secondaryStats.js';
 import { StealthMode } from '@koa/shared';
 
@@ -60,7 +63,7 @@ export function setPlayerLocation(playerId: number, roomId: number): void {
 }
 
 // Commands that require Developer role
-const developerCommands = ['create', 'link', 'unlink', 'edit', 'delete', 'reload', 'spawn', 'purge', 'items', 'iteminfo', 'setstealth', 'testbackstab'];
+const developerCommands = ['create', 'link', 'unlink', 'edit', 'delete', 'reload', 'spawn', 'purge', 'items', 'iteminfo', 'setstealth', 'testbackstab', 'lockpicking'];
 
 // Commands that any staff can use (Moderator+)
 const staffCommands = ['goto', 'rooms', 'roominfo', 'help', 'give', 'hurt', 'heal', 'drain', 'revive', 'teleport', 'learn', 'spells', 'effect', 'cleareffect', 'effects', 'stealth'];
@@ -149,6 +152,8 @@ export async function processAdminCommand(
       return handleListEffects(socket);
     case 'stealth':
       return handleStealthInfo(args, socket);
+    case 'lockpicking':
+      return handleLockpickingInfo(args, socket);
     case 'setstealth':
       return handleSetStealth(args, socket);
     case 'testbackstab':
@@ -1376,9 +1381,10 @@ function handleAdminHelp(userRoles: Role[]): CommandResponse {
     lines.push(colors.boldYellow('Developer Commands (System):'));
     lines.push(`  ${colors.boldCyan('@reload [type]')}     - Reload data from database`);
     lines.push('');
-    lines.push(colors.boldYellow('Developer Commands (Stealth):'));
+    lines.push(colors.boldYellow('Developer Commands (Stealth/Skills):'));
     lines.push(`  ${colors.boldCyan('@setstealth <mode> [player]')} - Force stealth state (none/sneaking/hidden)`);
     lines.push(`  ${colors.boldCyan('@testbackstab <target>')}  - Test backstab without stealth requirement`);
+    lines.push(`  ${colors.boldCyan('@lockpicking [player]')}   - Show lockpicking skill breakdown`);
 
     // Add progression commands help
     lines.push(getProgressionHelpText());
@@ -1696,6 +1702,81 @@ async function handleStealthInfo(
     lines.push(colors.boldCyan('Backstab Equipment Bonuses:'));
     lines.push(`  Damage: +${backstabBonuses.minBonus} to +${backstabBonuses.maxBonus}`);
   }
+
+  return { type: MessageType.OUTPUT, message: lines.join('\r\n') };
+}
+
+/**
+ * Show lockpicking skill breakdown for a player
+ * Usage: @lockpicking [player]
+ */
+async function handleLockpickingInfo(
+  args: string[],
+  socket: AuthenticatedSocket
+): Promise<CommandResponse> {
+  let targetSocket: AuthenticatedSocket = socket;
+  let targetName = socket.username;
+
+  // Find target player if specified
+  if (args.length > 0) {
+    const playerName = args.join(' ').toLowerCase();
+    let found = false;
+    for (const [, playerSocket] of connectedPlayers) {
+      if (playerSocket.username.toLowerCase() === playerName) {
+        targetSocket = playerSocket;
+        targetName = playerSocket.username;
+        found = true;
+        break;
+      }
+    }
+    if (!found) {
+      return { type: MessageType.ERROR, message: `Player not found: ${args.join(' ')}` };
+    }
+  }
+
+  if (!targetSocket.characterId) {
+    return { type: MessageType.ERROR, message: `${targetName} has no character selected.` };
+  }
+
+  // Get character data
+  const character = await characterRepo.findCharacterById(targetSocket.characterId);
+  if (!character) {
+    return { type: MessageType.ERROR, message: 'Character not found.' };
+  }
+
+  // Check lockpicking capability
+  const capability = await getLockpickingCapability(character.race, character.class);
+
+  // Calculate lockpicking skill
+  const lockpickingBreakdown = await calculateLockpicking(
+    {
+      dexterity: character.dexterity,
+      intelligence: character.intelligence,
+      level: character.level,
+      race: character.race,
+      class: character.class,
+    },
+    NO_LOCKPICK_BONUS
+  );
+
+  // Build output
+  const lines = [
+    colors.boldYellow(`Lockpicking Info for ${targetName}:`),
+    '',
+    colors.boldCyan('Lockpicking Capability:'),
+    `  Has Lockpicking: ${capability.hasLockpicking ? colors.green('Yes') : colors.red('No')}`,
+    `  From Race: ${capability.hasRacialLockpicking ? colors.green('Yes') : colors.red('No')}`,
+    `  From Class: ${capability.hasClassLockpicking ? colors.green('Yes') : colors.red('No')}`,
+    '',
+    colors.boldCyan('Lockpicking Calculation:'),
+    `  Base (race/class): ${colors.white(lockpickingBreakdown.base.toString())}`,
+    `  Level Bonus (+1/level): ${colors.white(lockpickingBreakdown.levelBonus.toString())}`,
+    `  Stat Bonuses:`,
+    `    DEX ${character.dexterity} (+2.5 per 10): ${colors.white(lockpickingBreakdown.dexterityBonus.toFixed(1))}`,
+    `    INT ${character.intelligence} (+1 per 10): ${colors.white(lockpickingBreakdown.intellectBonus.toFixed(1))}`,
+    `  Item Bonus (lockpick): ${lockpickingBreakdown.itemBonus > 0 ? colors.green('+' + lockpickingBreakdown.itemBonus) : colors.white('0')}`,
+    `  ${colors.boldWhite('Total Lockpicking:')} ${colors.boldGreen(lockpickingBreakdown.total.toString())}`,
+  ];
 
   return { type: MessageType.OUTPUT, message: lines.join('\r\n') };
 }

@@ -28,7 +28,7 @@ import {
 import { isHidden, isSneaking, isStealthing, setStealthMode, breakStealth } from './stealth/stealthState.js';
 import { handleHide, handleSneak, handleVisible, handleBackstab } from './stealth/stealthCommands.js';
 import { rollCumulativeDetection } from './stealth/stealthCheck.js';
-import { calculateStealth, calculatePerception, characterHasStealth, getEncumbrancePenalty } from './stats/secondaryStats.js';
+import { calculateStealth, calculatePerception, characterHasStealth, getEncumbrancePenalty, calculateLockpicking, characterHasLockpicking, NO_LOCKPICK_BONUS } from './stats/secondaryStats.js';
 import { calculateEncumbranceRatio, getEquipmentCombatStats } from './combatStats.js';
 import { getRespawnRoomId } from '../services/respawnService.js';
 import { findPlayerInRoom } from './playerUtils.js';
@@ -1153,61 +1153,6 @@ async function handleLockDoor(
 }
 
 /**
- * Check if a character has the lockpicking ability
- * Characters can pick locks if:
- * - Class has 'lockpicking' in special_abilities
- * - Race has 'picklocks' trait
- */
-async function characterHasLockpickingAbility(
-  characterClass: string,
-  characterRace: string
-): Promise<boolean> {
-  // Check class abilities
-  const classDef = await progressionRepo.getClassById(characterClass);
-  if (classDef?.special_abilities?.includes('lockpicking')) {
-    return true;
-  }
-
-  // Check race traits
-  const raceDef = await progressionRepo.getRaceById(characterRace);
-  if (raceDef?.traits) {
-    for (const trait of raceDef.traits) {
-      // Handle both object format { id, value } and legacy string format
-      const traitId = typeof trait === 'string' ? trait : trait.id;
-      if (traitId === 'picklocks') {
-        return true;
-      }
-    }
-  }
-
-  return false;
-}
-
-/**
- * Calculate a character's lockpicking stat
- * Based on: intellect, dexterity, level, race/class bonuses, equipment bonuses
- * For now, simplified formula: (intellect + dexterity) / 2 + level * 2
- * TODO: Add race bonuses, class bonuses, equipment bonuses, quest bonuses
- */
-function calculateLockpickingStat(character: {
-  dexterity: number;
-  intelligence: number;
-  level: number;
-}): number {
-  // Base lockpicking from stats: average of intellect and dexterity
-  const statBonus = Math.floor((character.intelligence + character.dexterity) / 2);
-
-  // Level bonus: 2 points per level
-  const levelBonus = character.level * 2;
-
-  // TODO: Add race/class bonuses from definitions
-  // TODO: Add equipment bonuses from equipped items
-  // TODO: Add quest completion bonuses
-
-  return statBonus + levelBonus;
-}
-
-/**
  * Calculate a character's bash stat (for bashing doors)
  * Based primarily on strength with some level bonus
  */
@@ -1243,7 +1188,7 @@ async function handlePickDoor(
   }
 
   // Check if character has lockpicking ability
-  const hasAbility = await characterHasLockpickingAbility(character.class, character.race);
+  const hasAbility = await characterHasLockpicking(character.race, character.class);
   if (!hasAbility) {
     return { type: MessageType.ERROR, message: `You don't know how to pick locks.` };
   }
@@ -1290,7 +1235,17 @@ async function handlePickDoor(
   }
 
   // Calculate lockpicking stat
-  const lockpickingStat = calculateLockpickingStat(character);
+  const lockpickingBreakdown = await calculateLockpicking(
+    {
+      dexterity: character.dexterity,
+      intelligence: character.intelligence,
+      level: character.level,
+      race: character.race,
+      class: character.class,
+    },
+    NO_LOCKPICK_BONUS
+  );
+  const lockpickingStat = lockpickingBreakdown.total;
 
   // Range-based mechanics:
   // - If skill < min difficulty -> 100% fail
