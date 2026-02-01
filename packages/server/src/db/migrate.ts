@@ -397,6 +397,32 @@ export async function runMigrations(): Promise<void> {
         ALTER TABLE item_templates ADD COLUMN IF NOT EXISTS stealth_modifier INTEGER DEFAULT 0
       `);
 
+      // Lockpicking System Phase 1: Migrate pick_difficulty to min/max range
+      // First add the new columns
+      await client.query(`
+        ALTER TABLE doors ADD COLUMN IF NOT EXISTS pick_difficulty_min INTEGER DEFAULT 0
+      `);
+      await client.query(`
+        ALTER TABLE doors ADD COLUMN IF NOT EXISTS pick_difficulty_max INTEGER DEFAULT 0
+      `);
+      // Migrate existing pick_difficulty values to both min and max
+      // (doors with old single value get that value for both, meaning skill must match exactly)
+      const hasOldPickDifficulty = await client.query(`
+        SELECT column_name FROM information_schema.columns
+        WHERE table_name = 'doors' AND column_name = 'pick_difficulty'
+      `);
+      if (hasOldPickDifficulty.rows.length > 0) {
+        await client.query(`
+          UPDATE doors
+          SET pick_difficulty_min = pick_difficulty,
+              pick_difficulty_max = pick_difficulty
+          WHERE pick_difficulty_min = 0 AND pick_difficulty_max = 0 AND pick_difficulty > 0
+        `);
+        await client.query(`
+          ALTER TABLE doors DROP COLUMN IF EXISTS pick_difficulty
+        `);
+      }
+
       // Seed default game settings (only if they don't exist)
       await client.query(`
         INSERT INTO game_settings (key, value) VALUES

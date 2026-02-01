@@ -14,7 +14,8 @@ interface Door {
   hasLock: boolean;
   keyItemTag: string | null;
   autoLockSeconds: number | null;
-  pickDifficulty: number;
+  pickDifficultyMin: number;
+  pickDifficultyMax: number;
   bashDifficulty: number;
   isHidden: boolean;
   triggerText: string | null;
@@ -593,13 +594,15 @@ function selectDoor(id: number): void {
   const hasLockCheck = getElement<HTMLInputElement>('has-lock');
   const keyItemTagInput = getElement<HTMLInputElement>('key-item-tag');
   const autoLockInput = getElement<HTMLInputElement>('auto-lock-seconds');
-  const pickDiffInput = getElement<HTMLInputElement>('pick-difficulty');
+  const pickDiffMinInput = getElement<HTMLInputElement>('pick-difficulty-min');
+  const pickDiffMaxInput = getElement<HTMLInputElement>('pick-difficulty-max');
   const bashDiffInput = getElement<HTMLInputElement>('bash-difficulty');
 
   if (hasLockCheck) hasLockCheck.checked = door.hasLock;
   if (keyItemTagInput) keyItemTagInput.value = door.keyItemTag || '';
   if (autoLockInput) autoLockInput.value = String(door.autoLockSeconds || 0);
-  if (pickDiffInput) pickDiffInput.value = String(door.pickDifficulty);
+  if (pickDiffMinInput) pickDiffMinInput.value = String(door.pickDifficultyMin);
+  if (pickDiffMaxInput) pickDiffMaxInput.value = String(door.pickDifficultyMax);
   if (bashDiffInput) bashDiffInput.value = String(door.bashDifficulty);
 
   updateLockOptionsVisibility();
@@ -727,11 +730,15 @@ function updatePreview(door: Door): void {
     `;
 
     if (door.hasLock) {
+      const pickLabel = door.pickDifficultyMax >= 500 ? 'unpickable' :
+        (door.pickDifficultyMin === door.pickDifficultyMax ?
+          String(door.pickDifficultyMin) :
+          `${door.pickDifficultyMin}-${door.pickDifficultyMax}`);
       html += `
         <div class="preview-section">
           <div class="preview-section-title">Lock</div>
           ${door.keyItemTag ? `<div class="preview-property">Key: ${escapeHtml(door.keyItemTag)}</div>` : ''}
-          <div class="preview-property">Pick: ${door.pickDifficulty}${door.pickDifficulty >= 500 ? ' (unpickable)' : ''}</div>
+          <div class="preview-property">Pick: ${pickLabel}</div>
           <div class="preview-property">Bash: ${door.bashDifficulty}${door.bashDifficulty >= 500 ? ' (unbashable)' : ''}</div>
         </div>
       `;
@@ -977,7 +984,8 @@ function gatherFormData(): Partial<Door> {
     data.keyItemTag = getElement<HTMLInputElement>('key-item-tag')?.value || null;
     const autoLock = parseInt(getElement<HTMLInputElement>('auto-lock-seconds')?.value || '0');
     data.autoLockSeconds = autoLock > 0 ? autoLock : null;
-    data.pickDifficulty = parseInt(getElement<HTMLInputElement>('pick-difficulty')?.value || '0') || 0;
+    data.pickDifficultyMin = parseInt(getElement<HTMLInputElement>('pick-difficulty-min')?.value || '0') || 0;
+    data.pickDifficultyMax = parseInt(getElement<HTMLInputElement>('pick-difficulty-max')?.value || '0') || 0;
     data.bashDifficulty = parseInt(getElement<HTMLInputElement>('bash-difficulty')?.value || '0') || 0;
   }
 
