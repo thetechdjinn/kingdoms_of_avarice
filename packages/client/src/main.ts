@@ -22,7 +22,6 @@ interface ClassDefinition {
   magic_level?: number;
   magic_school?: string;
   stealth?: boolean;
-  thievery?: boolean;
   playable: boolean;
 }
 

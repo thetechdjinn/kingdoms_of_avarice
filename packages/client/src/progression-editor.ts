@@ -517,7 +517,6 @@ function selectClass(classId: string): void {
   (document.getElementById('class-magic-level') as HTMLInputElement).value = String(cls.magic_level ?? 0);
   (document.getElementById('class-magic-school') as HTMLSelectElement).value = cls.magic_school || '';
   (document.getElementById('class-stealth') as HTMLInputElement).checked = cls.stealth === true;
-  (document.getElementById('class-thievery') as HTMLInputElement).checked = cls.thievery === true;
   (document.getElementById('class-crit-bonus') as HTMLInputElement).value = String(cls.crit_bonus ?? 0);
   (document.getElementById('class-dodge-bonus') as HTMLInputElement).value = String(cls.dodge_bonus ?? 0);
 
@@ -700,7 +699,6 @@ async function handleClassSubmit(e: Event): Promise<void> {
     magic_level: parseStatValue((document.getElementById('class-magic-level') as HTMLInputElement).value) || 0,
     magic_school: magicSchool || undefined,
     stealth: (document.getElementById('class-stealth') as HTMLInputElement).checked,
-    thievery: (document.getElementById('class-thievery') as HTMLInputElement).checked,
     crit_bonus: parseStatValue((document.getElementById('class-crit-bonus') as HTMLInputElement).value) || 0,
     dodge_bonus: parseStatValue((document.getElementById('class-dodge-bonus') as HTMLInputElement).value) || 0,
   };

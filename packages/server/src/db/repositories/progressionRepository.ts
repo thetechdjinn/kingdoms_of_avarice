@@ -31,7 +31,6 @@ interface DbClassDefinition {
   magic_level: number;
   magic_school: string | null;
   stealth: boolean;
-  thievery: boolean;
   crit_bonus: number;
   dodge_bonus: number;
   special_abilities: string[] | null;
@@ -148,7 +147,6 @@ function dbToClassDefinition(row: DbClassDefinition): ClassDefinition {
     magic_level: row.magic_level ?? 0,
     magic_school: row.magic_school ?? undefined,
     stealth: row.stealth ?? false,
-    thievery: row.thievery ?? false,
     crit_bonus: row.crit_bonus ?? 0,
     dodge_bonus: row.dodge_bonus ?? 0,
     special_abilities: row.special_abilities ?? [],
@@ -263,8 +261,8 @@ export async function createClass(classDef: ClassDefinition & { resource_type?: 
     `INSERT INTO class_definitions (
       class_id, display_name, description, essence_multiplier,
       subscribed_tags, talent_tree_id, resource_type, playable,
-      combat_level, magic_level, magic_school, stealth, thievery, crit_bonus, dodge_bonus, special_abilities
-    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+      combat_level, magic_level, magic_school, stealth, crit_bonus, dodge_bonus, special_abilities
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
     RETURNING *`,
     [
       classDef.class_id,
@@ -279,7 +277,6 @@ export async function createClass(classDef: ClassDefinition & { resource_type?: 
       classDef.magic_level ?? 0,
       classDef.magic_school ?? null,
       classDef.stealth ?? false,
-      classDef.thievery ?? false,
       classDef.crit_bonus ?? 0,
       classDef.dodge_bonus ?? 0,
       classDef.special_abilities ?? [],
@@ -336,10 +333,6 @@ export async function updateClass(classId: string, updates: Partial<ClassDefinit
   if (updates.stealth !== undefined) {
     setClauses.push(`stealth = $${paramIndex++}`);
     values.push(updates.stealth);
-  }
-  if (updates.thievery !== undefined) {
-    setClauses.push(`thievery = $${paramIndex++}`);
-    values.push(updates.thievery);
   }
   if (updates.crit_bonus !== undefined) {
     setClauses.push(`crit_bonus = $${paramIndex++}`);

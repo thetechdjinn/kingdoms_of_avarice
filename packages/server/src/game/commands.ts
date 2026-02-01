@@ -1154,17 +1154,31 @@ async function handleLockDoor(
 
 /**
  * Check if a character has the lockpicking ability
- * Characters can pick locks if their class has thievery=true or 'lockpicking' in special_abilities
+ * Characters can pick locks if:
+ * - Class has 'lockpicking' in special_abilities
+ * - Race has 'picklocks' trait
  */
-async function characterHasLockpickingAbility(characterClass: string): Promise<boolean> {
+async function characterHasLockpickingAbility(
+  characterClass: string,
+  characterRace: string
+): Promise<boolean> {
+  // Check class abilities
   const classDef = await progressionRepo.getClassById(characterClass);
-  if (!classDef) return false;
+  if (classDef?.special_abilities?.includes('lockpicking')) {
+    return true;
+  }
 
-  // Class has thievery skill (thief, bard, gypsy, missionary)
-  if (classDef.thievery) return true;
-
-  // Class has lockpicking in special_abilities (ninja)
-  if (classDef.special_abilities?.includes('lockpicking')) return true;
+  // Check race traits
+  const raceDef = await progressionRepo.getRaceById(characterRace);
+  if (raceDef?.traits) {
+    for (const trait of raceDef.traits) {
+      // Handle both object format { id, value } and legacy string format
+      const traitId = typeof trait === 'string' ? trait : trait.id;
+      if (traitId === 'picklocks') {
+        return true;
+      }
+    }
+  }
 
   return false;
 }
@@ -1229,7 +1243,7 @@ async function handlePickDoor(
   }
 
   // Check if character has lockpicking ability
-  const hasAbility = await characterHasLockpickingAbility(character.class);
+  const hasAbility = await characterHasLockpickingAbility(character.class, character.race);
   if (!hasAbility) {
     return { type: MessageType.ERROR, message: `You don't know how to pick locks.` };
   }
@@ -2011,7 +2025,7 @@ async function handleStatus(socket: AuthenticatedSocket): Promise<CommandRespons
   }
 
   // Unimplemented skills (show 0)
-  const thievery = 0;
+  const pickpocket = 0;
   const traps = 0;
   const picklocks = 0;
   const tracking = 0;
@@ -2052,7 +2066,7 @@ async function handleStatus(socket: AuthenticatedSocket): Promise<CommandRespons
   lines.push(
     cellRight('Hits:', `${hp}/${maxHp}`, COL1) +
     cellRight('Armour Class:', armourClass, COL2) +
-    cellRight('Thievery:', thievery.toString(), COL3)
+    cellRight('Pickpocket:', pickpocket.toString(), COL3)
   );
 
   // Row 5: Mana | (empty) | Traps
