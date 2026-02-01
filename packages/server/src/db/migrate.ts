@@ -167,10 +167,19 @@ export async function runMigrations(): Promise<void> {
         ALTER TABLE class_definitions ADD COLUMN IF NOT EXISTS stealth BOOLEAN DEFAULT FALSE
       `);
       await client.query(`
-        ALTER TABLE class_definitions ADD COLUMN IF NOT EXISTS thievery BOOLEAN DEFAULT FALSE
-      `);
-      await client.query(`
         ALTER TABLE class_definitions ADD COLUMN IF NOT EXISTS special_abilities JSONB DEFAULT '[]'
+      `);
+      // Migrate thievery=true to special_abilities before dropping column
+      // This preserves any custom classes that had thievery enabled
+      await client.query(`
+        UPDATE class_definitions
+        SET special_abilities = special_abilities || '["lockpicking", "traps", "pickpocket"]'::jsonb
+        WHERE thievery = true
+        AND NOT (special_abilities @> '"lockpicking"')
+      `);
+      // Drop deprecated thievery column (abilities now in special_abilities)
+      await client.query(`
+        ALTER TABLE class_definitions DROP COLUMN IF EXISTS thievery
       `);
 
       // Add crit_bonus column to class_definitions (MajorMUD-style class crit bonuses)

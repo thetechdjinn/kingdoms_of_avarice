@@ -44,7 +44,6 @@ export interface ClassDefinition {
   magic_level?: number; // 0-3, magic power level
   magic_school?: string; // mage, priest, druid, bardic, kai
   stealth?: boolean; // Can use stealth abilities
-  thievery?: boolean; // Can use thief skills (picklocks, traps)
   crit_bonus?: number; // Flat crit chance bonus (e.g., 10 for Ninja/Mystic)
   dodge_bonus?: number; // Flat dodge chance bonus (e.g., 25 for Ninja/Mystic)
   special_abilities?: string[]; // Class-specific abilities
