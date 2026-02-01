@@ -984,8 +984,11 @@ function gatherFormData(): Partial<Door> {
     data.keyItemTag = getElement<HTMLInputElement>('key-item-tag')?.value || null;
     const autoLock = parseInt(getElement<HTMLInputElement>('auto-lock-seconds')?.value || '0');
     data.autoLockSeconds = autoLock > 0 ? autoLock : null;
-    data.pickDifficultyMin = parseInt(getElement<HTMLInputElement>('pick-difficulty-min')?.value || '0') || 0;
-    data.pickDifficultyMax = parseInt(getElement<HTMLInputElement>('pick-difficulty-max')?.value || '0') || 0;
+    const pickMin = parseInt(getElement<HTMLInputElement>('pick-difficulty-min')?.value || '0') || 0;
+    const pickMax = parseInt(getElement<HTMLInputElement>('pick-difficulty-max')?.value || '0') || 0;
+    // Ensure min <= max (swap if user entered them backwards)
+    data.pickDifficultyMin = Math.min(pickMin, pickMax);
+    data.pickDifficultyMax = Math.max(pickMin, pickMax);
     data.bashDifficulty = parseInt(getElement<HTMLInputElement>('bash-difficulty')?.value || '0') || 0;
   }
 
