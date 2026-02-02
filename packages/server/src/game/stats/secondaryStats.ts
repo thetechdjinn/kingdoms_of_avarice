@@ -247,7 +247,7 @@ export function calculatePerception(
   equipmentPerceptionModifier: number = 0
 ): PerceptionBreakdown {
   // Calculate stat bonuses (per 10 points)
-  const intellectBonus = Math.floor(intelligence / 10) * 3;
+  const intellectBonus = Math.floor(intelligence / 10) * 2;
   const wisdomBonus = Math.floor(wisdom / 10) * 2;
   const charismaBonus = Math.floor(charisma / 10) * 1;
 
