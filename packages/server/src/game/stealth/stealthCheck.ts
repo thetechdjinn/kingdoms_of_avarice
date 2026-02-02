@@ -63,7 +63,7 @@ export function rollStealthCheck(
   // threshold = 50 + (perception - stealth)
   // If perception > stealth: easier to detect (higher threshold)
   // If stealth > perception: harder to detect (lower threshold)
-  const threshold = Math.min(95, Math.max(5, 50 + (perception - stealth)));
+  const threshold = Math.min(99, Math.max(1, 50 + (perception - stealth)));
 
   // Detected if roll is at or below threshold
   const detected = roll <= threshold;
@@ -137,7 +137,7 @@ export function getDetectionProbability(
   const stealth = Number.isFinite(stealthValue) ? Math.max(0, stealthValue) : 0;
   const perception = Number.isFinite(perceptionValue) ? Math.max(0, perceptionValue) : 0;
 
-  const threshold = Math.min(95, Math.max(5, 50 + (perception - stealth)));
+  const threshold = Math.min(99, Math.max(1, 50 + (perception - stealth)));
   return threshold / 100;
 }
 

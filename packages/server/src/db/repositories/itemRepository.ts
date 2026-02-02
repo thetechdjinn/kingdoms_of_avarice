@@ -847,7 +847,7 @@ export async function findBestLockpickInInventory(characterId: number): Promise<
      JOIN item_templates it ON ii.template_id = it.id
      WHERE ii.location_type = 'player'
        AND ii.location_id = $1
-       AND it.item_type = 'TOOL'
+       AND it.item_type = 'tool'
        AND it.tool_data->>'toolType' = 'lockpick'
      ORDER BY (it.tool_data->>'quality')::int DESC
      LIMIT 1`,

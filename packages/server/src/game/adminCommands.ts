@@ -1689,7 +1689,7 @@ async function handleStealthInfo(
     `  ${colors.boldWhite('Total Stealth:')} ${colors.boldGreen(stealthBreakdown.total.toString())}`,
     '',
     colors.boldCyan('Perception Calculation:'),
-    `  INT ${character.intelligence} × 0.6 = ${colors.white(perceptionBreakdown.intellectBonus.toFixed(1))}`,
+    `  INT ${character.intelligence} × 0.2 = ${colors.white(perceptionBreakdown.intellectBonus.toFixed(1))}`,
     `  WIS ${character.wisdom} × 0.2 = ${colors.white(perceptionBreakdown.wisdomBonus.toFixed(1))}`,
     `  CHA ${character.charisma} × 0.1 = ${colors.white(perceptionBreakdown.charismaBonus.toFixed(1))}`,
     `  Equipment Modifier: ${colors.white('0')}`,

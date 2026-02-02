@@ -80,7 +80,7 @@ function raceHasStealth(race: RaceDefinition): boolean {
       if (trait === 'stealth') return true;
     } else {
       const t = trait as RacialTrait;
-      if (t.id === 'stealth' && t.value === true) return true;
+      if (t.id === 'stealth' && t.value) return true;
     }
   }
   return false;
@@ -247,7 +247,7 @@ export function calculatePerception(
   equipmentPerceptionModifier: number = 0
 ): PerceptionBreakdown {
   // Calculate stat bonuses (per 10 points)
-  const intellectBonus = Math.floor(intelligence / 10) * 6;
+  const intellectBonus = Math.floor(intelligence / 10) * 2;
   const wisdomBonus = Math.floor(wisdom / 10) * 2;
   const charismaBonus = Math.floor(charisma / 10) * 1;
 
@@ -279,7 +279,7 @@ export async function raceCanSeeHidden(race: string): Promise<boolean> {
       if (trait === 'see_hidden') return true;
     } else {
       const t = trait as RacialTrait;
-      if (t.id === 'see_hidden' && t.value === true) return true;
+      if (t.id === 'see_hidden' && t.value) return true;
     }
   }
   return false;
@@ -300,7 +300,7 @@ function raceHasLockpicking(race: RaceDefinition): boolean {
       if (trait === 'picklocks' || trait === 'lockpicking') return true;
     } else {
       const t = trait as RacialTrait;
-      if ((t.id === 'picklocks' || t.id === 'lockpicking') && t.value === true) return true;
+      if ((t.id === 'picklocks' || t.id === 'lockpicking') && t.value) return true;
     }
   }
   return false;

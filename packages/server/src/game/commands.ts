@@ -1422,20 +1422,19 @@ async function handlePickDoor(
 
   // Auto-success if skill meets or exceeds maximum
   if (lockpickingStat >= maxDiff) {
-    // Success! Unlock and open the door
+    // Success! Unlock the door
     doorStateManager.unlockDoor(door.id);
-    doorStateManager.openDoor(door.id);
 
-    broadcastToRoom(currentRoomId, colors.green(`${colors.red(socket.username)} easily picks the lock on the ${doorDisplay}!`), socket.playerId);
+    broadcastToRoom(currentRoomId, colors.green(`${colors.red(socket.username)} easily picks the lock on the ${doorDisplay}.`), socket.playerId);
 
     const otherRoomId = doorStateManager.getDestinationRoom(door.id, currentRoomId);
     if (otherRoomId) {
-      broadcastToRoom(otherRoomId, `The ${doorDisplay} clicks and swings open.`);
+      broadcastToRoom(otherRoomId, `The ${doorDisplay} clicks as its lock is picked.`);
     }
 
     return {
       type: MessageType.OUTPUT,
-      message: `You easily pick the lock on the ${doorDisplay}!`,
+      message: `You easily pick the lock on the ${doorDisplay}.`,
     };
   }
 
@@ -1459,21 +1458,18 @@ async function handlePickDoor(
   // Success! Unlock the door (which sets it to CLOSED state)
   doorStateManager.unlockDoor(door.id);
 
-  // Now open it
-  doorStateManager.openDoor(door.id);
-
   // Broadcast success to current room
-  broadcastToRoom(currentRoomId, colors.green(`${colors.red(socket.username)} picks the lock on the ${doorDisplay}!`), socket.playerId);
+  broadcastToRoom(currentRoomId, colors.green(`${colors.red(socket.username)} picks the lock on the ${doorDisplay}.`), socket.playerId);
 
   // Broadcast to the other side (if two-way door)
   const otherRoomId = doorStateManager.getDestinationRoom(door.id, currentRoomId);
   if (otherRoomId) {
-    broadcastToRoom(otherRoomId, `The ${doorDisplay} clicks and swings open.`);
+    broadcastToRoom(otherRoomId, `The ${doorDisplay} clicks as its lock is picked.`);
   }
 
   return {
     type: MessageType.OUTPUT,
-    message: `You pick the lock on the ${doorDisplay}!`,
+    message: `You pick the lock on the ${doorDisplay}.`,
   };
 }
 

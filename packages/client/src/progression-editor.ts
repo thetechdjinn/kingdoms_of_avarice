@@ -517,6 +517,9 @@ function selectClass(classId: string): void {
   (document.getElementById('class-magic-level') as HTMLInputElement).value = String(cls.magic_level ?? 0);
   (document.getElementById('class-magic-school') as HTMLSelectElement).value = cls.magic_school || '';
   (document.getElementById('class-stealth') as HTMLInputElement).checked = cls.stealth === true;
+  (document.getElementById('class-lockpicking') as HTMLInputElement).checked = cls.special_abilities?.includes('lockpicking') ?? false;
+  (document.getElementById('class-traps') as HTMLInputElement).checked = cls.special_abilities?.includes('traps') ?? false;
+  (document.getElementById('class-pickpocket') as HTMLInputElement).checked = cls.special_abilities?.includes('pickpocket') ?? false;
   (document.getElementById('class-crit-bonus') as HTMLInputElement).value = String(cls.crit_bonus ?? 0);
   (document.getElementById('class-dodge-bonus') as HTMLInputElement).value = String(cls.dodge_bonus ?? 0);
 
@@ -560,8 +563,26 @@ function selectRace(raceId: string): void {
   (document.getElementById('race-cha-min') as HTMLInputElement).value = String(bs?.charisma?.min ?? 40);
   (document.getElementById('race-cha-max') as HTMLInputElement).value = String(bs?.charisma?.max ?? 100);
 
-  // Format traits for display
-  const traitsValue = race.traits?.map(t => typeof t === 'string' ? t : `${t.id}=${t.value}`).join(', ') || '';
+  // Check for special ability traits
+  const specialAbilityIds = ['stealth', 'picklocks', 'lockpicking', 'see_hidden'];
+  const hasSpecialAbility = (id: string): boolean => {
+    if (!race.traits) return false;
+    return race.traits.some(t => {
+      if (typeof t === 'string') return t === id;
+      return t.id === id && t.value;
+    });
+  };
+
+  (document.getElementById('race-stealth') as HTMLInputElement).checked = hasSpecialAbility('stealth');
+  (document.getElementById('race-lockpicking') as HTMLInputElement).checked = hasSpecialAbility('picklocks') || hasSpecialAbility('lockpicking');
+  (document.getElementById('race-see-hidden') as HTMLInputElement).checked = hasSpecialAbility('see_hidden');
+
+  // Format other traits for display (excluding special abilities)
+  const otherTraits = race.traits?.filter(t => {
+    const id = typeof t === 'string' ? t : t.id;
+    return !specialAbilityIds.includes(id);
+  }) || [];
+  const traitsValue = otherTraits.map(t => typeof t === 'string' ? t : `${t.id}=${t.value}`).join(', ');
   (document.getElementById('race-traits') as HTMLInputElement).value = traitsValue;
   (document.getElementById('race-allowed-classes') as HTMLInputElement).value = race.allowed_classes?.join(', ') || '';
 
@@ -699,6 +720,11 @@ async function handleClassSubmit(e: Event): Promise<void> {
     magic_level: parseStatValue((document.getElementById('class-magic-level') as HTMLInputElement).value) || 0,
     magic_school: magicSchool || undefined,
     stealth: (document.getElementById('class-stealth') as HTMLInputElement).checked,
+    special_abilities: [
+      (document.getElementById('class-lockpicking') as HTMLInputElement).checked ? 'lockpicking' : null,
+      (document.getElementById('class-traps') as HTMLInputElement).checked ? 'traps' : null,
+      (document.getElementById('class-pickpocket') as HTMLInputElement).checked ? 'pickpocket' : null,
+    ].filter((a): a is string => a !== null),
     crit_bonus: parseStatValue((document.getElementById('class-crit-bonus') as HTMLInputElement).value) || 0,
     dodge_bonus: parseStatValue((document.getElementById('class-dodge-bonus') as HTMLInputElement).value) || 0,
   };
@@ -749,9 +775,9 @@ async function handleRaceSubmit(e: Event): Promise<void> {
     return;
   }
 
-  // Parse traits - support both simple strings and id=value format
+  // Parse other traits - support both simple strings and id=value format
   const traitsRaw = raceTraitsEl?.value.split(',').map(t => t.trim()).filter(Boolean) ?? [];
-  const traits = traitsRaw.map(t => {
+  const otherTraits = traitsRaw.map(t => {
     if (t.includes('=')) {
       const [id, val] = t.split('=');
       const numVal = Number(val);
@@ -759,6 +785,20 @@ async function handleRaceSubmit(e: Event): Promise<void> {
     }
     return t;
   });
+
+  // Add special ability traits from checkboxes
+  const specialAbilityTraits: Array<{ id: string; value: number }> = [];
+  if ((document.getElementById('race-stealth') as HTMLInputElement).checked) {
+    specialAbilityTraits.push({ id: 'stealth', value: 1 });
+  }
+  if ((document.getElementById('race-lockpicking') as HTMLInputElement).checked) {
+    specialAbilityTraits.push({ id: 'picklocks', value: 1 });
+  }
+  if ((document.getElementById('race-see-hidden') as HTMLInputElement).checked) {
+    specialAbilityTraits.push({ id: 'see_hidden', value: 1 });
+  }
+
+  const traits = [...otherTraits, ...specialAbilityTraits];
 
   const data: Partial<RaceDefinition> = {
     race_id: raceId,
