@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { Role, hasAnyRole } from '@koa/shared';
 import { verifyToken, COOKIE_NAME, TokenPayload } from '../routes/auth.js';
+import * as roleRepo from '../db/repositories/roleRepository.js';
 
 // Extend Express Request to include user info
 declare global {
@@ -31,10 +32,11 @@ export function requireAuth(req: Request, res: Response, next: NextFunction): vo
 }
 
 // Middleware factory to require specific roles
+// Re-fetches roles from DB to enforce immediate revocation
 export function requireRoles(...requiredRoles: Role[]) {
-  return (req: Request, res: Response, next: NextFunction): void => {
+  return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const token = req.cookies[COOKIE_NAME];
-    
+
     if (!token) {
       res.status(401).json({ success: false, message: 'Authentication required' });
       return;
@@ -46,10 +48,17 @@ export function requireRoles(...requiredRoles: Role[]) {
       return;
     }
 
+    // Fetch current roles from DB to ensure revocations take effect immediately
+    try {
+      const currentRoles = await roleRepo.getPlayerRoles(payload.playerId);
+      payload.roles = currentRoles;
+    } catch {
+      // If DB is unavailable, fall back to token roles
+    }
+
     req.user = payload;
 
-    // Check if user has any of the required roles (Admin always passes)
-    if (!hasAnyRole(payload.roles, requiredRoles)) {
+    if (!hasAnyRole(payload.roles ?? [], requiredRoles)) {
       res.status(403).json({ success: false, message: 'Insufficient permissions' });
       return;
     }

@@ -52,28 +52,29 @@ export interface CreateCharacterInput {
 
 function calculateInitialHealth(constitution: number, characterClass: string): number {
   const baseHealth: Record<string, number> = {
-    Warrior: 30,
-    Paladin: 28,
-    Cleric: 25,
-    Ranger: 25,
-    Rogue: 20,
-    Mage: 15,
+    warrior: 30,
+    paladin: 28,
+    cleric: 25,
+    ranger: 25,
+    thief: 20,
+    mage: 15,
   };
-  return (baseHealth[characterClass] || 20) + constitution * 2;
+  return (baseHealth[characterClass.toLowerCase()] || 20) + constitution * 2;
 }
 
 function calculateInitialMana(intelligence: number, wisdom: number, characterClass: string): number {
   const baseMana: Record<string, number> = {
-    Mage: 30,
-    Cleric: 20,
-    Paladin: 15,
-    Ranger: 10,
-    Warrior: 0,
-    Rogue: 5,
+    mage: 30,
+    cleric: 20,
+    paladin: 15,
+    ranger: 10,
+    warrior: 0,
+    thief: 5,
   };
-  const base = baseMana[characterClass] || 0;
+  const normalized = characterClass.toLowerCase();
+  const base = baseMana[normalized] || 0;
   // Clerics and Paladins scale with wisdom, others with intelligence
-  if (characterClass === 'Cleric' || characterClass === 'Paladin') {
+  if (normalized === 'cleric' || normalized === 'paladin') {
     return base + wisdom;
   }
   return base + intelligence;
@@ -205,11 +206,13 @@ export async function updateCharacterStats(
 export async function addCurrency(
   characterId: number,
   currencyField: keyof Currency,
-  amount: number
+  amount: number,
+  client?: pg.PoolClient
 ): Promise<void> {
   await query(
     `UPDATE characters SET ${currencyField} = COALESCE(${currencyField}, 0) + $1 WHERE id = $2`,
-    [amount, characterId]
+    [amount, characterId],
+    client
   );
 }
 

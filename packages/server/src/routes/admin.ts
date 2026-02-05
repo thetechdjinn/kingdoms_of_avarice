@@ -1,6 +1,7 @@
 import { Express, Request, Response } from 'express';
 import net from 'net';
 import { requireAdmin } from '../middleware/auth.js';
+import { getClientIpFromRequest } from '../middleware/ipAccess.js';
 import * as settingsRepo from '../db/repositories/settingsRepository.js';
 import * as ipAccessRepo from '../db/repositories/ipAccessRepository.js';
 import * as playerRepo from '../db/repositories/playerRepository.js';
@@ -14,15 +15,8 @@ export function setupAdminRoutes(app: Express): void {
   // This endpoint does NOT require authentication - it just checks IP access rules
   app.get('/api/ip-check', async (req: Request, res: Response) => {
     try {
-      // Get client IP (may come from X-Forwarded-For if proxied from Vite)
-      const forwarded = req.headers['x-forwarded-for'];
-      let clientIp: string;
-      if (forwarded) {
-        const forwardedValue = Array.isArray(forwarded) ? forwarded[0] : forwarded;
-        clientIp = forwardedValue?.split(',')[0]?.trim() || req.socket.remoteAddress || '127.0.0.1';
-      } else {
-        clientIp = req.socket.remoteAddress || req.ip || '127.0.0.1';
-      }
+      // Get client IP using centralized extraction (respects TRUST_PROXY setting)
+      const clientIp = getClientIpFromRequest(req);
 
       // Normalize IPv6-mapped IPv4 addresses
       const normalizedIp = clientIp.startsWith('::ffff:') ? clientIp.slice(7) : clientIp;
@@ -445,7 +439,12 @@ export function setupAdminRoutes(app: Express): void {
         return;
       }
 
-      res.json({ success: true, message: 'Password reset', password: newPassword });
+      // Only include password in response when it was auto-generated (no password provided)
+      if (password) {
+        res.json({ success: true, message: 'Password reset' });
+      } else {
+        res.json({ success: true, message: 'Password reset', password: newPassword });
+      }
     } catch (error) {
       console.error('Failed to reset password:', error);
       res.status(500).json({ success: false, message: 'Failed to reset password' });

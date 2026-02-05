@@ -1,6 +1,10 @@
 import { Request, Response, NextFunction } from 'express';
+import { IncomingMessage } from 'http';
 import * as settingsRepo from '../db/repositories/settingsRepository.js';
 import * as ipAccessRepo from '../db/repositories/ipAccessRepository.js';
+
+// Only trust X-Forwarded-For when explicitly configured (server is behind a reverse proxy)
+const TRUST_PROXY = process.env.TRUST_PROXY === 'true';
 
 // Localhost IPs that are always allowed
 const LOCALHOST_IPS = new Set([
@@ -47,24 +51,35 @@ function hasEmergencyAccess(req: Request): boolean {
 }
 
 /**
- * Get the client IP address from the request
- * Handles both direct connections and proxied connections
+ * Extract client IP from X-Forwarded-For header.
+ * Only used when TRUST_PROXY is enabled.
  */
-function getClientIp(req: Request): string {
-  // Check for forwarded IP (if behind a proxy)
-  const forwarded = req.headers['x-forwarded-for'];
+function getForwardedIp(headers: Record<string, string | string[] | undefined>): string | null {
+  if (!TRUST_PROXY) return null;
+
+  const forwarded = headers['x-forwarded-for'];
   if (forwarded) {
-    // x-forwarded-for can contain multiple IPs, take the first one (client IP)
-    // Handle both array format and comma-separated string
     const forwardedValue = Array.isArray(forwarded) ? forwarded[0] : forwarded;
     const firstIp = forwardedValue?.split(',')[0]?.trim();
-    if (firstIp) {
-      return firstIp;
-    }
+    if (firstIp) return firstIp;
   }
+  return null;
+}
 
-  // Direct connection
-  return req.socket.remoteAddress || req.ip || '127.0.0.1';
+/**
+ * Get the client IP address from an Express request.
+ * Only trusts X-Forwarded-For when TRUST_PROXY is enabled.
+ */
+function getClientIp(req: Request): string {
+  return getForwardedIp(req.headers) || req.socket.remoteAddress || req.ip || '127.0.0.1';
+}
+
+/**
+ * Get the client IP address from a raw HTTP IncomingMessage (for WebSocket upgrades).
+ * Only trusts X-Forwarded-For when TRUST_PROXY is enabled.
+ */
+export function getClientIpFromRequest(req: IncomingMessage): string {
+  return getForwardedIp(req.headers as Record<string, string | string[] | undefined>) || req.socket.remoteAddress || '127.0.0.1';
 }
 
 /**

@@ -1,4 +1,5 @@
-import { query } from '../index.js';
+import pg from 'pg';
+import { query, withTransaction } from '../index.js';
 import { RoomFeatures, RoomTrainingConfig, RoomRespawnConfig } from '@koa/shared';
 
 export interface DbRoom {
@@ -143,12 +144,13 @@ export async function deleteRoom(id: number): Promise<boolean> {
   return (result.rowCount ?? 0) > 0;
 }
 
-export async function createExit(input: CreateExitInput): Promise<DbRoomExit> {
+export async function createExit(input: CreateExitInput, client?: pg.PoolClient): Promise<DbRoomExit> {
   const result = await query<DbRoomExit>(
     `INSERT INTO room_exits (from_room_id, to_room_id, direction)
      VALUES ($1, $2, $3)
      RETURNING *`,
-    [input.fromRoomId, input.toRoomId, input.direction]
+    [input.fromRoomId, input.toRoomId, input.direction],
+    client
   );
   return result.rows[0];
 }
@@ -173,19 +175,21 @@ export async function createBidirectionalExit(
 
   const reverseDirection = opposites[directionAtoB] || directionAtoB;
 
-  const forward = await createExit({
-    fromRoomId: roomAId,
-    toRoomId: roomBId,
-    direction: directionAtoB,
-  });
+  return withTransaction(async (client) => {
+    const forward = await createExit({
+      fromRoomId: roomAId,
+      toRoomId: roomBId,
+      direction: directionAtoB,
+    }, client);
 
-  const reverse = await createExit({
-    fromRoomId: roomBId,
-    toRoomId: roomAId,
-    direction: reverseDirection,
-  });
+    const reverse = await createExit({
+      fromRoomId: roomBId,
+      toRoomId: roomAId,
+      direction: reverseDirection,
+    }, client);
 
-  return { forward, reverse };
+    return { forward, reverse };
+  });
 }
 
 export async function deleteExit(fromRoomId: number, direction: string): Promise<boolean> {
@@ -213,28 +217,33 @@ export async function deleteBidirectionalExit(
     southwest: 'northeast',
   };
 
-  // Get the target room first
-  const exitResult = await query<DbRoomExit>(
-    'SELECT * FROM room_exits WHERE from_room_id = $1 AND direction = $2',
-    [fromRoomId, direction]
-  );
+  return withTransaction(async (client) => {
+    // Get the target room first
+    const exitResult = await query<DbRoomExit>(
+      'SELECT * FROM room_exits WHERE from_room_id = $1 AND direction = $2',
+      [fromRoomId, direction],
+      client
+    );
 
-  if (exitResult.rows.length === 0) return false;
+    if (exitResult.rows.length === 0) return false;
 
-  const targetRoomId = exitResult.rows[0].to_room_id;
-  const reverseDirection = opposites[direction] || direction;
+    const targetRoomId = exitResult.rows[0].to_room_id;
+    const reverseDirection = opposites[direction] || direction;
 
-  // Delete both directions
-  await query(
-    'DELETE FROM room_exits WHERE from_room_id = $1 AND direction = $2',
-    [fromRoomId, direction]
-  );
-  await query(
-    'DELETE FROM room_exits WHERE from_room_id = $1 AND direction = $2',
-    [targetRoomId, reverseDirection]
-  );
+    // Delete both directions atomically
+    await query(
+      'DELETE FROM room_exits WHERE from_room_id = $1 AND direction = $2',
+      [fromRoomId, direction],
+      client
+    );
+    await query(
+      'DELETE FROM room_exits WHERE from_room_id = $1 AND direction = $2',
+      [targetRoomId, reverseDirection],
+      client
+    );
 
-  return true;
+    return true;
+  });
 }
 
 export async function getRoomCount(): Promise<number> {

@@ -20,7 +20,7 @@ import { initializeSpellMnemonics } from './spellCommands.js';
 import { initializeActionCommands } from './actionCommands.js';
 import { loadEffectsFromDb, processEffectsTick, initializeEffectDefinitions } from './statusEffects.js';
 import { colors } from '../utils/colors.js';
-import { checkWebSocketIp } from '../middleware/ipAccess.js';
+import { checkWebSocketIp, getClientIpFromRequest } from '../middleware/ipAccess.js';
 import { startGameLoop, stopGameLoop } from './gameLoop.js';
 import { initializeTickProcessor, startQueuedAction, executeQueuedCommand, handlePlayerInput } from './tickProcessor.js';
 import { initializeDoorStates } from '../services/doorStateManager.js';
@@ -80,19 +80,11 @@ export function getGameWorld(): GameWorld {
 }
 
 /**
- * Get the client IP address from a WebSocket request
+ * Get the client IP address from a WebSocket request.
+ * Delegates to centralized IP extraction which respects TRUST_PROXY setting.
  */
 function getWebSocketClientIp(req: IncomingMessage): string {
-  // Check for forwarded IP (if behind a proxy)
-  const forwarded = req.headers['x-forwarded-for'];
-  if (forwarded) {
-    const forwardedValue = Array.isArray(forwarded) ? forwarded[0] : forwarded;
-    const firstIp = forwardedValue?.split(',')[0]?.trim();
-    if (firstIp) {
-      return firstIp;
-    }
-  }
-  return req.socket.remoteAddress || '127.0.0.1';
+  return getClientIpFromRequest(req);
 }
 
 /**
@@ -554,7 +546,11 @@ export function setupGameSocket(wss: WebSocketServer): void {
         broadcastToAll(colors.boldWhite(`** ${authWs.username} just hung up! **`), payload.playerId);
       }
 
-      connectedPlayers.delete(payload.playerId);
+      // Only remove from connectedPlayers if this socket is still the registered one.
+      // Prevents a race where an old socket's close handler deletes a newer connection.
+      if (connectedPlayers.get(payload.playerId) === authWs) {
+        connectedPlayers.delete(payload.playerId);
+      }
       console.log(`Character ${authWs.username} (Player ${payload.playerId}) disconnected${authWs.properlyExited ? '' : ' (hung up)'}`);
     });
 
