@@ -1,3 +1,4 @@
+import pg from 'pg';
 import { query, withTransaction } from '../index.js';
 import {
   ItemTemplate,
@@ -154,10 +155,11 @@ function dbToInstance(row: DbItemInstance, template?: ItemTemplate): ItemInstanc
 // Template Operations
 // ============================================================================
 
-export async function getTemplateById(id: number): Promise<ItemTemplate | null> {
+export async function getTemplateById(id: number, client?: pg.PoolClient): Promise<ItemTemplate | null> {
   const result = await query<DbItemTemplate>(
     'SELECT * FROM item_templates WHERE id = $1',
-    [id]
+    [id],
+    client
   );
   return result.rows[0] ? dbToTemplate(result.rows[0]) : null;
 }
@@ -204,7 +206,7 @@ export interface CreateTemplateInput {
   base_effects?: unknown;
 }
 
-export async function createTemplate(input: CreateTemplateInput): Promise<ItemTemplate> {
+export async function createTemplate(input: CreateTemplateInput, client?: pg.PoolClient): Promise<ItemTemplate> {
   const result = await query<DbItemTemplate>(
     `INSERT INTO item_templates (
       name, short_desc, long_desc, room_desc, keywords,
@@ -244,7 +246,8 @@ export async function createTemplate(input: CreateTemplateInput): Promise<ItemTe
       input.stealth_modifier ?? 0,
       input.effect_slots ?? 0,
       input.base_effects ? JSON.stringify(input.base_effects) : null,
-    ]
+    ],
+    client
   );
   return dbToTemplate(result.rows[0]);
 }
@@ -254,16 +257,17 @@ export async function deleteTemplate(id: number): Promise<boolean> {
   return (result.rowCount ?? 0) > 0;
 }
 
-export async function getTemplateByName(name: string): Promise<ItemTemplate | null> {
+export async function getTemplateByName(name: string, client?: pg.PoolClient): Promise<ItemTemplate | null> {
   const result = await query<DbItemTemplate>(
     'SELECT * FROM item_templates WHERE LOWER(name) = LOWER($1)',
-    [name]
+    [name],
+    client
   );
   return result.rows[0] ? dbToTemplate(result.rows[0]) : null;
 }
 
-export async function updateTemplate(id: number, updates: Partial<CreateTemplateInput>): Promise<ItemTemplate | null> {
-  const existing = await getTemplateById(id);
+export async function updateTemplate(id: number, updates: Partial<CreateTemplateInput>, client?: pg.PoolClient): Promise<ItemTemplate | null> {
+  const existing = await getTemplateById(id, client);
   if (!existing) return null;
 
   const result = await query<DbItemTemplate>(
@@ -321,7 +325,8 @@ export async function updateTemplate(id: number, updates: Partial<CreateTemplate
       updates.effect_slots ?? null,
       updates.base_effects ? JSON.stringify(updates.base_effects) : null,
       id,
-    ]
+    ],
+    client
   );
   return result.rows[0] ? dbToTemplate(result.rows[0]) : null;
 }
@@ -426,7 +431,7 @@ export interface CreateInstanceInput {
   custom_data?: ItemCustomData;
 }
 
-export async function createInstance(input: CreateInstanceInput): Promise<ItemInstance> {
+export async function createInstance(input: CreateInstanceInput, client?: pg.PoolClient): Promise<ItemInstance> {
   const result = await query<DbItemInstance>(
     `INSERT INTO item_instances (
       template_id, location_type, location_id, equipped_slot,
@@ -443,11 +448,12 @@ export async function createInstance(input: CreateInstanceInput): Promise<ItemIn
       input.charges_remaining ?? null,
       input.fuel_remaining ?? null,
       JSON.stringify(input.custom_data ?? {}),
-    ]
+    ],
+    client
   );
-  
+
   const instance = result.rows[0];
-  const template = await getTemplateById(instance.template_id);
+  const template = await getTemplateById(instance.template_id, client);
   return dbToInstance(instance, template ?? undefined);
 }
 
@@ -455,26 +461,30 @@ export async function updateInstanceLocation(
   instanceId: number,
   locationType: ItemLocationType,
   locationId: number,
-  equippedSlot?: EquipmentSlot
+  equippedSlot?: EquipmentSlot,
+  client?: pg.PoolClient
 ): Promise<boolean> {
   const result = await query(
-    `UPDATE item_instances 
+    `UPDATE item_instances
      SET location_type = $1, location_id = $2, equipped_slot = $3, updated_at = CURRENT_TIMESTAMP
      WHERE id = $4`,
-    [locationType, locationId, equippedSlot ?? null, instanceId]
+    [locationType, locationId, equippedSlot ?? null, instanceId],
+    client
   );
   return (result.rowCount ?? 0) > 0;
 }
 
 export async function updateInstanceQuantity(
   instanceId: number,
-  quantity: number
+  quantity: number,
+  client?: pg.PoolClient
 ): Promise<boolean> {
   const result = await query(
-    `UPDATE item_instances 
+    `UPDATE item_instances
      SET quantity = $1, updated_at = CURRENT_TIMESTAMP
      WHERE id = $2`,
-    [quantity, instanceId]
+    [quantity, instanceId],
+    client
   );
   return (result.rowCount ?? 0) > 0;
 }
@@ -529,8 +539,8 @@ export async function addToInstanceQuantity(
   return (result.rowCount ?? 0) > 0;
 }
 
-export async function deleteInstance(id: number): Promise<boolean> {
-  const result = await query('DELETE FROM item_instances WHERE id = $1', [id]);
+export async function deleteInstance(id: number, client?: pg.PoolClient): Promise<boolean> {
+  const result = await query('DELETE FROM item_instances WHERE id = $1', [id], client);
   return (result.rowCount ?? 0) > 0;
 }
 
@@ -710,13 +720,15 @@ export async function updateInstanceFuel(
 
 export async function updateInstanceCondition(
   instanceId: number,
-  condition: ItemCondition
+  condition: ItemCondition,
+  client?: pg.PoolClient
 ): Promise<boolean> {
   const result = await query(
-    `UPDATE item_instances 
+    `UPDATE item_instances
      SET condition = $1, updated_at = CURRENT_TIMESTAMP
      WHERE id = $2`,
-    [condition, instanceId]
+    [condition, instanceId],
+    client
   );
   return (result.rowCount ?? 0) > 0;
 }
@@ -787,13 +799,15 @@ export async function revealItem(instanceId: number): Promise<boolean> {
 // Update custom_data for an item instance (for enchantments, etc.)
 export async function updateInstanceCustomData(
   instanceId: number,
-  customData: ItemCustomData
+  customData: ItemCustomData,
+  client?: pg.PoolClient
 ): Promise<boolean> {
   const result = await query(
     `UPDATE item_instances
      SET custom_data = $1, updated_at = CURRENT_TIMESTAMP
      WHERE id = $2`,
-    [JSON.stringify(customData), instanceId]
+    [JSON.stringify(customData), instanceId],
+    client
   );
   return (result.rowCount ?? 0) > 0;
 }

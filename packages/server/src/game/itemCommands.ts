@@ -2126,20 +2126,20 @@ export async function handleCraft(
 
   // Consume ingredients and create result atomically
   let resultName = 'something';
-  await withTransaction(async () => {
+  await withTransaction(async (client) => {
     // Consume ingredients
     for (const ingredient of recipe.ingredients) {
       let remaining = ingredient.quantity;
       const matching = inventory.filter(i => i.template_id === ingredient.template_id);
-      
+
       for (const item of matching) {
         if (remaining <= 0) break;
-        
+
         if (item.quantity <= remaining) {
           remaining -= item.quantity;
-          await itemRepo.deleteInstance(item.id);
+          await itemRepo.deleteInstance(item.id, client);
         } else {
-          await itemRepo.updateInstanceQuantity(item.id, item.quantity - remaining);
+          await itemRepo.updateInstanceQuantity(item.id, item.quantity - remaining, client);
           remaining = 0;
         }
       }
@@ -2151,9 +2151,9 @@ export async function handleCraft(
       location_type: ItemLocationType.PLAYER,
       location_id: socket.characterId!,
       quantity: recipe.result_quantity,
-    });
+    }, client);
 
-    const resultTemplate = await itemRepo.getTemplateById(recipe.result_template_id);
+    const resultTemplate = await itemRepo.getTemplateById(recipe.result_template_id, client);
     resultName = resultTemplate?.name ?? 'something';
   });
 
@@ -2386,9 +2386,9 @@ async function handleCurrencyPickup(
   if (!currencyType) return null;
 
   const currencyInfo = CURRENCY_TYPES[currencyType];
-  return await withTransaction(async () => {
-    await characterRepo.addCurrency(characterId, currencyInfo.field, item.quantity);
-    await itemRepo.deleteInstance(item.id);
+  return await withTransaction(async (client) => {
+    await characterRepo.addCurrency(characterId, currencyInfo.field, item.quantity, client);
+    await itemRepo.deleteInstance(item.id, client);
     return item.quantity === 1 ? `1 ${currencyType} coin` : `${item.quantity} ${currencyType} coins`;
   });
 }

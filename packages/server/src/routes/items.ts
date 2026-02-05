@@ -328,25 +328,25 @@ export function setupItemRoutes(app: Express): void {
       }
 
       // Perform all updates atomically within a transaction
-      await withTransaction(async () => {
+      await withTransaction(async (client) => {
         // Update location if provided
         if (location_type && location_id !== undefined) {
-          await itemRepo.updateInstanceLocation(id, location_type, location_id, equipped_slot);
+          await itemRepo.updateInstanceLocation(id, location_type, location_id, equipped_slot, client);
         }
 
         // Update quantity if provided
         if (quantity !== undefined) {
-          await itemRepo.updateInstanceQuantity(id, quantity);
+          await itemRepo.updateInstanceQuantity(id, quantity, client);
         }
 
         // Update condition if provided
         if (condition) {
-          await itemRepo.updateInstanceCondition(id, condition);
+          await itemRepo.updateInstanceCondition(id, condition, client);
         }
 
         // Update custom_data if provided
         if (custom_data) {
-          await itemRepo.updateInstanceCustomData(id, custom_data);
+          await itemRepo.updateInstanceCustomData(id, custom_data, client);
         }
       });
 
@@ -440,16 +440,16 @@ export function setupItemRoutes(app: Express): void {
       // Execute all operations atomically within a single transaction
       // This ensures consistency between existence checks and mutations
       try {
-        await withTransaction(async () => {
+        await withTransaction(async (client) => {
           for (const template of templates) {
-            const existing = await itemRepo.getTemplateByName(template.name);
-            
+            const existing = await itemRepo.getTemplateByName(template.name, client);
+
             if (existing && merge) {
-              await itemRepo.updateTemplate(existing.id, template);
+              await itemRepo.updateTemplate(existing.id, template, client);
               results.updated++;
             } else if (!existing) {
               const { id, ...templateData } = template;
-              await itemRepo.createTemplate(templateData);
+              await itemRepo.createTemplate(templateData, client);
               results.created++;
             } else {
               results.errors.push(`Skipped "${template.name}": already exists (merge disabled)`);

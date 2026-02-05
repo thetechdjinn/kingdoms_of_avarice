@@ -7,6 +7,15 @@ import * as roleRepo from '../db/repositories/roleRepository.js';
 const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-change-in-production';
 const COOKIE_NAME = 'koa_token';
 
+// Warn at startup if JWT_SECRET is not configured
+if (!process.env.JWT_SECRET) {
+  if (process.env.NODE_ENV === 'production') {
+    console.error('[AUTH] CRITICAL: JWT_SECRET is not set! Tokens are signed with a hardcoded default. Set JWT_SECRET in your environment.');
+  } else {
+    console.warn('[AUTH] WARNING: JWT_SECRET is not set. Using default dev secret. Do not use this in production.');
+  }
+}
+
 // Fallback in-memory storage if database is unavailable
 const fallbackUsers = new Map<string, { id: number; passwordHash: string }>();
 let useDatabase = true;
@@ -82,7 +91,7 @@ export function setupAuthRoutes(app: Express): void {
           return;
         }
 
-        const token = jwt.sign({ playerId: user.id, username }, JWT_SECRET, { expiresIn: '24h' });
+        const token = jwt.sign({ playerId: user.id, username, roles: [] }, JWT_SECRET, { expiresIn: '24h' });
 
         res.cookie(COOKIE_NAME, token, {
           httpOnly: true,
