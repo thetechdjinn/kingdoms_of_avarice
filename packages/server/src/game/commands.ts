@@ -151,6 +151,8 @@ export async function processCommand(
       // Otherwise, examine an item
       return handleExamine(socket, args, currentRoomId);
     }
+    // Broadcast that the player is looking around
+    broadcastToRoom(currentRoomId, colors.green(`${colors.red(socket.username)} looks around the room.`), socket.playerId);
     return await handleLook(socket, currentRoomId, world, _connectedPlayers, false);
   }
 
