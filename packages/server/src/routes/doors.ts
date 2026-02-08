@@ -56,10 +56,9 @@ export function setupDoorRoutes(app: Express): void {
         exitRoomId,
         exitDirection,
         defaultState,
-        autoCloseSeconds,
+        autoResetSeconds,
         hasLock,
         keyItemTag,
-        autoLockSeconds,
         pickDifficultyMin,
         pickDifficultyMax,
         bashDifficulty,
@@ -129,13 +128,8 @@ export function setupDoorRoutes(app: Express): void {
       }
 
       // Validate numeric fields
-      if (autoCloseSeconds !== undefined && autoCloseSeconds !== null && (typeof autoCloseSeconds !== 'number' || autoCloseSeconds <= 0)) {
-        res.status(400).json({ success: false, message: 'Auto close seconds must be a positive number' });
-        return;
-      }
-
-      if (autoLockSeconds !== undefined && autoLockSeconds !== null && (typeof autoLockSeconds !== 'number' || autoLockSeconds <= 0)) {
-        res.status(400).json({ success: false, message: 'Auto lock seconds must be a positive number' });
+      if (autoResetSeconds !== undefined && autoResetSeconds !== null && (typeof autoResetSeconds !== 'number' || autoResetSeconds <= 0)) {
+        res.status(400).json({ success: false, message: 'Auto reset seconds must be a positive number' });
         return;
       }
 
@@ -187,10 +181,9 @@ export function setupDoorRoutes(app: Express): void {
         exitRoomId: exitRoomId ?? null,
         exitDirection: exitDirection?.toLowerCase() || null,
         defaultState: defaultState || DoorState.CLOSED,
-        autoCloseSeconds,
+        autoResetSeconds,
         hasLock: hasLock || false,
         keyItemTag: keyItemTag || null,
-        autoLockSeconds: autoLockSeconds ?? null,
         pickDifficultyMin: pickDifficultyMin ?? 0,
         pickDifficultyMax: pickDifficultyMax ?? 0,
         bashDifficulty: bashDifficulty ?? 0,
@@ -251,10 +244,9 @@ export function setupDoorRoutes(app: Express): void {
         exitRoomId,
         exitDirection,
         defaultState,
-        autoCloseSeconds,
+        autoResetSeconds,
         hasLock,
         keyItemTag,
-        autoLockSeconds,
         pickDifficultyMin,
         pickDifficultyMax,
         bashDifficulty,
@@ -326,13 +318,8 @@ export function setupDoorRoutes(app: Express): void {
       }
 
       // Validate numeric fields
-      if (autoCloseSeconds !== undefined && autoCloseSeconds !== null && (typeof autoCloseSeconds !== 'number' || autoCloseSeconds <= 0)) {
-        res.status(400).json({ success: false, message: 'Auto close seconds must be a positive number' });
-        return;
-      }
-
-      if (autoLockSeconds !== undefined && autoLockSeconds !== null && (typeof autoLockSeconds !== 'number' || autoLockSeconds <= 0)) {
-        res.status(400).json({ success: false, message: 'Auto lock seconds must be a positive number' });
+      if (autoResetSeconds !== undefined && autoResetSeconds !== null && (typeof autoResetSeconds !== 'number' || autoResetSeconds <= 0)) {
+        res.status(400).json({ success: false, message: 'Auto reset seconds must be a positive number' });
         return;
       }
 
@@ -386,10 +373,9 @@ export function setupDoorRoutes(app: Express): void {
       if (exitRoomId !== undefined) updates.exitRoomId = exitRoomId;
       if (exitDirection !== undefined) updates.exitDirection = exitDirection?.toLowerCase() || null;
       if (defaultState !== undefined) updates.defaultState = defaultState;
-      if (autoCloseSeconds !== undefined) updates.autoCloseSeconds = autoCloseSeconds;
+      if (autoResetSeconds !== undefined) updates.autoResetSeconds = autoResetSeconds;
       if (hasLock !== undefined) updates.hasLock = hasLock;
       if (keyItemTag !== undefined) updates.keyItemTag = keyItemTag || null;
-      if (autoLockSeconds !== undefined) updates.autoLockSeconds = autoLockSeconds;
       if (pickDifficultyMin !== undefined) updates.pickDifficultyMin = pickDifficultyMin;
       if (pickDifficultyMax !== undefined) updates.pickDifficultyMax = pickDifficultyMax;
       if (bashDifficulty !== undefined) updates.bashDifficulty = bashDifficulty;

@@ -425,6 +425,23 @@ export async function runMigrations(): Promise<void> {
         ALTER TABLE item_templates ADD COLUMN IF NOT EXISTS tool_data JSONB
       `);
 
+      // Unified auto-reset timer: Replace auto_close_seconds + auto_lock_seconds with auto_reset_seconds
+      await client.query(`
+        ALTER TABLE doors ADD COLUMN IF NOT EXISTS auto_reset_seconds INTEGER DEFAULT 120
+      `);
+      // Migrate data: prefer auto_lock_seconds (if set), else use auto_close_seconds
+      await client.query(`
+        UPDATE doors
+        SET auto_reset_seconds = COALESCE(auto_lock_seconds, auto_close_seconds)
+        WHERE auto_lock_seconds IS NOT NULL OR (auto_close_seconds IS NOT NULL AND auto_close_seconds != 120)
+      `);
+      await client.query(`
+        ALTER TABLE doors DROP COLUMN IF EXISTS auto_close_seconds
+      `);
+      await client.query(`
+        ALTER TABLE doors DROP COLUMN IF EXISTS auto_lock_seconds
+      `);
+
       // Lockpicking System Phase 1: Migrate pick_difficulty to min/max range
       // First add the new columns
       await client.query(`

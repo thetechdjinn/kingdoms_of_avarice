@@ -13,10 +13,9 @@ interface DbDoor {
   exit_room_id: number | null;
   exit_direction: string | null;
   default_state: string;
-  auto_close_seconds: number | null;
+  auto_reset_seconds: number | null;
   has_lock: boolean;
   key_item_tag: string | null;
-  auto_lock_seconds: number | null;
   pick_difficulty_min: number;
   pick_difficulty_max: number;
   bash_difficulty: number;
@@ -52,10 +51,9 @@ function dbToDoor(row: DbDoor): Door {
     exitRoomId: row.exit_room_id,
     exitDirection: row.exit_direction,
     defaultState: row.default_state as DoorState,
-    autoCloseSeconds: row.auto_close_seconds,
+    autoResetSeconds: row.auto_reset_seconds,
     hasLock: row.has_lock,
     keyItemTag: row.key_item_tag,
-    autoLockSeconds: row.auto_lock_seconds,
     pickDifficultyMin: row.pick_difficulty_min,
     pickDifficultyMax: row.pick_difficulty_max,
     bashDifficulty: row.bash_difficulty,
@@ -198,10 +196,9 @@ export interface CreateDoorInput {
   exitRoomId?: number | null;
   exitDirection?: string | null;
   defaultState?: DoorState;
-  autoCloseSeconds?: number | null;
+  autoResetSeconds?: number | null;
   hasLock?: boolean;
   keyItemTag?: string;
-  autoLockSeconds?: number | null;
   pickDifficultyMin?: number;
   pickDifficultyMax?: number;
   bashDifficulty?: number;
@@ -228,8 +225,8 @@ export async function createDoor(input: CreateDoorInput): Promise<Door> {
       name, display_name, door_type, description,
       entry_room_id, entry_direction,
       exit_room_id, exit_direction,
-      default_state, auto_close_seconds,
-      has_lock, key_item_tag, auto_lock_seconds,
+      default_state, auto_reset_seconds,
+      has_lock, key_item_tag,
       pick_difficulty_min, pick_difficulty_max, bash_difficulty,
       is_hidden,
       trigger_text, passage_message_self, passage_message_room,
@@ -238,7 +235,7 @@ export async function createDoor(input: CreateDoorInput): Promise<Door> {
       appear_message, disappear_message,
       required_level, required_classes, required_quest_flag,
       required_item_tag, denial_message
-    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31)
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30)
     RETURNING *`,
     [
       input.name,
@@ -250,10 +247,9 @@ export async function createDoor(input: CreateDoorInput): Promise<Door> {
       input.exitRoomId ?? null,
       input.exitDirection?.toLowerCase() ?? null,
       input.defaultState ?? DoorState.CLOSED,
-      input.autoCloseSeconds === undefined ? 120 : input.autoCloseSeconds,
+      input.autoResetSeconds === undefined ? 120 : input.autoResetSeconds,
       input.hasLock ?? false,
       input.keyItemTag ?? null,
-      input.autoLockSeconds ?? null,
       input.pickDifficultyMin ?? 0,
       input.pickDifficultyMax ?? 0,
       input.bashDifficulty ?? 0,
@@ -321,9 +317,9 @@ export async function updateDoor(
     setClauses.push(`default_state = $${paramIndex++}`);
     values.push(updates.defaultState);
   }
-  if (updates.autoCloseSeconds !== undefined) {
-    setClauses.push(`auto_close_seconds = $${paramIndex++}`);
-    values.push(updates.autoCloseSeconds);
+  if (updates.autoResetSeconds !== undefined) {
+    setClauses.push(`auto_reset_seconds = $${paramIndex++}`);
+    values.push(updates.autoResetSeconds);
   }
   if (updates.hasLock !== undefined) {
     setClauses.push(`has_lock = $${paramIndex++}`);
@@ -332,10 +328,6 @@ export async function updateDoor(
   if (updates.keyItemTag !== undefined) {
     setClauses.push(`key_item_tag = $${paramIndex++}`);
     values.push(updates.keyItemTag);
-  }
-  if (updates.autoLockSeconds !== undefined) {
-    setClauses.push(`auto_lock_seconds = $${paramIndex++}`);
-    values.push(updates.autoLockSeconds);
   }
   if (updates.pickDifficultyMin !== undefined) {
     setClauses.push(`pick_difficulty_min = $${paramIndex++}`);

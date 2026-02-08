@@ -64,16 +64,14 @@ export interface Door {
   // State (for physical doors)
   /** The state the door resets to (on server restart or after events) */
   defaultState: DoorState;
-  /** Seconds until door auto-closes after being opened (null = no auto-close) */
-  autoCloseSeconds: number | null;
+  /** Seconds until door auto-resets to defaultState after state change (null = no auto-reset) */
+  autoResetSeconds: number | null;
 
   // Lock properties (for physical doors)
   /** Whether this door has a lock */
   hasLock: boolean;
   /** Tag that matches an item's key_tag in flags to unlock this door */
   keyItemTag: string | null;
-  /** Seconds until door auto-locks after being unlocked (null = no auto-lock) */
-  autoLockSeconds: number | null;
   /** Minimum difficulty to pick lock (0-500+). Below this skill level = guaranteed failure */
   pickDifficultyMin: number;
   /** Maximum difficulty to pick lock (0-500+). Above this skill level = guaranteed success */
