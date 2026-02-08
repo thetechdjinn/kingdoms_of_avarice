@@ -935,6 +935,11 @@ export async function handleExamine(
   }
 
   const item = matches[0];
+  const itemName = getItemName(item);
+
+  // Broadcast to room that the player is examining something
+  broadcastToRoom(currentRoomId, colors.green(`${colors.red(socket.username)} examines ${withArticle(itemName)} closely.`), socket.playerId);
+
   return formatItemExamine(item);
 }
 
