@@ -169,6 +169,7 @@ export default defineConfig({
     port: 3000,
     host: true,
     allowedHosts: true, // Allow all hostnames - we have our own IP-based access control
+    hmr: { overlay: false },
     proxy: {
       '/api': {
         target: 'http://localhost:3001',

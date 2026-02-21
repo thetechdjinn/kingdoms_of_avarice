@@ -88,13 +88,12 @@ CREATE TABLE IF NOT EXISTS doors (
     -- State (for physical doors)
     default_state VARCHAR(20) DEFAULT 'closed' CHECK (default_state IN ('open', 'closed', 'locked')),
 
-    -- Auto-close timer (NULL = no auto-close, otherwise seconds until door closes)
-    auto_close_seconds INTEGER DEFAULT 120,
+    -- Auto-reset timer (NULL = no auto-reset, otherwise seconds until door resets to default_state)
+    auto_reset_seconds INTEGER DEFAULT 120,
 
     -- Lock properties (for physical doors)
     has_lock BOOLEAN DEFAULT FALSE,
     key_item_tag VARCHAR(100),  -- Tag that matches item's key_tag in flags to unlock
-    auto_lock_seconds INTEGER,  -- NULL = no auto-lock, otherwise seconds until door locks after unlock
     pick_difficulty_min INTEGER DEFAULT 0,  -- 0-500+, minimum lockpicking skill needed (below = auto-fail)
     pick_difficulty_max INTEGER DEFAULT 0,  -- 0-500+, lockpicking skill for guaranteed success (500+ = unpickable)
     bash_difficulty INTEGER DEFAULT 0,  -- 0-500+, difficulty to bash door (500+ = unbashable)

@@ -11,10 +11,9 @@ interface Door {
   exitRoomId: number | null;
   exitDirection: string | null;
   defaultState: string;
-  autoCloseSeconds: number | null;
+  autoResetSeconds: number | null;
   hasLock: boolean;
   keyItemTag: string | null;
-  autoLockSeconds: number | null;
   pickDifficultyMin: number;
   pickDifficultyMax: number;
   bashDifficulty: number;
@@ -588,22 +587,20 @@ function selectDoor(id: number): void {
 
   // State fields
   const defaultStateSelect = getElement<HTMLSelectElement>('default-state');
-  const autoCloseInput = getElement<HTMLInputElement>('auto-close-seconds');
+  const autoResetInput = getElement<HTMLInputElement>('auto-reset-seconds');
 
   if (defaultStateSelect) defaultStateSelect.value = door.defaultState;
-  if (autoCloseInput) autoCloseInput.value = String(door.autoCloseSeconds || 0);
+  if (autoResetInput) autoResetInput.value = String(door.autoResetSeconds || 0);
 
   // Lock fields
   const hasLockCheck = getElement<HTMLInputElement>('has-lock');
   const keyItemTagInput = getElement<HTMLInputElement>('key-item-tag');
-  const autoLockInput = getElement<HTMLInputElement>('auto-lock-seconds');
   const pickDiffMinInput = getElement<HTMLInputElement>('pick-difficulty-min');
   const pickDiffMaxInput = getElement<HTMLInputElement>('pick-difficulty-max');
   const bashDiffInput = getElement<HTMLInputElement>('bash-difficulty');
 
   if (hasLockCheck) hasLockCheck.checked = door.hasLock;
   if (keyItemTagInput) keyItemTagInput.value = door.keyItemTag || '';
-  if (autoLockInput) autoLockInput.value = String(door.autoLockSeconds || 0);
   if (pickDiffMinInput) pickDiffMinInput.value = String(door.pickDifficultyMin);
   if (pickDiffMaxInput) pickDiffMaxInput.value = String(door.pickDifficultyMax);
   if (bashDiffInput) bashDiffInput.value = String(door.bashDifficulty);
@@ -728,7 +725,7 @@ function updatePreview(door: Door): void {
       <div class="preview-section">
         <div class="preview-section-title">State</div>
         <div class="preview-property">Default: ${door.defaultState}</div>
-        ${door.autoCloseSeconds ? `<div class="preview-property">Auto-close: ${door.autoCloseSeconds}s</div>` : ''}
+        ${door.autoResetSeconds ? `<div class="preview-property">Auto-reset: ${door.autoResetSeconds}s</div>` : ''}
       </div>
     `;
 
@@ -980,14 +977,12 @@ function gatherFormData(): Partial<Door> {
   // State data (for physical doors)
   if (doorType === 'physical') {
     data.defaultState = getElement<HTMLSelectElement>('default-state')?.value || 'closed';
-    const autoClose = parseInt(getElement<HTMLInputElement>('auto-close-seconds')?.value || '0');
-    data.autoCloseSeconds = autoClose > 0 ? autoClose : null;
+    const autoReset = parseInt(getElement<HTMLInputElement>('auto-reset-seconds')?.value || '0');
+    data.autoResetSeconds = autoReset > 0 ? autoReset : null;
 
     // Lock data
     data.hasLock = getElement<HTMLInputElement>('has-lock')?.checked || false;
     data.keyItemTag = getElement<HTMLInputElement>('key-item-tag')?.value || null;
-    const autoLock = parseInt(getElement<HTMLInputElement>('auto-lock-seconds')?.value || '0');
-    data.autoLockSeconds = autoLock > 0 ? autoLock : null;
     const pickMin = parseInt(getElement<HTMLInputElement>('pick-difficulty-min')?.value || '0') || 0;
     const pickMax = parseInt(getElement<HTMLInputElement>('pick-difficulty-max')?.value || '0') || 0;
     // Ensure min <= max (swap if user entered them backwards)

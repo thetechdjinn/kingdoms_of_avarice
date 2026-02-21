@@ -4,7 +4,7 @@ import { getDelayModifierDescriptions, getStatusEffectDelayMultiplier } from './
 import { getPlayerQueueStatus } from './tickProcessor.js';
 import { getRemainingCooldown, formatAbilityName } from './cooldownTracker.js';
 import { GameWorld } from './world.js';
-import { AuthenticatedSocket, broadcastToRoom, sendVitals } from './socket.js';
+import { AuthenticatedSocket, broadcastToRoom, sendVitals, sendMessage } from './socket.js';
 import { colors } from '../utils/colors.js';
 import { processAdminCommand, getPlayerLocation, setPlayerLocation } from './adminCommands.js';
 import * as doorStateManager from '../services/doorStateManager.js';
@@ -137,7 +137,11 @@ export async function processCommand(
       // Try to find another player in the room with that name (respects stealth visibility)
       const targetPlayer = findPlayerInRoom(targetName, currentRoomId, _connectedPlayers, socket.playerId, socket.canSeeHidden);
       if (targetPlayer) {
-        return await handleLookAtPlayer(targetPlayer);
+        const result = await handleLookAtPlayer(targetPlayer);
+        // Notify the target player and room
+        sendMessage(targetPlayer, MessageType.OUTPUT, colors.green(`${colors.red(socket.username)} looks you up and down.`));
+        broadcastToRoom(currentRoomId, colors.green(`${colors.red(socket.username)} looks ${colors.red(targetPlayer.username)} up and down.`), [socket.playerId, targetPlayer.playerId]);
+        return result;
       }
       // Check if looking at a special door (e.g., "look portal", "look vortex")
       const specialDoor = doorStateManager.findSpecialDoorByDisplayName(currentRoomId, targetName);
@@ -147,6 +151,8 @@ export async function processCommand(
       // Otherwise, examine an item
       return handleExamine(socket, args, currentRoomId);
     }
+    // Broadcast that the player is looking around
+    broadcastToRoom(currentRoomId, colors.green(`${colors.red(socket.username)} looks around the room.`), socket.playerId);
     return await handleLook(socket, currentRoomId, world, _connectedPlayers, false);
   }
 
@@ -656,6 +662,9 @@ async function handleLookDirection(
     }
   }
 
+  // Notify players in the current room that someone is looking in a direction
+  broadcastToRoom(currentRoomId, colors.green(`${colors.red(socket.username)} looks ${direction}.`), socket.playerId);
+
   // Notify players in the target room that someone is peeking in
   const oppositeDir = OPPOSITE_DIRECTIONS[direction] || direction;
   broadcastToRoom(targetRoom.id, colors.green(`${colors.red(socket.username)} peeks in from the ${oppositeDir}.`), socket.playerId);
@@ -948,10 +957,12 @@ async function handleDoorAction(
   // Broadcast to current room
   broadcastToRoom(currentRoomId, colors.green(`${colors.red(socket.username)} ${verbs} the ${doorDisplay}.`), socket.playerId);
 
-  // Broadcast to the other side (if two-way door)
+  // Broadcast to the other side (if two-way door) using the opposite direction
   const otherRoomId = doorStateManager.getDestinationRoom(door.id, currentRoomId);
   if (otherRoomId) {
-    broadcastToRoom(otherRoomId, `The ${doorDisplay} ${verbs} from the other side.`);
+    const oppositeDirection = OPPOSITE_DIRECTIONS[direction] || direction;
+    const otherDoorDisplay = getDoorDisplayName(door, oppositeDirection);
+    broadcastToRoom(otherRoomId, `The ${otherDoorDisplay} ${verbs} from the other side.`);
   }
 
   return { type: MessageType.OUTPUT, message: `You ${verb} the ${doorDisplay}.` };
@@ -1134,10 +1145,12 @@ async function handleLockDoor(
   // Broadcast to current room
   broadcastToRoom(currentRoomId, colors.green(`${colors.red(socket.username)} locks the ${doorDisplay}.`), socket.playerId);
 
-  // Broadcast to the other side (if two-way door)
+  // Broadcast to the other side (if two-way door) using the opposite direction
   const otherRoomId = doorStateManager.getDestinationRoom(door.id, currentRoomId);
   if (otherRoomId) {
-    broadcastToRoom(otherRoomId, `The ${doorDisplay} locks from the other side.`);
+    const oppositeDirection = OPPOSITE_DIRECTIONS[direction] || direction;
+    const otherDoorDisplay = getDoorDisplayName(door, oppositeDirection);
+    broadcastToRoom(otherRoomId, `The ${otherDoorDisplay} locks from the other side.`);
   }
 
   // Check if key should be consumed
@@ -1241,10 +1254,12 @@ async function handleUseKey(
   // Broadcast to current room
   broadcastToRoom(currentRoomId, colors.green(`${colors.red(socket.username)} unlocks the ${doorDisplay} with a key.`), socket.playerId);
 
-  // Broadcast to the other side (if two-way door)
+  // Broadcast to the other side (if two-way door) using the opposite direction
   const otherRoomId = doorStateManager.getDestinationRoom(door.id, currentRoomId);
   if (otherRoomId) {
-    broadcastToRoom(otherRoomId, `The ${doorDisplay} unlocks from the other side.`);
+    const oppositeDirection = OPPOSITE_DIRECTIONS[direction] || direction;
+    const otherDoorDisplay = getDoorDisplayName(door, oppositeDirection);
+    broadcastToRoom(otherRoomId, `The ${otherDoorDisplay} unlocks from the other side.`);
   }
 
   // Check if key should be consumed
@@ -1429,7 +1444,9 @@ async function handlePickDoor(
 
     const otherRoomId = doorStateManager.getDestinationRoom(door.id, currentRoomId);
     if (otherRoomId) {
-      broadcastToRoom(otherRoomId, `The ${doorDisplay} clicks as its lock is picked.`);
+      const oppositeDirection = OPPOSITE_DIRECTIONS[direction] || direction;
+      const otherDoorDisplay = getDoorDisplayName(door, oppositeDirection);
+      broadcastToRoom(otherRoomId, `The ${otherDoorDisplay} clicks as its lock is picked.`);
     }
 
     return {
@@ -1461,10 +1478,12 @@ async function handlePickDoor(
   // Broadcast success to current room
   broadcastToRoom(currentRoomId, colors.green(`${colors.red(socket.username)} picks the lock on the ${doorDisplay}.`), socket.playerId);
 
-  // Broadcast to the other side (if two-way door)
+  // Broadcast to the other side (if two-way door) using the opposite direction
   const otherRoomId = doorStateManager.getDestinationRoom(door.id, currentRoomId);
   if (otherRoomId) {
-    broadcastToRoom(otherRoomId, `The ${doorDisplay} clicks as its lock is picked.`);
+    const oppositeDirection = OPPOSITE_DIRECTIONS[direction] || direction;
+    const otherDoorDisplay = getDoorDisplayName(door, oppositeDirection);
+    broadcastToRoom(otherRoomId, `The ${otherDoorDisplay} clicks as its lock is picked.`);
   }
 
   return {
@@ -1568,10 +1587,12 @@ async function handleBashDoor(
   // Broadcast success to current room
   broadcastToRoom(currentRoomId, colors.green(`${colors.red(socket.username)} bashes open the ${doorDisplay}!`), socket.playerId);
 
-  // Broadcast to the other side (if two-way door)
+  // Broadcast to the other side (if two-way door) using the opposite direction
   const otherRoomId = doorStateManager.getDestinationRoom(door.id, currentRoomId);
   if (otherRoomId) {
-    broadcastToRoom(otherRoomId, `The ${doorDisplay} bursts open with a crash!`);
+    const oppositeDirection = OPPOSITE_DIRECTIONS[direction] || direction;
+    const otherDoorDisplay = getDoorDisplayName(door, oppositeDirection);
+    broadcastToRoom(otherRoomId, `The ${otherDoorDisplay} bursts open with a crash!`);
   }
 
   return {

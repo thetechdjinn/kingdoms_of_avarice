@@ -26,9 +26,9 @@ const doorsById = new Map<number, Door>();
 // Key: room ID, Value: array of Door objects
 const doorsByRoomId = new Map<number, Door[]>();
 
-// Active auto-close timers for open doors
+// Active auto-reset timers for doors not at their default state
 // Key: door ID, Value: NodeJS.Timeout
-const autoCloseTimers = new Map<number, NodeJS.Timeout>();
+const autoResetTimers = new Map<number, NodeJS.Timeout>();
 
 // Active temporary portals (spawned and not yet expired)
 // Key: door ID, Value: timestamp when portal was spawned
@@ -53,10 +53,10 @@ export async function initializeDoorStates(
   const allDoors = await doorRepo.getAllDoors();
 
   // Clear any existing timers
-  for (const timer of autoCloseTimers.values()) {
+  for (const timer of autoResetTimers.values()) {
     clearTimeout(timer);
   }
-  autoCloseTimers.clear();
+  autoResetTimers.clear();
 
   // Clear portal expiration timers
   for (const timer of portalExpirationTimers.values()) {
@@ -114,7 +114,7 @@ export async function reloadDoor(doorId: number): Promise<Door | null> {
       doorStates.delete(doorId);
 
       // Cancel any active timers for this door
-      cancelAutoCloseTimer(doorId);
+      cancelAutoResetTimer(doorId);
       cancelPortalExpirationTimer(doorId);
       activePortals.delete(doorId);
 
@@ -212,12 +212,12 @@ export async function reloadDoor(doorId: number): Promise<Door | null> {
     }
   }
 
-  // If door is currently open and autoCloseSeconds changed, restart timer
+  // If door is not at default state and autoResetSeconds changed, restart timer
   const currentState = doorStates.get(doorId);
-  if (currentState === DoorState.OPEN) {
-    if (oldDoor && oldDoor.autoCloseSeconds !== door.autoCloseSeconds) {
+  if (currentState !== door.defaultState) {
+    if (oldDoor && oldDoor.autoResetSeconds !== door.autoResetSeconds) {
       // Timer settings changed - restart with new duration
-      startAutoCloseTimer(door);
+      startAutoResetTimer(door);
     }
   }
 
@@ -314,65 +314,86 @@ export function setDoorState(doorId: number, state: DoorState): boolean {
 }
 
 /**
- * Start the auto-close timer for a door
+ * Start the auto-reset timer for a door
+ * Timer fires after autoResetSeconds and resets the door to its defaultState
  */
-function startAutoCloseTimer(door: Door): void {
+function startAutoResetTimer(door: Door): void {
   // Cancel any existing timer
-  cancelAutoCloseTimer(door.id);
+  cancelAutoResetTimer(door.id);
 
-  // Only start timer if auto-close is enabled
-  if (door.autoCloseSeconds === null || door.autoCloseSeconds <= 0) {
+  // Only start timer if auto-reset is enabled
+  if (door.autoResetSeconds === null || door.autoResetSeconds <= 0) {
+    return;
+  }
+
+  // Don't start timer if door is already at default state
+  const currentState = doorStates.get(door.id);
+  if (currentState === door.defaultState) {
     return;
   }
 
   const doorId = door.id;
   const timer = setTimeout(() => {
-    autoCloseTimers.delete(doorId);
+    autoResetTimers.delete(doorId);
     // Fetch fresh door data to avoid stale references if door was edited
     const currentDoor = doorsById.get(doorId);
     if (currentDoor) {
-      autoCloseDoor(currentDoor);
+      autoResetDoor(currentDoor);
     }
-  }, door.autoCloseSeconds * 1000);
+  }, door.autoResetSeconds * 1000);
 
-  autoCloseTimers.set(door.id, timer);
+  autoResetTimers.set(door.id, timer);
 }
 
 /**
- * Cancel the auto-close timer for a door
+ * Cancel the auto-reset timer for a door
  */
-function cancelAutoCloseTimer(doorId: number): void {
-  const timer = autoCloseTimers.get(doorId);
+function cancelAutoResetTimer(doorId: number): void {
+  const timer = autoResetTimers.get(doorId);
   if (timer) {
     clearTimeout(timer);
-    autoCloseTimers.delete(doorId);
+    autoResetTimers.delete(doorId);
   }
 }
 
 /**
- * Called when auto-close timer expires
- * For doors with locks, this will auto-LOCK the door (not just close)
+ * Called when auto-reset timer expires
+ * Resets the door to its defaultState and broadcasts the change
  */
-function autoCloseDoor(door: Door): void {
+function autoResetDoor(door: Door): void {
   const currentState = doorStates.get(door.id);
-  if (currentState !== DoorState.OPEN) {
-    // Door was already closed (manually or otherwise)
+  if (currentState === door.defaultState) {
+    // Door is already at default state
     return;
   }
 
-  // For doors with locks, auto-lock instead of just closing
-  const newState = door.hasLock ? DoorState.LOCKED : DoorState.CLOSED;
-  const actionVerb = door.hasLock ? 'locked' : 'closed';
+  doorStates.set(door.id, door.defaultState);
 
-  doorStates.set(door.id, newState);
+  // Determine verb from default state
+  let actionVerb: string;
+  switch (door.defaultState) {
+    case DoorState.LOCKED:
+      actionVerb = 'locked';
+      break;
+    case DoorState.CLOSED:
+      actionVerb = 'closed';
+      break;
+    case DoorState.OPEN:
+      actionVerb = 'opened';
+      break;
+    default:
+      actionVerb = 'reset';
+  }
+
+  const doorLabel = door.displayName || 'door';
 
   // Broadcast to both rooms with consistent message format
   if (broadcastCallback) {
-    const entryMessage = `The ${door.name} to the ${door.entryDirection} just ${actionVerb}.`;
+    const entryMessage = `The ${doorLabel} to the ${door.entryDirection} just ${actionVerb}.`;
     broadcastCallback(door.entryRoomId, entryMessage);
 
     if (door.exitRoomId && door.exitDirection) {
-      const exitMessage = `The ${door.name} to the ${door.exitDirection} just ${actionVerb}.`;
+      const exitMessage = `The ${doorLabel} to the ${door.exitDirection} just ${actionVerb}.`;
       broadcastCallback(door.exitRoomId, exitMessage);
     }
   }
@@ -397,8 +418,8 @@ export function openDoor(doorId: number): boolean {
   }
   doorStates.set(doorId, DoorState.OPEN);
 
-  // Start auto-close timer
-  startAutoCloseTimer(door);
+  // Start auto-reset timer (door moved away from default)
+  startAutoResetTimer(door);
 
   return true;
 }
@@ -418,8 +439,12 @@ export function closeDoor(doorId: number): boolean {
   }
   doorStates.set(doorId, DoorState.CLOSED);
 
-  // Cancel auto-close timer since door was manually closed
-  cancelAutoCloseTimer(doorId);
+  // If now at default state, cancel timer; otherwise start/restart timer
+  if (door.defaultState === DoorState.CLOSED) {
+    cancelAutoResetTimer(doorId);
+  } else {
+    startAutoResetTimer(door);
+  }
 
   return true;
 }
@@ -441,6 +466,14 @@ export function lockDoor(doorId: number): boolean {
     return false; // Can only lock a closed door
   }
   doorStates.set(doorId, DoorState.LOCKED);
+
+  // If now at default state, cancel timer; otherwise start/restart timer
+  if (door.defaultState === DoorState.LOCKED) {
+    cancelAutoResetTimer(doorId);
+  } else {
+    startAutoResetTimer(door);
+  }
+
   return true;
 }
 
@@ -462,6 +495,14 @@ export function unlockDoor(doorId: number): boolean {
     return false; // Can only unlock a locked door
   }
   doorStates.set(doorId, DoorState.CLOSED);
+
+  // If now at default state, cancel timer; otherwise start/restart timer
+  if (door.defaultState === DoorState.CLOSED) {
+    cancelAutoResetTimer(doorId);
+  } else {
+    startAutoResetTimer(door);
+  }
+
   return true;
 }
 
@@ -571,17 +612,17 @@ export function isInitialized(): boolean {
 }
 
 /**
- * Get count of active auto-close timers (for debugging)
+ * Get count of active auto-reset timers (for debugging)
  */
 export function getActiveTimerCount(): number {
-  return autoCloseTimers.size;
+  return autoResetTimers.size;
 }
 
 /**
- * Check if a door has an active auto-close timer
+ * Check if a door has an active auto-reset timer
  */
 export function hasActiveTimer(doorId: number): boolean {
-  return autoCloseTimers.has(doorId);
+  return autoResetTimers.has(doorId);
 }
 
 /**
