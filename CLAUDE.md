@@ -6,6 +6,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Kingdoms of Avarice is a web-based MUD (Multi-User Dungeon) inspired by MajorMUD. TypeScript monorepo with real-time WebSocket communication and a terminal-style xterm.js interface.
 
+## Rules
+
+- Always ensure any libraries, frameworks, or dependencies are up to date and secure
+- Use the latest stable versions of libraries, frameworks, and dependencies
+
 ## Commands
 
 ```bash
@@ -232,64 +237,66 @@ Players can access different help categories based on their role:
 
 ### Staff Commands (MODERATOR+)
 
-| Command | Description |
-| ------- | ----------- |
-| `@goto <id>` | Teleport to a room |
-| `@rooms` | List all rooms |
-| `@roominfo [id]` | Show room details |
-| `@give <id\|name> [qty]` | Give yourself an item |
-| `@hurt [amount] [player]` | Damage HP (testing) |
-| `@drain [amount] [player]` | Drain mana (testing) |
-| `@learn <mnemonic>` | Learn a spell |
-| `@spells` | List all spells |
+| Command                            | Description                             |
+| ---------------------------------- | --------------------------------------- |
+| `@goto <id>`                       | Teleport to a room                      |
+| `@rooms`                           | List all rooms                          |
+| `@roominfo [id]`                   | Show room details                       |
+| `@give <id\|name> [qty]`           | Give yourself an item                   |
+| `@hurt [amount] [player]`          | Damage HP (testing)                     |
+| `@drain [amount] [player]`         | Drain mana (testing)                    |
+| `@learn <mnemonic>`                | Learn a spell                           |
+| `@spells`                          | List all spells                         |
 | `@effect <id> [duration] [player]` | Apply status effect (default 60s, self) |
-| `@cleareffect <id\|all>` | Remove status effect |
-| `@effects` | List available effects |
-| `@stealth [player]` | Show stealth/perception breakdown |
+| `@cleareffect <id\|all>`           | Remove status effect                    |
+| `@effects`                         | List available effects                  |
+| `@stealth [player]`                | Show stealth/perception breakdown       |
 
 ### Developer Commands (DEVELOPER+)
 
-| Command | Description |
-| ------- | ----------- |
-| `@create room <name>` | Create a new room |
-| `@link <dir> <id> [oneway]` | Link rooms |
-| `@unlink <dir> [oneway]` | Remove an exit |
-| `@edit <field> <value>` | Edit current room |
-| `@delete room <id>` | Delete a room |
-| `@items` | List item templates |
-| `@iteminfo <id\|name>` | Show item details |
-| `@spawn <id\|name> [qty]` | Spawn item in your inventory |
-| `@purge items` | Remove all room items |
-| `@reload [type]` | Reload data (rooms, items, effects, doors, actions, all) |
-| `@setstealth <mode> [player]` | Force stealth state (none/sneaking/hidden) |
-| `@testbackstab <target>` | Test backstab without stealth requirement |
-| `@lockpicking [player]` | Show lockpicking skill breakdown |
+| Command                       | Description                                              |
+| ----------------------------- | -------------------------------------------------------- |
+| `@create room <name>`         | Create a new room                                        |
+| `@link <dir> <id> [oneway]`   | Link rooms                                               |
+| `@unlink <dir> [oneway]`      | Remove an exit                                           |
+| `@edit <field> <value>`       | Edit current room                                        |
+| `@delete room <id>`           | Delete a room                                            |
+| `@items`                      | List item templates                                      |
+| `@iteminfo <id\|name>`        | Show item details                                        |
+| `@spawn <id\|name> [qty]`     | Spawn item in your inventory                             |
+| `@purge items`                | Remove all room items                                    |
+| `@reload [type]`              | Reload data (rooms, items, effects, doors, actions, all) |
+| `@setstealth <mode> [player]` | Force stealth state (none/sneaking/hidden)               |
+| `@testbackstab <target>`      | Test backstab without stealth requirement                |
+| `@lockpicking [player]`       | Show lockpicking skill breakdown                         |
 
 ### Player Door Commands
 
-| Command | Description |
-| ------- | ----------- |
-| `use <key> <direction>` | Unlock a door with a key |
-| `lock <direction>` | Lock an unlocked door (requires key) |
-| `pick <direction>` | Pick lock (requires thief skills) |
-| `bash <direction>` | Bash door open (uses strength) |
+| Command                 | Description                          |
+| ----------------------- | ------------------------------------ |
+| `use <key> <direction>` | Unlock a door with a key             |
+| `lock <direction>`      | Lock an unlocked door (requires key) |
+| `pick <direction>`      | Pick lock (requires thief skills)    |
+| `bash <direction>`      | Bash door open (uses strength)       |
 
 ### Stealth Commands
 
-| Command | Description |
-| ------- | ----------- |
-| `hide` | Attempt to hide in the shadows (requires stealth ability) |
-| `sneak` (sn) | Attempt to move stealthily (requires stealth ability) |
+| Command                  | Description                                               |
+| ------------------------ | --------------------------------------------------------- |
+| `hide`                   | Attempt to hide in the shadows (requires stealth ability) |
+| `sneak` (sn)             | Attempt to move stealthily (requires stealth ability)     |
 | `backstab <player>` (bs) | Surprise attack from stealth (requires one-handed weapon) |
-| `visible` (vis) | Stop hiding or sneaking |
+| `visible` (vis)          | Stop hiding or sneaking                                   |
 
 **Stealth Mechanics:**
+
 - Characters need a race or class with the `stealth` trait to use stealth commands
 - Hidden players are invisible in the room unless searched
 - Sneaking players are visible but don't trigger entrance/exit announcements
 - Stealth breaks when entering combat, casting spells, or using actions on others
 
 **Backstab Mechanics:**
+
 - Must be sneaking or hidden to backstab
 - Requires a one-handed weapon (cannot backstab with two-handed weapons)
 - Deals high damage using multiplier: 2-4x weapon max damage + level bonuses
@@ -298,22 +305,23 @@ Players can access different help categories based on their role:
 
 ### Social Commands
 
-| Command | Description |
-| ------- | ----------- |
-| `/me <text>` | Custom emote (e.g., `/me waves goodbye`) |
-| `<action>` | Perform a social action (e.g., `dance`, `bow`, `wave`) |
-| `<action> <player>` | Target a player with an action (e.g., `wave bob`) |
+| Command             | Description                                            |
+| ------------------- | ------------------------------------------------------ |
+| `/me <text>`        | Custom emote (e.g., `/me waves goodbye`)               |
+| `<action>`          | Perform a social action (e.g., `dance`, `bow`, `wave`) |
+| `<action> <player>` | Target a player with an action (e.g., `wave bob`)      |
 
 **Default Actions:** `bow`, `cackle`, `cheer`, `clap`, `cry`, `dance`, `grin`, `grovel`, `hug`, `laugh`, `nod`, `poke`, `salute`, `shrug`, `sigh`, `smirk`, `wave`, `wink`, `yawn`
 
 ### Death System Commands
 
-| Command | Description |
-| ------- | ----------- |
+| Command        | Description                                  |
+| -------------- | -------------------------------------------- |
 | `aid <player>` | Stabilize a fallen ally (prevents bleed-out) |
-| `respawn` | Return to life at respawn room (when dead) |
+| `respawn`      | Return to life at respawn room (when dead)   |
 
 **Death Mechanics:**
+
 - When HP drops to 0, players collapse and enter "dropped" state
 - Dropped players bleed out over time (-1 HP per tick)
 - Allies can use `aid` to stabilize dropped players (+1 HP recovery per tick)
