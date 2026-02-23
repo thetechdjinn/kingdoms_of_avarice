@@ -2,13 +2,13 @@
  * Combat Loop Module
  *
  * Manages the global combat timer and processes combat rounds for all players.
+ * Uses CombatEntity interface so both players and NPCs can participate.
  */
 
-import { MessageType, GameMessage, AttackResult, SpellScalingStat, AttackVerbs } from '@koa/shared';
-import { AuthenticatedSocket } from './socket.js';
-import { getPlayerLocation } from './adminCommands.js';
+import { MessageType, AttackResult, SpellScalingStat, AttackVerbs } from '@koa/shared';
+import { AuthenticatedSocket, sendVitals as sendPlayerVitals } from './socket.js';
+import { CombatEntity, isPlayerEntity, getEntityRoomId } from './combatEntity.js';
 import { colors } from '../utils/colors.js';
-import { getEffectModifiers, hasEffect } from './statusEffects.js';
 import {
   calculateRoundEnergy,
   calculateAccuracy,
@@ -28,19 +28,17 @@ import {
   applyDamage,
   initializeDroppedState,
   initializeDeadState,
-  isPlayerDropped,
-  isPlayerDead,
   formatDroppedMessage,
   formatDeathMessage,
 } from './damageHandler.js';
+import { getCombatStats, getCombatStatsWithDodge } from './combatStatProvider.js';
 import {
-  getEquipmentCombatStats,
-  calculateEncumbranceRatio,
-  getEquipmentAccuracyBonus,
-} from './combatStats.js';
-import * as characterRepo from '../db/repositories/characterRepository.js';
-import * as progressionRepo from '../db/repositories/progressionRepository.js';
-import { getRespawnRoomId } from '../services/respawnService.js';
+  sendCombatMessage,
+  sendEntityVitals,
+  broadcastCombatToRoom,
+  resolveCombatTarget,
+  initializeCombatMessaging,
+} from './combatMessaging.js';
 
 /**
  * Get character stat value based on spell scaling stat
@@ -76,19 +74,10 @@ const COMBAT_ROUND_MS = Number.isFinite(parsedRoundMs) && parsedRoundMs > 0
   ? parsedRoundMs
   : DEFAULT_COMBAT_ROUND_MS;
 
-// Default combat values (used when equipment/stats not yet implemented)
-// TODO: Replace these with actual equipment/stat lookups in Phase 3
-const DEFAULT_ENCUMBRANCE_RATIO = 0.5;  // 50% encumbrance baseline
-const DEFAULT_EQUIPMENT_BONUS = 0;
-const DEFAULT_SPELL_MODIFIER = 0;
-const DEFAULT_WEAPON_SPEED = 7500;
-const DEFAULT_UNARMED_DAMAGE = '1d6';
-const DEFAULT_BASE_CRIT_CHANCE = 5;     // 5% base crit chance
+// Default combat values
 const DEFAULT_CRIT_MULTIPLIER = 2.0;
-const DEFAULT_ARMOR_CLASS = 10;
 const DEFAULT_PERCEPTION = 0;
 const DEFAULT_SHADOW = 0;
-const DEFAULT_DAMAGE_REDUCTION = 0;
 
 let combatInterval: NodeJS.Timeout | null = null;
 let connectedPlayersRef: Map<number, AuthenticatedSocket>;
@@ -104,6 +93,8 @@ export function startCombatLoop(connectedPlayers: Map<number, AuthenticatedSocke
   }
 
   connectedPlayersRef = connectedPlayers;
+  // Initialize the messaging module with the player map and canonical sendVitals
+  initializeCombatMessaging(connectedPlayers as Map<number, CombatEntity>, sendPlayerVitals);
   combatInterval = setInterval(processCombatRound, COMBAT_ROUND_MS);
   console.log(`[Combat] Started combat loop (${COMBAT_ROUND_MS}ms rounds)`);
 }
@@ -117,49 +108,6 @@ export function stopCombatLoop(): void {
     clearInterval(combatInterval);
     combatInterval = null;
     console.log('[Combat] Stopped combat loop');
-  }
-}
-
-/**
- * Send a message to a specific socket
- */
-function sendToSocket(socket: AuthenticatedSocket, type: MessageType, payload: string): void {
-  const message: GameMessage = { type, payload, timestamp: Date.now() };
-  socket.send(JSON.stringify(message));
-}
-
-/**
- * Send vitals update to a socket
- */
-function sendVitals(socket: AuthenticatedSocket): void {
-  const message: GameMessage = {
-    type: MessageType.VITALS,
-    payload: JSON.stringify(socket.vitals),
-    timestamp: Date.now(),
-  };
-  socket.send(JSON.stringify(message));
-}
-
-/**
- * Broadcast a message to all players in a room except one
- */
-function broadcastToRoomExcept(
-  roomId: number,
-  message: string,
-  excludePlayerIds: number[]
-): void {
-  if (!connectedPlayersRef) return;
-
-  const gameMessage: GameMessage = {
-    type: MessageType.OUTPUT,
-    payload: message,
-    timestamp: Date.now(),
-  };
-
-  for (const [playerId, socket] of connectedPlayersRef) {
-    if (!excludePlayerIds.includes(playerId) && getPlayerLocation(playerId) === roomId) {
-      socket.send(JSON.stringify(gameMessage));
-    }
   }
 }
 
@@ -263,20 +211,19 @@ function formatSwingMessage(
  * Returns true if combat should continue, false if combat was broken
  */
 async function processSpellCombat(
-  attacker: AuthenticatedSocket,
+  attacker: CombatEntity,
   targets: Set<number>
 ): Promise<boolean> {
-  if (!connectedPlayersRef) return false;
   if (!attacker.combatState.activeSpell) return false;
 
   const spell = attacker.combatState.activeSpell;
-  const attackerRoomId = getPlayerLocation(attacker.playerId);
+  const attackerRoomId = getEntityRoomId(attacker);
 
   // Check if we have enough mana
   if ((attacker.vitals.resource ?? 0) < spell.manaCost) {
     // Not enough mana - break combat
-    sendToSocket(attacker, MessageType.SYSTEM, colors.red(`You don't have enough mana to cast ${spell.spellName}!`));
-    sendToSocket(attacker, MessageType.SYSTEM, colors.yellow('*COMBAT OFF*'));
+    sendCombatMessage(attacker, MessageType.SYSTEM, colors.red(`You don't have enough mana to cast ${spell.spellName}!`));
+    sendCombatMessage(attacker, MessageType.SYSTEM, colors.yellow('*COMBAT OFF*'));
 
     // Clear combat state
     clearCombatState(attacker, connectedPlayersRef);
@@ -285,7 +232,7 @@ async function processSpellCombat(
 
   // Deduct mana
   attacker.vitals.resource = (attacker.vitals.resource ?? 0) - spell.manaCost;
-  sendVitals(attacker);
+  sendEntityVitals(attacker);
 
   // Parse spell damage dice
   const { min: minDamage, max: maxDamage } = parseDiceString(spell.damageDice);
@@ -299,17 +246,17 @@ async function processSpellCombat(
 
   // Process each target
   for (const targetId of targets) {
-    const target = connectedPlayersRef.get(targetId);
+    const target = resolveCombatTarget(targetId);
     if (!target) {
       targets.delete(targetId);
       continue;
     }
 
     // Check if target is still in the same room
-    const targetRoomId = getPlayerLocation(targetId);
+    const targetRoomId = getEntityRoomId(target);
     if (targetRoomId !== attackerRoomId) {
       targets.delete(targetId);
-      sendToSocket(attacker, MessageType.SYSTEM, `${target.username} is no longer here.`);
+      sendCombatMessage(attacker, MessageType.SYSTEM, `${target.entityName} is no longer here.`);
       continue;
     }
 
@@ -318,23 +265,25 @@ async function processSpellCombat(
     const damage = baseDamage + scalingBonus;
 
     // Send spell messages
-    const attackerMsg = `You cast ${colors.cyan(spell.spellName)} at ${colors.combatDefender(target.username)} for ${colors.combatDamage(damage.toString())} damage!`;
-    const defenderMsg = `${colors.combatAttacker(attacker.username)} casts ${colors.cyan(spell.spellName)} at you for ${colors.combatDamage(damage.toString())} damage!`;
-    const roomMsg = `${colors.combatAttacker(attacker.username)} casts ${colors.cyan(spell.spellName)} at ${colors.combatDefender(target.username)} for ${colors.combatDamage(damage.toString())} damage!`;
+    const attackerMsg = `You cast ${colors.cyan(spell.spellName)} at ${colors.combatDefender(target.entityName)} for ${colors.combatDamage(damage.toString())} damage!`;
+    const defenderMsg = `${colors.combatAttacker(attacker.entityName)} casts ${colors.cyan(spell.spellName)} at you for ${colors.combatDamage(damage.toString())} damage!`;
+    const roomMsg = `${colors.combatAttacker(attacker.entityName)} casts ${colors.cyan(spell.spellName)} at ${colors.combatDefender(target.entityName)} for ${colors.combatDamage(damage.toString())} damage!`;
 
-    sendToSocket(attacker, MessageType.OUTPUT, attackerMsg);
-    sendToSocket(target, MessageType.OUTPUT, defenderMsg);
-    broadcastToRoomExcept(attackerRoomId, roomMsg, [attacker.playerId, targetId]);
+    sendCombatMessage(attacker, MessageType.OUTPUT, attackerMsg);
+    sendCombatMessage(target, MessageType.OUTPUT, defenderMsg);
+    broadcastCombatToRoom(attackerRoomId, roomMsg, [attacker.entityId, targetId]);
 
     // Apply damage using centralized handler
     const damageResult = await applyDamage(target, damage, 'spell');
-    sendVitals(target);
 
-    // Handle state changes
+    // Handle state changes (dropped/death send vitals with updated status)
     if (damageResult.stateChange === 'dropped') {
-      await handlePlayerDropped(target, attacker, attackerRoomId);
+      await handleEntityDropped(target, attacker, attackerRoomId);
     } else if (damageResult.stateChange === 'death') {
-      await handleActualDeath(target, attacker, attackerRoomId);
+      await handleEntityDeath(target, attacker, attackerRoomId);
+    } else {
+      // Only send vitals here if no state change — dropped/death handlers send their own
+      sendEntityVitals(target);
     }
   }
 
@@ -345,12 +294,14 @@ async function processSpellCombat(
  * Process combat for a single attacker against their targets
  */
 async function processAttackerCombat(
-  attacker: AuthenticatedSocket,
+  attacker: CombatEntity,
   targets: Set<number>,
   combatConfig: RuntimeCombatConfig = DEFAULT_RUNTIME_CONFIG
 ): Promise<void> {
   if (!connectedPlayersRef) return;
-  if (!attacker.characterId) return;
+
+  // Players require characterId; NPCs don't (Phase 2)
+  if (isPlayerEntity(attacker) && !attacker.characterId) return;
 
   // Check if using spell combat
   if (attacker.combatState.combatAction === 'spell' && attacker.combatState.activeSpell) {
@@ -363,57 +314,45 @@ async function processAttackerCombat(
       attacker.regenState.inCombat = false;
       attacker.combatState.combatAction = 'melee';
       attacker.combatState.activeSpell = null;
-      sendToSocket(attacker, MessageType.SYSTEM, colors.yellow('*COMBAT OFF*'));
+      sendCombatMessage(attacker, MessageType.SYSTEM, colors.yellow('*COMBAT OFF*'));
     }
     return;
   }
 
-  // Get attacker's equipment stats
-  const attackerEquipment = await getEquipmentCombatStats(attacker.characterId!);
-
-  // Calculate effective stats with equipment modifiers
-  const effectiveDex = attacker.characterStats.dexterity + (attackerEquipment.statModifiers.dexterity || 0);
-  const effectiveInt = attacker.characterStats.intelligence + (attackerEquipment.statModifiers.intelligence || 0);
-  const effectiveStr = attacker.characterStats.strength + (attackerEquipment.statModifiers.strength || 0);
-
-  // Calculate encumbrance from actual inventory weight
-  const encumbranceRatio = calculateEncumbranceRatio(attackerEquipment.totalWeight, effectiveStr);
+  // Get attacker's combat stats via the provider
+  const attackerStats = await getCombatStats(attacker);
 
   // Calculate attacker's energy for this round
   const energyFactors = {
     combatLevel: attacker.combatLevel,
     characterLevel: attacker.characterLevel,
-    dexterity: effectiveDex,
-    encumbranceRatio,
+    dexterity: attackerStats.effectiveDex,
+    encumbranceRatio: attackerStats.encumbranceRatio,
   };
 
-  // Get attacker's status effect modifiers
-  const attackerEffectMods = getEffectModifiers(attacker);
-
   // Apply energy modifier from status effects
-  const energyMultiplier = 1 + (attackerEffectMods.energyModifier / 100);
+  const energyMultiplier = 1 + (attackerStats.effectModifiers.energyModifier / 100);
   const roundEnergy = Math.floor(calculateRoundEnergy(energyFactors, combatConfig) * energyMultiplier);
 
   // Calculate attacker's accuracy with equipment and status effect bonuses
-  const equipmentAccuracyBonus = getEquipmentAccuracyBonus(attackerEquipment.statModifiers);
   const accuracyFactors = {
     characterLevel: attacker.characterLevel,
     combatLevel: attacker.combatLevel,
-    dexterity: effectiveDex,
-    intelligence: effectiveInt,
-    charisma: attacker.characterStats.charisma + (attackerEquipment.statModifiers.charisma || 0),
-    equipmentBonus: equipmentAccuracyBonus,
-    spellModifier: attackerEffectMods.accuracyModifier,
-    encumbrancePenalty: encumbranceRatio > 0.75 ? Math.floor((encumbranceRatio - 0.75) * 40) : 0,
-    isBlind: attackerEffectMods.isBlind,
+    dexterity: attackerStats.effectiveDex,
+    intelligence: attackerStats.effectiveInt,
+    charisma: attackerStats.effectiveCha,
+    equipmentBonus: attackerStats.equipmentAccuracyBonus,
+    spellModifier: attackerStats.effectModifiers.accuracyModifier,
+    encumbrancePenalty: attackerStats.encumbranceRatio > 0.75 ? Math.floor((attackerStats.encumbranceRatio - 0.75) * 40) : 0,
+    isBlind: attackerStats.effectModifiers.isBlind,
   };
 
   const attackerAccuracy = calculateAccuracy(accuracyFactors, combatConfig);
 
-  // Get weapon data from equipped weapon
-  const baseWeaponSpeed = attackerEquipment.weapon.attackSpeed;
-  const weaponMinDamage = attackerEquipment.weapon.minDamage;
-  const weaponMaxDamage = attackerEquipment.weapon.maxDamage;
+  // Get weapon data from stat snapshot
+  const baseWeaponSpeed = attackerStats.weapon.attackSpeed;
+  const weaponMinDamage = attackerStats.weapon.minDamage;
+  const weaponMaxDamage = attackerStats.weapon.maxDamage;
 
   // Calculate effective weapon cost (MajorMUD-style: level and combat reduce weapon cost)
   const effectiveWeaponCost = calculateEffectiveWeaponCost(
@@ -423,36 +362,26 @@ async function processAttackerCombat(
   );
 
   // Debug logging for swing calculations
-  console.log(`[Combat Debug] ${attacker.username}: Level=${attacker.characterLevel}, Combat=${attacker.combatLevel}, STR=${effectiveStr}, DEX=${effectiveDex}, Weight=${attackerEquipment.totalWeight}, MaxCap=${effectiveStr * 48}, Enc=${(encumbranceRatio * 100).toFixed(1)}%, BaseSpeed=${baseWeaponSpeed}, EffectiveCost=${effectiveWeaponCost}, RoundEnergy=${roundEnergy}, ExpectedSwings=${Math.floor(roundEnergy / effectiveWeaponCost)}`);
-
-  // Get class crit bonus (MajorMUD-style: some classes get flat crit bonuses)
-  let classCritBonus = 0;
-  if (attacker.characterId) {
-    const progression = await progressionRepo.getCharacterProgression(attacker.characterId);
-    if (progression) {
-      const classDef = await progressionRepo.getClassById(progression.class_id);
-      classCritBonus = classDef?.crit_bonus ?? 0;
-    }
-  }
+  console.log(`[Combat Debug] ${attacker.entityName}: Level=${attacker.characterLevel}, Combat=${attacker.combatLevel}, STR=${attackerStats.effectiveStr}, DEX=${attackerStats.effectiveDex}, Weight=${attackerStats.totalWeight}, MaxCap=${attackerStats.effectiveStr * 48}, Enc=${(attackerStats.encumbranceRatio * 100).toFixed(1)}%, BaseSpeed=${baseWeaponSpeed}, EffectiveCost=${effectiveWeaponCost}, RoundEnergy=${roundEnergy}, ExpectedSwings=${Math.floor(roundEnergy / effectiveWeaponCost)}`);
 
   // Calculate crit chance using MajorMUD-style formula
   const critFactors = {
     characterLevel: attacker.characterLevel,
-    intelligence: effectiveInt,
-    dexterity: effectiveDex,
-    classCritBonus,
-    weaponCritModifier: attackerEquipment.weapon.critModifier,
+    intelligence: attackerStats.effectiveInt,
+    dexterity: attackerStats.effectiveDex,
+    classCritBonus: attackerStats.classCritBonus,
+    weaponCritModifier: attackerStats.weapon.critModifier,
     equipmentCritBonus: 0, // TODO: Add equipment crit bonuses when implemented
-    encumbranceRatio,
+    encumbranceRatio: attackerStats.encumbranceRatio,
   };
   const baseCritChance = calculateCritChance(critFactors);
-  const critMultiplier = DEFAULT_CRIT_MULTIPLIER; // Now unused but kept for API compatibility
+  const critMultiplier = DEFAULT_CRIT_MULTIPLIER;
 
-  const attackerRoomId = getPlayerLocation(attacker.playerId);
+  const attackerRoomId = getEntityRoomId(attacker);
 
   // Process each target
   for (const targetId of targets) {
-    const target = connectedPlayersRef.get(targetId);
+    const target = resolveCombatTarget(targetId);
     if (!target) {
       // Target disconnected, remove from targets
       targets.delete(targetId);
@@ -460,80 +389,58 @@ async function processAttackerCombat(
     }
 
     // Check if target is still in the same room
-    const targetRoomId = getPlayerLocation(targetId);
+    const targetRoomId = getEntityRoomId(target);
     if (targetRoomId !== attackerRoomId) {
       // Target left the room, remove from targets
       targets.delete(targetId);
-      sendToSocket(attacker, MessageType.SYSTEM, `${target.username} is no longer here.`);
+      sendCombatMessage(attacker, MessageType.SYSTEM, `${target.entityName} is no longer here.`);
       continue;
     }
 
-    // Get defender's equipment stats (skip if no character selected)
-    if (!target.characterId) continue;
-    const defenderEquipment = await getEquipmentCombatStats(target.characterId);
-    const defenderEquipmentBonus = getEquipmentAccuracyBonus(defenderEquipment.statModifiers);
-
-    // Get defender's status effect modifiers
-    const defenderEffectMods = getEffectModifiers(target);
+    // Get defender's combat stats via the provider
+    // Players require characterId; NPCs will have pre-computed stats (Phase 2)
+    if (isPlayerEntity(target) && !target.characterId) continue;
+    const defenderStats = await getCombatStatsWithDodge(target);
 
     // Calculate defender's defense from equipped armor and status effects
     const defenseFactors = {
-      armorClass: defenderEquipment.armor.totalArmorClass,
+      armorClass: defenderStats.armor.totalArmorClass,
       perception: DEFAULT_PERCEPTION,  // TODO: Add perception stat to characters
       shadow: DEFAULT_SHADOW,          // TODO: Add shadow stat to characters
-      equipmentBonus: defenderEquipmentBonus,
-      spellModifier: defenderEffectMods.defenseModifier,
+      equipmentBonus: defenderStats.equipmentAccuracyBonus,
+      spellModifier: defenderStats.effectModifiers.defenseModifier,
     };
 
     const targetDefense = calculateDefense(defenseFactors);
 
     // Apply damage modifier from status effects to weapon damage range
-    const damageMultiplier = 1 + (attackerEffectMods.damageModifier / 100);
+    const damageMultiplier = 1 + (attackerStats.effectModifiers.damageModifier / 100);
     const minDamage = Math.max(1, Math.floor(weaponMinDamage * damageMultiplier));
     const maxDamage = Math.max(1, Math.floor(weaponMaxDamage * damageMultiplier));
 
     // Calculate defender's dodge chance (MajorMUD-style)
-    // Dodge is a class skill - only classes with dodge_bonus > 0 can dodge
     let defenderDodgeChance = 0;
-    if (target.characterId) {
-      // Use progressionRepo for class (consistent with attacker), characterRepo for race
-      const defenderProgression = await progressionRepo.getCharacterProgression(target.characterId);
-      const defenderCharacter = await characterRepo.findCharacterById(target.characterId);
-      if (defenderProgression && defenderCharacter) {
-        const defenderClassDef = await progressionRepo.getClassById(defenderProgression.class_id);
-        const defenderRaceDef = await progressionRepo.getRaceById(defenderCharacter.race);
+    if (defenderStats.classDodgeBonus > 0 || defenderStats.raceDodgeBonus > 0) {
+      // TODO: Add equipment dodge bonus when implemented on items
+      const equipmentDodgeBonus = 0;
 
-        const classDodgeBonus = defenderClassDef?.dodge_bonus ?? 0;
-        const raceDodgeBonus = defenderRaceDef?.dodge_bonus ?? 0;
+      const dodgeFactors = {
+        classDodgeBonus: defenderStats.classDodgeBonus,
+        raceDodgeBonus: defenderStats.raceDodgeBonus,
+        agility: defenderStats.effectiveDex,
+        charm: defenderStats.effectiveCha,
+        equipmentDodgeBonus,
+        attackerAccuracy,
+      };
 
-        // Only calculate dodge if defender has any dodge bonus
-        if (classDodgeBonus > 0 || raceDodgeBonus > 0) {
-          // Get defender's effective stats for dodge calculation
-          const defenderDex = target.characterStats.dexterity + (defenderEquipment.statModifiers.dexterity || 0);
-          const defenderCha = target.characterStats.charisma + (defenderEquipment.statModifiers.charisma || 0);
-
-          // TODO: Add equipment dodge bonus when implemented on items
-          const equipmentDodgeBonus = 0;
-
-          const dodgeFactors = {
-            classDodgeBonus,
-            raceDodgeBonus,
-            agility: defenderDex, // DEX maps to Agility
-            charm: defenderCha, // CHA maps to Charm
-            equipmentDodgeBonus,
-            attackerAccuracy, // Attacker's accuracy reduces dodge effectiveness
-          };
-
-          defenderDodgeChance = calculateDodgeChance(dodgeFactors);
-        }
-      }
+      defenderDodgeChance = calculateDodgeChance(dodgeFactors);
     }
 
     // Execute combat round with actual equipment stats
     // Pass defender's current HP to stop combat when they reach 0
     const combatResult = executeCombatRound(
-      attacker.username,
-      target.username,
+      attacker.entityName,
+      target.entityName,
       attackerAccuracy,
       targetDefense,
       roundEnergy,
@@ -543,7 +450,7 @@ async function processAttackerCombat(
       minDamage,
       maxDamage,
       critMultiplier,
-      defenderEquipment.armor.damageReduction,
+      defenderStats.armor.damageReduction,
       combatConfig,
       target.vitals.hp,
       defenderDodgeChance
@@ -559,47 +466,49 @@ async function processAttackerCombat(
 
     // Build weapon info for combat messages
     const weaponInfo: WeaponInfo = {
-      name: attackerEquipment.weapon.weaponName,
-      verbs: attackerEquipment.weapon.attackVerbs,
+      name: attackerStats.weapon.weaponName,
+      verbs: attackerStats.weapon.attackVerbs,
     };
 
     for (const swing of combatResult.swings) {
       attackerMessages.push(formatSwingMessage(
-        swing.result, swing.damage, attacker.username, target.username, true, false, weaponInfo
+        swing.result, swing.damage, attacker.entityName, target.entityName, true, false, weaponInfo
       ));
       defenderMessages.push(formatSwingMessage(
-        swing.result, swing.damage, attacker.username, target.username, false, true, weaponInfo
+        swing.result, swing.damage, attacker.entityName, target.entityName, false, true, weaponInfo
       ));
       roomMessages.push(formatSwingMessage(
-        swing.result, swing.damage, attacker.username, target.username, false, false, weaponInfo
+        swing.result, swing.damage, attacker.entityName, target.entityName, false, false, weaponInfo
       ));
     }
 
     // Send messages to attacker
     if (attackerMessages.length > 0) {
-      sendToSocket(attacker, MessageType.OUTPUT, attackerMessages.join('\r\n'));
+      sendCombatMessage(attacker, MessageType.OUTPUT, attackerMessages.join('\r\n'));
     }
 
     // Send messages to defender
     if (defenderMessages.length > 0) {
-      sendToSocket(target, MessageType.OUTPUT, defenderMessages.join('\r\n'));
+      sendCombatMessage(target, MessageType.OUTPUT, defenderMessages.join('\r\n'));
     }
 
     // Broadcast to room (excluding attacker and defender)
     if (roomMessages.length > 0) {
-      broadcastToRoomExcept(attackerRoomId, roomMessages.join('\r\n'), [attacker.playerId, targetId]);
+      broadcastCombatToRoom(attackerRoomId, roomMessages.join('\r\n'), [attacker.entityId, targetId]);
     }
 
     // Apply damage to target using centralized handler
     if (combatResult.totalDamage > 0) {
       const damageResult = await applyDamage(target, combatResult.totalDamage, 'melee');
-      sendVitals(target);
 
-      // Handle state changes
+      // Handle state changes (dropped/death send vitals with updated status)
       if (damageResult.stateChange === 'dropped') {
-        await handlePlayerDropped(target, attacker, attackerRoomId);
+        await handleEntityDropped(target, attacker, attackerRoomId);
       } else if (damageResult.stateChange === 'death') {
-        await handleActualDeath(target, attacker, attackerRoomId);
+        await handleEntityDeath(target, attacker, attackerRoomId);
+      } else {
+        // Only send vitals here if no state change — dropped/death handlers send their own
+        sendEntityVitals(target);
       }
     }
   }
@@ -607,17 +516,17 @@ async function processAttackerCombat(
   // If no targets remain, clear combat state
   if (attacker.combatState.targets.size === 0) {
     attacker.regenState.inCombat = false;
-    sendToSocket(attacker, MessageType.SYSTEM, colors.yellow('*COMBAT OFF*'));
+    sendCombatMessage(attacker, MessageType.SYSTEM, colors.yellow('*COMBAT OFF*'));
   }
 }
 
 /**
- * Handle player dropping to the ground (HP <= 0, but above death threshold)
- * Player is incapacitated but can be saved by allies
+ * Handle entity dropping to the ground (HP <= 0, but above death threshold)
+ * Entity is incapacitated but can be saved by allies
  */
-async function handlePlayerDropped(
-  victim: AuthenticatedSocket,
-  attacker: AuthenticatedSocket | null,
+async function handleEntityDropped(
+  victim: CombatEntity,
+  attacker: CombatEntity | null,
   roomId: number
 ): Promise<void> {
   if (!connectedPlayersRef) return;
@@ -629,34 +538,35 @@ async function handlePlayerDropped(
   clearCombatState(victim, connectedPlayersRef);
 
   // Broadcast dropped message
-  sendToSocket(victim, MessageType.SYSTEM, formatDroppedMessage());
+  sendCombatMessage(victim, MessageType.SYSTEM, formatDroppedMessage());
 
   if (attacker) {
-    sendToSocket(attacker, MessageType.SYSTEM, colors.boldGreen(`${victim.username} collapses to the ground!`));
-    broadcastToRoomExcept(
+    sendCombatMessage(attacker, MessageType.SYSTEM, colors.boldGreen(`${victim.entityName} collapses to the ground!`));
+    broadcastCombatToRoom(
       roomId,
-      colors.boldRed(`${victim.username} collapses to the ground!`),
-      [victim.playerId, attacker.playerId]
+      colors.boldRed(`${victim.entityName} collapses to the ground!`),
+      [victim.entityId, attacker.entityId]
     );
   } else {
     // No attacker (DoT, environmental, etc.)
-    broadcastToRoomExcept(
+    broadcastCombatToRoom(
       roomId,
-      colors.boldRed(`${victim.username} collapses to the ground!`),
-      [victim.playerId]
+      colors.boldRed(`${victim.entityName} collapses to the ground!`),
+      [victim.entityId]
     );
   }
 
-  sendVitals(victim);
+  sendEntityVitals(victim);
 }
 
 /**
- * Handle actual player death (HP below death threshold)
- * Player enters purgatory state, drops all items, must respawn
+ * Handle actual entity death (HP below death threshold)
+ * For players: enters purgatory state, drops all items, must respawn
+ * For NPCs (Phase 2): will handle loot drops and despawn
  */
-async function handleActualDeath(
-  victim: AuthenticatedSocket,
-  attacker: AuthenticatedSocket | null,
+async function handleEntityDeath(
+  victim: CombatEntity,
+  attacker: CombatEntity | null,
   roomId: number
 ): Promise<void> {
   if (!connectedPlayersRef) return;
@@ -667,41 +577,46 @@ async function handleActualDeath(
   // Clear combat state for victim
   clearCombatState(victim, connectedPlayersRef);
 
-  // Drop all items on death
-  try {
-    const { dropAllItemsOnDeath } = await import('./itemCommands.js');
-    await dropAllItemsOnDeath(victim.characterId!, roomId);
-  } catch (error) {
-    console.error('[Combat] Failed to drop items on death:', error);
-  }
+  // Player-specific death behavior (item drops, purgatory messages)
+  if (isPlayerEntity(victim) && victim.characterId) {
+    // Drop all items on death
+    try {
+      const { dropAllItemsOnDeath } = await import('./itemCommands.js');
+      await dropAllItemsOnDeath(victim.characterId, roomId);
+    } catch (error) {
+      console.error('[Combat] Failed to drop items on death:', error);
+    }
 
-  // Broadcast death message
-  sendToSocket(victim, MessageType.SYSTEM, formatDeathMessage());
+    // Broadcast death message
+    sendCombatMessage(victim, MessageType.SYSTEM, formatDeathMessage());
+  }
+  // Phase 2: NPC death behavior (loot table, despawn timer) will go here
 
   if (attacker) {
-    sendToSocket(attacker, MessageType.SYSTEM, colors.boldGreen(`You have slain ${victim.username}!`));
-    broadcastToRoomExcept(
+    sendCombatMessage(attacker, MessageType.SYSTEM, colors.boldGreen(`You have slain ${victim.entityName}!`));
+    broadcastCombatToRoom(
       roomId,
-      colors.boldRed(`${victim.username} has been slain by ${attacker.username}!`),
-      [victim.playerId, attacker.playerId]
+      colors.boldRed(`${victim.entityName} has been slain by ${attacker.entityName}!`),
+      [victim.entityId, attacker.entityId]
     );
   } else {
     // Death without attacker (e.g., from DoT, environmental)
-    broadcastToRoomExcept(
+    broadcastCombatToRoom(
       roomId,
-      colors.boldRed(`${victim.username} has died!`),
-      [victim.playerId]
+      colors.boldRed(`${victim.entityName} has died!`),
+      [victim.entityId]
     );
   }
 
-  sendVitals(victim);
+  sendEntityVitals(victim);
 }
 
-// Export for use by droppedStateManager
-export { handleActualDeath };
+// Export for use by droppedStateManager and statusEffects (DoT deaths)
+export { handleEntityDeath as handleActualDeath };
 
 /**
  * Process a single combat round for all players in combat
+ * Phase 2 will add NPC combat entity iteration here
  */
 async function processCombatRound(): Promise<void> {
   if (!connectedPlayersRef) return;
@@ -711,8 +626,8 @@ async function processCombatRound(): Promise<void> {
     const settings = await getCombatSettings();
     const combatConfig = toRuntimeConfig(settings);
 
-    // Collect all attackers who have targets
-    const attackers: AuthenticatedSocket[] = [];
+    // Collect all attackers who have targets (Phase 1: players only)
+    const attackers: CombatEntity[] = [];
     for (const [, socket] of connectedPlayersRef) {
       if (socket.combatState.targets.size > 0) {
         attackers.push(socket);
@@ -722,7 +637,7 @@ async function processCombatRound(): Promise<void> {
     // Process combat for each attacker
     for (const attacker of attackers) {
       processAttackerCombat(attacker, attacker.combatState.targets, combatConfig).catch((error) => {
-        console.error(`[Combat] Error processing combat for ${attacker.username}:`, error);
+        console.error(`[Combat] Error processing combat for ${attacker.entityName}:`, error);
       });
     }
   } catch (error) {

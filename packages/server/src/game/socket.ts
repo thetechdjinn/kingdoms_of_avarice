@@ -3,7 +3,7 @@ import { IncomingMessage } from 'http';
 import { URL } from 'url';
 import { parse as parseCookie } from 'cookie';
 import { MessageType, GameMessage, Role, VitalsData, ResourceType, PlayerRegenState, ActiveStatusEffect, PlayerQueueState, createPlayerQueueState, PlayerStatus, DeathState, StealthMode } from '@koa/shared';
-import type { CharacterStats, CombatActionType, SpellCastingState } from '@koa/shared';
+import type { CharacterStats } from '@koa/shared';
 import { verifyToken, COOKIE_NAME } from '../routes/auth.js';
 import { GameWorld } from './world.js';
 import { processCommand } from './commands.js';
@@ -31,15 +31,7 @@ import { isPlayerDropped, isPlayerDead, clearDeathState } from './damageHandler.
 import { getRespawnRoomId } from '../services/respawnService.js';
 import { raceCanSeeHidden } from './stats/secondaryStats.js';
 import { isHidden } from './stealth/stealthState.js';
-
-// Combat state tracked per-player in memory
-interface CombatState {
-  targets: Set<number>;    // playerIds this player is attacking
-  energy: number;          // Current energy pool for this round
-  carriedEnergy: number;   // Leftover energy from last round
-  combatAction: CombatActionType;  // 'melee' or 'spell'
-  activeSpell: SpellCastingState | null;  // If casting, the spell being cast
-}
+import { type CombatState, CombatEntity, NPC_ID_OFFSET, isPlayerEntity, getEntityRoomId } from './combatEntity.js';
 
 interface AuthenticatedSocket extends WebSocket {
   playerId: number;
@@ -66,6 +58,10 @@ interface AuthenticatedSocket extends WebSocket {
   stealthMode: StealthMode;
   // Cached: can this character see hidden players? (from race trait)
   canSeeHidden: boolean;
+  // CombatEntity identity fields (set during character login)
+  entityId: number;
+  entityName: string;
+  entityType: 'player' | 'npc';
 }
 
 const connectedPlayers = new Map<number, AuthenticatedSocket>();
@@ -292,6 +288,11 @@ export function setupGameSocket(wss: WebSocketServer): void {
     authWs.username = character.name; // Use character name instead of account username
     authWs.characterId = character.id;
     authWs.roles = payload.roles || [];
+
+    // CombatEntity identity fields
+    authWs.entityId = payload.playerId;
+    authWs.entityName = character.name;
+    authWs.entityType = 'player';
 
     // Initialize vitals from character data
     authWs.vitals = {
@@ -668,4 +669,5 @@ function startStatusEffectLoop(): void {
   console.log(`[StatusEffects] Started status effect processing loop (every ${STATUS_EFFECT_TICK_INTERVAL_MS}ms)`);
 }
 
-export { connectedPlayers, AuthenticatedSocket, sendVitals, sendMessage, CombatState, CharacterStats, startStatusEffectLoop };
+export { connectedPlayers, AuthenticatedSocket, sendVitals, sendMessage, startStatusEffectLoop };
+export { CombatEntity, CombatState, NPC_ID_OFFSET, isPlayerEntity, getEntityRoomId };
