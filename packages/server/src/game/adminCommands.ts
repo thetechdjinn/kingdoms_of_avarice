@@ -1419,6 +1419,9 @@ function handleAdminHelp(userRoles: Role[]): CommandResponse {
     lines.push(colors.boldYellow('Developer Commands (System):'));
     lines.push(`  ${colors.boldCyan('@reload [type]')}     - Reload data from database`);
     lines.push('');
+    lines.push(colors.boldYellow('Developer Commands (NPCs):'));
+    lines.push(`  ${colors.boldCyan('@npcs')}                    - List active NPC instances`);
+    lines.push('');
     lines.push(colors.boldYellow('Developer Commands (Stealth/Skills):'));
     lines.push(`  ${colors.boldCyan('@setstealth <mode> [player]')} - Force stealth state (none/sneaking/hidden)`);
     lines.push(`  ${colors.boldCyan('@testbackstab <target>')}  - Test backstab without stealth requirement`);

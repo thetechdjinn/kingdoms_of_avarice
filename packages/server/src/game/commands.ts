@@ -28,6 +28,7 @@ import {
 import { isHidden, isSneaking, isStealthing, setStealthMode, breakStealth } from './stealth/stealthState.js';
 import { handleHide, handleSneak, handleVisible, handleBackstab } from './stealth/stealthCommands.js';
 import { rollCumulativeDetection } from './stealth/stealthCheck.js';
+import { wordWrap } from '../utils/textFormat.js';
 import { calculateStealth, calculatePerception, characterHasStealth, getEncumbrancePenalty, calculateLockpicking, characterHasLockpicking } from './stats/secondaryStats.js';
 import { calculateEncumbranceRatio, getEquipmentCombatStats } from './combatStats.js';
 import { getRespawnRoomId } from '../services/respawnService.js';
@@ -466,12 +467,16 @@ function getOtherPlayersInRoom(
 }
 
 // Get display names of NPCs in a room (for "Also here:" line)
+// Returns pre-colored names: hostile NPCs in red, others in default player color
 function getNpcDisplayNames(roomId: number): string[] {
   const npcs = getNpcsInRoom(roomId);
   const names: string[] = [];
   for (const npc of npcs) {
     if (npc.vitals.hp <= 0) continue; // Skip dead NPCs
-    names.push(npc.entityName);
+    const name = npc.template.hostile
+      ? colors.hostileInRoom(npc.entityName)
+      : npc.entityName;
+    names.push(name);
   }
   return names;
 }
@@ -636,7 +641,7 @@ function handleLookAtNpc(npc: import('./npcManager.js').NpcCombatInstance): Comm
   // Description
   if (npc.template.description) {
     lines.push('');
-    lines.push(npc.template.description);
+    lines.push(wordWrap(npc.template.description, 80));
   }
 
   // HP status
