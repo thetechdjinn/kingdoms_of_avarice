@@ -8,7 +8,7 @@
 
 import { NpcTemplate, NpcAttack, ResourceType, DeathState, PlayerRegenState, StealthMode } from '@koa/shared';
 import type { CombatEntity, CombatState } from './combatEntity.js';
-import { NPC_ID_OFFSET, isPlayerEntity } from './combatEntity.js';
+import { NPC_ID_OFFSET, isPlayerEntity, getEntityRoomId } from './combatEntity.js';
 import * as npcRepo from '../db/repositories/npcRepository.js';
 import { colors } from '../utils/colors.js';
 import { sendCombatMessage, broadcastCombatToRoom } from './combatMessaging.js';
@@ -19,13 +19,16 @@ import * as doorStateManager from '../services/doorStateManager.js';
 
 // Lazy world reference for NPC movement (flee, return, roam)
 let worldRef: GameWorld | null = null;
+// Reference to connected players for aggro-on-arrival checks
+let connectedPlayersRef: Map<number, AuthenticatedSocket> | null = null;
 
 /**
- * Initialize the NPC manager's world reference.
+ * Initialize the NPC manager's world reference and connected players.
  * Must be called after initializeNpcManager() during server startup.
  */
-export function initializeNpcWorld(world: GameWorld): void {
+export function initializeNpcWorld(world: GameWorld, players: Map<number, AuthenticatedSocket>): void {
   worldRef = world;
+  connectedPlayersRef = players;
 }
 
 /**
@@ -50,6 +53,7 @@ export interface NpcCombatInstance extends CombatEntity {
   fleeDistance: number;           // Rooms traveled since fleeing started
   combatRoomId: number | null;   // Room where combat was when flee triggered
   hasCalledForHelp: boolean;     // Prevents repeated calls per engagement
+  nextRoamAt: number;            // Date.now() timestamp for next roam check
 }
 
 interface RespawnEntry {
@@ -66,9 +70,11 @@ const respawnQueue: RespawnEntry[] = [];
 
 let respawnInterval: NodeJS.Timeout | null = null;
 let persistInterval: NodeJS.Timeout | null = null;
+let roamInterval: NodeJS.Timeout | null = null;
 
 const RESPAWN_CHECK_MS = 5000;  // Check respawn queue every 5 seconds
 const PERSIST_INTERVAL_MS = 60000;  // Save instances to DB every 60 seconds
+const ROAM_CHECK_MS = 5000;  // Check roaming NPCs every 5 seconds
 
 /**
  * Create a fresh CombatState for an NPC.
@@ -176,6 +182,7 @@ function createNpcCombatEntity(
     fleeDistance: 0,
     combatRoomId: null,
     hasCalledForHelp: false,
+    nextRoamAt: Date.now() + (template.roamInterval * 1000),
   };
 }
 
@@ -246,6 +253,9 @@ export async function initializeNpcManager(): Promise<void> {
   // Start respawn timer
   respawnInterval = setInterval(processRespawnQueue, RESPAWN_CHECK_MS);
 
+  // Start roaming timer
+  roamInterval = setInterval(processRoaming, ROAM_CHECK_MS);
+
   // Start periodic persistence
   persistInterval = setInterval(saveAllInstances, PERSIST_INTERVAL_MS);
 
@@ -260,9 +270,10 @@ async function spawnNpcFromTemplate(
   roomId: number,
   augmentation: string | null = null
 ): Promise<NpcCombatInstance> {
-  // Pick augmentation if enabled and none provided
+  // Pick augmentation if enabled and none provided (extra slot = no augmentation)
   if (!augmentation && template.augmentationEnabled && template.augmentations.length > 0) {
-    augmentation = template.augmentations[Math.floor(Math.random() * template.augmentations.length)];
+    const roll = Math.floor(Math.random() * (template.augmentations.length + 1));
+    augmentation = roll < template.augmentations.length ? template.augmentations[roll] : null;
   }
 
   // Create DB instance
@@ -311,12 +322,13 @@ async function processRespawnQueue(): Promise<void> {
 
     try {
       const npc = await spawnNpcFromTemplate(template, entry.spawnRoomId);
-      // Broadcast spawn message to room
-      broadcastCombatToRoom(
-        entry.spawnRoomId,
-        colors.cyan(`${npc.entityName} appears.`),
-        []
-      );
+      // Spawn uses a neutral message — enterRoomMessage is reserved for movement
+      broadcastCombatToRoom(entry.spawnRoomId, colors.cyan(`${npc.entityName} appears.`), []);
+
+      // Check for hostile aggro on players in the spawn room
+      if (npc.template.hostile) {
+        checkNpcAggroOnArrival(npc);
+      }
     } catch (error) {
       console.error(`[NPC Manager] Failed to respawn template ${entry.templateId}:`, error);
       // Re-queue with a delay
@@ -445,12 +457,102 @@ export async function saveAllInstances(): Promise<void> {
 }
 
 /**
+ * Initiate mutual aggro between an NPC and a player.
+ * Shared helper used by both checkNpcAggroOnArrival and checkHostileAggro.
+ */
+function initiateAggro(npc: NpcCombatInstance, player: CombatEntity, roomId: number): void {
+  npc.combatState.targets.add(player.entityId);
+  npc.regenState.inCombat = true;
+  npc.behaviorState = 'combat';
+
+  player.combatState.targets.add(npc.entityId);
+  player.regenState.inCombat = true;
+
+  // Clear resting state
+  player.regenState.enhancedRegen.clear();
+
+  // Send messages
+  sendCombatMessage(player, MessageType.OUTPUT,
+    colors.boldRed(`${npc.entityName} attacks you!`)
+  );
+
+  broadcastCombatToRoom(
+    roomId,
+    colors.boldRed(`${npc.entityName} attacks ${player.entityName}!`),
+    [player.entityId]
+  );
+}
+
+/**
+ * Check all players in an NPC's room for aggro (reverse of checkHostileAggro).
+ * Called internally after an NPC roams into a room or respawns.
+ */
+function checkNpcAggroOnArrival(npc: NpcCombatInstance): void {
+  if (!connectedPlayersRef) return;
+  if (!npc.template.hostile) return;
+  if (npc.vitals.hp <= 0) return;
+  if (npc.combatState.targets.size > 0) return;
+  if (npc.behaviorState === 'fleeing' || npc.behaviorState === 'returning') return;
+
+  for (const player of connectedPlayersRef.values()) {
+    const playerRoomId = getEntityRoomId(player);
+    if (playerRoomId !== npc.currentRoomId) continue;
+
+    // Skip dead/dropped players
+    if (player.deathState?.isDead || player.deathState?.isDropped) continue;
+
+    // Skip hidden players unless NPC can see hidden
+    if (player.stealthMode === 'hidden' && !npc.canSeeHidden) continue;
+
+    initiateAggro(npc, player, npc.currentRoomId);
+  }
+}
+
+/**
+ * Process roaming for all idle NPCs with roaming enabled.
+ * Called on a timer every ROAM_CHECK_MS.
+ */
+function processRoaming(): void {
+  if (!connectedPlayersRef || !worldRef) return;
+
+  const now = Date.now();
+
+  for (const npc of npcInstances.values()) {
+    // Skip non-roaming, non-idle, or dead NPCs
+    if (!npc.template.roamEnabled) continue;
+    if (npc.behaviorState !== 'idle') continue;
+    if (npc.vitals.hp <= 0) continue;
+
+    // Skip if not yet time
+    if (now < npc.nextRoamAt) continue;
+
+    // Reset timer (always, regardless of roll outcome)
+    npc.nextRoamAt = now + (npc.template.roamInterval * 1000);
+
+    // Roll for roam (roamChance is % chance to move: roll <= roamChance means move)
+    const roll = Math.floor(Math.random() * 100) + 1;  // 1-100 inclusive
+    if (roll > npc.template.roamChance) continue;
+
+    // Pick a random valid exit
+    const exits = getValidNpcExits(npc);
+    if (exits.length === 0) continue;
+
+    const chosen = exits[Math.floor(Math.random() * exits.length)];
+    moveNpc(npc, chosen.direction, chosen.roomId);
+
+    // Check for aggro in new room
+    if (npc.template.hostile) {
+      checkNpcAggroOnArrival(npc);
+    }
+  }
+}
+
+/**
  * Check for hostile NPCs in a room and initiate aggro on a player.
  */
 export function checkHostileAggro(
   roomId: number,
   player: CombatEntity,
-  connectedPlayers: Map<number, AuthenticatedSocket>
 ): void {
   const npcs = getNpcsInRoom(roomId);
   if (npcs.length === 0) return;
@@ -465,27 +567,7 @@ export function checkHostileAggro(
     // Skip if player is hidden and NPC can't see hidden
     if (player.stealthMode === 'hidden' && !npc.canSeeHidden) continue;
 
-    // Initiate aggro
-    npc.combatState.targets.add(player.entityId);
-    npc.regenState.inCombat = true;
-    npc.behaviorState = 'combat';
-
-    player.combatState.targets.add(npc.entityId);
-    player.regenState.inCombat = true;
-
-    // Clear resting state
-    player.regenState.enhancedRegen.clear();
-
-    // Send messages
-    sendCombatMessage(player, MessageType.OUTPUT,
-      colors.boldRed(`${npc.entityName} attacks you!`)
-    );
-
-    broadcastCombatToRoom(
-      roomId,
-      colors.boldRed(`${npc.entityName} attacks ${player.entityName}!`),
-      [player.entityId]
-    );
+    initiateAggro(npc, player, roomId);
   }
 }
 
@@ -608,6 +690,10 @@ export async function shutdownNpcManager(): Promise<void> {
   if (respawnInterval) {
     clearInterval(respawnInterval);
     respawnInterval = null;
+  }
+  if (roamInterval) {
+    clearInterval(roamInterval);
+    roamInterval = null;
   }
   if (persistInterval) {
     clearInterval(persistInterval);

@@ -445,7 +445,7 @@ export async function runMigrations(): Promise<void> {
       await client.query(`ALTER TABLE npcs ADD COLUMN IF NOT EXISTS allowed_areas TEXT[] DEFAULT '{}'`);
       await client.query(`ALTER TABLE npcs ADD COLUMN IF NOT EXISTS roam_enabled BOOLEAN DEFAULT FALSE`);
       await client.query(`ALTER TABLE npcs ADD COLUMN IF NOT EXISTS roam_interval INTEGER DEFAULT 60`);
-      await client.query(`ALTER TABLE npcs ADD COLUMN IF NOT EXISTS roam_chance INTEGER DEFAULT 91`);
+      await client.query(`ALTER TABLE npcs ADD COLUMN IF NOT EXISTS roam_chance INTEGER DEFAULT 50`);
 
       // NPC loot
       await client.query(`ALTER TABLE npcs ADD COLUMN IF NOT EXISTS drop_table_id INTEGER`);
@@ -824,13 +824,19 @@ async function seedNpcs(): Promise<void> {
         name, description, spawn_room_id, health, max_health, hostile,
         respawn_time, level, experience_reward, gold_min, gold_max,
         max_mana, base_accuracy, base_defense, base_crit_chance, damage_reduction,
-        traits, max_active, essence_reward, essence_class
+        traits, max_active, essence_reward, essence_class,
+        roam_enabled, roam_interval, roam_chance, allowed_areas,
+        augmentation_enabled, augmentations,
+        enter_room_message, exit_room_message
       ) VALUES (
         'serpentine warrior', 'A fearsome warrior with serpentine features, its scaled skin glistening in the dim light.',
         6, 30, 30, TRUE,
         60, 2, 25, 5, 15,
         0, 35, 12, 5, 1,
-        '{}', 1, 5, NULL
+        '{}', 1, 5, NULL,
+        TRUE, 60, 10, '{Silverton}',
+        TRUE, '{fierce,scarred,young}',
+        '{name} slithers in.', '{name} slithers away {direction}.'
       ) RETURNING id
     `);
 

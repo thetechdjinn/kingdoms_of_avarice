@@ -141,7 +141,7 @@ export async function initializeGameWorld(): Promise<void> {
   // Initialize NPC manager (load templates, spawn instances, start respawn timers)
   try {
     await initializeNpcManager();
-    initializeNpcWorld(gameWorld);
+    initializeNpcWorld(gameWorld, connectedPlayers);
   } catch (error) {
     console.error('[NPC Manager] Failed to initialize:', error);
     // Server continues but NPCs will be unavailable
@@ -465,7 +465,7 @@ export function setupGameSocket(wss: WebSocketServer): void {
     sendVitals(authWs);
 
     // Check for hostile NPCs in the room (auto-aggro on login)
-    checkHostileAggro(startRoomId, authWs, connectedPlayers);
+    checkHostileAggro(startRoomId, authWs);
 
     // Check if this is a new character that should show the training form
     // New characters have full unspent CP and no points allocated
