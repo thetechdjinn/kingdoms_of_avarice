@@ -33,7 +33,7 @@ import { raceCanSeeHidden } from './stats/secondaryStats.js';
 import { isHidden } from './stealth/stealthState.js';
 import type { CombatEntity, CombatState } from './combatEntity.js';
 import { NPC_ID_OFFSET, isPlayerEntity, getEntityRoomId } from './combatEntity.js';
-import { initializeNpcManager, checkHostileAggro } from './npcManager.js';
+import { initializeNpcManager, checkHostileAggro, initializeNpcWorld } from './npcManager.js';
 
 interface AuthenticatedSocket extends WebSocket {
   playerId: number;
@@ -141,6 +141,7 @@ export async function initializeGameWorld(): Promise<void> {
   // Initialize NPC manager (load templates, spawn instances, start respawn timers)
   try {
     await initializeNpcManager();
+    initializeNpcWorld(gameWorld);
   } catch (error) {
     console.error('[NPC Manager] Failed to initialize:', error);
     // Server continues but NPCs will be unavailable

@@ -9,8 +9,9 @@ import { MessageType, AttackResult, SpellScalingStat, AttackVerbs } from '@koa/s
 import { AuthenticatedSocket, sendVitals as sendPlayerVitals } from './socket.js';
 import type { CombatEntity } from './combatEntity.js';
 import { isPlayerEntity, getEntityRoomId } from './combatEntity.js';
-import { getAllNpcInstances, getNpcInstance } from './npcManager.js';
+import { getAllNpcInstances, getNpcInstance, resetNpcBehaviorState } from './npcManager.js';
 import type { NpcCombatInstance } from './npcManager.js';
+import { processNpcBehavior } from './npcBehavior.js';
 import { selectNpcAttack } from './combatStatProvider.js';
 import { processNpcDeath } from './npcDeathHandler.js';
 import { colors } from '../utils/colors.js';
@@ -812,8 +813,7 @@ async function processNpcAttackerCombat(
 
   // If no targets remain, clear NPC combat state
   if (npc.combatState.targets.size === 0) {
-    npc.regenState.inCombat = false;
-    npc.behaviorState = 'idle';
+    resetNpcBehaviorState(npc);
   }
 }
 
@@ -851,11 +851,32 @@ async function processCombatRound(): Promise<void> {
       });
     }
 
-    // Process combat for each NPC attacker
+    // Process combat for each NPC attacker (behavior check first)
     for (const npc of npcAttackers) {
-      processNpcAttackerCombat(npc, combatConfig).catch((error) => {
-        console.error(`[Combat] Error processing NPC combat for ${npc.entityName}:`, error);
-      });
+      try {
+        const action = processNpcBehavior(npc, connectedPlayersRef);
+        if (action === 'attack') {
+          processNpcAttackerCombat(npc, combatConfig).catch((error) => {
+            console.error(`[Combat] Error processing NPC combat for ${npc.entityName}:`, error);
+          });
+        }
+      } catch (error) {
+        console.error(`[Combat] Error processing NPC behavior for ${npc.entityName}:`, error);
+      }
+    }
+
+    // Process behavior for fleeing/returning NPCs that have no targets
+    // (they aren't in the attackers list but still need behavior ticks)
+    for (const npc of getAllNpcInstances()) {
+      if (npc.vitals.hp <= 0) continue;
+      if ((npc.behaviorState === 'fleeing' || npc.behaviorState === 'returning')
+          && npc.combatState.targets.size === 0) {
+        try {
+          processNpcBehavior(npc, connectedPlayersRef);
+        } catch (error) {
+          console.error(`[Combat] Error processing NPC behavior for ${npc.entityName}:`, error);
+        }
+      }
     }
   } catch (error) {
     console.error('[Combat] Error processing combat round:', error);

@@ -14,6 +14,26 @@ import { colors } from '../utils/colors.js';
 import { sendCombatMessage, broadcastCombatToRoom } from './combatMessaging.js';
 import { MessageType } from '@koa/shared';
 import type { AuthenticatedSocket } from './socket.js';
+import type { GameWorld } from './world.js';
+import * as doorStateManager from '../services/doorStateManager.js';
+
+// Lazy world reference for NPC movement (flee, return, roam)
+let worldRef: GameWorld | null = null;
+
+/**
+ * Initialize the NPC manager's world reference.
+ * Must be called after initializeNpcManager() during server startup.
+ */
+export function initializeNpcWorld(world: GameWorld): void {
+  worldRef = world;
+}
+
+/**
+ * Get the world reference (for use by npcBehavior.ts).
+ */
+export function getWorldRef(): GameWorld | null {
+  return worldRef;
+}
 
 /**
  * NPC combat instance — extends CombatEntity with NPC-specific fields.
@@ -26,6 +46,10 @@ export interface NpcCombatInstance extends CombatEntity {
   behaviorState: 'idle' | 'combat' | 'fleeing' | 'returning';
   augmentation: string | null;
   dbInstanceId: number;  // Original DB instance ID (before offset)
+  // Phase 3: Behavior state machine runtime fields
+  fleeDistance: number;           // Rooms traveled since fleeing started
+  combatRoomId: number | null;   // Room where combat was when flee triggered
+  hasCalledForHelp: boolean;     // Prevents repeated calls per engagement
 }
 
 interface RespawnEntry {
@@ -79,6 +103,18 @@ function createNpcRegenState(): PlayerRegenState {
     inCombat: false,
     isPoisoned: false,
   };
+}
+
+/**
+ * Reset an NPC's behavior state to idle.
+ * Clears all fleeing/returning/combat tracking fields.
+ */
+export function resetNpcBehaviorState(npc: NpcCombatInstance): void {
+  npc.behaviorState = 'idle';
+  npc.fleeDistance = 0;
+  npc.combatRoomId = null;
+  npc.hasCalledForHelp = false;
+  npc.regenState.inCombat = false;
 }
 
 /**
@@ -137,6 +173,9 @@ function createNpcCombatEntity(
     behaviorState: 'idle',
     augmentation,
     dbInstanceId,
+    fleeDistance: 0,
+    combatRoomId: null,
+    hasCalledForHelp: false,
   };
 }
 
@@ -417,10 +456,11 @@ export function checkHostileAggro(
   if (npcs.length === 0) return;
 
   for (const npc of npcs) {
-    // Skip non-hostile, already-in-combat, or dead NPCs
+    // Skip non-hostile, already-in-combat, dead, fleeing, or returning NPCs
     if (!npc.template.hostile) continue;
     if (npc.combatState.targets.size > 0) continue;
     if (npc.vitals.hp <= 0) continue;
+    if (npc.behaviorState === 'fleeing' || npc.behaviorState === 'returning') continue;
 
     // Skip if player is hidden and NPC can't see hidden
     if (player.stealthMode === 'hidden' && !npc.canSeeHidden) continue;
@@ -476,6 +516,89 @@ export async function reloadNpcTemplates(): Promise<number> {
  */
 export function getTemplate(templateId: number): NpcTemplate | undefined {
   return npcTemplates.get(templateId);
+}
+
+// ============================================================================
+// NPC MOVEMENT INFRASTRUCTURE
+// ============================================================================
+
+/**
+ * Check if an NPC can pass through a door in a given direction from a room.
+ * NPCs cannot open doors — only open passageways and no-door exits are passable.
+ */
+export function canNpcPassDirection(fromRoomId: number, direction: string): boolean {
+  const door = doorStateManager.getDoorByRoomAndDirection(fromRoomId, direction);
+  if (!door) {
+    // No door in this direction — NPC can freely pass
+    return true;
+  }
+  const result = doorStateManager.canPassThrough(door.id, fromRoomId);
+  return result.allowed;
+}
+
+/**
+ * Check if a room is within an NPC's allowed areas.
+ * If allowedAreas is empty, all rooms are allowed.
+ */
+export function isRoomInAllowedArea(npc: NpcCombatInstance, roomId: number): boolean {
+  if (npc.template.allowedAreas.length === 0) return true;
+  if (!worldRef) return true; // Can't check without world reference
+
+  const room = worldRef.getRoom(roomId);
+  if (!room) return false;
+
+  return npc.template.allowedAreas.includes(room.area);
+}
+
+/**
+ * Get valid exits for an NPC from its current room.
+ * Filters by door passability and allowed areas.
+ */
+export function getValidNpcExits(npc: NpcCombatInstance): { direction: string; roomId: number }[] {
+  if (!worldRef) return [];
+
+  const room = worldRef.getRoom(npc.currentRoomId);
+  if (!room) return [];
+
+  const validExits: { direction: string; roomId: number }[] = [];
+  for (const [direction, targetRoomId] of room.exits) {
+    // Check door passability
+    if (!canNpcPassDirection(npc.currentRoomId, direction)) continue;
+    // Check allowed areas
+    if (!isRoomInAllowedArea(npc, targetRoomId)) continue;
+    validExits.push({ direction, roomId: targetRoomId });
+  }
+
+  return validExits;
+}
+
+/**
+ * Move an NPC from its current room to a new room.
+ * Updates currentRoomId, room indexes, and broadcasts exit/enter messages.
+ * Returns true on success.
+ */
+export function moveNpc(npc: NpcCombatInstance, direction: string, newRoomId: number): boolean {
+  const oldRoomId = npc.currentRoomId;
+  if (oldRoomId === newRoomId) return false;
+
+  // Update room indexes
+  removeFromRoomIndex(npc.entityId, oldRoomId);
+  npc.currentRoomId = newRoomId;
+  addToRoomIndex(npc.entityId, newRoomId);
+
+  // Broadcast exit message to old room
+  const exitMsg = npc.template.exitRoomMessage
+    ? npc.template.exitRoomMessage.replaceAll('{name}', npc.entityName).replaceAll('{direction}', direction)
+    : `${npc.entityName} leaves ${direction}.`;
+  broadcastCombatToRoom(oldRoomId, colors.cyan(exitMsg), []);
+
+  // Broadcast enter message to new room
+  const enterMsg = npc.template.enterRoomMessage
+    ? npc.template.enterRoomMessage.replaceAll('{name}', npc.entityName)
+    : `${npc.entityName} arrives.`;
+  broadcastCombatToRoom(newRoomId, colors.cyan(enterMsg), []);
+
+  return true;
 }
 
 /**

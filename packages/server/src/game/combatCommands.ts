@@ -12,7 +12,7 @@ import { getPlayerLocation } from './adminCommands.js';
 import { colors } from '../utils/colors.js';
 import { findPlayerInRoom } from './playerUtils.js';
 import { isStealthing, breakStealth } from './stealth/stealthState.js';
-import { getAllNpcInstances, findNpcInRoom, getNpcInstance } from './npcManager.js';
+import { getAllNpcInstances, findNpcInRoom, getNpcInstance, resetNpcBehaviorState } from './npcManager.js';
 import type { NpcCombatInstance } from './npcManager.js';
 
 /**
@@ -281,9 +281,9 @@ export function clearCombatState(
     if (npc.combatState.targets.has(entity.entityId)) {
       npc.combatState.targets.delete(entity.entityId);
 
-      if (npc.combatState.targets.size === 0) {
-        npc.regenState.inCombat = false;
-        npc.behaviorState = 'idle';
+      if (npc.combatState.targets.size === 0
+          && npc.behaviorState !== 'fleeing' && npc.behaviorState !== 'returning') {
+        resetNpcBehaviorState(npc);
       }
     }
   }
@@ -335,9 +335,9 @@ export function clearCombatState(
           }
         }
       }
-      if (!stillTargeted && npcTarget.combatState.targets.size === 0) {
-        npcTarget.regenState.inCombat = false;
-        npcTarget.behaviorState = 'idle';
+      if (!stillTargeted && npcTarget.combatState.targets.size === 0
+          && npcTarget.behaviorState !== 'fleeing' && npcTarget.behaviorState !== 'returning') {
+        resetNpcBehaviorState(npcTarget);
       }
     }
   }

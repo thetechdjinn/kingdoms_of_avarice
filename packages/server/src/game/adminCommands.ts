@@ -64,7 +64,7 @@ export function setPlayerLocation(playerId: number, roomId: number): void {
 }
 
 // Commands that require Developer role
-const developerCommands = ['create', 'link', 'unlink', 'edit', 'delete', 'reload', 'spawn', 'purge', 'items', 'iteminfo', 'setstealth', 'testbackstab', 'lockpicking', 'npcs'];
+const developerCommands = ['create', 'link', 'unlink', 'edit', 'delete', 'reload', 'spawn', 'purge', 'items', 'iteminfo', 'setstealth', 'testbackstab', 'lockpicking', 'npcs', 'mobbehavior'];
 
 // Commands that any staff can use (Moderator+)
 const staffCommands = ['goto', 'rooms', 'roominfo', 'help', 'give', 'hurt', 'heal', 'drain', 'revive', 'teleport', 'learn', 'spells', 'effect', 'cleareffect', 'effects', 'stealth'];
@@ -161,6 +161,8 @@ export async function processAdminCommand(
       return await handleTestBackstab(args, socket);
     case 'npcs':
       return handleListNpcs();
+    case 'mobbehavior':
+      return handleMobBehavior();
     case 'help':
       return handleAdminHelp(userRoles);
     default:
@@ -1365,9 +1367,53 @@ function handleListNpcs(): CommandResponse {
     for (const npc of roomNpcs) {
       const hpPct = Math.round((npc.vitals.hp / npc.vitals.maxHp) * 100);
       const hostileTag = npc.template.hostile ? colors.red(' [hostile]') : '';
-      const combatTag = npc.combatState.targets.size > 0 ? colors.boldRed(' [in combat]') : '';
-      lines.push(`    ${colors.white(`[${npc.entityId}]`)} ${npc.entityName} - Lv${npc.characterLevel} HP:${npc.vitals.hp}/${npc.vitals.maxHp} (${hpPct}%)${hostileTag}${combatTag}`);
+      const stateTag = npc.behaviorState !== 'idle'
+        ? colors.boldYellow(` [${npc.behaviorState}]`)
+        : (npc.combatState.targets.size > 0 ? colors.boldRed(' [in combat]') : '');
+      lines.push(`    ${colors.white(`[${npc.entityId}]`)} ${npc.entityName} - Lv${npc.characterLevel} HP:${npc.vitals.hp}/${npc.vitals.maxHp} (${hpPct}%)${hostileTag}${stateTag}`);
     }
+  }
+
+  return { type: MessageType.OUTPUT, message: lines.join('\r\n') };
+}
+
+function handleMobBehavior(): CommandResponse {
+  const npcs = getAllNpcInstances();
+
+  if (npcs.length === 0) {
+    return { type: MessageType.SYSTEM, message: 'No active NPC instances.' };
+  }
+
+  const lines = [
+    colors.boldYellow(`NPC Behavior States (${npcs.length} total):`),
+    '',
+  ];
+
+  for (const npc of npcs) {
+    const hpPct = Math.round((npc.vitals.hp / npc.vitals.maxHp) * 100);
+    const targets = npc.combatState.targets.size;
+    const stateColor = npc.behaviorState === 'idle' ? colors.green
+      : npc.behaviorState === 'combat' ? colors.red
+      : npc.behaviorState === 'fleeing' ? colors.boldYellow
+      : colors.cyan;
+
+    let detail = `  ${colors.white(`[${npc.entityId}]`)} ${npc.entityName}`;
+    detail += ` - ${stateColor(npc.behaviorState)}`;
+    detail += ` | Room:${npc.currentRoomId}`;
+    detail += ` | HP:${hpPct}%`;
+    detail += ` | Targets:${targets}`;
+
+    if (npc.combatRoomId !== null) {
+      detail += ` | CombatRoom:${npc.combatRoomId}`;
+    }
+    if (npc.fleeDistance > 0) {
+      detail += ` | FleeDist:${npc.fleeDistance}`;
+    }
+    if (npc.hasCalledForHelp) {
+      detail += ` | CalledHelp`;
+    }
+
+    lines.push(detail);
   }
 
   return { type: MessageType.OUTPUT, message: lines.join('\r\n') };
@@ -1421,6 +1467,7 @@ function handleAdminHelp(userRoles: Role[]): CommandResponse {
     lines.push('');
     lines.push(colors.boldYellow('Developer Commands (NPCs):'));
     lines.push(`  ${colors.boldCyan('@npcs')}                    - List active NPC instances`);
+    lines.push(`  ${colors.boldCyan('@mobbehavior')}             - Show NPC behavior states/debug info`);
     lines.push('');
     lines.push(colors.boldYellow('Developer Commands (Stealth/Skills):'));
     lines.push(`  ${colors.boldCyan('@setstealth <mode> [player]')} - Force stealth state (none/sneaking/hidden)`);
