@@ -475,7 +475,7 @@ function getNpcDisplayNames(roomId: number): string[] {
     if (npc.vitals.hp <= 0) continue; // Skip dead NPCs
     const name = npc.template.hostile
       ? colors.hostileInRoom(npc.entityName)
-      : npc.entityName;
+      : colors.playerInRoom(npc.entityName);
     names.push(name);
   }
   return names;

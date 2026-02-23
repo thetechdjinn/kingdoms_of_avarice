@@ -445,7 +445,7 @@ export function setupGameSocket(wss: WebSocketServer): void {
         if (npc.vitals.hp > 0) {
           const name = npc.template.hostile
             ? colorUtils.hostileInRoom(npc.entityName)
-            : npc.entityName;
+            : colorUtils.playerInRoom(npc.entityName);
           npcNames.push(name);
         }
       }
