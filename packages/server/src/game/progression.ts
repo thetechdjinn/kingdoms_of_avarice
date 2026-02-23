@@ -285,32 +285,23 @@ export function processGameEvent(
  * Returns false if progression not loaded or amount <= 0.
  */
 export async function awardEssence(characterId: number, amount: number): Promise<boolean> {
-  if (amount <= 0) return false;
+  if (typeof amount !== 'number' || !isFinite(amount) || amount <= 0) return false;
 
   const progression = characterProgressions.get(characterId);
   if (!progression) return false;
 
-  // Update in-memory state
-  progression.essence_wallet += amount;
-  progression.total_essence_earned += amount;
-
-  // Persist to DB
+  // Persist to DB first with atomic increment to avoid race conditions
   try {
-    const result = await progressionRepo.updateCharacterProgression(characterId, {
-      essence_wallet: progression.essence_wallet,
-      total_essence_earned: progression.total_essence_earned,
-    });
+    const result = await progressionRepo.incrementEssenceWallet(characterId, amount);
     if (!result) {
-      // No row updated — revert in-memory
-      progression.essence_wallet -= amount;
-      progression.total_essence_earned -= amount;
       console.error(`[Progression] No progression row found in DB for character ${characterId}`);
       return false;
     }
+
+    // Sync in-memory from the authoritative DB result
+    progression.essence_wallet = result.essence_wallet;
+    progression.total_essence_earned = result.total_essence_earned;
   } catch (error) {
-    // Revert in-memory on failure
-    progression.essence_wallet -= amount;
-    progression.total_essence_earned -= amount;
     console.error(`[Progression] Failed to persist essence award for character ${characterId}:`, error);
     return false;
   }
