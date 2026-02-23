@@ -4,7 +4,8 @@
  * Processes NPC death: XP distribution, gold/loot drops, despawn, respawn queue.
  */
 
-import { MessageType } from '@koa/shared';
+import { MessageType, ItemLocationType, CURRENCY_DENOMINATIONS } from '@koa/shared';
+import type { CurrencyDenomination } from '@koa/shared';
 import type { CombatEntity } from './combatEntity.js';
 import { isPlayerEntity } from './combatEntity.js';
 import type { NpcCombatInstance } from './npcManager.js';
@@ -12,11 +13,11 @@ import { removeNpcInstance, queueRespawn } from './npcManager.js';
 import { sendCombatMessage, broadcastCombatToRoom } from './combatMessaging.js';
 import { colors } from '../utils/colors.js';
 import { awardEssence } from './progression.js';
-import * as npcRepo from '../db/repositories/npcRepository.js';
+import { copperToDenominationCounts, formatCopperAsDenominations } from '../utils/textFormat.js';
+import * as dropTableRepo from '../db/repositories/dropTableRepository.js';
 import * as itemRepo from '../db/repositories/itemRepository.js';
 import * as characterRepo from '../db/repositories/characterRepository.js';
 import type { AuthenticatedSocket } from './socket.js';
-import { ItemLocationType } from '@koa/shared';
 
 /** Level gap for XP eligibility: players more than this many levels apart get nothing */
 const XP_LEVEL_GAP = 5;
@@ -166,9 +167,88 @@ async function distributeEssence(
   }
 }
 
+// ============================================================================
+// Currency / Denomination Drop System
+// ============================================================================
+
+/** Cache for denomination coin template IDs (e.g. "gold coins" → template) */
+const denominationTemplateCache = new Map<string, { id: number } | null>();
+
+/** Map denomination name to item template name */
+const DENOMINATION_TEMPLATE_NAMES: Record<CurrencyDenomination, string> = {
+  copper: 'copper coins',
+  silver: 'silver coins',
+  gold: 'gold coins',
+  platinum: 'platinum coins',
+  runic: 'runic coins',
+};
+
+/**
+ * Look up the item template for a denomination coin, with caching.
+ */
+async function getDenominationTemplate(denom: CurrencyDenomination): Promise<{ id: number } | null> {
+  const name = DENOMINATION_TEMPLATE_NAMES[denom];
+  if (denominationTemplateCache.has(name)) {
+    return denominationTemplateCache.get(name)!;
+  }
+
+  try {
+    const template = await itemRepo.getTemplateByName(name);
+    const result = template ? { id: template.id } : null;
+    denominationTemplateCache.set(name, result);
+    return result;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Drop a copper amount as individual denomination coin items in a room.
+ * Converts copper to the best-fit denominations, then creates/stacks
+ * item instances for each denomination.
+ */
+async function dropCurrencyAsDenominations(
+  copperAmount: number,
+  allowedDenominations: readonly CurrencyDenomination[],
+  roomId: number
+): Promise<void> {
+  if (copperAmount <= 0) return;
+
+  const counts = copperToDenominationCounts(copperAmount, allowedDenominations);
+
+  for (const [denom, count] of counts) {
+    if (count <= 0) continue;
+
+    const template = await getDenominationTemplate(denom);
+    if (!template) {
+      console.warn(`[NPC Death] ${denom} coin template not found, skipping`);
+      continue;
+    }
+
+    // Stack with existing coins in room
+    const existing = await itemRepo.findStackableInstance(
+      template.id,
+      'room' as ItemLocationType,
+      roomId
+    );
+
+    if (existing) {
+      await itemRepo.addToInstanceQuantity(existing.id, count);
+    } else {
+      await itemRepo.createInstance({
+        template_id: template.id,
+        location_type: 'room' as ItemLocationType,
+        location_id: roomId,
+        quantity: count,
+      });
+    }
+  }
+}
+
 /**
  * Drop gold on the ground in the room where the NPC died.
- * Creates currency item instances using the existing item system.
+ * goldMin/goldMax are interpreted as gold coin counts.
+ * Multiplied by 100 to convert to copper, then run through denomination system.
  */
 async function dropGold(npc: NpcCombatInstance, roomId: number): Promise<void> {
   const { goldMin, goldMax } = npc.template;
@@ -176,39 +256,13 @@ async function dropGold(npc: NpcCombatInstance, roomId: number): Promise<void> {
 
   if (goldAmount <= 0) return;
 
+  // Convert gold coin count to copper (1 gold = 100 copper)
+  const copperAmount = goldAmount * 100;
+
   try {
-    // Find the gold coin template
-    const goldTemplate = await findCurrencyTemplate('gold coins');
-    if (!goldTemplate) {
-      console.warn('[NPC Death] Gold coin template not found, skipping gold drop');
-      return;
-    }
-
-    // Check for existing stackable gold in room
-    const existingGold = await itemRepo.findStackableInstance(
-      goldTemplate.id,
-      'room' as ItemLocationType,
-      roomId
-    );
-
-    if (existingGold) {
-      // Add to existing stack
-      await itemRepo.addToInstanceQuantity(existingGold.id, goldAmount);
-    } else {
-      // Create new gold stack
-      await itemRepo.createInstance({
-        template_id: goldTemplate.id,
-        location_type: 'room' as ItemLocationType,
-        location_id: roomId,
-        quantity: goldAmount,
-      });
-    }
-
-    broadcastCombatToRoom(
-      roomId,
-      colors.gold(`${goldAmount} gold coins scatter across the ground.`),
-      []
-    );
+    await dropCurrencyAsDenominations(copperAmount, CURRENCY_DENOMINATIONS, roomId);
+    const denomStr = formatCopperAsDenominations(copperAmount);
+    broadcastCombatToRoom(roomId, colors.gold(`${denomStr} scatters across the ground.`), []);
   } catch (error) {
     console.error('[NPC Death] Failed to drop gold:', error);
   }
@@ -216,24 +270,26 @@ async function dropGold(npc: NpcCombatInstance, roomId: number): Promise<void> {
 
 /**
  * Process a drop table — roll for each entry, spawn items that pass the check.
+ * Currency entries use the denomination system with allowed_denominations filtering.
+ * Loot dropping is silent (no broadcast messages).
  */
 async function processDropTable(dropTableId: number, roomId: number): Promise<void> {
   try {
-    const entries = await npcRepo.getDropTableEntries(dropTableId);
+    const entries = await dropTableRepo.getEntriesForDropTable(dropTableId);
 
     for (const entry of entries) {
       // Roll against drop chance
       const roll = Math.random() * 100;
-      if (roll > entry.drop_chance) continue;
+      if (roll > entry.dropChance) continue;
 
-      if (entry.item_template_id) {
+      if (entry.itemTemplateId) {
         // Drop an item
-        const quantity = entry.min_quantity + Math.floor(
-          Math.random() * (entry.max_quantity - entry.min_quantity + 1)
+        const quantity = entry.minQuantity + Math.floor(
+          Math.random() * (entry.maxQuantity - entry.minQuantity + 1)
         );
 
         await itemRepo.createInstance({
-          template_id: entry.item_template_id,
+          template_id: entry.itemTemplateId,
           location_type: 'room' as ItemLocationType,
           location_id: roomId,
           quantity,
@@ -241,36 +297,16 @@ async function processDropTable(dropTableId: number, roomId: number): Promise<vo
       }
 
       // Drop currency from entry if specified
-      if (entry.currency_min > 0 || entry.currency_max > 0) {
-        const currencyAmount = entry.currency_min + Math.floor(
-          Math.random() * (entry.currency_max - entry.currency_min + 1)
+      if (entry.currencyMin > 0 || entry.currencyMax > 0) {
+        const currencyAmount = entry.currencyMin + Math.floor(
+          Math.random() * (entry.currencyMax - entry.currencyMin + 1)
         );
         if (currencyAmount > 0) {
-          const goldTemplate = await findCurrencyTemplate('gold coins');
-          if (goldTemplate) {
-            // Stack with existing gold in room
-            const existingGold = await itemRepo.findStackableInstance(
-              goldTemplate.id,
-              'room' as ItemLocationType,
-              roomId
-            );
-            if (existingGold) {
-              await itemRepo.addToInstanceQuantity(existingGold.id, currencyAmount);
-            } else {
-              await itemRepo.createInstance({
-                template_id: goldTemplate.id,
-                location_type: 'room' as ItemLocationType,
-                location_id: roomId,
-                quantity: currencyAmount,
-              });
-            }
-
-            broadcastCombatToRoom(
-              roomId,
-              colors.gold(`${currencyAmount} gold coins scatter across the ground.`),
-              []
-            );
-          }
+          await dropCurrencyAsDenominations(
+            currencyAmount,
+            entry.allowedDenominations,
+            roomId
+          );
         }
       }
     }
@@ -279,21 +315,9 @@ async function processDropTable(dropTableId: number, roomId: number): Promise<vo
   }
 }
 
-// Cache for currency template IDs
-const currencyTemplateCache = new Map<string, { id: number } | null>();
-
-async function findCurrencyTemplate(name: string): Promise<{ id: number } | null> {
-  if (currencyTemplateCache.has(name)) {
-    return currencyTemplateCache.get(name)!;
-  }
-
-  try {
-    const templates = await itemRepo.getAllTemplates();
-    const template = templates.find(t => t.name.toLowerCase() === name.toLowerCase());
-    const result = template ? { id: template.id } : null;
-    currencyTemplateCache.set(name, result);
-    return result;
-  } catch {
-    return null;
-  }
+/**
+ * Clear the denomination template cache. Called by @reload droptables.
+ */
+export function clearDenominationCache(): void {
+  denominationTemplateCache.clear();
 }

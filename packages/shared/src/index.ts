@@ -313,6 +313,30 @@ export interface NpcTemplate {
   attacks: NpcAttack[];
 }
 
+// Currency denomination types
+export const CURRENCY_DENOMINATIONS = ['copper', 'silver', 'gold', 'platinum', 'runic'] as const;
+export type CurrencyDenomination = (typeof CURRENCY_DENOMINATIONS)[number];
+
+// Drop table (loot table definition)
+export interface DropTable {
+  id: number;
+  name: string;
+  description: string | null;
+}
+
+// Drop table entry (individual loot roll)
+export interface DropTableEntry {
+  id: number;
+  dropTableId: number;
+  itemTemplateId: number | null;
+  dropChance: number;
+  minQuantity: number;
+  maxQuantity: number;
+  currencyMin: number;
+  currencyMax: number;
+  allowedDenominations: CurrencyDenomination[];
+}
+
 // Action (social emote) data
 export interface Action {
   id: number;

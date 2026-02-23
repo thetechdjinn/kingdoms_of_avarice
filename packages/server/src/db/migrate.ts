@@ -468,6 +468,30 @@ export async function runMigrations(): Promise<void> {
       await client.query(`ALTER TABLE npc_instances ADD COLUMN IF NOT EXISTS current_mana INTEGER DEFAULT 0`);
       await client.query(`ALTER TABLE npc_instances ADD COLUMN IF NOT EXISTS augmentation VARCHAR(100)`);
 
+      // Drop table: allowed_denominations column (Phase 5: Loot/Drop Table System)
+      await client.query(`
+        ALTER TABLE drop_table_entries ADD COLUMN IF NOT EXISTS allowed_denominations TEXT[] DEFAULT '{copper,silver,gold,platinum,runic}'
+      `);
+
+      // Phase 5: One-shot migration of drop_table_entries currency values from gold to copper.
+      // Old behavior treated currency_min/currency_max as gold-coin counts.
+      // New behavior treats them as copper amounts. Multiply existing non-zero values by 100.
+      // Uses a game_settings flag to ensure this only runs once.
+      const migrationFlag = await client.query(
+        `SELECT 1 FROM game_settings WHERE key = 'drop_table_currency_migrated'`
+      );
+      if (migrationFlag.rows.length === 0) {
+        await client.query(`
+          UPDATE drop_table_entries
+          SET currency_min = currency_min * 100,
+              currency_max = currency_max * 100
+          WHERE (currency_min > 0 OR currency_max > 0)
+        `);
+        await client.query(
+          `INSERT INTO game_settings (key, value) VALUES ('drop_table_currency_migrated', 'true') ON CONFLICT (key) DO NOTHING`
+        );
+      }
+
       // Unified auto-reset timer: Replace auto_close_seconds + auto_lock_seconds with auto_reset_seconds
       await client.query(`
         ALTER TABLE doors ADD COLUMN IF NOT EXISTS auto_reset_seconds INTEGER DEFAULT 120
@@ -824,6 +848,25 @@ async function seedNpcs(): Promise<void> {
         'claw', 'claws', 'swipe at', 'swipes at'
       )
     `, [npcId]);
+
+    // Create drop table for serpentine warrior
+    const dropTableResult = await getPool().query(`
+      INSERT INTO drop_tables (name, description)
+      VALUES ('serpentine warrior loot', 'Loot table for the serpentine warrior')
+      RETURNING id
+    `);
+    const dropTableId = dropTableResult.rows[0].id;
+
+    // Add currency entry: 75% chance, 10-50 copper, only copper and silver denominations
+    await getPool().query(`
+      INSERT INTO drop_table_entries (drop_table_id, drop_chance, min_quantity, max_quantity, currency_min, currency_max, allowed_denominations)
+      VALUES ($1, 75, 1, 1, 10, 50, '{copper,silver}')
+    `, [dropTableId]);
+
+    // Link drop table to NPC template
+    await getPool().query(`
+      UPDATE npcs SET drop_table_id = $1 WHERE id = $2
+    `, [dropTableId, npcId]);
 
     // Spawn an instance of the NPC
     await getPool().query(`
