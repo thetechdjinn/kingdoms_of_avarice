@@ -425,6 +425,49 @@ export async function runMigrations(): Promise<void> {
         ALTER TABLE item_templates ADD COLUMN IF NOT EXISTS tool_data JSONB
       `);
 
+      // NPC combat stats (Phase 2: Mob Combat)
+      await client.query(`ALTER TABLE npcs ADD COLUMN IF NOT EXISTS max_mana INTEGER DEFAULT 0`);
+      await client.query(`ALTER TABLE npcs ADD COLUMN IF NOT EXISTS base_accuracy INTEGER DEFAULT 0`);
+      await client.query(`ALTER TABLE npcs ADD COLUMN IF NOT EXISTS base_defense INTEGER DEFAULT 10`);
+      await client.query(`ALTER TABLE npcs ADD COLUMN IF NOT EXISTS base_crit_chance INTEGER DEFAULT 0`);
+      await client.query(`ALTER TABLE npcs ADD COLUMN IF NOT EXISTS base_dodge INTEGER DEFAULT 0`);
+      await client.query(`ALTER TABLE npcs ADD COLUMN IF NOT EXISTS damage_reduction INTEGER DEFAULT 0`);
+
+      // NPC traits & behavior
+      await client.query(`ALTER TABLE npcs ADD COLUMN IF NOT EXISTS traits TEXT[] DEFAULT '{}'`);
+      await client.query(`ALTER TABLE npcs ADD COLUMN IF NOT EXISTS flee_enabled BOOLEAN DEFAULT FALSE`);
+      await client.query(`ALTER TABLE npcs ADD COLUMN IF NOT EXISTS flee_hp_percent INTEGER DEFAULT 20`);
+      await client.query(`ALTER TABLE npcs ADD COLUMN IF NOT EXISTS call_for_help_chance INTEGER DEFAULT 50`);
+      await client.query(`ALTER TABLE npcs ADD COLUMN IF NOT EXISTS max_active INTEGER DEFAULT 1`);
+      await client.query(`ALTER TABLE npcs ADD COLUMN IF NOT EXISTS interactable BOOLEAN DEFAULT FALSE`);
+
+      // NPC spawning & movement
+      await client.query(`ALTER TABLE npcs ADD COLUMN IF NOT EXISTS allowed_areas TEXT[] DEFAULT '{}'`);
+      await client.query(`ALTER TABLE npcs ADD COLUMN IF NOT EXISTS roam_enabled BOOLEAN DEFAULT FALSE`);
+      await client.query(`ALTER TABLE npcs ADD COLUMN IF NOT EXISTS roam_interval INTEGER DEFAULT 60`);
+      await client.query(`ALTER TABLE npcs ADD COLUMN IF NOT EXISTS roam_chance INTEGER DEFAULT 91`);
+
+      // NPC loot
+      await client.query(`ALTER TABLE npcs ADD COLUMN IF NOT EXISTS drop_table_id INTEGER`);
+      await client.query(`ALTER TABLE npcs ADD COLUMN IF NOT EXISTS essence_reward INTEGER DEFAULT 0`);
+      await client.query(`ALTER TABLE npcs ADD COLUMN IF NOT EXISTS essence_class VARCHAR(50)`);
+
+      // NPC corpse
+      await client.query(`ALTER TABLE npcs ADD COLUMN IF NOT EXISTS leave_corpse BOOLEAN DEFAULT FALSE`);
+      await client.query(`ALTER TABLE npcs ADD COLUMN IF NOT EXISTS corpse_duration INTEGER DEFAULT 300`);
+
+      // NPC name augmentation
+      await client.query(`ALTER TABLE npcs ADD COLUMN IF NOT EXISTS augmentation_enabled BOOLEAN DEFAULT FALSE`);
+      await client.query(`ALTER TABLE npcs ADD COLUMN IF NOT EXISTS augmentations TEXT[] DEFAULT '{}'`);
+
+      // NPC room messages
+      await client.query(`ALTER TABLE npcs ADD COLUMN IF NOT EXISTS enter_room_message TEXT`);
+      await client.query(`ALTER TABLE npcs ADD COLUMN IF NOT EXISTS exit_room_message TEXT`);
+
+      // NPC instance columns
+      await client.query(`ALTER TABLE npc_instances ADD COLUMN IF NOT EXISTS current_mana INTEGER DEFAULT 0`);
+      await client.query(`ALTER TABLE npc_instances ADD COLUMN IF NOT EXISTS augmentation VARCHAR(100)`);
+
       // Unified auto-reset timer: Replace auto_close_seconds + auto_lock_seconds with auto_reset_seconds
       await client.query(`
         ALTER TABLE doors ADD COLUMN IF NOT EXISTS auto_reset_seconds INTEGER DEFAULT 120
@@ -573,6 +616,16 @@ export async function seedInitialData(): Promise<void> {
     console.log('Action seed data already exists, skipping actions...');
   } else {
     await seedActions();
+  }
+
+  // Check if NPCs already exist
+  const npcCheck = await getPool().query('SELECT COUNT(*) FROM npcs');
+  const npcsExist = parseInt(npcCheck.rows[0].count) > 0;
+
+  if (npcsExist) {
+    console.log('NPC seed data already exists, skipping NPCs...');
+  } else {
+    await seedNpcs();
   }
 }
 
@@ -734,6 +787,53 @@ async function seedActions(): Promise<void> {
   } catch (error) {
     console.error('Failed to seed actions:', error);
     // Don't throw - actions are optional, game can run without them
+  }
+}
+
+async function seedNpcs(): Promise<void> {
+  console.log('Seeding initial NPC data...');
+
+  try {
+    // Insert a test NPC template - serpentine warrior at City Gates
+    const templateResult = await getPool().query(`
+      INSERT INTO npcs (
+        name, description, spawn_room_id, health, max_health, hostile,
+        respawn_time, level, experience_reward, gold_min, gold_max,
+        max_mana, base_accuracy, base_defense, base_crit_chance, damage_reduction,
+        traits, max_active
+      ) VALUES (
+        'serpentine warrior', 'A fearsome warrior with serpentine features, its scaled skin glistening in the dim light.',
+        6, 30, 30, TRUE,
+        60, 2, 25, 5, 15,
+        0, 35, 12, 5, 1,
+        '{}', 1
+      ) RETURNING id
+    `);
+
+    const npcId = templateResult.rows[0].id;
+
+    // Insert attack for the NPC
+    await getPool().query(`
+      INSERT INTO npc_attacks (
+        npc_id, attack_type, name, min_damage, max_damage,
+        attacks_per_round, percentage, mana_cost,
+        hit_verb, hit_verb_3p, miss_verb, miss_verb_3p
+      ) VALUES (
+        $1, 'melee', 'claw strike', 2, 6,
+        1, 100, 0,
+        'claw', 'claws', 'swipe at', 'swipes at'
+      )
+    `, [npcId]);
+
+    // Spawn an instance of the NPC
+    await getPool().query(`
+      INSERT INTO npc_instances (npc_id, current_room_id, current_health)
+      VALUES ($1, 6, 30)
+    `, [npcId]);
+
+    console.log('NPC seed data inserted successfully');
+  } catch (error) {
+    console.error('Failed to seed NPCs:', error);
   }
 }
 

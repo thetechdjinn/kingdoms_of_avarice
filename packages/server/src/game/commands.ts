@@ -28,10 +28,12 @@ import {
 import { isHidden, isSneaking, isStealthing, setStealthMode, breakStealth } from './stealth/stealthState.js';
 import { handleHide, handleSneak, handleVisible, handleBackstab } from './stealth/stealthCommands.js';
 import { rollCumulativeDetection } from './stealth/stealthCheck.js';
+import { wordWrap } from '../utils/textFormat.js';
 import { calculateStealth, calculatePerception, characterHasStealth, getEncumbrancePenalty, calculateLockpicking, characterHasLockpicking } from './stats/secondaryStats.js';
 import { calculateEncumbranceRatio, getEquipmentCombatStats } from './combatStats.js';
 import { getRespawnRoomId } from '../services/respawnService.js';
 import { findPlayerInRoom } from './playerUtils.js';
+import { getNpcsInRoom, findNpcInRoom, checkHostileAggro } from './npcManager.js';
 
 export interface CommandResponse {
   type: MessageType;
@@ -142,6 +144,11 @@ export async function processCommand(
         sendMessage(targetPlayer, MessageType.OUTPUT, colors.green(`${colors.red(socket.username)} looks you up and down.`));
         broadcastToRoom(currentRoomId, colors.green(`${colors.red(socket.username)} looks ${colors.red(targetPlayer.username)} up and down.`), [socket.playerId, targetPlayer.playerId]);
         return result;
+      }
+      // Check if looking at an NPC
+      const npcTarget = findNpcInRoom(targetName, currentRoomId);
+      if (npcTarget) {
+        return handleLookAtNpc(npcTarget);
       }
       // Check if looking at a special door (e.g., "look portal", "look vortex")
       const specialDoor = doorStateManager.findSpecialDoorByDisplayName(currentRoomId, targetName);
@@ -459,6 +466,21 @@ function getOtherPlayersInRoom(
   return otherPlayers;
 }
 
+// Get display names of NPCs in a room (for "Also here:" line)
+// Returns pre-colored names: hostile NPCs in red, others in default player color
+function getNpcDisplayNames(roomId: number): string[] {
+  const npcs = getNpcsInRoom(roomId);
+  const names: string[] = [];
+  for (const npc of npcs) {
+    if (npc.vitals.hp <= 0) continue; // Skip dead NPCs
+    const name = npc.template.hostile
+      ? colors.hostileInRoom(npc.entityName)
+      : colors.playerInRoom(npc.entityName);
+    names.push(name);
+  }
+  return names;
+}
+
 // Get names of all players in a room (for looking into adjacent rooms)
 // Hidden players are filtered out unless viewer can see hidden
 function getPlayersInRoom(
@@ -606,6 +628,50 @@ async function handleLookAtPlayer(
 }
 
 /**
+ * Handle looking at an NPC
+ * Returns name, description, and HP status
+ */
+function handleLookAtNpc(npc: import('./npcManager.js').NpcCombatInstance): CommandResponse {
+  const lines: string[] = [];
+
+  // Name and level
+  lines.push(colors.boldYellow(npc.entityName));
+  lines.push(`Level ${npc.characterLevel}`);
+
+  // Description
+  if (npc.template.description) {
+    lines.push('');
+    lines.push(wordWrap(npc.template.description, 80));
+  }
+
+  // HP status
+  lines.push('');
+  const hpPercent = Math.round((npc.vitals.hp / npc.vitals.maxHp) * 100);
+  let hpStatus: string;
+  if (hpPercent >= 90) {
+    hpStatus = colors.green('is in excellent condition.');
+  } else if (hpPercent >= 75) {
+    hpStatus = colors.green('has a few scratches.');
+  } else if (hpPercent >= 50) {
+    hpStatus = colors.yellow('has some wounds.');
+  } else if (hpPercent >= 25) {
+    hpStatus = colors.red('is badly wounded.');
+  } else if (hpPercent > 0) {
+    hpStatus = colors.boldRed('is near death!');
+  } else {
+    hpStatus = colors.boldRed('is dead.');
+  }
+  lines.push(`${npc.entityName} ${hpStatus}`);
+
+  // Hostile indicator
+  if (npc.template.hostile) {
+    lines.push(colors.red('It looks hostile.'));
+  }
+
+  return { type: MessageType.OUTPUT, message: lines.join('\r\n') };
+}
+
+/**
  * Handle looking at a special door (portal, vortex, etc.)
  * Returns the door's description
  */
@@ -631,8 +697,9 @@ async function handleLook(
   }
 
   const otherPlayers = getOtherPlayersInRoom(roomId, socket.playerId, connectedPlayers, socket.canSeeHidden);
+  const npcNames = getNpcDisplayNames(roomId);
   const itemDescriptions = await getRoomItemsDescription(roomId);
-  return { type: MessageType.OUTPUT, message: world.formatRoomDescription(room, otherPlayers, useBriefMode, itemDescriptions) };
+  return { type: MessageType.OUTPUT, message: world.formatRoomDescription(room, otherPlayers, useBriefMode, itemDescriptions, npcNames) };
 }
 
 async function handleLookDirection(
@@ -669,10 +736,11 @@ async function handleLookDirection(
   const oppositeDir = OPPOSITE_DIRECTIONS[direction] || direction;
   broadcastToRoom(targetRoom.id, colors.green(`${colors.red(socket.username)} peeks in from the ${oppositeDir}.`), socket.playerId);
 
-  // Show the full room including players and exits
+  // Show the full room including players, NPCs, and exits
   const playersInRoom = getPlayersInRoom(targetRoom.id, connectedPlayers, socket.canSeeHidden);
+  const adjacentNpcNames = getNpcDisplayNames(targetRoom.id);
   const itemDescriptions = await getRoomItemsDescription(targetRoom.id);
-  return { type: MessageType.OUTPUT, message: world.formatRoomDescription(targetRoom, playersInRoom, false, itemDescriptions) };
+  return { type: MessageType.OUTPUT, message: world.formatRoomDescription(targetRoom, playersInRoom, false, itemDescriptions, adjacentNpcNames) };
 }
 
 async function handleBrief(socket: AuthenticatedSocket): Promise<CommandResponse> {
@@ -883,13 +951,17 @@ async function handleMove(
 
   // Build room description
   const otherPlayers = getOtherPlayersInRoom(newRoom.id, socket.playerId, connectedPlayers, socket.canSeeHidden);
+  const npcNames = getNpcDisplayNames(newRoom.id);
   const itemDescriptions = await getRoomItemsDescription(newRoom.id);
-  let roomDescription = world.formatRoomDescription(newRoom, otherPlayers, socket.briefMode, itemDescriptions);
+  let roomDescription = world.formatRoomDescription(newRoom, otherPlayers, socket.briefMode, itemDescriptions, npcNames);
 
   // Prepend stealth message if applicable
   if (playerMessage) {
     roomDescription = playerMessage + '\r\n' + roomDescription;
   }
+
+  // Check for hostile NPCs in the new room (auto-aggro)
+  checkHostileAggro(newRoom.id, socket, connectedPlayers);
 
   return { type: MessageType.OUTPUT, message: roomDescription };
 }

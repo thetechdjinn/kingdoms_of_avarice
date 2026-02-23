@@ -293,7 +293,47 @@ CREATE TABLE IF NOT EXISTS npc_instances (
     npc_id INTEGER REFERENCES npcs(id) ON DELETE CASCADE,
     current_room_id INTEGER REFERENCES rooms(id),
     current_health INTEGER,
+    current_mana INTEGER DEFAULT 0,
+    augmentation VARCHAR(100),
     spawned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- NPC attacks (per-template attack definitions)
+CREATE TABLE IF NOT EXISTS npc_attacks (
+    id SERIAL PRIMARY KEY,
+    npc_id INTEGER NOT NULL REFERENCES npcs(id) ON DELETE CASCADE,
+    attack_type VARCHAR(50) NOT NULL DEFAULT 'melee',
+    name VARCHAR(100) NOT NULL,
+    min_damage INTEGER NOT NULL DEFAULT 1 CHECK (min_damage >= 0),
+    max_damage INTEGER NOT NULL DEFAULT 4 CHECK (max_damage >= min_damage),
+    attacks_per_round INTEGER NOT NULL DEFAULT 1 CHECK (attacks_per_round >= 1),
+    percentage INTEGER NOT NULL DEFAULT 100 CHECK (percentage >= 0 AND percentage <= 100),
+    mana_cost INTEGER DEFAULT 0 CHECK (mana_cost >= 0),
+    hit_message TEXT,
+    miss_message TEXT,
+    hit_verb VARCHAR(50) DEFAULT 'hit',
+    hit_verb_3p VARCHAR(50) DEFAULT 'hits',
+    miss_verb VARCHAR(50) DEFAULT 'swing at',
+    miss_verb_3p VARCHAR(50) DEFAULT 'swings at'
+);
+
+-- Drop tables (loot table definitions)
+CREATE TABLE IF NOT EXISTS drop_tables (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    description TEXT
+);
+
+-- Drop table entries (items in a loot table)
+CREATE TABLE IF NOT EXISTS drop_table_entries (
+    id SERIAL PRIMARY KEY,
+    drop_table_id INTEGER NOT NULL REFERENCES drop_tables(id) ON DELETE CASCADE,
+    item_template_id INTEGER REFERENCES item_templates(id) ON DELETE CASCADE,
+    drop_chance DECIMAL(5,2) NOT NULL DEFAULT 100.00 CHECK (drop_chance >= 0 AND drop_chance <= 100),
+    min_quantity INTEGER NOT NULL DEFAULT 1 CHECK (min_quantity >= 0),
+    max_quantity INTEGER NOT NULL DEFAULT 1 CHECK (max_quantity >= min_quantity),
+    currency_min INTEGER DEFAULT 0 CHECK (currency_min >= 0),
+    currency_max INTEGER DEFAULT 0 CHECK (currency_max >= currency_min)
 );
 
 -- Roles table for RBAC
@@ -351,3 +391,5 @@ CREATE INDEX IF NOT EXISTS idx_ip_access_entry_type ON ip_access(entry_type);
 CREATE INDEX IF NOT EXISTS idx_doors_entry_room ON doors(entry_room_id);
 CREATE INDEX IF NOT EXISTS idx_doors_exit_room ON doors(exit_room_id);
 CREATE INDEX IF NOT EXISTS idx_doors_type ON doors(door_type);
+CREATE INDEX IF NOT EXISTS idx_npc_attacks_npc ON npc_attacks(npc_id);
+CREATE INDEX IF NOT EXISTS idx_drop_table_entries_table ON drop_table_entries(drop_table_id);

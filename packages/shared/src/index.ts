@@ -252,6 +252,67 @@ export * from "./characterPoints.js";
 // Re-export command queue system
 export * from "./commandQueue.js";
 
+// NPC attack definition
+export interface NpcAttack {
+  id: number;
+  npcId: number;
+  attackType: string;
+  name: string;
+  minDamage: number;
+  maxDamage: number;
+  attacksPerRound: number;
+  percentage: number;
+  manaCost: number;
+  hitMessage: string | null;
+  missMessage: string | null;
+  hitVerb: string;
+  hitVerb3p: string;
+  missVerb: string;
+  missVerb3p: string;
+}
+
+// NPC template (blueprint for NPCs)
+export interface NpcTemplate {
+  id: number;
+  name: string;
+  description: string | null;
+  spawnRoomId: number | null;
+  health: number;
+  maxHealth: number;
+  hostile: boolean;
+  respawnTime: number | null;
+  level: number;
+  experienceReward: number;
+  goldMin: number;
+  goldMax: number;
+  maxMana: number;
+  baseAccuracy: number;
+  baseDefense: number;
+  baseCritChance: number;
+  baseDodge: number;
+  damageReduction: number;
+  traits: string[];
+  fleeEnabled: boolean;
+  fleeHpPercent: number;
+  callForHelpChance: number;
+  maxActive: number;
+  interactable: boolean;
+  allowedAreas: string[];
+  roamEnabled: boolean;
+  roamInterval: number;
+  roamChance: number;
+  dropTableId: number | null;
+  essenceReward: number;
+  essenceClass: string | null;
+  leaveCorpse: boolean;
+  corpseDuration: number;
+  augmentationEnabled: boolean;
+  augmentations: string[];
+  enterRoomMessage: string | null;
+  exitRoomMessage: string | null;
+  attacks: NpcAttack[];
+}
+
 // Action (social emote) data
 export interface Action {
   id: number;

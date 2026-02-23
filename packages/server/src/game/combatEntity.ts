@@ -12,6 +12,7 @@
 import { VitalsData, PlayerRegenState, ActiveStatusEffect, DeathState, StealthMode } from '@koa/shared';
 import type { CharacterStats, CombatActionType, SpellCastingState } from '@koa/shared';
 import { getPlayerLocation } from './adminCommands.js';
+import { getNpcInstance } from './npcManager.js';
 
 /**
  * Combat state tracked per-entity in memory.
@@ -74,7 +75,6 @@ export function getEntityRoomId(entity: CombatEntity): number {
   if (entity.entityType === 'player') {
     return getPlayerLocation(entity.entityId);
   }
-  // Phase 2: NPCs will store their room ID on the entity directly
-  // For now, return 0 as a safe fallback (should never be reached in Phase 1)
-  return 0;
+  const npc = getNpcInstance(entity.entityId);
+  return npc ? npc.currentRoomId : 0;
 }

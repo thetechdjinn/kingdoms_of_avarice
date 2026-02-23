@@ -31,7 +31,9 @@ import { isPlayerDropped, isPlayerDead, clearDeathState } from './damageHandler.
 import { getRespawnRoomId } from '../services/respawnService.js';
 import { raceCanSeeHidden } from './stats/secondaryStats.js';
 import { isHidden } from './stealth/stealthState.js';
-import { type CombatState, CombatEntity, NPC_ID_OFFSET, isPlayerEntity, getEntityRoomId } from './combatEntity.js';
+import type { CombatEntity, CombatState } from './combatEntity.js';
+import { NPC_ID_OFFSET, isPlayerEntity, getEntityRoomId } from './combatEntity.js';
+import { initializeNpcManager, checkHostileAggro } from './npcManager.js';
 
 interface AuthenticatedSocket extends WebSocket {
   playerId: number;
@@ -135,6 +137,14 @@ export async function initializeGameWorld(): Promise<void> {
 
   // Initialize action commands
   await initializeActionCommands();
+
+  // Initialize NPC manager (load templates, spawn instances, start respawn timers)
+  try {
+    await initializeNpcManager();
+  } catch (error) {
+    console.error('[NPC Manager] Failed to initialize:', error);
+    // Server continues but NPCs will be unavailable
+  }
 
   // Initialize command queue system
   try {
@@ -427,6 +437,19 @@ export function setupGameSocket(wss: WebSocketServer): void {
           otherPlayers.push(displayName);
         }
       }
+      // Add NPCs to room display
+      const { getNpcsInRoom } = await import('./npcManager.js');
+      const { colors: colorUtils } = await import('../utils/colors.js');
+      const npcNames: string[] = [];
+      for (const npc of getNpcsInRoom(startRoomId)) {
+        if (npc.vitals.hp > 0) {
+          const name = npc.template.hostile
+            ? colorUtils.hostileInRoom(npc.entityName)
+            : colorUtils.playerInRoom(npc.entityName);
+          npcNames.push(name);
+        }
+      }
+
       const { getRoomItemsDescription } = await import('./itemCommands.js');
       let itemDescriptions: string | null = null;
       try {
@@ -434,11 +457,14 @@ export function setupGameSocket(wss: WebSocketServer): void {
       } catch (err) {
         console.error('Failed to get room items:', err);
       }
-      sendMessage(authWs, MessageType.OUTPUT, gameWorld.formatRoomDescription(room, otherPlayers, authWs.briefMode, itemDescriptions));
+      sendMessage(authWs, MessageType.OUTPUT, gameWorld.formatRoomDescription(room, otherPlayers, authWs.briefMode, itemDescriptions, npcNames));
     }
 
     // Send initial vitals
     sendVitals(authWs);
+
+    // Check for hostile NPCs in the room (auto-aggro on login)
+    checkHostileAggro(startRoomId, authWs, connectedPlayers);
 
     // Check if this is a new character that should show the training form
     // New characters have full unspent CP and no points allocated
@@ -670,4 +696,5 @@ function startStatusEffectLoop(): void {
 }
 
 export { connectedPlayers, AuthenticatedSocket, sendVitals, sendMessage, startStatusEffectLoop };
-export { CombatEntity, CombatState, NPC_ID_OFFSET, isPlayerEntity, getEntityRoomId };
+export type { CombatEntity, CombatState };
+export { NPC_ID_OFFSET, isPlayerEntity, getEntityRoomId };

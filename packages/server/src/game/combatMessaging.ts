@@ -8,9 +8,11 @@
  */
 
 import { MessageType, GameMessage } from '@koa/shared';
-import { CombatEntity, isPlayerEntity } from './combatEntity.js';
+import type { CombatEntity } from './combatEntity.js';
+import { isPlayerEntity, NPC_ID_OFFSET } from './combatEntity.js';
 import { getPlayerLocation } from './adminCommands.js';
 import type { AuthenticatedSocket } from './socket.js';
+import { getNpcInstance } from './npcManager.js';
 
 // Lazy references set during initialization to avoid circular imports.
 // IMPORTANT: This map is shared with combat.ts (typed as Map<number, AuthenticatedSocket>
@@ -96,6 +98,14 @@ export function broadcastCombatToRoom(
 export function resolveCombatTarget(entityId: number): CombatEntity | undefined {
   if (!connectedPlayersRef) return undefined;
 
-  // Phase 1: Players only
-  return connectedPlayersRef.get(entityId);
+  // Check players first
+  const player = connectedPlayersRef.get(entityId);
+  if (player) return player;
+
+  // Check NPCs (entity IDs >= NPC_ID_OFFSET)
+  if (entityId >= NPC_ID_OFFSET) {
+    return getNpcInstance(entityId);
+  }
+
+  return undefined;
 }

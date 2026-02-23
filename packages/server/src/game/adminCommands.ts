@@ -46,6 +46,7 @@ import {
   NO_LOCKPICK_BONUS,
 } from './stats/secondaryStats.js';
 import { StealthMode } from '@koa/shared';
+import { getAllNpcInstances, reloadNpcTemplates } from './npcManager.js';
 
 interface CommandResponse {
   type: MessageType;
@@ -63,7 +64,7 @@ export function setPlayerLocation(playerId: number, roomId: number): void {
 }
 
 // Commands that require Developer role
-const developerCommands = ['create', 'link', 'unlink', 'edit', 'delete', 'reload', 'spawn', 'purge', 'items', 'iteminfo', 'setstealth', 'testbackstab', 'lockpicking'];
+const developerCommands = ['create', 'link', 'unlink', 'edit', 'delete', 'reload', 'spawn', 'purge', 'items', 'iteminfo', 'setstealth', 'testbackstab', 'lockpicking', 'npcs'];
 
 // Commands that any staff can use (Moderator+)
 const staffCommands = ['goto', 'rooms', 'roominfo', 'help', 'give', 'hurt', 'heal', 'drain', 'revive', 'teleport', 'learn', 'spells', 'effect', 'cleareffect', 'effects', 'stealth'];
@@ -158,6 +159,8 @@ export async function processAdminCommand(
       return handleSetStealth(args, socket);
     case 'testbackstab':
       return await handleTestBackstab(args, socket);
+    case 'npcs':
+      return handleListNpcs();
     case 'help':
       return handleAdminHelp(userRoles);
     default:
@@ -479,8 +482,8 @@ async function handleReload(
     }
 
     if (target === 'mobs' || target === 'all') {
-      // TODO: Implement mob reload when mobs are added
-      results.push(`${colors.yellow('○')} Mobs reload not yet implemented`);
+      const count = await reloadNpcTemplates();
+      results.push(`${colors.green('✓')} Reloaded ${count} NPC templates`);
     }
 
     if (target === 'effects' || target === 'all') {
@@ -1335,6 +1338,41 @@ async function handleListSpells(): Promise<CommandResponse> {
   return { type: MessageType.OUTPUT, message: lines.join('\r\n') };
 }
 
+function handleListNpcs(): CommandResponse {
+  const npcs = getAllNpcInstances();
+
+  if (npcs.length === 0) {
+    return { type: MessageType.SYSTEM, message: 'No active NPC instances.' };
+  }
+
+  const lines = [
+    colors.boldYellow(`Active NPCs (${npcs.length} total):`),
+    '',
+  ];
+
+  // Group by room
+  const byRoom = new Map<number, typeof npcs>();
+  for (const npc of npcs) {
+    const roomId = npc.currentRoomId;
+    if (!byRoom.has(roomId)) {
+      byRoom.set(roomId, []);
+    }
+    byRoom.get(roomId)!.push(npc);
+  }
+
+  for (const [roomId, roomNpcs] of byRoom) {
+    lines.push(colors.boldCyan(`  Room ${roomId}:`));
+    for (const npc of roomNpcs) {
+      const hpPct = Math.round((npc.vitals.hp / npc.vitals.maxHp) * 100);
+      const hostileTag = npc.template.hostile ? colors.red(' [hostile]') : '';
+      const combatTag = npc.combatState.targets.size > 0 ? colors.boldRed(' [in combat]') : '';
+      lines.push(`    ${colors.white(`[${npc.entityId}]`)} ${npc.entityName} - Lv${npc.characterLevel} HP:${npc.vitals.hp}/${npc.vitals.maxHp} (${hpPct}%)${hostileTag}${combatTag}`);
+    }
+  }
+
+  return { type: MessageType.OUTPUT, message: lines.join('\r\n') };
+}
+
 function handleAdminHelp(userRoles: Role[]): CommandResponse {
   const isDeveloper = hasAnyRole(userRoles, [Role.DEVELOPER, Role.ADMIN]);
   
@@ -1380,6 +1418,9 @@ function handleAdminHelp(userRoles: Role[]): CommandResponse {
     lines.push('');
     lines.push(colors.boldYellow('Developer Commands (System):'));
     lines.push(`  ${colors.boldCyan('@reload [type]')}     - Reload data from database`);
+    lines.push('');
+    lines.push(colors.boldYellow('Developer Commands (NPCs):'));
+    lines.push(`  ${colors.boldCyan('@npcs')}                    - List active NPC instances`);
     lines.push('');
     lines.push(colors.boldYellow('Developer Commands (Stealth/Skills):'));
     lines.push(`  ${colors.boldCyan('@setstealth <mode> [player]')} - Force stealth state (none/sneaking/hidden)`);
