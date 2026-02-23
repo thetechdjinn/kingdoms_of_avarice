@@ -47,6 +47,7 @@ import {
 } from './stats/secondaryStats.js';
 import { StealthMode } from '@koa/shared';
 import { getAllNpcInstances, reloadNpcTemplates } from './npcManager.js';
+import { clearDropTableCache } from './npcDeathHandler.js';
 
 interface CommandResponse {
   type: MessageType;
@@ -460,10 +461,10 @@ async function handleReload(
   args: string[],
   world: GameWorld
 ): Promise<CommandResponse> {
-  // @reload [rooms|items|mobs|effects|doors|actions|all]
+  // @reload [rooms|items|mobs|effects|doors|actions|droptables|all]
   const target = args[0]?.toLowerCase() || 'all';
 
-  const validTargets = ['rooms', 'items', 'mobs', 'effects', 'doors', 'actions', 'all'];
+  const validTargets = ['rooms', 'items', 'mobs', 'effects', 'doors', 'actions', 'droptables', 'all'];
   if (!validTargets.includes(target)) {
     return { type: MessageType.ERROR, message: `Usage: @reload [${validTargets.join('|')}]` };
   }
@@ -501,6 +502,11 @@ async function handleReload(
     if (target === 'actions' || target === 'all') {
       await initializeActionCommands();
       results.push(`${colors.green('✓')} Reloaded action commands`);
+    }
+
+    if (target === 'droptables' || target === 'all') {
+      clearDropTableCache();
+      results.push(`${colors.green('✓')} Cleared drop table cache`);
     }
 
     return {
