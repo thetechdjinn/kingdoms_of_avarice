@@ -698,9 +698,8 @@ async function handleLook(
 
   const otherPlayers = getOtherPlayersInRoom(roomId, socket.playerId, connectedPlayers, socket.canSeeHidden);
   const npcNames = getNpcDisplayNames(roomId);
-  const allEntities = [...otherPlayers, ...npcNames];
   const itemDescriptions = await getRoomItemsDescription(roomId);
-  return { type: MessageType.OUTPUT, message: world.formatRoomDescription(room, allEntities, useBriefMode, itemDescriptions) };
+  return { type: MessageType.OUTPUT, message: world.formatRoomDescription(room, otherPlayers, useBriefMode, itemDescriptions, npcNames) };
 }
 
 async function handleLookDirection(
@@ -740,9 +739,8 @@ async function handleLookDirection(
   // Show the full room including players, NPCs, and exits
   const playersInRoom = getPlayersInRoom(targetRoom.id, connectedPlayers, socket.canSeeHidden);
   const adjacentNpcNames = getNpcDisplayNames(targetRoom.id);
-  const allInRoom = [...playersInRoom, ...adjacentNpcNames];
   const itemDescriptions = await getRoomItemsDescription(targetRoom.id);
-  return { type: MessageType.OUTPUT, message: world.formatRoomDescription(targetRoom, allInRoom, false, itemDescriptions) };
+  return { type: MessageType.OUTPUT, message: world.formatRoomDescription(targetRoom, playersInRoom, false, itemDescriptions, adjacentNpcNames) };
 }
 
 async function handleBrief(socket: AuthenticatedSocket): Promise<CommandResponse> {
@@ -954,9 +952,8 @@ async function handleMove(
   // Build room description
   const otherPlayers = getOtherPlayersInRoom(newRoom.id, socket.playerId, connectedPlayers, socket.canSeeHidden);
   const npcNames = getNpcDisplayNames(newRoom.id);
-  const allEntities = [...otherPlayers, ...npcNames];
   const itemDescriptions = await getRoomItemsDescription(newRoom.id);
-  let roomDescription = world.formatRoomDescription(newRoom, allEntities, socket.briefMode, itemDescriptions);
+  let roomDescription = world.formatRoomDescription(newRoom, otherPlayers, socket.briefMode, itemDescriptions, npcNames);
 
   // Prepend stealth message if applicable
   if (playerMessage) {

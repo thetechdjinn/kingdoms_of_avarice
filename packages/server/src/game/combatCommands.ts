@@ -326,6 +326,15 @@ export function clearCombatState(
           break;
         }
       }
+      // Also check if any other NPC is still targeting this NPC
+      if (!stillTargeted) {
+        for (const npc of getAllNpcInstances()) {
+          if (npc !== entity && npc.combatState.targets.has(targetId)) {
+            stillTargeted = true;
+            break;
+          }
+        }
+      }
       if (!stillTargeted && npcTarget.combatState.targets.size === 0) {
         npcTarget.regenState.inCombat = false;
         npcTarget.behaviorState = 'idle';

@@ -439,13 +439,16 @@ export function setupGameSocket(wss: WebSocketServer): void {
       }
       // Add NPCs to room display
       const { getNpcsInRoom } = await import('./npcManager.js');
+      const { colors: colorUtils } = await import('../utils/colors.js');
       const npcNames: string[] = [];
       for (const npc of getNpcsInRoom(startRoomId)) {
         if (npc.vitals.hp > 0) {
-          npcNames.push(npc.entityName);
+          const name = npc.template.hostile
+            ? colorUtils.hostileInRoom(npc.entityName)
+            : npc.entityName;
+          npcNames.push(name);
         }
       }
-      const allEntities = [...otherPlayers, ...npcNames];
 
       const { getRoomItemsDescription } = await import('./itemCommands.js');
       let itemDescriptions: string | null = null;
@@ -454,7 +457,7 @@ export function setupGameSocket(wss: WebSocketServer): void {
       } catch (err) {
         console.error('Failed to get room items:', err);
       }
-      sendMessage(authWs, MessageType.OUTPUT, gameWorld.formatRoomDescription(room, allEntities, authWs.briefMode, itemDescriptions));
+      sendMessage(authWs, MessageType.OUTPUT, gameWorld.formatRoomDescription(room, otherPlayers, authWs.briefMode, itemDescriptions, npcNames));
     }
 
     // Send initial vitals

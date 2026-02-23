@@ -21,13 +21,13 @@ interface DbNpcTemplate {
   base_crit_chance: number;
   base_dodge: number;
   damage_reduction: number;
-  traits: string[];
+  traits: string[] | null;
   flee_enabled: boolean;
   flee_hp_percent: number;
   call_for_help_chance: number;
   max_active: number;
   interactable: boolean;
-  allowed_areas: string[];
+  allowed_areas: string[] | null;
   roam_enabled: boolean;
   roam_interval: number;
   roam_chance: number;
@@ -37,7 +37,7 @@ interface DbNpcTemplate {
   leave_corpse: boolean;
   corpse_duration: number;
   augmentation_enabled: boolean;
-  augmentations: string[];
+  augmentations: string[] | null;
   enter_room_message: string | null;
   exit_room_message: string | null;
 }

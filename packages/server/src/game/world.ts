@@ -163,7 +163,7 @@ export class GameWorld {
     return this.rooms.get(targetId);
   }
 
-  formatRoomDescription(room: Room, otherPlayers: string[] = [], briefMode: boolean = false, itemDescriptions: string | null = null): string {
+  formatRoomDescription(room: Room, otherPlayers: string[] = [], briefMode: boolean = false, itemDescriptions: string | null = null, preColoredEntities: string[] = []): string {
     // Get doors in this room
     const doors = doorStateManager.getDoorsInRoom(room.id);
     const doorsByDirection = new Map<string, { door: typeof doors[0]; state: DoorState | null }>();
@@ -243,9 +243,14 @@ export class GameWorld {
       }
     }
 
-    // Add other players
+    // Add other players (colored as playerInRoom)
     for (const name of otherPlayers) {
       alsoHereItems.push(colors.playerInRoom(name));
+    }
+
+    // Add pre-colored entities (NPCs, etc.) — already styled by caller
+    for (const name of preColoredEntities) {
+      alsoHereItems.push(name);
     }
 
     // Show "Also here:" line if there's anything to show

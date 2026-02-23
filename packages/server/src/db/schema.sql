@@ -305,7 +305,7 @@ CREATE TABLE IF NOT EXISTS npc_attacks (
     attack_type VARCHAR(50) NOT NULL DEFAULT 'melee',
     name VARCHAR(100) NOT NULL,
     min_damage INTEGER NOT NULL DEFAULT 1 CHECK (min_damage >= 0),
-    max_damage INTEGER NOT NULL DEFAULT 4 CHECK (max_damage >= 0),
+    max_damage INTEGER NOT NULL DEFAULT 4 CHECK (max_damage >= min_damage),
     attacks_per_round INTEGER NOT NULL DEFAULT 1 CHECK (attacks_per_round >= 1),
     percentage INTEGER NOT NULL DEFAULT 100 CHECK (percentage >= 0 AND percentage <= 100),
     mana_cost INTEGER DEFAULT 0 CHECK (mana_cost >= 0),
@@ -331,9 +331,9 @@ CREATE TABLE IF NOT EXISTS drop_table_entries (
     item_template_id INTEGER REFERENCES item_templates(id) ON DELETE CASCADE,
     drop_chance DECIMAL(5,2) NOT NULL DEFAULT 100.00 CHECK (drop_chance >= 0 AND drop_chance <= 100),
     min_quantity INTEGER NOT NULL DEFAULT 1 CHECK (min_quantity >= 0),
-    max_quantity INTEGER NOT NULL DEFAULT 1 CHECK (max_quantity >= 0),
+    max_quantity INTEGER NOT NULL DEFAULT 1 CHECK (max_quantity >= min_quantity),
     currency_min INTEGER DEFAULT 0 CHECK (currency_min >= 0),
-    currency_max INTEGER DEFAULT 0 CHECK (currency_max >= 0)
+    currency_max INTEGER DEFAULT 0 CHECK (currency_max >= currency_min)
 );
 
 -- Roles table for RBAC
