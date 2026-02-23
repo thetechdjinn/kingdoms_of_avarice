@@ -273,6 +273,52 @@ export function processGameEvent(
 }
 
 // ============================================================================
+// FLAT ESSENCE AWARD (NPC kills, quest rewards, etc.)
+// ============================================================================
+
+/**
+ * Award a flat amount of essence to a character's wallet.
+ * Unlike processGameEvent() which uses tag matching + diminishing returns,
+ * this is a direct, unconditional award (e.g., from NPC kills).
+ *
+ * Updates in-memory state and persists to DB.
+ * Returns false if progression not loaded or amount <= 0.
+ */
+export async function awardEssence(characterId: number, amount: number): Promise<boolean> {
+  if (amount <= 0) return false;
+
+  const progression = characterProgressions.get(characterId);
+  if (!progression) return false;
+
+  // Update in-memory state
+  progression.essence_wallet += amount;
+  progression.total_essence_earned += amount;
+
+  // Persist to DB
+  try {
+    const result = await progressionRepo.updateCharacterProgression(characterId, {
+      essence_wallet: progression.essence_wallet,
+      total_essence_earned: progression.total_essence_earned,
+    });
+    if (!result) {
+      // No row updated — revert in-memory
+      progression.essence_wallet -= amount;
+      progression.total_essence_earned -= amount;
+      console.error(`[Progression] No progression row found in DB for character ${characterId}`);
+      return false;
+    }
+  } catch (error) {
+    // Revert in-memory on failure
+    progression.essence_wallet -= amount;
+    progression.total_essence_earned -= amount;
+    console.error(`[Progression] Failed to persist essence award for character ${characterId}:`, error);
+    return false;
+  }
+
+  return true;
+}
+
+// ============================================================================
 // LEVEL CHECK
 // ============================================================================
 

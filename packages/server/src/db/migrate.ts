@@ -800,13 +800,13 @@ async function seedNpcs(): Promise<void> {
         name, description, spawn_room_id, health, max_health, hostile,
         respawn_time, level, experience_reward, gold_min, gold_max,
         max_mana, base_accuracy, base_defense, base_crit_chance, damage_reduction,
-        traits, max_active
+        traits, max_active, essence_reward, essence_class
       ) VALUES (
         'serpentine warrior', 'A fearsome warrior with serpentine features, its scaled skin glistening in the dim light.',
         6, 30, 30, TRUE,
         60, 2, 25, 5, 15,
         0, 35, 12, 5, 1,
-        '{}', 1
+        '{}', 1, 5, NULL
       ) RETURNING id
     `);
 
