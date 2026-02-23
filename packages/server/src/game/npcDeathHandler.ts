@@ -10,10 +10,10 @@ import type { CombatEntity } from './combatEntity.js';
 import { isPlayerEntity } from './combatEntity.js';
 import type { NpcCombatInstance } from './npcManager.js';
 import { removeNpcInstance, queueRespawn } from './npcManager.js';
-import { sendCombatMessage } from './combatMessaging.js';
+import { sendCombatMessage, broadcastCombatToRoom } from './combatMessaging.js';
 import { colors } from '../utils/colors.js';
 import { awardEssence } from './progression.js';
-import { copperToDenominationCounts } from '../utils/textFormat.js';
+import { copperToDenominationCounts, formatCopperAsDenominations } from '../utils/textFormat.js';
 import * as dropTableRepo from '../db/repositories/dropTableRepository.js';
 import * as itemRepo from '../db/repositories/itemRepository.js';
 import * as characterRepo from '../db/repositories/characterRepository.js';
@@ -261,6 +261,8 @@ async function dropGold(npc: NpcCombatInstance, roomId: number): Promise<void> {
 
   try {
     await dropCurrencyAsDenominations(copperAmount, CURRENCY_DENOMINATIONS, roomId);
+    const denomStr = formatCopperAsDenominations(copperAmount);
+    broadcastCombatToRoom(roomId, colors.gold(`${denomStr} scatters across the ground.`), []);
   } catch (error) {
     console.error('[NPC Death] Failed to drop gold:', error);
   }
@@ -316,6 +318,6 @@ async function processDropTable(dropTableId: number, roomId: number): Promise<vo
 /**
  * Clear the denomination template cache. Called by @reload droptables.
  */
-export function clearDropTableCache(): void {
+export function clearDenominationCache(): void {
   denominationTemplateCache.clear();
 }

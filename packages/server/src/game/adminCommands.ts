@@ -47,7 +47,7 @@ import {
 } from './stats/secondaryStats.js';
 import { StealthMode } from '@koa/shared';
 import { getAllNpcInstances, reloadNpcTemplates } from './npcManager.js';
-import { clearDropTableCache } from './npcDeathHandler.js';
+import { clearDenominationCache } from './npcDeathHandler.js';
 
 interface CommandResponse {
   type: MessageType;
@@ -505,8 +505,8 @@ async function handleReload(
     }
 
     if (target === 'droptables' || target === 'all') {
-      clearDropTableCache();
-      results.push(`${colors.green('✓')} Cleared drop table cache`);
+      clearDenominationCache();
+      results.push(`${colors.green('✓')} Cleared denomination template cache`);
     }
 
     return {

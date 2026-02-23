@@ -29,6 +29,7 @@ function validateDenominations(arr: unknown): string | null {
  */
 function parseNumericField(value: unknown, name: string, opts?: { min?: number; integer?: boolean }): number | null | string {
   if (value === undefined) return null;
+  if (typeof value === 'string' && value.trim() === '') return `${name} must be a number`;
   const n = Number(value);
   if (isNaN(n)) return `${name} must be a number`;
   if (opts?.integer && !Number.isInteger(n)) return `${name} must be an integer`;
