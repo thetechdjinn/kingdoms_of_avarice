@@ -940,3 +940,31 @@ export async function updateCharacterProgression(
   );
   return result.rows[0] ? dbToCharacterProgressionWithLevel(result.rows[0]) : null;
 }
+
+/**
+ * Atomically increment essence_wallet and total_essence_earned in the DB.
+ * Returns the updated progression, or null if no row matched.
+ */
+export async function incrementEssenceWallet(
+  characterId: number,
+  amount: number
+): Promise<CharacterProgression | null> {
+  const result = await query<DbCharacterProgression & { calculated_level: number }>(
+    `WITH updated AS (
+      UPDATE character_progression
+      SET essence_wallet = essence_wallet + $1,
+          total_essence_earned = total_essence_earned + $1,
+          updated_at = CURRENT_TIMESTAMP
+      WHERE character_id = $2
+      RETURNING *
+    )
+    SELECT updated.*,
+      COALESCE(
+        (SELECT MAX(level) FROM progression_table WHERE std_xp_required <= updated.std_xp),
+        1
+      ) as calculated_level
+    FROM updated`,
+    [amount, characterId]
+  );
+  return result.rows[0] ? dbToCharacterProgressionWithLevel(result.rows[0]) : null;
+}

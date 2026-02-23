@@ -89,3 +89,36 @@ export function withArticle(noun: string): string {
   const article = vowels.includes(lower[0]) ? 'an' : 'a';
   return `${article} ${trimmed}`;
 }
+
+/**
+ * Format a copper-denominated amount into a human-readable denomination string.
+ * Conversion rates: 10 copper = 1 silver, 10 silver = 1 gold,
+ * 10 gold = 1 platinum, 100 platinum = 1 runic.
+ *
+ * @param copper - Total value in copper farthings
+ * @returns Formatted string like "2 gold, 4 silver, 5 copper"
+ */
+export function formatCopperAsDenominations(copper: number): string {
+  if (copper <= 0) return '0 copper';
+
+  let remaining = Math.floor(copper);
+
+  const runic = Math.floor(remaining / 100000);
+  remaining %= 100000;
+  const platinum = Math.floor(remaining / 1000);
+  remaining %= 1000;
+  const gold = Math.floor(remaining / 100);
+  remaining %= 100;
+  const silver = Math.floor(remaining / 10);
+  remaining %= 10;
+  const copperLeft = remaining;
+
+  const parts: string[] = [];
+  if (runic > 0) parts.push(`${runic} runic`);
+  if (platinum > 0) parts.push(`${platinum} platinum`);
+  if (gold > 0) parts.push(`${gold} gold`);
+  if (silver > 0) parts.push(`${silver} silver`);
+  if (copperLeft > 0) parts.push(`${copperLeft} copper`);
+
+  return parts.length > 0 ? parts.join(', ') : '0 copper';
+}

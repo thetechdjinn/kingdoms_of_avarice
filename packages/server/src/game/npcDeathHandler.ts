@@ -11,6 +11,7 @@ import type { NpcCombatInstance } from './npcManager.js';
 import { removeNpcInstance, queueRespawn } from './npcManager.js';
 import { sendCombatMessage, broadcastCombatToRoom } from './combatMessaging.js';
 import { colors } from '../utils/colors.js';
+import { awardEssence } from './progression.js';
 import * as npcRepo from '../db/repositories/npcRepository.js';
 import * as itemRepo from '../db/repositories/itemRepository.js';
 import * as characterRepo from '../db/repositories/characterRepository.js';
@@ -46,6 +47,11 @@ export async function processNpcDeath(
   // Award XP
   if (template.experienceReward > 0 && participants.length > 0) {
     await distributeXp(npc, participants);
+  }
+
+  // Award essence
+  if (template.essenceReward > 0 && participants.length > 0) {
+    await distributeEssence(npc, participants);
   }
 
   // Drop gold
@@ -96,20 +102,66 @@ async function distributeXp(
     // Level-weighted share
     const share = Math.max(1, Math.floor((player.characterLevel / totalLevels) * xpReward));
 
+    // Group bonus: +10% per group member, max +40% (Phase 8)
+    const groupBonusMultiplier = 1.0;
+    const finalShare = Math.max(1, Math.floor(share * groupBonusMultiplier));
+
     // Award XP via character repository
     try {
       // Get current experience first, then set new value
       const character = await characterRepo.findCharacterById(player.characterId);
       if (character) {
-        const newXp = character.experience + share;
+        const newXp = character.experience + finalShare;
         await characterRepo.updateCharacterStats(player.characterId, { experience: newXp });
       }
 
       sendCombatMessage(player, MessageType.SYSTEM,
-        colors.green(`You gain ${share} experience.`)
+        colors.green(`You gain ${finalShare} experience.`)
       );
     } catch (error) {
       console.error(`[NPC Death] Failed to award XP to character ${player.characterId}:`, error);
+    }
+  }
+}
+
+/**
+ * Distribute essence to eligible participants.
+ * Each eligible player gets the full essenceReward (not split).
+ * Essence is class-gated: if essenceClass is set, only matching class gets it.
+ * If essenceClass is null, all classes are eligible.
+ */
+async function distributeEssence(
+  npc: NpcCombatInstance,
+  participants: CombatEntity[]
+): Promise<void> {
+  const essenceReward = npc.template.essenceReward;
+  const essenceClass = npc.template.essenceClass;
+  const npcLevel = npc.template.level;
+
+  for (const player of participants) {
+    if (!isPlayerEntity(player) || !player.characterId) continue;
+
+    // Level gap check (reuse same constant as XP)
+    const levelDiff = Math.abs(player.characterLevel - npcLevel);
+    if (levelDiff > XP_LEVEL_GAP) continue;
+
+    // Class gate: if essenceClass is set, only matching class gets essence
+    if (essenceClass) {
+      try {
+        const character = await characterRepo.findCharacterById(player.characterId);
+        if (!character || character.class !== essenceClass) continue;
+      } catch (error) {
+        console.error(`[NPC Death] Failed to look up class for character ${player.characterId}:`, error);
+        continue;
+      }
+    }
+
+    // Award full essence amount to each eligible player
+    const success = await awardEssence(player.characterId, essenceReward);
+    if (success) {
+      sendCombatMessage(player, MessageType.SYSTEM,
+        colors.green(`You gain ${essenceReward} essence.`)
+      );
     }
   }
 }
