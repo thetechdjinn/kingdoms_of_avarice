@@ -7,7 +7,7 @@
  */
 
 import { MessageType, DeathState } from '@koa/shared';
-import { AuthenticatedSocket } from './socket.js';
+import type { CombatEntity } from './combatEntity.js';
 import { getMaxNegativeHpPercent } from '../db/repositories/settingsRepository.js';
 import { colors } from '../utils/colors.js';
 
@@ -38,7 +38,7 @@ export interface DamageResult {
  * @returns DamageResult with new HP and any state change
  */
 export async function applyDamage(
-  socket: AuthenticatedSocket,
+  socket: CombatEntity,
   damage: number,
   _source: DamageSource
 ): Promise<DamageResult> {
@@ -99,7 +99,7 @@ export async function applyDamage(
  * Called when a player's HP drops to 0 or below (but above death threshold).
  */
 export function initializeDroppedState(
-  socket: AuthenticatedSocket,
+  socket: CombatEntity,
   roomId: number
 ): void {
   socket.deathState = {
@@ -116,7 +116,7 @@ export function initializeDroppedState(
  * Called when a player's HP drops below the death threshold.
  */
 export function initializeDeadState(
-  socket: AuthenticatedSocket,
+  socket: CombatEntity,
   roomId: number
 ): void {
   socket.deathState = {
@@ -132,35 +132,35 @@ export function initializeDeadState(
  * Clear the death state, returning player to normal.
  * Called when player respawns or is healed above 0 HP.
  */
-export function clearDeathState(socket: AuthenticatedSocket): void {
+export function clearDeathState(socket: CombatEntity): void {
   socket.deathState = null;
 }
 
 /**
  * Check if a player is in the dropped state (on the ground, not dead).
  */
-export function isPlayerDropped(socket: AuthenticatedSocket): boolean {
+export function isPlayerDropped(socket: CombatEntity): boolean {
   return socket.deathState?.isDropped === true && !socket.deathState?.isDead;
 }
 
 /**
  * Check if a player is dead (in purgatory).
  */
-export function isPlayerDead(socket: AuthenticatedSocket): boolean {
+export function isPlayerDead(socket: CombatEntity): boolean {
   return socket.deathState?.isDead === true;
 }
 
 /**
  * Check if a player has been aided (stabilized by another player).
  */
-export function isPlayerAided(socket: AuthenticatedSocket): boolean {
+export function isPlayerAided(socket: CombatEntity): boolean {
   return socket.deathState?.isAided === true;
 }
 
 /**
  * Set the aided status for a dropped player.
  */
-export function setPlayerAided(socket: AuthenticatedSocket, aided: boolean): void {
+export function setPlayerAided(socket: CombatEntity, aided: boolean): void {
   if (socket.deathState?.isDropped) {
     socket.deathState.isAided = aided;
   }
@@ -169,7 +169,7 @@ export function setPlayerAided(socket: AuthenticatedSocket, aided: boolean): voi
 /**
  * Get the death room ID where player died/dropped.
  */
-export function getDeathRoomId(socket: AuthenticatedSocket): number | undefined {
+export function getDeathRoomId(socket: CombatEntity): number | undefined {
   return socket.deathState?.deathRoomId;
 }
 

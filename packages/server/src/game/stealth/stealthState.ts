@@ -9,6 +9,7 @@
 
 import { StealthMode, MessageType } from '@koa/shared';
 import { AuthenticatedSocket, broadcastToRoom, sendMessage, sendVitals } from '../socket.js';
+import type { CombatEntity } from '../combatEntity.js';
 import { getPlayerLocation } from '../adminCommands.js';
 import { colors } from '../../utils/colors.js';
 import { characterHasStealth } from '../stats/secondaryStats.js';
@@ -20,8 +21,8 @@ import { characterHasStealth } from '../stats/secondaryStats.js';
 /**
  * Check if a character is currently in combat
  */
-export function isInCombat(socket: AuthenticatedSocket): boolean {
-  return socket.combatState.targets.size > 0 || socket.regenState.inCombat;
+export function isInCombat(entity: CombatEntity): boolean {
+  return entity.combatState.targets.size > 0 || entity.regenState.inCombat;
 }
 
 /**

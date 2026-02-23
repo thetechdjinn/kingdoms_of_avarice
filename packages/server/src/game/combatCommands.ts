@@ -7,6 +7,7 @@
 import { MessageType } from '@koa/shared';
 import { CommandResponse } from './commands.js';
 import { AuthenticatedSocket, broadcastToRoom, sendVitals } from './socket.js';
+import type { CombatEntity } from './combatEntity.js';
 import { getPlayerLocation } from './adminCommands.js';
 import { colors } from '../utils/colors.js';
 import { findPlayerInRoom } from './playerUtils.js';
@@ -183,30 +184,34 @@ export async function handleFlee(
 }
 
 /**
- * Clear combat state for a player
+ * Clear combat state for an entity.
  *
  * Removes all targets and clears combat flag.
  * Also updates opponents' combat states if they're no longer in combat.
+ *
+ * Note: Phase 1 only checks the player map for mutual target cleanup.
+ * Phase 2 must also check the NPC instance map so that NPCs targeting
+ * a dying player (and vice versa) have their combat state cleaned up.
  */
 export function clearCombatState(
-  socket: AuthenticatedSocket,
+  entity: CombatEntity,
   connectedPlayers: Map<number, AuthenticatedSocket>
 ): void {
   // Save targets before clearing (needed to check if they should exit combat)
-  const previousTargets = new Set(socket.combatState.targets);
+  const previousTargets = new Set(entity.combatState.targets);
 
-  // Clear this player's targets
-  socket.combatState.targets.clear();
-  socket.combatState.energy = 0;
-  socket.combatState.carriedEnergy = 0;
-  socket.combatState.combatAction = 'melee';
-  socket.combatState.activeSpell = null;
+  // Clear this entity's targets
+  entity.combatState.targets.clear();
+  entity.combatState.energy = 0;
+  entity.combatState.carriedEnergy = 0;
+  entity.combatState.combatAction = 'melee';
+  entity.combatState.activeSpell = null;
 
-  // Check if any other players were targeting this player
+  // Check if any other players were targeting this entity
   // and update their combat state
   for (const [, otherSocket] of connectedPlayers) {
-    if (otherSocket.combatState.targets.has(socket.playerId)) {
-      otherSocket.combatState.targets.delete(socket.playerId);
+    if (otherSocket.combatState.targets.has(entity.entityId)) {
+      otherSocket.combatState.targets.delete(entity.entityId);
 
       // If they have no more targets, they're out of combat
       if (otherSocket.combatState.targets.size === 0) {
@@ -215,16 +220,16 @@ export function clearCombatState(
     }
   }
 
-  // Also check players we were targeting - if no one else is targeting them,
+  // Also check entities we were targeting - if no one else is targeting them,
   // they should exit combat too (fixes backstab victim staying in combat)
   for (const targetId of previousTargets) {
     const targetSocket = connectedPlayers.get(targetId);
     if (!targetSocket) continue;
 
-    // Check if anyone else is still targeting this player
+    // Check if anyone else is still targeting this entity
     let stillTargeted = false;
     for (const [, otherSocket] of connectedPlayers) {
-      if (otherSocket !== socket && otherSocket.combatState.targets.has(targetId)) {
+      if (otherSocket !== entity && otherSocket.combatState.targets.has(targetId)) {
         stillTargeted = true;
         break;
       }
@@ -236,26 +241,26 @@ export function clearCombatState(
     }
   }
 
-  // This player is no longer in combat
-  socket.regenState.inCombat = false;
+  // This entity is no longer in combat
+  entity.regenState.inCombat = false;
 }
 
 /**
  * Check if a player is in combat
  */
-export function isInCombat(socket: AuthenticatedSocket): boolean {
-  return socket.combatState.targets.size > 0;
+export function isInCombat(entity: CombatEntity): boolean {
+  return entity.combatState.targets.size > 0;
 }
 
 /**
  * Get the names of all targets a player is attacking
  */
 export function getTargetNames(
-  socket: AuthenticatedSocket,
+  entity: CombatEntity,
   connectedPlayers: Map<number, AuthenticatedSocket>
 ): string[] {
   const names: string[] = [];
-  for (const targetId of socket.combatState.targets) {
+  for (const targetId of entity.combatState.targets) {
     const target = connectedPlayers.get(targetId);
     if (target) {
       names.push(target.username);

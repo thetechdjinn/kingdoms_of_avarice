@@ -15,6 +15,7 @@ import {
 import * as statusEffectRepo from '../db/repositories/statusEffectRepository.js';
 import * as effectDefRepo from '../db/repositories/statusEffectDefinitionRepository.js';
 import { AuthenticatedSocket } from './socket.js';
+import type { CombatEntity } from './combatEntity.js';
 import { colors } from '../utils/colors.js';
 import { MessageType } from '@koa/shared';
 import { handleInterruptTrigger } from './interruptHandler.js';
@@ -621,7 +622,7 @@ export async function removeEffect(
 /**
  * Check if a character has a specific effect (active, non-expired)
  */
-export function hasEffect(socket: AuthenticatedSocket, effectId: string): boolean {
+export function hasEffect(socket: CombatEntity, effectId: string): boolean {
   if (!socket.activeEffects) {
     return false;
   }
@@ -638,7 +639,7 @@ export function hasEffect(socket: AuthenticatedSocket, effectId: string): boolea
 /**
  * Get the combined modifiers from all active effects
  */
-export function getEffectModifiers(socket: AuthenticatedSocket): EffectModifiers {
+export function getEffectModifiers(socket: CombatEntity): EffectModifiers {
   const modifiers: EffectModifiers = {
     accuracyModifier: 0,
     defenseModifier: 0,
@@ -695,14 +696,14 @@ export function getEffectModifiers(socket: AuthenticatedSocket): EffectModifiers
 /**
  * Check if any active effect blocks regeneration
  */
-export function shouldBlockRegen(socket: AuthenticatedSocket): boolean {
+export function shouldBlockRegen(socket: CombatEntity): boolean {
   return getEffectModifiers(socket).blocksRegen;
 }
 
 /**
  * Check if any active effect blocks movement
  */
-export function shouldBlockMovement(socket: AuthenticatedSocket): boolean {
+export function shouldBlockMovement(socket: CombatEntity): boolean {
   return getEffectModifiers(socket).blocksMovement;
 }
 
