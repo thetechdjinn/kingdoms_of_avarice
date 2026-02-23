@@ -6,6 +6,12 @@ import { requireDeveloper } from '../middleware/auth.js';
 
 const validDenominations = new Set<string>(CURRENCY_DENOMINATIONS);
 
+/** Parse a route parameter as a positive integer, or return NaN. */
+function parsePositiveInt(value: string): number {
+  const n = parseInt(value);
+  return (!isNaN(n) && n > 0) ? n : NaN;
+}
+
 function validateDenominations(arr: unknown): string | null {
   if (!Array.isArray(arr)) return 'allowedDenominations must be an array';
   if (arr.length === 0) return 'allowedDenominations must not be empty';
@@ -34,6 +40,12 @@ function validateEntryFields(body: Record<string, unknown>): string | null {
   const dropChance = parseNumericField(body.dropChance, 'dropChance', { min: 0 });
   if (typeof dropChance === 'string') return dropChance;
   if (typeof dropChance === 'number' && dropChance > 100) return 'dropChance must be between 0 and 100';
+
+  // Validate itemTemplateId is a positive integer when provided
+  if (body.itemTemplateId !== undefined && body.itemTemplateId !== null) {
+    const itemId = parseNumericField(body.itemTemplateId, 'itemTemplateId', { min: 1, integer: true });
+    if (typeof itemId === 'string') return itemId;
+  }
 
   const minQuantity = parseNumericField(body.minQuantity, 'minQuantity', { min: 0, integer: true });
   if (typeof minQuantity === 'string') return minQuantity;
@@ -97,7 +109,7 @@ export function setupDropTableRoutes(app: Express): void {
   // Get single drop table with entries
   app.get('/api/drop-tables/:id', requireDeveloper, async (req: Request, res: Response) => {
     try {
-      const id = parseInt(req.params.id);
+      const id = parsePositiveInt(req.params.id);
       if (isNaN(id)) {
         res.status(400).json({ success: false, message: 'Invalid drop table ID' });
         return;
@@ -136,7 +148,7 @@ export function setupDropTableRoutes(app: Express): void {
   // Update drop table
   app.put('/api/drop-tables/:id', requireDeveloper, async (req: Request, res: Response) => {
     try {
-      const id = parseInt(req.params.id);
+      const id = parsePositiveInt(req.params.id);
       if (isNaN(id)) {
         res.status(400).json({ success: false, message: 'Invalid drop table ID' });
         return;
@@ -158,7 +170,7 @@ export function setupDropTableRoutes(app: Express): void {
   // Delete drop table (cascades entries)
   app.delete('/api/drop-tables/:id', requireDeveloper, async (req: Request, res: Response) => {
     try {
-      const id = parseInt(req.params.id);
+      const id = parsePositiveInt(req.params.id);
       if (isNaN(id)) {
         res.status(400).json({ success: false, message: 'Invalid drop table ID' });
         return;
@@ -184,7 +196,7 @@ export function setupDropTableRoutes(app: Express): void {
   // Add entry to drop table
   app.post('/api/drop-tables/:tableId/entries', requireDeveloper, async (req: Request, res: Response) => {
     try {
-      const tableId = parseInt(req.params.tableId);
+      const tableId = parsePositiveInt(req.params.tableId);
       if (isNaN(tableId)) {
         res.status(400).json({ success: false, message: 'Invalid drop table ID' });
         return;
@@ -199,7 +211,7 @@ export function setupDropTableRoutes(app: Express): void {
 
       const { dropChance, itemTemplateId, minQuantity, maxQuantity, currencyMin, currencyMax, allowedDenominations } = req.body;
 
-      if (dropChance === undefined || dropChance === null) {
+      if (dropChance === undefined || dropChance === null || dropChance === '') {
         res.status(400).json({ success: false, message: 'dropChance is required' });
         return;
       }
@@ -231,8 +243,8 @@ export function setupDropTableRoutes(app: Express): void {
   // Update entry (scoped to tableId)
   app.put('/api/drop-tables/:tableId/entries/:entryId', requireDeveloper, async (req: Request, res: Response) => {
     try {
-      const tableId = parseInt(req.params.tableId);
-      const entryId = parseInt(req.params.entryId);
+      const tableId = parsePositiveInt(req.params.tableId);
+      const entryId = parsePositiveInt(req.params.entryId);
       if (isNaN(tableId) || isNaN(entryId)) {
         res.status(400).json({ success: false, message: 'Invalid ID' });
         return;
@@ -269,8 +281,8 @@ export function setupDropTableRoutes(app: Express): void {
   // Delete entry (scoped to tableId)
   app.delete('/api/drop-tables/:tableId/entries/:entryId', requireDeveloper, async (req: Request, res: Response) => {
     try {
-      const tableId = parseInt(req.params.tableId);
-      const entryId = parseInt(req.params.entryId);
+      const tableId = parsePositiveInt(req.params.tableId);
+      const entryId = parsePositiveInt(req.params.entryId);
       if (isNaN(tableId) || isNaN(entryId)) {
         res.status(400).json({ success: false, message: 'Invalid ID' });
         return;
