@@ -23,6 +23,9 @@ import {
 } from './combatStats.js';
 import * as progressionRepo from '../db/repositories/progressionRepository.js';
 import * as characterRepo from '../db/repositories/characterRepository.js';
+import { getNpcInstance } from './npcManager.js';
+import type { NpcCombatInstance } from './npcManager.js';
+import type { NpcAttack } from '@koa/shared';
 
 /**
  * Combat-relevant derived stats for a single entity.
@@ -57,8 +60,7 @@ export async function getCombatStats(entity: CombatEntity): Promise<CombatStatSn
     return getPlayerCombatStats(entity, false);
   }
 
-  // Phase 2: NPC stat provider will return static values from the NPC template.
-  return getDefaultCombatStats(entity);
+  return getNpcCombatStats(entity);
 }
 
 /**
@@ -70,7 +72,7 @@ export async function getCombatStatsWithDodge(entity: CombatEntity): Promise<Com
     return getPlayerCombatStats(entity, true);
   }
 
-  return getDefaultCombatStats(entity);
+  return getNpcCombatStats(entity);
 }
 
 /**
@@ -141,9 +143,75 @@ async function getPlayerCombatStats(entity: CombatEntity, includeDodge: boolean)
 }
 
 /**
- * Default combat stats fallback (used for NPCs until Phase 2 implements real stats).
+ * Select an attack for an NPC based on weighted percentages.
+ * Filters out attacks that require more mana than the NPC currently has,
+ * then redistributes percentages among affordable attacks.
  */
-function getDefaultCombatStats(entity: CombatEntity): CombatStatSnapshot {
+export function selectNpcAttack(npc: NpcCombatInstance): NpcAttack | null {
+  const attacks = npc.template.attacks;
+  if (attacks.length === 0) return null;
+
+  // Filter to affordable attacks
+  const affordable = attacks.filter(a => a.manaCost <= npc.currentMana);
+  if (affordable.length === 0) {
+    // Fall back to any free attack
+    const freeAttacks = attacks.filter(a => a.manaCost === 0);
+    if (freeAttacks.length === 0) return attacks[0]; // last resort
+    return freeAttacks[Math.floor(Math.random() * freeAttacks.length)];
+  }
+
+  // Weighted random selection based on percentage
+  const totalWeight = affordable.reduce((sum, a) => sum + a.percentage, 0);
+  let roll = Math.random() * totalWeight;
+
+  for (const attack of affordable) {
+    roll -= attack.percentage;
+    if (roll <= 0) return attack;
+  }
+
+  return affordable[affordable.length - 1];
+}
+
+/**
+ * NPC combat stats — reads pre-computed values from the NPC template.
+ */
+function getNpcCombatStats(entity: CombatEntity): CombatStatSnapshot {
+  const npc = getNpcInstance(entity.entityId);
+  const effectModifiers = getEffectModifiers(entity);
+
+  if (!npc) {
+    // Fallback if NPC not found (shouldn't happen)
+    return {
+      effectiveDex: entity.characterStats.dexterity,
+      effectiveInt: entity.characterStats.intelligence,
+      effectiveStr: entity.characterStats.strength,
+      effectiveCha: entity.characterStats.charisma,
+      encumbranceRatio: 0,
+      equipmentAccuracyBonus: 0,
+      weapon: {
+        minDamage: 1,
+        maxDamage: 4,
+        attackSpeed: 4500,
+        critModifier: 0,
+        damageType: 'bludgeoning',
+        weaponName: 'fists',
+        attackVerbs: { hit: 'hit', hit_3p: 'hits', miss: 'swing at', miss_3p: 'swings at' },
+      },
+      armor: {
+        totalArmorClass: 10,
+        damageReduction: 0,
+      },
+      classCritBonus: 0,
+      classDodgeBonus: 0,
+      raceDodgeBonus: 0,
+      effectModifiers,
+      totalWeight: 0,
+    };
+  }
+
+  // Select attack for this round
+  const attack = selectNpcAttack(npc);
+
   return {
     effectiveDex: entity.characterStats.dexterity,
     effectiveInt: entity.characterStats.intelligence,
@@ -152,22 +220,27 @@ function getDefaultCombatStats(entity: CombatEntity): CombatStatSnapshot {
     encumbranceRatio: 0,
     equipmentAccuracyBonus: 0,
     weapon: {
-      minDamage: 1,
-      maxDamage: 4,
-      attackSpeed: 4500,
+      minDamage: attack?.minDamage ?? 1,
+      maxDamage: attack?.maxDamage ?? 4,
+      attackSpeed: 4500, // NPCs don't use energy system
       critModifier: 0,
       damageType: 'bludgeoning',
-      weaponName: 'fists',
-      attackVerbs: { hit: 'hit', hit_3p: 'hits', miss: 'swing at', miss_3p: 'swings at' },
+      weaponName: attack?.name ?? 'fists',
+      attackVerbs: {
+        hit: attack?.hitVerb ?? 'hit',
+        hit_3p: attack?.hitVerb3p ?? 'hits',
+        miss: attack?.missVerb ?? 'swing at',
+        miss_3p: attack?.missVerb3p ?? 'swings at',
+      },
     },
     armor: {
-      totalArmorClass: 10,
-      damageReduction: 0,
+      totalArmorClass: npc.template.baseDefense,
+      damageReduction: npc.template.damageReduction,
     },
-    classCritBonus: 0,
-    classDodgeBonus: 0,
+    classCritBonus: npc.template.baseCritChance,
+    classDodgeBonus: npc.template.baseDodge,
     raceDodgeBonus: 0,
-    effectModifiers: getEffectModifiers(entity),
+    effectModifiers,
     totalWeight: 0,
   };
 }

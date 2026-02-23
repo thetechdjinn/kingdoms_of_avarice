@@ -12,6 +12,8 @@ import { getPlayerLocation } from './adminCommands.js';
 import { colors } from '../utils/colors.js';
 import { findPlayerInRoom } from './playerUtils.js';
 import { isStealthing, breakStealth } from './stealth/stealthState.js';
+import { getAllNpcInstances, findNpcInRoom, getNpcInstance } from './npcManager.js';
+import type { NpcCombatInstance } from './npcManager.js';
 
 /**
  * Handle the attack command
@@ -37,13 +39,84 @@ export function handleAttack(
   // Find the target player (respects stealth - can't attack what you can't see)
   const target = findPlayerInRoom(targetName, currentRoomId, connectedPlayers, socket.playerId, socket.canSeeHidden);
 
-  if (!target) {
+  if (target) {
+    // Attacking a player
+    // Check if already attacking this target
+    if (socket.combatState.targets.has(target.playerId)) {
+      return { type: MessageType.SYSTEM, message: `You are already attacking ${target.username}!` };
+    }
+
+    // Break stealth when initiating combat
+    if (isStealthing(socket)) {
+      breakStealth(socket, 'attack', true);
+    }
+
+    // Break target's stealth if they're hidden (they've been spotted)
+    if (isStealthing(target)) {
+      breakStealth(target, 'attacked', true);
+    }
+
+    // Add target to attacker's target list
+    socket.combatState.targets.add(target.playerId);
+
+    // Set both players' combat flags
+    socket.regenState.inCombat = true;
+    target.regenState.inCombat = true;
+
+    // Clear resting state for both players
+    socket.regenState.enhancedRegen.clear();
+    target.regenState.enhancedRegen.clear();
+
+    // Cancel meditation for both players if they were meditating
+    if (socket.exitTimer) {
+      clearTimeout(socket.exitTimer);
+      socket.exitTimer = undefined;
+    }
+    if (target.exitTimer) {
+      clearTimeout(target.exitTimer);
+      target.exitTimer = undefined;
+    }
+
+    // Update vitals to reflect status change (removes resting/meditating from statline)
+    sendVitals(socket);
+    sendVitals(target);
+
+    // Broadcast to room (exclude attacker and target - they get personalized messages)
+    broadcastToRoom(
+      currentRoomId,
+      `${colors.combatAttacker(socket.username)} moves to attack ${colors.combatDefender(target.username)}.`,
+      [socket.playerId, target.playerId]
+    );
+
+    // Notify the target
+    const targetMessage = {
+      type: MessageType.OUTPUT,
+      payload: `${colors.combatAttacker(socket.username)} moves to attack you!`,
+      timestamp: Date.now(),
+    };
+    target.send(JSON.stringify(targetMessage));
+
+    return {
+      type: MessageType.OUTPUT,
+      message: colors.yellow('*COMBAT ENGAGED*'),
+    };
+  }
+
+  // No player found — check NPCs
+  const npcTarget = findNpcInRoom(targetName, currentRoomId);
+
+  if (!npcTarget) {
     return { type: MessageType.ERROR, message: `You don't see ${targetName} here.` };
   }
 
-  // Check if already attacking this target
-  if (socket.combatState.targets.has(target.playerId)) {
-    return { type: MessageType.SYSTEM, message: `You are already attacking ${target.username}!` };
+  // Check if NPC is already dead
+  if (npcTarget.vitals.hp <= 0) {
+    return { type: MessageType.ERROR, message: `${npcTarget.entityName} is already dead.` };
+  }
+
+  // Check if already attacking this NPC
+  if (socket.combatState.targets.has(npcTarget.entityId)) {
+    return { type: MessageType.SYSTEM, message: `You are already attacking ${npcTarget.entityName}!` };
   }
 
   // Break stealth when initiating combat
@@ -51,50 +124,32 @@ export function handleAttack(
     breakStealth(socket, 'attack', true);
   }
 
-  // Break target's stealth if they're hidden (they've been spotted)
-  if (isStealthing(target)) {
-    breakStealth(target, 'attacked', true);
-  }
+  // Add NPC to attacker's target list and vice versa
+  socket.combatState.targets.add(npcTarget.entityId);
+  npcTarget.combatState.targets.add(socket.playerId);
 
-  // Add target to attacker's target list
-  socket.combatState.targets.add(target.playerId);
-
-  // Set both players' combat flags
+  // Set combat flags
   socket.regenState.inCombat = true;
-  target.regenState.inCombat = true;
+  npcTarget.regenState.inCombat = true;
+  npcTarget.behaviorState = 'combat';
 
-  // Clear resting state for both players
+  // Clear resting state for attacker
   socket.regenState.enhancedRegen.clear();
-  target.regenState.enhancedRegen.clear();
 
-  // Cancel meditation for both players if they were meditating
+  // Cancel meditation if meditating
   if (socket.exitTimer) {
     clearTimeout(socket.exitTimer);
     socket.exitTimer = undefined;
   }
-  if (target.exitTimer) {
-    clearTimeout(target.exitTimer);
-    target.exitTimer = undefined;
-  }
 
-  // Update vitals to reflect status change (removes resting/meditating from statline)
   sendVitals(socket);
-  sendVitals(target);
 
-  // Broadcast to room (exclude attacker and target - they get personalized messages)
+  // Broadcast to room
   broadcastToRoom(
     currentRoomId,
-    `${colors.combatAttacker(socket.username)} moves to attack ${colors.combatDefender(target.username)}.`,
-    [socket.playerId, target.playerId]
+    `${colors.combatAttacker(socket.username)} moves to attack ${colors.combatDefender(npcTarget.entityName)}.`,
+    socket.playerId
   );
-
-  // Notify the target
-  const targetMessage = {
-    type: MessageType.OUTPUT,
-    payload: `${colors.combatAttacker(socket.username)} moves to attack you!`,
-    timestamp: Date.now(),
-  };
-  target.send(JSON.stringify(targetMessage));
 
   return {
     type: MessageType.OUTPUT,
@@ -220,24 +275,61 @@ export function clearCombatState(
     }
   }
 
+  // Check if any NPCs were targeting this entity
+  for (const npc of getAllNpcInstances()) {
+    if (npc === entity) continue;
+    if (npc.combatState.targets.has(entity.entityId)) {
+      npc.combatState.targets.delete(entity.entityId);
+
+      if (npc.combatState.targets.size === 0) {
+        npc.regenState.inCombat = false;
+        npc.behaviorState = 'idle';
+      }
+    }
+  }
+
   // Also check entities we were targeting - if no one else is targeting them,
   // they should exit combat too (fixes backstab victim staying in combat)
   for (const targetId of previousTargets) {
+    // Check players
     const targetSocket = connectedPlayers.get(targetId);
-    if (!targetSocket) continue;
-
-    // Check if anyone else is still targeting this entity
-    let stillTargeted = false;
-    for (const [, otherSocket] of connectedPlayers) {
-      if (otherSocket !== entity && otherSocket.combatState.targets.has(targetId)) {
-        stillTargeted = true;
-        break;
+    if (targetSocket) {
+      let stillTargeted = false;
+      for (const [, otherSocket] of connectedPlayers) {
+        if (otherSocket !== entity && otherSocket.combatState.targets.has(targetId)) {
+          stillTargeted = true;
+          break;
+        }
       }
+      // Also check if any NPC is still targeting this player
+      if (!stillTargeted) {
+        for (const npc of getAllNpcInstances()) {
+          if (npc !== entity && npc.combatState.targets.has(targetId)) {
+            stillTargeted = true;
+            break;
+          }
+        }
+      }
+      if (!stillTargeted && targetSocket.combatState.targets.size === 0) {
+        targetSocket.regenState.inCombat = false;
+      }
+      continue;
     }
 
-    // If no one is targeting them and they have no targets, exit combat
-    if (!stillTargeted && targetSocket.combatState.targets.size === 0) {
-      targetSocket.regenState.inCombat = false;
+    // Check NPCs we were targeting
+    const npcTargets = getAllNpcInstances().filter(n => n.entityId === targetId);
+    for (const npcTarget of npcTargets) {
+      let stillTargeted = false;
+      for (const [, otherSocket] of connectedPlayers) {
+        if (otherSocket !== entity && otherSocket.combatState.targets.has(targetId)) {
+          stillTargeted = true;
+          break;
+        }
+      }
+      if (!stillTargeted && npcTarget.combatState.targets.size === 0) {
+        npcTarget.regenState.inCombat = false;
+        npcTarget.behaviorState = 'idle';
+      }
     }
   }
 
@@ -264,6 +356,12 @@ export function getTargetNames(
     const target = connectedPlayers.get(targetId);
     if (target) {
       names.push(target.username);
+    } else {
+      // Check NPC targets
+      const npc = getNpcInstance(targetId);
+      if (npc) {
+        names.push(npc.entityName);
+      }
     }
   }
   return names;
