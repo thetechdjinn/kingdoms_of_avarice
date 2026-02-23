@@ -14,7 +14,6 @@ import { colors } from '../utils/colors.js';
 import { sendCombatMessage, broadcastCombatToRoom } from './combatMessaging.js';
 import { MessageType } from '@koa/shared';
 import type { AuthenticatedSocket } from './socket.js';
-import { getPlayerLocation } from './adminCommands.js';
 
 /**
  * NPC combat instance — extends CombatEntity with NPC-specific fields.

@@ -317,8 +317,8 @@ export function clearCombatState(
     }
 
     // Check NPCs we were targeting
-    const npcTargets = getAllNpcInstances().filter(n => n.entityId === targetId);
-    for (const npcTarget of npcTargets) {
+    const npcTarget = getNpcInstance(targetId);
+    if (npcTarget) {
       let stillTargeted = false;
       for (const [, otherSocket] of connectedPlayers) {
         if (otherSocket !== entity && otherSocket.combatState.targets.has(targetId)) {

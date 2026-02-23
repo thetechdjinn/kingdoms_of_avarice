@@ -714,6 +714,12 @@ async function processNpcAttackerCombat(
       continue;
     }
 
+    // Skip targets already dead (killed earlier this round by another attacker)
+    if (target.vitals.hp <= 0) {
+      npc.combatState.targets.delete(targetId);
+      continue;
+    }
+
     // Check if target is still in the same room
     const targetRoomId = getEntityRoomId(target);
     if (targetRoomId !== npcRoomId) {

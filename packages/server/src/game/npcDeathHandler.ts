@@ -196,12 +196,28 @@ async function processDropTable(dropTableId: number, roomId: number): Promise<vo
         if (currencyAmount > 0) {
           const goldTemplate = await findCurrencyTemplate('gold coins');
           if (goldTemplate) {
-            await itemRepo.createInstance({
-              template_id: goldTemplate.id,
-              location_type: 'room' as ItemLocationType,
-              location_id: roomId,
-              quantity: currencyAmount,
-            });
+            // Stack with existing gold in room
+            const existingGold = await itemRepo.findStackableInstance(
+              goldTemplate.id,
+              'room' as ItemLocationType,
+              roomId
+            );
+            if (existingGold) {
+              await itemRepo.addToInstanceQuantity(existingGold.id, currencyAmount);
+            } else {
+              await itemRepo.createInstance({
+                template_id: goldTemplate.id,
+                location_type: 'room' as ItemLocationType,
+                location_id: roomId,
+                quantity: currencyAmount,
+              });
+            }
+
+            broadcastCombatToRoom(
+              roomId,
+              colors.gold(`${currencyAmount} gold coins scatter across the ground.`),
+              []
+            );
           }
         }
       }
