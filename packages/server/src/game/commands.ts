@@ -961,7 +961,7 @@ async function handleMove(
   }
 
   // Check for hostile NPCs in the new room (auto-aggro)
-  checkHostileAggro(newRoom.id, socket, connectedPlayers);
+  checkHostileAggro(newRoom.id, socket);
 
   return { type: MessageType.OUTPUT, message: roomDescription };
 }

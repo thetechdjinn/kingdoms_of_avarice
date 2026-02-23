@@ -1418,6 +1418,11 @@ function handleMobBehavior(): CommandResponse {
     if (npc.hasCalledForHelp) {
       detail += ` | CalledHelp`;
     }
+    if (npc.template.roamEnabled) {
+      const secsLeft = Math.max(0, Math.round((npc.nextRoamAt - Date.now()) / 1000));
+      detail += ` | Roam:${secsLeft}s`;
+    }
+    detail += ` | Aug:${npc.augmentation ?? 'none'}`;
 
     lines.push(detail);
   }
