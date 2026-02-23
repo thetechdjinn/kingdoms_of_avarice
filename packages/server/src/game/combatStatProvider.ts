@@ -11,7 +11,8 @@
  */
 
 import { EffectModifiers } from '@koa/shared';
-import { CombatEntity, isPlayerEntity } from './combatEntity.js';
+import type { CombatEntity } from './combatEntity.js';
+import { isPlayerEntity } from './combatEntity.js';
 import { getEffectModifiers } from './statusEffects.js';
 import {
   getEquipmentCombatStats,

@@ -31,7 +31,8 @@ import { isPlayerDropped, isPlayerDead, clearDeathState } from './damageHandler.
 import { getRespawnRoomId } from '../services/respawnService.js';
 import { raceCanSeeHidden } from './stats/secondaryStats.js';
 import { isHidden } from './stealth/stealthState.js';
-import { type CombatState, CombatEntity, NPC_ID_OFFSET, isPlayerEntity, getEntityRoomId } from './combatEntity.js';
+import type { CombatEntity, CombatState } from './combatEntity.js';
+import { NPC_ID_OFFSET, isPlayerEntity, getEntityRoomId } from './combatEntity.js';
 
 interface AuthenticatedSocket extends WebSocket {
   playerId: number;
@@ -670,4 +671,5 @@ function startStatusEffectLoop(): void {
 }
 
 export { connectedPlayers, AuthenticatedSocket, sendVitals, sendMessage, startStatusEffectLoop };
-export { CombatEntity, CombatState, NPC_ID_OFFSET, isPlayerEntity, getEntityRoomId };
+export type { CombatEntity, CombatState };
+export { NPC_ID_OFFSET, isPlayerEntity, getEntityRoomId };

@@ -7,7 +7,8 @@
 
 import { MessageType, AttackResult, SpellScalingStat, AttackVerbs } from '@koa/shared';
 import { AuthenticatedSocket, sendVitals as sendPlayerVitals } from './socket.js';
-import { CombatEntity, isPlayerEntity, getEntityRoomId } from './combatEntity.js';
+import type { CombatEntity } from './combatEntity.js';
+import { isPlayerEntity, getEntityRoomId } from './combatEntity.js';
 import { colors } from '../utils/colors.js';
 import {
   calculateRoundEnergy,

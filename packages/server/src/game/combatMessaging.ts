@@ -8,7 +8,8 @@
  */
 
 import { MessageType, GameMessage } from '@koa/shared';
-import { CombatEntity, isPlayerEntity } from './combatEntity.js';
+import type { CombatEntity } from './combatEntity.js';
+import { isPlayerEntity } from './combatEntity.js';
 import { getPlayerLocation } from './adminCommands.js';
 import type { AuthenticatedSocket } from './socket.js';
 
