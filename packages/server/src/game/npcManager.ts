@@ -699,14 +699,16 @@ export async function spawnNpcPublic(template: NpcTemplate, roomId: number): Pro
  * Despawn all active instances of a given template.
  */
 export function despawnByTemplate(templateId: number): number {
-  let count = 0;
+  const toRemove: number[] = [];
   for (const [entityId, npc] of npcInstances) {
     if (npc.templateId === templateId) {
-      removeNpcInstance(entityId);
-      count++;
+      toRemove.push(entityId);
     }
   }
-  return count;
+  for (const entityId of toRemove) {
+    removeNpcInstance(entityId);
+  }
+  return toRemove.length;
 }
 
 /**
