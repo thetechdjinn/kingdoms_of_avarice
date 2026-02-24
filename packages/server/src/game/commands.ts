@@ -1052,7 +1052,7 @@ async function handleMove(
   // checkHostileAggro sends combat messages via WebSocket immediately, but the room
   // description is only sent after processCommand returns. Without deferring, the
   // "attacks you!" message arrives before the player sees the room.
-  setTimeout(() => checkHostileAggro(newRoom.id, socket), 0);
+  setImmediate(() => checkHostileAggro(newRoom.id, socket));
 
   return { type: MessageType.OUTPUT, message: roomDescription };
 }

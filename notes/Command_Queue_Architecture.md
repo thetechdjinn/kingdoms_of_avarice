@@ -166,7 +166,7 @@ interface CombatConfig {
   roundDurationMs: number;
   autoAttack: boolean;
   queuePausedDuringCombat: boolean;
-  allowedCommandsInCombat: string[];
+  blockedCommandsInCombat: string[];
   exitCombatCommands: string[];
   combatDelayModifier: number;
   exitConditions: CombatExitConditions;
@@ -490,7 +490,7 @@ The hybrid model provides the best balance of responsiveness and classic MUD fee
     "roundDurationMs": 2000,
     "autoAttack": true,
     "queuePausedDuringCombat": false,
-    "allowedCommandsInCombat": ["attack", "cast", "use", "say"],
+    "blockedCommandsInCombat": ["rest", "hide", "quit", "train"],
     "exitCombatCommands": ["recall"],
     "combatDelayModifier": 1.0,
     "exitConditions": {
@@ -513,7 +513,7 @@ The hybrid model provides the best balance of responsiveness and classic MUD fee
 | `roundDurationMs` | Duration of each combat round |
 | `autoAttack` | Whether player auto-attacks each round |
 | `queuePausedDuringCombat` | If true, queue only processes combat commands |
-| `allowedCommandsInCombat` | Commands that can execute during combat |
+| `blockedCommandsInCombat` | Commands blocked during combat (everything else is allowed) |
 | `exitCombatCommands` | Commands that allow voluntary exit from combat |
 | `combatDelayModifier` | Global modifier to delays while in combat |
 | `exitConditions` | Automatic conditions that end combat (see below) |
@@ -1870,8 +1870,8 @@ Filter commands during combat based on configuration.
 - `packages/server/src/game/inputProcessor.ts` - Add combat filtering
 
 **Tasks:**
-1. Check `allowedCommandsInCombat` when player is in combat
-2. Reject disallowed commands with appropriate message
+1. Check `blockedCommandsInCombat` when player is in combat
+2. Reject blocked commands with appropriate message
 3. Handle `combatOnly` actions (reject if not in combat)
 
 #### 4.3 Combat Delay Modifier
