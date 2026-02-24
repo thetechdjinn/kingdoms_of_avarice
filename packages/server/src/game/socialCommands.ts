@@ -3,6 +3,7 @@ import { AuthenticatedSocket, sendMessage, broadcastToRoom } from './socket.js';
 import { getPlayerLocation } from './adminCommands.js';
 import { findOnlinePlayer } from './playerUtils.js';
 import { colors } from '../utils/colors.js';
+import { wordWrap } from '../utils/textFormat.js';
 import type { GameWorld } from './world.js';
 import type { CommandResponse } from './commands.js';
 
@@ -358,7 +359,7 @@ export function handleBroadcast(
     }
     const lines = [
       colors.boldCyan(`Broadcast channel: ${channel.name}`),
-      `Members: ${memberNames.join(', ')}`,
+      wordWrap(`Members: ${memberNames.join(', ')}`),
     ];
     return { type: MessageType.OUTPUT, message: lines.join('\r\n') };
   }
