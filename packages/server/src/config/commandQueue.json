@@ -97,7 +97,9 @@
   },
   "queueBypass": {
     "enabled": true,
-    "bypassCommands": ["look", "say", "who", "score", "inventory", "equipment", "stat", "help", "?"],
+    "bypassCommands": ["look", "say", "who", "score", "inventory", "equipment", "stat", "help", "?",
+      "gossip", "gos", "auction", "auc", "tel", "telepath", "shout", "yel",
+      "br", "broadcast", "group", "gr", "invite", "join", "kick", "leave", "/block", "/unblock"],
     "zeroDelayBypass": true
   },
   "timing": {
@@ -110,7 +112,10 @@
     "roundDurationMs": 2000,
     "autoAttack": true,
     "queuePausedDuringCombat": false,
-    "allowedCommandsInCombat": ["attack", "cast", "use", "say", "look", "inventory", "equipment", "score", "who", "break", "bre", "brea", "help", "?", "stat"],
+    "allowedCommandsInCombat": ["attack", "cast", "use", "say", "look", "inventory", "equipment", "score", "who", "break", "bre", "brea", "help", "?", "stat",
+      "gossip", "gos", "auction", "auc", "tel", "telepath", "shout", "yel",
+      "group", "gr", "br", "broadcast", "/block", "/unblock",
+      "invite", "join", "kick", "leave"],
     "exitCombatCommands": ["recall"],
     "combatDelayModifier": 1.0,
     "exitConditions": {

@@ -3,8 +3,40 @@ import { getPlayerLocation } from './adminCommands.js';
 import { isHidden } from './stealth/stealthState.js';
 
 /**
+ * Find any online player by name (case-insensitive partial match)
+ * Not room-scoped — searches all connected players globally.
+ * Excludes the searching player from results.
+ * Exact matches are preferred over prefix matches.
+ */
+export function findOnlinePlayer(
+  targetName: string,
+  connectedPlayers: Map<number, AuthenticatedSocket>,
+  excludePlayerId: number
+): AuthenticatedSocket | null {
+  const lowerTarget = targetName.trim().toLowerCase();
+  if (!lowerTarget) return null;
+
+  let prefixMatch: AuthenticatedSocket | null = null;
+
+  for (const [playerId, socket] of connectedPlayers) {
+    if (playerId === excludePlayerId) continue;
+
+    const playerName = socket.username.toLowerCase();
+    if (playerName === lowerTarget) {
+      return socket; // exact match — return immediately
+    }
+    if (!prefixMatch && playerName.startsWith(lowerTarget)) {
+      prefixMatch = socket;
+    }
+  }
+
+  return prefixMatch;
+}
+
+/**
  * Find a player in the same room by name (case-insensitive partial match)
- * Excludes the searching player from results
+ * Excludes the searching player from results.
+ * Exact matches are preferred over prefix matches.
  *
  * @param targetName - Name to search for (partial match supported)
  * @param roomId - Room to search in
@@ -22,6 +54,8 @@ export function findPlayerInRoom(
   const lowerTarget = targetName.trim().toLowerCase();
   if (!lowerTarget) return null;
 
+  let prefixMatch: AuthenticatedSocket | null = null;
+
   for (const [playerId, socket] of connectedPlayers) {
     if (playerId === excludePlayerId) continue;
     if (getPlayerLocation(playerId) !== roomId) continue;
@@ -32,10 +66,13 @@ export function findPlayerInRoom(
     }
 
     const playerName = socket.username.toLowerCase();
-    if (playerName === lowerTarget || playerName.startsWith(lowerTarget)) {
-      return socket;
+    if (playerName === lowerTarget) {
+      return socket; // exact match — return immediately
+    }
+    if (!prefixMatch && playerName.startsWith(lowerTarget)) {
+      prefixMatch = socket;
     }
   }
 
-  return null;
+  return prefixMatch;
 }

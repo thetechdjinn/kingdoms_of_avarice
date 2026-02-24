@@ -303,6 +303,55 @@ Players can access different help categories based on their role:
 - Accuracy based on DEX, INT, CHA, stealth, and weapon/class bonuses
 - Always breaks stealth and engages combat (hit or miss)
 
+### Chat Commands
+
+| Command                           | Description                                    |
+| --------------------------------- | ---------------------------------------------- |
+| `gossip <msg>` (gos)             | Send message to gossip channel                 |
+| `gossip on/off`                   | Toggle gossip channel                          |
+| `auction <msg>` (auc)            | Send message to auction channel                |
+| `auction on/off`                  | Toggle auction channel                         |
+| `tel <player> <msg>`             | Send private telepath to a player              |
+| `tel on/off`                      | Toggle receiving telepaths                     |
+| `/block <player>`                | Block telepaths from a player                  |
+| `/unblock <player>`              | Unblock a player                               |
+| `shout <msg>` (yel)              | Shout to room and adjacent rooms               |
+
+### Broadcast Channels
+
+| Command                           | Description                                    |
+| --------------------------------- | ---------------------------------------------- |
+| `broadcast create <name> [pass]` | Create a broadcast channel                     |
+| `join br <name> [pass]`          | Join a broadcast channel                       |
+| `leave <channel>`                | Leave a broadcast channel                      |
+| `br <msg>`                       | Send message to your broadcast channel         |
+| `br`                             | List broadcast channel members                 |
+
+**Broadcast Mechanics:**
+- One channel per player at a time
+- Channels can optionally be password-protected
+- Channels are automatically deleted when empty
+- All channel state is in-memory (resets on server restart)
+
+### Group Commands
+
+| Command             | Description                                    |
+| ------------------- | ---------------------------------------------- |
+| `invite <player>`  | Invite a player to your group (same room)      |
+| `join <leader>`    | Accept a pending group invitation              |
+| `leave`            | Leave your current group                       |
+| `kick <player>`    | Kick a member from the group (leader only)     |
+| `group <msg>` (gr) | Send message to group chat                     |
+| `group`            | Show group status (HP/mana percentages)        |
+
+**Group Mechanics:**
+- Max 6 players per group
+- Must be in same room to invite/join
+- Invitations expire after 60 seconds
+- Leader succession: if leader leaves, first-joined member becomes leader
+- Group XP bonus: +10% per additional member, max +40%
+- All group state is in-memory (resets on server restart)
+
 ### Social Commands
 
 | Command             | Description                                            |
