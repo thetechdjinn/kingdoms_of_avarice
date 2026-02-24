@@ -18,6 +18,7 @@ import * as dropTableRepo from '../db/repositories/dropTableRepository.js';
 import * as itemRepo from '../db/repositories/itemRepository.js';
 import * as characterRepo from '../db/repositories/characterRepository.js';
 import type { AuthenticatedSocket } from './socket.js';
+import { getGroupMembers } from './groupManager.js';
 
 /** Level gap for XP eligibility: players more than this many levels apart get nothing */
 const XP_LEVEL_GAP = 5;
@@ -103,8 +104,12 @@ async function distributeXp(
     // Level-weighted share
     const share = Math.max(1, Math.floor((player.characterLevel / totalLevels) * xpReward));
 
-    // Group bonus: +10% per group member, max +40% (Phase 8)
-    const groupBonusMultiplier = 1.0;
+    // Group bonus: +10% per additional group member who participated, max +40%
+    const groupMembers = getGroupMembers(player.entityId);
+    const eligibleIds = new Set(eligible.map(e => e.entityId));
+    const participatingGroupMembers = groupMembers.filter(id => eligibleIds.has(id)).length;
+    const additionalMembers = Math.max(0, participatingGroupMembers - 1);
+    const groupBonusMultiplier = 1.0 + Math.min(additionalMembers * 0.10, 0.40);
     const finalShare = Math.max(1, Math.floor(share * groupBonusMultiplier));
 
     // Award XP via character repository

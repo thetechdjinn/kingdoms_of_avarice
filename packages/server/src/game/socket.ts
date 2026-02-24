@@ -34,6 +34,8 @@ import { isHidden } from './stealth/stealthState.js';
 import type { CombatEntity, CombatState } from './combatEntity.js';
 import { NPC_ID_OFFSET, isPlayerEntity, getEntityRoomId } from './combatEntity.js';
 import { initializeNpcManager, checkHostileAggro, initializeNpcWorld } from './npcManager.js';
+import { cleanupBroadcastMembership } from './socialCommands.js';
+import { cleanupPlayerGroup } from './groupManager.js';
 
 interface AuthenticatedSocket extends WebSocket {
   playerId: number;
@@ -64,6 +66,14 @@ interface AuthenticatedSocket extends WebSocket {
   entityId: number;
   entityName: string;
   entityType: 'player' | 'npc';
+  // Social system fields
+  gossipEnabled: boolean;
+  auctionEnabled: boolean;
+  telepathEnabled: boolean;
+  telepathBlocks: Set<number>;
+  broadcastChannel: string | null;
+  groupId: string | null;
+  pendingGroupInvite: { groupId: string; leaderId: number; leaderName: string; expiresAt: number } | null;
 }
 
 const connectedPlayers = new Map<number, AuthenticatedSocket>();
@@ -378,6 +388,15 @@ export function setupGameSocket(wss: WebSocketServer): void {
       authWs.canSeeHidden = false;
     }
 
+    // Initialize social system state
+    authWs.gossipEnabled = true;
+    authWs.auctionEnabled = true;
+    authWs.telepathEnabled = true;
+    authWs.telepathBlocks = new Set();
+    authWs.broadcastChannel = null;
+    authWs.groupId = null;
+    authWs.pendingGroupInvite = null;
+
     // Load brief mode from database (default to false on error)
     try {
       authWs.briefMode = await playerRepo.getBriefMode(payload.playerId);
@@ -566,17 +585,21 @@ export function setupGameSocket(wss: WebSocketServer): void {
         unloadCharacterProgression(authWs.characterId);
       }
 
-      // Broadcast appropriate message based on how they disconnected
-      if (authWs.properlyExited) {
-        broadcastToAll(`${authWs.username} left the realm.`, payload.playerId);
-      } else {
-        // Player closed browser/tab without proper exit - potential cheating
-        broadcastToAll(colors.boldWhite(`** ${authWs.username} just hung up! **`), payload.playerId);
-      }
-
-      // Only remove from connectedPlayers if this socket is still the registered one.
-      // Prevents a race where an old socket's close handler deletes a newer connection.
+      // Only process full cleanup if this socket is still the registered one.
+      // Prevents a race where an old socket's close handler clobbers a newer connection.
       if (connectedPlayers.get(payload.playerId) === authWs) {
+        // Clean up social system state (broadcast channels, groups)
+        cleanupBroadcastMembership(authWs);
+        cleanupPlayerGroup(authWs.playerId);
+
+        // Broadcast appropriate message based on how they disconnected
+        if (authWs.properlyExited) {
+          broadcastToAll(`${authWs.username} left the realm.`, payload.playerId);
+        } else {
+          // Player closed browser/tab without proper exit - potential cheating
+          broadcastToAll(colors.boldWhite(`** ${authWs.username} just hung up! **`), payload.playerId);
+        }
+
         connectedPlayers.delete(payload.playerId);
       }
       console.log(`Character ${authWs.username} (Player ${payload.playerId}) disconnected${authWs.properlyExited ? '' : ' (hung up)'}`);

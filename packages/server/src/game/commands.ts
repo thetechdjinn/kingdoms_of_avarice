@@ -34,6 +34,13 @@ import { calculateEncumbranceRatio, getEquipmentCombatStats } from './combatStat
 import { getRespawnRoomId } from '../services/respawnService.js';
 import { findPlayerInRoom } from './playerUtils.js';
 import { getNpcsInRoom, findNpcInRoom, checkHostileAggro } from './npcManager.js';
+import {
+  handleGossip, handleAuction, handleTelepath, handleBlock, handleUnblock,
+  handleShout, handleBroadcastCreate, handleJoinBroadcast, handleLeaveBroadcast, handleBroadcast,
+} from './socialCommands.js';
+import {
+  handleInvite, handleJoinGroup, handleLeaveGroup, handleKick, handleGroupChat,
+} from './groupManager.js';
 
 export interface CommandResponse {
   type: MessageType;
@@ -96,14 +103,19 @@ export async function processCommand(
   // Death state command restrictions
   // Dead state - very limited commands
   if (isPlayerDead(socket)) {
-    const allowedDead = ['respawn', 'look', 'l', 'who', 'say', "'", 'help', '?'];
+    const allowedDead = ['respawn', 'look', 'l', 'who', 'say', "'", 'help', '?',
+      'gossip', 'gos', 'auction', 'auc', 'tel', 'telepath', 'shout', 'yel',
+      'group', 'gr', 'br', 'broadcast', '/block', '/unblock'];
     if (!allowedDead.includes(command)) {
       return { type: MessageType.ERROR, message: 'You are dead. Type "respawn" to return to life.' };
     }
   }
   // Dropped state - limited commands (but allow actions/emotes for roleplay)
   else if (isPlayerDropped(socket)) {
-    const allowedDropped = ['look', 'l', 'inventory', 'inv', 'i', 'who', 'say', "'", 'quit', 'x', 'help', '?', 'status', 'st', 'sta', 'stat', 'statu', 'me', '/me'];
+    const allowedDropped = ['look', 'l', 'inventory', 'inv', 'i', 'who', 'say', "'", 'quit', 'x', 'help', '?', 'status', 'st', 'sta', 'stat', 'statu', 'me', '/me',
+      'gossip', 'gos', 'auction', 'auc', 'tel', 'telepath', 'shout', 'yel',
+      'group', 'gr', 'br', 'broadcast', '/block', '/unblock',
+      'invite', 'join', 'kick', 'leave'];
     // Also allow action commands while dropped
     if (!allowedDropped.includes(command) && !isActionCommand(command)) {
       return { type: MessageType.ERROR, message: 'You cannot do that while on the ground. Wait for aid or bleed out.' };
@@ -394,6 +406,81 @@ export async function processCommand(
   // Check for spell mnemonics (e.g., 'mmis goblin' for Magic Missile)
   if (isSpellMnemonic(command)) {
     return handleSpellCommand(socket, command, args, _connectedPlayers);
+  }
+
+  // ---------- Social / Chat commands ----------
+
+  // Gossip channel
+  if (command === 'gossip' || command === 'gos') {
+    return handleGossip(socket, args, _connectedPlayers);
+  }
+
+  // Auction channel
+  if (command === 'auction' || command === 'auc') {
+    return handleAuction(socket, args, _connectedPlayers);
+  }
+
+  // Telepath (private message)
+  if (command === 'tel' || command === 'telepath') {
+    return handleTelepath(socket, args, _connectedPlayers);
+  }
+
+  // Block/unblock telepaths
+  if (command === '/block') {
+    return handleBlock(socket, args, _connectedPlayers);
+  }
+  if (command === '/unblock') {
+    return handleUnblock(socket, args, _connectedPlayers);
+  }
+
+  // Shout (room + adjacent rooms)
+  if (command === 'shout' || command === 'yel') {
+    return handleShout(socket, args, _connectedPlayers, world);
+  }
+
+  // Broadcast channels
+  if (command === 'broadcast' || command === 'br') {
+    // "broadcast create <name> [password]"
+    if (args.length >= 2 && args[0].toLowerCase() === 'create') {
+      return handleBroadcastCreate(socket, args.slice(1));
+    }
+    return handleBroadcast(socket, args, _connectedPlayers);
+  }
+
+  // Join: disambiguate broadcast vs group
+  if (command === 'join') {
+    if (args.length > 1 && args[0].toLowerCase() === 'br') {
+      return handleJoinBroadcast(socket, args.slice(1));
+    }
+    return handleJoinGroup(socket, args, _connectedPlayers);
+  }
+
+  // Leave: disambiguate broadcast vs group
+  if (command === 'leave') {
+    if (args.length > 0) {
+      // If the player is in a broadcast channel matching the argument, leave that channel.
+      // Otherwise treat it as a group leave (which will give its own error if not in a group).
+      if (socket.broadcastChannel && socket.broadcastChannel === args[0].toLowerCase()) {
+        return handleLeaveBroadcast(socket, args);
+      }
+      return { type: MessageType.ERROR, message: `You are not in broadcast channel "${args[0]}". To leave your group, type "leave" with no arguments.` };
+    }
+    return handleLeaveGroup(socket, _connectedPlayers);
+  }
+
+  // Group invite
+  if (command === 'invite') {
+    return handleInvite(socket, args, _connectedPlayers);
+  }
+
+  // Group kick
+  if (command === 'kick') {
+    return handleKick(socket, args, _connectedPlayers);
+  }
+
+  // Group chat / status
+  if (command === 'group' || command === 'gr') {
+    return handleGroupChat(socket, args, _connectedPlayers);
   }
 
   // Check for temporary portal spawn triggers (e.g., "Valar Morghulis")
@@ -1951,6 +2038,32 @@ function handleHelp(userRoles: Role[], category?: string): CommandResponse {
     colors.boldCyan('  Progression:'),
     `    ${colors.white('train')} (tr)            - Level up (in training room)`,
     `    ${colors.white('train stats')}           - Allocate CP to stats (in training room)`,
+    '',
+    colors.boldCyan('  Chat Channels:'),
+    `    ${colors.white('gossip <msg>')} (gos)    - Send to gossip channel`,
+    `    ${colors.white('gossip on/off')}         - Toggle gossip channel`,
+    `    ${colors.white('auction <msg>')} (auc)   - Send to auction channel`,
+    `    ${colors.white('auction on/off')}        - Toggle auction channel`,
+    `    ${colors.white('tel <player> <msg>')}    - Send private telepath`,
+    `    ${colors.white('tel on/off')}            - Toggle receiving telepaths`,
+    `    ${colors.white('/block <player>')}       - Block telepaths from player`,
+    `    ${colors.white('/unblock <player>')}     - Unblock a player`,
+    `    ${colors.white('shout <msg>')} (yel)     - Shout to room and adjacent rooms`,
+    '',
+    colors.boldCyan('  Broadcast Channels:'),
+    `    ${colors.white('broadcast create <name> [pass]')} - Create a channel`,
+    `    ${colors.white('join br <name> [pass]')} - Join a broadcast channel`,
+    `    ${colors.white('leave <channel>')}       - Leave a broadcast channel`,
+    `    ${colors.white('br <msg>')}              - Send to your broadcast channel`,
+    `    ${colors.white('br')}                    - List channel members`,
+    '',
+    colors.boldCyan('  Groups:'),
+    `    ${colors.white('invite <player>')}       - Invite a player to your group`,
+    `    ${colors.white('join <leader>')}         - Accept a group invitation`,
+    `    ${colors.white('leave')}                 - Leave your group`,
+    `    ${colors.white('kick <player>')}         - Kick a member (leader only)`,
+    `    ${colors.white('group <msg>')} (gr)      - Send to group chat`,
+    `    ${colors.white('group')}                 - Show group status`,
     '',
     colors.boldCyan('  Social:'),
     `    ${colors.white('/me <text>')}            - Custom emote (e.g., /me waves)`,
