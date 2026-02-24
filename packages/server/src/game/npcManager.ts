@@ -684,6 +684,32 @@ export function moveNpc(npc: NpcCombatInstance, direction: string, newRoomId: nu
 }
 
 /**
+ * Spawn an NPC instance from a template (public API for REST routes).
+ */
+export async function spawnNpcPublic(template: NpcTemplate, roomId: number): Promise<NpcCombatInstance> {
+  const npc = await spawnNpcFromTemplate(template, roomId);
+  broadcastCombatToRoom(roomId, colors.cyan(`${npc.entityName} appears.`), []);
+  if (npc.template.hostile) {
+    checkNpcAggroOnArrival(npc);
+  }
+  return npc;
+}
+
+/**
+ * Despawn all active instances of a given template.
+ */
+export function despawnByTemplate(templateId: number): number {
+  let count = 0;
+  for (const [entityId, npc] of npcInstances) {
+    if (npc.templateId === templateId) {
+      removeNpcInstance(entityId);
+      count++;
+    }
+  }
+  return count;
+}
+
+/**
  * Shutdown: save instances and clear timers.
  */
 export async function shutdownNpcManager(): Promise<void> {

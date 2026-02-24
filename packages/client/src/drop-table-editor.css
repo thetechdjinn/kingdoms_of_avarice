@@ -1,0 +1,330 @@
+/* Drop Table Editor Specific Styles */
+
+#dt-editor-panel {
+  flex: 1;
+  padding: 1.5rem;
+  overflow-y: auto;
+}
+
+#dt-form {
+  max-width: 800px;
+}
+
+#dt-form .form-actions {
+  display: flex;
+  gap: 1rem;
+  margin-top: 1.5rem;
+  padding: 1rem 0;
+  border-top: 1px solid #333;
+  background: #1a1a2e;
+  position: sticky;
+  bottom: 0;
+}
+
+/* Left list panel */
+#dt-list-panel {
+  display: flex;
+  flex-direction: column;
+}
+
+#dt-list {
+  flex: 1;
+  overflow-y: auto;
+}
+
+#dt-list li {
+  display: flex;
+  flex-direction: column;
+  padding: 8px 12px;
+  border-bottom: 1px solid #333;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+#dt-list li:hover {
+  background: #1a1a2e;
+}
+
+#dt-list li.selected {
+  background: #0e4429;
+  border-left: 3px solid #00ff00;
+}
+
+#dt-list li .dt-name {
+  font-weight: bold;
+  color: #00ff00;
+}
+
+#dt-list li .dt-info {
+  font-size: 0.8rem;
+  color: #888;
+}
+
+#dt-list li .dt-id {
+  font-size: 0.75rem;
+  color: #666;
+}
+
+#dt-search {
+  padding: 8px 12px;
+  border-bottom: 1px solid #333;
+}
+
+#dt-search input {
+  width: 100%;
+}
+
+/* Tabs */
+.form-tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 16px;
+  border-bottom: 2px solid #333;
+  padding-bottom: 8px;
+}
+
+.tab-btn {
+  padding: 8px 16px;
+  background: transparent;
+  border: none;
+  color: #888;
+  cursor: pointer;
+  border-radius: 4px 4px 0 0;
+  transition: all 0.2s;
+}
+
+.tab-btn:hover {
+  color: #00ff00;
+  background: #1a1a2e;
+}
+
+.tab-btn.active {
+  color: #00ff00;
+  background: #0e4429;
+}
+
+.tab-content {
+  display: none;
+}
+
+.tab-content.active {
+  display: block;
+}
+
+/* Form Rows */
+.form-row {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+
+.form-row .form-group {
+  flex: 1;
+  margin-bottom: 0;
+}
+
+/* Entries */
+.entries-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.entries-header h3 {
+  margin: 0;
+  color: #ffaa00;
+  font-size: 0.95rem;
+}
+
+.entry-row {
+  border: 1px solid #333;
+  border-radius: 4px;
+  padding: 12px;
+  margin-bottom: 12px;
+  background: #0f0f23;
+}
+
+.entry-row-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.entry-row-header .entry-title {
+  font-weight: bold;
+  color: #00ff00;
+  font-size: 0.9rem;
+}
+
+.entry-row-header .btn-remove {
+  background: none;
+  border: 1px solid #ff4444;
+  color: #ff4444;
+  padding: 2px 8px;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 0.8rem;
+}
+
+.entry-row-header .btn-remove:hover {
+  background: #ff4444;
+  color: #fff;
+}
+
+.entry-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 8px;
+}
+
+.entry-fields .form-group {
+  margin-bottom: 4px;
+}
+
+.entry-fields label {
+  font-size: 0.8rem;
+  color: #888;
+  margin-bottom: 2px;
+  display: block;
+}
+
+.entry-fields input,
+.entry-fields select {
+  width: 100%;
+  padding: 4px 8px;
+  font-size: 0.85rem;
+}
+
+.denomination-checkboxes {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid #333;
+}
+
+.denomination-checkboxes .denom-title {
+  font-size: 0.8rem;
+  color: #888;
+  margin-bottom: 6px;
+}
+
+.denomination-checkboxes .denom-grid {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.denomination-checkboxes .denom-grid label {
+  font-size: 0.8rem;
+  color: #aaa;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Preview/Simulation Panel */
+#preview-panel {
+  width: 300px;
+  background: #0f0f23;
+  border-left: 1px solid #333;
+  display: flex;
+  flex-direction: column;
+}
+
+#simulation-panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+#simulation-content {
+  flex: 1;
+  padding: 16px;
+  overflow-y: auto;
+  font-family: 'Courier New', monospace;
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
+#simulation-content .sim-section {
+  margin-bottom: 12px;
+}
+
+#simulation-content .sim-title {
+  color: #ffaa00;
+  font-weight: bold;
+  margin-bottom: 4px;
+}
+
+#simulation-content .sim-stat {
+  color: #888;
+  margin: 2px 0;
+}
+
+#simulation-content .sim-stat .label {
+  color: #aaa;
+}
+
+#simulation-content .sim-stat .value {
+  color: #00ff00;
+}
+
+.panel-section {
+  padding: 16px;
+  border-top: 1px solid #333;
+}
+
+.panel-section h3 {
+  margin-top: 0;
+  margin-bottom: 12px;
+  font-size: 0.9rem;
+  color: #888;
+}
+
+/* Hints */
+.hint {
+  color: #666;
+  font-size: 0.9rem;
+}
+
+.hint-inline {
+  color: #666;
+  font-size: 0.8rem;
+  font-weight: normal;
+}
+
+/* Button variants */
+.btn-small {
+  padding: 6px 12px;
+  font-size: 0.85rem;
+}
+
+.btn-secondary {
+  background: #333;
+  color: #fff;
+  border: 1px solid #555;
+}
+
+.btn-secondary:hover {
+  background: #444;
+}
+
+.btn-secondary:disabled {
+  background: #222;
+  color: #666;
+  cursor: not-allowed;
+}
+
+/* Responsive */
+@media (max-width: 1200px) {
+  #preview-panel {
+    width: 250px;
+  }
+}
+
+@media (max-width: 900px) {
+  #preview-panel {
+    display: none;
+  }
+}

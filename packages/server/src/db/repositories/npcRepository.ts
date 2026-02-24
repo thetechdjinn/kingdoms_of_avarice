@@ -1,5 +1,6 @@
 import { query, withTransaction } from '../index.js';
 import { NpcTemplate, NpcAttack } from '@koa/shared';
+import type pg from 'pg';
 
 // Database row types
 interface DbNpcTemplate {
@@ -269,4 +270,243 @@ export async function getDropTableEntries(dropTableId: number): Promise<DbDropTa
     [dropTableId]
   );
   return result.rows;
+}
+
+// ============================================================================
+// NPC TEMPLATE WRITE OPERATIONS
+// ============================================================================
+
+export interface CreateNpcTemplateInput {
+  name: string;
+  description?: string | null;
+  spawnRoomId?: number | null;
+  maxHealth?: number;
+  hostile?: boolean;
+  respawnTime?: number | null;
+  level?: number;
+  experienceReward?: number;
+  goldMin?: number;
+  goldMax?: number;
+  maxMana?: number;
+  baseAccuracy?: number;
+  baseDefense?: number;
+  baseCritChance?: number;
+  baseDodge?: number;
+  damageReduction?: number;
+  traits?: string[];
+  fleeEnabled?: boolean;
+  fleeHpPercent?: number;
+  callForHelpChance?: number;
+  maxActive?: number;
+  interactable?: boolean;
+  allowedAreas?: string[];
+  roamEnabled?: boolean;
+  roamInterval?: number;
+  roamChance?: number;
+  dropTableId?: number | null;
+  essenceReward?: number;
+  essenceClass?: string | null;
+  leaveCorpse?: boolean;
+  corpseDuration?: number;
+  augmentationEnabled?: boolean;
+  augmentations?: string[];
+  enterRoomMessage?: string | null;
+  exitRoomMessage?: string | null;
+}
+
+export interface CreateNpcAttackInput {
+  name: string;
+  attackType?: string;
+  minDamage?: number;
+  maxDamage?: number;
+  attacksPerRound?: number;
+  percentage?: number;
+  manaCost?: number;
+  hitMessage?: string | null;
+  missMessage?: string | null;
+  hitVerb?: string;
+  hitVerb3p?: string;
+  missVerb?: string;
+  missVerb3p?: string;
+}
+
+/**
+ * Create a new NPC template.
+ */
+export async function createTemplate(input: CreateNpcTemplateInput): Promise<NpcTemplate> {
+  const maxHealth = input.maxHealth ?? 100;
+  const result = await query<{ id: number }>(
+    `INSERT INTO npcs (
+      name, description, spawn_room_id, health, max_health, hostile, respawn_time,
+      level, experience_reward, gold_min, gold_max, max_mana,
+      base_accuracy, base_defense, base_crit_chance, base_dodge, damage_reduction,
+      traits, flee_enabled, flee_hp_percent, call_for_help_chance,
+      max_active, interactable, allowed_areas, roam_enabled, roam_interval, roam_chance,
+      drop_table_id, essence_reward, essence_class,
+      leave_corpse, corpse_duration, augmentation_enabled, augmentations,
+      enter_room_message, exit_room_message
+    ) VALUES (
+      $1, $2, $3, $4, $4, $5, $6,
+      $7, $8, $9, $10, $11,
+      $12, $13, $14, $15, $16,
+      $17, $18, $19, $20,
+      $21, $22, $23, $24, $25, $26,
+      $27, $28, $29,
+      $30, $31, $32, $33,
+      $34, $35
+    ) RETURNING id`,
+    [
+      input.name,
+      input.description ?? null,
+      input.spawnRoomId ?? null,
+      maxHealth,
+      input.hostile ?? true,
+      input.respawnTime ?? null,
+      input.level ?? 1,
+      input.experienceReward ?? 0,
+      input.goldMin ?? 0,
+      input.goldMax ?? 0,
+      input.maxMana ?? 0,
+      input.baseAccuracy ?? 50,
+      input.baseDefense ?? 50,
+      input.baseCritChance ?? 5,
+      input.baseDodge ?? 5,
+      input.damageReduction ?? 0,
+      input.traits ?? [],
+      input.fleeEnabled ?? false,
+      input.fleeHpPercent ?? 20,
+      input.callForHelpChance ?? 0,
+      input.maxActive ?? 1,
+      input.interactable ?? false,
+      input.allowedAreas ?? [],
+      input.roamEnabled ?? false,
+      input.roamInterval ?? 60,
+      input.roamChance ?? 10,
+      input.dropTableId ?? null,
+      input.essenceReward ?? 0,
+      input.essenceClass ?? null,
+      input.leaveCorpse ?? false,
+      input.corpseDuration ?? 300,
+      input.augmentationEnabled ?? false,
+      input.augmentations ?? [],
+      input.enterRoomMessage ?? null,
+      input.exitRoomMessage ?? null,
+    ]
+  );
+
+  const template = await getTemplateById(result.rows[0].id);
+  return template!;
+}
+
+/**
+ * Update an NPC template. Only provided fields are updated.
+ */
+export async function updateTemplate(id: number, input: Partial<CreateNpcTemplateInput>): Promise<NpcTemplate | null> {
+  const existing = await getTemplateById(id);
+  if (!existing) return null;
+
+  // Map input fields to DB columns
+  const fieldMap: Record<string, { column: string; value: unknown }> = {};
+
+  if (input.name !== undefined) fieldMap.name = { column: 'name', value: input.name };
+  if (input.description !== undefined) fieldMap.description = { column: 'description', value: input.description };
+  if (input.spawnRoomId !== undefined) fieldMap.spawnRoomId = { column: 'spawn_room_id', value: input.spawnRoomId };
+  if (input.maxHealth !== undefined) {
+    fieldMap.maxHealth = { column: 'max_health', value: input.maxHealth };
+    fieldMap.health = { column: 'health', value: input.maxHealth };
+  }
+  if (input.hostile !== undefined) fieldMap.hostile = { column: 'hostile', value: input.hostile };
+  if (input.respawnTime !== undefined) fieldMap.respawnTime = { column: 'respawn_time', value: input.respawnTime };
+  if (input.level !== undefined) fieldMap.level = { column: 'level', value: input.level };
+  if (input.experienceReward !== undefined) fieldMap.experienceReward = { column: 'experience_reward', value: input.experienceReward };
+  if (input.goldMin !== undefined) fieldMap.goldMin = { column: 'gold_min', value: input.goldMin };
+  if (input.goldMax !== undefined) fieldMap.goldMax = { column: 'gold_max', value: input.goldMax };
+  if (input.maxMana !== undefined) fieldMap.maxMana = { column: 'max_mana', value: input.maxMana };
+  if (input.baseAccuracy !== undefined) fieldMap.baseAccuracy = { column: 'base_accuracy', value: input.baseAccuracy };
+  if (input.baseDefense !== undefined) fieldMap.baseDefense = { column: 'base_defense', value: input.baseDefense };
+  if (input.baseCritChance !== undefined) fieldMap.baseCritChance = { column: 'base_crit_chance', value: input.baseCritChance };
+  if (input.baseDodge !== undefined) fieldMap.baseDodge = { column: 'base_dodge', value: input.baseDodge };
+  if (input.damageReduction !== undefined) fieldMap.damageReduction = { column: 'damage_reduction', value: input.damageReduction };
+  if (input.traits !== undefined) fieldMap.traits = { column: 'traits', value: input.traits };
+  if (input.fleeEnabled !== undefined) fieldMap.fleeEnabled = { column: 'flee_enabled', value: input.fleeEnabled };
+  if (input.fleeHpPercent !== undefined) fieldMap.fleeHpPercent = { column: 'flee_hp_percent', value: input.fleeHpPercent };
+  if (input.callForHelpChance !== undefined) fieldMap.callForHelpChance = { column: 'call_for_help_chance', value: input.callForHelpChance };
+  if (input.maxActive !== undefined) fieldMap.maxActive = { column: 'max_active', value: input.maxActive };
+  if (input.interactable !== undefined) fieldMap.interactable = { column: 'interactable', value: input.interactable };
+  if (input.allowedAreas !== undefined) fieldMap.allowedAreas = { column: 'allowed_areas', value: input.allowedAreas };
+  if (input.roamEnabled !== undefined) fieldMap.roamEnabled = { column: 'roam_enabled', value: input.roamEnabled };
+  if (input.roamInterval !== undefined) fieldMap.roamInterval = { column: 'roam_interval', value: input.roamInterval };
+  if (input.roamChance !== undefined) fieldMap.roamChance = { column: 'roam_chance', value: input.roamChance };
+  if (input.dropTableId !== undefined) fieldMap.dropTableId = { column: 'drop_table_id', value: input.dropTableId };
+  if (input.essenceReward !== undefined) fieldMap.essenceReward = { column: 'essence_reward', value: input.essenceReward };
+  if (input.essenceClass !== undefined) fieldMap.essenceClass = { column: 'essence_class', value: input.essenceClass };
+  if (input.leaveCorpse !== undefined) fieldMap.leaveCorpse = { column: 'leave_corpse', value: input.leaveCorpse };
+  if (input.corpseDuration !== undefined) fieldMap.corpseDuration = { column: 'corpse_duration', value: input.corpseDuration };
+  if (input.augmentationEnabled !== undefined) fieldMap.augmentationEnabled = { column: 'augmentation_enabled', value: input.augmentationEnabled };
+  if (input.augmentations !== undefined) fieldMap.augmentations = { column: 'augmentations', value: input.augmentations };
+  if (input.enterRoomMessage !== undefined) fieldMap.enterRoomMessage = { column: 'enter_room_message', value: input.enterRoomMessage };
+  if (input.exitRoomMessage !== undefined) fieldMap.exitRoomMessage = { column: 'exit_room_message', value: input.exitRoomMessage };
+
+  const entries = Object.values(fieldMap);
+  if (entries.length === 0) return existing;
+
+  const setClauses = entries.map((e, i) => `${e.column} = $${i + 1}`);
+  const values = entries.map(e => e.value);
+  values.push(id);
+
+  await query(
+    `UPDATE npcs SET ${setClauses.join(', ')} WHERE id = $${values.length}`,
+    values
+  );
+
+  return getTemplateById(id);
+}
+
+/**
+ * Delete an NPC template. FK CASCADE handles attacks + instances.
+ */
+export async function deleteTemplate(id: number): Promise<boolean> {
+  const result = await query('DELETE FROM npcs WHERE id = $1', [id]);
+  return (result.rowCount ?? 0) > 0;
+}
+
+/**
+ * Replace all attacks for an NPC template.
+ * Deletes existing attacks and inserts new ones within a transaction.
+ */
+export async function replaceAttacks(npcId: number, attacks: CreateNpcAttackInput[]): Promise<NpcAttack[]> {
+  return withTransaction(async (client: pg.PoolClient) => {
+    await client.query('DELETE FROM npc_attacks WHERE npc_id = $1', [npcId]);
+
+    const results: NpcAttack[] = [];
+    for (const atk of attacks) {
+      const result = await client.query<DbNpcAttack>(
+        `INSERT INTO npc_attacks (
+          npc_id, name, attack_type, min_damage, max_damage,
+          attacks_per_round, percentage, mana_cost,
+          hit_message, miss_message,
+          hit_verb, hit_verb_3p, miss_verb, miss_verb_3p
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14) RETURNING *`,
+        [
+          npcId,
+          atk.name,
+          atk.attackType ?? 'melee',
+          atk.minDamage ?? 1,
+          atk.maxDamage ?? 5,
+          atk.attacksPerRound ?? 1,
+          atk.percentage ?? 100,
+          atk.manaCost ?? 0,
+          atk.hitMessage ?? null,
+          atk.missMessage ?? null,
+          atk.hitVerb ?? 'hits',
+          atk.hitVerb3p ?? 'hits',
+          atk.missVerb ?? 'misses',
+          atk.missVerb3p ?? 'misses',
+        ]
+      );
+      results.push(dbToAttack(result.rows[0]));
+    }
+
+    return results;
+  });
 }
