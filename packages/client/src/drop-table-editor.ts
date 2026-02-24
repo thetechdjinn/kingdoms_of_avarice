@@ -152,7 +152,7 @@ async function handleLogout(): Promise<void> {
 
 async function fetchDropTables(): Promise<void> {
   try {
-    const response = await fetch('/api/drop-tables');
+    const response = await fetch('/api/drop-tables', { credentials: 'include' });
     if (!response.ok) throw new Error('Failed to fetch drop tables');
     const data = await response.json();
     dropTables = data.dropTables || [];
@@ -165,7 +165,7 @@ async function fetchDropTables(): Promise<void> {
 
 async function fetchItemTemplates(): Promise<void> {
   try {
-    const response = await fetch('/api/items');
+    const response = await fetch('/api/items', { credentials: 'include' });
     if (!response.ok) throw new Error('Failed to fetch items');
     const data = await response.json();
     itemTemplates = (data.items || []).map((i: Record<string, unknown>) => ({
@@ -179,7 +179,7 @@ async function fetchItemTemplates(): Promise<void> {
 
 async function fetchTableWithEntries(id: number): Promise<DropTable | null> {
   try {
-    const response = await fetch(`/api/drop-tables/${id}`);
+    const response = await fetch(`/api/drop-tables/${id}`, { credentials: 'include' });
     if (!response.ok) return null;
     const data = await response.json();
     return data.dropTable || null;
