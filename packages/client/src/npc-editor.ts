@@ -755,6 +755,11 @@ async function doImport(): Promise<void> {
         merge: mergeCheckbox?.checked ?? true,
       }),
     });
+    if (!response.ok) {
+      const errData = await response.json().catch(() => null);
+      showToast(errData?.message || `Import failed (HTTP ${response.status})`, 'error');
+      return;
+    }
     const data = await response.json();
     if (!data.success) {
       showToast(data.message || 'Import failed', 'error');
@@ -774,6 +779,7 @@ async function doImport(): Promise<void> {
 async function exportNpcs(): Promise<void> {
   try {
     const response = await fetch('/api/npcs/export');
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const data = await response.json();
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
