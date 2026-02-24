@@ -30,7 +30,8 @@ export async function processNpcDeath(
   npc: NpcCombatInstance,
   attacker: CombatEntity | null,
   roomId: number,
-  connectedPlayers: Map<number, AuthenticatedSocket>
+  connectedPlayers: Map<number, AuthenticatedSocket>,
+  deferredRewards: Array<() => Promise<void>> = []
 ): Promise<void> {
   const template = npc.template;
 
@@ -46,24 +47,26 @@ export async function processNpcDeath(
     participants.push(attacker);
   }
 
-  // Award XP
-  if (template.experienceReward > 0 && participants.length > 0) {
-    await distributeXp(npc, participants);
-  }
-
-  // Award essence
-  if (template.essenceReward > 0 && participants.length > 0) {
-    await distributeEssence(npc, participants);
-  }
-
-  // Drop gold
+  // Drop gold (visible to room, before COMBAT OFF)
   if (template.goldMin > 0 || template.goldMax > 0) {
     await dropGold(npc, roomId);
   }
 
-  // Process drop table (loot)
+  // Process drop table (loot, before COMBAT OFF)
   if (template.dropTableId) {
     await processDropTable(template.dropTableId, roomId);
+  }
+
+  // Defer XP/essence to send after COMBAT OFF
+  if (template.experienceReward > 0 && participants.length > 0) {
+    // Capture participants snapshot for deferred execution
+    const xpParticipants = [...participants];
+    deferredRewards.push(() => distributeXp(npc, xpParticipants));
+  }
+
+  if (template.essenceReward > 0 && participants.length > 0) {
+    const essenceParticipants = [...participants];
+    deferredRewards.push(() => distributeEssence(npc, essenceParticipants));
   }
 
   // Despawn the NPC instance

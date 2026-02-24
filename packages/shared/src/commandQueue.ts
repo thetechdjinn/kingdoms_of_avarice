@@ -309,8 +309,8 @@ export interface CombatQueueConfig {
   autoAttack: boolean;
   /** Whether the queue is paused during combat */
   queuePausedDuringCombat: boolean;
-  /** Commands allowed during combat */
-  allowedCommandsInCombat: string[];
+  /** Commands blocked during combat (everything else is allowed) */
+  blockedCommandsInCombat: string[];
   /** Commands that can exit combat */
   exitCombatCommands: string[];
   /** Global delay modifier during combat */

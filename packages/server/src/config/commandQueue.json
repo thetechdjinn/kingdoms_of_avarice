@@ -112,10 +112,7 @@
     "roundDurationMs": 2000,
     "autoAttack": true,
     "queuePausedDuringCombat": false,
-    "allowedCommandsInCombat": ["attack", "cast", "use", "say", "look", "inventory", "equipment", "score", "who", "break", "bre", "brea", "help", "?", "stat",
-      "gossip", "gos", "auction", "auc", "tel", "telepath", "shout", "yel",
-      "group", "gr", "br", "broadcast", "/block", "/unblock",
-      "invite", "join", "kick", "leave"],
+    "blockedCommandsInCombat": ["rest", "hide", "quit", "train"],
     "exitCombatCommands": ["recall"],
     "combatDelayModifier": 1.0,
     "exitConditions": {

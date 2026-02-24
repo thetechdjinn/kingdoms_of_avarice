@@ -7,7 +7,7 @@
  */
 
 import { MessageType, CPStatName, CP_STAT_NAMES, getCPCostForNextPoint, getTotalCPCost, DEFAULT_STARTING_CP, TrainingFormPayload, TrainingSubmitPayload, formatCurrency, HairStyle, HairColor, EyeColor, HAIR_STYLES, HAIR_COLORS, EYE_COLORS, Gender } from '@koa/shared';
-import { AuthenticatedSocket } from './socket.js';
+import { AuthenticatedSocket, broadcastToAll } from './socket.js';
 import { CommandResponse } from './commands.js';
 import { colors } from '../utils/colors.js';
 import * as characterRepo from '../db/repositories/characterRepository.js';
@@ -99,6 +99,10 @@ export async function handleTrain(
       cpSpent,
       unspentCp
     );
+
+    // Remove player from game world while training
+    socket.isTraining = true;
+    broadcastToAll(`${socket.username} left the realm.`, socket.playerId);
 
     socket.send(JSON.stringify({
       type: MessageType.TRAINING_FORM,
@@ -209,35 +213,49 @@ export async function handleTrainingSubmit(
   socket: AuthenticatedSocket,
   payload: TrainingSubmitPayload
 ): Promise<CommandResponse | null> {
+  // Helper to restore player to game world
+  const exitTraining = () => {
+    if (socket.isTraining) {
+      socket.isTraining = false;
+      broadcastToAll(`${socket.username} entered the realm.`, socket.playerId);
+    }
+  };
+
   // Validate payload structure
   if (!payload || typeof payload !== 'object') {
+    exitTraining();
     return { type: MessageType.ERROR, message: 'Invalid training data.' };
   }
 
-  // If cancelled, just acknowledge
+  // If cancelled, restore to world and acknowledge
   if (payload.cancelled) {
+    exitTraining();
     return { type: MessageType.OUTPUT, message: 'Training cancelled.' };
   }
 
   // Validate payload has required fields
   if (!payload.stats || typeof payload.stats !== 'object' ||
       !payload.cpSpent || typeof payload.cpSpent !== 'object') {
+    exitTraining();
     return { type: MessageType.ERROR, message: 'Invalid training data structure.' };
   }
 
   const characterId = socket.characterId;
   if (!characterId) {
+    exitTraining();
     return { type: MessageType.ERROR, message: 'No character selected.' };
   }
 
   // Get character and race data
   const character = await characterRepo.findCharacterById(characterId);
   if (!character) {
+    exitTraining();
     return { type: MessageType.ERROR, message: 'Character not found.' };
   }
 
   const race = await progressionRepo.getRaceById(character.race);
   if (!race || !race.base_stats) {
+    exitTraining();
     return { type: MessageType.ERROR, message: 'Race data not found.' };
   }
 
@@ -257,6 +275,7 @@ export async function handleTrainingSubmit(
 
     // Validate race has this stat defined
     if (!baseStats || typeof baseStats.min !== 'number' || typeof baseStats.max !== 'number') {
+      exitTraining();
       return { type: MessageType.ERROR, message: `Invalid race stat configuration for ${statName}.` };
     }
 
@@ -284,6 +303,7 @@ export async function handleTrainingSubmit(
     // Validate new value is within bounds
     const newCurrent = baseStats.min + newSpent;
     if (newCurrent < baseStats.min || newCurrent > baseStats.max) {
+      exitTraining();
       return { type: MessageType.ERROR, message: `${statName} value ${newCurrent} is outside allowed range (${baseStats.min}-${baseStats.max}).` };
     }
 
@@ -297,6 +317,7 @@ export async function handleTrainingSubmit(
   // Validate we have enough CP
   const newUnspentCp = oldUnspentCp - totalCpUsed;
   if (newUnspentCp < 0) {
+    exitTraining();
     return { type: MessageType.ERROR, message: 'Not enough CP for these changes.' };
   }
 
@@ -307,10 +328,12 @@ export async function handleTrainingSubmit(
   if (payload.familyName !== undefined) {
     const trimmedName = (payload.familyName || '').trim();
     if (trimmedName.length > 20) {
+      exitTraining();
       return { type: MessageType.ERROR, message: 'Family name too long (max 20 characters).' };
     }
     // Allow only letters, hyphens, apostrophes, and spaces
     if (trimmedName && !/^[a-zA-Z'\s-]+$/.test(trimmedName)) {
+      exitTraining();
       return { type: MessageType.ERROR, message: 'Family name contains invalid characters.' };
     }
     appearanceUpdates.last_name = trimmedName || null;
@@ -334,6 +357,9 @@ export async function handleTrainingSubmit(
       }
     }
   }
+
+  // All validation passed — restore player to game world
+  exitTraining();
 
   // Apply the changes
   await characterRepo.updateCharacterStats(characterId, {
@@ -377,6 +403,10 @@ export async function sendTrainingForm(
     unspentCp,
     isNewCharacter
   );
+
+  // Remove player from game world while training
+  socket.isTraining = true;
+  broadcastToAll(`${socket.username} left the realm.`, socket.playerId);
 
   socket.send(JSON.stringify({
     type: MessageType.TRAINING_FORM,
