@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>NPC Editor - Kingdoms of Avarice</title>
+    <link rel="stylesheet" href="/src/editor.css" />
+    <link rel="stylesheet" href="/src/npc-editor.css" />
+  </head>
+  <body>
+    <div id="editor-app">
+      <nav id="main-nav">
+        <div class="nav-brand">Kingdoms of Avarice</div>
+        <div class="nav-links">
+          <a href="/" class="nav-link">Game</a>
+          <div class="nav-dropdown" id="nav-dev-dropdown">
+            <button class="nav-link nav-dropdown-btn active">Developer</button>
+            <div class="nav-dropdown-menu">
+              <a href="/editor.html" class="nav-dropdown-item">Room Editor</a>
+              <a href="/item-editor.html" class="nav-dropdown-item">Item Editor</a>
+              <a href="/spell-editor.html" class="nav-dropdown-item">Spell Editor</a>
+              <a href="/status-editor.html" class="nav-dropdown-item">Status Effects Editor</a>
+              <a href="/progression-editor.html" class="nav-dropdown-item">Progression Editor</a>
+              <a href="/door-editor.html" class="nav-dropdown-item">Door Editor</a>
+              <a href="/action-editor.html" class="nav-dropdown-item">Action Editor</a>
+              <a href="/npc-editor.html" class="nav-dropdown-item active">NPC Editor</a>
+              <a href="/drop-table-editor.html" class="nav-dropdown-item">Drop Table Editor</a>
+              <a href="/swing-calculator.html" class="nav-dropdown-item">Swing Calculator</a>
+            </div>
+          </div>
+          <div class="nav-dropdown" id="nav-admin-dropdown" style="display: none;">
+            <button class="nav-link nav-dropdown-btn">Admin</button>
+            <div class="nav-dropdown-menu">
+              <a href="/admin.html" class="nav-dropdown-item">Admin Panel</a>
+              <a href="/game-settings-editor.html" class="nav-dropdown-item">Game Settings</a>
+              <a href="/user-editor.html" class="nav-dropdown-item">User Editor</a>
+            </div>
+          </div>
+        </div>
+        <div class="nav-spacer"></div>
+        <div class="nav-user-menu">
+          <button class="nav-user-btn" id="nav-username">User</button>
+          <div class="dropdown-menu" id="user-dropdown">
+            <button class="dropdown-item" id="logout-btn">Logout</button>
+          </div>
+        </div>
+      </nav>
+
+      <div id="editor-layout">
+        <aside id="npc-list-panel">
+          <div class="panel-header">
+            <h2>NPC Templates</h2>
+            <button id="new-npc-btn" class="btn-primary">+ New NPC</button>
+          </div>
+          <div id="npc-search">
+            <input type="text" id="search-input" placeholder="Search NPCs..." />
+          </div>
+          <ul id="npc-list"></ul>
+
+          <div class="panel-footer">
+            <button id="import-btn" class="btn-small">Import</button>
+            <button id="export-btn" class="btn-small">Export</button>
+          </div>
+        </aside>
+
+        <main id="npc-editor-panel">
+          <div id="no-npc-selected">
+            <p>Select an NPC template from the list or create a new one.</p>
+          </div>
+
+          <form id="npc-form" style="display: none;">
+            <div class="form-header">
+              <h2 id="npc-form-title">Edit NPC</h2>
+              <span id="npc-id-display"></span>
+            </div>
+
+            <div class="form-tabs">
+              <button type="button" class="tab-btn active" data-tab="basic">Basic</button>
+              <button type="button" class="tab-btn" data-tab="combat">Combat</button>
+              <button type="button" class="tab-btn" data-tab="behavior">Behavior</button>
+              <button type="button" class="tab-btn" data-tab="rewards">Rewards</button>
+              <button type="button" class="tab-btn" data-tab="appearance">Appearance</button>
+              <button type="button" class="tab-btn" data-tab="attacks">Attacks</button>
+            </div>
+
+            <!-- Basic Tab -->
+            <div class="tab-content active" id="tab-basic">
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="npc-name">Name</label>
+                  <input type="text" id="npc-name" required placeholder="serpentine warrior" />
+                </div>
+                <div class="form-group">
+                  <label for="npc-level">Level</label>
+                  <input type="number" id="npc-level" min="1" value="1" />
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label for="npc-description">Description</label>
+                <textarea id="npc-description" rows="3" placeholder="A fearsome creature..."></textarea>
+              </div>
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="npc-spawn-room">Spawn Room ID</label>
+                  <input type="number" id="npc-spawn-room" min="1" placeholder="None" />
+                </div>
+                <div class="form-group">
+                  <label for="npc-respawn-time">Respawn Time (s)</label>
+                  <input type="number" id="npc-respawn-time" min="0" placeholder="None" />
+                </div>
+                <div class="form-group">
+                  <label for="npc-max-active">Max Active</label>
+                  <input type="number" id="npc-max-active" min="1" value="1" />
+                </div>
+              </div>
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label class="checkbox-label">
+                    <input type="checkbox" id="npc-hostile" checked />
+                    Hostile
+                  </label>
+                </div>
+                <div class="form-group">
+                  <label class="checkbox-label">
+                    <input type="checkbox" id="npc-interactable" />
+                    Interactable
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <!-- Combat Tab -->
+            <div class="tab-content" id="tab-combat">
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="npc-max-health">Max Health</label>
+                  <input type="number" id="npc-max-health" min="1" value="100" />
+                </div>
+                <div class="form-group">
+                  <label for="npc-max-mana">Max Mana</label>
+                  <input type="number" id="npc-max-mana" min="0" value="0" />
+                </div>
+              </div>
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="npc-base-accuracy">Base Accuracy</label>
+                  <input type="number" id="npc-base-accuracy" min="0" value="50" />
+                </div>
+                <div class="form-group">
+                  <label for="npc-base-defense">Base Defense</label>
+                  <input type="number" id="npc-base-defense" min="0" value="50" />
+                </div>
+              </div>
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="npc-base-crit-chance">Base Crit Chance %</label>
+                  <input type="number" id="npc-base-crit-chance" min="0" max="100" value="5" />
+                </div>
+                <div class="form-group">
+                  <label for="npc-base-dodge">Base Dodge %</label>
+                  <input type="number" id="npc-base-dodge" min="0" max="100" value="5" />
+                </div>
+                <div class="form-group">
+                  <label for="npc-damage-reduction">Damage Reduction %</label>
+                  <input type="number" id="npc-damage-reduction" min="0" max="100" value="0" />
+                </div>
+              </div>
+            </div>
+
+            <!-- Behavior Tab -->
+            <div class="tab-content" id="tab-behavior">
+              <h3>Flee Behavior</h3>
+              <div class="form-row">
+                <div class="form-group">
+                  <label class="checkbox-label">
+                    <input type="checkbox" id="npc-flee-enabled" />
+                    Flee Enabled
+                  </label>
+                </div>
+                <div class="form-group">
+                  <label for="npc-flee-hp-percent">Flee HP Threshold %</label>
+                  <input type="number" id="npc-flee-hp-percent" min="0" max="100" value="20" />
+                </div>
+                <div class="form-group">
+                  <label for="npc-call-for-help">Call for Help Chance %</label>
+                  <input type="number" id="npc-call-for-help" min="0" max="100" value="0" />
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label for="npc-traits">Traits <span class="hint-inline">(comma-separated: stealth, see-invisible)</span></label>
+                <input type="text" id="npc-traits" placeholder="e.g., see-invisible" />
+              </div>
+
+              <h3>Roaming</h3>
+              <div class="form-row">
+                <div class="form-group">
+                  <label class="checkbox-label">
+                    <input type="checkbox" id="npc-roam-enabled" />
+                    Roam Enabled
+                  </label>
+                </div>
+                <div class="form-group">
+                  <label for="npc-roam-interval">Roam Interval (s)</label>
+                  <input type="number" id="npc-roam-interval" min="1" value="60" />
+                </div>
+                <div class="form-group">
+                  <label for="npc-roam-chance">Roam Chance %</label>
+                  <input type="number" id="npc-roam-chance" min="0" max="100" value="10" />
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label for="npc-allowed-areas">Allowed Areas <span class="hint-inline">(comma-separated, empty = all)</span></label>
+                <input type="text" id="npc-allowed-areas" placeholder="e.g., Silverton, Dark Forest" />
+              </div>
+            </div>
+
+            <!-- Rewards Tab -->
+            <div class="tab-content" id="tab-rewards">
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="npc-experience-reward">Experience Reward</label>
+                  <input type="number" id="npc-experience-reward" min="0" value="0" />
+                </div>
+                <div class="form-group">
+                  <label for="npc-essence-reward">Essence Reward</label>
+                  <input type="number" id="npc-essence-reward" min="0" value="0" />
+                </div>
+                <div class="form-group">
+                  <label for="npc-essence-class">Essence Class <span class="hint-inline">(empty = any)</span></label>
+                  <input type="text" id="npc-essence-class" placeholder="e.g., warrior" />
+                </div>
+              </div>
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="npc-gold-min">Gold Min (copper)</label>
+                  <input type="number" id="npc-gold-min" min="0" value="0" />
+                </div>
+                <div class="form-group">
+                  <label for="npc-gold-max">Gold Max (copper)</label>
+                  <input type="number" id="npc-gold-max" min="0" value="0" />
+                </div>
+              </div>
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="npc-drop-table">Drop Table</label>
+                  <select id="npc-drop-table">
+                    <option value="">None</option>
+                  </select>
+                  <a href="/drop-table-editor.html" class="hint-inline" style="margin-top: 4px; display: inline-block;">Open Drop Table Editor</a>
+                </div>
+              </div>
+            </div>
+
+            <!-- Appearance Tab -->
+            <div class="tab-content" id="tab-appearance">
+              <div class="form-row">
+                <div class="form-group">
+                  <label class="checkbox-label">
+                    <input type="checkbox" id="npc-augmentation-enabled" />
+                    Augmentation Enabled
+                  </label>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label for="npc-augmentations">Augmentations <span class="hint-inline">(comma-separated prefixes)</span></label>
+                <input type="text" id="npc-augmentations" placeholder="e.g., fierce, scarred, young" />
+              </div>
+
+              <div class="form-group">
+                <label for="npc-enter-message">Enter Room Message <span class="hint-inline">({name}, {direction} placeholders)</span></label>
+                <input type="text" id="npc-enter-message" placeholder="e.g., {name} slithers in." />
+              </div>
+
+              <div class="form-group">
+                <label for="npc-exit-message">Exit Room Message <span class="hint-inline">({name}, {direction} placeholders)</span></label>
+                <input type="text" id="npc-exit-message" placeholder="e.g., {name} slithers {direction}." />
+              </div>
+
+              <h3>Corpse</h3>
+              <div class="form-row">
+                <div class="form-group">
+                  <label class="checkbox-label">
+                    <input type="checkbox" id="npc-leave-corpse" />
+                    Leave Corpse
+                  </label>
+                </div>
+                <div class="form-group">
+                  <label for="npc-corpse-duration">Corpse Duration (s)</label>
+                  <input type="number" id="npc-corpse-duration" min="0" value="300" />
+                </div>
+              </div>
+            </div>
+
+            <!-- Attacks Tab -->
+            <div class="tab-content" id="tab-attacks">
+              <div class="attacks-header">
+                <h3>NPC Attacks</h3>
+                <button type="button" id="add-attack-btn" class="btn-small btn-primary">+ Add Attack</button>
+              </div>
+              <div id="attacks-container"></div>
+              <p id="no-attacks-hint" class="hint">No attacks defined. Add an attack to configure combat abilities.</p>
+            </div>
+
+            <div class="form-actions">
+              <button type="submit" class="btn-primary">Save NPC</button>
+              <button type="button" id="duplicate-npc-btn" class="btn-secondary">Duplicate</button>
+              <button type="button" id="delete-npc-btn" class="btn-danger">Delete NPC</button>
+            </div>
+          </form>
+        </main>
+
+        <aside id="preview-panel">
+          <div class="panel-header">
+            <h2>Preview</h2>
+          </div>
+          <div id="npc-preview">
+            <div id="preview-content">
+              <p class="hint">Select an NPC to see preview</p>
+            </div>
+          </div>
+
+          <div class="panel-section">
+            <h3>Spawn NPC</h3>
+            <div class="form-row">
+              <div class="form-group">
+                <label for="spawn-room">Room ID</label>
+                <input type="number" id="spawn-room" min="1" value="1" />
+              </div>
+            </div>
+            <button id="spawn-btn" class="btn-secondary" disabled>Spawn in Room</button>
+          </div>
+        </aside>
+      </div>
+    </div>
+
+    <!-- Import Modal -->
+    <div id="import-modal" class="modal" style="display: none;">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>Import NPCs</h3>
+          <button id="close-import-modal" class="close-btn" aria-label="Close">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label for="import-file">Select JSON file:</label>
+            <input type="file" id="import-file" accept=".json" />
+          </div>
+          <label class="checkbox-label">
+            <input type="checkbox" id="import-merge" checked />
+            Merge with existing (update if name matches)
+          </label>
+        </div>
+        <div class="modal-footer">
+          <button id="do-import-btn" class="btn-primary">Import</button>
+        </div>
+      </div>
+    </div>
+
+    <script type="module" src="/src/npc-editor.ts"></script>
+  </body>
+</html>

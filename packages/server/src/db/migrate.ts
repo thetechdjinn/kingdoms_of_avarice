@@ -427,17 +427,17 @@ export async function runMigrations(): Promise<void> {
 
       // NPC combat stats (Phase 2: Mob Combat)
       await client.query(`ALTER TABLE npcs ADD COLUMN IF NOT EXISTS max_mana INTEGER DEFAULT 0`);
-      await client.query(`ALTER TABLE npcs ADD COLUMN IF NOT EXISTS base_accuracy INTEGER DEFAULT 0`);
-      await client.query(`ALTER TABLE npcs ADD COLUMN IF NOT EXISTS base_defense INTEGER DEFAULT 10`);
-      await client.query(`ALTER TABLE npcs ADD COLUMN IF NOT EXISTS base_crit_chance INTEGER DEFAULT 0`);
-      await client.query(`ALTER TABLE npcs ADD COLUMN IF NOT EXISTS base_dodge INTEGER DEFAULT 0`);
+      await client.query(`ALTER TABLE npcs ADD COLUMN IF NOT EXISTS base_accuracy INTEGER DEFAULT 50`);
+      await client.query(`ALTER TABLE npcs ADD COLUMN IF NOT EXISTS base_defense INTEGER DEFAULT 50`);
+      await client.query(`ALTER TABLE npcs ADD COLUMN IF NOT EXISTS base_crit_chance INTEGER DEFAULT 5`);
+      await client.query(`ALTER TABLE npcs ADD COLUMN IF NOT EXISTS base_dodge INTEGER DEFAULT 5`);
       await client.query(`ALTER TABLE npcs ADD COLUMN IF NOT EXISTS damage_reduction INTEGER DEFAULT 0`);
 
       // NPC traits & behavior
       await client.query(`ALTER TABLE npcs ADD COLUMN IF NOT EXISTS traits TEXT[] DEFAULT '{}'`);
       await client.query(`ALTER TABLE npcs ADD COLUMN IF NOT EXISTS flee_enabled BOOLEAN DEFAULT FALSE`);
       await client.query(`ALTER TABLE npcs ADD COLUMN IF NOT EXISTS flee_hp_percent INTEGER DEFAULT 20`);
-      await client.query(`ALTER TABLE npcs ADD COLUMN IF NOT EXISTS call_for_help_chance INTEGER DEFAULT 50`);
+      await client.query(`ALTER TABLE npcs ADD COLUMN IF NOT EXISTS call_for_help_chance INTEGER DEFAULT 0`);
       await client.query(`ALTER TABLE npcs ADD COLUMN IF NOT EXISTS max_active INTEGER DEFAULT 1`);
       await client.query(`ALTER TABLE npcs ADD COLUMN IF NOT EXISTS interactable BOOLEAN DEFAULT FALSE`);
 
@@ -445,7 +445,7 @@ export async function runMigrations(): Promise<void> {
       await client.query(`ALTER TABLE npcs ADD COLUMN IF NOT EXISTS allowed_areas TEXT[] DEFAULT '{}'`);
       await client.query(`ALTER TABLE npcs ADD COLUMN IF NOT EXISTS roam_enabled BOOLEAN DEFAULT FALSE`);
       await client.query(`ALTER TABLE npcs ADD COLUMN IF NOT EXISTS roam_interval INTEGER DEFAULT 60`);
-      await client.query(`ALTER TABLE npcs ADD COLUMN IF NOT EXISTS roam_chance INTEGER DEFAULT 50`);
+      await client.query(`ALTER TABLE npcs ADD COLUMN IF NOT EXISTS roam_chance INTEGER DEFAULT 10`);
 
       // NPC loot
       await client.query(`ALTER TABLE npcs ADD COLUMN IF NOT EXISTS drop_table_id INTEGER`);

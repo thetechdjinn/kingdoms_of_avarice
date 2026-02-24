@@ -1,0 +1,433 @@
+/* NPC Editor Specific Styles */
+
+/* Main editor panel scrolling */
+#npc-editor-panel {
+  flex: 1;
+  padding: 1.5rem;
+  overflow-y: auto;
+}
+
+#npc-form {
+  max-width: 800px;
+}
+
+#npc-form .form-actions {
+  display: flex;
+  gap: 1rem;
+  margin-top: 1.5rem;
+  padding: 1rem 0;
+  border-top: 1px solid #333;
+  background: #1a1a2e;
+  position: sticky;
+  bottom: 0;
+}
+
+/* Left list panel */
+#npc-list-panel {
+  display: flex;
+  flex-direction: column;
+}
+
+#npc-list {
+  flex: 1;
+  overflow-y: auto;
+}
+
+#npc-list li {
+  display: flex;
+  flex-direction: column;
+  padding: 8px 12px;
+  border-bottom: 1px solid #333;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+#npc-list li:hover {
+  background: #1a1a2e;
+}
+
+#npc-list li.selected {
+  background: #0e4429;
+  border-left: 3px solid #00ff00;
+}
+
+#npc-list li .npc-name {
+  font-weight: bold;
+  color: #00ff00;
+}
+
+#npc-list li .npc-info {
+  font-size: 0.8rem;
+  color: #888;
+}
+
+#npc-list li .npc-info .hostile-tag {
+  color: #ff4444;
+}
+
+#npc-list li .npc-id {
+  font-size: 0.75rem;
+  color: #666;
+}
+
+#npc-search {
+  padding: 8px 12px;
+  border-bottom: 1px solid #333;
+}
+
+#npc-search input {
+  width: 100%;
+}
+
+.panel-footer {
+  padding: 12px;
+  border-top: 1px solid #333;
+  display: flex;
+  gap: 8px;
+}
+
+.panel-footer button {
+  flex: 1;
+}
+
+/* Tabs */
+.form-tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 16px;
+  border-bottom: 2px solid #333;
+  padding-bottom: 8px;
+  flex-wrap: wrap;
+}
+
+.tab-btn {
+  padding: 8px 16px;
+  background: transparent;
+  border: none;
+  color: #888;
+  cursor: pointer;
+  border-radius: 4px 4px 0 0;
+  transition: all 0.2s;
+}
+
+.tab-btn:hover {
+  color: #00ff00;
+  background: #1a1a2e;
+}
+
+.tab-btn.active {
+  color: #00ff00;
+  background: #0e4429;
+}
+
+.tab-content {
+  display: none;
+}
+
+.tab-content.active {
+  display: block;
+}
+
+/* Form Rows */
+.form-row {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+
+.form-row .form-group {
+  flex: 1;
+  margin-bottom: 0;
+}
+
+/* Section headers */
+.tab-content h3 {
+  margin: 16px 0 12px;
+  color: #ffaa00;
+  font-size: 0.95rem;
+}
+
+.tab-content h3:first-child {
+  margin-top: 0;
+}
+
+/* Attacks */
+.attacks-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.attacks-header h3 {
+  margin: 0;
+  color: #ffaa00;
+  font-size: 0.95rem;
+}
+
+.attack-row {
+  border: 1px solid #333;
+  border-radius: 4px;
+  padding: 12px;
+  margin-bottom: 12px;
+  background: #0f0f23;
+}
+
+.attack-row-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.attack-row-header .attack-title {
+  font-weight: bold;
+  color: #00ff00;
+  font-size: 0.9rem;
+}
+
+.attack-row-header .btn-remove {
+  background: none;
+  border: 1px solid #ff4444;
+  color: #ff4444;
+  padding: 2px 8px;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 0.8rem;
+}
+
+.attack-row-header .btn-remove:hover {
+  background: #ff4444;
+  color: #fff;
+}
+
+.attack-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 8px;
+}
+
+.attack-fields .form-group {
+  margin-bottom: 4px;
+}
+
+.attack-fields label {
+  font-size: 0.8rem;
+  color: #888;
+  margin-bottom: 2px;
+  display: block;
+}
+
+.attack-fields input,
+.attack-fields select {
+  width: 100%;
+  padding: 4px 8px;
+  font-size: 0.85rem;
+}
+
+.attack-verbs {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid #333;
+}
+
+.attack-verbs-title {
+  font-size: 0.8rem;
+  color: #888;
+  margin-bottom: 6px;
+}
+
+/* Preview Panel */
+#preview-panel {
+  width: 300px;
+  background: #0f0f23;
+  border-left: 1px solid #333;
+  display: flex;
+  flex-direction: column;
+}
+
+#npc-preview {
+  flex: 1;
+  padding: 16px;
+  overflow-y: auto;
+}
+
+#preview-content {
+  font-family: 'Courier New', monospace;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+#preview-content .preview-name {
+  color: #00ff00;
+  font-weight: bold;
+  font-size: 1.1rem;
+}
+
+#preview-content .preview-desc {
+  color: #aaa;
+  margin: 8px 0;
+}
+
+#preview-content .preview-section {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #333;
+}
+
+#preview-content .preview-section-title {
+  color: #ffaa00;
+  font-weight: bold;
+  margin-bottom: 4px;
+}
+
+#preview-content .preview-stat {
+  color: #888;
+  font-size: 0.85rem;
+  margin: 2px 0;
+}
+
+#preview-content .preview-stat .label {
+  color: #aaa;
+}
+
+#preview-content .preview-stat .value {
+  color: #00ff00;
+}
+
+#preview-content .preview-stat .value.hostile {
+  color: #ff4444;
+}
+
+#preview-content .preview-stat .value.peaceful {
+  color: #44ff44;
+}
+
+.balance-value {
+  color: #ffaa00;
+  font-weight: bold;
+}
+
+.panel-section {
+  padding: 16px;
+  border-top: 1px solid #333;
+}
+
+.panel-section h3 {
+  margin-top: 0;
+  margin-bottom: 12px;
+  font-size: 0.9rem;
+  color: #888;
+}
+
+/* Modal Styles */
+.modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background: #1a1a2e;
+  border-radius: 8px;
+  width: 90%;
+  max-width: 500px;
+  max-height: 80vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px;
+  border-bottom: 1px solid #333;
+}
+
+.modal-header h3 {
+  margin: 0;
+  color: #00ff00;
+}
+
+.modal-body {
+  padding: 16px;
+  overflow-y: auto;
+}
+
+.modal-footer {
+  padding: 16px;
+  border-top: 1px solid #333;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  color: #888;
+  font-size: 1.5rem;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+}
+
+.close-btn:hover {
+  color: #ff4444;
+}
+
+/* Hints */
+.hint {
+  color: #666;
+  font-size: 0.9rem;
+}
+
+.hint-inline {
+  color: #666;
+  font-size: 0.8rem;
+  font-weight: normal;
+}
+
+/* Button variants */
+.btn-small {
+  padding: 6px 12px;
+  font-size: 0.85rem;
+}
+
+.btn-secondary {
+  background: #333;
+  color: #fff;
+  border: 1px solid #555;
+}
+
+.btn-secondary:hover {
+  background: #444;
+}
+
+.btn-secondary:disabled {
+  background: #222;
+  color: #666;
+  cursor: not-allowed;
+}
+
+/* Responsive */
+@media (max-width: 1200px) {
+  #preview-panel {
+    width: 250px;
+  }
+}
+
+@media (max-width: 900px) {
+  #preview-panel {
+    display: none;
+  }
+}

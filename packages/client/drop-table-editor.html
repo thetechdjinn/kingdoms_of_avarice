@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Drop Table Editor - Kingdoms of Avarice</title>
+    <link rel="stylesheet" href="/src/editor.css" />
+    <link rel="stylesheet" href="/src/drop-table-editor.css" />
+  </head>
+  <body>
+    <div id="editor-app">
+      <nav id="main-nav">
+        <div class="nav-brand">Kingdoms of Avarice</div>
+        <div class="nav-links">
+          <a href="/" class="nav-link">Game</a>
+          <div class="nav-dropdown" id="nav-dev-dropdown">
+            <button class="nav-link nav-dropdown-btn active">Developer</button>
+            <div class="nav-dropdown-menu">
+              <a href="/editor.html" class="nav-dropdown-item">Room Editor</a>
+              <a href="/item-editor.html" class="nav-dropdown-item">Item Editor</a>
+              <a href="/spell-editor.html" class="nav-dropdown-item">Spell Editor</a>
+              <a href="/status-editor.html" class="nav-dropdown-item">Status Effects Editor</a>
+              <a href="/progression-editor.html" class="nav-dropdown-item">Progression Editor</a>
+              <a href="/door-editor.html" class="nav-dropdown-item">Door Editor</a>
+              <a href="/action-editor.html" class="nav-dropdown-item">Action Editor</a>
+              <a href="/npc-editor.html" class="nav-dropdown-item">NPC Editor</a>
+              <a href="/drop-table-editor.html" class="nav-dropdown-item active">Drop Table Editor</a>
+              <a href="/swing-calculator.html" class="nav-dropdown-item">Swing Calculator</a>
+            </div>
+          </div>
+          <div class="nav-dropdown" id="nav-admin-dropdown" style="display: none;">
+            <button class="nav-link nav-dropdown-btn">Admin</button>
+            <div class="nav-dropdown-menu">
+              <a href="/admin.html" class="nav-dropdown-item">Admin Panel</a>
+              <a href="/game-settings-editor.html" class="nav-dropdown-item">Game Settings</a>
+              <a href="/user-editor.html" class="nav-dropdown-item">User Editor</a>
+            </div>
+          </div>
+        </div>
+        <div class="nav-spacer"></div>
+        <div class="nav-user-menu">
+          <button class="nav-user-btn" id="nav-username">User</button>
+          <div class="dropdown-menu" id="user-dropdown">
+            <button class="dropdown-item" id="logout-btn">Logout</button>
+          </div>
+        </div>
+      </nav>
+
+      <div id="editor-layout">
+        <aside id="dt-list-panel">
+          <div class="panel-header">
+            <h2>Drop Tables</h2>
+            <button id="new-dt-btn" class="btn-primary">+ New Table</button>
+          </div>
+          <div id="dt-search">
+            <input type="text" id="search-input" placeholder="Search drop tables..." />
+          </div>
+          <ul id="dt-list"></ul>
+        </aside>
+
+        <main id="dt-editor-panel">
+          <div id="no-dt-selected">
+            <p>Select a drop table from the list or create a new one.</p>
+          </div>
+
+          <form id="dt-form" style="display: none;">
+            <div class="form-header">
+              <h2 id="dt-form-title">Edit Drop Table</h2>
+              <span id="dt-id-display"></span>
+            </div>
+
+            <div class="form-tabs">
+              <button type="button" class="tab-btn active" data-tab="details">Details</button>
+              <button type="button" class="tab-btn" data-tab="entries">Entries</button>
+            </div>
+
+            <!-- Details Tab -->
+            <div class="tab-content active" id="tab-details">
+              <div class="form-group">
+                <label for="dt-name">Name</label>
+                <input type="text" id="dt-name" required placeholder="e.g., goblin loot" />
+              </div>
+              <div class="form-group">
+                <label for="dt-description">Description</label>
+                <textarea id="dt-description" rows="3" placeholder="Description of this drop table..."></textarea>
+              </div>
+            </div>
+
+            <!-- Entries Tab -->
+            <div class="tab-content" id="tab-entries">
+              <div class="entries-header">
+                <h3>Drop Table Entries</h3>
+                <button type="button" id="add-entry-btn" class="btn-small btn-primary">+ Add Entry</button>
+              </div>
+              <div id="entries-container"></div>
+              <p id="no-entries-hint" class="hint">No entries defined. Add an entry to configure drops.</p>
+            </div>
+
+            <div class="form-actions">
+              <button type="submit" class="btn-primary">Save Table</button>
+              <button type="button" id="duplicate-dt-btn" class="btn-secondary">Duplicate</button>
+              <button type="button" id="delete-dt-btn" class="btn-danger">Delete Table</button>
+            </div>
+          </form>
+        </main>
+
+        <aside id="preview-panel">
+          <div class="panel-header">
+            <h2>Drop Simulation</h2>
+          </div>
+          <div id="simulation-panel">
+            <div id="simulation-content">
+              <p class="hint">Select a drop table to simulate drops</p>
+            </div>
+            <div class="panel-section">
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="sim-iterations">Iterations</label>
+                  <input type="number" id="sim-iterations" min="1" max="10000" value="100" />
+                </div>
+              </div>
+              <button id="simulate-btn" class="btn-secondary" disabled>Simulate Drops</button>
+            </div>
+          </div>
+        </aside>
+      </div>
+    </div>
+
+    <script type="module" src="/src/drop-table-editor.ts"></script>
+  </body>
+</html>

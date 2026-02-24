@@ -28,6 +28,7 @@ import { setupStatusEffectDefinitionRoutes } from './routes/statusEffectDefiniti
 import { setupDoorRoutes } from './routes/doors.js';
 import { setupActionRoutes } from './routes/actions.js';
 import { setupDropTableRoutes } from './routes/dropTables.js';
+import { setupNpcRoutes } from './routes/npcs.js';
 import { setupGameSocket, initializeGameWorld } from './game/socket.js';
 import { stopCharacterSaveLoop } from './game/characterSaveLoop.js';
 import { stopCombatLoop } from './game/combat.js';
@@ -66,6 +67,7 @@ setupStatusEffectDefinitionRoutes(app);
 setupDoorRoutes(app);
 setupActionRoutes(app);
 setupDropTableRoutes(app);
+setupNpcRoutes(app);
 
 const server = createServer(app);
 
