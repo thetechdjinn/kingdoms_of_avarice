@@ -104,10 +104,17 @@ export async function handleTrain(
     socket.isTraining = true;
     broadcastToAll(`${socket.username} left the realm.`, socket.playerId);
 
-    socket.send(JSON.stringify({
-      type: MessageType.TRAINING_FORM,
-      payload: JSON.stringify(formPayload),
-    }));
+    try {
+      socket.send(JSON.stringify({
+        type: MessageType.TRAINING_FORM,
+        payload: JSON.stringify(formPayload),
+      }));
+    } catch (error) {
+      // Restore player to game world if send fails
+      socket.isTraining = false;
+      broadcastToAll(`${socket.username} entered the realm.`, socket.playerId);
+      return { type: MessageType.ERROR, message: 'Failed to open training form.' };
+    }
 
     // Return null to indicate we handled this directly
     return null;
@@ -408,10 +415,16 @@ export async function sendTrainingForm(
   socket.isTraining = true;
   broadcastToAll(`${socket.username} left the realm.`, socket.playerId);
 
-  socket.send(JSON.stringify({
-    type: MessageType.TRAINING_FORM,
-    payload: JSON.stringify(formPayload),
-  }));
+  try {
+    socket.send(JSON.stringify({
+      type: MessageType.TRAINING_FORM,
+      payload: JSON.stringify(formPayload),
+    }));
+  } catch (error) {
+    // Restore player to game world if send fails
+    socket.isTraining = false;
+    broadcastToAll(`${socket.username} entered the realm.`, socket.playerId);
+  }
 }
 
 /**
