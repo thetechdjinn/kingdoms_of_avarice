@@ -130,7 +130,7 @@ function getElement<T extends HTMLElement>(id: string): T | null {
 
 async function checkAuth(): Promise<boolean> {
   try {
-    const response = await fetch('/api/auth/me');
+    const response = await fetch('/api/auth/me', { credentials: 'include' });
     if (!response.ok) {
       window.location.href = '/';
       return false;
@@ -767,7 +767,7 @@ async function doImport(): Promise<void> {
     showToast(`Import complete: ${data.created} created, ${data.updated} updated${skippedMsg}`, data.skipped > 0 ? 'warning' : 'success');
   } catch (error) {
     console.error('Import failed:', error);
-    showToast('Import failed: invalid JSON', 'error');
+    showToast(error instanceof SyntaxError ? 'Import failed: invalid JSON' : 'Import failed', 'error');
   }
 }
 
@@ -842,7 +842,7 @@ function updatePreview(): void {
       <div class="preview-section-title">Identity</div>
       <div class="preview-stat"><span class="label">Level:</span> <span class="value">${level}</span></div>
       <div class="preview-stat"><span class="label">Hostile:</span> <span class="value ${hostile ? 'hostile' : 'peaceful'}">${hostile ? 'Yes' : 'No'}</span></div>
-      ${spawnRoom ? `<div class="preview-stat"><span class="label">Spawn Room:</span> <span class="value">${spawnRoom}</span></div>` : ''}
+      ${spawnRoom ? `<div class="preview-stat"><span class="label">Spawn Room:</span> <span class="value">${escapeHtml(spawnRoom)}</span></div>` : ''}
     </div>
     <div class="preview-section">
       <div class="preview-section-title">Combat Stats</div>

@@ -97,7 +97,7 @@ function getItemName(itemId: number | null): string {
 
 async function checkAuth(): Promise<boolean> {
   try {
-    const response = await fetch('/api/auth/me');
+    const response = await fetch('/api/auth/me', { credentials: 'include' });
     if (!response.ok) {
       window.location.href = '/';
       return false;
@@ -252,7 +252,7 @@ async function selectTable(id: number): Promise<void> {
   setInputValue('dt-description', tableData.description || '');
 
   // Entries
-  editingEntries = (tableData.entries || []).map(e => ({ ...e }));
+  editingEntries = (tableData.entries || []).map(e => ({ ...e, allowedDenominations: [...(e.allowedDenominations || [])] }));
   renderEntries();
 
   // Enable simulate
@@ -499,7 +499,7 @@ async function saveTable(): Promise<void> {
         entryRes = await fetch(`/api/drop-tables/${selectedTableId}/entries`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ ...body, dropChance: body.dropChance || 50 }),
+          body: JSON.stringify({ ...body, dropChance: body.dropChance ?? 50 }),
         });
       }
       const entryData = await entryRes.json();
