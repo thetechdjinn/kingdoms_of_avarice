@@ -401,6 +401,9 @@ export function processNpcBehavior(
   npc: NpcCombatInstance,
   connectedPlayers: Map<number, AuthenticatedSocket>
 ): 'attack' | 'skip' {
+  // Skip if NPC was killed earlier this round (stale reference in attackers list)
+  if (npc.vitals.hp <= 0) return 'skip';
+
   switch (npc.behaviorState) {
     case 'idle':
       // Safety: idle NPCs shouldn't be in the behavior loop

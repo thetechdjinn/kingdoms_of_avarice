@@ -33,7 +33,7 @@ import { calculateStealth, calculatePerception, characterHasStealth, getEncumbra
 import { calculateEncumbranceRatio, getEquipmentCombatStats } from './combatStats.js';
 import { getRespawnRoomId } from '../services/respawnService.js';
 import { findPlayerInRoom } from './playerUtils.js';
-import { getNpcsInRoom, findNpcInRoom, checkHostileAggro } from './npcManager.js';
+import { getNpcsInRoom, findNpcInRoom, checkHostileAggro, isPlayerTargetedByAnyNpc } from './npcManager.js';
 import {
   handleGossip, handleAuction, handleTelepath, handleBlock, handleUnblock,
   handleShout, handleBroadcastCreate, handleJoinBroadcast, handleLeaveBroadcast, handleBroadcast,
@@ -885,9 +885,13 @@ function handleRest(socket: AuthenticatedSocket): CommandResponse {
     return { type: MessageType.SYSTEM, message: 'You are already resting.' };
   }
 
-  // Check if in combat
+  // Check if in combat (self-heal stale flag if no targets exist on either side)
   if (socket.regenState.inCombat) {
-    return { type: MessageType.ERROR, message: 'You cannot rest while in combat!' };
+    if (socket.combatState.targets.size === 0 && !isPlayerTargetedByAnyNpc(socket.playerId)) {
+      socket.regenState.inCombat = false;
+    } else {
+      return { type: MessageType.ERROR, message: 'You cannot rest while in combat!' };
+    }
   }
 
   // Check if poisoned
