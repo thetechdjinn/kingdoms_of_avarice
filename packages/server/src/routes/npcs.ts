@@ -242,11 +242,12 @@ export function setupNpcRoutes(app: Express): void {
   // Import templates
   app.post('/api/npcs/import', requireDeveloper, async (req: Request, res: Response) => {
     try {
-      const { templates: importData, merge } = req.body;
+      const { templates: importData, merge: rawMerge } = req.body;
       if (!Array.isArray(importData)) {
         res.status(400).json({ success: false, message: 'templates must be an array' });
         return;
       }
+      const merge = rawMerge === true;
 
       let created = 0;
       let updated = 0;
