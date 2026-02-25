@@ -212,11 +212,11 @@ export async function startQueuedAction(
   const config = getCommandQueueConfig();
   const hasActiveTargets = player.combatState.targets.size > 0;
   if (hasActiveTargets) {
-    // Player is actively engaged in combat - check if this action is allowed
-    if (!config.combat.allowedCommandsInCombat.includes(commandName) &&
-        !config.combat.allowedCommandsInCombat.includes(actionType)) {
+    // Player is actively engaged in combat - check if this action is blocked
+    if (config.combat.blockedCommandsInCombat.includes(commandName) ||
+        config.combat.blockedCommandsInCombat.includes(actionType)) {
       if (sendMessageFn) {
-        sendMessageFn(player, MessageType.ERROR, 'You must break combat before doing that!');
+        sendMessageFn(player, MessageType.ERROR, 'You can\'t do that while in combat!');
       }
       return;
     }
@@ -341,10 +341,10 @@ export async function handlePlayerInput(
   const actionType = getActionTypeForCommand(commandName);
   const hasActiveTargets = player.combatState.targets.size > 0;
   if (hasActiveTargets) {
-    // Player is actively engaged in combat - check if command is allowed
-    if (!config.combat.allowedCommandsInCombat.includes(commandName) &&
-        !config.combat.allowedCommandsInCombat.includes(actionType)) {
-      sendMessageFn(player, MessageType.ERROR, 'You must break combat before doing that!');
+    // Player is actively engaged in combat - check if this action is blocked
+    if (config.combat.blockedCommandsInCombat.includes(commandName) ||
+        config.combat.blockedCommandsInCombat.includes(actionType)) {
+      sendMessageFn(player, MessageType.ERROR, 'You can\'t do that while in combat!');
       return;
     }
   }

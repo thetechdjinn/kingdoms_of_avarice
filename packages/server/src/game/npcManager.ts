@@ -124,6 +124,17 @@ export function resetNpcBehaviorState(npc: NpcCombatInstance): void {
 }
 
 /**
+ * Check if any NPC is currently targeting a given player.
+ * Used to determine whether a player should remain in combat after an NPC drops them.
+ */
+export function isPlayerTargetedByAnyNpc(playerId: number): boolean {
+  for (const npc of npcInstances.values()) {
+    if (npc.combatState.targets.has(playerId)) return true;
+  }
+  return false;
+}
+
+/**
  * Build an NpcCombatInstance from a template and DB instance data.
  */
 function createNpcCombatEntity(
@@ -465,7 +476,8 @@ function initiateAggro(npc: NpcCombatInstance, player: CombatEntity, roomId: num
   npc.regenState.inCombat = true;
   npc.behaviorState = 'combat';
 
-  player.combatState.targets.add(npc.entityId);
+  // Mark the player as in combat (stops regen) but do NOT add the NPC to
+  // the player's targets — players must manually choose to attack back.
   player.regenState.inCombat = true;
 
   // Clear resting state
@@ -497,6 +509,9 @@ function checkNpcAggroOnArrival(npc: NpcCombatInstance): void {
   for (const player of connectedPlayersRef.values()) {
     const playerRoomId = getEntityRoomId(player);
     if (playerRoomId !== npc.currentRoomId) continue;
+
+    // Skip players in training form
+    if (player.isTraining) continue;
 
     // Skip dead/dropped players
     if (player.deathState?.isDead || player.deathState?.isDropped) continue;
@@ -554,6 +569,9 @@ export function checkHostileAggro(
   roomId: number,
   player: CombatEntity,
 ): void {
+  // Skip players in training form
+  if (isPlayerEntity(player) && (player as AuthenticatedSocket).isTraining) return;
+
   const npcs = getNpcsInRoom(roomId);
   if (npcs.length === 0) return;
 

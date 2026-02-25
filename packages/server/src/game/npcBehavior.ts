@@ -17,6 +17,7 @@ import {
   isRoomInAllowedArea,
   canNpcPassDirection,
   getWorldRef,
+  isPlayerTargetedByAnyNpc,
 } from './npcManager.js';
 import { getPlayerLocation } from './adminCommands.js';
 import { isPlayerEntity } from './combatEntity.js';
@@ -42,6 +43,8 @@ function selectRandomTarget(
   for (const [playerId, socket] of connectedPlayers) {
     // Must be in same room
     if (getPlayerLocation(playerId) !== npc.currentRoomId) continue;
+    // Skip players in training form
+    if (socket.isTraining) continue;
     // Must be alive and not dropped/dead
     if (socket.vitals.hp <= 0) continue;
     if (socket.deathState?.isDropped || socket.deathState?.isDead) continue;
@@ -135,10 +138,10 @@ function processCallForHelp(
       for (const targetId of npc.combatState.targets) {
         responder.combatState.targets.add(targetId);
 
-        // Set up bidirectional targeting
+        // Mark player as in combat but do NOT add responder to player's targets —
+        // players must manually choose to attack back.
         const target = resolveCombatTarget(targetId);
         if (target) {
-          target.combatState.targets.add(responder.entityId);
           target.regenState.inCombat = true;
           target.regenState.enhancedRegen.clear();
 
@@ -227,9 +230,10 @@ function processFleeMovement(
       npc.regenState.inCombat = true;
       npc.combatState.targets.add(target);
 
+      // Mark player as in combat but do NOT add NPC to player's targets —
+      // players must manually choose to attack back.
       const targetEntity = resolveCombatTarget(target);
       if (targetEntity) {
-        targetEntity.combatState.targets.add(npc.entityId);
         targetEntity.regenState.inCombat = true;
         targetEntity.regenState.enhancedRegen.clear();
         sendCombatMessage(targetEntity, MessageType.OUTPUT,
@@ -397,6 +401,9 @@ export function processNpcBehavior(
   npc: NpcCombatInstance,
   connectedPlayers: Map<number, AuthenticatedSocket>
 ): 'attack' | 'skip' {
+  // Skip if NPC was killed earlier this round (stale reference in attackers list)
+  if (npc.vitals.hp <= 0) return 'skip';
+
   switch (npc.behaviorState) {
     case 'idle':
       // Safety: idle NPCs shouldn't be in the behavior loop
@@ -429,6 +436,7 @@ function processCombatBehavior(
   connectedPlayers: Map<number, AuthenticatedSocket>
 ): 'attack' | 'skip' {
   // Clean stale targets (dead, left room, disconnected)
+  const droppedPlayerIds: number[] = [];
   for (const targetId of new Set(npc.combatState.targets)) {
     const target = resolveCombatTarget(targetId);
     if (!target) {
@@ -438,14 +446,27 @@ function processCombatBehavior(
     // Target dead or dropped
     if (target.vitals.hp <= 0) {
       npc.combatState.targets.delete(targetId);
+      if (isPlayerEntity(target)) droppedPlayerIds.push(targetId);
       continue;
     }
-    // Target left room
+    // Target left room or is in training form
     if (isPlayerEntity(target)) {
-      if (getPlayerLocation(target.entityId) !== npc.currentRoomId) {
+      const targetSocket = connectedPlayers.get(target.entityId);
+      if (getPlayerLocation(target.entityId) !== npc.currentRoomId ||
+          targetSocket?.isTraining) {
         npc.combatState.targets.delete(targetId);
+        droppedPlayerIds.push(targetId);
         continue;
       }
+    }
+  }
+
+  // For players removed from this NPC's targets: if no other NPC targets them
+  // and they have no targets of their own, take them out of combat.
+  for (const playerId of droppedPlayerIds) {
+    const player = connectedPlayers.get(playerId);
+    if (player && player.combatState.targets.size === 0 && !isPlayerTargetedByAnyNpc(playerId)) {
+      player.regenState.inCombat = false;
     }
   }
 
@@ -457,9 +478,10 @@ function processCombatBehavior(
       npc.combatState.targets.add(newTarget);
       npc.regenState.inCombat = true;
 
+      // Mark player as in combat but do NOT add NPC to player's targets —
+      // players must manually choose to attack back.
       const targetEntity = resolveCombatTarget(newTarget);
       if (targetEntity) {
-        targetEntity.combatState.targets.add(npc.entityId);
         targetEntity.regenState.inCombat = true;
         targetEntity.regenState.enhancedRegen.clear();
 

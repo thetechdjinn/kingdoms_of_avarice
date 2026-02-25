@@ -58,6 +58,7 @@ export function findPlayerInRoom(
 
   for (const [playerId, socket] of connectedPlayers) {
     if (playerId === excludePlayerId) continue;
+    if (socket.isTraining) continue;
     if (getPlayerLocation(playerId) !== roomId) continue;
 
     // Hidden players can only be found if searcher can see hidden

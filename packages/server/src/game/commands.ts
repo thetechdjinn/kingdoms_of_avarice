@@ -33,7 +33,7 @@ import { calculateStealth, calculatePerception, characterHasStealth, getEncumbra
 import { calculateEncumbranceRatio, getEquipmentCombatStats } from './combatStats.js';
 import { getRespawnRoomId } from '../services/respawnService.js';
 import { findPlayerInRoom } from './playerUtils.js';
-import { getNpcsInRoom, findNpcInRoom, checkHostileAggro } from './npcManager.js';
+import { getNpcsInRoom, findNpcInRoom, checkHostileAggro, isPlayerTargetedByAnyNpc } from './npcManager.js';
 import {
   handleGossip, handleAuction, handleTelepath, handleBlock, handleUnblock,
   handleShout, handleBroadcastCreate, handleJoinBroadcast, handleLeaveBroadcast, handleBroadcast,
@@ -527,7 +527,7 @@ function getOtherPlayersInRoom(
 ): string[] {
   const otherPlayers: string[] = [];
   for (const [playerId, socket] of connectedPlayers) {
-    if (playerId !== excludePlayerId && getPlayerLocation(playerId) === roomId) {
+    if (playerId !== excludePlayerId && !socket.isTraining && getPlayerLocation(playerId) === roomId) {
       // Check if player is hidden
       const playerIsHidden = isHidden(socket);
 
@@ -577,6 +577,7 @@ function getPlayersInRoom(
 ): string[] {
   const players: string[] = [];
   for (const [playerId, socket] of connectedPlayers) {
+    if (socket.isTraining) continue;
     if (getPlayerLocation(playerId) === roomId) {
       const playerIsHidden = isHidden(socket);
 
@@ -621,7 +622,7 @@ async function getObserversInRoom(
   const observers: RoomObserver[] = [];
 
   for (const [playerId, socket] of connectedPlayers) {
-    if (playerId !== excludePlayerId && getPlayerLocation(playerId) === roomId) {
+    if (playerId !== excludePlayerId && !socket.isTraining && getPlayerLocation(playerId) === roomId) {
       // Dead/dropped players can't observe
       if (isPlayerDead(socket) || isPlayerDropped(socket)) {
         continue;
@@ -884,9 +885,13 @@ function handleRest(socket: AuthenticatedSocket): CommandResponse {
     return { type: MessageType.SYSTEM, message: 'You are already resting.' };
   }
 
-  // Check if in combat
+  // Check if in combat (self-heal stale flag if no targets exist on either side)
   if (socket.regenState.inCombat) {
-    return { type: MessageType.ERROR, message: 'You cannot rest while in combat!' };
+    if (socket.combatState.targets.size === 0 && !isPlayerTargetedByAnyNpc(socket.playerId)) {
+      socket.regenState.inCombat = false;
+    } else {
+      return { type: MessageType.ERROR, message: 'You cannot rest while in combat!' };
+    }
   }
 
   // Check if poisoned
@@ -1047,8 +1052,11 @@ async function handleMove(
     roomDescription = playerMessage + '\r\n' + roomDescription;
   }
 
-  // Check for hostile NPCs in the new room (auto-aggro)
-  checkHostileAggro(newRoom.id, socket);
+  // Defer hostile aggro check until after the room description is sent to the player.
+  // checkHostileAggro sends combat messages via WebSocket immediately, but the room
+  // description is only sent after processCommand returns. Without deferring, the
+  // "attacks you!" message arrives before the player sees the room.
+  setImmediate(() => checkHostileAggro(newRoom.id, socket));
 
   return { type: MessageType.OUTPUT, message: roomDescription };
 }
@@ -2243,7 +2251,9 @@ function getStealthHelp(): CommandResponse {
 }
 
 function handleWho(connectedPlayers: Map<number, AuthenticatedSocket>): CommandResponse {
-  const players = Array.from(connectedPlayers.values()).map(p => colors.player(p.username));
+  const players = Array.from(connectedPlayers.values())
+    .filter(p => !p.isTraining)
+    .map(p => colors.player(p.username));
   const count = players.length;
   const list = players.join(', ');
 
@@ -2346,10 +2356,23 @@ async function handleStatus(socket: AuthenticatedSocket): Promise<CommandRespons
     stealth = stealthBreakdown.total;
   }
 
+  // Calculate lockpicking (only if character has lockpicking ability)
+  const hasLockpicking = await characterHasLockpicking(character.race, character.class);
+  let picklocks = 0;
+  if (hasLockpicking) {
+    const lockpickingBreakdown = await calculateLockpicking({
+      dexterity: character.dexterity,
+      intelligence: character.intelligence,
+      level: character.level,
+      race: character.race,
+      class: character.class,
+    });
+    picklocks = lockpickingBreakdown.total;
+  }
+
   // Unimplemented skills (show 0)
   const pickpocket = 0;
   const traps = 0;
-  const picklocks = 0;
   const tracking = 0;
   const martialArts = 0;
   const magicRes = 0;

@@ -66,6 +66,8 @@ interface AuthenticatedSocket extends WebSocket {
   entityId: number;
   entityName: string;
   entityType: 'player' | 'npc';
+  // Training form state (player is removed from game world while training)
+  isTraining: boolean;
   // Social system fields
   gossipEnabled: boolean;
   auctionEnabled: boolean;
@@ -388,6 +390,9 @@ export function setupGameSocket(wss: WebSocketServer): void {
       authWs.canSeeHidden = false;
     }
 
+    // Initialize training state
+    authWs.isTraining = false;
+
     // Initialize social system state
     authWs.gossipEnabled = true;
     authWs.auctionEnabled = true;
@@ -426,8 +431,18 @@ export function setupGameSocket(wss: WebSocketServer): void {
 
     setPlayerLocation(payload.playerId, startRoomId);
 
-    // Broadcast to all players that someone entered the realm (using character name)
-    broadcastToAll(`${character.name} entered the realm.`, authWs.playerId);
+    // Check if this is a new character that should show the training form
+    // New characters have full unspent CP and no points allocated
+    const isNewCharacter = character.unspent_cp >= 100 &&
+      (!character.cp_spent || Object.keys(character.cp_spent).length === 0 ||
+       Object.values(character.cp_spent).every(v => v === 0));
+
+    // Broadcast to all players that someone entered the realm (using character name).
+    // Skip for new characters — they go straight into training, which broadcasts
+    // "entered the realm" when training completes.
+    if (!isNewCharacter) {
+      broadcastToAll(`${character.name} entered the realm.`, authWs.playerId);
+    }
 
     sendMessage(authWs, MessageType.SYSTEM, '\r\n=== Welcome to Kingdoms of Avarice ===\r\n');
     
@@ -436,7 +451,7 @@ export function setupGameSocket(wss: WebSocketServer): void {
       // Get other players in the room (excluding self, respecting hidden/seeHidden)
       const otherPlayers: string[] = [];
       for (const [playerId, playerSocket] of connectedPlayers) {
-        if (playerId !== payload.playerId && getPlayerLocation(playerId) === startRoomId) {
+        if (playerId !== payload.playerId && !playerSocket.isTraining && getPlayerLocation(playerId) === startRoomId) {
           const playerIsHidden = isHidden(playerSocket);
 
           // Skip hidden players unless viewer can see them
@@ -486,12 +501,6 @@ export function setupGameSocket(wss: WebSocketServer): void {
     // Check for hostile NPCs in the room (auto-aggro on login)
     checkHostileAggro(startRoomId, authWs);
 
-    // Check if this is a new character that should show the training form
-    // New characters have full unspent CP and no points allocated
-    const isNewCharacter = character.unspent_cp >= 100 &&
-      (!character.cp_spent || Object.keys(character.cp_spent).length === 0 ||
-       Object.values(character.cp_spent).every(v => v === 0));
-
     if (isNewCharacter) {
       // Send training form after a short delay to let the room render first
       setTimeout(async () => {
@@ -512,6 +521,13 @@ export function setupGameSocket(wss: WebSocketServer): void {
       } catch {
         sendMessage(authWs, MessageType.ERROR, 'Invalid message format');
         return;
+      }
+
+      // While training, only TRAINING_SUBMIT is accepted — reject everything else
+      if (authWs.isTraining) {
+        if (message.type !== MessageType.TRAINING_SUBMIT) {
+          return; // silently drop non-training messages
+        }
       }
 
       // Process command through the queue system
@@ -592,8 +608,11 @@ export function setupGameSocket(wss: WebSocketServer): void {
         cleanupBroadcastMembership(authWs);
         cleanupPlayerGroup(authWs.playerId);
 
-        // Broadcast appropriate message based on how they disconnected
-        if (authWs.properlyExited) {
+        // Broadcast appropriate message based on how they disconnected.
+        // If isTraining, "left the realm." was already sent when training started — skip.
+        if (authWs.isTraining) {
+          authWs.isTraining = false;
+        } else if (authWs.properlyExited) {
           broadcastToAll(`${authWs.username} left the realm.`, payload.playerId);
         } else {
           // Player closed browser/tab without proper exit - potential cheating
@@ -652,7 +671,7 @@ function broadcastToAll(text: string, excludePlayerId?: number): void {
     timestamp: Date.now(),
   };
   for (const [playerId, socket] of connectedPlayers) {
-    if (playerId !== excludePlayerId) {
+    if (playerId !== excludePlayerId && !socket.isTraining) {
       socket.send(JSON.stringify(message));
     }
   }
@@ -670,7 +689,7 @@ export function broadcastToRoom(roomId: number, text: string, excludePlayerIds?:
     Array.isArray(excludePlayerIds) ? excludePlayerIds : [excludePlayerIds]
   );
   for (const [playerId, socket] of connectedPlayers) {
-    if (!excludeSet.has(playerId) && getPlayerLocation(playerId) === roomId) {
+    if (!excludeSet.has(playerId) && !socket.isTraining && getPlayerLocation(playerId) === roomId) {
       socket.send(JSON.stringify(message));
     }
   }
@@ -719,6 +738,6 @@ function startStatusEffectLoop(): void {
   console.log(`[StatusEffects] Started status effect processing loop (every ${STATUS_EFFECT_TICK_INTERVAL_MS}ms)`);
 }
 
-export { connectedPlayers, AuthenticatedSocket, sendVitals, sendMessage, startStatusEffectLoop };
+export { connectedPlayers, AuthenticatedSocket, sendVitals, sendMessage, broadcastToAll, startStatusEffectLoop };
 export type { CombatEntity, CombatState };
 export { NPC_ID_OFFSET, isPlayerEntity, getEntityRoomId };

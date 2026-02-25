@@ -88,6 +88,7 @@ const DEFAULT_PERCEPTION = 0;
 const DEFAULT_SHADOW = 0;
 
 let combatInterval: NodeJS.Timeout | null = null;
+let combatRoundInProgress = false;
 let connectedPlayersRef: Map<number, AuthenticatedSocket>;
 
 /**
@@ -103,7 +104,14 @@ export function startCombatLoop(connectedPlayers: Map<number, AuthenticatedSocke
   connectedPlayersRef = connectedPlayers;
   // Initialize the messaging module with the player map and canonical sendVitals
   initializeCombatMessaging(connectedPlayers as Map<number, CombatEntity>, sendPlayerVitals);
-  combatInterval = setInterval(processCombatRound, COMBAT_ROUND_MS);
+  combatInterval = setInterval(() => {
+    // Prevent overlapping async rounds (processCombatRound uses await internally)
+    if (combatRoundInProgress) return;
+    combatRoundInProgress = true;
+    processCombatRound().finally(() => {
+      combatRoundInProgress = false;
+    });
+  }, COMBAT_ROUND_MS);
   console.log(`[Combat] Started combat loop (${COMBAT_ROUND_MS}ms rounds)`);
 }
 
@@ -115,6 +123,7 @@ export function stopCombatLoop(): void {
   if (combatInterval) {
     clearInterval(combatInterval);
     combatInterval = null;
+    combatRoundInProgress = false;
     console.log('[Combat] Stopped combat loop');
   }
 }
@@ -220,7 +229,8 @@ function formatSwingMessage(
  */
 async function processSpellCombat(
   attacker: CombatEntity,
-  targets: Set<number>
+  targets: Set<number>,
+  deferredRewards: Array<() => Promise<void>> = []
 ): Promise<boolean> {
   if (!attacker.combatState.activeSpell) return false;
 
@@ -288,12 +298,12 @@ async function processSpellCombat(
     if (damageResult.stateChange === 'dropped') {
       if (!isPlayerEntity(target)) {
         // NPCs die immediately at 0 HP — skip dropped state
-        await handleEntityDeath(target, attacker, attackerRoomId);
+        await handleEntityDeath(target, attacker, attackerRoomId, deferredRewards);
       } else {
         await handleEntityDropped(target, attacker, attackerRoomId);
       }
     } else if (damageResult.stateChange === 'death') {
-      await handleEntityDeath(target, attacker, attackerRoomId);
+      await handleEntityDeath(target, attacker, attackerRoomId, deferredRewards);
     } else {
       // Only send vitals here if no state change — dropped/death handlers send their own
       sendEntityVitals(target);
@@ -316,10 +326,17 @@ async function processAttackerCombat(
   // Players require characterId; NPCs don't (Phase 2)
   if (isPlayerEntity(attacker) && !attacker.characterId) return;
 
+  // Collect deferred reward callbacks (XP/essence) to send after COMBAT OFF
+  const deferredRewards: Array<() => Promise<void>> = [];
+
   // Check if using spell combat
   if (attacker.combatState.combatAction === 'spell' && attacker.combatState.activeSpell) {
-    const combatContinues = await processSpellCombat(attacker, targets);
+    const combatContinues = await processSpellCombat(attacker, targets, deferredRewards);
     if (!combatContinues) {
+      // Flush deferred rewards even when combat breaks (kill may have occurred)
+      for (const reward of deferredRewards) {
+        await reward();
+      }
       return; // Combat was broken due to no mana
     }
     // If no targets remain after spell combat, end combat
@@ -328,6 +345,10 @@ async function processAttackerCombat(
       attacker.combatState.combatAction = 'melee';
       attacker.combatState.activeSpell = null;
       sendCombatMessage(attacker, MessageType.SYSTEM, colors.yellow('*COMBAT OFF*'));
+    }
+    // Flush deferred rewards (XP, essence) after combat state is resolved
+    for (const reward of deferredRewards) {
+      await reward();
     }
     return;
   }
@@ -518,12 +539,12 @@ async function processAttackerCombat(
       if (damageResult.stateChange === 'dropped') {
         if (!isPlayerEntity(target)) {
           // NPCs die immediately at 0 HP — skip dropped state
-          await handleEntityDeath(target, attacker, attackerRoomId);
+          await handleEntityDeath(target, attacker, attackerRoomId, deferredRewards);
         } else {
           await handleEntityDropped(target, attacker, attackerRoomId);
         }
       } else if (damageResult.stateChange === 'death') {
-        await handleEntityDeath(target, attacker, attackerRoomId);
+        await handleEntityDeath(target, attacker, attackerRoomId, deferredRewards);
       } else {
         // Only send vitals here if no state change — dropped/death handlers send their own
         sendEntityVitals(target);
@@ -535,6 +556,11 @@ async function processAttackerCombat(
   if (attacker.combatState.targets.size === 0) {
     attacker.regenState.inCombat = false;
     sendCombatMessage(attacker, MessageType.SYSTEM, colors.yellow('*COMBAT OFF*'));
+  }
+
+  // Flush deferred rewards (XP, essence) after combat state is resolved
+  for (const reward of deferredRewards) {
+    await reward();
   }
 }
 
@@ -585,7 +611,8 @@ async function handleEntityDropped(
 async function handleEntityDeath(
   victim: CombatEntity,
   attacker: CombatEntity | null,
-  roomId: number
+  roomId: number,
+  deferredRewards: Array<() => Promise<void>> = []
 ): Promise<void> {
   if (!connectedPlayersRef) return;
 
@@ -607,29 +634,44 @@ async function handleEntityDeath(
 
     // Broadcast death message
     sendCombatMessage(victim, MessageType.SYSTEM, formatDeathMessage());
+
+    if (attacker) {
+      sendCombatMessage(attacker, MessageType.SYSTEM, colors.boldGreen(`You have slain ${victim.entityName}!`));
+      broadcastCombatToRoom(
+        roomId,
+        colors.boldRed(`${victim.entityName} has been slain by ${attacker.entityName}!`),
+        [victim.entityId, attacker.entityId]
+      );
+    } else {
+      broadcastCombatToRoom(
+        roomId,
+        colors.boldRed(`${victim.entityName} has died!`),
+        [victim.entityId]
+      );
+    }
   } else if (!isPlayerEntity(victim)) {
-    // NPC death: process loot drops, XP, despawn, respawn queue
+    // NPC death: send slain message FIRST, then process loot/rewards
+    if (attacker) {
+      sendCombatMessage(attacker, MessageType.SYSTEM, colors.boldGreen(`You have slain ${victim.entityName}!`));
+      broadcastCombatToRoom(
+        roomId,
+        colors.boldRed(`${victim.entityName} has been slain by ${attacker.entityName}!`),
+        [victim.entityId, attacker.entityId]
+      );
+    } else {
+      broadcastCombatToRoom(
+        roomId,
+        colors.boldRed(`${victim.entityName} has died!`),
+        [victim.entityId]
+      );
+    }
+
+    // Process loot drops, despawn, respawn queue (XP/essence deferred)
     try {
-      await processNpcDeath(victim as NpcCombatInstance, attacker, roomId, connectedPlayersRef);
+      await processNpcDeath(victim as NpcCombatInstance, attacker, roomId, connectedPlayersRef, deferredRewards);
     } catch (error) {
       console.error('[Combat] Failed to process NPC death:', error);
     }
-  }
-
-  if (attacker) {
-    sendCombatMessage(attacker, MessageType.SYSTEM, colors.boldGreen(`You have slain ${victim.entityName}!`));
-    broadcastCombatToRoom(
-      roomId,
-      colors.boldRed(`${victim.entityName} has been slain by ${attacker.entityName}!`),
-      [victim.entityId, attacker.entityId]
-    );
-  } else {
-    // Death without attacker (e.g., from DoT, environmental)
-    broadcastCombatToRoom(
-      roomId,
-      colors.boldRed(`${victim.entityName} has died!`),
-      [victim.entityId]
-    );
   }
 
   sendEntityVitals(victim);
@@ -647,6 +689,9 @@ async function processNpcAttackerCombat(
   combatConfig: RuntimeCombatConfig = DEFAULT_RUNTIME_CONFIG
 ): Promise<void> {
   if (!connectedPlayersRef) return;
+
+  // Skip if NPC was killed earlier this round
+  if (npc.vitals.hp <= 0) return;
 
   const npcRoomId = npc.currentRoomId;
 
@@ -844,11 +889,14 @@ async function processCombatRound(): Promise<void> {
       }
     }
 
-    // Process combat for each player attacker
+    // Process combat for each player attacker (await all before NPC attacks
+    // so that kills take effect before NPCs get their turn)
     for (const attacker of playerAttackers) {
-      processAttackerCombat(attacker, attacker.combatState.targets, combatConfig).catch((error) => {
+      try {
+        await processAttackerCombat(attacker, attacker.combatState.targets, combatConfig);
+      } catch (error) {
         console.error(`[Combat] Error processing combat for ${attacker.entityName}:`, error);
-      });
+      }
     }
 
     // Process combat for each NPC attacker (behavior check first)
@@ -856,9 +904,11 @@ async function processCombatRound(): Promise<void> {
       try {
         const action = processNpcBehavior(npc, connectedPlayersRef);
         if (action === 'attack') {
-          processNpcAttackerCombat(npc, combatConfig).catch((error) => {
+          try {
+            await processNpcAttackerCombat(npc, combatConfig);
+          } catch (error) {
             console.error(`[Combat] Error processing NPC combat for ${npc.entityName}:`, error);
-          });
+          }
         }
       } catch (error) {
         console.error(`[Combat] Error processing NPC behavior for ${npc.entityName}:`, error);
