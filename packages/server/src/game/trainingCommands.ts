@@ -365,16 +365,22 @@ export async function handleTrainingSubmit(
     }
   }
 
-  // All validation passed — restore player to game world
-  exitTraining();
+  // Apply the changes to DB before restoring player to game world
+  try {
+    await characterRepo.updateCharacterStats(characterId, {
+      ...statUpdates,
+      ...appearanceUpdates,
+      unspent_cp: newUnspentCp,
+      cp_spent: newCpSpent,
+    });
+  } catch (error) {
+    console.error('[Training] Failed to save stat changes:', error);
+    exitTraining();
+    return { type: MessageType.ERROR, message: 'Failed to save training changes. Please try again.' };
+  }
 
-  // Apply the changes
-  await characterRepo.updateCharacterStats(characterId, {
-    ...statUpdates,
-    ...appearanceUpdates,
-    unspent_cp: newUnspentCp,
-    cp_spent: newCpSpent,
-  });
+  // DB update succeeded — restore player to game world
+  exitTraining();
 
   // Silently complete - client refreshes the room display
   return { type: MessageType.OUTPUT, message: '' };
