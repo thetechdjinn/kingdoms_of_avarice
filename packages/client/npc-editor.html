@@ -262,17 +262,8 @@
 
             <!-- Appearance Tab -->
             <div class="tab-content" id="tab-appearance">
-              <div class="form-row">
-                <div class="form-group">
-                  <label class="checkbox-label">
-                    <input type="checkbox" id="npc-augmentation-enabled" />
-                    Augmentation Enabled
-                  </label>
-                </div>
-              </div>
-
               <div class="form-group">
-                <label for="npc-augmentations">Augmentations <span class="hint-inline">(comma-separated prefixes)</span></label>
+                <label for="npc-augmentations">Name Augmentations <span class="hint-inline">(comma-separated prefixes, e.g. "fierce, scarred, young")</span></label>
                 <input type="text" id="npc-augmentations" placeholder="e.g., fierce, scarred, young" />
               </div>
 
@@ -284,6 +275,11 @@
               <div class="form-group">
                 <label for="npc-exit-message">Exit Room Message <span class="hint-inline">({name}, {direction} placeholders)</span></label>
                 <input type="text" id="npc-exit-message" placeholder="e.g., {name} slithers {direction}." />
+              </div>
+
+              <div class="form-group">
+                <label for="npc-spawn-message">Spawn Message <span class="hint-inline">({name} placeholder, shown when NPC first appears)</span></label>
+                <input type="text" id="npc-spawn-message" placeholder="e.g., {name} slithers in." />
               </div>
 
               <h3>Corpse</h3>

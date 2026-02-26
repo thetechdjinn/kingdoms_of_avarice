@@ -306,10 +306,10 @@ export interface NpcTemplate {
   essenceClass: string | null;
   leaveCorpse: boolean;
   corpseDuration: number;
-  augmentationEnabled: boolean;
   augmentations: string[];
   enterRoomMessage: string | null;
   exitRoomMessage: string | null;
+  spawnMessage: string | null;
   attacks: NpcAttack[];
 }
 

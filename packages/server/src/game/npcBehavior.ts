@@ -18,6 +18,7 @@ import {
   canNpcPassDirection,
   getWorldRef,
   isPlayerTargetedByAnyNpc,
+  isNpcDebugEnabled,
 } from './npcManager.js';
 import { getPlayerLocation } from './adminCommands.js';
 import { isPlayerEntity } from './combatEntity.js';
@@ -145,10 +146,12 @@ function processCallForHelp(
           target.regenState.inCombat = true;
           target.regenState.enhancedRegen.clear();
 
-          // Notify targeted players
-          sendCombatMessage(target, MessageType.OUTPUT,
-            colors.boldRed(`${responder.entityName} attacks you!`)
-          );
+          // Notify targeted players (debug only)
+          if (isNpcDebugEnabled()) {
+            sendCombatMessage(target, MessageType.OUTPUT,
+              colors.boldRed(`${responder.entityName} attacks you!`)
+            );
+          }
         }
       }
 
@@ -236,16 +239,20 @@ function processFleeMovement(
       if (targetEntity) {
         targetEntity.regenState.inCombat = true;
         targetEntity.regenState.enhancedRegen.clear();
-        sendCombatMessage(targetEntity, MessageType.OUTPUT,
-          colors.boldRed(`${npc.entityName} attacks you!`)
-        );
+        if (isNpcDebugEnabled()) {
+          sendCombatMessage(targetEntity, MessageType.OUTPUT,
+            colors.boldRed(`${npc.entityName} attacks you!`)
+          );
+        }
       }
 
-      broadcastCombatToRoom(
-        npc.currentRoomId,
-        colors.boldRed(`${npc.entityName} is cornered and turns to fight!`),
-        []
-      );
+      if (isNpcDebugEnabled()) {
+        broadcastCombatToRoom(
+          npc.currentRoomId,
+          colors.boldRed(`${npc.entityName} is cornered and turns to fight!`),
+          []
+        );
+      }
     } else {
       // No players and nowhere to go — transition to returning
       npc.behaviorState = 'returning';

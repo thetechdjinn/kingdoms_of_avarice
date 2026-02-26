@@ -52,10 +52,10 @@ interface NpcTemplate {
   essenceClass: string | null;
   leaveCorpse: boolean;
   corpseDuration: number;
-  augmentationEnabled: boolean;
   augmentations: string[];
   enterRoomMessage: string | null;
   exitRoomMessage: string | null;
+  spawnMessage: string | null;
   attacks: NpcAttack[];
 }
 
@@ -315,10 +315,10 @@ function selectTemplate(id: number): void {
   setSelectValue('npc-drop-table', template.dropTableId ? String(template.dropTableId) : '');
 
   // Appearance tab
-  setCheckbox('npc-augmentation-enabled', template.augmentationEnabled);
   setInputValue('npc-augmentations', template.augmentations.join(', '));
   setInputValue('npc-enter-message', template.enterRoomMessage || '');
   setInputValue('npc-exit-message', template.exitRoomMessage || '');
+  setInputValue('npc-spawn-message', template.spawnMessage || '');
   setCheckbox('npc-leave-corpse', template.leaveCorpse);
   setInputValue('npc-corpse-duration', String(template.corpseDuration));
 
@@ -558,10 +558,10 @@ function gatherFormData(): Record<string, unknown> {
     goldMax: getNum('npc-gold-max', 0),
     dropTableId: dropTableVal ? parseInt(dropTableVal) : null,
 
-    augmentationEnabled: getChecked('npc-augmentation-enabled'),
     augmentations,
     enterRoomMessage: getVal('npc-enter-message') || null,
     exitRoomMessage: getVal('npc-exit-message') || null,
+    spawnMessage: getVal('npc-spawn-message') || null,
     leaveCorpse: getChecked('npc-leave-corpse'),
     corpseDuration: getNum('npc-corpse-duration', 300),
 

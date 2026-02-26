@@ -722,9 +722,8 @@ async function handleLookAtPlayer(
 function handleLookAtNpc(npc: import('./npcManager.js').NpcCombatInstance): CommandResponse {
   const lines: string[] = [];
 
-  // Name and level
+  // Name
   lines.push(colors.boldYellow(npc.entityName));
-  lines.push(`Level ${npc.characterLevel}`);
 
   // Description
   if (npc.template.description) {
@@ -753,7 +752,7 @@ function handleLookAtNpc(npc: import('./npcManager.js').NpcCombatInstance): Comm
 
   // Hostile indicator
   if (npc.template.hostile) {
-    lines.push(colors.red('It looks hostile.'));
+    lines.push(colors.red(`The ${npc.entityName} looks hostile.`));
   }
 
   return { type: MessageType.OUTPUT, message: lines.join('\r\n') };
