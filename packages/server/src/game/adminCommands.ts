@@ -46,7 +46,7 @@ import {
   NO_LOCKPICK_BONUS,
 } from './stats/secondaryStats.js';
 import { StealthMode } from '@koa/shared';
-import { getAllNpcInstances, reloadNpcTemplates } from './npcManager.js';
+import { getAllNpcInstances, reloadNpcTemplates, isNpcDebugEnabled, setNpcDebug } from './npcManager.js';
 import { clearDenominationCache } from './npcDeathHandler.js';
 
 interface CommandResponse {
@@ -65,7 +65,7 @@ export function setPlayerLocation(playerId: number, roomId: number): void {
 }
 
 // Commands that require Developer role
-const developerCommands = ['create', 'link', 'unlink', 'edit', 'delete', 'reload', 'spawn', 'purge', 'items', 'iteminfo', 'setstealth', 'testbackstab', 'lockpicking', 'npcs', 'mobbehavior'];
+const developerCommands = ['create', 'link', 'unlink', 'edit', 'delete', 'reload', 'spawn', 'purge', 'items', 'iteminfo', 'setstealth', 'testbackstab', 'lockpicking', 'npcs', 'mobbehavior', 'npcdebug'];
 
 // Commands that any staff can use (Moderator+)
 const staffCommands = ['goto', 'rooms', 'roominfo', 'help', 'give', 'hurt', 'heal', 'drain', 'revive', 'teleport', 'learn', 'spells', 'effect', 'cleareffect', 'effects', 'stealth'];
@@ -164,6 +164,8 @@ export async function processAdminCommand(
       return handleListNpcs();
     case 'mobbehavior':
       return handleMobBehavior();
+    case 'npcdebug':
+      return handleNpcDebug(args[0] || '');
     case 'help':
       return handleAdminHelp(userRoles);
     default:
@@ -1430,6 +1432,19 @@ function handleMobBehavior(): CommandResponse {
   return { type: MessageType.OUTPUT, message: lines.join('\r\n') };
 }
 
+function handleNpcDebug(args: string): CommandResponse {
+  const arg = args.trim().toLowerCase();
+  if (arg === 'on') {
+    setNpcDebug(true);
+    return { type: MessageType.SYSTEM, message: 'NPC debug mode enabled.' };
+  } else if (arg === 'off') {
+    setNpcDebug(false);
+    return { type: MessageType.SYSTEM, message: 'NPC debug mode disabled.' };
+  }
+  const status = isNpcDebugEnabled() ? 'enabled' : 'disabled';
+  return { type: MessageType.SYSTEM, message: `NPC debug mode is ${status}. Usage: @npcdebug on|off` };
+}
+
 function handleAdminHelp(userRoles: Role[]): CommandResponse {
   const isDeveloper = hasAnyRole(userRoles, [Role.DEVELOPER, Role.ADMIN]);
   
@@ -1479,6 +1494,7 @@ function handleAdminHelp(userRoles: Role[]): CommandResponse {
     lines.push(colors.boldYellow('Developer Commands (NPCs):'));
     lines.push(`  ${colors.boldCyan('@npcs')}                    - List active NPC instances`);
     lines.push(`  ${colors.boldCyan('@mobbehavior')}             - Show NPC behavior states/debug info`);
+    lines.push(`  ${colors.boldCyan('@npcdebug on|off')}         - Toggle NPC aggro debug messages`);
     lines.push('');
     lines.push(colors.boldYellow('Developer Commands (Stealth/Skills):'));
     lines.push(`  ${colors.boldCyan('@setstealth <mode> [player]')} - Force stealth state (none/sneaking/hidden)`);

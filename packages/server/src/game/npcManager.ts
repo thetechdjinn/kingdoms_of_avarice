@@ -72,9 +72,45 @@ let respawnInterval: NodeJS.Timeout | null = null;
 let persistInterval: NodeJS.Timeout | null = null;
 let roamInterval: NodeJS.Timeout | null = null;
 
+const OPPOSITE_DIRECTIONS: Record<string, string> = {
+  north: 'south',
+  south: 'north',
+  east: 'west',
+  west: 'east',
+  up: 'below',
+  down: 'above',
+  northeast: 'southwest',
+  northwest: 'southeast',
+  southeast: 'northwest',
+  southwest: 'northeast',
+};
+
 const RESPAWN_CHECK_MS = 5000;  // Check respawn queue every 5 seconds
 const PERSIST_INTERVAL_MS = 60000;  // Save instances to DB every 60 seconds
 const ROAM_CHECK_MS = 5000;  // Check roaming NPCs every 5 seconds
+
+// Debug mode — when enabled, aggro messages like "X attacks you!" are shown
+let npcDebugMode = false;
+
+export function isNpcDebugEnabled(): boolean {
+  return npcDebugMode;
+}
+
+export function setNpcDebug(enabled: boolean): void {
+  npcDebugMode = enabled;
+}
+
+/**
+ * Build the broadcast message for an NPC spawning into a room.
+ * Uses the dedicated spawnMessage template with {name} substitution.
+ * Falls back to "<name> appears." if no spawn message is set.
+ */
+function buildSpawnMessage(npc: NpcCombatInstance): string {
+  if (!npc.template.spawnMessage) {
+    return `${npc.entityName} appears.`;
+  }
+  return npc.template.spawnMessage.replaceAll('{name}', npc.entityName);
+}
 
 /**
  * Create a fresh CombatState for an NPC.
@@ -281,8 +317,8 @@ async function spawnNpcFromTemplate(
   roomId: number,
   augmentation: string | null = null
 ): Promise<NpcCombatInstance> {
-  // Pick augmentation if enabled and none provided (extra slot = no augmentation)
-  if (!augmentation && template.augmentationEnabled && template.augmentations.length > 0) {
+  // Pick augmentation if none provided and template has augmentations defined
+  if (!augmentation && template.augmentations.length > 0) {
     const roll = Math.floor(Math.random() * (template.augmentations.length + 1));
     augmentation = roll < template.augmentations.length ? template.augmentations[roll] : null;
   }
@@ -333,8 +369,7 @@ async function processRespawnQueue(): Promise<void> {
 
     try {
       const npc = await spawnNpcFromTemplate(template, entry.spawnRoomId);
-      // Spawn uses a neutral message — enterRoomMessage is reserved for movement
-      broadcastCombatToRoom(entry.spawnRoomId, colors.cyan(`${npc.entityName} appears.`), []);
+      broadcastCombatToRoom(entry.spawnRoomId, colors.cyan(buildSpawnMessage(npc)), []);
 
       // Check for hostile aggro on players in the spawn room
       if (npc.template.hostile) {
@@ -483,16 +518,18 @@ function initiateAggro(npc: NpcCombatInstance, player: CombatEntity, roomId: num
   // Clear resting state
   player.regenState.enhancedRegen.clear();
 
-  // Send messages
-  sendCombatMessage(player, MessageType.OUTPUT,
-    colors.boldRed(`${npc.entityName} attacks you!`)
-  );
+  // Send messages (only in debug mode — normal play skips the explicit aggro announcement)
+  if (npcDebugMode) {
+    sendCombatMessage(player, MessageType.OUTPUT,
+      colors.boldRed(`${npc.entityName} attacks you!`)
+    );
 
-  broadcastCombatToRoom(
-    roomId,
-    colors.boldRed(`${npc.entityName} attacks ${player.entityName}!`),
-    [player.entityId]
-  );
+    broadcastCombatToRoom(
+      roomId,
+      colors.boldRed(`${npc.entityName} attacks ${player.entityName}!`),
+      [player.entityId]
+    );
+  }
 }
 
 /**
@@ -692,9 +729,10 @@ export function moveNpc(npc: NpcCombatInstance, direction: string, newRoomId: nu
     : `${npc.entityName} leaves ${direction}.`;
   broadcastCombatToRoom(oldRoomId, colors.cyan(exitMsg), []);
 
-  // Broadcast enter message to new room
+  // Broadcast enter message to new room ({direction} = where they came from)
+  const fromDirection = OPPOSITE_DIRECTIONS[direction] || direction;
   const enterMsg = npc.template.enterRoomMessage
-    ? npc.template.enterRoomMessage.replaceAll('{name}', npc.entityName)
+    ? npc.template.enterRoomMessage.replaceAll('{name}', npc.entityName).replaceAll('{direction}', fromDirection)
     : `${npc.entityName} arrives.`;
   broadcastCombatToRoom(newRoomId, colors.cyan(enterMsg), []);
 
@@ -706,7 +744,7 @@ export function moveNpc(npc: NpcCombatInstance, direction: string, newRoomId: nu
  */
 export async function spawnNpcPublic(template: NpcTemplate, roomId: number): Promise<NpcCombatInstance> {
   const npc = await spawnNpcFromTemplate(template, roomId);
-  broadcastCombatToRoom(roomId, colors.cyan(`${npc.entityName} appears.`), []);
+  broadcastCombatToRoom(roomId, colors.cyan(buildSpawnMessage(npc)), []);
   if (npc.template.hostile) {
     checkNpcAggroOnArrival(npc);
   }

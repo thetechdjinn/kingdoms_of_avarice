@@ -37,10 +37,10 @@ interface DbNpcTemplate {
   essence_class: string | null;
   leave_corpse: boolean;
   corpse_duration: number;
-  augmentation_enabled: boolean;
   augmentations: string[] | null;
   enter_room_message: string | null;
   exit_room_message: string | null;
+  spawn_message: string | null;
 }
 
 interface DbNpcAttack {
@@ -139,10 +139,10 @@ function dbToTemplate(row: DbNpcTemplate, attacks: NpcAttack[]): NpcTemplate {
     essenceClass: row.essence_class,
     leaveCorpse: row.leave_corpse,
     corpseDuration: row.corpse_duration,
-    augmentationEnabled: row.augmentation_enabled,
     augmentations: row.augmentations || [],
     enterRoomMessage: row.enter_room_message,
     exitRoomMessage: row.exit_room_message,
+    spawnMessage: row.spawn_message,
     attacks,
   };
 }
@@ -308,10 +308,10 @@ export interface CreateNpcTemplateInput {
   essenceClass?: string | null;
   leaveCorpse?: boolean;
   corpseDuration?: number;
-  augmentationEnabled?: boolean;
   augmentations?: string[];
   enterRoomMessage?: string | null;
   exitRoomMessage?: string | null;
+  spawnMessage?: string | null;
 }
 
 export interface CreateNpcAttackInput {
@@ -343,8 +343,8 @@ export async function createTemplate(input: CreateNpcTemplateInput): Promise<Npc
       traits, flee_enabled, flee_hp_percent, call_for_help_chance,
       max_active, interactable, allowed_areas, roam_enabled, roam_interval, roam_chance,
       drop_table_id, essence_reward, essence_class,
-      leave_corpse, corpse_duration, augmentation_enabled, augmentations,
-      enter_room_message, exit_room_message
+      leave_corpse, corpse_duration, augmentations,
+      enter_room_message, exit_room_message, spawn_message
     ) VALUES (
       $1, $2, $3, $4, $4, $5, $6,
       $7, $8, $9, $10, $11,
@@ -352,8 +352,8 @@ export async function createTemplate(input: CreateNpcTemplateInput): Promise<Npc
       $17, $18, $19, $20,
       $21, $22, $23, $24, $25, $26,
       $27, $28, $29,
-      $30, $31, $32, $33,
-      $34, $35
+      $30, $31, $32,
+      $33, $34, $35
     ) RETURNING id`,
     [
       input.name,
@@ -387,10 +387,10 @@ export async function createTemplate(input: CreateNpcTemplateInput): Promise<Npc
       input.essenceClass ?? null,
       input.leaveCorpse ?? false,
       input.corpseDuration ?? 300,
-      input.augmentationEnabled ?? false,
       input.augmentations ?? [],
       input.enterRoomMessage ?? null,
       input.exitRoomMessage ?? null,
+      input.spawnMessage ?? null,
     ]
   );
 
@@ -442,10 +442,10 @@ export async function updateTemplate(id: number, input: Partial<CreateNpcTemplat
   if (input.essenceClass !== undefined) fieldMap.essenceClass = { column: 'essence_class', value: input.essenceClass };
   if (input.leaveCorpse !== undefined) fieldMap.leaveCorpse = { column: 'leave_corpse', value: input.leaveCorpse };
   if (input.corpseDuration !== undefined) fieldMap.corpseDuration = { column: 'corpse_duration', value: input.corpseDuration };
-  if (input.augmentationEnabled !== undefined) fieldMap.augmentationEnabled = { column: 'augmentation_enabled', value: input.augmentationEnabled };
   if (input.augmentations !== undefined) fieldMap.augmentations = { column: 'augmentations', value: input.augmentations };
   if (input.enterRoomMessage !== undefined) fieldMap.enterRoomMessage = { column: 'enter_room_message', value: input.enterRoomMessage };
   if (input.exitRoomMessage !== undefined) fieldMap.exitRoomMessage = { column: 'exit_room_message', value: input.exitRoomMessage };
+  if (input.spawnMessage !== undefined) fieldMap.spawnMessage = { column: 'spawn_message', value: input.spawnMessage };
 
   const entries = Object.values(fieldMap);
   if (entries.length === 0) return existing;

@@ -459,10 +459,14 @@ export async function runMigrations(): Promise<void> {
       // NPC name augmentation
       await client.query(`ALTER TABLE npcs ADD COLUMN IF NOT EXISTS augmentation_enabled BOOLEAN DEFAULT FALSE`);
       await client.query(`ALTER TABLE npcs ADD COLUMN IF NOT EXISTS augmentations TEXT[] DEFAULT '{}'`);
+      // Clear augmentations on templates where augmentation_enabled was false,
+      // since the runtime now derives "enabled" from augmentations being non-empty.
+      await client.query(`UPDATE npcs SET augmentations = '{}' WHERE augmentation_enabled = FALSE AND augmentations != '{}'`);
 
       // NPC room messages
       await client.query(`ALTER TABLE npcs ADD COLUMN IF NOT EXISTS enter_room_message TEXT`);
       await client.query(`ALTER TABLE npcs ADD COLUMN IF NOT EXISTS exit_room_message TEXT`);
+      await client.query(`ALTER TABLE npcs ADD COLUMN IF NOT EXISTS spawn_message TEXT`);
 
       // NPC instance columns
       await client.query(`ALTER TABLE npc_instances ADD COLUMN IF NOT EXISTS current_mana INTEGER DEFAULT 0`);
@@ -827,7 +831,7 @@ async function seedNpcs(): Promise<void> {
         traits, max_active, essence_reward, essence_class,
         roam_enabled, roam_interval, roam_chance, allowed_areas,
         augmentation_enabled, augmentations,
-        enter_room_message, exit_room_message
+        enter_room_message, exit_room_message, spawn_message
       ) VALUES (
         'serpentine warrior', 'A fearsome warrior with serpentine features, its scaled skin glistening in the dim light.',
         6, 30, 30, TRUE,
@@ -836,7 +840,7 @@ async function seedNpcs(): Promise<void> {
         '{}', 1, 5, NULL,
         TRUE, 60, 10, '{Silverton}',
         TRUE, '{fierce,scarred,young}',
-        '{name} slithers in.', '{name} slithers away {direction}.'
+        '{name} slithers in from the {direction}.', '{name} slithers away {direction}.', '{name} slithers in.'
       ) RETURNING id
     `);
 
