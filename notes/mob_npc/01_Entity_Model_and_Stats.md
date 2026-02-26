@@ -97,8 +97,7 @@ interface NpcTemplate {
   leaveCorpse: boolean;
   corpseDuration: number;        // Seconds (default 300)
 
-  // ── Name Augmentation ──
-  augmentationEnabled: boolean;
+  // ── Name Augmentation (enabled when array is non-empty) ──
   augmentations: string[];       // ["angry", "fat", "skinny"]
 
   // ── Faction ──
