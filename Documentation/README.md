@@ -19,6 +19,10 @@ Welcome to the Kingdoms of Avarice documentation. This guide covers all aspects 
 - [Spell and Effects Guide](Spell_and_Effects_Guide.md) - Spells and status effects
 - [Actions and Emotes Guide](Actions_and_Emotes_Guide.md) - Social actions and custom emotes
 
+### Economy
+
+- [Currency](Currency.md) - Currency denominations, banking, and weight system
+
 ### Combat System
 
 - [Combat Energy System](Combat_Energy_System.md) - Attack energy, weapon speed, and swings per round

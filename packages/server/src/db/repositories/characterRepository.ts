@@ -28,6 +28,7 @@ export interface DbCharacter {
   silver: number | null;
   platinum: number | null;
   runic: number | null;
+  bank_balance: number;
   unspent_cp: number;
   cp_spent: Record<string, number>;
   // Appearance fields
@@ -214,6 +215,48 @@ export async function addCurrency(
     [amount, characterId],
     client
   );
+}
+
+/**
+ * Get a character's bank balance (in copper).
+ * Note: BIGINT is returned as string by pg; parseInt is safe up to Number.MAX_SAFE_INTEGER
+ * (~9 quadrillion copper). All arithmetic stays in Postgres BIGINT space.
+ */
+export async function getBankBalance(characterId: number, client?: pg.PoolClient): Promise<number> {
+  const result = await query<{ bank_balance: string }>(
+    'SELECT COALESCE(bank_balance, 0) AS bank_balance FROM characters WHERE id = $1',
+    [characterId],
+    client
+  );
+  return result.rows[0] ? parseInt(result.rows[0].bank_balance, 10) || 0 : 0;
+}
+
+/**
+ * Atomically add to a character's bank balance (negative for withdrawals).
+ * Returns true if the update succeeded, false if insufficient funds for withdrawals.
+ */
+export async function addBankBalance(
+  characterId: number,
+  amount: number,
+  client?: pg.PoolClient
+): Promise<boolean> {
+  if (amount >= 0) {
+    // Deposit: always succeeds
+    await query(
+      'UPDATE characters SET bank_balance = COALESCE(bank_balance, 0) + $1 WHERE id = $2',
+      [amount, characterId],
+      client
+    );
+    return true;
+  } else {
+    // Withdrawal: only succeed if balance is sufficient
+    const result = await query(
+      'UPDATE characters SET bank_balance = COALESCE(bank_balance, 0) + $1 WHERE id = $2 AND COALESCE(bank_balance, 0) >= $3',
+      [amount, characterId, Math.abs(amount)],
+      client
+    );
+    return (result.rowCount ?? 0) > 0;
+  }
 }
 
 export async function deleteCharacter(characterId: number): Promise<boolean> {

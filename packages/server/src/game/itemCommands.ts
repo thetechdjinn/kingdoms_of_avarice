@@ -767,7 +767,7 @@ function getEncumbranceLevel(percent: number): string {
  * @param currency - The currency amounts to convert
  * @returns Total wealth expressed in copper farthings
  */
-function calculateTotalWealth(currency: Currency): number {
+export function calculateTotalWealth(currency: Currency): number {
   return currency.copper +
     (currency.silver * 10) +
     (currency.gold * 100) +
@@ -2353,7 +2353,7 @@ export async function handleEnchant(
  * Mapping of currency type names to their item template names and character fields.
  * Used to look up the correct database template and character column for each currency type.
  */
-const CURRENCY_TYPES: Record<string, { templateName: string; field: keyof Currency }> = {
+export const CURRENCY_TYPES: Record<string, { templateName: string; field: keyof Currency }> = {
   'copper': { templateName: 'copper coins', field: 'copper' },
   'silver': { templateName: 'silver coins', field: 'silver' },
   'gold': { templateName: 'gold coins', field: 'gold' },
@@ -2405,7 +2405,7 @@ async function handleCurrencyPickup(
  * @param input - The user's input string
  * @returns The normalized currency type name, or null if not recognized
  */
-function parseCurrencyType(input: string): string | null {
+export function parseCurrencyType(input: string): string | null {
   const lower = input.toLowerCase();
   // Exact matches
   if (CURRENCY_TYPES[lower]) return lower;

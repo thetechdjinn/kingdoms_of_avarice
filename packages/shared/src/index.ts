@@ -109,10 +109,16 @@ export interface RoomRespawnConfig {
   servedAreas?: string[];  // Additional areas this respawn room serves (besides its own)
 }
 
+// Room bank configuration
+export interface RoomBankConfig {
+  enabled: boolean;
+}
+
 // Room features (extensible for future features like portals, quests, etc.)
 export interface RoomFeatures {
   training?: RoomTrainingConfig;
   respawn?: RoomRespawnConfig;
+  bank?: RoomBankConfig;
 }
 
 // Hair style options for character appearance

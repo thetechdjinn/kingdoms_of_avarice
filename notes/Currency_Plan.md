@@ -49,12 +49,12 @@ The "You have:" and "Wealth:" should be in green, and the values should be in bl
 Since you can end up collecting a lot of lower value coins. You should be able to convert them to higher value coins to reduce the amount of coins you are carrying and thereby reduce the weight of your inventory.
 
 1. Purchasing or selling something in a shop should convert all the coins to the highest value coin.
-2. Depositing coins into a bank and then withdrawing them again should convert all the coins to the highest value coin.
+2. ✅ Depositing coins into a bank and then withdrawing them again converts to the highest value coins. (Implemented - see `bankCommands.ts`)
 3. Training to the next level costs money. This transaction should convert all the coins to the highest value coin.
 
 **NOTE:** Training (paying to train) to the next level does not yet exist. This is just a plan for the future.
 
-**NOTE:** Banks and shops do not yet exist. This is just a plan for the future.
+**NOTE:** Shops do not yet exist. This is just a plan for the future.
 
 ### Coin Weights
 

@@ -497,6 +497,35 @@ With this setup:
 
 If you wanted Arindale Sewers to have its own respawn (Sewer Entrance), remove "Arindale Sewers" from Town Square's served areas.
 
+### Bank Rooms
+
+Bank rooms allow players to deposit and withdraw currency using a persistent bank balance.
+
+**Configuration Options:**
+
+| Field | Description |
+|-------|-------------|
+| Mark as Bank | Enables banking functionality for this room |
+
+**How It Works:**
+
+When a room has the bank feature enabled, players in that room can use `deposit` and `withdraw` commands to manage their bank balance. The `bank` command to check balance works anywhere.
+
+**Example Use Cases:**
+- Town banks for safe currency storage
+- Guild vaults
+- Merchant district banking houses
+
+**Setting Up a Bank Room:**
+
+1. Open the Room Editor
+2. Select or create the room
+3. Expand the "Bank Settings" collapsible section
+4. Check "Mark as Bank"
+5. Save the room
+
+The room's features JSON will include `"bank": {"enabled": true}`.
+
 **Setting a Global Default:**
 
 To configure the fallback respawn room (used when an area has no designated respawn point):

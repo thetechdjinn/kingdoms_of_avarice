@@ -25,6 +25,7 @@ interface RoomRespawnConfig {
 interface RoomFeatures {
   training?: RoomTrainingConfig;
   respawn?: RoomRespawnConfig;
+  bank?: { enabled: boolean };
 }
 
 // ============================================================================
@@ -416,6 +417,10 @@ async function selectRoom(id: number): Promise<void> {
     input.checked = allClassesAllowed || (Array.isArray(allowedClasses) && allowedClasses.includes(input.value));
   });
 
+  // Populate bank settings
+  const bankEnabled = room.features?.bank?.enabled === true;
+  (document.getElementById('room-bank-enabled') as HTMLInputElement).checked = bankEnabled;
+
   // Populate respawn settings
   const respawnEnabled = room.features?.respawn?.enabled === true;
   (document.getElementById('room-respawn-enabled') as HTMLInputElement).checked = respawnEnabled;
@@ -621,6 +626,14 @@ async function saveRoom(): Promise<void> {
     };
   } else {
     delete features.respawn;
+  }
+
+  // Build bank configuration
+  const bankEnabled = (document.getElementById('room-bank-enabled') as HTMLInputElement).checked;
+  if (bankEnabled) {
+    features.bank = { enabled: true };
+  } else {
+    delete features.bank;
   }
 
   try {
@@ -1283,6 +1296,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Set up collapsible sections and checkbox toggles
   setupCollapsibleSection('training-section-header', 'training-section-content');
   setupCheckboxToggle('room-training-enabled', 'training-options');
+  setupCollapsibleSection('bank-section-header', 'bank-section-content');
   setupCollapsibleSection('respawn-section-header', 'respawn-section-content');
   setupCheckboxToggle('room-respawn-enabled', 'respawn-options');
 

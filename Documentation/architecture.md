@@ -62,7 +62,8 @@ Backend application:
 
 - **players** - Account information, credentials, settings
 - **player_roles** - Role assignments (many-to-many)
-- **rooms** - Game world rooms with descriptions
+- **characters** - Character data including stats, currency, and bank_balance (BIGINT)
+- **rooms** - Game world rooms with descriptions and features (JSONB for training, respawn, bank)
 - **room_exits** - Connections between rooms
 
 ### Key Fields
@@ -73,8 +74,14 @@ players:
   - brief_mode (boolean)
   - current_room_id (persistence)
 
+characters:
+  - id, player_id, name, race, class, level
+  - copper, silver, gold, platinum, runic (wallet)
+  - bank_balance (BIGINT, stored in copper farthings)
+
 rooms:
   - id, name, description, area
+  - features (JSONB: training, respawn, bank)
 
 room_exits:
   - from_room_id, direction, to_room_id
@@ -99,6 +106,14 @@ room_exits:
 - Location tracked in memory (`playerLocations` map)
 - Persisted to database on movement
 - Brief mode preference saved
+
+### Banking
+
+- Bank balance stored on `characters.bank_balance` (BIGINT, in copper farthings)
+- Bank rooms configured via `rooms.features` JSONB (`{"bank": {"enabled": true}}`)
+- `deposit`/`withdraw` commands require bank room; `bank` works anywhere
+- Withdrawals auto-convert to highest denominations
+- All operations use `withTransaction()` for ACID compliance
 
 ### Broadcasting
 

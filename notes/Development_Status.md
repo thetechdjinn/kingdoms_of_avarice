@@ -24,6 +24,16 @@ This document tracks the current development status and planned phases for Kingd
 | Mana | 5000ms | 2% | 5% |
 | Health | 5000ms | 1% | 3% |
 
+### Banking System
+- **Status:** ✅ Complete
+- Bank balance stored as copper farthings (BIGINT) on characters table
+- `bank`/`bal`/`balance` command (global, works anywhere including dead/dropped)
+- `deposit`/`dep` command (requires bank room): deposit all, amount, amount + type
+- `withdraw`/`wit` command (requires bank room): withdraw all, amount, amount + type
+- Auto-conversion to highest denominations on withdrawal for weight efficiency
+- Bank room type configured via room features JSONB in Room Editor
+- All operations use database transactions for atomicity
+
 ### Core Infrastructure (Previously Completed)
 - Room system with exits and areas
 - Item system (templates, instances, equipment slots)
