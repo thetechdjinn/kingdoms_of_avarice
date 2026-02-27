@@ -280,6 +280,14 @@ export async function updateRoomFeatures(roomId: number, features: RoomFeatures)
 }
 
 /**
+ * Check if a room is a bank room
+ */
+export async function isBankRoom(roomId: number): Promise<boolean> {
+  const features = await getRoomFeatures(roomId);
+  return features.bank?.enabled === true;
+}
+
+/**
  * Check if a room is a training room
  */
 export async function isTrainingRoom(roomId: number): Promise<boolean> {

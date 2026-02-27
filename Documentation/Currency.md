@@ -117,13 +117,41 @@ When currency is dropped, it appears as a stackable item in the room:
 - Multiple drops of the same currency type combine into one stack
 - Picking up currency adds directly to your character's currency (not inventory)
 
+## Banking
+
+Players can deposit and withdraw currency at bank rooms. Bank balance is stored as copper farthings.
+
+### Commands
+
+| Command | Description |
+|---------|-------------|
+| `bank` (bal, balance) | Check bank balance (works anywhere, even while dead) |
+| `deposit all` | Deposit all carried currency |
+| `deposit <amount>` | Deposit copper farthings |
+| `deposit <amount> <type>` | Deposit specific currency type |
+| `withdraw all` | Withdraw all funds as highest denominations |
+| `withdraw <amount>` | Withdraw copper, auto-converts to highest denominations |
+| `withdraw <amount> <type>` | Withdraw as specific currency type |
+
+### Auto-Conversion
+
+When withdrawing currency (including `withdraw all` and `withdraw <amount>`), the bank automatically converts to the highest denominations possible. For example, withdrawing 1000 copper results in 1 platinum coin rather than 1000 copper coins, reducing inventory weight.
+
+When withdrawing a specific currency type (e.g., `withdraw 5 gold`), you receive exactly that denomination.
+
+### Bank Rooms
+
+Bank functionality requires being in a room with the bank feature enabled. Bank rooms are configured by developers using the Room Editor's "Bank Settings" collapsible section.
+
+### Technical Details
+
+- Bank balance is stored as `bank_balance BIGINT` on the `characters` table
+- All deposit/withdraw operations use database transactions for atomicity
+- Withdrawal uses `WHERE bank_balance >= amount` for race-condition safety
+
 ## Future Features
 
 The following features are planned but not yet implemented:
-
-### Banks
-- Depositing and withdrawing currency
-- Currency auto-conversion to highest denominations on withdrawal
 
 ### Shops
 - Buying and selling items

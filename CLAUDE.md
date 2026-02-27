@@ -62,7 +62,7 @@ Client (xterm.js) <--WebSocket--> Server (Express/ws) <--pg--> PostgreSQL
 - `packages/server/src/game/world.ts` - Game state management
 - `packages/server/src/game/commands.ts` - Core command processor
 - `packages/server/src/game/socket.ts` - WebSocket connection handler
-- Additional: `itemCommands.ts`, `adminCommands.ts`, `progressionCommands.ts`, `actionCommands.ts`
+- Additional: `itemCommands.ts`, `adminCommands.ts`, `progressionCommands.ts`, `actionCommands.ts`, `bankCommands.ts`
 
 **Shared Types:**
 
@@ -128,7 +128,7 @@ JWT_SECRET=<secret>
 EMERGENCY_ACCESS_TOKEN=<optional-secret>  # For emergency IP bypass
 ```
 
-**Key tables:** `players`, `rooms`, `room_exits`, `item_templates`, `item_instances`, `character_progression`, `talent_unlocks`, `game_settings`, `ip_access`, `actions`
+**Key tables:** `players`, `rooms`, `room_exits`, `item_templates`, `item_instances`, `characters` (includes `bank_balance`), `character_progression`, `talent_unlocks`, `game_settings`, `ip_access`, `actions`
 
 ## Page Flow
 
@@ -377,6 +377,27 @@ Players can access different help categories based on their role:
 - If HP falls below the death threshold (default: -50% of max HP), the player dies
 - Dead players drop all items and currency, then must `respawn`
 - Respawning restores full HP/mana at the designated respawn room
+
+### Banking Commands
+
+| Command                   | Description                                          |
+| ------------------------- | ---------------------------------------------------- |
+| `bank` (bal, balance)     | Check bank balance (works anywhere)                  |
+| `deposit all` (dep)       | Deposit all carried currency (requires bank room)    |
+| `deposit <amount>`        | Deposit copper (requires bank room)                  |
+| `deposit <amount> <type>` | Deposit specific currency (requires bank room)       |
+| `withdraw all` (wit)      | Withdraw all funds as denominations (requires bank)  |
+| `withdraw <amount>`       | Withdraw copper, auto-convert to highest denominations |
+| `withdraw <amount> <type>`| Withdraw specific currency type (requires bank)      |
+
+**Banking Mechanics:**
+
+- Bank balance is stored in copper farthings (BIGINT) on the `characters` table
+- `bank` command is informational-only and works while dead or dropped
+- `deposit` and `withdraw` require being in a room with the bank feature enabled
+- Withdrawals auto-convert to highest denominations for weight efficiency
+- All deposit/withdraw operations use database transactions for atomicity
+- Bank rooms are configured via the Room Editor (Bank Settings section)
 
 ## Git Conventions
 

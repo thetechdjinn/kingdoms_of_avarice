@@ -278,6 +278,12 @@ export async function runMigrations(): Promise<void> {
         ALTER TABLE characters ADD COLUMN IF NOT EXISTS runic INTEGER DEFAULT 0
       `);
 
+      // Bank balance stored in copper (BIGINT for large amounts)
+      // Practical JS limit: ~9 quadrillion copper (~90 billion runic) via Number.MAX_SAFE_INTEGER
+      await client.query(`
+        ALTER TABLE characters ADD COLUMN IF NOT EXISTS bank_balance BIGINT NOT NULL DEFAULT 0
+      `);
+
       // Migrate item_instances location_id from players.id to characters.id
       // For items with location_type 'player' or 'equipped', update location_id
       // to point to the player's first character instead of the player account

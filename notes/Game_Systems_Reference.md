@@ -362,12 +362,34 @@ death_penalties:
 
 ---
 
-## 10. Future Systems (Not Yet Implemented)
+## 10. Banking System
 
-### NPC/Monster System
+### Overview
 
-- Currently using PvP combat
-- PvE with NPCs/monsters planned for future implementation
+Players can deposit and withdraw currency at bank-flagged rooms. Bank balance is stored as copper farthings (BIGINT) on the characters table.
+
+### Commands
+
+- `bank` / `bal` / `balance` - Check balance (global, works anywhere including dead/dropped)
+- `deposit` / `dep` - Deposit currency (requires bank room)
+- `withdraw` / `wit` - Withdraw currency (requires bank room)
+
+### Key Details
+
+- Bank rooms configured via room features JSONB: `{"bank": {"enabled": true}}`
+- Withdrawals auto-convert to highest denominations for weight efficiency
+- All operations wrapped in database transactions for ACID compliance
+- Race-condition safe: withdrawals use `WHERE bank_balance >= amount`
+
+### Key Files
+
+- `packages/server/src/game/bankCommands.ts` - Command handlers
+- `packages/server/src/db/repositories/characterRepository.ts` - `getBankBalance()`, `addBankBalance()`
+- `packages/server/src/db/repositories/roomRepository.ts` - `isBankRoom()`
+
+---
+
+## 11. Future Systems (Not Yet Implemented)
 
 ### Equipment Slots
 

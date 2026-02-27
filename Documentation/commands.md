@@ -117,6 +117,24 @@ This document lists all available commands in Kingdoms of Avarice.
 | `train stats` | | Allocate CP to stats (in training room) |
 | `status` | `st`, `sta`, `stat`, `statu` | View your character sheet |
 
+### Banking
+
+| Command | Aliases | Description |
+| ------- | ------- | ----------- |
+| `bank` | `bal`, `balance` | Check bank balance (works anywhere) |
+| `deposit all` | `dep all` | Deposit all carried currency (in bank room) |
+| `deposit <amount>` | `dep` | Deposit copper farthings (in bank room) |
+| `deposit <amount> <type>` | | Deposit specific currency type (in bank room) |
+| `withdraw all` | `wit all` | Withdraw all funds as denominations (in bank room) |
+| `withdraw <amount>` | `wit` | Withdraw copper, auto-converts to highest denominations (in bank room) |
+| `withdraw <amount> <type>` | | Withdraw as specific currency type (in bank room) |
+
+**Notes:**
+- Bank balance is stored in copper farthings
+- `bank` is informational-only and works while dead or dropped
+- Withdrawals auto-convert to the highest denominations for weight efficiency
+- Bank rooms are configured by developers in the Room Editor
+
 ### Social
 
 | Command | Aliases | Description |

@@ -41,6 +41,7 @@ import {
 import {
   handleInvite, handleJoinGroup, handleLeaveGroup, handleKick, handleGroupChat,
 } from './groupManager.js';
+import { handleBank, handleDeposit, handleWithdraw } from './bankCommands.js';
 
 export interface CommandResponse {
   type: MessageType;
@@ -105,7 +106,8 @@ export async function processCommand(
   if (isPlayerDead(socket)) {
     const allowedDead = ['respawn', 'look', 'l', 'who', 'say', "'", 'help', '?',
       'gossip', 'gos', 'auction', 'auc', 'tel', 'telepath', 'shout', 'yel',
-      'group', 'gr', 'br', 'broadcast', '/block', '/unblock'];
+      'group', 'gr', 'br', 'broadcast', '/block', '/unblock',
+      'bank', 'bal', 'balance'];
     if (!allowedDead.includes(command)) {
       return { type: MessageType.ERROR, message: 'You are dead. Type "respawn" to return to life.' };
     }
@@ -115,7 +117,8 @@ export async function processCommand(
     const allowedDropped = ['look', 'l', 'inventory', 'inv', 'i', 'who', 'say', "'", 'quit', 'x', 'help', '?', 'status', 'st', 'sta', 'stat', 'statu', 'me', '/me',
       'gossip', 'gos', 'auction', 'auc', 'tel', 'telepath', 'shout', 'yel',
       'group', 'gr', 'br', 'broadcast', '/block', '/unblock',
-      'invite', 'join', 'kick', 'leave'];
+      'invite', 'join', 'kick', 'leave',
+      'bank', 'bal', 'balance'];
     // Also allow action commands while dropped
     if (!allowedDropped.includes(command) && !isActionCommand(command)) {
       return { type: MessageType.ERROR, message: 'You cannot do that while on the ground. Wait for aid or bleed out.' };
@@ -481,6 +484,20 @@ export async function processCommand(
   // Group chat / status
   if (command === 'group' || command === 'gr') {
     return handleGroupChat(socket, args, _connectedPlayers);
+  }
+
+  // ---------- Banking commands ----------
+
+  if (command === 'bank' || command === 'bal' || command === 'balance') {
+    return handleBank(socket);
+  }
+
+  if (command === 'deposit' || command === 'dep') {
+    return handleDeposit(socket, args);
+  }
+
+  if (command === 'withdraw' || command === 'wit') {
+    return handleWithdraw(socket, args);
   }
 
   // Check for temporary portal spawn triggers (e.g., "Valar Morghulis")
@@ -2045,6 +2062,13 @@ function handleHelp(userRoles: Role[], category?: string): CommandResponse {
     colors.boldCyan('  Progression:'),
     `    ${colors.white('train')} (tr)            - Level up (in training room)`,
     `    ${colors.white('train stats')}           - Allocate CP to stats (in training room)`,
+    '',
+    colors.boldCyan('  Banking:'),
+    `    ${colors.white('bank')} (bal)            - Check your bank balance`,
+    `    ${colors.white('deposit all')} (dep)     - Deposit all currency`,
+    `    ${colors.white('deposit <amt> [type]')}  - Deposit currency (in bank)`,
+    `    ${colors.white('withdraw all')} (wit)    - Withdraw all funds`,
+    `    ${colors.white('withdraw <amt> [type]')} - Withdraw currency (in bank)`,
     '',
     colors.boldCyan('  Chat Channels:'),
     `    ${colors.white('gossip <msg>')} (gos)    - Send to gossip channel`,
