@@ -57,7 +57,7 @@ export function setupFactionRoutes(app: Express): void {
       const faction = await factionRepo.createFaction({
         name: name.trim(),
         description: description ?? null,
-        factionType: factionType as FactionType,
+        factionType: VALID_FACTION_TYPES.has(factionType) ? (factionType as FactionType) : undefined,
       });
       res.json({ success: true, faction });
     } catch (error) {
@@ -86,7 +86,7 @@ export function setupFactionRoutes(app: Express): void {
       const faction = await factionRepo.updateFaction(id, {
         name: name?.trim(),
         description,
-        factionType: factionType as FactionType,
+        factionType: VALID_FACTION_TYPES.has(factionType) ? (factionType as FactionType) : undefined,
       });
       if (!faction) {
         res.status(404).json({ success: false, message: 'Faction not found' });

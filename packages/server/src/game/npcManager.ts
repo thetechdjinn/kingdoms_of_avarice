@@ -802,6 +802,9 @@ export function getMerchantsInRoom(roomId: number): NpcCombatInstance[] {
  * Returns undefined if the NPC is not a merchant.
  */
 export function findMerchantInRoom(targetName: string, roomId: number): NpcCombatInstance | undefined {
+  if (!targetName || targetName.trim() === '') {
+    return undefined;
+  }
   const npc = findNpcInRoom(targetName, roomId);
   if (npc && npc.template.merchantEnabled) {
     return npc;

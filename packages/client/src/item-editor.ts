@@ -779,7 +779,9 @@ function gatherFormData(): Partial<ItemTemplate> {
     max_stack: parseInt((document.getElementById('item-max-stack') as HTMLInputElement).value) || 1,
     effect_slots: parseInt((document.getElementById('item-effect-slots') as HTMLInputElement).value) || 0,
     rarity: (document.getElementById('item-rarity') as HTMLSelectElement).value || 'common',
-    max_in_world: parseInt((document.getElementById('item-max-in-world') as HTMLInputElement).value) || undefined,
+    max_in_world: (document.getElementById('item-max-in-world') as HTMLInputElement).value
+      ? parseInt((document.getElementById('item-max-in-world') as HTMLInputElement).value, 10)
+      : undefined,
     flags: {
       takeable: (document.getElementById('flag-takeable') as HTMLInputElement).checked,
       hidden: (document.getElementById('flag-hidden') as HTMLInputElement).checked,

@@ -937,6 +937,7 @@ async function fetchFactions(): Promise<void> {
     populateFactionDropdown();
   } catch (error) {
     console.error('Failed to fetch factions:', error);
+    showToast('Failed to load factions', 'error');
   }
 }
 
@@ -953,6 +954,7 @@ async function fetchItemTemplates(): Promise<void> {
     populateItemDropdown();
   } catch (error) {
     console.error('Failed to fetch item templates:', error);
+    showToast('Failed to load item templates', 'error');
   }
 }
 

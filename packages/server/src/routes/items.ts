@@ -2,7 +2,7 @@ import { Express, Request, Response } from 'express';
 import * as itemRepo from '../db/repositories/itemRepository.js';
 import * as craftingRepo from '../db/repositories/craftingRepository.js';
 import { requireDeveloper } from '../middleware/auth.js';
-import { ItemType, ItemLocationType, ItemCondition, EquipmentSlot } from '@koa/shared';
+import { ItemType, ItemLocationType, ItemCondition, EquipmentSlot, ItemRarity } from '@koa/shared';
 import { withTransaction } from '../db/index.js';
 
 export function setupItemRoutes(app: Express): void {
@@ -86,6 +86,21 @@ export function setupItemRoutes(app: Express): void {
           res.status(400).json({ success: false, message: `Invalid equipment_slot: must be one of ${validSlots.join(', ')}` });
           return;
         }
+      }
+
+      // Validate rarity if provided
+      if (rarity !== undefined) {
+        const validRarities = Object.values(ItemRarity);
+        if (!validRarities.includes(rarity)) {
+          res.status(400).json({ success: false, message: `Invalid rarity: must be one of ${validRarities.join(', ')}` });
+          return;
+        }
+      }
+
+      // Validate max_in_world if provided
+      if (max_in_world !== undefined && (typeof max_in_world !== 'number' || !Number.isInteger(max_in_world) || max_in_world < 1)) {
+        res.status(400).json({ success: false, message: 'max_in_world must be a positive integer' });
+        return;
       }
 
       const template = await itemRepo.createTemplate({
