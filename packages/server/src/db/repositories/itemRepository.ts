@@ -9,6 +9,7 @@ import {
   ItemCondition,
   EquipmentSlot,
   ItemFlags,
+  ItemRarity,
   WeaponData,
   ArmorData,
   ConsumableData,
@@ -24,7 +25,8 @@ const TEMPLATE_COLUMNS = `it.name, it.short_desc, it.long_desc, it.room_desc, it
         it.weight, it.size, it.base_value, it.item_type, it.equipment_slot,
         it.flags, it.max_stack, it.container_capacity, it.container_weight_limit,
         it.weapon_data, it.armor_data, it.consumable_data, it.light_data, it.tool_data,
-        it.requirements, it.stat_modifiers, it.stealth_modifier, it.effect_slots, it.base_effects`;
+        it.requirements, it.stat_modifiers, it.stealth_modifier, it.effect_slots, it.base_effects,
+        it.rarity, it.max_in_world`;
 
 // Database row types
 interface DbItemTemplate {
@@ -53,6 +55,8 @@ interface DbItemTemplate {
   stealth_modifier: number | null;
   effect_slots: number;
   base_effects: unknown | null;
+  rarity: string | null;
+  max_in_world: number | null;
   created_at: Date;
   updated_at: Date;
 }
@@ -100,6 +104,8 @@ function dbToTemplate(row: DbItemTemplate): ItemTemplate {
     stealth_modifier: row.stealth_modifier ?? undefined,
     effect_slots: row.effect_slots,
     base_effects: row.base_effects ?? undefined,
+    rarity: (row.rarity as ItemRarity) ?? undefined,
+    max_in_world: row.max_in_world ?? undefined,
   };
 }
 
@@ -131,6 +137,8 @@ function dbJoinedToTemplate(row: DbItemInstance & DbItemTemplate): ItemTemplate 
     stealth_modifier: row.stealth_modifier ?? undefined,
     effect_slots: row.effect_slots,
     base_effects: row.base_effects ?? undefined,
+    rarity: (row.rarity as ItemRarity) ?? undefined,
+    max_in_world: row.max_in_world ?? undefined,
   };
 }
 
@@ -204,6 +212,8 @@ export interface CreateTemplateInput {
   stealth_modifier?: number;
   effect_slots?: number;
   base_effects?: unknown;
+  rarity?: ItemRarity;
+  max_in_world?: number;
 }
 
 export async function createTemplate(input: CreateTemplateInput, client?: pg.PoolClient): Promise<ItemTemplate> {
@@ -213,13 +223,15 @@ export async function createTemplate(input: CreateTemplateInput, client?: pg.Poo
       weight, size, base_value, item_type, equipment_slot,
       flags, max_stack, container_capacity, container_weight_limit,
       weapon_data, armor_data, consumable_data, light_data, tool_data,
-      requirements, stat_modifiers, stealth_modifier, effect_slots, base_effects
+      requirements, stat_modifiers, stealth_modifier, effect_slots, base_effects,
+      rarity, max_in_world
     ) VALUES (
       $1, $2, $3, $4, $5,
       $6, $7, $8, $9, $10,
       $11, $12, $13, $14,
       $15, $16, $17, $18, $19,
-      $20, $21, $22, $23, $24
+      $20, $21, $22, $23, $24,
+      $25, $26
     ) RETURNING *`,
     [
       input.name,
@@ -246,6 +258,8 @@ export async function createTemplate(input: CreateTemplateInput, client?: pg.Poo
       input.stealth_modifier ?? 0,
       input.effect_slots ?? 0,
       input.base_effects ? JSON.stringify(input.base_effects) : null,
+      input.rarity ?? 'common',
+      input.max_in_world ?? null,
     ],
     client
   );
@@ -296,8 +310,10 @@ export async function updateTemplate(id: number, updates: Partial<CreateTemplate
       stealth_modifier = COALESCE($22, stealth_modifier),
       effect_slots = COALESCE($23, effect_slots),
       base_effects = COALESCE($24, base_effects),
+      rarity = COALESCE($25, rarity),
+      max_in_world = $26,
       updated_at = CURRENT_TIMESTAMP
-    WHERE id = $25
+    WHERE id = $27
     RETURNING *`,
     [
       updates.name ?? null,
@@ -324,6 +340,8 @@ export async function updateTemplate(id: number, updates: Partial<CreateTemplate
       updates.stealth_modifier ?? null,
       updates.effect_slots ?? null,
       updates.base_effects ? JSON.stringify(updates.base_effects) : null,
+      updates.rarity ?? null,
+      updates.max_in_world !== undefined ? (updates.max_in_world ?? null) : existing.max_in_world ?? null,
       id,
     ],
     client

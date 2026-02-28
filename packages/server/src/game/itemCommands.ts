@@ -3,7 +3,7 @@ import { CommandResponse } from './commands.js';
 import { AuthenticatedSocket, broadcastToRoom, sendMessage } from './socket.js';
 import { getPlayerLocation } from './adminCommands.js';
 import { colors } from '../utils/colors.js';
-import { wordWrap } from '../utils/textFormat.js';
+import { wordWrap, formatCopperAsDenominations } from '../utils/textFormat.js';
 import * as itemRepo from '../db/repositories/itemRepository.js';
 import * as craftingRepo from '../db/repositories/craftingRepository.js';
 import * as characterRepo from '../db/repositories/characterRepository.js';
@@ -1008,9 +1008,15 @@ function formatItemExamine(item: ItemInstance): CommandResponse {
     lines.push(`Stealth: ${colors.boldWhite(`${sign}${template.stealth_modifier}`)}`);
   }
 
-  // Value
+  // Rarity (if not common)
+  if (template.rarity && template.rarity !== 'common') {
+    const rarityDisplay = template.rarity.charAt(0).toUpperCase() + template.rarity.slice(1);
+    lines.push(`Rarity: ${colors.boldWhite(rarityDisplay)}`);
+  }
+
+  // Value (displayed as denominations since base_value is stored in copper)
   if (template.base_value > 0) {
-    lines.push(`It looks to be worth about ${colors.gold(String(template.base_value))} gold.`);
+    lines.push(`It looks to be worth about ${colors.gold(formatCopperAsDenominations(template.base_value))}.`);
   }
 
   return { type: MessageType.OUTPUT, message: lines.join('\r\n') };

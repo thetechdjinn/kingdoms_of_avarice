@@ -33,9 +33,10 @@ import { raceCanSeeHidden } from './stats/secondaryStats.js';
 import { isHidden } from './stealth/stealthState.js';
 import type { CombatEntity, CombatState } from './combatEntity.js';
 import { NPC_ID_OFFSET, isPlayerEntity, getEntityRoomId } from './combatEntity.js';
-import { initializeNpcManager, checkHostileAggro, initializeNpcWorld } from './npcManager.js';
+import { initializeNpcManager, checkHostileAggro, initializeNpcWorld, clearMerchantHostility } from './npcManager.js';
 import { cleanupBroadcastMembership } from './socialCommands.js';
 import { cleanupPlayerGroup } from './groupManager.js';
+import { clearHaggleState } from './merchantCommands.js';
 
 interface AuthenticatedSocket extends WebSocket {
   playerId: number;
@@ -607,6 +608,12 @@ export function setupGameSocket(wss: WebSocketServer): void {
         // Clean up social system state (broadcast channels, groups)
         cleanupBroadcastMembership(authWs);
         cleanupPlayerGroup(authWs.playerId);
+
+        // Clean up merchant state (haggle reputation, hostility)
+        if (authWs.characterId) {
+          clearHaggleState(authWs.characterId);
+          clearMerchantHostility(authWs.characterId);
+        }
 
         // Broadcast appropriate message based on how they disconnected.
         // If isTraining, "left the realm." was already sent when training started — skip.

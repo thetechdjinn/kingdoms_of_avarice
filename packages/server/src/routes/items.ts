@@ -63,7 +63,8 @@ export function setupItemRoutes(app: Express): void {
         weight, size, base_value, item_type, equipment_slot,
         flags, max_stack, container_capacity, container_weight_limit,
         weapon_data, armor_data, consumable_data, light_data,
-        requirements, stat_modifiers, effect_slots, base_effects
+        requirements, stat_modifiers, effect_slots, base_effects,
+        rarity, max_in_world
       } = req.body;
 
       if (!name || !short_desc || !item_type) {
@@ -110,6 +111,8 @@ export function setupItemRoutes(app: Express): void {
         stat_modifiers,
         effect_slots: effect_slots ?? 0,
         base_effects,
+        rarity,
+        max_in_world,
       });
 
       res.json({ success: true, template });

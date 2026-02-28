@@ -431,3 +431,65 @@
     display: none;
   }
 }
+
+/* Merchant Tab */
+
+.merchant-inv-controls {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.merchant-inv-controls select,
+.merchant-inv-controls input[type="text"] {
+  background: #0d1117;
+  border: 1px solid #333;
+  color: #e0e0e0;
+  padding: 6px 8px;
+  border-radius: 4px;
+  font-size: 0.85rem;
+}
+
+.merchant-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 16px;
+  font-size: 0.85rem;
+}
+
+.merchant-table th {
+  text-align: left;
+  padding: 6px 8px;
+  border-bottom: 2px solid #333;
+  color: #888;
+  font-weight: 600;
+}
+
+.merchant-table td {
+  padding: 4px 8px;
+  border-bottom: 1px solid #222;
+}
+
+.merchant-table input[type="number"] {
+  background: #0d1117;
+  border: 1px solid #333;
+  color: #e0e0e0;
+  padding: 4px;
+  border-radius: 3px;
+  text-align: center;
+}
+
+#merchant-section h3 {
+  color: #00ff00;
+  margin: 20px 0 10px;
+  font-size: 1rem;
+}
+
+#price-test-result {
+  margin-top: 8px;
+  padding: 8px;
+  background: #0d1117;
+  border-radius: 4px;
+  font-family: monospace;
+}

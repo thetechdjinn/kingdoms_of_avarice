@@ -29,6 +29,8 @@ import { setupDoorRoutes } from './routes/doors.js';
 import { setupActionRoutes } from './routes/actions.js';
 import { setupDropTableRoutes } from './routes/dropTables.js';
 import { setupNpcRoutes } from './routes/npcs.js';
+import { setupFactionRoutes } from './routes/factions.js';
+import { setupMerchantRoutes } from './routes/merchants.js';
 import { setupGameSocket, initializeGameWorld } from './game/socket.js';
 import { stopCharacterSaveLoop } from './game/characterSaveLoop.js';
 import { stopCombatLoop } from './game/combat.js';
@@ -37,7 +39,7 @@ import { stopRegenLoops } from './game/regeneration.js';
 import { stopDroppedStateLoop } from './game/droppedStateManager.js';
 import { stopDnsResolver } from './services/dnsResolver.js';
 import { testConnection } from './db/index.js';
-import { runMigrations, seedInitialData } from './db/migrate.js';
+import { runMigrations, seedInitialData, ensureCopperConversion } from './db/migrate.js';
 import { ipAccessMiddleware } from './middleware/ipAccess.js';
 import { startDnsResolver } from './services/dnsResolver.js';
 
@@ -68,6 +70,8 @@ setupDoorRoutes(app);
 setupActionRoutes(app);
 setupDropTableRoutes(app);
 setupNpcRoutes(app);
+setupFactionRoutes(app);
+setupMerchantRoutes(app);
 
 const server = createServer(app);
 
@@ -80,6 +84,7 @@ async function start() {
   if (dbConnected) {
     await runMigrations();
     await seedInitialData();
+    await ensureCopperConversion();
     setDatabaseMode(true);
     await initializeGameWorld();
     // Start DNS resolver for hostname-based IP access rules

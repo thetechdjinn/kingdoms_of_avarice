@@ -12,7 +12,7 @@ import { getPlayerLocation } from './adminCommands.js';
 import { colors } from '../utils/colors.js';
 import { findPlayerInRoom } from './playerUtils.js';
 import { isStealthing, breakStealth } from './stealth/stealthState.js';
-import { getAllNpcInstances, findNpcInRoom, getNpcInstance, resetNpcBehaviorState } from './npcManager.js';
+import { getAllNpcInstances, findNpcInRoom, getNpcInstance, resetNpcBehaviorState, setMerchantHostile } from './npcManager.js';
 import type { NpcCombatInstance } from './npcManager.js';
 
 /**
@@ -132,6 +132,11 @@ export function handleAttack(
   socket.regenState.inCombat = true;
   npcTarget.regenState.inCombat = true;
   npcTarget.behaviorState = 'combat';
+
+  // If attacking a merchant, mark them as hostile to this player
+  if (npcTarget.template.merchantEnabled && socket.characterId) {
+    setMerchantHostile(socket.characterId, npcTarget.template.id);
+  }
 
   // Clear resting state for attacker
   socket.regenState.enhancedRegen.clear();
