@@ -15,6 +15,7 @@ import { processNpcBehavior } from './npcBehavior.js';
 import { selectNpcAttack } from './combatStatProvider.js';
 import { processNpcDeath } from './npcDeathHandler.js';
 import { colors } from '../utils/colors.js';
+import { withNpcName, withNpcNameCapitalized, withNpcNamePossessive } from '../utils/textFormat.js';
 import {
   calculateRoundEnergy,
   calculateAccuracy,
@@ -139,18 +140,29 @@ interface WeaponInfo {
 /**
  * Format a swing result into combat message text
  */
+interface SwingEntity {
+  name: string;
+  isProperName: boolean;
+}
+
 function formatSwingMessage(
   result: AttackResult,
   damage: number,
-  attackerName: string,
-  defenderName: string,
+  attackerEntity: SwingEntity,
+  defenderEntity: SwingEntity,
   isAttacker: boolean,
   isDefender: boolean,
   weapon?: WeaponInfo
 ): string {
-  const attacker = isAttacker ? 'You' : attackerName;
-  const defender = isDefender ? 'you' : defenderName;
-  const attackerPossessive = isAttacker ? 'Your' : `${attackerName}'s`;
+  // Subject form: sentence-start capitalized article ("A serpentine warrior" / "Bob")
+  const atkSubject = isAttacker ? 'You' : withNpcNameCapitalized(attackerEntity.name, attackerEntity.isProperName);
+  const defSubject = isDefender ? 'You' : withNpcNameCapitalized(defenderEntity.name, defenderEntity.isProperName);
+  // Object form: lowercase article ("a serpentine warrior" / "Bob" / "you")
+  const defObject = isDefender ? 'you' : withNpcName(defenderEntity.name, defenderEntity.isProperName);
+  // Possessive: "The serpentine warrior's" / "Bob's" / "Your"
+  const atkPossessive = isAttacker ? 'Your' : withNpcNamePossessive(attackerEntity.name, attackerEntity.isProperName);
+  // Inline possessive for isDefender: "the serpentine warrior's" / "Bob's"
+  const atkInlinePossessive = attackerEntity.isProperName ? `${attackerEntity.name}'s` : `the ${attackerEntity.name}'s`;
 
   // Get attack verbs from weapon or use defaults
   const hitVerb1p = weapon?.verbs.hit || 'hit';
@@ -165,61 +177,59 @@ function formatSwingMessage(
   switch (result) {
     case AttackResult.CRITICAL:
       if (isAttacker) {
-        return `You ${colors.combatCritical('critically')} ${colors.combatHit(hitVerb1p)} ${colors.combatDefender(defenderName)} for ${colors.combatDamage(damage.toString())} damage!`;
+        return `You ${colors.combatCritical('critically')} ${colors.combatHit(hitVerb1p)} ${colors.combatDefender(defObject)} for ${colors.combatDamage(damage.toString())} damage!`;
       } else if (isDefender) {
-        return `${colors.combatAttacker(attackerName)} ${colors.combatCritical('critically')} ${colors.combatHit(hitVerb3p)} you for ${colors.combatDamage(damage.toString())} damage!`;
+        return `${colors.combatAttacker(atkSubject)} ${colors.combatCritical('critically')} ${colors.combatHit(hitVerb3p)} you for ${colors.combatDamage(damage.toString())} damage!`;
       }
-      return `${colors.combatAttacker(attackerName)} ${colors.combatCritical('critically')} ${colors.combatHit(hitVerb3p)} ${colors.combatDefender(defenderName)} for ${colors.combatDamage(damage.toString())} damage!`;
+      return `${colors.combatAttacker(atkSubject)} ${colors.combatCritical('critically')} ${colors.combatHit(hitVerb3p)} ${colors.combatDefender(defObject)} for ${colors.combatDamage(damage.toString())} damage!`;
 
     case AttackResult.HIT:
       if (isAttacker) {
-        return `You ${colors.combatHit(hitVerb1p)} ${colors.combatDefender(defenderName)} for ${colors.combatDamage(damage.toString())} damage.`;
+        return `You ${colors.combatHit(hitVerb1p)} ${colors.combatDefender(defObject)} for ${colors.combatDamage(damage.toString())} damage.`;
       } else if (isDefender) {
-        return `${colors.combatAttacker(attackerName)} ${colors.combatHit(hitVerb3p)} you for ${colors.combatDamage(damage.toString())} damage.`;
+        return `${colors.combatAttacker(atkSubject)} ${colors.combatHit(hitVerb3p)} you for ${colors.combatDamage(damage.toString())} damage.`;
       }
-      return `${colors.combatAttacker(attackerName)} ${colors.combatHit(hitVerb3p)} ${colors.combatDefender(defenderName)} for ${colors.combatDamage(damage.toString())} damage.`;
+      return `${colors.combatAttacker(atkSubject)} ${colors.combatHit(hitVerb3p)} ${colors.combatDefender(defObject)} for ${colors.combatDamage(damage.toString())} damage.`;
 
     case AttackResult.MISS:
       if (isUnarmed) {
-        // Unarmed: "You swing at Goblin, but miss."
         if (isAttacker) {
-          return `You ${colors.combatMiss(missVerb1p)} ${colors.combatDefender(defenderName)}, but miss.`;
+          return `You ${colors.combatMiss(missVerb1p)} ${colors.combatDefender(defObject)}, but miss.`;
         } else if (isDefender) {
-          return `${colors.combatAttacker(attackerName)} ${colors.combatMiss(missVerb3p)} you, but misses.`;
+          return `${colors.combatAttacker(atkSubject)} ${colors.combatMiss(missVerb3p)} you, but misses.`;
         }
-        return `${colors.combatAttacker(attackerName)} ${colors.combatMiss(missVerb3p)} ${colors.combatDefender(defenderName)}, but misses.`;
+        return `${colors.combatAttacker(atkSubject)} ${colors.combatMiss(missVerb3p)} ${colors.combatDefender(defObject)}, but misses.`;
       } else {
-        // Armed: "You swing your battle axe at Goblin, but miss."
         if (isAttacker) {
-          return `You ${colors.combatMiss(missVerb1p)} ${colors.combatDefender(defenderName)} with your ${colors.item(weaponName)}, but miss.`;
+          return `You ${colors.combatMiss(missVerb1p)} ${colors.combatDefender(defObject)} with your ${colors.item(weaponName)}, but miss.`;
         } else if (isDefender) {
-          return `${colors.combatAttacker(attackerName)} ${colors.combatMiss(missVerb3p)} you with their ${colors.item(weaponName)}, but misses.`;
+          return `${colors.combatAttacker(atkSubject)} ${colors.combatMiss(missVerb3p)} you with their ${colors.item(weaponName)}, but misses.`;
         }
-        return `${colors.combatAttacker(attackerName)} ${colors.combatMiss(missVerb3p)} ${colors.combatDefender(defenderName)} with their ${colors.item(weaponName)}, but misses.`;
+        return `${colors.combatAttacker(atkSubject)} ${colors.combatMiss(missVerb3p)} ${colors.combatDefender(defObject)} with their ${colors.item(weaponName)}, but misses.`;
       }
 
     case AttackResult.DODGE:
       if (isAttacker) {
-        return `${colors.combatDefender(defenderName)} ${colors.combatDodge('dodges')} your attack.`;
+        return `${colors.combatDefender(defSubject)} ${colors.combatDodge('dodges')} your attack.`;
       } else if (isDefender) {
-        return `You ${colors.combatDodge('dodge')} ${colors.combatAttacker(attackerName)}'s attack!`;
+        return `You ${colors.combatDodge('dodge')} ${colors.combatAttacker(atkInlinePossessive)} attack!`;
       }
-      return `${colors.combatDefender(defenderName)} ${colors.combatDodge('dodges')} ${attackerPossessive} attack.`;
+      return `${colors.combatDefender(defSubject)} ${colors.combatDodge('dodges')} ${atkPossessive} attack.`;
 
     case AttackResult.PARRY:
       if (isDefender) {
-        return `You ${colors.combatDodge('parry')} ${colors.combatAttacker(attackerName)}'s attack!`;
+        return `You ${colors.combatDodge('parry')} ${colors.combatAttacker(atkInlinePossessive)} attack!`;
       }
-      return `${colors.combatDefender(defenderName)} ${colors.combatDodge('parries')} ${attackerPossessive} attack.`;
+      return `${colors.combatDefender(defSubject)} ${colors.combatDodge('parries')} ${atkPossessive} attack.`;
 
     case AttackResult.BLOCK:
       if (isDefender) {
-        return `You ${colors.combatDodge('block')} ${colors.combatAttacker(attackerName)}'s attack!`;
+        return `You ${colors.combatDodge('block')} ${colors.combatAttacker(atkInlinePossessive)} attack!`;
       }
-      return `${colors.combatDefender(defenderName)} ${colors.combatDodge('blocks')} ${attackerPossessive} attack.`;
+      return `${colors.combatDefender(defSubject)} ${colors.combatDodge('blocks')} ${atkPossessive} attack.`;
 
     default:
-      return `${attacker} attacks ${defender}.`;
+      return `${atkSubject} attacks ${defObject}.`;
   }
 }
 
@@ -274,7 +284,7 @@ async function processSpellCombat(
     const targetRoomId = getEntityRoomId(target);
     if (targetRoomId !== attackerRoomId) {
       targets.delete(targetId);
-      sendCombatMessage(attacker, MessageType.SYSTEM, `${target.entityName} is no longer here.`);
+      sendCombatMessage(attacker, MessageType.SYSTEM, `${withNpcNameCapitalized(target.entityName, target.isProperName)} is no longer here.`);
       continue;
     }
 
@@ -283,9 +293,9 @@ async function processSpellCombat(
     const damage = baseDamage + scalingBonus;
 
     // Send spell messages
-    const attackerMsg = `You cast ${colors.cyan(spell.spellName)} at ${colors.combatDefender(target.entityName)} for ${colors.combatDamage(damage.toString())} damage!`;
-    const defenderMsg = `${colors.combatAttacker(attacker.entityName)} casts ${colors.cyan(spell.spellName)} at you for ${colors.combatDamage(damage.toString())} damage!`;
-    const roomMsg = `${colors.combatAttacker(attacker.entityName)} casts ${colors.cyan(spell.spellName)} at ${colors.combatDefender(target.entityName)} for ${colors.combatDamage(damage.toString())} damage!`;
+    const attackerMsg = `You cast ${colors.cyan(spell.spellName)} at ${colors.combatDefender(withNpcName(target.entityName, target.isProperName))} for ${colors.combatDamage(damage.toString())} damage!`;
+    const defenderMsg = `${colors.combatAttacker(withNpcNameCapitalized(attacker.entityName, attacker.isProperName))} casts ${colors.cyan(spell.spellName)} at you for ${colors.combatDamage(damage.toString())} damage!`;
+    const roomMsg = `${colors.combatAttacker(withNpcNameCapitalized(attacker.entityName, attacker.isProperName))} casts ${colors.cyan(spell.spellName)} at ${colors.combatDefender(withNpcName(target.entityName, target.isProperName))} for ${colors.combatDamage(damage.toString())} damage!`;
 
     sendCombatMessage(attacker, MessageType.OUTPUT, attackerMsg);
     sendCombatMessage(target, MessageType.OUTPUT, defenderMsg);
@@ -427,7 +437,7 @@ async function processAttackerCombat(
     if (targetRoomId !== attackerRoomId) {
       // Target left the room, remove from targets
       targets.delete(targetId);
-      sendCombatMessage(attacker, MessageType.SYSTEM, `${target.entityName} is no longer here.`);
+      sendCombatMessage(attacker, MessageType.SYSTEM, `${withNpcNameCapitalized(target.entityName, target.isProperName)} is no longer here.`);
       continue;
     }
 
@@ -504,15 +514,18 @@ async function processAttackerCombat(
       verbs: attackerStats.weapon.attackVerbs,
     };
 
+    const atkEntity: SwingEntity = { name: attacker.entityName, isProperName: attacker.isProperName };
+    const defEntity: SwingEntity = { name: target.entityName, isProperName: target.isProperName };
+
     for (const swing of combatResult.swings) {
       attackerMessages.push(formatSwingMessage(
-        swing.result, swing.damage, attacker.entityName, target.entityName, true, false, weaponInfo
+        swing.result, swing.damage, atkEntity, defEntity, true, false, weaponInfo
       ));
       defenderMessages.push(formatSwingMessage(
-        swing.result, swing.damage, attacker.entityName, target.entityName, false, true, weaponInfo
+        swing.result, swing.damage, atkEntity, defEntity, false, true, weaponInfo
       ));
       roomMessages.push(formatSwingMessage(
-        swing.result, swing.damage, attacker.entityName, target.entityName, false, false, weaponInfo
+        swing.result, swing.damage, atkEntity, defEntity, false, false, weaponInfo
       ));
     }
 
@@ -585,17 +598,17 @@ async function handleEntityDropped(
   sendCombatMessage(victim, MessageType.SYSTEM, formatDroppedMessage());
 
   if (attacker) {
-    sendCombatMessage(attacker, MessageType.SYSTEM, colors.boldGreen(`${victim.entityName} collapses to the ground!`));
+    sendCombatMessage(attacker, MessageType.SYSTEM, colors.boldGreen(`${withNpcNameCapitalized(victim.entityName, victim.isProperName)} collapses to the ground!`));
     broadcastCombatToRoom(
       roomId,
-      colors.boldRed(`${victim.entityName} collapses to the ground!`),
+      colors.boldRed(`${withNpcNameCapitalized(victim.entityName, victim.isProperName)} collapses to the ground!`),
       [victim.entityId, attacker.entityId]
     );
   } else {
     // No attacker (DoT, environmental, etc.)
     broadcastCombatToRoom(
       roomId,
-      colors.boldRed(`${victim.entityName} collapses to the ground!`),
+      colors.boldRed(`${withNpcNameCapitalized(victim.entityName, victim.isProperName)} collapses to the ground!`),
       [victim.entityId]
     );
   }
@@ -636,32 +649,32 @@ async function handleEntityDeath(
     sendCombatMessage(victim, MessageType.SYSTEM, formatDeathMessage());
 
     if (attacker) {
-      sendCombatMessage(attacker, MessageType.SYSTEM, colors.boldGreen(`You have slain ${victim.entityName}!`));
+      sendCombatMessage(attacker, MessageType.SYSTEM, colors.boldGreen(`You have slain ${withNpcName(victim.entityName, victim.isProperName)}!`));
       broadcastCombatToRoom(
         roomId,
-        colors.boldRed(`${victim.entityName} has been slain by ${attacker.entityName}!`),
+        colors.boldRed(`${withNpcNameCapitalized(victim.entityName, victim.isProperName)} has been slain by ${withNpcName(attacker.entityName, attacker.isProperName)}!`),
         [victim.entityId, attacker.entityId]
       );
     } else {
       broadcastCombatToRoom(
         roomId,
-        colors.boldRed(`${victim.entityName} has died!`),
+        colors.boldRed(`${withNpcNameCapitalized(victim.entityName, victim.isProperName)} has died!`),
         [victim.entityId]
       );
     }
   } else if (!isPlayerEntity(victim)) {
     // NPC death: send slain message FIRST, then process loot/rewards
     if (attacker) {
-      sendCombatMessage(attacker, MessageType.SYSTEM, colors.boldGreen(`You have slain ${victim.entityName}!`));
+      sendCombatMessage(attacker, MessageType.SYSTEM, colors.boldGreen(`You have slain ${withNpcName(victim.entityName, victim.isProperName)}!`));
       broadcastCombatToRoom(
         roomId,
-        colors.boldRed(`${victim.entityName} has been slain by ${attacker.entityName}!`),
+        colors.boldRed(`${withNpcNameCapitalized(victim.entityName, victim.isProperName)} has been slain by ${withNpcName(attacker.entityName, attacker.isProperName)}!`),
         [victim.entityId, attacker.entityId]
       );
     } else {
       broadcastCombatToRoom(
         roomId,
-        colors.boldRed(`${victim.entityName} has died!`),
+        colors.boldRed(`${withNpcNameCapitalized(victim.entityName, victim.isProperName)} has died!`),
         [victim.entityId]
       );
     }
@@ -822,9 +835,11 @@ async function processNpcAttackerCombat(
         totalDamage += damage;
       }
 
-      attackerMessages.push(formatSwingMessage(result, damage, npc.entityName, target.entityName, false, false, weaponInfo));
-      defenderMessages.push(formatSwingMessage(result, damage, npc.entityName, target.entityName, false, true, weaponInfo));
-      roomMessages.push(formatSwingMessage(result, damage, npc.entityName, target.entityName, false, false, weaponInfo));
+      const npcSwingEntity: SwingEntity = { name: npc.entityName, isProperName: npc.isProperName };
+      const targetSwingEntity: SwingEntity = { name: target.entityName, isProperName: target.isProperName };
+      attackerMessages.push(formatSwingMessage(result, damage, npcSwingEntity, targetSwingEntity, false, false, weaponInfo));
+      defenderMessages.push(formatSwingMessage(result, damage, npcSwingEntity, targetSwingEntity, false, true, weaponInfo));
+      roomMessages.push(formatSwingMessage(result, damage, npcSwingEntity, targetSwingEntity, false, false, weaponInfo));
     }
 
     // Send messages to defender (player)

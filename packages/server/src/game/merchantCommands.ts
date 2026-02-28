@@ -3,7 +3,7 @@ import { CommandResponse } from './commands.js';
 import { AuthenticatedSocket, broadcastToRoom } from './socket.js';
 import { getPlayerLocation } from './adminCommands.js';
 import { colors } from '../utils/colors.js';
-import { formatCopperAsDenominations, copperToDenominationCounts } from '../utils/textFormat.js';
+import { formatCopperAsDenominations, copperToDenominationCounts, withNpcName, withNpcNameCapitalized, withNpcNamePossessive } from '../utils/textFormat.js';
 import { deductCopperFromWallet } from '../utils/currency.js';
 import { calculateTotalWealth, CURRENCY_TYPES } from './itemCommands.js';
 import { getMerchantsInRoom, findMerchantInRoom, NpcCombatInstance, isMerchantHostileToPlayer } from './npcManager.js';
@@ -180,16 +180,16 @@ function resolveMerchant(
 
 function isMerchantAvailable(merchant: NpcCombatInstance, characterId?: number): CommandResponse | null {
   if (merchant.behaviorState === 'combat') {
-    return { type: MessageType.ERROR, message: `${merchant.entityName} is busy fighting and cannot trade right now.` };
+    return { type: MessageType.ERROR, message: `${withNpcNameCapitalized(merchant.entityName, merchant.isProperName)} is busy fighting and cannot trade right now.` };
   }
   if (merchant.behaviorState === 'fleeing' || merchant.behaviorState === 'returning') {
-    return { type: MessageType.ERROR, message: `${merchant.entityName} is not available right now.` };
+    return { type: MessageType.ERROR, message: `${withNpcNameCapitalized(merchant.entityName, merchant.isProperName)} is not available right now.` };
   }
   if (merchant.vitals.hp <= 0) {
-    return { type: MessageType.ERROR, message: `${merchant.entityName} is dead.` };
+    return { type: MessageType.ERROR, message: `${withNpcNameCapitalized(merchant.entityName, merchant.isProperName)} is dead.` };
   }
   if (characterId && isMerchantHostileToPlayer(characterId, merchant.templateId)) {
-    return { type: MessageType.ERROR, message: `${merchant.entityName} refuses to deal with you after your attack.` };
+    return { type: MessageType.ERROR, message: `${withNpcNameCapitalized(merchant.entityName, merchant.isProperName)} refuses to deal with you after your attack.` };
   }
   return null;
 }
@@ -220,7 +220,7 @@ export async function handleList(
   // Get inventory with templates
   const inventory = await merchantRepo.getInventoryWithTemplates(merchant.templateId);
   if (inventory.length === 0) {
-    return { type: MessageType.OUTPUT, message: `${colors.boldWhite(merchant.entityName)} has nothing for sale.` };
+    return { type: MessageType.OUTPUT, message: `${colors.boldWhite(withNpcNameCapitalized(merchant.entityName, merchant.isProperName))} has nothing for sale.` };
   }
 
   // Get player faction rep, charisma, and haggle rep for pricing
@@ -231,7 +231,7 @@ export async function handleList(
   const haggleRep = getEffectiveHaggleRep(socket.characterId!, merchant.templateId);
 
   const lines: string[] = [
-    colors.boldYellow(`${merchant.entityName}'s Wares:`),
+    colors.boldYellow(`${withNpcNamePossessive(merchant.entityName, merchant.isProperName)} Wares:`),
     '',
     `  ${colors.boldWhite('Item'.padEnd(30))} ${colors.boldWhite('Stock'.padEnd(8))} ${colors.boldWhite('Price')}`,
     `  ${'─'.repeat(30)} ${'─'.repeat(7)} ${'─'.repeat(20)}`,
@@ -299,11 +299,11 @@ export async function handleBuy(
   });
 
   if (!entry) {
-    return { type: MessageType.ERROR, message: `${merchant.entityName} doesn't sell that.` };
+    return { type: MessageType.ERROR, message: `${withNpcNameCapitalized(merchant.entityName, merchant.isProperName)} doesn't sell that.` };
   }
 
   if (entry.currentStock <= 0) {
-    return { type: MessageType.ERROR, message: `${merchant.entityName} is out of stock on ${entry.itemTemplate.name}.` };
+    return { type: MessageType.ERROR, message: `${withNpcNameCapitalized(merchant.entityName, merchant.isProperName)} is out of stock on ${entry.itemTemplate.name}.` };
   }
 
   // Calculate price with haggle rep
@@ -315,7 +315,7 @@ export async function handleBuy(
 
   const { price, refused } = calculateMerchantPrice(entry.itemTemplate.base_value, factionRep, charisma, true, haggleRep);
   if (refused) {
-    return { type: MessageType.ERROR, message: `${merchant.entityName} refuses to do business with you.` };
+    return { type: MessageType.ERROR, message: `${withNpcNameCapitalized(merchant.entityName, merchant.isProperName)} refuses to do business with you.` };
   }
 
   // Check player can afford
@@ -360,11 +360,11 @@ export async function handleBuy(
   });
 
   const priceStr = formatCopperAsDenominations(price);
-  broadcastToRoom(roomId, `${socket.username} buys something from ${merchant.entityName}.`, socket.playerId);
+  broadcastToRoom(roomId, `${socket.username} buys something from ${withNpcName(merchant.entityName, merchant.isProperName)}.`, socket.playerId);
 
   return {
     type: MessageType.OUTPUT,
-    message: `You buy ${colors.item(entry.itemTemplate.name)} from ${colors.boldWhite(merchant.entityName)} for ${colors.gold(priceStr)}.`,
+    message: `You buy ${colors.item(entry.itemTemplate.name)} from ${colors.boldWhite(withNpcName(merchant.entityName, merchant.isProperName))} for ${colors.gold(priceStr)}.`,
   };
 }
 
@@ -422,7 +422,7 @@ export async function handleSell(
 
   // Items with no base value can't be sold
   if (template.base_value <= 0) {
-    return { type: MessageType.ERROR, message: `${merchant.entityName} isn't interested in that.` };
+    return { type: MessageType.ERROR, message: `${withNpcNameCapitalized(merchant.entityName, merchant.isProperName)} isn't interested in that.` };
   }
 
   // Calculate sell price with haggle rep
@@ -434,7 +434,7 @@ export async function handleSell(
 
   const { price, refused } = calculateMerchantPrice(template.base_value, factionRep, charisma, false, haggleRep);
   if (refused) {
-    return { type: MessageType.ERROR, message: `${merchant.entityName} refuses to do business with you.` };
+    return { type: MessageType.ERROR, message: `${withNpcNameCapitalized(merchant.entityName, merchant.isProperName)} refuses to do business with you.` };
   }
 
   // Perform the transaction
@@ -454,11 +454,11 @@ export async function handleSell(
   });
 
   const priceStr = formatCopperAsDenominations(price);
-  broadcastToRoom(roomId, `${socket.username} sells something to ${merchant.entityName}.`, socket.playerId);
+  broadcastToRoom(roomId, `${socket.username} sells something to ${withNpcName(merchant.entityName, merchant.isProperName)}.`, socket.playerId);
 
   return {
     type: MessageType.OUTPUT,
-    message: `You sell ${colors.item(template.name)} to ${colors.boldWhite(merchant.entityName)} for ${colors.gold(priceStr)}.`,
+    message: `You sell ${colors.item(template.name)} to ${colors.boldWhite(withNpcName(merchant.entityName, merchant.isProperName))} for ${colors.gold(priceStr)}.`,
   };
 }
 
@@ -558,34 +558,34 @@ export async function handleHaggle(
   // Check current effective rep before incrementing
   const currentRep = getEffectiveHaggleRep(socket.characterId!, merchant.templateId);
   if (currentRep >= 10) {
-    return { type: MessageType.ERROR, message: `${merchant.entityName} refuses to deal with you any further. Try again later.` };
+    return { type: MessageType.ERROR, message: `${withNpcNameCapitalized(merchant.entityName, merchant.isProperName)} refuses to deal with you any further. Try again later.` };
   }
 
   // Increment haggle rep
   const newRep = incrementHaggleRep(socket.characterId!, merchant.templateId);
 
   // Broadcast to room
-  broadcastToRoom(roomId, `${socket.username} haggles with ${merchant.entityName}.`, socket.playerId);
+  broadcastToRoom(roomId, `${socket.username} haggles with ${withNpcName(merchant.entityName, merchant.isProperName)}.`, socket.playerId);
 
   if (newRep <= 3) {
     return {
       type: MessageType.OUTPUT,
-      message: `You haggle with ${colors.boldWhite(merchant.entityName)}. Prices seem a bit better.`,
+      message: `You haggle with ${colors.boldWhite(withNpcName(merchant.entityName, merchant.isProperName))}. Prices seem a bit better.`,
     };
   } else if (newRep === 4) {
     return {
       type: MessageType.OUTPUT,
-      message: `${colors.boldWhite(merchant.entityName)} crosses their arms. "That's my final offer."`,
+      message: `${colors.boldWhite(withNpcNameCapitalized(merchant.entityName, merchant.isProperName))} crosses their arms. "That's my final offer."`,
     };
   } else if (newRep <= 9) {
     return {
       type: MessageType.OUTPUT,
-      message: `${colors.boldWhite(merchant.entityName)} narrows their eyes. "You're pushing your luck."`,
+      message: `${colors.boldWhite(withNpcNameCapitalized(merchant.entityName, merchant.isProperName))} narrows their eyes. "You're pushing your luck."`,
     };
   } else {
     return {
       type: MessageType.ERROR,
-      message: `${colors.boldWhite(merchant.entityName)} turns away. "We're done here."`,
+      message: `${colors.boldWhite(withNpcNameCapitalized(merchant.entityName, merchant.isProperName))} turns away. "We're done here."`,
     };
   }
 }

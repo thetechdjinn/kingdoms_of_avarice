@@ -93,6 +93,41 @@ export function withArticle(noun: string): string {
   return `${article} ${trimmed}`;
 }
 
+/**
+ * Format an NPC/entity name for use in prose.
+ * Common nouns get "a"/"an" prefix; proper nouns pass through unchanged.
+ */
+export function withNpcName(name: string, isProperName: boolean): string {
+  return isProperName ? name : withArticle(name);
+}
+
+/**
+ * Format an NPC/entity name in possessive form for prose.
+ * Common nouns get "The" prefix; proper nouns pass through unchanged.
+ * E.g., "Goran's Wares" vs "The serpentine warrior's Wares"
+ */
+export function withNpcNamePossessive(name: string, isProperName: boolean): string {
+  return isProperName ? `${name}'s` : `The ${name}'s`;
+}
+
+/**
+ * Format an NPC/entity name with capitalized article for sentence start.
+ * Common nouns get "A"/"An" or "The" prefix; proper nouns pass through unchanged.
+ */
+export function withNpcNameCapitalized(name: string, isProperName: boolean): string {
+  if (isProperName) return name;
+  const article = withArticle(name);
+  return article.charAt(0).toUpperCase() + article.slice(1);
+}
+
+/**
+ * Format an NPC/entity name with "The" prefix for sentence start.
+ * Common nouns get "The" prefix; proper nouns pass through unchanged.
+ */
+export function withNpcNameThe(name: string, isProperName: boolean): string {
+  return isProperName ? name : `The ${name}`;
+}
+
 /** Copper value of each denomination (ordered highest to lowest) */
 const DENOMINATION_VALUES: { denom: CurrencyDenomination; value: number }[] = [
   { denom: 'runic', value: 100000 },

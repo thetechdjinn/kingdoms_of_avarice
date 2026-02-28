@@ -288,7 +288,8 @@ CREATE TABLE IF NOT EXISTS npcs (
     level INTEGER DEFAULT 1,
     experience_reward INTEGER DEFAULT 0,
     gold_min INTEGER DEFAULT 0,
-    gold_max INTEGER DEFAULT 0
+    gold_max INTEGER DEFAULT 0,
+    proper_name BOOLEAN DEFAULT FALSE
 );
 
 -- NPC instances (spawned NPCs in the world)

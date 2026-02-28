@@ -43,6 +43,7 @@ interface DbNpcTemplate {
   spawn_message: string | null;
   primary_faction_id: number | null;
   merchant_enabled: boolean;
+  proper_name: boolean;
 }
 
 interface DbNpcAttack {
@@ -147,6 +148,7 @@ function dbToTemplate(row: DbNpcTemplate, attacks: NpcAttack[]): NpcTemplate {
     spawnMessage: row.spawn_message,
     primaryFactionId: row.primary_faction_id,
     merchantEnabled: row.merchant_enabled,
+    properName: row.proper_name,
     attacks,
   };
 }
@@ -318,6 +320,7 @@ export interface CreateNpcTemplateInput {
   spawnMessage?: string | null;
   primaryFactionId?: number | null;
   merchantEnabled?: boolean;
+  properName?: boolean;
 }
 
 export interface CreateNpcAttackInput {
@@ -351,7 +354,7 @@ export async function createTemplate(input: CreateNpcTemplateInput): Promise<Npc
       drop_table_id, essence_reward, essence_class,
       leave_corpse, corpse_duration, augmentations,
       enter_room_message, exit_room_message, spawn_message,
-      primary_faction_id, merchant_enabled
+      primary_faction_id, merchant_enabled, proper_name
     ) VALUES (
       $1, $2, $3, $4, $4, $5, $6,
       $7, $8, $9, $10, $11,
@@ -361,7 +364,7 @@ export async function createTemplate(input: CreateNpcTemplateInput): Promise<Npc
       $27, $28, $29,
       $30, $31, $32,
       $33, $34, $35,
-      $36, $37
+      $36, $37, $38
     ) RETURNING id`,
     [
       input.name,
@@ -401,6 +404,7 @@ export async function createTemplate(input: CreateNpcTemplateInput): Promise<Npc
       input.spawnMessage ?? null,
       input.primaryFactionId ?? null,
       input.merchantEnabled ?? false,
+      input.properName ?? false,
     ]
   );
 
@@ -458,6 +462,7 @@ export async function updateTemplate(id: number, input: Partial<CreateNpcTemplat
   if (input.spawnMessage !== undefined) fieldMap.spawnMessage = { column: 'spawn_message', value: input.spawnMessage };
   if (input.primaryFactionId !== undefined) fieldMap.primaryFactionId = { column: 'primary_faction_id', value: input.primaryFactionId };
   if (input.merchantEnabled !== undefined) fieldMap.merchantEnabled = { column: 'merchant_enabled', value: input.merchantEnabled };
+  if (input.properName !== undefined) fieldMap.properName = { column: 'proper_name', value: input.properName };
 
   const entries = Object.values(fieldMap);
   if (entries.length === 0) return existing;

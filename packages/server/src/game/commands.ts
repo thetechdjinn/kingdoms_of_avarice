@@ -28,7 +28,7 @@ import {
 import { isHidden, isSneaking, isStealthing, setStealthMode, breakStealth } from './stealth/stealthState.js';
 import { handleHide, handleSneak, handleVisible, handleBackstab } from './stealth/stealthCommands.js';
 import { rollCumulativeDetection } from './stealth/stealthCheck.js';
-import { wordWrap } from '../utils/textFormat.js';
+import { wordWrap, withNpcNameCapitalized, withNpcNameThe } from '../utils/textFormat.js';
 import { calculateStealth, calculatePerception, characterHasStealth, getEncumbrancePenalty, calculateLockpicking, characterHasLockpicking } from './stats/secondaryStats.js';
 import { calculateEncumbranceRatio, getEquipmentCombatStats } from './combatStats.js';
 import { getRespawnRoomId } from '../services/respawnService.js';
@@ -796,11 +796,11 @@ function handleLookAtNpc(npc: import('./npcManager.js').NpcCombatInstance): Comm
   } else {
     hpStatus = colors.boldRed('is dead.');
   }
-  lines.push(`${npc.entityName} ${hpStatus}`);
+  lines.push(`${withNpcNameCapitalized(npc.entityName, npc.isProperName)} ${hpStatus}`);
 
   // Hostile indicator
   if (npc.template.hostile) {
-    lines.push(colors.red(`The ${npc.entityName} looks hostile.`));
+    lines.push(colors.red(`${withNpcNameThe(npc.entityName, npc.isProperName)} looks hostile.`));
   }
 
   return { type: MessageType.OUTPUT, message: lines.join('\r\n') };

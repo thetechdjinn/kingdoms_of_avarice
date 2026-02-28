@@ -11,6 +11,7 @@ import type { CombatEntity, CombatState } from './combatEntity.js';
 import { NPC_ID_OFFSET, isPlayerEntity, getEntityRoomId } from './combatEntity.js';
 import * as npcRepo from '../db/repositories/npcRepository.js';
 import { colors } from '../utils/colors.js';
+import { withNpcNameCapitalized } from '../utils/textFormat.js';
 import { sendCombatMessage, broadcastCombatToRoom } from './combatMessaging.js';
 import { MessageType } from '@koa/shared';
 import type { AuthenticatedSocket } from './socket.js';
@@ -112,7 +113,7 @@ export function setNpcDebug(enabled: boolean): void {
  */
 function buildSpawnMessage(npc: NpcCombatInstance): string {
   if (!npc.template.spawnMessage) {
-    return `${npc.entityName} appears.`;
+    return `${withNpcNameCapitalized(npc.entityName, npc.isProperName)} appears.`;
   }
   return npc.template.spawnMessage.replaceAll('{name}', npc.entityName);
 }
@@ -198,6 +199,7 @@ function createNpcCombatEntity(
     // CombatEntity fields
     entityId,
     entityName: displayName,
+    isProperName: template.properName,
     entityType: 'npc',
     vitals: {
       hp: currentHealth,
@@ -538,12 +540,12 @@ function initiateAggro(npc: NpcCombatInstance, player: CombatEntity, roomId: num
   // Send messages (only in debug mode — normal play skips the explicit aggro announcement)
   if (npcDebugMode) {
     sendCombatMessage(player, MessageType.OUTPUT,
-      colors.boldRed(`${npc.entityName} attacks you!`)
+      colors.boldRed(`${withNpcNameCapitalized(npc.entityName, npc.isProperName)} attacks you!`)
     );
 
     broadcastCombatToRoom(
       roomId,
-      colors.boldRed(`${npc.entityName} attacks ${player.entityName}!`),
+      colors.boldRed(`${withNpcNameCapitalized(npc.entityName, npc.isProperName)} attacks ${player.entityName}!`),
       [player.entityId]
     );
   }
@@ -743,14 +745,14 @@ export function moveNpc(npc: NpcCombatInstance, direction: string, newRoomId: nu
   // Broadcast exit message to old room
   const exitMsg = npc.template.exitRoomMessage
     ? npc.template.exitRoomMessage.replaceAll('{name}', npc.entityName).replaceAll('{direction}', direction)
-    : `${npc.entityName} leaves ${direction}.`;
+    : `${withNpcNameCapitalized(npc.entityName, npc.isProperName)} leaves ${direction}.`;
   broadcastCombatToRoom(oldRoomId, colors.cyan(exitMsg), []);
 
   // Broadcast enter message to new room ({direction} = where they came from)
   const fromDirection = OPPOSITE_DIRECTIONS[direction] || direction;
   const enterMsg = npc.template.enterRoomMessage
     ? npc.template.enterRoomMessage.replaceAll('{name}', npc.entityName).replaceAll('{direction}', fromDirection)
-    : `${npc.entityName} arrives.`;
+    : `${withNpcNameCapitalized(npc.entityName, npc.isProperName)} arrives.`;
   broadcastCombatToRoom(newRoomId, colors.cyan(enterMsg), []);
 
   return true;

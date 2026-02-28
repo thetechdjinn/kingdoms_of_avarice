@@ -66,6 +66,7 @@ interface AuthenticatedSocket extends WebSocket {
   // CombatEntity identity fields (set during character login)
   entityId: number;
   entityName: string;
+  isProperName: boolean;
   entityType: 'player' | 'npc';
   // Training form state (player is removed from game world while training)
   isTraining: boolean;
@@ -316,6 +317,7 @@ export function setupGameSocket(wss: WebSocketServer): void {
     // CombatEntity identity fields
     authWs.entityId = payload.playerId;
     authWs.entityName = character.name;
+    authWs.isProperName = true; // Players are always proper nouns
     authWs.entityType = 'player';
 
     // Initialize vitals from character data

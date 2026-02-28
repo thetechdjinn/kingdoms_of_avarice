@@ -25,6 +25,7 @@ import { isPlayerEntity } from './combatEntity.js';
 import { sendCombatMessage, broadcastCombatToRoom, resolveCombatTarget } from './combatMessaging.js';
 import { clearCombatState } from './combatCommands.js';
 import { colors } from '../utils/colors.js';
+import { withNpcName, withNpcNameCapitalized } from '../utils/textFormat.js';
 
 // ============================================================================
 // TARGET SELECTION
@@ -90,7 +91,7 @@ function processCallForHelp(
   // Broadcast the call
   broadcastCombatToRoom(
     npc.currentRoomId,
-    colors.boldRed(`${npc.entityName} calls out for help!`),
+    colors.boldRed(`${withNpcNameCapitalized(npc.entityName, npc.isProperName)} calls out for help!`),
     []
   );
 
@@ -149,7 +150,7 @@ function processCallForHelp(
           // Notify targeted players (debug only)
           if (isNpcDebugEnabled()) {
             sendCombatMessage(target, MessageType.OUTPUT,
-              colors.boldRed(`${responder.entityName} attacks you!`)
+              colors.boldRed(`${withNpcNameCapitalized(responder.entityName, responder.isProperName)} attacks you!`)
             );
           }
         }
@@ -158,7 +159,7 @@ function processCallForHelp(
       // Broadcast to room
       broadcastCombatToRoom(
         npc.currentRoomId,
-        colors.boldRed(`${responder.entityName} rushes in to help!`),
+        colors.boldRed(`${withNpcNameCapitalized(responder.entityName, responder.isProperName)} rushes in to help!`),
         []
       );
 
@@ -196,7 +197,7 @@ function initiateFlee(
   // Broadcast panic message
   broadcastCombatToRoom(
     npc.currentRoomId,
-    colors.boldYellow(`${npc.entityName} panics and attempts to flee!`),
+    colors.boldYellow(`${withNpcNameCapitalized(npc.entityName, npc.isProperName)} panics and attempts to flee!`),
     []
   );
 
@@ -241,7 +242,7 @@ function processFleeMovement(
         targetEntity.regenState.enhancedRegen.clear();
         if (isNpcDebugEnabled()) {
           sendCombatMessage(targetEntity, MessageType.OUTPUT,
-            colors.boldRed(`${npc.entityName} attacks you!`)
+            colors.boldRed(`${withNpcNameCapitalized(npc.entityName, npc.isProperName)} attacks you!`)
           );
         }
       }
@@ -249,7 +250,7 @@ function processFleeMovement(
       if (isNpcDebugEnabled()) {
         broadcastCombatToRoom(
           npc.currentRoomId,
-          colors.boldRed(`${npc.entityName} is cornered and turns to fight!`),
+          colors.boldRed(`${withNpcNameCapitalized(npc.entityName, npc.isProperName)} is cornered and turns to fight!`),
           []
         );
       }
@@ -494,11 +495,11 @@ function processCombatBehavior(
 
         // Broadcast re-targeting
         sendCombatMessage(targetEntity, MessageType.OUTPUT,
-          colors.boldRed(`${npc.entityName} turns to attack you!`)
+          colors.boldRed(`${withNpcNameCapitalized(npc.entityName, npc.isProperName)} turns to attack you!`)
         );
         broadcastCombatToRoom(
           npc.currentRoomId,
-          colors.boldRed(`${npc.entityName} turns to attack ${targetEntity.entityName}!`),
+          colors.boldRed(`${withNpcNameCapitalized(npc.entityName, npc.isProperName)} turns to attack ${targetEntity.entityName}!`),
           [targetEntity.entityId]
         );
       }

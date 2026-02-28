@@ -318,6 +318,7 @@ export interface NpcTemplate {
   spawnMessage: string | null;
   primaryFactionId: number | null;
   merchantEnabled: boolean;
+  properName: boolean;
   attacks: NpcAttack[];
 }
 

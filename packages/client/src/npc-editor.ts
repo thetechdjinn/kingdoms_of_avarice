@@ -58,6 +58,7 @@ interface NpcTemplate {
   spawnMessage: string | null;
   merchantEnabled: boolean;
   primaryFactionId: number | null;
+  properName: boolean;
   attacks: NpcAttack[];
 }
 
@@ -321,6 +322,7 @@ function selectTemplate(id: number): void {
   setInputValue('npc-respawn-time', template.respawnTime !== null ? String(template.respawnTime) : '');
   setInputValue('npc-max-active', String(template.maxActive));
   setCheckbox('npc-hostile', template.hostile);
+  setCheckbox('npc-proper-name', template.properName);
   setCheckbox('npc-interactable', template.interactable);
 
   // Combat tab
@@ -576,6 +578,7 @@ function gatherFormData(): Record<string, unknown> {
     respawnTime: respawnTimeVal ? parseInt(respawnTimeVal) : null,
     maxActive: getNum('npc-max-active', 1),
     hostile: getChecked('npc-hostile'),
+    properName: getChecked('npc-proper-name'),
     interactable: getChecked('npc-interactable'),
 
     maxHealth: getNum('npc-max-health', 100),
