@@ -601,6 +601,8 @@ export async function runMigrations(): Promise<void> {
       await client.query(`ALTER TABLE npcs ADD COLUMN IF NOT EXISTS proper_name BOOLEAN DEFAULT FALSE`);
       // Goran is a proper noun — set proper_name for existing installs
       await client.query(`UPDATE npcs SET proper_name = TRUE WHERE LOWER(name) = LOWER('goran the weaponsmith') AND proper_name = FALSE`);
+      // Fix Goran's health column (was missing from original seed)
+      await client.query(`UPDATE npcs SET health = max_health WHERE LOWER(name) = LOWER('goran the weaponsmith') AND health IS NULL`);
 
       // Indexes for faction tables
       await client.query(`CREATE INDEX IF NOT EXISTS idx_npc_factions_npc ON npc_factions(npc_id)`);
@@ -1033,14 +1035,14 @@ async function seedMerchant(): Promise<void> {
 
     const goranResult = await pool.query(
       `INSERT INTO npcs (
-        name, description, spawn_room_id, max_health, hostile, respawn_time,
+        name, description, spawn_room_id, health, max_health, hostile, respawn_time,
         level, experience_reward, gold_min, gold_max, max_mana,
         base_accuracy, base_defense, base_crit_chance, base_dodge, damage_reduction,
         flee_enabled, max_active, interactable, merchant_enabled, primary_faction_id, proper_name
       ) VALUES (
         'goran the weaponsmith',
         'A burly man with soot-stained hands and a leather apron. His arms are thick from years at the forge, and his eyes hold the steady gaze of a master craftsman.',
-        3, 200, false, 120,
+        3, 200, 200, false, 120,
         5, 0, 0, 0, 0,
         60, 60, 5, 10, 5,
         true, 1, true, true, $1, true
