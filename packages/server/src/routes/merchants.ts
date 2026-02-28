@@ -6,7 +6,7 @@ import { clearMerchantResponseCache } from '../game/npcManager.js';
 import { requireDeveloper } from '../middleware/auth.js';
 
 function parsePositiveInt(value: string): number {
-  const n = parseInt(value);
+  const n = parseInt(value, 10);
   return (!isNaN(n) && n > 0) ? n : NaN;
 }
 
@@ -71,6 +71,10 @@ export function setupMerchantRoutes(app: Express): void {
       });
       res.json({ success: true, entry });
     } catch (error) {
+      if (error instanceof Error && error.message.includes('already exists')) {
+        res.status(409).json({ success: false, message: 'This item is already in the merchant inventory' });
+        return;
+      }
       console.error('Failed to add merchant inventory entry:', error);
       res.status(500).json({ success: false, message: 'Failed to add inventory entry' });
     }

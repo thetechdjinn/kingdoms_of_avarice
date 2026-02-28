@@ -1,5 +1,5 @@
 import pg from 'pg';
-import { query } from '../index.js';
+import { query, withTransaction } from '../index.js';
 import { MerchantInventoryEntry, ItemTemplate, ItemRarity } from '@koa/shared';
 
 // Database row types
@@ -136,6 +136,14 @@ export interface CreateInventoryInput {
 
 export async function createInventoryEntry(input: CreateInventoryInput): Promise<MerchantInventoryEntry> {
   const maxStock = input.maxStock ?? 10;
+  // Check for duplicates — the DB has a UNIQUE constraint but we return a cleaner error
+  const existing = await query<DbMerchantInventory>(
+    'SELECT 1 FROM merchant_inventory WHERE npc_template_id = $1 AND item_template_id = $2',
+    [input.npcTemplateId, input.itemTemplateId]
+  );
+  if (existing.rows.length > 0) {
+    throw new Error(`Inventory entry already exists for NPC template ${input.npcTemplateId} and item template ${input.itemTemplateId}`);
+  }
   const result = await query<DbMerchantInventory>(
     `INSERT INTO merchant_inventory (npc_template_id, item_template_id, max_stock, current_stock, restock_chance)
      VALUES ($1, $2, $3, $4, $5)
@@ -155,9 +163,6 @@ export async function updateInventoryEntry(
   id: number,
   updates: Partial<{ maxStock: number; currentStock: number; restockChance: number }>
 ): Promise<MerchantInventoryEntry | null> {
-  const existing = await getInventoryEntry(id);
-  if (!existing) return null;
-
   const result = await query<DbMerchantInventory>(
     `UPDATE merchant_inventory SET
       max_stock = COALESCE($1, max_stock),
@@ -197,11 +202,11 @@ export async function deleteAllInventoryForTemplate(npcTemplateId: number): Prom
  * Returns false if out of stock.
  */
 export async function decrementStock(id: number, client?: pg.PoolClient): Promise<boolean> {
-  const q = client ? client.query.bind(client) : (sql: string, params: unknown[]) => query(sql, params);
-  const result = await q(
+  const result = await query(
     `UPDATE merchant_inventory SET current_stock = current_stock - 1
      WHERE id = $1 AND current_stock > 0`,
-    [id]
+    [id],
+    client
   );
   return (result.rowCount ?? 0) > 0;
 }
@@ -244,39 +249,41 @@ export async function findInventoryEntry(
  * Common items auto-restock. Non-common items roll against restock_chance.
  */
 export async function processRestock(): Promise<number> {
-  // Auto-restock common rarity items to max
-  await query(`
-    UPDATE merchant_inventory mi
-    SET current_stock = mi.max_stock
-    FROM item_templates it
-    WHERE mi.item_template_id = it.id
-      AND mi.current_stock < mi.max_stock
-      AND (it.rarity IS NULL OR it.rarity = 'common')
-  `);
+  return await withTransaction(async (client) => {
+    // Auto-restock common rarity items to max
+    await client.query(`
+      UPDATE merchant_inventory mi
+      SET current_stock = mi.max_stock
+      FROM item_templates it
+      WHERE mi.item_template_id = it.id
+        AND mi.current_stock < mi.max_stock
+        AND (it.rarity IS NULL OR it.rarity = 'common')
+    `);
 
-  // Roll for non-common items
-  const nonCommonResult = await query<DbMerchantInventory & { rarity: string | null }>(
-    `SELECT mi.*, it.rarity
-     FROM merchant_inventory mi
-     JOIN item_templates it ON mi.item_template_id = it.id
-     WHERE mi.current_stock < mi.max_stock
-       AND it.rarity IS NOT NULL
-       AND it.rarity != 'common'`
-  );
+    // Roll for non-common items
+    const nonCommonResult = await client.query<DbMerchantInventory & { rarity: string | null }>(
+      `SELECT mi.*, it.rarity
+       FROM merchant_inventory mi
+       JOIN item_templates it ON mi.item_template_id = it.id
+       WHERE mi.current_stock < mi.max_stock
+         AND it.rarity IS NOT NULL
+         AND it.rarity != 'common'`
+    );
 
-  let restocked = 0;
-  for (const row of nonCommonResult.rows) {
-    const roll = Math.floor(Math.random() * 100) + 1;
-    if (roll <= row.restock_chance) {
-      await query(
-        `UPDATE merchant_inventory SET current_stock = LEAST(current_stock + 1, max_stock) WHERE id = $1`,
-        [row.id]
-      );
-      restocked++;
+    let restocked = 0;
+    for (const row of nonCommonResult.rows) {
+      const roll = Math.floor(Math.random() * 100) + 1;
+      if (roll <= row.restock_chance) {
+        await client.query(
+          `UPDATE merchant_inventory SET current_stock = LEAST(current_stock + 1, max_stock) WHERE id = $1`,
+          [row.id]
+        );
+        restocked++;
+      }
     }
-  }
 
-  return restocked;
+    return restocked;
+  });
 }
 
 /**
