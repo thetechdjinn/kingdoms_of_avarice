@@ -449,6 +449,18 @@ export interface CreateInstanceInput {
   custom_data?: ItemCustomData;
 }
 
+/**
+ * Count all existing instances of an item template in the world.
+ */
+export async function countWorldInstances(templateId: number, client?: pg.PoolClient): Promise<number> {
+  const result = await query<{ count: string }>(
+    'SELECT COUNT(*) as count FROM item_instances WHERE template_id = $1',
+    [templateId],
+    client
+  );
+  return parseInt(result.rows[0].count, 10);
+}
+
 export async function createInstance(input: CreateInstanceInput, client?: pg.PoolClient): Promise<ItemInstance> {
   const result = await query<DbItemInstance>(
     `INSERT INTO item_instances (

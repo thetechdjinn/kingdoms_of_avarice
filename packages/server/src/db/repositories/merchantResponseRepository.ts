@@ -99,7 +99,7 @@ export function findMatchingResponse(
   responses: MerchantResponse[],
   message: string
 ): MerchantResponse | undefined {
-  const words = message.toLowerCase().split(/\s+/);
+  const words = message.toLowerCase().split(/\s+/).map(w => w.replace(/[^a-z0-9'-]/g, ''));
   return responses.find(r =>
     r.triggerKeywords.some(keyword =>
       words.includes(keyword.toLowerCase())

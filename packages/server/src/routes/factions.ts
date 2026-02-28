@@ -49,6 +49,11 @@ export function setupFactionRoutes(app: Express): void {
         res.status(400).json({ success: false, message: `Invalid faction type. Valid: ${[...VALID_FACTION_TYPES].join(', ')}` });
         return;
       }
+      const existing = await factionRepo.getFactionByName(name.trim());
+      if (existing) {
+        res.status(409).json({ success: false, message: 'A faction with that name already exists' });
+        return;
+      }
       const faction = await factionRepo.createFaction({
         name: name.trim(),
         description: description ?? null,

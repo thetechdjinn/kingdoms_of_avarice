@@ -70,19 +70,21 @@ export async function updateFaction(id: number, input: Partial<CreateFactionInpu
   const existing = await getFactionById(id);
   if (!existing) return null;
 
+  const descriptionProvided = input.description !== undefined;
   const result = await query<DbFaction>(
     `UPDATE factions SET
       name = COALESCE($1, name),
-      description = COALESCE($2, description),
+      description = CASE WHEN $5 THEN $2 ELSE description END,
       faction_type = COALESCE($3, faction_type),
       updated_at = CURRENT_TIMESTAMP
     WHERE id = $4
     RETURNING *`,
     [
       input.name ?? null,
-      input.description !== undefined ? input.description : null,
+      descriptionProvided ? input.description : null,
       input.factionType ?? null,
       id,
+      descriptionProvided,
     ]
   );
   return result.rows[0] ? dbToFaction(result.rows[0]) : null;

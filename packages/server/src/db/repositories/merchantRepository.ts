@@ -209,13 +209,30 @@ export async function decrementStock(id: number, client?: pg.PoolClient): Promis
 /**
  * Increment stock by 1, up to max_stock.
  */
-export async function incrementStock(id: number): Promise<boolean> {
+export async function incrementStock(id: number, client?: pg.PoolClient): Promise<boolean> {
   const result = await query(
     `UPDATE merchant_inventory SET current_stock = LEAST(current_stock + 1, max_stock)
      WHERE id = $1`,
-    [id]
+    [id],
+    client
   );
   return (result.rowCount ?? 0) > 0;
+}
+
+/**
+ * Find an inventory entry for a specific NPC template and item template.
+ */
+export async function findInventoryEntry(
+  npcTemplateId: number,
+  itemTemplateId: number,
+  client?: pg.PoolClient
+): Promise<MerchantInventoryEntry | null> {
+  const result = await query<DbMerchantInventory>(
+    'SELECT * FROM merchant_inventory WHERE npc_template_id = $1 AND item_template_id = $2',
+    [npcTemplateId, itemTemplateId],
+    client
+  );
+  return result.rows[0] ? dbToEntry(result.rows[0]) : null;
 }
 
 // ============================================================================

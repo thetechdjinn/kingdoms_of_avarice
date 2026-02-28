@@ -131,12 +131,34 @@ describe('calculateMerchantPrice', () => {
   });
 
   describe('haggle reputation', () => {
-    it('rep 1-3 has no additional effect', () => {
-      const noHaggle = calculateMerchantPrice(1000, 0, 50, true, 0);
+    it('rep 1-3 gives 1% discount per point when buying', () => {
+      // Base price = 1000. Haggle 1 → 1% discount = 990
       const haggle1 = calculateMerchantPrice(1000, 0, 50, true, 1);
+      expect(haggle1.price).toBe(990);
+
+      // Haggle 2 → 2% discount = 980
+      const haggle2 = calculateMerchantPrice(1000, 0, 50, true, 2);
+      expect(haggle2.price).toBe(980);
+
+      // Haggle 3 → 3% discount = 970
       const haggle3 = calculateMerchantPrice(1000, 0, 50, true, 3);
-      expect(haggle1.price).toBe(noHaggle.price);
-      expect(haggle3.price).toBe(noHaggle.price);
+      expect(haggle3.price).toBe(970);
+    });
+
+    it('rep 1-3 gives 1% bonus per point when selling', () => {
+      // Sell base = 500. Haggle 1 → 1% bonus = 505
+      const haggle1 = calculateMerchantPrice(1000, 0, 50, false, 1);
+      expect(haggle1.price).toBe(505);
+
+      // Haggle 3 → 3% bonus = 515
+      const haggle3 = calculateMerchantPrice(1000, 0, 50, false, 3);
+      expect(haggle3.price).toBe(515);
+    });
+
+    it('rep 1-3 stacks with faction/charisma discounts', () => {
+      // factionRep=20 → 2% discount → 980. Then haggle 2 → 2% discount → 960
+      const result = calculateMerchantPrice(1000, 20, 50, true, 2);
+      expect(result.price).toBe(960);
     });
 
     it('rep 4 resets to base MSRP', () => {

@@ -101,6 +101,14 @@ export function setupMerchantRoutes(app: Express): void {
         res.status(400).json({ success: false, message: 'currentStock cannot exceed maxStock' });
         return;
       }
+      // When only maxStock is lowered, ensure existing current_stock doesn't exceed it
+      if (maxStock !== undefined && currentStock === undefined) {
+        const existing = await merchantRepo.getInventoryEntry(id);
+        if (existing && existing.currentStock > maxStock) {
+          res.status(400).json({ success: false, message: `currentStock (${existing.currentStock}) would exceed new maxStock (${maxStock}). Lower currentStock first or send both values.` });
+          return;
+        }
+      }
       const entry = await merchantRepo.updateInventoryEntry(id, {
         maxStock, currentStock, restockChance,
       });

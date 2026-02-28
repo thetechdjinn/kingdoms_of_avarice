@@ -86,6 +86,7 @@ export function clearHaggleState(characterId: number): void {
  * Each +10 positive rep = 1% discount (max 10%)
  * Each -10 negative rep = 2% surcharge (max 10%, then refuse)
  * Sell to merchant: 50% of base_value, same modifiers
+ * Haggle rep 1-3: 1% improvement per point; 4: reset to MSRP; 5-9: +2%/point surcharge; 10: refuse
  */
 export function calculateMerchantPrice(
   baseValue: number,
@@ -129,8 +130,15 @@ export function calculateMerchantPrice(
   } else if (haggleRep === 4) {
     // Rep 4: reset to base MSRP (ignore positive modifiers)
     price = isBuying ? baseValue : Math.floor(baseValue * 0.5);
+  } else if (haggleRep > 0) {
+    // Rep 1-3: 1% improvement per point (lower buy price, higher sell price)
+    const haggleDiscount = haggleRep;
+    if (isBuying) {
+      price = Math.round(price * (1 - haggleDiscount / 100));
+    } else {
+      price = Math.round(price * (1 + haggleDiscount / 100));
+    }
   }
-  // Rep 1-3: no additional effect (normal pricing applies)
 
   // Minimum price of 1 copper
   return { price: Math.max(1, price), refused: false };
@@ -241,9 +249,10 @@ export async function handleList(
     const template = entry.itemTemplate;
     const { price, refused } = calculateMerchantPrice(template.base_value, factionRep, charisma, true, haggleRep);
 
+    const stockRaw = entry.currentStock > 0 ? String(entry.currentStock) : 'OUT';
     const stockStr = entry.currentStock > 0
-      ? String(entry.currentStock)
-      : colors.red('OUT');
+      ? stockRaw.padEnd(8)
+      : colors.red(stockRaw.padEnd(8));
     const priceStr = refused
       ? colors.red('REFUSED')
       : formatCopperAsDenominations(price);
@@ -252,7 +261,7 @@ export async function handleList(
       ? template.name.substring(0, 27) + '…'
       : template.name;
 
-    lines.push(`  ${colors.item(nameStr.padEnd(30))} ${stockStr.padEnd(8)} ${priceStr}`);
+    lines.push(`  ${colors.item(nameStr.padEnd(30))} ${stockStr} ${priceStr}`);
   }
 
   return { type: MessageType.OUTPUT, message: lines.join('\r\n') };
@@ -338,33 +347,48 @@ export async function handleBuy(
   // Perform the transaction
   const deductions = deductCopperFromWallet(currency, price);
 
-  await withTransaction(async (client) => {
-    // Deduct currency from player
-    for (const [field, qty] of deductions) {
-      await characterRepo.addCurrency(socket.characterId!, field, -qty, client);
-    }
+  try {
+    await withTransaction(async (client) => {
+      // Enforce max_in_world limit
+      if (entry.itemTemplate.max_in_world != null) {
+        const worldCount = await itemRepo.countWorldInstances(entry.itemTemplateId, client);
+        if (worldCount >= entry.itemTemplate.max_in_world) {
+          throw new Error('WORLD_LIMIT');
+        }
+      }
 
-    // Create item instance in player inventory
-    await itemRepo.createInstance({
-      template_id: entry.itemTemplateId,
-      location_type: ItemLocationType.PLAYER,
-      location_id: socket.characterId!,
-      condition: ItemCondition.PRISTINE,
-    }, client);
+      // Deduct currency from player
+      for (const [field, qty] of deductions) {
+        await characterRepo.addCurrency(socket.characterId!, field, -qty, client);
+      }
 
-    // Decrement merchant stock
-    const decremented = await merchantRepo.decrementStock(entry.id, client);
-    if (!decremented) {
-      throw new Error('Item is out of stock.');
+      // Create item instance in player inventory
+      await itemRepo.createInstance({
+        template_id: entry.itemTemplateId,
+        location_type: ItemLocationType.PLAYER,
+        location_id: socket.characterId!,
+        condition: ItemCondition.PRISTINE,
+      }, client);
+
+      // Decrement merchant stock
+      const decremented = await merchantRepo.decrementStock(entry.id, client);
+      if (!decremented) {
+        throw new Error('Item is out of stock.');
+      }
+    });
+  } catch (err: unknown) {
+    if (err instanceof Error && err.message === 'WORLD_LIMIT') {
+      return { type: MessageType.ERROR, message: `That item is no longer available.` };
     }
-  });
+    throw err;
+  }
 
   const priceStr = formatCopperAsDenominations(price);
   broadcastToRoom(roomId, `${socket.username} buys ${withArticle(entry.itemTemplate.name)} from ${withNpcName(merchant.entityName, merchant.isProperName)}.`, socket.playerId);
 
   return {
     type: MessageType.OUTPUT,
-    message: `You buy ${colors.item(entry.itemTemplate.name)} from ${colors.boldWhite(withNpcName(merchant.entityName, merchant.isProperName))} for ${colors.gold(priceStr)}.`,
+    message: `You buy ${colors.item(withArticle(entry.itemTemplate.name))} from ${colors.boldWhite(withNpcName(merchant.entityName, merchant.isProperName))} for ${colors.gold(priceStr)}.`,
   };
 }
 
@@ -451,6 +475,12 @@ export async function handleSell(
         await characterRepo.addCurrency(socket.characterId!, currencyInfo.field, count, client);
       }
     }
+
+    // Increment merchant stock if this item is in their catalog
+    const catalogEntry = await merchantRepo.findInventoryEntry(merchant.templateId, template.id, client);
+    if (catalogEntry) {
+      await merchantRepo.incrementStock(catalogEntry.id, client);
+    }
   });
 
   const priceStr = formatCopperAsDenominations(price);
@@ -458,7 +488,7 @@ export async function handleSell(
 
   return {
     type: MessageType.OUTPUT,
-    message: `You sell ${colors.item(template.name)} to ${colors.boldWhite(withNpcName(merchant.entityName, merchant.isProperName))} for ${colors.gold(priceStr)}.`,
+    message: `You sell ${colors.item(withArticle(template.name))} to ${colors.boldWhite(withNpcName(merchant.entityName, merchant.isProperName))} for ${colors.gold(priceStr)}.`,
   };
 }
 
@@ -474,23 +504,23 @@ export async function handlePrice(
   if (charError) return charError;
 
   if (args.length === 0) {
-    return { type: MessageType.ERROR, message: 'Price what? Usage: price <item>' };
+    return { type: MessageType.ERROR, message: 'Price what? Usage: price <item> [from <merchant>]' };
   }
 
   const roomId = getPlayerLocation(socket.playerId);
   if (!roomId) return { type: MessageType.ERROR, message: 'You are nowhere.' };
 
-  const merchants = getMerchantsInRoom(roomId);
-  if (merchants.length === 0) {
-    return { type: MessageType.ERROR, message: 'There are no merchants here.' };
-  }
+  // Parse "price <item> from <merchant>"
+  const fromIdx = args.findIndex(a => a.toLowerCase() === 'from');
+  const itemKeyword = fromIdx >= 0 ? args.slice(0, fromIdx).join(' ') : args.join(' ');
+  const merchantName = fromIdx >= 0 ? args.slice(fromIdx + 1).join(' ') : undefined;
 
-  // Use first available merchant for pricing
-  const merchant = merchants[0];
+  const { merchant, error } = resolveMerchant(roomId, merchantName);
+  if (error) return error;
+  if (!merchant) return { type: MessageType.ERROR, message: 'No merchant found.' };
+
   const available = isMerchantAvailable(merchant, socket.characterId!);
   if (available) return available;
-
-  const itemKeyword = args.join(' ');
   const charisma = socket.characterStats?.charisma ?? 50;
   const factionRep = merchant.template.primaryFactionId
     ? await factionRepo.getPlayerReputation(socket.characterId!, merchant.template.primaryFactionId)
