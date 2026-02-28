@@ -599,7 +599,7 @@ function getOtherPlayersInRoom(
 }
 
 // Get display names of NPCs in a room (for "Also here:" line)
-// Returns pre-colored names: hostile NPCs in red, others in default player color
+// Returns pre-colored names: hostile NPCs in red, non-hostile in blue
 function getNpcDisplayNames(roomId: number): string[] {
   const npcs = getNpcsInRoom(roomId);
   const names: string[] = [];
@@ -607,7 +607,7 @@ function getNpcDisplayNames(roomId: number): string[] {
     if (npc.vitals.hp <= 0) continue; // Skip dead NPCs
     const name = npc.template.hostile
       ? colors.hostileInRoom(npc.entityName)
-      : colors.playerInRoom(npc.entityName);
+      : colors.npcInRoom(npc.entityName);
     names.push(name);
   }
   return names;
