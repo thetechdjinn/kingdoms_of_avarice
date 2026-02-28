@@ -2044,10 +2044,17 @@ async function handleDirectedSpeech(
 
     // Check for merchant keyword response
     if (npcTarget.template.merchantEnabled) {
-      const response = await getResponseForKeywords(npcTarget.template.id, message);
-      if (response) {
-        // Broadcast the merchant's response to the room
-        broadcastToRoom(roomId, `${colors.sayName(npcTarget.entityName + ' says:')} ${colors.say('"' + response + '"')}`, undefined);
+      const npcResponse = await getResponseForKeywords(npcTarget.template.id, message);
+      if (npcResponse) {
+        // Send merchant's response to speaker after their speech (via sendMessage),
+        // then broadcast to the rest of the room. The speaker's own speech line is
+        // returned as the CommandResponse so it arrives first.
+        const merchantLine = `${colors.sayName(npcTarget.entityName + ' says:')} ${colors.say('"' + npcResponse + '"')}`;
+        // Use setTimeout(0) to ensure the CommandResponse (player's speech) is sent first
+        setTimeout(() => {
+          sendMessage(socket, MessageType.OUTPUT, merchantLine);
+          broadcastToRoom(roomId, merchantLine, socket.playerId);
+        }, 0);
         return {
           type: MessageType.OUTPUT,
           message: `${colors.sayName('You say to ' + npcTarget.entityName + ':')} ${colors.say('"' + message + '"')}`,
