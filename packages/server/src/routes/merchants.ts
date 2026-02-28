@@ -40,8 +40,8 @@ export function setupMerchantRoutes(app: Express): void {
         return;
       }
       const { itemTemplateId, maxStock, currentStock, restockChance } = req.body;
-      if (!itemTemplateId || typeof itemTemplateId !== 'number') {
-        res.status(400).json({ success: false, message: 'itemTemplateId is required' });
+      if (!itemTemplateId || typeof itemTemplateId !== 'number' || itemTemplateId < 1) {
+        res.status(400).json({ success: false, message: 'itemTemplateId must be a positive integer' });
         return;
       }
       const entry = await merchantRepo.createInventoryEntry({

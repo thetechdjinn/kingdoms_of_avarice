@@ -1,4 +1,4 @@
-import { query } from '../index.js';
+import { query, withTransaction } from '../index.js';
 import { Faction, FactionType, PlayerFactionReputation } from '@koa/shared';
 
 // Database row types
@@ -109,13 +109,15 @@ export async function getNpcFactions(npcId: number): Promise<Faction[]> {
 }
 
 export async function setNpcFactions(npcId: number, factionIds: number[]): Promise<void> {
-  await query('DELETE FROM npc_factions WHERE npc_id = $1', [npcId]);
-  for (const factionId of factionIds) {
-    await query(
-      'INSERT INTO npc_factions (npc_id, faction_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
-      [npcId, factionId]
-    );
-  }
+  await withTransaction(async (client) => {
+    await client.query('DELETE FROM npc_factions WHERE npc_id = $1', [npcId]);
+    for (const factionId of factionIds) {
+      await client.query(
+        'INSERT INTO npc_factions (npc_id, faction_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
+        [npcId, factionId]
+      );
+    }
+  });
 }
 
 // ============================================================================

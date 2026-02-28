@@ -227,7 +227,7 @@ export interface ItemTemplate {
   effect_slots: number;
   base_effects?: unknown;
   rarity?: ItemRarity;        // Item rarity tier (default: common)
-  max_in_world?: number;      // Maximum instances allowed in the world (null = unlimited)
+  max_in_world?: number;      // Maximum instances allowed in the world (undefined = unlimited)
 }
 
 // Item instance (actual object in game)

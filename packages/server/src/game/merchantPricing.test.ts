@@ -33,7 +33,8 @@ vi.mock('../db/index.js', () => ({
   withTransaction: vi.fn(),
 }));
 
-import { calculateMerchantPrice, deductCopperFromWallet } from './merchantCommands.js';
+import { calculateMerchantPrice } from './merchantCommands.js';
+import { deductCopperFromWallet } from '../utils/currency.js';
 import type { Currency } from '@koa/shared';
 
 // ============================================================================

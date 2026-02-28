@@ -70,6 +70,10 @@ export function setupFactionRoutes(app: Express): void {
         return;
       }
       const { name, description, factionType } = req.body;
+      if (name !== undefined && (typeof name !== 'string' || name.trim().length === 0)) {
+        res.status(400).json({ success: false, message: 'Name cannot be empty' });
+        return;
+      }
       if (factionType && !VALID_FACTION_TYPES.has(factionType)) {
         res.status(400).json({ success: false, message: `Invalid faction type. Valid: ${[...VALID_FACTION_TYPES].join(', ')}` });
         return;
