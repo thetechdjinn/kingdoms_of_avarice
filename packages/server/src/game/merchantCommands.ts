@@ -3,7 +3,7 @@ import { CommandResponse } from './commands.js';
 import { AuthenticatedSocket, broadcastToRoom } from './socket.js';
 import { getPlayerLocation } from './adminCommands.js';
 import { colors } from '../utils/colors.js';
-import { formatCopperAsDenominations, copperToDenominationCounts, withNpcName, withNpcNameCapitalized, withNpcNamePossessive } from '../utils/textFormat.js';
+import { formatCopperAsDenominations, copperToDenominationCounts, withArticle, withNpcName, withNpcNameCapitalized, withNpcNamePossessive } from '../utils/textFormat.js';
 import { deductCopperFromWallet } from '../utils/currency.js';
 import { calculateTotalWealth, CURRENCY_TYPES } from './itemCommands.js';
 import { getMerchantsInRoom, findMerchantInRoom, NpcCombatInstance, isMerchantHostileToPlayer } from './npcManager.js';
@@ -360,7 +360,7 @@ export async function handleBuy(
   });
 
   const priceStr = formatCopperAsDenominations(price);
-  broadcastToRoom(roomId, `${socket.username} buys something from ${withNpcName(merchant.entityName, merchant.isProperName)}.`, socket.playerId);
+  broadcastToRoom(roomId, `${socket.username} buys ${withArticle(entry.itemTemplate.name)} from ${withNpcName(merchant.entityName, merchant.isProperName)}.`, socket.playerId);
 
   return {
     type: MessageType.OUTPUT,
@@ -454,7 +454,7 @@ export async function handleSell(
   });
 
   const priceStr = formatCopperAsDenominations(price);
-  broadcastToRoom(roomId, `${socket.username} sells something to ${withNpcName(merchant.entityName, merchant.isProperName)}.`, socket.playerId);
+  broadcastToRoom(roomId, `${socket.username} sells ${withArticle(template.name)} to ${withNpcName(merchant.entityName, merchant.isProperName)}.`, socket.playerId);
 
   return {
     type: MessageType.OUTPUT,
