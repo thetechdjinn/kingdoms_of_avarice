@@ -3,7 +3,7 @@ import { FactionType } from '@koa/shared';
 import * as factionRepo from '../db/repositories/factionRepository.js';
 import { requireDeveloper } from '../middleware/auth.js';
 
-const VALID_FACTION_TYPES = new Set<string>(['city', 'tribal', 'merchant', 'guild']);
+const VALID_FACTION_TYPES = new Set<string>(Object.values(FactionType));
 
 export function setupFactionRoutes(app: Express): void {
   // List all factions
@@ -51,7 +51,7 @@ export function setupFactionRoutes(app: Express): void {
       }
       const faction = await factionRepo.createFaction({
         name: name.trim(),
-        description: description || null,
+        description: description ?? null,
         factionType: factionType as FactionType,
       });
       res.json({ success: true, faction });

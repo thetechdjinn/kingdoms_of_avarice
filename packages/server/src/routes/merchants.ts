@@ -56,11 +56,17 @@ export function setupMerchantRoutes(app: Express): void {
         res.status(400).json({ success: false, message: 'restockChance must be an integer between 1 and 100' });
         return;
       }
+      const effectiveMaxStock = maxStock ?? 10;
+      const effectiveCurrentStock = currentStock ?? effectiveMaxStock;
+      if (effectiveCurrentStock > effectiveMaxStock) {
+        res.status(400).json({ success: false, message: 'currentStock cannot exceed maxStock' });
+        return;
+      }
       const entry = await merchantRepo.createInventoryEntry({
         npcTemplateId,
         itemTemplateId,
-        maxStock: maxStock ?? 10,
-        currentStock: currentStock ?? maxStock ?? 10,
+        maxStock: effectiveMaxStock,
+        currentStock: effectiveCurrentStock,
         restockChance: restockChance ?? 100,
       });
       res.json({ success: true, entry });
@@ -89,6 +95,10 @@ export function setupMerchantRoutes(app: Express): void {
       }
       if (restockChance !== undefined && (typeof restockChance !== 'number' || !Number.isInteger(restockChance) || restockChance < 1 || restockChance > 100)) {
         res.status(400).json({ success: false, message: 'restockChance must be an integer between 1 and 100' });
+        return;
+      }
+      if (maxStock !== undefined && currentStock !== undefined && currentStock > maxStock) {
+        res.status(400).json({ success: false, message: 'currentStock cannot exceed maxStock' });
         return;
       }
       const entry = await merchantRepo.updateInventoryEntry(id, {
@@ -180,7 +190,7 @@ export function setupMerchantRoutes(app: Express): void {
         res.status(400).json({ success: false, message: 'triggerKeywords must be a non-empty array of non-empty strings' });
         return;
       }
-      if (!responseText || typeof responseText !== 'string') {
+      if (!responseText || typeof responseText !== 'string' || responseText.trim().length === 0) {
         res.status(400).json({ success: false, message: 'response text is required' });
         return;
       }
