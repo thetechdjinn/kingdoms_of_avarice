@@ -40,8 +40,20 @@ export function setupMerchantRoutes(app: Express): void {
         return;
       }
       const { itemTemplateId, maxStock, currentStock, restockChance } = req.body;
-      if (!itemTemplateId || typeof itemTemplateId !== 'number' || itemTemplateId < 1) {
+      if (!itemTemplateId || typeof itemTemplateId !== 'number' || !Number.isInteger(itemTemplateId) || itemTemplateId < 1) {
         res.status(400).json({ success: false, message: 'itemTemplateId must be a positive integer' });
+        return;
+      }
+      if (maxStock !== undefined && (typeof maxStock !== 'number' || !Number.isInteger(maxStock) || maxStock < 0)) {
+        res.status(400).json({ success: false, message: 'maxStock must be a non-negative integer' });
+        return;
+      }
+      if (currentStock !== undefined && (typeof currentStock !== 'number' || !Number.isInteger(currentStock) || currentStock < 0)) {
+        res.status(400).json({ success: false, message: 'currentStock must be a non-negative integer' });
+        return;
+      }
+      if (restockChance !== undefined && (typeof restockChance !== 'number' || !Number.isInteger(restockChance) || restockChance < 1 || restockChance > 100)) {
+        res.status(400).json({ success: false, message: 'restockChance must be an integer between 1 and 100' });
         return;
       }
       const entry = await merchantRepo.createInventoryEntry({
@@ -67,6 +79,18 @@ export function setupMerchantRoutes(app: Express): void {
         return;
       }
       const { maxStock, currentStock, restockChance } = req.body;
+      if (maxStock !== undefined && (typeof maxStock !== 'number' || !Number.isInteger(maxStock) || maxStock < 0)) {
+        res.status(400).json({ success: false, message: 'maxStock must be a non-negative integer' });
+        return;
+      }
+      if (currentStock !== undefined && (typeof currentStock !== 'number' || !Number.isInteger(currentStock) || currentStock < 0)) {
+        res.status(400).json({ success: false, message: 'currentStock must be a non-negative integer' });
+        return;
+      }
+      if (restockChance !== undefined && (typeof restockChance !== 'number' || !Number.isInteger(restockChance) || restockChance < 1 || restockChance > 100)) {
+        res.status(400).json({ success: false, message: 'restockChance must be an integer between 1 and 100' });
+        return;
+      }
       const entry = await merchantRepo.updateInventoryEntry(id, {
         maxStock, currentStock, restockChance,
       });
@@ -151,8 +175,9 @@ export function setupMerchantRoutes(app: Express): void {
         return;
       }
       const { triggerKeywords, response: responseText } = req.body;
-      if (!Array.isArray(triggerKeywords) || triggerKeywords.length === 0) {
-        res.status(400).json({ success: false, message: 'triggerKeywords array is required' });
+      if (!Array.isArray(triggerKeywords) || triggerKeywords.length === 0 ||
+          !triggerKeywords.every((k: unknown) => typeof k === 'string' && k.trim().length > 0)) {
+        res.status(400).json({ success: false, message: 'triggerKeywords must be a non-empty array of non-empty strings' });
         return;
       }
       if (!responseText || typeof responseText !== 'string') {
@@ -181,6 +206,16 @@ export function setupMerchantRoutes(app: Express): void {
         return;
       }
       const { triggerKeywords, response: responseText } = req.body;
+      if (triggerKeywords !== undefined &&
+          (!Array.isArray(triggerKeywords) || triggerKeywords.length === 0 ||
+           !triggerKeywords.every((k: unknown) => typeof k === 'string' && k.trim().length > 0))) {
+        res.status(400).json({ success: false, message: 'triggerKeywords must be a non-empty array of non-empty strings' });
+        return;
+      }
+      if (responseText !== undefined && (typeof responseText !== 'string' || responseText.trim().length === 0)) {
+        res.status(400).json({ success: false, message: 'response must be a non-empty string' });
+        return;
+      }
       const entry = await merchantResponseRepo.updateResponse(id, {
         triggerKeywords,
         response: responseText,

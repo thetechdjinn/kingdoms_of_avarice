@@ -525,7 +525,7 @@ export async function processCommand(
 
   // Directed speech: >target message
   if (trimmed.startsWith('>')) {
-    return handleDirectedSpeech(socket, trimmed.slice(1), currentRoomId, _connectedPlayers);
+    return await handleDirectedSpeech(socket, trimmed.slice(1), currentRoomId, _connectedPlayers);
   }
 
   // Check for temporary portal spawn triggers (e.g., "Valar Morghulis")
