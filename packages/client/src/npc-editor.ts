@@ -991,6 +991,8 @@ function toggleMerchantSection(enabled: boolean): void {
 }
 
 async function loadMerchantData(npcTemplateId: number): Promise<void> {
+  merchantInventory = [];
+  merchantResponses = [];
   try {
     const [invRes, respRes] = await Promise.all([
       fetch(`/api/merchants/${npcTemplateId}/inventory`),

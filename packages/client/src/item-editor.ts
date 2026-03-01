@@ -328,7 +328,7 @@ function selectTemplate(id: number): void {
   const raritySelect = getElement<HTMLSelectElement>('item-rarity');
   const maxInWorldInput = getElement<HTMLInputElement>('item-max-in-world');
   if (raritySelect) raritySelect.value = template.rarity || 'common';
-  if (maxInWorldInput) maxInWorldInput.value = String(template.max_in_world || 0);
+  if (maxInWorldInput) maxInWorldInput.value = template.max_in_world ? String(template.max_in_world) : '';
 
   // Flags
   const flagTakeable = getElement<HTMLInputElement>('flag-takeable');

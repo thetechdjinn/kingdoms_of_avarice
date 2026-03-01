@@ -159,8 +159,8 @@ function formatSwingMessage(
   const defSubject = isDefender ? 'You' : withNpcNameCapitalized(defenderEntity.name, defenderEntity.isProperName);
   // Object form: lowercase article ("a serpentine warrior" / "Bob" / "you")
   const defObject = isDefender ? 'you' : withNpcName(defenderEntity.name, defenderEntity.isProperName);
-  // Possessive: "The serpentine warrior's" / "Bob's" / "Your"
-  const atkPossessive = isAttacker ? 'Your' : withNpcNamePossessive(attackerEntity.name, attackerEntity.isProperName);
+  // Possessive (lowercase for mid-sentence observer messages): "the serpentine warrior's" / "Bob's" / "Your"
+  const atkPossessive = isAttacker ? 'Your' : withNpcNamePossessive(attackerEntity.name, attackerEntity.isProperName, false);
   // Inline possessive for isDefender: "the serpentine warrior's" / "Bob's"
   const atkInlinePossessive = attackerEntity.isProperName ? `${attackerEntity.name}'s` : `the ${attackerEntity.name}'s`;
 

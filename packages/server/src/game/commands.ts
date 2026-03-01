@@ -2052,7 +2052,9 @@ async function handleDirectedSpeech(
         const merchantLine = `${colors.sayName(npcTarget.entityName + ' says:')} ${colors.say('"' + npcResponse + '"')}`;
         // Use setTimeout(0) to ensure the CommandResponse (player's speech) is sent first
         setTimeout(() => {
-          sendMessage(socket, MessageType.OUTPUT, merchantLine);
+          if (socket.readyState === socket.OPEN) {
+            sendMessage(socket, MessageType.OUTPUT, merchantLine);
+          }
           broadcastToRoom(roomId, merchantLine, socket.playerId);
         }, 0);
         return {

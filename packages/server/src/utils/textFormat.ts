@@ -106,8 +106,9 @@ export function withNpcName(name: string, isProperName: boolean): string {
  * Common nouns get "The" prefix; proper nouns pass through unchanged.
  * E.g., "Goran's Wares" vs "The serpentine warrior's Wares"
  */
-export function withNpcNamePossessive(name: string, isProperName: boolean): string {
-  return isProperName ? `${name}'s` : `The ${name}'s`;
+export function withNpcNamePossessive(name: string, isProperName: boolean, capitalize: boolean = true): string {
+  if (isProperName) return `${name}'s`;
+  return capitalize ? `The ${name}'s` : `the ${name}'s`;
 }
 
 /**
