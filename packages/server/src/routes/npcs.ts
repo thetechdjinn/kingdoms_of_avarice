@@ -1,4 +1,5 @@
 import { Express, Request, Response } from 'express';
+import { NPC_SPELL_CONDITIONS } from '@koa/shared';
 import * as npcRepo from '../db/repositories/npcRepository.js';
 import type { CreateNpcAttackInput, CreateNpcTemplateInput } from '../db/repositories/npcRepository.js';
 import * as npcSpellRepo from '../db/repositories/npcSpellRepository.js';
@@ -52,8 +53,11 @@ function validateNpcSpell(sp: Record<string, unknown>, index: number): string | 
   if (sp.cooldownRounds !== undefined && (typeof sp.cooldownRounds !== 'number' || sp.cooldownRounds < 0)) {
     return `Spell ${index + 1}: cooldownRounds must be >= 0`;
   }
-  if (sp.conditionValue !== undefined && (typeof sp.conditionValue !== 'number')) {
-    return `Spell ${index + 1}: conditionValue must be a number`;
+  if (sp.conditionType !== undefined && (typeof sp.conditionType !== 'string' || !(sp.conditionType in NPC_SPELL_CONDITIONS))) {
+    return `Spell ${index + 1}: conditionType must be one of: ${Object.keys(NPC_SPELL_CONDITIONS).join(', ')}`;
+  }
+  if (sp.conditionValue !== undefined && (typeof sp.conditionValue !== 'number' || !Number.isFinite(sp.conditionValue) || sp.conditionValue < 0)) {
+    return `Spell ${index + 1}: conditionValue must be a non-negative number`;
   }
   return null;
 }

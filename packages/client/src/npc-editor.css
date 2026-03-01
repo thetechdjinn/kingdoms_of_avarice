@@ -237,6 +237,88 @@
   margin-bottom: 6px;
 }
 
+/* Spells */
+.spells-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.spells-header h3 {
+  margin: 0;
+  color: #ffaa00;
+  font-size: 0.95rem;
+}
+
+.spell-row {
+  border: 1px solid #333;
+  border-radius: 4px;
+  padding: 12px;
+  margin-bottom: 12px;
+  background: #0f0f23;
+}
+
+.spell-row-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.spell-row-header .spell-title {
+  font-weight: bold;
+  color: #00ff00;
+  font-size: 0.9rem;
+}
+
+.spell-row-header .btn-remove {
+  background: none;
+  border: 1px solid #ff4444;
+  color: #ff4444;
+  padding: 2px 8px;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 0.8rem;
+}
+
+.spell-row-header .btn-remove:hover {
+  background: #ff4444;
+  color: #fff;
+}
+
+.spell-info {
+  font-size: 0.8rem;
+  color: #888;
+  margin-bottom: 8px;
+  padding-left: 8px;
+  border-left: 2px solid #333;
+}
+
+.spell-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 8px;
+}
+
+.spell-fields .form-group {
+  margin-bottom: 4px;
+}
+
+.spell-fields label {
+  font-size: 0.8rem;
+  color: #888;
+  margin-bottom: 2px;
+  display: block;
+}
+
+.spell-fields input,
+.spell-fields select {
+  width: 100%;
+  padding: 4px 8px;
+  font-size: 0.85rem;
+}
+
 /* Preview Panel */
 #preview-panel {
   width: 300px;
