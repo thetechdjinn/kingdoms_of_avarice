@@ -137,6 +137,7 @@ function createFreshCombatState(): CombatState {
     carriedEnergy: 0,
     combatAction: 'melee',
     activeSpell: null,
+    combatOrderPosition: 0,
   };
 }
 

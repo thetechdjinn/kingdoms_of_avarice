@@ -57,8 +57,16 @@ export function handleAttack(
       breakStealth(target, 'attacked', true);
     }
 
+    // Detect re-engage: player is in combat (being attacked) but has no targets (broke combat)
+    const isReEngaging = socket.regenState.inCombat && socket.combatState.targets.size === 0;
+
     // Add target to attacker's target list
     socket.combatState.targets.add(target.playerId);
+
+    // Re-engaging after combat break: swing last next round
+    if (isReEngaging) {
+      socket.combatState.combatOrderPosition = Date.now();
+    }
 
     // Set both players' combat flags
     socket.regenState.inCombat = true;
@@ -99,7 +107,7 @@ export function handleAttack(
 
     return {
       type: MessageType.OUTPUT,
-      message: colors.yellow('*COMBAT ENGAGED*'),
+      message: isReEngaging ? colors.yellow('*COMBAT RE-ENGAGED*') : colors.yellow('*COMBAT ENGAGED*'),
     };
   }
 
@@ -125,9 +133,17 @@ export function handleAttack(
     breakStealth(socket, 'attack', true);
   }
 
+  // Detect re-engage: player is in combat (being attacked) but has no targets (broke combat)
+  const isReEngaging = socket.regenState.inCombat && socket.combatState.targets.size === 0;
+
   // Add NPC to attacker's target list and vice versa
   socket.combatState.targets.add(npcTarget.entityId);
   npcTarget.combatState.targets.add(socket.playerId);
+
+  // Re-engaging after combat break: swing last next round
+  if (isReEngaging) {
+    socket.combatState.combatOrderPosition = Date.now();
+  }
 
   // Set combat flags
   socket.regenState.inCombat = true;
@@ -159,7 +175,7 @@ export function handleAttack(
 
   return {
     type: MessageType.OUTPUT,
-    message: colors.yellow('*COMBAT ENGAGED*'),
+    message: isReEngaging ? colors.yellow('*COMBAT RE-ENGAGED*') : colors.yellow('*COMBAT ENGAGED*'),
   };
 }
 
@@ -245,6 +261,28 @@ export async function handleFlee(
 }
 
 /**
+ * Break the caster's offensive combat state without fully disengaging.
+ *
+ * Lighter version of clearCombatState() — clears the caster's targets and
+ * energy so they stop attacking, but does NOT remove the caster from other
+ * entities' target lists, does NOT set inCombat to false, and does NOT
+ * reset NPC behavior state. The caster can still be attacked by enemies.
+ *
+ * Used when non-offensive spells (heal/buff/debuff) are cast mid-combat.
+ */
+export function breakCasterCombat(entity: CombatEntity): void {
+  entity.combatState.targets.clear();
+  entity.combatState.energy = 0;
+  entity.combatState.carriedEnergy = 0;
+  entity.combatState.combatAction = 'melee';
+  entity.combatState.activeSpell = null;
+  // NOTE: Do NOT reset combatOrderPosition (preserve any pending re-engage penalty)
+  // NOTE: Do NOT set regenState.inCombat = false (enemies still targeting caster)
+  // NOTE: Do NOT remove caster from others' target lists
+  // NOTE: Do NOT call resetNpcBehaviorState (NPC stays in 'combat' state)
+}
+
+/**
  * Clear combat state for an entity.
  *
  * Removes all targets and clears combat flag.
@@ -267,6 +305,7 @@ export function clearCombatState(
   entity.combatState.carriedEnergy = 0;
   entity.combatState.combatAction = 'melee';
   entity.combatState.activeSpell = null;
+  entity.combatState.combatOrderPosition = 0;
 
   // Check if any other players were targeting this entity
   // and update their combat state
@@ -277,6 +316,7 @@ export function clearCombatState(
       // If they have no more targets, they're out of combat
       if (otherSocket.combatState.targets.size === 0) {
         otherSocket.regenState.inCombat = false;
+        otherSocket.combatState.combatOrderPosition = 0;
       }
     }
   }
@@ -289,6 +329,7 @@ export function clearCombatState(
 
       if (npc.combatState.targets.size === 0
           && npc.behaviorState !== 'fleeing' && npc.behaviorState !== 'returning') {
+        npc.combatState.combatOrderPosition = 0;
         resetNpcBehaviorState(npc);
       }
     }
@@ -318,6 +359,7 @@ export function clearCombatState(
       }
       if (!stillTargeted && targetSocket.combatState.targets.size === 0) {
         targetSocket.regenState.inCombat = false;
+        targetSocket.combatState.combatOrderPosition = 0;
       }
       continue;
     }
@@ -343,6 +385,7 @@ export function clearCombatState(
       }
       if (!stillTargeted && npcTarget.combatState.targets.size === 0
           && npcTarget.behaviorState !== 'fleeing' && npcTarget.behaviorState !== 'returning') {
+        npcTarget.combatState.combatOrderPosition = 0;
         resetNpcBehaviorState(npcTarget);
       }
     }
