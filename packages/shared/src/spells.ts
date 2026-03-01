@@ -65,6 +65,25 @@ export interface Spell {
 }
 
 /**
+ * Condition types for NPC spell AI casting decisions
+ */
+export const NPC_SPELL_CONDITIONS = {
+  any: 'Always',
+  hp_below: 'HP Below %',
+  hp_above: 'HP Above %',
+  target_hp_below: 'Target HP Below %',
+  mana_above: 'Mana Above %',
+  no_effect: 'Missing Effect',
+  has_allies: 'Has Allies',
+  combat_start: 'Combat Start',
+} satisfies Record<string, string>;
+
+/**
+ * Valid NPC spell condition type values
+ */
+export type NpcSpellConditionType = keyof typeof NPC_SPELL_CONDITIONS;
+
+/**
  * Character's learned spell record
  */
 export interface CharacterSpell {

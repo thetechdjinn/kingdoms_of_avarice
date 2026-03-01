@@ -991,7 +991,7 @@ async function seedNpcs(): Promise<void> {
         name, description, spawn_room_id, health, max_health, hostile,
         respawn_time, level, experience_reward, gold_min, gold_max,
         max_mana, base_accuracy, base_defense, base_crit_chance, damage_reduction,
-        traits, max_active, essence_reward, essence_class,
+        spell_power, traits, max_active, essence_reward, essence_class,
         roam_enabled, roam_interval, roam_chance, allowed_areas,
         augmentation_enabled, augmentations,
         enter_room_message, exit_room_message, spawn_message
@@ -999,8 +999,8 @@ async function seedNpcs(): Promise<void> {
         'serpentine warrior', 'A fearsome warrior with serpentine features, its scaled skin glistening in the dim light.',
         6, 30, 30, TRUE,
         60, 2, 25, 5, 15,
-        0, 35, 12, 5, 1,
-        '{}', 1, 5, NULL,
+        20, 35, 12, 5, 1,
+        10, '{}', 1, 5, NULL,
         TRUE, 60, 10, '{Silverton}',
         TRUE, '{fierce,scarred,young}',
         '{name} slithers in from the {direction}.', '{name} slithers away {direction}.', '{name} slithers in.'
@@ -1021,6 +1021,18 @@ async function seedNpcs(): Promise<void> {
         'claw', 'claws', 'swipe at', 'swipes at'
       )
     `, [npcId]);
+
+    // Assign Minor Heal spell to serpentine warrior (heals when HP below 50%)
+    const minorHealResult = await getPool().query(
+      "SELECT id FROM spells WHERE mnemonic = 'mhea' LIMIT 1"
+    );
+    if (minorHealResult.rows.length > 0) {
+      const spellId = minorHealResult.rows[0].id;
+      await getPool().query(`
+        INSERT INTO npc_spells (npc_id, spell_id, priority, cast_chance, condition_type, condition_value, cooldown_rounds)
+        VALUES ($1, $2, 80, 75, 'hp_below', 50, 3)
+      `, [npcId, spellId]);
+    }
 
     // Create drop table for serpentine warrior
     const dropTableResult = await getPool().query(`

@@ -27,7 +27,7 @@ interface NpcSpell {
   conditionType: string;
   conditionValue: number;
   cooldownRounds: number;
-  spell: Record<string, unknown>;
+  spell?: Record<string, unknown>;
 }
 
 interface NpcTemplate {
@@ -127,6 +127,8 @@ let merchantInventory: MerchantInventoryEntry[] = [];
 let merchantResponses: MerchantResponse[] = [];
 let selectedTemplateId: number | null = null;
 let editingAttacks: NpcAttack[] = [];
+let editingSpells: NpcSpell[] = [];
+let availableSpells: Array<{ id: number; name: string; mnemonic: string; spellType: string; manaCost: number }> = [];
 let currentUser: AuthInfo | null = null;
 
 // ============================================================================
@@ -347,6 +349,7 @@ function selectTemplate(id: number): void {
   setInputValue('npc-base-crit-chance', String(template.baseCritChance));
   setInputValue('npc-base-dodge', String(template.baseDodge));
   setInputValue('npc-damage-reduction', String(template.damageReduction));
+  setInputValue('npc-spell-power', String(template.spellPower));
 
   // Behavior tab
   setCheckbox('npc-flee-enabled', template.fleeEnabled);
@@ -377,6 +380,10 @@ function selectTemplate(id: number): void {
   // Attacks
   editingAttacks = template.attacks.map(a => ({ ...a }));
   renderAttacks();
+
+  // Spells
+  editingSpells = template.spells?.map(s => ({ ...s })) || [];
+  renderSpells();
 
   // Merchant tab
   setCheckbox('npc-merchant-enabled', template.merchantEnabled);
@@ -567,6 +574,164 @@ function addAttack(): void {
 }
 
 // ============================================================================
+// Spells Rendering
+// ============================================================================
+
+async function fetchAvailableSpells(): Promise<void> {
+  try {
+    const res = await fetch('/api/spells');
+    if (!res.ok) return;
+    const data = await res.json();
+    availableSpells = (data.spells || []).map((s: Record<string, unknown>) => ({
+      id: s.id as number,
+      name: s.name as string,
+      mnemonic: s.mnemonic as string,
+      spellType: s.spellType as string,
+      manaCost: s.manaCost as number,
+    }));
+  } catch (e) {
+    console.error('Failed to load spells:', e);
+  }
+}
+
+function getSpellName(spellId: number): string {
+  const spell = availableSpells.find(s => s.id === spellId);
+  return spell?.name || `Spell #${spellId}`;
+}
+
+function renderSpells(): void {
+  const container = getElement<HTMLElement>('spells-container');
+  const hint = getElement<HTMLElement>('no-spells-hint');
+  if (!container) return;
+
+  container.innerHTML = '';
+
+  if (editingSpells.length === 0) {
+    if (hint) hint.style.display = 'block';
+    return;
+  }
+
+  if (hint) hint.style.display = 'none';
+
+  const conditionLabels: Record<string, string> = {
+    any: 'Always',
+    hp_below: 'HP Below %',
+    hp_above: 'HP Above %',
+    target_hp_below: 'Target HP Below %',
+    mana_above: 'Mana Above %',
+    no_effect: 'Missing Effect',
+    has_allies: 'Has Allies',
+    combat_start: 'Combat Start',
+  };
+
+  editingSpells.forEach((spell, index) => {
+    const spellInfo = availableSpells.find(s => s.id === spell.spellId);
+    const spellName = spellInfo?.name || `Spell #${spell.spellId}`;
+
+    const spellOptions = availableSpells.map(s =>
+      `<option value="${s.id}" ${s.id === spell.spellId ? 'selected' : ''}>${escapeHtml(s.name)} (${escapeHtml(s.mnemonic)})</option>`
+    ).join('');
+
+    const conditionOptions = Object.entries(conditionLabels).map(([val, label]) =>
+      `<option value="${val}" ${spell.conditionType === val ? 'selected' : ''}>${label}</option>`
+    ).join('');
+
+    const row = document.createElement('div');
+    row.className = 'spell-row';
+    row.innerHTML = `
+      <div class="spell-row-header">
+        <span class="spell-title">${escapeHtml(spellName)}</span>
+        <button type="button" class="btn-remove" data-index="${index}">Remove</button>
+      </div>
+      ${spellInfo ? `<div class="spell-info">${escapeHtml(spellInfo.spellType)} &middot; ${spellInfo.manaCost} mana &middot; ${escapeHtml(spellInfo.mnemonic)}</div>` : ''}
+      <div class="spell-fields">
+        <div class="form-group">
+          <label>Spell</label>
+          <select data-field="spellId" data-index="${index}">${spellOptions}</select>
+        </div>
+        <div class="form-group">
+          <label>Priority (0-100)</label>
+          <input type="number" data-field="priority" data-index="${index}" min="0" max="100" value="${spell.priority}" />
+        </div>
+        <div class="form-group">
+          <label>Cast Chance %</label>
+          <input type="number" data-field="castChance" data-index="${index}" min="1" max="100" value="${spell.castChance}" />
+        </div>
+        <div class="form-group">
+          <label>Condition</label>
+          <select data-field="conditionType" data-index="${index}">${conditionOptions}</select>
+        </div>
+        <div class="form-group">
+          <label>Condition Value</label>
+          <input type="number" data-field="conditionValue" data-index="${index}" min="0" value="${spell.conditionValue}" />
+        </div>
+        <div class="form-group">
+          <label>Cooldown (rounds)</label>
+          <input type="number" data-field="cooldownRounds" data-index="${index}" min="0" value="${spell.cooldownRounds}" />
+        </div>
+      </div>
+    `;
+    container.appendChild(row);
+  });
+
+  // Wire up change listeners on spell inputs
+  container.querySelectorAll('input, select').forEach(el => {
+    el.addEventListener('change', handleSpellFieldChange);
+    el.addEventListener('input', handleSpellFieldChange);
+  });
+
+  // Wire up remove buttons
+  container.querySelectorAll('.btn-remove').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      const index = parseInt((e.target as HTMLElement).dataset.index || '0');
+      editingSpells.splice(index, 1);
+      renderSpells();
+      updatePreview();
+    });
+  });
+}
+
+function handleSpellFieldChange(e: Event): void {
+  const el = e.target as HTMLInputElement | HTMLSelectElement;
+  const index = parseInt(el.dataset.index || '0');
+  const field = el.dataset.field as string;
+  if (index < 0 || index >= editingSpells.length || !field) return;
+
+  const spell = editingSpells[index] as unknown as Record<string, unknown>;
+  const numericFields = ['priority', 'castChance', 'conditionValue', 'cooldownRounds'];
+
+  if (field === 'spellId') {
+    const parsed = parseInt(el.value);
+    if (!parsed || parsed < 1) return;
+    spell.spellId = parsed;
+    renderSpells();
+  } else if (numericFields.includes(field)) {
+    spell[field] = parseNumberOrDefault(el.value, 0);
+  } else {
+    spell[field] = el.value;
+  }
+
+  updatePreview();
+}
+
+function addSpell(): void {
+  if (availableSpells.length === 0) {
+    showToast('No spells available. Check that spells exist in the database.', 'error');
+    return;
+  }
+  editingSpells.push({
+    spellId: availableSpells[0].id,
+    priority: 50,
+    castChance: 100,
+    conditionType: 'any',
+    conditionValue: 0,
+    cooldownRounds: 0,
+  });
+  renderSpells();
+  updatePreview();
+}
+
+// ============================================================================
 // Form Data Gathering
 // ============================================================================
 
@@ -597,6 +762,7 @@ function gatherFormData(): Record<string, unknown> {
 
     maxHealth: getNum('npc-max-health', 100),
     maxMana: getNum('npc-max-mana', 0),
+    spellPower: getNum('npc-spell-power', 0),
     baseAccuracy: getNum('npc-base-accuracy', 50),
     baseDefense: getNum('npc-base-defense', 50),
     baseCritChance: getNum('npc-base-crit-chance', 5),
@@ -632,6 +798,14 @@ function gatherFormData(): Record<string, unknown> {
       : null,
 
     attacks: editingAttacks,
+    spells: editingSpells.map(s => ({
+      spellId: s.spellId,
+      priority: s.priority,
+      castChance: s.castChance,
+      conditionType: s.conditionType,
+      conditionValue: s.conditionValue,
+      cooldownRounds: s.cooldownRounds,
+    })),
   };
 }
 
@@ -930,6 +1104,16 @@ function updatePreview(): void {
       ${attackLines.length > 0 ? attackLines.join('') : '<div class="preview-stat"><span class="label">No attacks defined</span></div>'}
       <div class="preview-stat"><span class="label">Total DPS:</span> <span class="balance-value">${totalDps.toFixed(1)}</span></div>
     </div>
+    ${editingSpells.length > 0 ? `
+    <div class="preview-section">
+      <div class="preview-section-title">Spells (${editingSpells.length})</div>
+      ${editingSpells.map(s => `
+        <div class="preview-stat">
+          <span class="label">${escapeHtml(getSpellName(s.spellId))}:</span>
+          <span class="value">P${s.priority} ${s.castChance}% ${s.conditionType !== 'any' ? escapeHtml(s.conditionType) + ' ' + s.conditionValue : ''}</span>
+        </div>
+      `).join('')}
+    </div>` : ''}
     <div class="preview-section">
       <div class="preview-section-title">Rewards</div>
       <div class="preview-stat"><span class="label">XP:</span> <span class="value">${xp}</span></div>
@@ -1230,7 +1414,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const hasAccess = await checkAuth();
   if (!hasAccess) return;
 
-  await Promise.all([fetchTemplates(), fetchDropTables(), fetchFactions(), fetchItemTemplates()]);
+  await Promise.all([fetchTemplates(), fetchDropTables(), fetchFactions(), fetchItemTemplates(), fetchAvailableSpells()]);
   setupTabs();
 
   const addListener = (id: string, event: string, handler: EventListener) => {
@@ -1253,6 +1437,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Attacks
   addListener('add-attack-btn', 'click', addAttack);
+
+  // Spells
+  addListener('add-spell-btn', 'click', addSpell);
 
   // Import/Export
   addListener('import-btn', 'click', showImportModal);
