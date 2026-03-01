@@ -1016,8 +1016,14 @@ async function processNpcDebuffSpell(
 
   for (const targetId of targetIds) {
     const target = resolveCombatTarget(targetId);
-    if (!target || target.vitals.hp <= 0) continue;
-    if (getEntityRoomId(target) !== npcRoomId) continue;
+    if (!target || target.vitals.hp <= 0) {
+      npc.combatState.targets.delete(targetId);
+      continue;
+    }
+    if (getEntityRoomId(target) !== npcRoomId) {
+      npc.combatState.targets.delete(targetId);
+      continue;
+    }
 
     // Apply effect: use player-aware path for DB persistence, entity path for NPCs
     let applied: { success: boolean; message: string };
