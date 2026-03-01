@@ -42,6 +42,14 @@ function validateSpellScalingFields(spell: Record<string, unknown>): string | nu
       !VALID_SCALING_STATS.includes(spell.saveStat as string)) {
     return `saveStat must be one of: ${VALID_SCALING_STATS.join(', ')}`;
   }
+  if (spell.damageScalingFactor !== undefined && spell.damageScalingFactor !== null &&
+      (typeof spell.damageScalingFactor !== 'number' || spell.damageScalingFactor < 0)) {
+    return 'damageScalingFactor must be a number >= 0';
+  }
+  if (spell.healingScalingFactor !== undefined && spell.healingScalingFactor !== null &&
+      (typeof spell.healingScalingFactor !== 'number' || spell.healingScalingFactor < 0)) {
+    return 'healingScalingFactor must be a number >= 0';
+  }
   if (spell.saveDifficulty !== undefined && spell.saveDifficulty !== null &&
       (typeof spell.saveDifficulty !== 'number' || spell.saveDifficulty < 0)) {
     return 'saveDifficulty must be a number >= 0';
