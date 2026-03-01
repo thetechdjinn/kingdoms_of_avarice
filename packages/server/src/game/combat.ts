@@ -918,16 +918,41 @@ async function processCombatRound(): Promise<void> {
     for (const npc of npcAttackers) {
       try {
         const action = processNpcBehavior(npc, connectedPlayersRef);
-        if (action === 'attack') {
-          try {
-            await processNpcAttackerCombat(npc, combatConfig);
-          } catch (error) {
-            console.error(`[Combat] Error processing NPC combat for ${npc.entityName}:`, error);
-          }
+        switch (action.type) {
+          case 'attack':
+            try {
+              await processNpcAttackerCombat(npc, combatConfig);
+            } catch (error) {
+              console.error(`[Combat] Error processing NPC combat for ${npc.entityName}:`, error);
+            }
+            break;
+          case 'spell':
+            // Phase C: spell execution. For now, all spells fall back to melee.
+            try {
+              await processNpcAttackerCombat(npc, combatConfig);
+            } catch (error) {
+              console.error(`[Combat] Error processing NPC combat for ${npc.entityName}:`, error);
+            }
+            break;
+          case 'skip':
+            break;
         }
       } catch (error) {
         console.error(`[Combat] Error processing NPC behavior for ${npc.entityName}:`, error);
       }
+    }
+
+    // Decrement spell cooldowns and increment round counters for combat NPCs
+    for (const npc of npcAttackers) {
+      if (npc.vitals.hp <= 0 || npc.behaviorState !== 'combat') continue;
+      for (const [spellId, remaining] of npc.spellCooldowns) {
+        if (remaining <= 1) {
+          npc.spellCooldowns.delete(spellId);
+        } else {
+          npc.spellCooldowns.set(spellId, remaining - 1);
+        }
+      }
+      npc.combatRoundCount++;
     }
 
     // Process behavior for fleeing/returning NPCs that have no targets

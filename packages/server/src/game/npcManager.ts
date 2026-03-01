@@ -58,6 +58,9 @@ export interface NpcCombatInstance extends CombatEntity {
   combatRoomId: number | null;   // Room where combat was when flee triggered
   hasCalledForHelp: boolean;     // Prevents repeated calls per engagement
   nextRoamAt: number;            // Date.now() timestamp for next roam check
+  // Phase B: Spell AI runtime fields
+  spellCooldowns: Map<number, number>;  // spellId → rounds remaining
+  combatRoundCount: number;             // rounds in current combat engagement
 }
 
 interface RespawnEntry {
@@ -76,6 +79,7 @@ let respawnInterval: NodeJS.Timeout | null = null;
 let persistInterval: NodeJS.Timeout | null = null;
 let roamInterval: NodeJS.Timeout | null = null;
 let restockInterval: NodeJS.Timeout | null = null;
+let regenInterval: NodeJS.Timeout | null = null;
 
 const OPPOSITE_DIRECTIONS: Record<string, string> = {
   north: 'south',
@@ -94,6 +98,11 @@ const RESPAWN_CHECK_MS = 5000;  // Check respawn queue every 5 seconds
 const PERSIST_INTERVAL_MS = 60000;  // Save instances to DB every 60 seconds
 const ROAM_CHECK_MS = 5000;  // Check roaming NPCs every 5 seconds
 const RESTOCK_INTERVAL_MS = 3600000;  // Restock merchant inventories every hour
+const REGEN_TICK_MS = 5000;  // NPC regen tick every 5 seconds (matches player regen)
+
+// NPC regen rates (same as player base rates)
+const NPC_HEALTH_REGEN_PERCENT = Number(process.env.HEALTH_REGEN_BASE_PERCENT) || 1;
+const NPC_MANA_REGEN_PERCENT = Number(process.env.MANA_REGEN_BASE_PERCENT) || 2;
 
 // Debug mode — when enabled, aggro messages like "X attacks you!" are shown
 let npcDebugMode = false;
@@ -163,6 +172,7 @@ export function resetNpcBehaviorState(npc: NpcCombatInstance): void {
   npc.combatRoomId = null;
   npc.hasCalledForHelp = false;
   npc.regenState.inCombat = false;
+  npc.combatRoundCount = 0;
 }
 
 /**
@@ -237,6 +247,8 @@ function createNpcCombatEntity(
     combatRoomId: null,
     hasCalledForHelp: false,
     nextRoamAt: Date.now() + (template.roamInterval * 1000),
+    spellCooldowns: new Map(),
+    combatRoundCount: 0,
   };
 }
 
@@ -312,6 +324,9 @@ export async function initializeNpcManager(): Promise<void> {
 
   // Start periodic persistence
   persistInterval = setInterval(saveAllInstances, PERSIST_INTERVAL_MS);
+
+  // Start NPC regen timer
+  regenInterval = setInterval(processNpcRegen, REGEN_TICK_MS);
 
   // Start merchant restock timer
   restockInterval = setInterval(async () => {
@@ -614,6 +629,37 @@ function processRoaming(): void {
     // Check for aggro in new room
     if (npc.template.hostile) {
       checkNpcAggroOnArrival(npc);
+    }
+  }
+}
+
+/**
+ * Process regeneration for all living NPCs not in combat.
+ * Ticks HP and mana at the same base rate as players.
+ * Called on a timer every REGEN_TICK_MS.
+ */
+function processNpcRegen(): void {
+  for (const npc of npcInstances.values()) {
+    // Skip dead NPCs
+    if (npc.vitals.hp <= 0) continue;
+
+    // Skip NPCs in combat
+    if (npc.regenState.inCombat) continue;
+
+    // Skip poisoned NPCs (same rule as players)
+    if (npc.regenState.isPoisoned) continue;
+
+    // Health regen
+    if (npc.vitals.hp < npc.vitals.maxHp) {
+      const hpRegen = Math.max(1, Math.ceil(npc.vitals.maxHp * NPC_HEALTH_REGEN_PERCENT / 100));
+      npc.vitals.hp = Math.min(npc.vitals.hp + hpRegen, npc.vitals.maxHp);
+    }
+
+    // Mana regen
+    if (npc.template.maxMana > 0 && npc.currentMana < npc.template.maxMana) {
+      const manaRegen = Math.max(1, Math.ceil(npc.template.maxMana * NPC_MANA_REGEN_PERCENT / 100));
+      npc.currentMana = Math.min(npc.currentMana + manaRegen, npc.template.maxMana);
+      npc.vitals.resource = npc.currentMana;
     }
   }
 }
@@ -936,6 +982,10 @@ export async function shutdownNpcManager(): Promise<void> {
   if (restockInterval) {
     clearInterval(restockInterval);
     restockInterval = null;
+  }
+  if (regenInterval) {
+    clearInterval(regenInterval);
+    regenInterval = null;
   }
   await saveAllInstances();
   console.log('[NPC Manager] Shut down, instances persisted');
