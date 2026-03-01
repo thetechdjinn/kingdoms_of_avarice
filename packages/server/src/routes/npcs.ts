@@ -56,8 +56,8 @@ function validateNpcSpell(sp: Record<string, unknown>, index: number): string | 
   if (sp.conditionType !== undefined && (typeof sp.conditionType !== 'string' || !(sp.conditionType in NPC_SPELL_CONDITIONS))) {
     return `Spell ${index + 1}: conditionType must be one of: ${Object.keys(NPC_SPELL_CONDITIONS).join(', ')}`;
   }
-  if (sp.conditionValue !== undefined && (typeof sp.conditionValue !== 'number')) {
-    return `Spell ${index + 1}: conditionValue must be a number`;
+  if (sp.conditionValue !== undefined && (typeof sp.conditionValue !== 'number' || !Number.isFinite(sp.conditionValue) || sp.conditionValue < 0)) {
+    return `Spell ${index + 1}: conditionValue must be a non-negative number`;
   }
   return null;
 }
