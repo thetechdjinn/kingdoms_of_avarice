@@ -26,6 +26,17 @@ import { sendCombatMessage, broadcastCombatToRoom, resolveCombatTarget } from '.
 import { clearCombatState } from './combatCommands.js';
 import { colors } from '../utils/colors.js';
 import { withNpcNameCapitalized } from '../utils/textFormat.js';
+import { selectNpcSpell } from './npcSpellAI.js';
+import type { NpcSpellSelection } from './npcSpellAI.js';
+
+// ============================================================================
+// BEHAVIOR ACTION TYPE
+// ============================================================================
+
+export type NpcBehaviorAction =
+  | { type: 'attack' }
+  | { type: 'skip' }
+  | { type: 'spell'; spell: NpcSpellSelection };
 
 // ============================================================================
 // TARGET SELECTION
@@ -386,13 +397,12 @@ function processReturnMovement(npc: NpcCombatInstance): boolean {
 }
 
 /**
- * Finalize return: reset state and restore full HP/mana.
+ * Finalize return: reset behavior state and clear spell cooldowns.
+ * HP/mana recover gradually via the NPC regen tick (same as players).
  */
 function finalizeReturn(npc: NpcCombatInstance): void {
   resetNpcBehaviorState(npc);
-  npc.vitals.hp = npc.vitals.maxHp;
-  npc.currentMana = npc.template.maxMana;
-  npc.vitals.resource = npc.template.maxMana;
+  npc.spellCooldowns.clear();
 }
 
 // ============================================================================
@@ -402,20 +412,22 @@ function finalizeReturn(npc: NpcCombatInstance): void {
 /**
  * Process NPC behavior for one combat round tick.
  *
- * Returns 'attack' if the NPC should execute its normal attack this round,
- * or 'skip' if it took another action (fled, returned, etc.) instead.
+ * Returns an action describing what the NPC should do this round:
+ * - 'attack': execute normal melee attack
+ * - 'spell':  cast the selected spell (Phase C handles execution)
+ * - 'skip':   took another action (fled, returned, etc.)
  */
 export function processNpcBehavior(
   npc: NpcCombatInstance,
   connectedPlayers: Map<number, AuthenticatedSocket>
-): 'attack' | 'skip' {
+): NpcBehaviorAction {
   // Skip if NPC was killed earlier this round (stale reference in attackers list)
-  if (npc.vitals.hp <= 0) return 'skip';
+  if (npc.vitals.hp <= 0) return { type: 'skip' };
 
   switch (npc.behaviorState) {
     case 'idle':
       // Safety: idle NPCs shouldn't be in the behavior loop
-      return 'skip';
+      return { type: 'skip' };
 
     case 'combat':
       return processCombatBehavior(npc, connectedPlayers);
@@ -424,25 +436,26 @@ export function processNpcBehavior(
       // Safety fallback: flee is normally fully resolved in initiateFlee().
       // If still fleeing here, take one more step.
       processFleeMovement(npc, connectedPlayers);
-      return 'skip';
+      return { type: 'skip' };
 
     case 'returning':
       processReturnMovement(npc);
-      return 'skip';
+      return { type: 'skip' };
 
     default:
-      return 'skip';
+      return { type: 'skip' };
   }
 }
 
 /**
  * Process behavior for an NPC in combat state.
- * Handles stale target cleanup, re-targeting, flee checks, and call-for-help.
+ * Handles stale target cleanup, re-targeting, flee checks, call-for-help,
+ * and spell selection.
  */
 function processCombatBehavior(
   npc: NpcCombatInstance,
   connectedPlayers: Map<number, AuthenticatedSocket>
-): 'attack' | 'skip' {
+): NpcBehaviorAction {
   // Clean stale targets (dead, left room, disconnected)
   const droppedPlayerIds: number[] = [];
   for (const targetId of new Set(npc.combatState.targets)) {
@@ -506,7 +519,7 @@ function processCombatBehavior(
     } else {
       // No targets at all — exit combat
       resetNpcBehaviorState(npc);
-      return 'skip';
+      return { type: 'skip' };
     }
   }
 
@@ -515,7 +528,7 @@ function processCombatBehavior(
     const hpPercent = (npc.vitals.hp / npc.vitals.maxHp) * 100;
     if (hpPercent <= npc.template.fleeHpPercent) {
       initiateFlee(npc, connectedPlayers);
-      return 'skip';
+      return { type: 'skip' };
     }
   }
 
@@ -530,5 +543,19 @@ function processCombatBehavior(
     }
   }
 
-  return 'attack';
+  // Check spell selection (only if NPC has spells configured)
+  if (npc.template.spells.length > 0) {
+    // Resolve primary target (first in targets set)
+    const primaryTargetId = npc.combatState.targets.values().next().value;
+    const primaryTarget = primaryTargetId !== undefined
+      ? resolveCombatTarget(primaryTargetId) ?? null
+      : null;
+
+    const spellSelection = selectNpcSpell(npc, primaryTarget);
+    if (spellSelection) {
+      return { type: 'spell', spell: spellSelection };
+    }
+  }
+
+  return { type: 'attack' };
 }

@@ -918,7 +918,9 @@ async function processCombatRound(): Promise<void> {
     for (const npc of npcAttackers) {
       try {
         const action = processNpcBehavior(npc, connectedPlayersRef);
-        if (action === 'attack') {
+        if (action.type === 'attack' || action.type === 'spell') {
+          // Phase C will split these paths: 'spell' will execute the selected
+          // spell and deduct spell mana. Until then, both do normal melee.
           try {
             await processNpcAttackerCombat(npc, combatConfig);
           } catch (error) {
@@ -928,6 +930,19 @@ async function processCombatRound(): Promise<void> {
       } catch (error) {
         console.error(`[Combat] Error processing NPC behavior for ${npc.entityName}:`, error);
       }
+    }
+
+    // Decrement spell cooldowns and increment round counters for combat NPCs
+    for (const npc of npcAttackers) {
+      if (npc.vitals.hp <= 0 || npc.behaviorState !== 'combat') continue;
+      for (const [spellId, remaining] of npc.spellCooldowns) {
+        if (remaining <= 1) {
+          npc.spellCooldowns.delete(spellId);
+        } else {
+          npc.spellCooldowns.set(spellId, remaining - 1);
+        }
+      }
+      npc.combatRoundCount++;
     }
 
     // Process behavior for fleeing/returning NPCs that have no targets

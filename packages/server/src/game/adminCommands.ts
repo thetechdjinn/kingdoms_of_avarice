@@ -1445,6 +1445,18 @@ function handleMobBehavior(): CommandResponse {
     }
     detail += ` | Aug:${npc.augmentation ?? 'none'}`;
 
+    if (npc.template.spells.length > 0) {
+      detail += ` | Spells:${npc.template.spells.length}`;
+      detail += ` | Mana:${npc.currentMana}/${npc.template.maxMana}`;
+      if (npc.spellCooldowns.size > 0) {
+        const cds = [...npc.spellCooldowns.entries()].map(([id, r]) => `${id}:${r}r`).join(',');
+        detail += ` | CD:[${cds}]`;
+      }
+      if (npc.behaviorState === 'combat') {
+        detail += ` | Round:${npc.combatRoundCount}`;
+      }
+    }
+
     lines.push(detail);
   }
 
