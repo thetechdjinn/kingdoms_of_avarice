@@ -18,6 +18,18 @@ interface NpcAttack {
   missVerb3p: string;
 }
 
+interface NpcSpell {
+  id?: number;
+  npcId?: number;
+  spellId: number;
+  priority: number;
+  castChance: number;
+  conditionType: string;
+  conditionValue: number;
+  cooldownRounds: number;
+  spell: Record<string, unknown>;
+}
+
 interface NpcTemplate {
   id: number;
   name: string;
@@ -59,7 +71,9 @@ interface NpcTemplate {
   merchantEnabled: boolean;
   primaryFactionId: number | null;
   properName: boolean;
+  spellPower: number;
   attacks: NpcAttack[];
+  spells: NpcSpell[];
 }
 
 interface Faction {

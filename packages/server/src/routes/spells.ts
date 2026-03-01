@@ -1,8 +1,10 @@
 import { Express, Request, Response } from 'express';
 import * as spellRepo from '../db/repositories/spellRepository.js';
 import { requireDeveloper } from '../middleware/auth.js';
-import { SpellType, SpellTargetType } from '@koa/shared';
+import { SpellType, SpellTargetType, SpellScalingStat } from '@koa/shared';
 import { initializeSpellMnemonics } from '../game/spellCommands.js';
+
+const VALID_SCALING_STATS = Object.values(SpellScalingStat) as string[];
 
 // Validate spell object structure and field values
 function validateSpellInput(spell: Record<string, unknown>): string | null {
@@ -20,6 +22,37 @@ function validateSpellInput(spell: Record<string, unknown>): string | null {
   }
   if (!spell.targetType || !validTargetTypes.includes(spell.targetType as SpellTargetType)) {
     return `targetType is required and must be one of: ${validTargetTypes.join(', ')}`;
+  }
+  const scalingError = validateSpellScalingFields(spell);
+  if (scalingError) return scalingError;
+  return null;
+}
+
+/** Validate scaling and save fields on a spell. Returns error string or null. */
+function validateSpellScalingFields(spell: Record<string, unknown>): string | null {
+  if (spell.damageScalingStat !== undefined && spell.damageScalingStat !== null &&
+      !VALID_SCALING_STATS.includes(spell.damageScalingStat as string)) {
+    return `damageScalingStat must be one of: ${VALID_SCALING_STATS.join(', ')}`;
+  }
+  if (spell.healingScalingStat !== undefined && spell.healingScalingStat !== null &&
+      !VALID_SCALING_STATS.includes(spell.healingScalingStat as string)) {
+    return `healingScalingStat must be one of: ${VALID_SCALING_STATS.join(', ')}`;
+  }
+  if (spell.saveStat !== undefined && spell.saveStat !== null &&
+      !VALID_SCALING_STATS.includes(spell.saveStat as string)) {
+    return `saveStat must be one of: ${VALID_SCALING_STATS.join(', ')}`;
+  }
+  if (spell.damageScalingFactor !== undefined && spell.damageScalingFactor !== null &&
+      (typeof spell.damageScalingFactor !== 'number' || spell.damageScalingFactor < 0)) {
+    return 'damageScalingFactor must be a number >= 0';
+  }
+  if (spell.healingScalingFactor !== undefined && spell.healingScalingFactor !== null &&
+      (typeof spell.healingScalingFactor !== 'number' || spell.healingScalingFactor < 0)) {
+    return 'healingScalingFactor must be a number >= 0';
+  }
+  if (spell.saveDifficulty !== undefined && spell.saveDifficulty !== null &&
+      (typeof spell.saveDifficulty !== 'number' || spell.saveDifficulty < 0)) {
+    return 'saveDifficulty must be a number >= 0';
   }
   return null;
 }
@@ -68,7 +101,9 @@ export function setupSpellRoutes(app: Express): void {
       const {
         name, mnemonic, description, spellType, targetType,
         manaCost, damageDice, healingDice, statusEffect, effectDuration,
-        levelRequired, classRestrictions, isAttackSpell
+        levelRequired, classRestrictions, isAttackSpell,
+        damageScalingStat, damageScalingFactor, healingScalingStat, healingScalingFactor,
+        telegraphMessage, saveStat, saveDifficulty
       } = req.body;
 
       if (!name || !mnemonic || !spellType || !targetType) {
@@ -87,6 +122,13 @@ export function setupSpellRoutes(app: Express): void {
       const validTargetTypes = Object.values(SpellTargetType);
       if (!validTargetTypes.includes(targetType)) {
         res.status(400).json({ success: false, message: `Invalid targetType: must be one of ${validTargetTypes.join(', ')}` });
+        return;
+      }
+
+      // Validate scaling and save fields
+      const scalingError = validateSpellScalingFields(req.body);
+      if (scalingError) {
+        res.status(400).json({ success: false, message: scalingError });
         return;
       }
 
@@ -111,6 +153,13 @@ export function setupSpellRoutes(app: Express): void {
         levelRequired: levelRequired ?? 1,
         classRestrictions,
         isAttackSpell: isAttackSpell ?? false,
+        damageScalingStat,
+        damageScalingFactor,
+        healingScalingStat,
+        healingScalingFactor,
+        telegraphMessage,
+        saveStat,
+        saveDifficulty,
       });
 
       // Refresh mnemonic cache
@@ -164,6 +213,13 @@ export function setupSpellRoutes(app: Express): void {
           res.status(400).json({ success: false, message: `Invalid targetType: must be one of ${validTargetTypes.join(', ')}` });
           return;
         }
+      }
+
+      // Validate scaling and save fields if provided
+      const scalingError = validateSpellScalingFields(req.body);
+      if (scalingError) {
+        res.status(400).json({ success: false, message: scalingError });
+        return;
       }
 
       const spell = await spellRepo.updateSpell(id, req.body);

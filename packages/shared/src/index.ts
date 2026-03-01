@@ -248,6 +248,7 @@ export * from "./combat.js";
 
 // Re-export spell system
 export * from "./spells.js";
+import type { Spell } from "./spells.js";
 
 // Re-export status effects system
 export * from "./statusEffects.js";
@@ -275,6 +276,19 @@ export interface NpcAttack {
   hitVerb3p: string;
   missVerb: string;
   missVerb3p: string;
+}
+
+// NPC spell assignment (links NPC to a spell with AI casting parameters)
+export interface NpcSpell {
+  id: number;
+  npcId: number;
+  spellId: number;
+  priority: number;
+  castChance: number;
+  conditionType: string;
+  conditionValue: number;
+  cooldownRounds: number;
+  spell: Spell;
 }
 
 // NPC template (blueprint for NPCs)
@@ -319,7 +333,9 @@ export interface NpcTemplate {
   primaryFactionId: number | null;
   merchantEnabled: boolean;
   properName: boolean;
+  spellPower: number;
   attacks: NpcAttack[];
+  spells: NpcSpell[];
 }
 
 // Currency denomination types

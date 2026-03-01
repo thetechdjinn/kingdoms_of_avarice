@@ -1,6 +1,9 @@
 import { Express, Request, Response } from 'express';
 import * as npcRepo from '../db/repositories/npcRepository.js';
-import type { CreateNpcAttackInput } from '../db/repositories/npcRepository.js';
+import type { CreateNpcAttackInput, CreateNpcTemplateInput } from '../db/repositories/npcRepository.js';
+import * as npcSpellRepo from '../db/repositories/npcSpellRepository.js';
+import type { CreateNpcSpellInput } from '../db/repositories/npcSpellRepository.js';
+import { withTransaction } from '../db/index.js';
 import { reloadNpcTemplates, getTemplate, spawnNpcPublic, despawnByTemplate } from '../game/npcManager.js';
 import { requireDeveloper } from '../middleware/auth.js';
 
@@ -35,6 +38,26 @@ function validateAttack(atk: Record<string, unknown>, index: number): string | n
   return null;
 }
 
+/** Validate NPC spell assignment fields. Returns error string or null. */
+function validateNpcSpell(sp: Record<string, unknown>, index: number): string | null {
+  if (sp.spellId === undefined || typeof sp.spellId !== 'number' || sp.spellId < 1 || !Number.isInteger(sp.spellId)) {
+    return `Spell ${index + 1}: spellId must be a positive integer`;
+  }
+  if (sp.priority !== undefined && (typeof sp.priority !== 'number' || sp.priority < 0 || sp.priority > 100)) {
+    return `Spell ${index + 1}: priority must be 0-100`;
+  }
+  if (sp.castChance !== undefined && (typeof sp.castChance !== 'number' || sp.castChance < 1 || sp.castChance > 100)) {
+    return `Spell ${index + 1}: castChance must be 1-100`;
+  }
+  if (sp.cooldownRounds !== undefined && (typeof sp.cooldownRounds !== 'number' || sp.cooldownRounds < 0)) {
+    return `Spell ${index + 1}: cooldownRounds must be >= 0`;
+  }
+  if (sp.conditionValue !== undefined && (typeof sp.conditionValue !== 'number')) {
+    return `Spell ${index + 1}: conditionValue must be a number`;
+  }
+  return null;
+}
+
 /** Validate template fields. Returns error string or null. */
 function validateTemplate(item: Record<string, unknown>, label: string): string | null {
   if (item.level !== undefined && (typeof item.level !== 'number' || item.level < 1)) {
@@ -54,6 +77,12 @@ function validateTemplate(item: Record<string, unknown>, label: string): string 
   if (Array.isArray(item.attacks)) {
     for (let i = 0; i < item.attacks.length; i++) {
       const error = validateAttack(item.attacks[i], i);
+      if (error) return `${label}: ${error}`;
+    }
+  }
+  if (Array.isArray(item.spells)) {
+    for (let i = 0; i < item.spells.length; i++) {
+      const error = validateNpcSpell(item.spells[i], i);
       if (error) return `${label}: ${error}`;
     }
   }
@@ -109,26 +138,33 @@ export function setupNpcRoutes(app: Express): void {
   // Create template
   app.post('/api/npcs', requireDeveloper, async (req: Request, res: Response) => {
     try {
-      const { name, attacks, ...rest } = req.body;
+      const { name, attacks, spells, ...rest } = req.body;
       if (!name || typeof name !== 'string') {
         res.status(400).json({ success: false, message: 'name is required' });
         return;
       }
 
-      const validationError = validateTemplate({ ...rest, attacks }, name);
+      const validationError = validateTemplate({ ...rest, attacks, spells }, name);
       if (validationError) {
         res.status(400).json({ success: false, message: validationError });
         return;
       }
 
-      const template = await npcRepo.createTemplate({ name, ...rest });
+      const created = await withTransaction(async (client) => {
+        const template = await npcRepo.createTemplate({ name, ...rest }, client);
 
-      if (Array.isArray(attacks) && attacks.length > 0) {
-        await npcRepo.replaceAttacks(template.id, attacks as CreateNpcAttackInput[]);
-      }
+        if (Array.isArray(attacks) && attacks.length > 0) {
+          await npcRepo.replaceAttacks(template.id, attacks as CreateNpcAttackInput[], client);
+        }
+
+        if (Array.isArray(spells) && spells.length > 0) {
+          await npcSpellRepo.replaceSpells(template.id, spells as CreateNpcSpellInput[], client);
+        }
+
+        return npcRepo.getTemplateById(template.id, client);
+      });
 
       await reloadNpcTemplates();
-      const created = await npcRepo.getTemplateById(template.id);
       res.json({ success: true, template: created });
     } catch (error) {
       console.error('Failed to create NPC template:', error);
@@ -145,7 +181,7 @@ export function setupNpcRoutes(app: Express): void {
         return;
       }
 
-      const { attacks, ...rest } = req.body;
+      const { attacks, spells, ...rest } = req.body;
 
       // Validate gold range against existing values when only one field is provided
       const existing = await npcRepo.getTemplateById(id);
@@ -157,20 +193,27 @@ export function setupNpcRoutes(app: Express): void {
       const effectiveGoldMin = (rest.goldMin !== undefined && typeof rest.goldMin === 'number') ? rest.goldMin : existing.goldMin;
       const effectiveGoldMax = (rest.goldMax !== undefined && typeof rest.goldMax === 'number') ? rest.goldMax : existing.goldMax;
 
-      const validationError = validateTemplate({ ...rest, goldMin: effectiveGoldMin, goldMax: effectiveGoldMax, attacks }, existing.name);
+      const validationError = validateTemplate({ ...rest, goldMin: effectiveGoldMin, goldMax: effectiveGoldMax, attacks, spells }, existing.name);
       if (validationError) {
         res.status(400).json({ success: false, message: validationError });
         return;
       }
 
-      const template = await npcRepo.updateTemplate(id, rest);
+      const updated = await withTransaction(async (client) => {
+        await npcRepo.updateTemplate(id, rest, client);
 
-      if (Array.isArray(attacks)) {
-        await npcRepo.replaceAttacks(id, attacks as CreateNpcAttackInput[]);
-      }
+        if (Array.isArray(attacks)) {
+          await npcRepo.replaceAttacks(id, attacks as CreateNpcAttackInput[], client);
+        }
+
+        if (Array.isArray(spells)) {
+          await npcSpellRepo.replaceSpells(id, spells as CreateNpcSpellInput[], client);
+        }
+
+        return npcRepo.getTemplateById(id, client);
+      });
 
       await reloadNpcTemplates();
-      const updated = await npcRepo.getTemplateById(id);
       res.json({ success: true, template: updated });
     } catch (error) {
       console.error('Failed to update NPC template:', error);
@@ -253,6 +296,8 @@ export function setupNpcRoutes(app: Express): void {
       let updated = 0;
       const skipped: string[] = [];
 
+      // Pre-validate all items before starting the transaction
+      const validItems: Array<{ item: Record<string, unknown>; templateData: Record<string, unknown>; attacks: unknown[]; spells: unknown[] }> = [];
       const existingTemplates = await npcRepo.getAllTemplates();
       const existingByName = new Map(existingTemplates.map(t => [t.name.toLowerCase(), t]));
 
@@ -265,23 +310,35 @@ export function setupNpcRoutes(app: Express): void {
           continue;
         }
 
-        const { id: _id, attacks, ...templateData } = item;
-        const existing = existingByName.get(item.name.toLowerCase());
-
-        if (existing && merge) {
-          await npcRepo.updateTemplate(existing.id, templateData);
-          if (Array.isArray(attacks)) {
-            await npcRepo.replaceAttacks(existing.id, attacks);
-          }
-          updated++;
-        } else if (!existing) {
-          const newTemplate = await npcRepo.createTemplate(templateData);
-          if (Array.isArray(attacks) && attacks.length > 0) {
-            await npcRepo.replaceAttacks(newTemplate.id, attacks);
-          }
-          created++;
-        }
+        const { id: _id, attacks, spells, ...templateData } = item;
+        validItems.push({ item, templateData, attacks: attacks ?? [], spells: spells ?? [] });
       }
+
+      await withTransaction(async (client) => {
+        for (const { item, templateData, attacks, spells } of validItems) {
+          const existing = existingByName.get((item.name as string).toLowerCase());
+
+          if (existing && merge) {
+            await npcRepo.updateTemplate(existing.id, templateData, client);
+            if (Array.isArray(attacks) && attacks.length > 0) {
+              await npcRepo.replaceAttacks(existing.id, attacks as CreateNpcAttackInput[], client);
+            }
+            if (Array.isArray(spells) && spells.length > 0) {
+              await npcSpellRepo.replaceSpells(existing.id, spells as CreateNpcSpellInput[], client);
+            }
+            updated++;
+          } else if (!existing) {
+            const newTemplate = await npcRepo.createTemplate(templateData as unknown as CreateNpcTemplateInput, client);
+            if (Array.isArray(attacks) && attacks.length > 0) {
+              await npcRepo.replaceAttacks(newTemplate.id, attacks as CreateNpcAttackInput[], client);
+            }
+            if (Array.isArray(spells) && spells.length > 0) {
+              await npcSpellRepo.replaceSpells(newTemplate.id, spells as CreateNpcSpellInput[], client);
+            }
+            created++;
+          }
+        }
+      });
 
       await reloadNpcTemplates();
       res.json({ success: true, created, updated, skipped: skipped.length, skippedReasons: skipped });
