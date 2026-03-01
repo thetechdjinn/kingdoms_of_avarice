@@ -58,6 +58,10 @@ export interface Spell {
   damageScalingFactor: number | null;           // % of stat added to damage (e.g., 0.5 = 50%)
   healingScalingStat: SpellScalingStat | null;  // Which stat scales healing
   healingScalingFactor: number | null;          // % of stat added to healing
+  // NPC spell casting / saving throw fields
+  telegraphMessage: string | null;              // Optional preparation message shown before cast
+  saveStat: SpellScalingStat | null;            // Stat target rolls to resist (null = no save)
+  saveDifficulty: number;                       // Base difficulty for saving throw
 }
 
 /**

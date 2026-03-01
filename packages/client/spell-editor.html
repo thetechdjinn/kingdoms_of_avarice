@@ -110,7 +110,13 @@
 
               <div class="form-group">
                 <label for="spell-description">Description</label>
-                <textarea id="spell-description" rows="3" placeholder="A bolt of magical energy strikes the target..."></textarea>
+                <textarea id="spell-description" rows="2" placeholder="A bolt of magical energy strikes the target..."></textarea>
+              </div>
+
+              <div class="form-group">
+                <label for="spell-telegraph-message">Telegraph Message</label>
+                <input type="text" id="spell-telegraph-message" placeholder="{name} begins chanting an incantation..." />
+                <span class="hint-inline">Optional message shown before spell resolves. Use {name} for caster.</span>
               </div>
 
               <div class="form-row">
@@ -225,6 +231,27 @@
                     <label for="spell-effect-duration">Duration (seconds)</label>
                     <input type="number" id="spell-effect-duration" min="0" value="0" />
                     <span class="hint-inline">0 = instant/permanent</span>
+                  </div>
+                </div>
+
+                <div class="form-row">
+                  <div class="form-group">
+                    <label for="spell-save-stat">Saving Throw Stat</label>
+                    <select id="spell-save-stat">
+                      <option value="none">None (Always lands)</option>
+                      <option value="strength">Strength</option>
+                      <option value="agility">Agility</option>
+                      <option value="constitution">Constitution</option>
+                      <option value="intellect">Intellect</option>
+                      <option value="wisdom">Wisdom</option>
+                      <option value="charisma">Charisma</option>
+                    </select>
+                    <span class="hint-inline">Stat target rolls to resist</span>
+                  </div>
+                  <div class="form-group">
+                    <label for="spell-save-difficulty">Save Difficulty</label>
+                    <input type="number" id="spell-save-difficulty" min="0" value="0" />
+                    <span class="hint-inline">Base difficulty to beat</span>
                   </div>
                 </div>
               </div>

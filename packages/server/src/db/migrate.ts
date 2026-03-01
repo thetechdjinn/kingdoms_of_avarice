@@ -622,6 +622,37 @@ export async function runMigrations(): Promise<void> {
       await client.query(`CREATE INDEX IF NOT EXISTS idx_player_faction_rep_character ON player_faction_reputation(character_id)`);
       await client.query(`CREATE INDEX IF NOT EXISTS idx_player_faction_rep_faction ON player_faction_reputation(faction_id)`);
 
+      // NPC spell casting
+      await client.query(`ALTER TABLE npcs ADD COLUMN IF NOT EXISTS spell_power INTEGER DEFAULT 0`);
+
+      // Spell saving throw fields
+      await client.query(`ALTER TABLE spells ADD COLUMN IF NOT EXISTS telegraph_message TEXT`);
+      await client.query(`ALTER TABLE spells ADD COLUMN IF NOT EXISTS save_stat VARCHAR(20)`);
+      await client.query(`ALTER TABLE spells ADD COLUMN IF NOT EXISTS save_difficulty INTEGER DEFAULT 0`);
+      await client.query(`
+        ALTER TABLE spells DROP CONSTRAINT IF EXISTS spells_save_stat_check
+      `);
+      await client.query(`
+        ALTER TABLE spells ADD CONSTRAINT spells_save_stat_check
+        CHECK (save_stat IS NULL OR save_stat IN ('none', 'strength', 'agility', 'constitution', 'intellect', 'wisdom', 'charisma'))
+      `);
+
+      // NPC spell assignments (junction table linking NPCs to spells with AI parameters)
+      await client.query(`
+        CREATE TABLE IF NOT EXISTS npc_spells (
+          id SERIAL PRIMARY KEY,
+          npc_id INTEGER NOT NULL REFERENCES npcs(id) ON DELETE CASCADE,
+          spell_id INTEGER NOT NULL REFERENCES spells(id) ON DELETE CASCADE,
+          priority INTEGER NOT NULL DEFAULT 50 CHECK (priority >= 0 AND priority <= 100),
+          cast_chance INTEGER NOT NULL DEFAULT 100 CHECK (cast_chance >= 1 AND cast_chance <= 100),
+          condition_type VARCHAR(50) NOT NULL DEFAULT 'any',
+          condition_value INTEGER NOT NULL DEFAULT 0,
+          cooldown_rounds INTEGER NOT NULL DEFAULT 0 CHECK (cooldown_rounds >= 0),
+          UNIQUE(npc_id, spell_id)
+        )
+      `);
+      await client.query(`CREATE INDEX IF NOT EXISTS idx_npc_spells_npc ON npc_spells(npc_id)`);
+
       // Merchant Responses: keyword-triggered NPC responses for directed speech
       await client.query(`
         CREATE TABLE IF NOT EXISTS merchant_responses (

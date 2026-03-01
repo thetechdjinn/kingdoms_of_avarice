@@ -1,5 +1,6 @@
 import { query, withTransaction } from '../index.js';
-import { NpcTemplate, NpcAttack } from '@koa/shared';
+import { NpcTemplate, NpcAttack, NpcSpell } from '@koa/shared';
+import * as npcSpellRepo from './npcSpellRepository.js';
 import type pg from 'pg';
 
 // Database row types
@@ -44,6 +45,7 @@ interface DbNpcTemplate {
   primary_faction_id: number | null;
   merchant_enabled: boolean;
   proper_name: boolean;
+  spell_power: number;
 }
 
 interface DbNpcAttack {
@@ -106,8 +108,8 @@ function dbToAttack(row: DbNpcAttack): NpcAttack {
   };
 }
 
-// Convert DB row to shared NpcTemplate (attacks added separately)
-function dbToTemplate(row: DbNpcTemplate, attacks: NpcAttack[]): NpcTemplate {
+// Convert DB row to shared NpcTemplate (attacks and spells added separately)
+function dbToTemplate(row: DbNpcTemplate, attacks: NpcAttack[], spells: NpcSpell[] = []): NpcTemplate {
   return {
     id: row.id,
     name: row.name,
@@ -149,7 +151,9 @@ function dbToTemplate(row: DbNpcTemplate, attacks: NpcAttack[]): NpcTemplate {
     primaryFactionId: row.primary_faction_id,
     merchantEnabled: row.merchant_enabled,
     properName: row.proper_name,
+    spellPower: row.spell_power ?? 0,
     attacks,
+    spells,
   };
 }
 
@@ -171,26 +175,34 @@ export async function getAllTemplates(): Promise<NpcTemplate[]> {
     attacksByNpc.get(npcId)!.push(dbToAttack(row));
   }
 
+  // Load all NPC spells grouped by npc_id
+  const spellsByNpc = await npcSpellRepo.getAllNpcSpells();
+
   return templateResult.rows.map(row =>
-    dbToTemplate(row, attacksByNpc.get(row.id) || [])
+    dbToTemplate(row, attacksByNpc.get(row.id) || [], spellsByNpc.get(row.id) || [])
   );
 }
 
 /**
  * Load a single NPC template by ID.
+ * Optional client parameter for use within an existing transaction.
  */
-export async function getTemplateById(id: number): Promise<NpcTemplate | null> {
-  const templateResult = await query<DbNpcTemplate>('SELECT * FROM npcs WHERE id = $1', [id]);
+export async function getTemplateById(id: number, client?: pg.PoolClient): Promise<NpcTemplate | null> {
+  const templateResult = await query<DbNpcTemplate>('SELECT * FROM npcs WHERE id = $1', [id], client);
   if (templateResult.rows.length === 0) return null;
 
   const attackResult = await query<DbNpcAttack>(
     'SELECT * FROM npc_attacks WHERE npc_id = $1 ORDER BY id',
-    [id]
+    [id],
+    client
   );
+
+  const spells = await npcSpellRepo.getSpellsForNpc(id, client);
 
   return dbToTemplate(
     templateResult.rows[0],
-    attackResult.rows.map(dbToAttack)
+    attackResult.rows.map(dbToAttack),
+    spells
   );
 }
 
@@ -321,6 +333,7 @@ export interface CreateNpcTemplateInput {
   primaryFactionId?: number | null;
   merchantEnabled?: boolean;
   properName?: boolean;
+  spellPower?: number;
 }
 
 export interface CreateNpcAttackInput {
@@ -341,8 +354,9 @@ export interface CreateNpcAttackInput {
 
 /**
  * Create a new NPC template.
+ * Optional client parameter for use within an existing transaction.
  */
-export async function createTemplate(input: CreateNpcTemplateInput): Promise<NpcTemplate> {
+export async function createTemplate(input: CreateNpcTemplateInput, client?: pg.PoolClient): Promise<NpcTemplate> {
   const maxHealth = input.maxHealth ?? 100;
   const result = await query<{ id: number }>(
     `INSERT INTO npcs (
@@ -354,7 +368,7 @@ export async function createTemplate(input: CreateNpcTemplateInput): Promise<Npc
       drop_table_id, essence_reward, essence_class,
       leave_corpse, corpse_duration, augmentations,
       enter_room_message, exit_room_message, spawn_message,
-      primary_faction_id, merchant_enabled, proper_name
+      primary_faction_id, merchant_enabled, proper_name, spell_power
     ) VALUES (
       $1, $2, $3, $4, $4, $5, $6,
       $7, $8, $9, $10, $11,
@@ -364,7 +378,7 @@ export async function createTemplate(input: CreateNpcTemplateInput): Promise<Npc
       $27, $28, $29,
       $30, $31, $32,
       $33, $34, $35,
-      $36, $37, $38
+      $36, $37, $38, $39
     ) RETURNING id`,
     [
       input.name,
@@ -405,18 +419,21 @@ export async function createTemplate(input: CreateNpcTemplateInput): Promise<Npc
       input.primaryFactionId ?? null,
       input.merchantEnabled ?? false,
       input.properName ?? false,
-    ]
+      input.spellPower ?? 0,
+    ],
+    client
   );
 
-  const template = await getTemplateById(result.rows[0].id);
+  const template = await getTemplateById(result.rows[0].id, client);
   return template!;
 }
 
 /**
  * Update an NPC template. Only provided fields are updated.
+ * Optional client parameter for use within an existing transaction.
  */
-export async function updateTemplate(id: number, input: Partial<CreateNpcTemplateInput>): Promise<NpcTemplate | null> {
-  const existing = await getTemplateById(id);
+export async function updateTemplate(id: number, input: Partial<CreateNpcTemplateInput>, client?: pg.PoolClient): Promise<NpcTemplate | null> {
+  const existing = await getTemplateById(id, client);
   if (!existing) return null;
 
   // Map input fields to DB columns
@@ -463,6 +480,7 @@ export async function updateTemplate(id: number, input: Partial<CreateNpcTemplat
   if (input.primaryFactionId !== undefined) fieldMap.primaryFactionId = { column: 'primary_faction_id', value: input.primaryFactionId };
   if (input.merchantEnabled !== undefined) fieldMap.merchantEnabled = { column: 'merchant_enabled', value: input.merchantEnabled };
   if (input.properName !== undefined) fieldMap.properName = { column: 'proper_name', value: input.properName };
+  if (input.spellPower !== undefined) fieldMap.spellPower = { column: 'spell_power', value: input.spellPower };
 
   const entries = Object.values(fieldMap);
   if (entries.length === 0) return existing;
@@ -473,10 +491,11 @@ export async function updateTemplate(id: number, input: Partial<CreateNpcTemplat
 
   await query(
     `UPDATE npcs SET ${setClauses.join(', ')} WHERE id = $${values.length}`,
-    values
+    values,
+    client
   );
 
-  return getTemplateById(id);
+  return getTemplateById(id, client);
 }
 
 /**
@@ -490,9 +509,10 @@ export async function deleteTemplate(id: number): Promise<boolean> {
 /**
  * Replace all attacks for an NPC template.
  * Deletes existing attacks and inserts new ones within a transaction.
+ * When an external client is provided, uses it directly (caller manages the transaction).
  */
-export async function replaceAttacks(npcId: number, attacks: CreateNpcAttackInput[]): Promise<NpcAttack[]> {
-  return withTransaction(async (client: pg.PoolClient) => {
+export async function replaceAttacks(npcId: number, attacks: CreateNpcAttackInput[], externalClient?: pg.PoolClient): Promise<NpcAttack[]> {
+  const doWork = async (client: pg.PoolClient) => {
     await client.query('DELETE FROM npc_attacks WHERE npc_id = $1', [npcId]);
 
     const results: NpcAttack[] = [];
@@ -525,5 +545,10 @@ export async function replaceAttacks(npcId: number, attacks: CreateNpcAttackInpu
     }
 
     return results;
-  });
+  };
+
+  if (externalClient) {
+    return doWork(externalClient);
+  }
+  return withTransaction(doWork);
 }

@@ -27,6 +27,9 @@ interface DbSpell {
   damage_scaling_factor: string | null;  // DECIMAL comes as string
   healing_scaling_stat: string | null;
   healing_scaling_factor: string | null;  // DECIMAL comes as string
+  telegraph_message: string | null;
+  save_stat: string | null;
+  save_difficulty: number;
   created_at: Date;
   updated_at: Date;
 }
@@ -60,6 +63,9 @@ function dbToSpell(row: DbSpell): Spell {
     damageScalingFactor: row.damage_scaling_factor ? (isNaN(parseFloat(row.damage_scaling_factor)) ? null : parseFloat(row.damage_scaling_factor)) : null,
     healingScalingStat: row.healing_scaling_stat as SpellScalingStat | null,
     healingScalingFactor: row.healing_scaling_factor ? (isNaN(parseFloat(row.healing_scaling_factor)) ? null : parseFloat(row.healing_scaling_factor)) : null,
+    telegraphMessage: row.telegraph_message,
+    saveStat: row.save_stat as SpellScalingStat | null,
+    saveDifficulty: row.save_difficulty ?? 0,
   };
 }
 
@@ -301,6 +307,9 @@ export interface CreateSpellInput {
   damageScalingFactor?: number;
   healingScalingStat?: SpellScalingStat;
   healingScalingFactor?: number;
+  telegraphMessage?: string;
+  saveStat?: SpellScalingStat;
+  saveDifficulty?: number;
 }
 
 /**
@@ -312,8 +321,9 @@ export async function createSpell(input: CreateSpellInput): Promise<Spell> {
       name, mnemonic, description, spell_type, target_type,
       mana_cost, damage_dice, healing_dice, status_effect, effect_duration,
       level_required, class_restrictions, is_attack_spell,
-      damage_scaling_stat, damage_scaling_factor, healing_scaling_stat, healing_scaling_factor
-    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
+      damage_scaling_stat, damage_scaling_factor, healing_scaling_stat, healing_scaling_factor,
+      telegraph_message, save_stat, save_difficulty
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
     RETURNING *`,
     [
       input.name,
@@ -333,6 +343,9 @@ export async function createSpell(input: CreateSpellInput): Promise<Spell> {
       input.damageScalingFactor || null,
       input.healingScalingStat || null,
       input.healingScalingFactor || null,
+      input.telegraphMessage || null,
+      input.saveStat || null,
+      input.saveDifficulty ?? 0,
     ]
   );
   return dbToSpell(result.rows[0]);
@@ -363,6 +376,9 @@ export async function updateSpell(id: number, input: Partial<CreateSpellInput>):
     damageScalingFactor: input.damageScalingFactor !== undefined ? input.damageScalingFactor : existing.damageScalingFactor,
     healingScalingStat: input.healingScalingStat !== undefined ? input.healingScalingStat : existing.healingScalingStat,
     healingScalingFactor: input.healingScalingFactor !== undefined ? input.healingScalingFactor : existing.healingScalingFactor,
+    telegraphMessage: input.telegraphMessage !== undefined ? input.telegraphMessage : existing.telegraphMessage,
+    saveStat: input.saveStat !== undefined ? input.saveStat : existing.saveStat,
+    saveDifficulty: input.saveDifficulty !== undefined ? input.saveDifficulty : existing.saveDifficulty,
   };
 
   const result = await query<DbSpell>(
@@ -371,8 +387,9 @@ export async function updateSpell(id: number, input: Partial<CreateSpellInput>):
       mana_cost = $6, damage_dice = $7, healing_dice = $8, status_effect = $9, effect_duration = $10,
       level_required = $11, class_restrictions = $12, is_attack_spell = $13,
       damage_scaling_stat = $14, damage_scaling_factor = $15, healing_scaling_stat = $16, healing_scaling_factor = $17,
+      telegraph_message = $18, save_stat = $19, save_difficulty = $20,
       updated_at = NOW()
-    WHERE id = $18
+    WHERE id = $21
     RETURNING *`,
     [
       updated.name,
@@ -392,6 +409,9 @@ export async function updateSpell(id: number, input: Partial<CreateSpellInput>):
       updated.damageScalingFactor || null,
       updated.healingScalingStat || null,
       updated.healingScalingFactor || null,
+      updated.telegraphMessage || null,
+      updated.saveStat || null,
+      updated.saveDifficulty ?? 0,
       id,
     ]
   );

@@ -223,16 +223,24 @@ function selectSpell(id: number): void {
   if (manaCostInput) manaCostInput.value = String(spell.manaCost);
   if (isAttackCheckbox) isAttackCheckbox.checked = spell.isAttackSpell;
 
+  // Telegraph
+  const telegraphMessageInput = getElement<HTMLInputElement>('spell-telegraph-message');
+  if (telegraphMessageInput) telegraphMessageInput.value = spell.telegraphMessage || '';
+
   // Effects
   const damageDiceInput = getElement<HTMLInputElement>('spell-damage-dice');
   const healingDiceInput = getElement<HTMLInputElement>('spell-healing-dice');
   const statusEffectInput = getElement<HTMLInputElement>('spell-status-effect');
   const effectDurationInput = getElement<HTMLInputElement>('spell-effect-duration');
+  const saveStatSelect = getElement<HTMLSelectElement>('spell-save-stat');
+  const saveDifficultyInput = getElement<HTMLInputElement>('spell-save-difficulty');
 
   if (damageDiceInput) damageDiceInput.value = spell.damageDice || '';
   if (healingDiceInput) healingDiceInput.value = spell.healingDice || '';
   if (statusEffectInput) statusEffectInput.value = spell.statusEffect || '';
   if (effectDurationInput) effectDurationInput.value = String(spell.effectDuration || 0);
+  if (saveStatSelect) saveStatSelect.value = spell.saveStat || 'none';
+  if (saveDifficultyInput) saveDifficultyInput.value = String(spell.saveDifficulty || 0);
 
   // Scaling fields
   const damageScalingStatSelect = getElement<HTMLSelectElement>('spell-damage-scaling-stat');
@@ -352,6 +360,25 @@ function updatePreview(spell: Spell): void {
       <div class="preview-section">
         <div class="preview-section-title">Status Effect</div>
         <div>${escapeHtml(spell.statusEffect)}${spell.effectDuration ? ` (${spell.effectDuration}s)` : ''}</div>
+      </div>
+    `;
+
+    if (spell.saveStat && spell.saveStat !== 'none') {
+      html += `
+        <div class="preview-section">
+          <div class="preview-section-title">Saving Throw</div>
+          <div>${escapeHtml(spell.saveStat.toUpperCase())} DC ${spell.saveDifficulty}</div>
+        </div>
+      `;
+    }
+  }
+
+  // Telegraph
+  if (spell.telegraphMessage) {
+    html += `
+      <div class="preview-section">
+        <div class="preview-section-title">Telegraph</div>
+        <div style="font-style: italic; font-size: 0.9em; opacity: 0.8;">${escapeHtml(spell.telegraphMessage).replace('{name}', 'Caster')}</div>
       </div>
     `;
   }
@@ -554,6 +581,9 @@ function gatherFormData(): Partial<Spell> {
     healingDice: (document.getElementById('spell-healing-dice') as HTMLInputElement).value || null,
     statusEffect: (document.getElementById('spell-status-effect') as HTMLInputElement).value || null,
     effectDuration: parseInt((document.getElementById('spell-effect-duration') as HTMLInputElement).value) || null,
+    telegraphMessage: (document.getElementById('spell-telegraph-message') as HTMLInputElement).value || null,
+    saveStat: (document.getElementById('spell-save-stat') as HTMLSelectElement).value as SpellScalingStat | null,
+    saveDifficulty: parseInt((document.getElementById('spell-save-difficulty') as HTMLInputElement).value) || 0,
     levelRequired: parseInt((document.getElementById('spell-level-required') as HTMLInputElement).value) || 1,
     classRestrictions,
     damageScalingStat: damageScalingStat as SpellScalingStat | null,
