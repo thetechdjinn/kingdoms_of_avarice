@@ -24,6 +24,7 @@ export interface CombatState {
   carriedEnergy: number;   // Leftover energy from last round
   combatAction: CombatActionType;  // 'melee' or 'spell'
   activeSpell: SpellCastingState | null;  // If casting, the spell being cast
+  combatOrderPosition: number;  // 0 = normal, higher = swings later (re-engage penalty)
 }
 
 /**

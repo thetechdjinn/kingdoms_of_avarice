@@ -18,6 +18,7 @@ import { isOnCooldown, startCooldown, getCooldownMessage } from './cooldownTrack
 import { isPlayerDropped, isPlayerDead, clearDeathState } from './damageHandler.js';
 import { findPlayerInRoom } from './playerUtils.js';
 import { isStealthing, breakStealth } from './stealth/stealthState.js';
+import { breakCasterCombat } from './combatCommands.js';
 
 /**
  * Cache of all spell mnemonics for quick lookup
@@ -255,6 +256,12 @@ async function handleHealingSpell(
   // Deduct mana
   socket.vitals.resource = (socket.vitals.resource ?? 0) - spell.manaCost;
 
+  // Combat break: non-offensive spells break combat
+  const hadCombatTargets = socket.combatState.targets.size > 0;
+  if (hadCombatTargets) {
+    breakCasterCombat(socket);
+  }
+
   // Roll healing
   const healingResult = parseDiceString(spell.healingDice || '1d8');
   const healAmount = healingResult.roll;
@@ -301,6 +308,8 @@ async function handleHealingSpell(
   startCooldown(socket, spell.mnemonic, 'use');
   startCooldown(socket, spell.mnemonic, 'complete');
 
+  const combatBreakMsg = hadCombatTargets ? `\r\n${colors.yellow('*COMBAT BREAK* You must attack again to re-engage.')}` : '';
+
   // Broadcast to room (excluding caster and target who get direct messages)
   if (isSelfHeal) {
     broadcastToRoom(
@@ -310,7 +319,7 @@ async function handleHealingSpell(
     );
     return {
       type: MessageType.OUTPUT,
-      message: `You cast ${colors.cyan(spell.name.toLowerCase())} and heal for ${colors.green(actualHeal.toString())} HP!`,
+      message: `You cast ${colors.cyan(spell.name.toLowerCase())} and heal for ${colors.green(actualHeal.toString())} HP!${combatBreakMsg}`,
     };
   } else {
     // Broadcast to others (excluding caster - target already got direct message)
@@ -326,7 +335,7 @@ async function handleHealingSpell(
     }
     return {
       type: MessageType.OUTPUT,
-      message: `You cast ${colors.cyan(spell.name.toLowerCase())} on ${colors.cyan(targetName)} and heal for ${colors.green(actualHeal.toString())} HP!`,
+      message: `You cast ${colors.cyan(spell.name.toLowerCase())} on ${colors.cyan(targetName)} and heal for ${colors.green(actualHeal.toString())} HP!${combatBreakMsg}`,
     };
   }
 }
@@ -358,6 +367,12 @@ async function handleBuffSpell(
   // Deduct mana
   socket.vitals.resource = (socket.vitals.resource ?? 0) - spell.manaCost;
 
+  // Combat break: non-offensive spells break combat
+  const hadCombatTargets = socket.combatState.targets.size > 0;
+  if (hadCombatTargets) {
+    breakCasterCombat(socket);
+  }
+
   // Calculate duration in milliseconds (effectDuration is in seconds)
   const durationMs = (spell.effectDuration ?? 60) * 1000;
 
@@ -386,10 +401,11 @@ async function handleBuffSpell(
   // Send updated vitals
   sendVitals(socket);
 
+  const combatBreakMsg = hadCombatTargets ? `\r\n${colors.yellow('*COMBAT BREAK* You must attack again to re-engage.')}` : '';
   const durationStr = formatDuration(durationMs);
   return {
     type: MessageType.OUTPUT,
-    message: `You cast ${colors.cyan(spell.name.toLowerCase())}. ${result.message} (${durationStr})`,
+    message: `You cast ${colors.cyan(spell.name.toLowerCase())}. ${result.message} (${durationStr})${combatBreakMsg}`,
   };
 }
 
@@ -437,6 +453,12 @@ async function handleDebuffSpell(
   // Deduct mana
   socket.vitals.resource = (socket.vitals.resource ?? 0) - spell.manaCost;
 
+  // Combat break: non-offensive spells break combat
+  const hadCombatTargets = socket.combatState.targets.size > 0;
+  if (hadCombatTargets) {
+    breakCasterCombat(socket);
+  }
+
   // Calculate duration in milliseconds (effectDuration is in seconds)
   const durationMs = (spell.effectDuration ?? 60) * 1000;
 
@@ -471,10 +493,11 @@ async function handleDebuffSpell(
   // Send updated vitals to target
   sendVitals(target);
 
+  const combatBreakMsg = hadCombatTargets ? `\r\n${colors.yellow('*COMBAT BREAK* You must attack again to re-engage.')}` : '';
   const durationStr = formatDuration(durationMs);
   return {
     type: MessageType.OUTPUT,
-    message: `You cast ${colors.cyan(spell.name.toLowerCase())} on ${colors.magenta(target.username)}. ${result.message} (${durationStr})`,
+    message: `You cast ${colors.cyan(spell.name.toLowerCase())} on ${colors.magenta(target.username)}. ${result.message} (${durationStr})${combatBreakMsg}`,
   };
 }
 

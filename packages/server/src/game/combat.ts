@@ -34,7 +34,7 @@ import {
   DEFAULT_RUNTIME_CONFIG,
 } from './combatCalculations.js';
 import { getCombatSettings } from '../db/repositories/settingsRepository.js';
-import { clearCombatState } from './combatCommands.js';
+import { clearCombatState, breakCasterCombat } from './combatCommands.js';
 import {
   applyDamage,
   initializeDroppedState,
@@ -1261,60 +1261,117 @@ async function processCombatRound(): Promise<void> {
     const settings = await getCombatSettings();
     const combatConfig = toRuntimeConfig(settings);
 
-    // Collect all player attackers who have targets
-    const playerAttackers: CombatEntity[] = [];
+    // Collect all combatants into a unified array
+    interface CombatParticipant {
+      entity: CombatEntity;
+      isNpc: boolean;
+    }
+    const participants: CombatParticipant[] = [];
+
     for (const [, socket] of connectedPlayersRef) {
       if (socket.combatState.targets.size > 0) {
-        playerAttackers.push(socket);
+        participants.push({ entity: socket, isNpc: false });
       }
     }
-
-    // Collect NPC attackers who have targets
-    const npcAttackers: NpcCombatInstance[] = [];
     for (const npc of getAllNpcInstances()) {
       if (npc.combatState.targets.size > 0 && npc.vitals.hp > 0) {
-        npcAttackers.push(npc);
+        participants.push({ entity: npc, isNpc: true });
       }
     }
 
-    // Process combat for each player attacker (await all before NPC attacks
-    // so that kills take effect before NPCs get their turn)
-    for (const attacker of playerAttackers) {
-      try {
-        await processAttackerCombat(attacker, attacker.combatState.targets, combatConfig);
-      } catch (error) {
-        console.error(`[Combat] Error processing combat for ${attacker.entityName}:`, error);
+    // Sort by combatOrderPosition (ascending), then entityId for stability
+    participants.sort((a, b) => {
+      const posA = a.entity.combatState.combatOrderPosition;
+      const posB = b.entity.combatState.combatOrderPosition;
+      if (posA !== posB) return posA - posB;
+      return a.entity.entityId - b.entity.entityId;
+    });
+
+    // Snapshot which entities had a penalty at round start so we only
+    // reset those at round end (not fresh penalties set mid-round by re-engage)
+    const penaltyServed = new Set<number>();
+    for (const { entity } of participants) {
+      if (entity.combatState.combatOrderPosition > 0) {
+        penaltyServed.add(entity.entityId);
       }
     }
 
-    // Process combat for each NPC attacker (behavior check first)
-    for (const npc of npcAttackers) {
+    // Track NPCs that need to collect cooldown/round updates
+    const combatNpcs: NpcCombatInstance[] = [];
+
+    // Track NPCs whose between-round spell defers their melee to end of round
+    const deferredMelee: NpcCombatInstance[] = [];
+
+    // Process each participant in combat order
+    for (const { entity, isNpc } of participants) {
       try {
-        const action = processNpcBehavior(npc, connectedPlayersRef);
-        if (action.type === 'spell') {
-          try {
+        if (isNpc) {
+          const npc = entity as NpcCombatInstance;
+          combatNpcs.push(npc);
+
+          const action = processNpcBehavior(npc, connectedPlayersRef);
+
+          if (action.type === 'spell') {
+            // Snapshot targets BEFORE spell execution so re-engage uses the
+            // pre-spell target set (defensive against future spell types that
+            // might remove targets during execution).
+            const previousTargets = action.spell.selectionType === 'between_round'
+              ? new Set(npc.combatState.targets) : null;
+
             await processNpcSpellCombat(npc, action.spell, connectedPlayersRef, combatConfig);
-            // Between-round spells are a bonus action — NPC still gets melee
-            if (action.spell.selectionType === 'between_round' && npc.vitals.hp > 0 && npc.combatState.targets.size > 0) {
-              await processNpcAttackerCombat(npc, combatConfig);
+
+            if (previousTargets) {
+              // Combat break: clear offensive state, then auto-re-engage
+              breakCasterCombat(npc);
+
+              // Auto-re-engage: restore targets that are still valid
+              for (const targetId of previousTargets) {
+                const target = resolveCombatTarget(targetId);
+                if (target && target.vitals.hp > 0 && getEntityRoomId(target) === npc.currentRoomId) {
+                  npc.combatState.targets.add(targetId);
+                }
+              }
+
+              // Defer melee to end of round (swing last)
+              if (npc.vitals.hp > 0 && npc.combatState.targets.size > 0) {
+                deferredMelee.push(npc);
+              }
             }
-          } catch (error) {
-            console.error(`[Combat] Error processing NPC spell for ${npc.entityName}:`, error);
-          }
-        } else if (action.type === 'attack') {
-          try {
+            // In-round spells: no additional melee (spell replaces attack)
+          } else if (action.type === 'attack') {
             await processNpcAttackerCombat(npc, combatConfig);
-          } catch (error) {
-            console.error(`[Combat] Error processing NPC combat for ${npc.entityName}:`, error);
           }
+        } else {
+          // Player combat (unchanged logic)
+          await processAttackerCombat(entity, entity.combatState.targets, combatConfig);
         }
       } catch (error) {
-        console.error(`[Combat] Error processing NPC behavior for ${npc.entityName}:`, error);
+        console.error(`[Combat] Error processing combat for ${entity.entityName}:`, error);
+      }
+    }
+
+    // Process deferred melee (NPCs that cast between-round spells swing last)
+    for (const npc of deferredMelee) {
+      try {
+        if (npc.vitals.hp > 0 && npc.combatState.targets.size > 0) {
+          await processNpcAttackerCombat(npc, combatConfig);
+        }
+      } catch (error) {
+        console.error(`[Combat] Error processing deferred melee for ${npc.entityName}:`, error);
+      }
+    }
+
+    // Reset combatOrderPosition only for entities that had a penalty at round start.
+    // Fresh penalties set mid-round (e.g. player re-engage between ticks) are preserved
+    // so they apply to the next round as intended.
+    for (const { entity } of participants) {
+      if (penaltyServed.has(entity.entityId)) {
+        entity.combatState.combatOrderPosition = 0;
       }
     }
 
     // Decrement spell cooldowns and increment round counters for combat NPCs
-    for (const npc of npcAttackers) {
+    for (const npc of combatNpcs) {
       if (npc.vitals.hp <= 0 || npc.behaviorState !== 'combat') continue;
       for (const [spellId, remaining] of npc.spellCooldowns) {
         if (remaining <= 1) {
