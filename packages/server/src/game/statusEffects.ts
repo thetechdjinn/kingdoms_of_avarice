@@ -594,6 +594,93 @@ export async function applyEffect(
 }
 
 /**
+ * Apply a status effect to a CombatEntity (NPC-compatible).
+ * Same stacking logic as applyEffect() but:
+ * - Skips DB persistence (NPCs are in-memory only)
+ * - Skips legacy isPoisoned flag (NPC regen doesn't use it)
+ * - Skips interrupt triggers (NPCs don't have player interrupt mechanics)
+ */
+export function applyEffectToEntity(
+  entity: CombatEntity,
+  effectId: string,
+  durationMs: number,
+  sourceSpellId?: number
+): { success: boolean; message: string } {
+  const definition = getEffectDefinition(effectId);
+  if (!definition) {
+    return { success: false, message: `Unknown effect: ${effectId}` };
+  }
+
+  const now = Date.now();
+  const expiresAt = now + durationMs;
+
+  if (!entity.activeEffects) {
+    entity.activeEffects = new Map();
+  }
+
+  const existing = entity.activeEffects.get(effectId);
+  let effect: ActiveStatusEffect;
+
+  if (existing) {
+    switch (definition.stackingBehavior) {
+      case StackingBehavior.REPLACE:
+        effect = {
+          definitionId: effectId,
+          appliedAt: now,
+          expiresAt,
+          stacks: 1,
+          sourceSpellId,
+        };
+        break;
+
+      case StackingBehavior.REFRESH:
+        effect = {
+          ...existing,
+          expiresAt,
+          sourceSpellId: sourceSpellId ?? existing.sourceSpellId,
+        };
+        break;
+
+      case StackingBehavior.STACK: {
+        const newStacks = Math.min(existing.stacks + 1, definition.maxStacks);
+        effect = {
+          ...existing,
+          stacks: newStacks,
+          expiresAt,
+          sourceSpellId: sourceSpellId ?? existing.sourceSpellId,
+        };
+        break;
+      }
+
+      default:
+        effect = {
+          definitionId: effectId,
+          appliedAt: now,
+          expiresAt,
+          stacks: 1,
+          sourceSpellId,
+        };
+    }
+  } else {
+    effect = {
+      definitionId: effectId,
+      appliedAt: now,
+      expiresAt,
+      stacks: 1,
+      sourceSpellId,
+    };
+  }
+
+  entity.activeEffects.set(effectId, effect);
+
+  const stackInfo = effect.stacks > 1 ? ` (${effect.stacks} stacks)` : '';
+  return {
+    success: true,
+    message: `${definition.name}${stackInfo}`,
+  };
+}
+
+/**
  * Remove a status effect from a character
  */
 export async function removeEffect(

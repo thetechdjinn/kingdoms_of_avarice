@@ -5,13 +5,15 @@
  * Uses CombatEntity interface so both players and NPCs can participate.
  */
 
-import { MessageType, AttackResult, SpellScalingStat, AttackVerbs } from '@koa/shared';
+import { MessageType, AttackResult, SpellScalingStat, SpellType, SpellTargetType, AttackVerbs } from '@koa/shared';
 import { AuthenticatedSocket, sendVitals as sendPlayerVitals } from './socket.js';
 import type { CombatEntity } from './combatEntity.js';
 import { isPlayerEntity, getEntityRoomId } from './combatEntity.js';
-import { getAllNpcInstances, getNpcInstance, resetNpcBehaviorState } from './npcManager.js';
+import { getAllNpcInstances, getNpcInstance, getNpcsInRoom, resetNpcBehaviorState } from './npcManager.js';
 import type { NpcCombatInstance } from './npcManager.js';
 import { processNpcBehavior } from './npcBehavior.js';
+import { setSpellCooldown } from './npcSpellAI.js';
+import type { NpcSpellSelection } from './npcSpellAI.js';
 import { selectNpcAttack } from './combatStatProvider.js';
 import { processNpcDeath } from './npcDeathHandler.js';
 import { colors } from '../utils/colors.js';
@@ -41,6 +43,7 @@ import {
   formatDeathMessage,
 } from './damageHandler.js';
 import { getCombatStats, getCombatStatsWithDodge } from './combatStatProvider.js';
+import { applyEffect, applyEffectToEntity, getEffectDefinition, hasEffect } from './statusEffects.js';
 import {
   sendCombatMessage,
   sendEntityVitals,
@@ -694,12 +697,377 @@ async function handleEntityDeath(
 export { handleEntityDeath as handleActualDeath };
 
 /**
+ * Process NPC spell combat.
+ * Handles all spell types: OFFENSIVE, HEALING, BUFF, DEBUFF.
+ * Called when the NPC behavior AI selects a spell instead of melee.
+ */
+async function processNpcSpellCombat(
+  npc: NpcCombatInstance,
+  selection: NpcSpellSelection,
+  players: Map<number, AuthenticatedSocket>,
+  _combatConfig: RuntimeCombatConfig = DEFAULT_RUNTIME_CONFIG
+): Promise<void> {
+  if (!players) return;
+  if (npc.vitals.hp <= 0) return;
+
+  // Silenced NPCs cannot cast (safety net — AI already checks this)
+  if (hasEffect(npc, 'silenced')) return;
+
+  const spell = selection.npcSpell.spell;
+  const npcRoomId = npc.currentRoomId;
+
+  // Safety net: mana check (AI already filtered, but guard against races)
+  if (npc.currentMana < spell.manaCost) return;
+
+  // Deduct mana
+  npc.currentMana -= spell.manaCost;
+  npc.vitals.resource = npc.currentMana;
+
+  // Telegraph message (broadcast to room before the spell fires)
+  if (spell.telegraphMessage) {
+    const msg = spell.telegraphMessage.replace(/\{name\}/g, npc.entityName);
+    broadcastCombatToRoom(npcRoomId, colors.yellow(msg), []);
+  }
+
+  // Collect deferred rewards for kills caused by offensive spells
+  const deferredRewards: Array<() => Promise<void>> = [];
+
+  // Branch by spell type
+  switch (spell.spellType) {
+    case SpellType.OFFENSIVE: {
+      await processNpcOffensiveSpell(npc, spell, npcRoomId, players, deferredRewards);
+      break;
+    }
+
+    case SpellType.HEALING: {
+      processNpcHealingSpell(npc, spell, npcRoomId);
+      break;
+    }
+
+    case SpellType.BUFF: {
+      processNpcBuffSpell(npc, spell, npcRoomId);
+      break;
+    }
+
+    case SpellType.DEBUFF: {
+      await processNpcDebuffSpell(npc, spell, npcRoomId, players);
+      break;
+    }
+
+    default:
+      break;
+  }
+
+  // Set cooldown
+  setSpellCooldown(npc, selection.npcSpell.spellId, selection.npcSpell.cooldownRounds);
+
+  // Send NPC vitals update (mana change)
+  sendEntityVitals(npc);
+
+  // If all targets are dead/gone, reset behavior
+  if (npc.combatState.targets.size === 0) {
+    resetNpcBehaviorState(npc);
+  }
+
+  // Flush deferred rewards
+  for (const reward of deferredRewards) {
+    await reward();
+  }
+}
+
+/**
+ * Get eligible player IDs in a room for AoE targeting.
+ * Skips training-mode, dead, and dropped players.
+ */
+function getEligiblePlayersInRoom(
+  roomId: number,
+  players: Map<number, AuthenticatedSocket>
+): number[] {
+  const ids: number[] = [];
+  for (const [playerId, socket] of players) {
+    if (socket.isTraining) continue;
+    if (getEntityRoomId(socket) !== roomId) continue;
+    if (socket.vitals.hp <= 0) continue;
+    ids.push(playerId);
+  }
+  return ids;
+}
+
+/**
+ * Process an NPC offensive spell — deals damage to combat targets.
+ * Replaces melee for the round (in_round timing).
+ */
+async function processNpcOffensiveSpell(
+  npc: NpcCombatInstance,
+  spell: NpcSpellSelection['npcSpell']['spell'],
+  npcRoomId: number,
+  players: Map<number, AuthenticatedSocket>,
+  deferredRewards: Array<() => Promise<void>>
+): Promise<void> {
+  // No damage dice means this offensive spell has no direct damage component — skip
+  if (!spell.damageDice) return;
+
+  const { min: minDmg, max: maxDmg } = parseDiceString(spell.damageDice);
+  const isAoE = spell.targetType === SpellTargetType.ROOM;
+
+  // NPC scaling uses template.spellPower as the universal stat value
+  let scalingBonus = 0;
+  if (spell.damageScalingFactor) {
+    scalingBonus = Math.floor(npc.template.spellPower * spell.damageScalingFactor);
+  }
+
+  // Determine targets
+  const targetIds: number[] = isAoE
+    ? getEligiblePlayersInRoom(npcRoomId, players)
+    : [...npc.combatState.targets];
+
+  // AoE: single room broadcast before per-target damage
+  if (isAoE && targetIds.length > 0) {
+    broadcastCombatToRoom(
+      npcRoomId,
+      `${colors.combatAttacker(withNpcNameCapitalized(npc.entityName, npc.isProperName))} casts ${colors.cyan(spell.name)}!`,
+      targetIds // exclude targets — they get individual messages
+    );
+  }
+
+  for (const targetId of targetIds) {
+    const target = resolveCombatTarget(targetId);
+    if (!target || target.vitals.hp <= 0) {
+      npc.combatState.targets.delete(targetId);
+      continue;
+    }
+
+    if (getEntityRoomId(target) !== npcRoomId) {
+      npc.combatState.targets.delete(targetId);
+      continue;
+    }
+
+    // Roll damage
+    const baseDamage = Math.floor(Math.random() * (maxDmg - minDmg + 1)) + minDmg;
+    const damage = baseDamage + scalingBonus;
+
+    // Per-target message
+    sendCombatMessage(target, MessageType.OUTPUT,
+      `${colors.combatAttacker(withNpcNameCapitalized(npc.entityName, npc.isProperName))} casts ${colors.cyan(spell.name)} at you for ${colors.combatDamage(damage.toString())} damage!`
+    );
+
+    // Single-target: also broadcast to room observers
+    if (!isAoE) {
+      broadcastCombatToRoom(npcRoomId,
+        `${colors.combatAttacker(withNpcNameCapitalized(npc.entityName, npc.isProperName))} casts ${colors.cyan(spell.name)} at ${colors.combatDefender(withNpcName(target.entityName, target.isProperName))} for ${colors.combatDamage(damage.toString())} damage!`,
+        [targetId]
+      );
+    }
+
+    // Apply damage
+    const damageResult = await applyDamage(target, damage, 'spell');
+
+    if (damageResult.stateChange === 'dropped') {
+      if (!isPlayerEntity(target)) {
+        await handleEntityDeath(target, npc, npcRoomId, deferredRewards);
+      } else {
+        await handleEntityDropped(target, npc, npcRoomId);
+      }
+    } else if (damageResult.stateChange === 'death') {
+      await handleEntityDeath(target, npc, npcRoomId, deferredRewards);
+    } else {
+      sendEntityVitals(target);
+    }
+
+    // Apply status effect if the spell has one (e.g., burning, poisoned)
+    if (spell.statusEffect && spell.effectDuration && target.vitals.hp > 0) {
+      const effectDurationMs = spell.effectDuration * 1000;
+      if (isPlayerEntity(target)) {
+        await applyEffect(target as unknown as AuthenticatedSocket, spell.statusEffect, effectDurationMs, spell.id);
+      } else {
+        applyEffectToEntity(target, spell.statusEffect, effectDurationMs, spell.id);
+      }
+    }
+  }
+}
+
+/**
+ * Process an NPC healing spell — heals self (and optionally room NPCs).
+ * Between-round timing: bonus action alongside melee.
+ */
+function processNpcHealingSpell(
+  npc: NpcCombatInstance,
+  spell: NpcSpellSelection['npcSpell']['spell'],
+  npcRoomId: number
+): void {
+  const { min: minHeal, max: maxHeal } = parseDiceString(spell.healingDice || '1d8');
+
+  // NPC scaling uses template.spellPower
+  let scalingBonus = 0;
+  if (spell.healingScalingFactor) {
+    scalingBonus = Math.floor(npc.template.spellPower * spell.healingScalingFactor);
+  }
+
+  // Helper to heal a single NPC
+  const healTarget = (target: NpcCombatInstance) => {
+    const baseHeal = Math.floor(Math.random() * (maxHeal - minHeal + 1)) + minHeal;
+    const healAmount = baseHeal + scalingBonus;
+    const oldHp = target.vitals.hp;
+    target.vitals.hp = Math.min(target.vitals.hp + healAmount, target.vitals.maxHp);
+    const actualHeal = target.vitals.hp - oldHp;
+
+    // Apply HoT effect if spell has one
+    if (spell.statusEffect && spell.effectDuration) {
+      applyEffectToEntity(target, spell.statusEffect, spell.effectDuration * 1000, spell.id);
+    }
+
+    return actualHeal;
+  };
+
+  if (spell.targetType === SpellTargetType.ROOM) {
+    // AoE heal: all living NPCs in room — single room broadcast
+    const roomNpcs = getNpcsInRoom(npcRoomId).filter(n => n.vitals.hp > 0);
+    let anyHealed = false;
+    for (const ally of roomNpcs) {
+      if (healTarget(ally) > 0) anyHealed = true;
+    }
+    if (anyHealed) {
+      broadcastCombatToRoom(
+        npcRoomId,
+        `${colors.combatAttacker(withNpcNameCapitalized(npc.entityName, npc.isProperName))} casts ${colors.cyan(spell.name)}! Nearby allies are bathed in healing light!`,
+        []
+      );
+    }
+  } else {
+    // Self-heal only
+    const healed = healTarget(npc);
+    if (healed > 0) {
+      broadcastCombatToRoom(
+        npcRoomId,
+        `${colors.combatAttacker(withNpcNameCapitalized(npc.entityName, npc.isProperName))} casts ${colors.cyan(spell.name)} and recovers ${colors.green(healed.toString())} HP!`,
+        []
+      );
+    }
+  }
+}
+
+/**
+ * Process an NPC buff spell — applies status effect to self (and optionally room NPCs).
+ * Between-round timing: bonus action alongside melee.
+ */
+function processNpcBuffSpell(
+  npc: NpcCombatInstance,
+  spell: NpcSpellSelection['npcSpell']['spell'],
+  npcRoomId: number
+): void {
+  if (!spell.statusEffect) return;
+
+  const durationMs = (spell.effectDuration ?? 60) * 1000;
+  const effectDef = getEffectDefinition(spell.statusEffect);
+  const effectName = effectDef?.name ?? spell.statusEffect;
+
+  const applyBuff = (target: NpcCombatInstance) => {
+    applyEffectToEntity(target, spell.statusEffect!, durationMs, spell.id);
+  };
+
+  if (spell.targetType === SpellTargetType.ROOM) {
+    // AoE buff: all living NPCs in room
+    const roomNpcs = getNpcsInRoom(npcRoomId).filter(n => n.vitals.hp > 0);
+    for (const ally of roomNpcs) {
+      applyBuff(ally);
+    }
+    broadcastCombatToRoom(
+      npcRoomId,
+      `${colors.combatAttacker(withNpcNameCapitalized(npc.entityName, npc.isProperName))} casts ${colors.cyan(spell.name)}! Nearby allies are ${colors.yellow(effectName)}!`,
+      []
+    );
+  } else {
+    // Self-buff
+    applyBuff(npc);
+    broadcastCombatToRoom(
+      npcRoomId,
+      `${colors.combatAttacker(withNpcNameCapitalized(npc.entityName, npc.isProperName))} casts ${colors.cyan(spell.name)} and is ${colors.yellow(effectName)}!`,
+      []
+    );
+  }
+}
+
+/**
+ * Process an NPC debuff spell — applies status effect to enemy targets.
+ * Between-round timing: bonus action alongside melee.
+ */
+async function processNpcDebuffSpell(
+  npc: NpcCombatInstance,
+  spell: NpcSpellSelection['npcSpell']['spell'],
+  npcRoomId: number,
+  players: Map<number, AuthenticatedSocket>
+): Promise<void> {
+  if (!spell.statusEffect) return;
+
+  const durationMs = (spell.effectDuration ?? 30) * 1000;
+  const effectDef = getEffectDefinition(spell.statusEffect);
+  const effectName = effectDef?.name ?? spell.statusEffect;
+
+  const isAoE = spell.targetType === SpellTargetType.ROOM;
+  const primaryTargetId = npc.combatState.targets.values().next().value;
+
+  // Determine targets
+  const targetIds: number[] = isAoE
+    ? getEligiblePlayersInRoom(npcRoomId, players)
+    : primaryTargetId !== undefined ? [primaryTargetId] : [];
+
+  // AoE: single room broadcast before per-target effects
+  const affectedIds: number[] = [];
+
+  for (const targetId of targetIds) {
+    const target = resolveCombatTarget(targetId);
+    if (!target || target.vitals.hp <= 0) {
+      npc.combatState.targets.delete(targetId);
+      continue;
+    }
+    if (getEntityRoomId(target) !== npcRoomId) {
+      npc.combatState.targets.delete(targetId);
+      continue;
+    }
+
+    // Apply effect: use player-aware path for DB persistence, entity path for NPCs
+    let applied: { success: boolean; message: string };
+    if (isPlayerEntity(target)) {
+      applied = await applyEffect(target as unknown as AuthenticatedSocket, spell.statusEffect, durationMs, spell.id);
+    } else {
+      applied = applyEffectToEntity(target, spell.statusEffect, durationMs, spell.id);
+    }
+
+    if (!applied.success) continue;
+    affectedIds.push(targetId);
+
+    // Per-target message (only sent when effect was actually applied)
+    sendCombatMessage(target, MessageType.OUTPUT,
+      `${colors.combatAttacker(withNpcNameCapitalized(npc.entityName, npc.isProperName))} casts ${colors.cyan(spell.name)} on you! You are ${colors.red(effectName)}!`
+    );
+    sendEntityVitals(target);
+
+    // Single-target: also broadcast to room observers
+    if (!isAoE) {
+      broadcastCombatToRoom(npcRoomId,
+        `${colors.combatAttacker(withNpcNameCapitalized(npc.entityName, npc.isProperName))} casts ${colors.cyan(spell.name)} on ${colors.combatDefender(withNpcName(target.entityName, target.isProperName))}!`,
+        [targetId]
+      );
+    }
+  }
+
+  // AoE: single room broadcast (exclude affected targets — they got individual messages)
+  if (isAoE && affectedIds.length > 0) {
+    broadcastCombatToRoom(npcRoomId,
+      `${colors.combatAttacker(withNpcNameCapitalized(npc.entityName, npc.isProperName))} casts ${colors.cyan(spell.name)}! A dark energy fills the room!`,
+      affectedIds
+    );
+  }
+}
+
+/**
  * Process combat for a single NPC attacker.
  * NPCs don't use the energy/weapon-speed system — they have static attacksPerRound.
  */
 async function processNpcAttackerCombat(
   npc: NpcCombatInstance,
-  combatConfig: RuntimeCombatConfig = DEFAULT_RUNTIME_CONFIG
+  combatConfig: RuntimeCombatConfig = DEFAULT_RUNTIME_CONFIG,
+  deferredRewards: Array<() => Promise<void>> = []
 ): Promise<void> {
   if (!connectedPlayersRef) return;
 
@@ -859,12 +1227,12 @@ async function processNpcAttackerCombat(
       if (damageResult.stateChange === 'dropped') {
         if (!isPlayerEntity(target)) {
           // NPCs die immediately, skip dropped state
-          await handleEntityDeath(target, npc, npcRoomId);
+          await handleEntityDeath(target, npc, npcRoomId, deferredRewards);
         } else {
           await handleEntityDropped(target, npc, npcRoomId);
         }
       } else if (damageResult.stateChange === 'death') {
-        await handleEntityDeath(target, npc, npcRoomId);
+        await handleEntityDeath(target, npc, npcRoomId, deferredRewards);
       } else {
         sendEntityVitals(target);
       }
@@ -874,6 +1242,11 @@ async function processNpcAttackerCombat(
   // If no targets remain, clear NPC combat state
   if (npc.combatState.targets.size === 0) {
     resetNpcBehaviorState(npc);
+  }
+
+  // Flush deferred rewards (XP, essence)
+  for (const reward of deferredRewards) {
+    await reward();
   }
 }
 
@@ -918,9 +1291,17 @@ async function processCombatRound(): Promise<void> {
     for (const npc of npcAttackers) {
       try {
         const action = processNpcBehavior(npc, connectedPlayersRef);
-        if (action.type === 'attack' || action.type === 'spell') {
-          // Phase C will split these paths: 'spell' will execute the selected
-          // spell and deduct spell mana. Until then, both do normal melee.
+        if (action.type === 'spell') {
+          try {
+            await processNpcSpellCombat(npc, action.spell, connectedPlayersRef, combatConfig);
+            // Between-round spells are a bonus action — NPC still gets melee
+            if (action.spell.selectionType === 'between_round' && npc.vitals.hp > 0 && npc.combatState.targets.size > 0) {
+              await processNpcAttackerCombat(npc, combatConfig);
+            }
+          } catch (error) {
+            console.error(`[Combat] Error processing NPC spell for ${npc.entityName}:`, error);
+          }
+        } else if (action.type === 'attack') {
           try {
             await processNpcAttackerCombat(npc, combatConfig);
           } catch (error) {

@@ -179,6 +179,9 @@ export function selectNpcSpell(
   const spells = npc.template.spells;
   if (spells.length === 0) return null;
 
+  // Silenced NPCs cannot cast spells
+  if (hasEffect(npc, 'silenced')) return null;
+
   // Pass 1: between-round (buffs, debuffs, heals, dots)
   const betweenRound = selectFromPool(spells, 'between_round', npc, target);
   if (betweenRound) {
