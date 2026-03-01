@@ -384,8 +384,8 @@ CREATE TABLE IF NOT EXISTS merchant_inventory (
     id SERIAL PRIMARY KEY,
     npc_template_id INTEGER NOT NULL REFERENCES npcs(id) ON DELETE CASCADE,
     item_template_id INTEGER NOT NULL REFERENCES item_templates(id) ON DELETE CASCADE,
-    max_stock INTEGER NOT NULL DEFAULT 10,
-    current_stock INTEGER NOT NULL DEFAULT 10,
+    max_stock INTEGER NOT NULL DEFAULT 10 CHECK (max_stock >= 0),
+    current_stock INTEGER NOT NULL DEFAULT 10 CHECK (current_stock >= 0 AND current_stock <= max_stock),
     restock_chance INTEGER NOT NULL DEFAULT 100 CHECK (restock_chance >= 1 AND restock_chance <= 100),
     UNIQUE(npc_template_id, item_template_id)
 );

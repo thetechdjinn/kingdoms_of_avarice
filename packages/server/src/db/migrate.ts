@@ -568,6 +568,18 @@ export async function runMigrations(): Promise<void> {
       `);
       await client.query(`CREATE INDEX IF NOT EXISTS idx_merchant_inventory_npc ON merchant_inventory(npc_template_id)`);
 
+      // Add stock constraints (safe to re-run: checks IF NOT EXISTS via constraint name)
+      await client.query(`
+        DO $$ BEGIN
+          IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'merchant_inventory_max_stock_check') THEN
+            ALTER TABLE merchant_inventory ADD CONSTRAINT merchant_inventory_max_stock_check CHECK (max_stock >= 0);
+          END IF;
+          IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'merchant_inventory_current_stock_check') THEN
+            ALTER TABLE merchant_inventory ADD CONSTRAINT merchant_inventory_current_stock_check CHECK (current_stock >= 0 AND current_stock <= max_stock);
+          END IF;
+        END $$
+      `);
+
       // Faction System: Create factions, npc_factions, and player_faction_reputation tables
       await client.query(`
         CREATE TABLE IF NOT EXISTS factions (
