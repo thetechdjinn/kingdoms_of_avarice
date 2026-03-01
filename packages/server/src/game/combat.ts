@@ -918,24 +918,14 @@ async function processCombatRound(): Promise<void> {
     for (const npc of npcAttackers) {
       try {
         const action = processNpcBehavior(npc, connectedPlayersRef);
-        switch (action.type) {
-          case 'attack':
-            try {
-              await processNpcAttackerCombat(npc, combatConfig);
-            } catch (error) {
-              console.error(`[Combat] Error processing NPC combat for ${npc.entityName}:`, error);
-            }
-            break;
-          case 'spell':
-            // Phase C: spell execution. For now, all spells fall back to melee.
-            try {
-              await processNpcAttackerCombat(npc, combatConfig);
-            } catch (error) {
-              console.error(`[Combat] Error processing NPC combat for ${npc.entityName}:`, error);
-            }
-            break;
-          case 'skip':
-            break;
+        if (action.type === 'attack' || action.type === 'spell') {
+          // Phase C will split these paths: 'spell' will execute the selected
+          // spell and deduct spell mana. Until then, both do normal melee.
+          try {
+            await processNpcAttackerCombat(npc, combatConfig);
+          } catch (error) {
+            console.error(`[Combat] Error processing NPC combat for ${npc.entityName}:`, error);
+          }
         }
       } catch (error) {
         console.error(`[Combat] Error processing NPC behavior for ${npc.entityName}:`, error);
