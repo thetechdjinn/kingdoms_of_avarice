@@ -1,4 +1,4 @@
-import { MessageType, Role, hasAnyRole, ItemLocationType, ItemCondition } from '@koa/shared';
+import { MessageType, Role, hasAnyRole, ItemLocationType, ItemCondition, NPC_SPELL_CONDITIONS, SpellType } from '@koa/shared';
 import * as spellRepo from '../db/repositories/spellRepository.js';
 import * as characterRepo from '../db/repositories/characterRepository.js';
 import { GameWorld, Room } from './world.js';
@@ -10,12 +10,14 @@ import { initializeDoorStates } from '../services/doorStateManager.js';
 import {
   applyEffect,
   removeEffect,
+  hasEffect,
   getActiveEffectsDisplay,
   formatDuration,
   getAllEffectIds,
   getEffectDefinition,
   initializeEffectDefinitions,
 } from './statusEffects.js';
+import type { CombatEntity } from './combatEntity.js';
 import { getDelayModifierDescriptions } from './delayModifiers.js';
 import { StatusEffectCategory } from '@koa/shared';
 import {
@@ -46,7 +48,9 @@ import {
   NO_LOCKPICK_BONUS,
 } from './stats/secondaryStats.js';
 import { StealthMode } from '@koa/shared';
-import { getAllNpcInstances, reloadNpcTemplates, isNpcDebugEnabled, setNpcDebug, getMerchantsInRoom, clearMerchantResponseCache } from './npcManager.js';
+import { getAllNpcInstances, reloadNpcTemplates, isNpcDebugEnabled, setNpcDebug, getMerchantsInRoom, clearMerchantResponseCache, findNpcInRoom } from './npcManager.js';
+import { evaluateSpellCondition, selectNpcSpell } from './npcSpellAI.js';
+import { resolveCombatTarget } from './combatMessaging.js';
 import * as merchantRepo from '../db/repositories/merchantRepository.js';
 import { clearDenominationCache } from './npcDeathHandler.js';
 import * as factionRepo from '../db/repositories/factionRepository.js';
@@ -67,7 +71,7 @@ export function setPlayerLocation(playerId: number, roomId: number): void {
 }
 
 // Commands that require Developer role
-const developerCommands = ['create', 'link', 'unlink', 'edit', 'delete', 'reload', 'spawn', 'purge', 'items', 'iteminfo', 'setstealth', 'testbackstab', 'lockpicking', 'npcs', 'mobbehavior', 'npcdebug', 'merchants'];
+const developerCommands = ['create', 'link', 'unlink', 'edit', 'delete', 'reload', 'spawn', 'purge', 'items', 'iteminfo', 'setstealth', 'testbackstab', 'testspell', 'lockpicking', 'npcs', 'mobbehavior', 'npcdebug', 'merchants'];
 
 // Commands that any staff can use (Moderator+)
 const staffCommands = ['goto', 'rooms', 'roominfo', 'help', 'give', 'hurt', 'heal', 'drain', 'revive', 'teleport', 'learn', 'spells', 'effect', 'cleareffect', 'effects', 'stealth'];
@@ -162,6 +166,8 @@ export async function processAdminCommand(
       return handleSetStealth(args, socket);
     case 'testbackstab':
       return await handleTestBackstab(args, socket);
+    case 'testspell':
+      return handleTestSpell(args, socket);
     case 'npcs':
       return handleListNpcs();
     case 'mobbehavior':
@@ -1562,6 +1568,7 @@ function handleAdminHelp(userRoles: Role[]): CommandResponse {
     lines.push(colors.boldYellow('Developer Commands (Stealth/Skills):'));
     lines.push(`  ${colors.boldCyan('@setstealth <mode> [player]')} - Force stealth state (none/sneaking/hidden)`);
     lines.push(`  ${colors.boldCyan('@testbackstab <target>')}  - Test backstab without stealth requirement`);
+    lines.push(`  ${colors.boldCyan('@testspell <npc>')}       - Show NPC spell AI evaluation report`);
     lines.push(`  ${colors.boldCyan('@lockpicking [player]')}   - Show lockpicking skill breakdown`);
 
     // Add progression commands help
@@ -2042,4 +2049,129 @@ async function handleTestBackstab(
     setStealthMode(socket, originalMode);
     return { type: MessageType.ERROR, message: `Backstab failed: ${error}` };
   }
+}
+
+/**
+ * Show NPC spell AI evaluation report
+ * Usage: @testspell <npc-name>
+ *
+ * Resolves the NPC's actual primary combat target (same as live behavior in
+ * npcBehavior.ts), falling back to the invoking developer when out of combat.
+ */
+function handleTestSpell(
+  args: string[],
+  socket: AuthenticatedSocket
+): CommandResponse {
+  if (args.length < 1) {
+    return { type: MessageType.ERROR, message: 'Usage: @testspell <npc-name>' };
+  }
+
+  const roomId = getPlayerLocation(socket.playerId);
+  const targetName = args.join(' ');
+  const npc = findNpcInRoom(targetName, roomId);
+
+  if (!npc) {
+    return { type: MessageType.ERROR, message: `No NPC named "${targetName}" found in this room.` };
+  }
+
+  // Resolve target the same way live combat does (npcBehavior.ts):
+  // use the NPC's primary combat target, fall back to the invoking player.
+  const primaryTargetId = npc.combatState.targets.values().next().value;
+  const target: CombatEntity = (primaryTargetId !== undefined
+    ? resolveCombatTarget(primaryTargetId)
+    : undefined) ?? socket;
+  const usingLiveTarget = primaryTargetId !== undefined && target.entityId === primaryTargetId;
+
+  const spells = npc.template.spells;
+  const isSilenced = hasEffect(npc, 'silenced');
+  const hpPct = npc.vitals.maxHp > 0 ? Math.round((npc.vitals.hp / npc.vitals.maxHp) * 100) : 0;
+  const manaPct = npc.template.maxMana > 0 ? Math.round((npc.currentMana / npc.template.maxMana) * 100) : 0;
+
+  const lines: string[] = [];
+  lines.push(colors.boldYellow(`=== Spell AI Report: ${npc.entityName} ===`));
+  lines.push(`Mana: ${npc.currentMana}/${npc.template.maxMana} (${manaPct}%) | HP: ${npc.vitals.hp}/${npc.vitals.maxHp} (${hpPct}%) | Round: ${npc.combatRoundCount} | Silenced: ${isSilenced ? colors.red('Yes') : 'No'}`);
+  lines.push(`Target: ${target.entityName}${usingLiveTarget ? '' : colors.yellow(' (fallback — NPC not in combat)')}`);
+  lines.push('');
+
+  if (spells.length === 0) {
+    lines.push(colors.gray('No spells configured.'));
+    return { type: MessageType.OUTPUT, message: lines.join('\r\n') };
+  }
+
+  if (isSilenced) {
+    lines.push(colors.red('NPC is silenced — all casting blocked.'));
+    lines.push('');
+  }
+
+  // Run the actual selection to see what would be picked
+  const selection = selectNpcSpell(npc, target);
+
+  // Conditions that use a percentage value
+  const percentConditions = new Set(['hp_below', 'hp_above', 'target_hp_below', 'mana_above']);
+
+  // Evaluate each spell individually for the report
+  for (let i = 0; i < spells.length; i++) {
+    const npcSpell = spells[i];
+    const spell = npcSpell.spell;
+    const isOffensiveDamage = spell.spellType === SpellType.OFFENSIVE && spell.damageDice;
+    const timing = isOffensiveDamage ? 'in-round' : 'between-round';
+    const conditionLabel = NPC_SPELL_CONDITIONS[npcSpell.conditionType as keyof typeof NPC_SPELL_CONDITIONS] || npcSpell.conditionType;
+
+    const isSelected = selection && selection.npcSpell.spellId === npcSpell.spellId;
+
+    lines.push(colors.boldCyan(`[${i + 1}] ${spell.name}`) + ` (${timing})`);
+
+    // Mana check
+    const manaOk = npc.currentMana >= spell.manaCost;
+    const manaStr = manaOk
+      ? colors.green(`OK (${spell.manaCost}/${npc.currentMana})`)
+      : colors.red(`INSUFFICIENT (need ${spell.manaCost}, have ${npc.currentMana})`);
+    lines.push(`    Mana: ${manaStr}`);
+
+    // Cooldown check
+    const cooldownLeft = npc.spellCooldowns.get(npcSpell.spellId);
+    const cooldownOk = !cooldownLeft;
+    const cooldownStr = cooldownOk
+      ? colors.green('OK')
+      : colors.red(`${cooldownLeft} rounds left`);
+    lines.push(`    Cooldown: ${cooldownStr} (${npcSpell.cooldownRounds}rd recharge)`);
+
+    // Condition check
+    const conditionMet = evaluateSpellCondition(npcSpell, npc, target);
+    const conditionStr = conditionMet ? colors.green('YES') : colors.red('NO');
+    let conditionDetail = conditionLabel;
+    if (npcSpell.conditionValue > 0) {
+      const suffix = percentConditions.has(npcSpell.conditionType) ? '%' : '';
+      conditionDetail = `${conditionLabel} ${npcSpell.conditionValue}${suffix}`;
+    }
+    lines.push(`    Condition: ${conditionDetail} → ${conditionStr}`);
+
+    // Cast chance
+    lines.push(`    Cast Chance: ${npcSpell.castChance}% | Priority: ${npcSpell.priority}`);
+
+    // Status — deterministic eligibility report (no random roll here)
+    if (isSilenced) {
+      lines.push(`    ${colors.red('BLOCKED: silenced')}`);
+    } else if (!manaOk) {
+      lines.push(`    ${colors.red('SKIPPED: insufficient mana')}`);
+    } else if (!cooldownOk) {
+      lines.push(`    ${colors.red('SKIPPED: on cooldown')}`);
+    } else if (!conditionMet) {
+      lines.push(`    ${colors.red('SKIPPED: condition not met')}`);
+    } else if (isSelected) {
+      lines.push(`    ${colors.boldGreen('★ SELECTED (passed cast chance roll)')}`);
+    } else {
+      lines.push(`    ${colors.yellow('ELIGIBLE (failed cast chance roll or lost priority)')}`);
+    }
+
+    lines.push('');
+  }
+
+  if (!selection) {
+    lines.push(colors.yellow('Result: No spell selected — NPC will melee.'));
+  } else {
+    lines.push(colors.green(`Result: Will cast ${selection.npcSpell.spell.name} (${selection.selectionType.replace('_', '-')})`));
+  }
+
+  return { type: MessageType.OUTPUT, message: lines.join('\r\n') };
 }
