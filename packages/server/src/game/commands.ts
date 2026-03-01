@@ -28,12 +28,12 @@ import {
 import { isHidden, isSneaking, isStealthing, setStealthMode, breakStealth } from './stealth/stealthState.js';
 import { handleHide, handleSneak, handleVisible, handleBackstab } from './stealth/stealthCommands.js';
 import { rollCumulativeDetection } from './stealth/stealthCheck.js';
-import { wordWrap } from '../utils/textFormat.js';
+import { wordWrap, withNpcNameCapitalized, withNpcNameThe } from '../utils/textFormat.js';
 import { calculateStealth, calculatePerception, characterHasStealth, getEncumbrancePenalty, calculateLockpicking, characterHasLockpicking } from './stats/secondaryStats.js';
 import { calculateEncumbranceRatio, getEquipmentCombatStats } from './combatStats.js';
 import { getRespawnRoomId } from '../services/respawnService.js';
 import { findPlayerInRoom } from './playerUtils.js';
-import { getNpcsInRoom, findNpcInRoom, checkHostileAggro, isPlayerTargetedByAnyNpc } from './npcManager.js';
+import { getNpcsInRoom, findNpcInRoom, checkHostileAggro, isPlayerTargetedByAnyNpc, getResponseForKeywords } from './npcManager.js';
 import {
   handleGossip, handleAuction, handleTelepath, handleBlock, handleUnblock,
   handleShout, handleBroadcastCreate, handleJoinBroadcast, handleLeaveBroadcast, handleBroadcast,
@@ -42,6 +42,7 @@ import {
   handleInvite, handleJoinGroup, handleLeaveGroup, handleKick, handleGroupChat,
 } from './groupManager.js';
 import { handleBank, handleDeposit, handleWithdraw } from './bankCommands.js';
+import { handleList, handleBuy, handleSell, handlePrice, handleHaggle } from './merchantCommands.js';
 
 export interface CommandResponse {
   type: MessageType;
@@ -500,6 +501,33 @@ export async function processCommand(
     return handleWithdraw(socket, args);
   }
 
+  // ---------- Merchant commands ----------
+
+  if (command === 'list') {
+    return handleList(socket, args);
+  }
+
+  if (command === 'buy') {
+    return handleBuy(socket, args);
+  }
+
+  if (command === 'sell') {
+    return handleSell(socket, args);
+  }
+
+  if (command === 'price') {
+    return handlePrice(socket, args);
+  }
+
+  if (command === 'haggle' || command === 'hag') {
+    return handleHaggle(socket, args);
+  }
+
+  // Directed speech: >target message
+  if (trimmed.startsWith('>')) {
+    return await handleDirectedSpeech(socket, trimmed.slice(1), currentRoomId, _connectedPlayers);
+  }
+
   // Check for temporary portal spawn triggers (e.g., "Valar Morghulis")
   // This spawns inactive portals, making them visible and usable
   const portalToSpawn = doorStateManager.findPortalBySpawnTrigger(currentRoomId, lowerTrimmed);
@@ -571,7 +599,7 @@ function getOtherPlayersInRoom(
 }
 
 // Get display names of NPCs in a room (for "Also here:" line)
-// Returns pre-colored names: hostile NPCs in red, others in default player color
+// Returns pre-colored names: hostile NPCs in red, non-hostile in blue
 function getNpcDisplayNames(roomId: number): string[] {
   const npcs = getNpcsInRoom(roomId);
   const names: string[] = [];
@@ -579,7 +607,7 @@ function getNpcDisplayNames(roomId: number): string[] {
     if (npc.vitals.hp <= 0) continue; // Skip dead NPCs
     const name = npc.template.hostile
       ? colors.hostileInRoom(npc.entityName)
-      : colors.playerInRoom(npc.entityName);
+      : colors.npcInRoom(npc.entityName);
     names.push(name);
   }
   return names;
@@ -739,8 +767,11 @@ async function handleLookAtPlayer(
 function handleLookAtNpc(npc: import('./npcManager.js').NpcCombatInstance): CommandResponse {
   const lines: string[] = [];
 
-  // Name
-  lines.push(colors.boldYellow(npc.entityName));
+  // Name — prefix with "Merchant" if applicable
+  const displayName = npc.template.merchantEnabled
+    ? `Merchant ${npc.entityName}`
+    : npc.entityName;
+  lines.push(colors.boldYellow(displayName));
 
   // Description
   if (npc.template.description) {
@@ -765,11 +796,11 @@ function handleLookAtNpc(npc: import('./npcManager.js').NpcCombatInstance): Comm
   } else {
     hpStatus = colors.boldRed('is dead.');
   }
-  lines.push(`${npc.entityName} ${hpStatus}`);
+  lines.push(`${withNpcNameCapitalized(npc.entityName, npc.isProperName)} ${hpStatus}`);
 
   // Hostile indicator
   if (npc.template.hostile) {
-    lines.push(colors.red(`The ${npc.entityName} looks hostile.`));
+    lines.push(colors.red(`${withNpcNameThe(npc.entityName, npc.isProperName)} looks hostile.`));
   }
 
   return { type: MessageType.OUTPUT, message: lines.join('\r\n') };
@@ -1948,6 +1979,100 @@ function handleSay(
   return { type: MessageType.OUTPUT, message: `${colors.sayName('You say:')} ${colors.say('"' + message + '"')}` };
 }
 
+async function handleDirectedSpeech(
+  socket: AuthenticatedSocket,
+  input: string,
+  roomId: number,
+  connectedPlayers: Map<number, AuthenticatedSocket>
+): Promise<CommandResponse> {
+  // Parse ">target message" — first word is target, rest is message
+  const spaceIdx = input.indexOf(' ');
+  if (spaceIdx < 0 || input.trim().length === 0) {
+    return { type: MessageType.ERROR, message: 'Say what to whom? Usage: >target message' };
+  }
+
+  const targetName = input.substring(0, spaceIdx).trim();
+  const message = input.substring(spaceIdx + 1).trim();
+
+  if (!targetName || !message) {
+    return { type: MessageType.ERROR, message: 'Say what to whom? Usage: >target message' };
+  }
+
+  // Check players in room first
+  const targetPlayer = findPlayerInRoom(targetName, roomId, connectedPlayers, socket.playerId, socket.canSeeHidden);
+  if (targetPlayer) {
+    // Broadcast to room (exclude speaker and target)
+    for (const [playerId, playerSocket] of connectedPlayers) {
+      if (playerId !== socket.playerId && playerId !== targetPlayer.playerId && getPlayerLocation(playerId) === roomId) {
+        const gameMessage: GameMessage = {
+          type: MessageType.OUTPUT,
+          payload: `${colors.sayName(socket.username + ' says to ' + targetPlayer.username + ':')} ${colors.say('"' + message + '"')}`,
+          timestamp: Date.now(),
+        };
+        playerSocket.send(JSON.stringify(gameMessage));
+      }
+    }
+
+    // Notify target
+    const targetMsg: GameMessage = {
+      type: MessageType.OUTPUT,
+      payload: `${colors.sayName(socket.username + ' says to you:')} ${colors.say('"' + message + '"')}`,
+      timestamp: Date.now(),
+    };
+    targetPlayer.send(JSON.stringify(targetMsg));
+
+    return {
+      type: MessageType.OUTPUT,
+      message: `${colors.sayName('You say to ' + targetPlayer.username + ':')} ${colors.say('"' + message + '"')}`,
+    };
+  }
+
+  // Check NPCs in room
+  const npcTarget = findNpcInRoom(targetName, roomId);
+  if (npcTarget) {
+    // Broadcast to room
+    for (const [playerId, playerSocket] of connectedPlayers) {
+      if (playerId !== socket.playerId && getPlayerLocation(playerId) === roomId) {
+        const gameMessage: GameMessage = {
+          type: MessageType.OUTPUT,
+          payload: `${colors.sayName(socket.username + ' says to ' + npcTarget.entityName + ':')} ${colors.say('"' + message + '"')}`,
+          timestamp: Date.now(),
+        };
+        playerSocket.send(JSON.stringify(gameMessage));
+      }
+    }
+
+    // Check for merchant keyword response
+    if (npcTarget.template.merchantEnabled) {
+      const npcResponse = await getResponseForKeywords(npcTarget.template.id, message);
+      if (npcResponse) {
+        // Send merchant's response to speaker after their speech (via sendMessage),
+        // then broadcast to the rest of the room. The speaker's own speech line is
+        // returned as the CommandResponse so it arrives first.
+        const merchantLine = `${colors.sayName(npcTarget.entityName + ' says:')} ${colors.say('"' + npcResponse + '"')}`;
+        // Use setTimeout(0) to ensure the CommandResponse (player's speech) is sent first
+        setTimeout(() => {
+          if (socket.readyState === socket.OPEN) {
+            sendMessage(socket, MessageType.OUTPUT, merchantLine);
+          }
+          broadcastToRoom(roomId, merchantLine, socket.playerId);
+        }, 0);
+        return {
+          type: MessageType.OUTPUT,
+          message: `${colors.sayName('You say to ' + npcTarget.entityName + ':')} ${colors.say('"' + message + '"')}`,
+        };
+      }
+    }
+
+    return {
+      type: MessageType.OUTPUT,
+      message: `${colors.sayName('You say to ' + npcTarget.entityName + ':')} ${colors.say('"' + message + '"')}`,
+    };
+  }
+
+  return { type: MessageType.ERROR, message: `There is no ${targetName} here.` };
+}
+
 function handleHelp(userRoles: Role[], category?: string): CommandResponse {
   const isStaff = hasAnyRole(userRoles, [Role.MODERATOR, Role.SYSOP, Role.DEVELOPER, Role.ADMIN]);
   const isDeveloper = hasAnyRole(userRoles, [Role.DEVELOPER, Role.ADMIN]);
@@ -2069,6 +2194,14 @@ function handleHelp(userRoles: Role[], category?: string): CommandResponse {
     `    ${colors.white('deposit <amt> [type]')}  - Deposit currency (in bank)`,
     `    ${colors.white('withdraw all')} (wit)    - Withdraw all funds`,
     `    ${colors.white('withdraw <amt> [type]')} - Withdraw currency (in bank)`,
+    '',
+    colors.boldCyan('  Merchants:'),
+    `    ${colors.white('list')}                  - View merchant inventory and prices`,
+    `    ${colors.white('buy <item>')}            - Buy an item from a merchant`,
+    `    ${colors.white('sell <item>')}           - Sell an item to a merchant`,
+    `    ${colors.white('price <item>')}          - Check buy/sell price of an item`,
+    `    ${colors.white('haggle')} (hag)          - Try to get better prices`,
+    `    ${colors.white('>merchant message')}     - Say something to a merchant`,
     '',
     colors.boldCyan('  Chat Channels:'),
     `    ${colors.white('gossip <msg>')} (gos)    - Send to gossip channel`,

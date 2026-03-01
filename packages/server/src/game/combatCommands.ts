@@ -10,9 +10,10 @@ import { AuthenticatedSocket, broadcastToRoom, sendVitals } from './socket.js';
 import type { CombatEntity } from './combatEntity.js';
 import { getPlayerLocation } from './adminCommands.js';
 import { colors } from '../utils/colors.js';
+import { withNpcName, withNpcNameCapitalized } from '../utils/textFormat.js';
 import { findPlayerInRoom } from './playerUtils.js';
 import { isStealthing, breakStealth } from './stealth/stealthState.js';
-import { getAllNpcInstances, findNpcInRoom, getNpcInstance, resetNpcBehaviorState } from './npcManager.js';
+import { getAllNpcInstances, findNpcInRoom, getNpcInstance, resetNpcBehaviorState, setMerchantHostile } from './npcManager.js';
 import type { NpcCombatInstance } from './npcManager.js';
 
 /**
@@ -111,12 +112,12 @@ export function handleAttack(
 
   // Check if NPC is already dead
   if (npcTarget.vitals.hp <= 0) {
-    return { type: MessageType.ERROR, message: `${npcTarget.entityName} is already dead.` };
+    return { type: MessageType.ERROR, message: `${withNpcNameCapitalized(npcTarget.entityName, npcTarget.isProperName)} is already dead.` };
   }
 
   // Check if already attacking this NPC
   if (socket.combatState.targets.has(npcTarget.entityId)) {
-    return { type: MessageType.SYSTEM, message: `You are already attacking ${npcTarget.entityName}!` };
+    return { type: MessageType.SYSTEM, message: `You are already attacking ${withNpcName(npcTarget.entityName, npcTarget.isProperName)}!` };
   }
 
   // Break stealth when initiating combat
@@ -133,6 +134,11 @@ export function handleAttack(
   npcTarget.regenState.inCombat = true;
   npcTarget.behaviorState = 'combat';
 
+  // If attacking a merchant, mark them as hostile to this player
+  if (npcTarget.template.merchantEnabled && socket.characterId) {
+    setMerchantHostile(socket.characterId, npcTarget.template.id);
+  }
+
   // Clear resting state for attacker
   socket.regenState.enhancedRegen.clear();
 
@@ -147,7 +153,7 @@ export function handleAttack(
   // Broadcast to room
   broadcastToRoom(
     currentRoomId,
-    `${colors.combatAttacker(socket.username)} moves to attack ${colors.combatDefender(npcTarget.entityName)}.`,
+    `${colors.combatAttacker(socket.username)} moves to attack ${colors.combatDefender(withNpcName(npcTarget.entityName, npcTarget.isProperName))}.`,
     socket.playerId
   );
 

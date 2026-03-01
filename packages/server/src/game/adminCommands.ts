@@ -46,8 +46,10 @@ import {
   NO_LOCKPICK_BONUS,
 } from './stats/secondaryStats.js';
 import { StealthMode } from '@koa/shared';
-import { getAllNpcInstances, reloadNpcTemplates, isNpcDebugEnabled, setNpcDebug } from './npcManager.js';
+import { getAllNpcInstances, reloadNpcTemplates, isNpcDebugEnabled, setNpcDebug, getMerchantsInRoom, clearMerchantResponseCache } from './npcManager.js';
+import * as merchantRepo from '../db/repositories/merchantRepository.js';
 import { clearDenominationCache } from './npcDeathHandler.js';
+import * as factionRepo from '../db/repositories/factionRepository.js';
 
 interface CommandResponse {
   type: MessageType;
@@ -65,7 +67,7 @@ export function setPlayerLocation(playerId: number, roomId: number): void {
 }
 
 // Commands that require Developer role
-const developerCommands = ['create', 'link', 'unlink', 'edit', 'delete', 'reload', 'spawn', 'purge', 'items', 'iteminfo', 'setstealth', 'testbackstab', 'lockpicking', 'npcs', 'mobbehavior', 'npcdebug'];
+const developerCommands = ['create', 'link', 'unlink', 'edit', 'delete', 'reload', 'spawn', 'purge', 'items', 'iteminfo', 'setstealth', 'testbackstab', 'lockpicking', 'npcs', 'mobbehavior', 'npcdebug', 'merchants'];
 
 // Commands that any staff can use (Moderator+)
 const staffCommands = ['goto', 'rooms', 'roominfo', 'help', 'give', 'hurt', 'heal', 'drain', 'revive', 'teleport', 'learn', 'spells', 'effect', 'cleareffect', 'effects', 'stealth'];
@@ -166,6 +168,8 @@ export async function processAdminCommand(
       return handleMobBehavior();
     case 'npcdebug':
       return handleNpcDebug(args[0] || '');
+    case 'merchants':
+      return await handleMerchantsDebug(socket);
     case 'help':
       return handleAdminHelp(userRoles);
     default:
@@ -466,7 +470,7 @@ async function handleReload(
   // @reload [rooms|items|mobs|effects|doors|actions|droptables|all]
   const target = args[0]?.toLowerCase() || 'all';
 
-  const validTargets = ['rooms', 'items', 'mobs', 'effects', 'doors', 'actions', 'droptables', 'all'];
+  const validTargets = ['rooms', 'items', 'mobs', 'effects', 'doors', 'actions', 'droptables', 'factions', 'merchants', 'merchantresponses', 'all'];
   if (!validTargets.includes(target)) {
     return { type: MessageType.ERROR, message: `Usage: @reload [${validTargets.join('|')}]` };
   }
@@ -509,6 +513,21 @@ async function handleReload(
     if (target === 'droptables' || target === 'all') {
       clearDenominationCache();
       results.push(`${colors.green('✓')} Cleared denomination template cache`);
+    }
+
+    if (target === 'factions' || target === 'all') {
+      const factions = await factionRepo.getAllFactions();
+      results.push(`${colors.green('✓')} Reloaded ${factions.length} factions`);
+    }
+
+    if (target === 'merchants' || target === 'all') {
+      const restocked = await merchantRepo.processRestock();
+      results.push(`${colors.green('✓')} Merchant restock processed (${restocked} non-common items restocked)`);
+    }
+
+    if (target === 'merchantresponses' || target === 'all') {
+      clearMerchantResponseCache();
+      results.push(`${colors.green('✓')} Cleared merchant response cache`);
     }
 
     return {
@@ -1443,6 +1462,38 @@ function handleNpcDebug(args: string): CommandResponse {
   }
   const status = isNpcDebugEnabled() ? 'enabled' : 'disabled';
   return { type: MessageType.SYSTEM, message: `NPC debug mode is ${status}. Usage: @npcdebug on|off` };
+}
+
+async function handleMerchantsDebug(socket: AuthenticatedSocket): Promise<CommandResponse> {
+  const roomId = getPlayerLocation(socket.playerId);
+  if (!roomId) {
+    return { type: MessageType.ERROR, message: 'You must be in a room.' };
+  }
+
+  const merchants = getMerchantsInRoom(roomId);
+  if (merchants.length === 0) {
+    return { type: MessageType.SYSTEM, message: 'No merchants in this room.' };
+  }
+
+  const lines: string[] = [colors.boldYellow('Merchants in room:'), ''];
+
+  for (const m of merchants) {
+    const inventory = await merchantRepo.getInventoryForTemplate(m.templateId);
+    lines.push(`  ${colors.boldWhite(m.entityName)} (ID: ${m.templateId})`);
+    lines.push(`    Faction: ${m.template.primaryFactionId ?? 'none'}`);
+    lines.push(`    State: ${m.behaviorState}`);
+    if (inventory.length === 0) {
+      lines.push('    Inventory: empty');
+    } else {
+      lines.push(`    Inventory: ${inventory.length} items`);
+      for (const entry of inventory) {
+        lines.push(`      Item #${entry.itemTemplateId}: ${entry.currentStock}/${entry.maxStock} (restock: ${entry.restockChance}%)`);
+      }
+    }
+    lines.push('');
+  }
+
+  return { type: MessageType.OUTPUT, message: lines.join('\r\n') };
 }
 
 function handleAdminHelp(userRoles: Role[]): CommandResponse {

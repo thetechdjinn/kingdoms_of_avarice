@@ -56,7 +56,40 @@ interface NpcTemplate {
   enterRoomMessage: string | null;
   exitRoomMessage: string | null;
   spawnMessage: string | null;
+  merchantEnabled: boolean;
+  primaryFactionId: number | null;
+  properName: boolean;
   attacks: NpcAttack[];
+}
+
+interface Faction {
+  id: number;
+  name: string;
+  description: string | null;
+  factionType: string;
+}
+
+interface ItemTemplateBasic {
+  id: number;
+  name: string;
+  base_value: number;
+}
+
+interface MerchantInventoryEntry {
+  id: number;
+  npcTemplateId: number;
+  itemTemplateId: number;
+  maxStock: number;
+  currentStock: number;
+  restockChance: number;
+  itemTemplate: ItemTemplateBasic;
+}
+
+interface MerchantResponse {
+  id: number;
+  npcTemplateId: number;
+  triggerKeywords: string[];
+  response: string;
 }
 
 interface DropTable {
@@ -74,6 +107,10 @@ interface AuthInfo {
 
 let templates: NpcTemplate[] = [];
 let dropTables: DropTable[] = [];
+let factions: Faction[] = [];
+let itemTemplates: ItemTemplateBasic[] = [];
+let merchantInventory: MerchantInventoryEntry[] = [];
+let merchantResponses: MerchantResponse[] = [];
 let selectedTemplateId: number | null = null;
 let editingAttacks: NpcAttack[] = [];
 let currentUser: AuthInfo | null = null;
@@ -285,6 +322,7 @@ function selectTemplate(id: number): void {
   setInputValue('npc-respawn-time', template.respawnTime !== null ? String(template.respawnTime) : '');
   setInputValue('npc-max-active', String(template.maxActive));
   setCheckbox('npc-hostile', template.hostile);
+  setCheckbox('npc-proper-name', template.properName);
   setCheckbox('npc-interactable', template.interactable);
 
   // Combat tab
@@ -325,6 +363,14 @@ function selectTemplate(id: number): void {
   // Attacks
   editingAttacks = template.attacks.map(a => ({ ...a }));
   renderAttacks();
+
+  // Merchant tab
+  setCheckbox('npc-merchant-enabled', template.merchantEnabled);
+  setSelectValue('npc-primary-faction', template.primaryFactionId ? String(template.primaryFactionId) : '');
+  toggleMerchantSection(template.merchantEnabled);
+  if (template.merchantEnabled) {
+    loadMerchantData(template.id);
+  }
 
   // Enable spawn
   const spawnBtn = getElement<HTMLButtonElement>('spawn-btn');
@@ -532,6 +578,7 @@ function gatherFormData(): Record<string, unknown> {
     respawnTime: respawnTimeVal ? parseInt(respawnTimeVal) : null,
     maxActive: getNum('npc-max-active', 1),
     hostile: getChecked('npc-hostile'),
+    properName: getChecked('npc-proper-name'),
     interactable: getChecked('npc-interactable'),
 
     maxHealth: getNum('npc-max-health', 100),
@@ -564,6 +611,11 @@ function gatherFormData(): Record<string, unknown> {
     spawnMessage: getVal('npc-spawn-message') || null,
     leaveCorpse: getChecked('npc-leave-corpse'),
     corpseDuration: getNum('npc-corpse-duration', 300),
+
+    merchantEnabled: getChecked('npc-merchant-enabled'),
+    primaryFactionId: getElement<HTMLSelectElement>('npc-primary-faction')?.value
+      ? parseInt(getElement<HTMLSelectElement>('npc-primary-faction')!.value)
+      : null,
 
     attacks: editingAttacks,
   };
@@ -873,6 +925,270 @@ function updatePreview(): void {
 }
 
 // ============================================================================
+// Merchant Tab
+// ============================================================================
+
+async function fetchFactions(): Promise<void> {
+  try {
+    const response = await fetch('/api/factions');
+    if (!response.ok) return;
+    const data = await response.json();
+    factions = data.factions || [];
+    populateFactionDropdown();
+  } catch (error) {
+    console.error('Failed to fetch factions:', error);
+    showToast('Failed to load factions', 'error');
+  }
+}
+
+async function fetchItemTemplates(): Promise<void> {
+  try {
+    const response = await fetch('/api/items/templates');
+    if (!response.ok) return;
+    const data = await response.json();
+    itemTemplates = (data.templates || []).map((t: Record<string, unknown>) => ({
+      id: t.id,
+      name: t.name,
+      base_value: t.base_value ?? 0,
+    }));
+    populateItemDropdown();
+  } catch (error) {
+    console.error('Failed to fetch item templates:', error);
+    showToast('Failed to load item templates', 'error');
+  }
+}
+
+function populateFactionDropdown(): void {
+  const select = getElement<HTMLSelectElement>('npc-primary-faction');
+  if (!select) return;
+  const currentValue = select.value;
+  select.innerHTML = '<option value="">None</option>';
+  for (const f of factions) {
+    const opt = document.createElement('option');
+    opt.value = String(f.id);
+    opt.textContent = `${f.name} (${f.factionType})`;
+    select.appendChild(opt);
+  }
+  select.value = currentValue;
+}
+
+function populateItemDropdown(): void {
+  const select = getElement<HTMLSelectElement>('merchant-add-item-select');
+  if (!select) return;
+  select.innerHTML = '<option value="">Select item to add...</option>';
+  const sorted = [...itemTemplates].sort((a, b) => a.name.localeCompare(b.name));
+  for (const item of sorted) {
+    const opt = document.createElement('option');
+    opt.value = String(item.id);
+    opt.textContent = `${item.name} (${item.base_value}c)`;
+    select.appendChild(opt);
+  }
+}
+
+function toggleMerchantSection(enabled: boolean): void {
+  const section = document.getElementById('merchant-section');
+  if (section) section.style.display = enabled ? 'block' : 'none';
+}
+
+async function loadMerchantData(npcTemplateId: number): Promise<void> {
+  merchantInventory = [];
+  merchantResponses = [];
+  try {
+    const [invRes, respRes] = await Promise.all([
+      fetch(`/api/merchants/${npcTemplateId}/inventory`),
+      fetch(`/api/merchants/${npcTemplateId}/responses`),
+    ]);
+    if (invRes.ok) {
+      const invData = await invRes.json();
+      merchantInventory = invData.inventory || [];
+    }
+    if (respRes.ok) {
+      const respData = await respRes.json();
+      merchantResponses = respData.responses || [];
+    }
+  } catch (error) {
+    console.error('Failed to load merchant data:', error);
+  }
+  renderMerchantInventory();
+  renderMerchantResponses();
+}
+
+function renderMerchantInventory(): void {
+  const tbody = document.getElementById('merchant-inventory-body');
+  const hint = document.getElementById('no-inventory-hint');
+  if (!tbody) return;
+  tbody.innerHTML = '';
+  if (hint) hint.style.display = merchantInventory.length === 0 ? 'block' : 'none';
+
+  for (const entry of merchantInventory) {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${escapeHtml(entry.itemTemplate.name)}</td>
+      <td><input type="number" value="${entry.maxStock}" min="1" data-id="${entry.id}" data-field="maxStock" class="inv-edit" style="width:60px" /></td>
+      <td><input type="number" value="${entry.currentStock}" min="0" data-id="${entry.id}" data-field="currentStock" class="inv-edit" style="width:60px" /></td>
+      <td><input type="number" value="${entry.restockChance}" min="1" max="100" data-id="${entry.id}" data-field="restockChance" class="inv-edit" style="width:60px" /></td>
+      <td>${entry.itemTemplate.base_value}c</td>
+      <td><button type="button" class="btn-small btn-danger inv-delete" data-id="${entry.id}">X</button></td>
+    `;
+    tbody.appendChild(tr);
+  }
+
+  // Attach listeners
+  tbody.querySelectorAll('.inv-edit').forEach(input => {
+    input.addEventListener('change', async (e) => {
+      const el = e.target as HTMLInputElement;
+      const id = parseInt(el.dataset.id || '0');
+      const field = el.dataset.field || '';
+      const value = parseInt(el.value);
+      if (isNaN(id) || isNaN(value)) return;
+      try {
+        await fetch(`/api/merchants/inventory/${id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ [field]: value }),
+        });
+        showToast('Inventory updated', 'success');
+      } catch (error) {
+        showToast('Failed to update inventory', 'error');
+      }
+    });
+  });
+
+  tbody.querySelectorAll('.inv-delete').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const id = parseInt((btn as HTMLElement).dataset.id || '0');
+      if (!id || !confirm('Remove this item from inventory?')) return;
+      try {
+        await fetch(`/api/merchants/inventory/${id}`, { method: 'DELETE' });
+        if (selectedTemplateId) await loadMerchantData(selectedTemplateId);
+        showToast('Item removed from inventory', 'success');
+      } catch (error) {
+        showToast('Failed to remove item', 'error');
+      }
+    });
+  });
+}
+
+async function addMerchantItem(): Promise<void> {
+  if (!selectedTemplateId) return;
+  const select = getElement<HTMLSelectElement>('merchant-add-item-select');
+  if (!select || !select.value) {
+    showToast('Select an item to add', 'error');
+    return;
+  }
+  const itemTemplateId = parseInt(select.value);
+  try {
+    const res = await fetch(`/api/merchants/${selectedTemplateId}/inventory`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ itemTemplateId, maxStock: 10, restockChance: 100 }),
+    });
+    const data = await res.json();
+    if (!data.success) {
+      showToast(data.message || 'Failed to add item', 'error');
+      return;
+    }
+    await loadMerchantData(selectedTemplateId);
+    select.value = '';
+    showToast('Item added to inventory', 'success');
+  } catch (error) {
+    showToast('Failed to add item', 'error');
+  }
+}
+
+function renderMerchantResponses(): void {
+  const tbody = document.getElementById('merchant-responses-body');
+  const hint = document.getElementById('no-responses-hint');
+  if (!tbody) return;
+  tbody.innerHTML = '';
+  if (hint) hint.style.display = merchantResponses.length === 0 ? 'block' : 'none';
+
+  for (const resp of merchantResponses) {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${escapeHtml(resp.triggerKeywords.join(', '))}</td>
+      <td>${escapeHtml(resp.response)}</td>
+      <td><button type="button" class="btn-small btn-danger resp-delete" data-id="${resp.id}">X</button></td>
+    `;
+    tbody.appendChild(tr);
+  }
+
+  tbody.querySelectorAll('.resp-delete').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const id = parseInt((btn as HTMLElement).dataset.id || '0');
+      if (!id || !confirm('Delete this response?')) return;
+      try {
+        await fetch(`/api/merchants/responses/${id}`, { method: 'DELETE' });
+        if (selectedTemplateId) await loadMerchantData(selectedTemplateId);
+        showToast('Response deleted', 'success');
+      } catch (error) {
+        showToast('Failed to delete response', 'error');
+      }
+    });
+  });
+}
+
+async function addMerchantResponse(): Promise<void> {
+  if (!selectedTemplateId) return;
+  const keywordsInput = getElement<HTMLInputElement>('response-keywords');
+  const textInput = getElement<HTMLInputElement>('response-text');
+  if (!keywordsInput?.value || !textInput?.value) {
+    showToast('Keywords and response text are required', 'error');
+    return;
+  }
+  const triggerKeywords = keywordsInput.value.split(',').map(s => s.trim()).filter(Boolean);
+  if (triggerKeywords.length === 0) {
+    showToast('At least one keyword is required', 'error');
+    return;
+  }
+  try {
+    const res = await fetch(`/api/merchants/${selectedTemplateId}/responses`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ triggerKeywords, response: textInput.value }),
+    });
+    const data = await res.json();
+    if (!data.success) {
+      showToast(data.message || 'Failed to add response', 'error');
+      return;
+    }
+    keywordsInput.value = '';
+    textInput.value = '';
+    await loadMerchantData(selectedTemplateId);
+    showToast('Response added', 'success');
+  } catch (error) {
+    showToast('Failed to add response', 'error');
+  }
+}
+
+async function testPrice(): Promise<void> {
+  const baseValue = parseInt(getElement<HTMLInputElement>('test-base-value')?.value || '100');
+  const factionRep = parseInt(getElement<HTMLInputElement>('test-faction-rep')?.value || '0');
+  const charisma = parseInt(getElement<HTMLInputElement>('test-charisma')?.value || '50');
+  const haggleRep = parseInt(getElement<HTMLInputElement>('test-haggle-rep')?.value || '0');
+  const resultDiv = document.getElementById('price-test-result');
+  if (!resultDiv) return;
+
+  try {
+    const res = await fetch('/api/merchants/test-price', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ baseValue, factionRep, charisma, haggleRep }),
+    });
+    const data = await res.json();
+    if (data.success) {
+      const buyStr = data.buy.refused ? 'REFUSED' : `${data.buy.price} copper`;
+      const sellStr = data.sell.refused ? 'REFUSED' : `${data.sell.price} copper`;
+      resultDiv.textContent = `Buy: ${buyStr} | Sell: ${sellStr}`;
+    } else {
+      resultDiv.textContent = 'Error calculating price';
+    }
+  } catch (error) {
+    resultDiv.textContent = 'Error calculating price';
+  }
+}
+
+// ============================================================================
 // Tab Handling
 // ============================================================================
 
@@ -900,7 +1216,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const hasAccess = await checkAuth();
   if (!hasAccess) return;
 
-  await Promise.all([fetchTemplates(), fetchDropTables()]);
+  await Promise.all([fetchTemplates(), fetchDropTables(), fetchFactions(), fetchItemTemplates()]);
   setupTabs();
 
   const addListener = (id: string, event: string, handler: EventListener) => {
@@ -932,6 +1248,20 @@ document.addEventListener('DOMContentLoaded', async () => {
   addListener('import-modal', 'click', (e) => {
     if (e.target === e.currentTarget) hideImportModal();
   });
+
+  // Merchant tab
+  addListener('merchant-add-item-btn', 'click', addMerchantItem);
+  addListener('merchant-add-response-btn', 'click', addMerchantResponse);
+  addListener('test-price-btn', 'click', testPrice);
+  const merchantEnabledCheckbox = document.getElementById('npc-merchant-enabled') as HTMLInputElement;
+  if (merchantEnabledCheckbox) {
+    merchantEnabledCheckbox.addEventListener('change', () => {
+      toggleMerchantSection(merchantEnabledCheckbox.checked);
+      if (merchantEnabledCheckbox.checked && selectedTemplateId) {
+        loadMerchantData(selectedTemplateId);
+      }
+    });
+  }
 
   // Spawn
   addListener('spawn-btn', 'click', spawnNpc);

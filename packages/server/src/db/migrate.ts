@@ -545,6 +545,102 @@ export async function runMigrations(): Promise<void> {
         `);
       }
 
+      // Merchant System: Add rarity and max_in_world to item_templates
+      await client.query(`
+        ALTER TABLE item_templates ADD COLUMN IF NOT EXISTS rarity VARCHAR(20) DEFAULT 'common'
+      `);
+      await client.query(`
+        ALTER TABLE item_templates ADD COLUMN IF NOT EXISTS max_in_world INTEGER
+      `);
+
+      // Merchant System: Add merchant_enabled to npcs, create merchant_inventory
+      await client.query(`ALTER TABLE npcs ADD COLUMN IF NOT EXISTS merchant_enabled BOOLEAN DEFAULT FALSE`);
+      await client.query(`
+        CREATE TABLE IF NOT EXISTS merchant_inventory (
+          id SERIAL PRIMARY KEY,
+          npc_template_id INTEGER NOT NULL REFERENCES npcs(id) ON DELETE CASCADE,
+          item_template_id INTEGER NOT NULL REFERENCES item_templates(id) ON DELETE CASCADE,
+          max_stock INTEGER NOT NULL DEFAULT 10,
+          current_stock INTEGER NOT NULL DEFAULT 10,
+          restock_chance INTEGER NOT NULL DEFAULT 100 CHECK (restock_chance >= 1 AND restock_chance <= 100),
+          UNIQUE(npc_template_id, item_template_id)
+        )
+      `);
+      await client.query(`CREATE INDEX IF NOT EXISTS idx_merchant_inventory_npc ON merchant_inventory(npc_template_id)`);
+
+      // Add stock constraints (safe to re-run: checks IF NOT EXISTS via constraint name)
+      await client.query(`
+        DO $$ BEGIN
+          IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'merchant_inventory_max_stock_check') THEN
+            ALTER TABLE merchant_inventory ADD CONSTRAINT merchant_inventory_max_stock_check CHECK (max_stock >= 0);
+          END IF;
+          IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'merchant_inventory_current_stock_check') THEN
+            ALTER TABLE merchant_inventory ADD CONSTRAINT merchant_inventory_current_stock_check CHECK (current_stock >= 0 AND current_stock <= max_stock);
+          END IF;
+        END $$
+      `);
+
+      // Faction System: Create factions, npc_factions, and player_faction_reputation tables
+      await client.query(`
+        CREATE TABLE IF NOT EXISTS factions (
+          id SERIAL PRIMARY KEY,
+          name VARCHAR(100) NOT NULL UNIQUE,
+          description TEXT,
+          faction_type VARCHAR(50) NOT NULL DEFAULT 'merchant' CHECK (faction_type IN ('city', 'tribal', 'merchant', 'guild')),
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
+      await client.query(`
+        CREATE TABLE IF NOT EXISTS npc_factions (
+          id SERIAL PRIMARY KEY,
+          npc_id INTEGER NOT NULL REFERENCES npcs(id) ON DELETE CASCADE,
+          faction_id INTEGER NOT NULL REFERENCES factions(id) ON DELETE CASCADE,
+          UNIQUE(npc_id, faction_id)
+        )
+      `);
+      await client.query(`
+        CREATE TABLE IF NOT EXISTS player_faction_reputation (
+          id SERIAL PRIMARY KEY,
+          character_id INTEGER NOT NULL REFERENCES characters(id) ON DELETE CASCADE,
+          faction_id INTEGER NOT NULL REFERENCES factions(id) ON DELETE CASCADE,
+          reputation INTEGER NOT NULL DEFAULT 0,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          UNIQUE(character_id, faction_id)
+        )
+      `);
+      await client.query(`ALTER TABLE npcs ADD COLUMN IF NOT EXISTS primary_faction_id INTEGER REFERENCES factions(id)`);
+      await client.query(`ALTER TABLE npcs ADD COLUMN IF NOT EXISTS proper_name BOOLEAN DEFAULT FALSE`);
+      // Goran is a proper noun — set proper_name for existing installs
+      await client.query(`UPDATE npcs SET proper_name = TRUE WHERE LOWER(name) = LOWER('goran the weaponsmith') AND proper_name = FALSE`);
+      // Fix Goran's health column (was missing from original seed)
+      await client.query(`UPDATE npcs SET health = max_health WHERE LOWER(name) = LOWER('goran the weaponsmith') AND health IS NULL`);
+
+      // Indexes for faction tables
+      await client.query(`CREATE INDEX IF NOT EXISTS idx_npc_factions_npc ON npc_factions(npc_id)`);
+      await client.query(`CREATE INDEX IF NOT EXISTS idx_npc_factions_faction ON npc_factions(faction_id)`);
+      await client.query(`CREATE INDEX IF NOT EXISTS idx_player_faction_rep_character ON player_faction_reputation(character_id)`);
+      await client.query(`CREATE INDEX IF NOT EXISTS idx_player_faction_rep_faction ON player_faction_reputation(faction_id)`);
+
+      // Merchant Responses: keyword-triggered NPC responses for directed speech
+      await client.query(`
+        CREATE TABLE IF NOT EXISTS merchant_responses (
+          id SERIAL PRIMARY KEY,
+          npc_template_id INTEGER NOT NULL REFERENCES npcs(id) ON DELETE CASCADE,
+          trigger_keywords TEXT[] NOT NULL,
+          response TEXT NOT NULL
+        )
+      `);
+      await client.query(`CREATE INDEX IF NOT EXISTS idx_merchant_responses_npc ON merchant_responses(npc_template_id)`);
+
+      // Seed default factions
+      await client.query(`
+        INSERT INTO factions (name, description, faction_type) VALUES
+          ('Silverton Merchants Guild', 'The trade guild of Silverton, controlling commerce in the city.', 'merchant'),
+          ('Silverton City Guard', 'The city guard of Silverton, maintaining order and justice.', 'city')
+        ON CONFLICT (name) DO NOTHING
+      `);
+
       // Seed default game settings (only if they don't exist)
       await client.query(`
         INSERT INTO game_settings (key, value) VALUES
@@ -589,6 +685,7 @@ export async function runMigrations(): Promise<void> {
           );
         }
       }
+
     });
 
     console.log('Database migrations completed successfully');
@@ -598,6 +695,32 @@ export async function runMigrations(): Promise<void> {
   } catch (error) {
     console.error('Migration failed:', error);
     throw error;
+  }
+}
+
+/**
+ * Convert item base_value from gold to copper (multiply by 100).
+ * Must run AFTER seedInitialData so freshly seeded items also get converted.
+ * Uses a game_settings flag to ensure this only runs once.
+ */
+export async function ensureCopperConversion(): Promise<void> {
+  const pool = getPool();
+  const flagResult = await pool.query(
+    `SELECT 1 FROM game_settings WHERE key = 'item_base_value_copper_migrated'`
+  );
+  if (flagResult.rows.length === 0) {
+    await withTransaction(async (client) => {
+      await client.query(`
+        UPDATE item_templates
+        SET base_value = base_value * 100
+        WHERE item_type != 'currency'
+          AND base_value > 0
+      `);
+      await client.query(
+        `INSERT INTO game_settings (key, value) VALUES ('item_base_value_copper_migrated', 'true') ON CONFLICT (key) DO NOTHING`
+      );
+    });
+    console.log('Item base_value copper conversion completed');
   }
 }
 
@@ -661,6 +784,9 @@ export async function seedInitialData(): Promise<void> {
   } else {
     await seedNpcs();
   }
+
+  // Seed merchant NPC (has its own existence check, runs after rooms/items/npcs are ready)
+  await seedMerchant();
 }
 
 async function seedRooms(): Promise<void> {
@@ -896,6 +1022,65 @@ async function seedNpcs(): Promise<void> {
   }
 }
 
+async function seedMerchant(): Promise<void> {
+  const pool = getPool();
+
+  // Check if Goran already exists
+  const goranExists = await pool.query(
+    "SELECT 1 FROM npcs WHERE LOWER(name) = LOWER('goran the weaponsmith')"
+  );
+  if (goranExists.rows.length > 0) return;
+
+  // Verify room 3 exists (required FK)
+  const roomExists = await pool.query('SELECT 1 FROM rooms WHERE id = 3');
+  if (roomExists.rows.length === 0) {
+    console.log('Room 3 does not exist, skipping merchant seed.');
+    return;
+  }
+
+  try {
+    // Get the Silverton Merchants Guild faction ID
+    const guildResult = await pool.query(
+      "SELECT id FROM factions WHERE name = 'Silverton Merchants Guild'"
+    );
+    const guildId = guildResult.rows[0]?.id ?? null;
+
+    const goranResult = await pool.query(
+      `INSERT INTO npcs (
+        name, description, spawn_room_id, health, max_health, hostile, respawn_time,
+        level, experience_reward, gold_min, gold_max, max_mana,
+        base_accuracy, base_defense, base_crit_chance, base_dodge, damage_reduction,
+        flee_enabled, max_active, interactable, merchant_enabled, primary_faction_id, proper_name
+      ) VALUES (
+        'goran the weaponsmith',
+        'A burly man with soot-stained hands and a leather apron. His arms are thick from years at the forge, and his eyes hold the steady gaze of a master craftsman.',
+        3, 200, 200, false, 120,
+        5, 0, 0, 0, 0,
+        60, 60, 5, 10, 5,
+        true, 1, true, true, $1, true
+      ) RETURNING id`,
+      [guildId]
+    );
+    const goranId = goranResult.rows[0]?.id;
+
+    if (goranId) {
+      // Add default merchant responses
+      await pool.query(
+        `INSERT INTO merchant_responses (npc_template_id, trigger_keywords, response) VALUES
+          ($1, '{hello,hi,greetings,hey}', 'Welcome to my shop! Take a look around. Type "list" to see what I have for sale.'),
+          ($1, '{help,how,buy,sell}', 'You can "list" my wares, "buy" an item, "sell" me something, or check the "price" of goods.'),
+          ($1, '{bye,farewell,goodbye}', 'Safe travels! Come back when you need good steel.')
+        ON CONFLICT DO NOTHING`,
+        [goranId]
+      );
+    }
+
+    console.log('Merchant NPC "Goran the Weaponsmith" seeded successfully');
+  } catch (error) {
+    console.error('Failed to seed merchant NPC:', error);
+  }
+}
+
 async function normalizeItemNames(): Promise<void> {
   // Convert all item names to lowercase for consistency
   await getPool().query(`UPDATE item_templates SET name = LOWER(name)`);
@@ -907,6 +1092,7 @@ async function normalizeItemNames(): Promise<void> {
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   runMigrations()
     .then(() => seedInitialData())
+    .then(() => ensureCopperConversion())
     .then(() => process.exit(0))
     .catch(() => process.exit(1));
 }

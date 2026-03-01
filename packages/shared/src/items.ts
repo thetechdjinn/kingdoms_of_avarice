@@ -1,5 +1,15 @@
 // Item system types for Kingdoms of Avarice
 
+// Item rarity levels
+export enum ItemRarity {
+  COMMON = 'common',
+  UNCOMMON = 'uncommon',
+  RARE = 'rare',
+  LIMITED = 'limited',
+  UNIQUE = 'unique',
+  QUEST = 'quest',
+}
+
 // Equipment slot enum
 export enum EquipmentSlot {
   // Armor slots
@@ -216,6 +226,8 @@ export interface ItemTemplate {
   stealth_modifier?: number; // Modifier to stealth when equipped (negative for heavy armor)
   effect_slots: number;
   base_effects?: unknown;
+  rarity?: ItemRarity;        // Item rarity tier (default: common)
+  max_in_world?: number;      // Maximum instances allowed in the world (undefined = unlimited)
 }
 
 // Item instance (actual object in game)

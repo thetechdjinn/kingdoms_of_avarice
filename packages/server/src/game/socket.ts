@@ -33,9 +33,10 @@ import { raceCanSeeHidden } from './stats/secondaryStats.js';
 import { isHidden } from './stealth/stealthState.js';
 import type { CombatEntity, CombatState } from './combatEntity.js';
 import { NPC_ID_OFFSET, isPlayerEntity, getEntityRoomId } from './combatEntity.js';
-import { initializeNpcManager, checkHostileAggro, initializeNpcWorld } from './npcManager.js';
+import { initializeNpcManager, checkHostileAggro, initializeNpcWorld, clearMerchantHostility } from './npcManager.js';
 import { cleanupBroadcastMembership } from './socialCommands.js';
 import { cleanupPlayerGroup } from './groupManager.js';
+import { clearHaggleState } from './merchantCommands.js';
 
 interface AuthenticatedSocket extends WebSocket {
   playerId: number;
@@ -65,6 +66,7 @@ interface AuthenticatedSocket extends WebSocket {
   // CombatEntity identity fields (set during character login)
   entityId: number;
   entityName: string;
+  isProperName: boolean;
   entityType: 'player' | 'npc';
   // Training form state (player is removed from game world while training)
   isTraining: boolean;
@@ -315,6 +317,7 @@ export function setupGameSocket(wss: WebSocketServer): void {
     // CombatEntity identity fields
     authWs.entityId = payload.playerId;
     authWs.entityName = character.name;
+    authWs.isProperName = true; // Players are always proper nouns
     authWs.entityType = 'player';
 
     // Initialize vitals from character data
@@ -480,7 +483,7 @@ export function setupGameSocket(wss: WebSocketServer): void {
         if (npc.vitals.hp > 0) {
           const name = npc.template.hostile
             ? colorUtils.hostileInRoom(npc.entityName)
-            : colorUtils.playerInRoom(npc.entityName);
+            : colorUtils.npcInRoom(npc.entityName);
           npcNames.push(name);
         }
       }
@@ -607,6 +610,12 @@ export function setupGameSocket(wss: WebSocketServer): void {
         // Clean up social system state (broadcast channels, groups)
         cleanupBroadcastMembership(authWs);
         cleanupPlayerGroup(authWs.playerId);
+
+        // Clean up merchant state (haggle reputation, hostility)
+        if (authWs.characterId) {
+          clearHaggleState(authWs.characterId);
+          clearMerchantHostility(authWs.characterId);
+        }
 
         // Broadcast appropriate message based on how they disconnected.
         // If isTraining, "left the realm." was already sent when training started — skip.

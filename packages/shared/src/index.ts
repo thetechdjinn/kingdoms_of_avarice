@@ -316,6 +316,9 @@ export interface NpcTemplate {
   enterRoomMessage: string | null;
   exitRoomMessage: string | null;
   spawnMessage: string | null;
+  primaryFactionId: number | null;
+  merchantEnabled: boolean;
+  properName: boolean;
   attacks: NpcAttack[];
 }
 
@@ -341,6 +344,46 @@ export interface DropTableEntry {
   currencyMin: number;
   currencyMax: number;
   allowedDenominations: CurrencyDenomination[];
+}
+
+// Faction types
+export enum FactionType {
+  CITY = 'city',
+  TRIBAL = 'tribal',
+  MERCHANT = 'merchant',
+  GUILD = 'guild',
+}
+
+// Faction definition
+export interface Faction {
+  id: number;
+  name: string;
+  description: string | null;
+  factionType: FactionType;
+}
+
+// Player reputation with a faction
+export interface PlayerFactionReputation {
+  characterId: number;
+  factionId: number;
+  reputation: number;
+}
+
+// Merchant inventory entry (item stock for a merchant NPC)
+export interface MerchantInventoryEntry {
+  id: number;
+  npcTemplateId: number;
+  itemTemplateId: number;
+  maxStock: number;
+  currentStock: number;
+  restockChance: number; // 1-100 percentage
+}
+
+export interface MerchantResponse {
+  id: number;
+  npcTemplateId: number;
+  triggerKeywords: string[];
+  response: string;
 }
 
 // Action (social emote) data

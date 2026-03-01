@@ -182,6 +182,10 @@ CREATE TABLE IF NOT EXISTS item_templates (
     -- Stealth modifier (negative for heavy armor, positive for stealth gear)
     stealth_modifier INTEGER DEFAULT 0,
 
+    -- Rarity and world limits
+    rarity VARCHAR(20) DEFAULT 'common',
+    max_in_world INTEGER,
+
     -- Future extensibility
     effect_slots INTEGER DEFAULT 0,
     base_effects JSONB,
@@ -284,7 +288,8 @@ CREATE TABLE IF NOT EXISTS npcs (
     level INTEGER DEFAULT 1,
     experience_reward INTEGER DEFAULT 0,
     gold_min INTEGER DEFAULT 0,
-    gold_max INTEGER DEFAULT 0
+    gold_max INTEGER DEFAULT 0,
+    proper_name BOOLEAN DEFAULT FALSE
 );
 
 -- NPC instances (spawned NPCs in the world)
@@ -374,6 +379,53 @@ CREATE TABLE IF NOT EXISTS ip_access (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
+-- Merchant inventory (stock for merchant NPCs)
+CREATE TABLE IF NOT EXISTS merchant_inventory (
+    id SERIAL PRIMARY KEY,
+    npc_template_id INTEGER NOT NULL REFERENCES npcs(id) ON DELETE CASCADE,
+    item_template_id INTEGER NOT NULL REFERENCES item_templates(id) ON DELETE CASCADE,
+    max_stock INTEGER NOT NULL DEFAULT 10 CHECK (max_stock >= 0),
+    current_stock INTEGER NOT NULL DEFAULT 10 CHECK (current_stock >= 0 AND current_stock <= max_stock),
+    restock_chance INTEGER NOT NULL DEFAULT 100 CHECK (restock_chance >= 1 AND restock_chance <= 100),
+    UNIQUE(npc_template_id, item_template_id)
+);
+
+-- Factions (city, tribal, merchant, guild groups)
+CREATE TABLE IF NOT EXISTS factions (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(100) NOT NULL UNIQUE,
+    description TEXT,
+    faction_type VARCHAR(50) NOT NULL DEFAULT 'merchant' CHECK (faction_type IN ('city', 'tribal', 'merchant', 'guild')),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- NPC-to-faction assignments (many-to-many)
+CREATE TABLE IF NOT EXISTS npc_factions (
+    id SERIAL PRIMARY KEY,
+    npc_id INTEGER NOT NULL REFERENCES npcs(id) ON DELETE CASCADE,
+    faction_id INTEGER NOT NULL REFERENCES factions(id) ON DELETE CASCADE,
+    UNIQUE(npc_id, faction_id)
+);
+
+-- Player reputation with factions
+CREATE TABLE IF NOT EXISTS player_faction_reputation (
+    id SERIAL PRIMARY KEY,
+    character_id INTEGER NOT NULL REFERENCES characters(id) ON DELETE CASCADE,
+    faction_id INTEGER NOT NULL REFERENCES factions(id) ON DELETE CASCADE,
+    reputation INTEGER NOT NULL DEFAULT 0,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(character_id, faction_id)
+);
+
+-- Merchant responses (keyword-triggered NPC responses for directed speech)
+CREATE TABLE IF NOT EXISTS merchant_responses (
+    id SERIAL PRIMARY KEY,
+    npc_template_id INTEGER NOT NULL REFERENCES npcs(id) ON DELETE CASCADE,
+    trigger_keywords TEXT[] NOT NULL,
+    response TEXT NOT NULL
+);
+
 -- Indexes for performance
 CREATE INDEX IF NOT EXISTS idx_characters_player_id ON characters(player_id);
 CREATE INDEX IF NOT EXISTS idx_characters_current_room ON characters(current_room_id);
@@ -393,3 +445,9 @@ CREATE INDEX IF NOT EXISTS idx_doors_exit_room ON doors(exit_room_id);
 CREATE INDEX IF NOT EXISTS idx_doors_type ON doors(door_type);
 CREATE INDEX IF NOT EXISTS idx_npc_attacks_npc ON npc_attacks(npc_id);
 CREATE INDEX IF NOT EXISTS idx_drop_table_entries_table ON drop_table_entries(drop_table_id);
+CREATE INDEX IF NOT EXISTS idx_merchant_inventory_npc ON merchant_inventory(npc_template_id);
+CREATE INDEX IF NOT EXISTS idx_npc_factions_npc ON npc_factions(npc_id);
+CREATE INDEX IF NOT EXISTS idx_npc_factions_faction ON npc_factions(faction_id);
+CREATE INDEX IF NOT EXISTS idx_player_faction_rep_character ON player_faction_reputation(character_id);
+CREATE INDEX IF NOT EXISTS idx_player_faction_rep_faction ON player_faction_reputation(faction_id);
+CREATE INDEX IF NOT EXISTS idx_merchant_responses_npc ON merchant_responses(npc_template_id);

@@ -73,6 +73,8 @@ interface ItemTemplate {
   };
   stealth_modifier?: number;
   effect_slots: number;
+  rarity?: string;
+  max_in_world?: number;
 }
 
 interface AuthInfo {
@@ -322,6 +324,12 @@ function selectTemplate(id: number): void {
   if (maxStackInput) maxStackInput.value = String(template.max_stack);
   if (effectSlotsInput) effectSlotsInput.value = String(template.effect_slots);
 
+  // Rarity and max_in_world
+  const raritySelect = getElement<HTMLSelectElement>('item-rarity');
+  const maxInWorldInput = getElement<HTMLInputElement>('item-max-in-world');
+  if (raritySelect) raritySelect.value = template.rarity || 'common';
+  if (maxInWorldInput) maxInWorldInput.value = template.max_in_world ? String(template.max_in_world) : '';
+
   // Flags
   const flagTakeable = getElement<HTMLInputElement>('flag-takeable');
   const flagHidden = getElement<HTMLInputElement>('flag-hidden');
@@ -502,12 +510,17 @@ function updateTypeSections(itemType: string): void {
 function updatePreview(template: ItemTemplate): void {
   const content = document.getElementById('preview-content')!;
   
+  const rarityDisplay = template.rarity && template.rarity !== 'common'
+    ? `<span>Rarity: ${escapeHtml(template.rarity.charAt(0).toUpperCase() + template.rarity.slice(1))}</span>` : '';
+  const valueDisplay = formatCopperValue(template.base_value);
+
   let html = `
     <div class="preview-name">${escapeHtml(template.short_desc)}</div>
     <div class="preview-desc">${escapeHtml(template.long_desc || 'No description.')}</div>
     <div class="preview-stats">
       <span>Weight: ${template.weight}</span>
-      <span>Value: ${template.base_value}g</span>
+      <span>Value: ${escapeHtml(valueDisplay)}</span>
+      ${rarityDisplay}
     </div>
   `;
 
@@ -765,6 +778,10 @@ function gatherFormData(): Partial<ItemTemplate> {
     equipment_slot: (document.getElementById('item-equipment-slot') as HTMLSelectElement).value || undefined,
     max_stack: parseInt((document.getElementById('item-max-stack') as HTMLInputElement).value) || 1,
     effect_slots: parseInt((document.getElementById('item-effect-slots') as HTMLInputElement).value) || 0,
+    rarity: (document.getElementById('item-rarity') as HTMLSelectElement).value || 'common',
+    max_in_world: (document.getElementById('item-max-in-world') as HTMLInputElement).value
+      ? parseInt((document.getElementById('item-max-in-world') as HTMLInputElement).value, 10)
+      : undefined,
     flags: {
       takeable: (document.getElementById('flag-takeable') as HTMLInputElement).checked,
       hidden: (document.getElementById('flag-hidden') as HTMLInputElement).checked,
@@ -1028,6 +1045,28 @@ function escapeHtml(text: string): string {
   const div = document.createElement('div');
   div.textContent = text;
   return div.innerHTML;
+}
+
+// Format copper value as denomination string (e.g., 1234 -> "12 gold, 3 silver, 4 copper")
+function formatCopperValue(copper: number): string {
+  if (copper <= 0) return '0 copper';
+  const denominations: { name: string; value: number }[] = [
+    { name: 'runic', value: 100000 },
+    { name: 'platinum', value: 1000 },
+    { name: 'gold', value: 100 },
+    { name: 'silver', value: 10 },
+    { name: 'copper', value: 1 },
+  ];
+  const parts: string[] = [];
+  let remaining = copper;
+  for (const d of denominations) {
+    const count = Math.floor(remaining / d.value);
+    if (count > 0) {
+      parts.push(`${count} ${d.name}`);
+      remaining -= count * d.value;
+    }
+  }
+  return parts.length > 0 ? parts.join(', ') : '0 copper';
 }
 
 // ============================================================================

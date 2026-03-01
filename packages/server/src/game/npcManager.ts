@@ -11,11 +11,15 @@ import type { CombatEntity, CombatState } from './combatEntity.js';
 import { NPC_ID_OFFSET, isPlayerEntity, getEntityRoomId } from './combatEntity.js';
 import * as npcRepo from '../db/repositories/npcRepository.js';
 import { colors } from '../utils/colors.js';
+import { withNpcNameCapitalized } from '../utils/textFormat.js';
 import { sendCombatMessage, broadcastCombatToRoom } from './combatMessaging.js';
 import { MessageType } from '@koa/shared';
 import type { AuthenticatedSocket } from './socket.js';
 import type { GameWorld } from './world.js';
 import * as doorStateManager from '../services/doorStateManager.js';
+import * as merchantRepo from '../db/repositories/merchantRepository.js';
+import * as merchantResponseRepo from '../db/repositories/merchantResponseRepository.js';
+import type { MerchantResponse } from '@koa/shared';
 
 // Lazy world reference for NPC movement (flee, return, roam)
 let worldRef: GameWorld | null = null;
@@ -71,6 +75,7 @@ const respawnQueue: RespawnEntry[] = [];
 let respawnInterval: NodeJS.Timeout | null = null;
 let persistInterval: NodeJS.Timeout | null = null;
 let roamInterval: NodeJS.Timeout | null = null;
+let restockInterval: NodeJS.Timeout | null = null;
 
 const OPPOSITE_DIRECTIONS: Record<string, string> = {
   north: 'south',
@@ -88,6 +93,7 @@ const OPPOSITE_DIRECTIONS: Record<string, string> = {
 const RESPAWN_CHECK_MS = 5000;  // Check respawn queue every 5 seconds
 const PERSIST_INTERVAL_MS = 60000;  // Save instances to DB every 60 seconds
 const ROAM_CHECK_MS = 5000;  // Check roaming NPCs every 5 seconds
+const RESTOCK_INTERVAL_MS = 3600000;  // Restock merchant inventories every hour
 
 // Debug mode — when enabled, aggro messages like "X attacks you!" are shown
 let npcDebugMode = false;
@@ -107,7 +113,7 @@ export function setNpcDebug(enabled: boolean): void {
  */
 function buildSpawnMessage(npc: NpcCombatInstance): string {
   if (!npc.template.spawnMessage) {
-    return `${npc.entityName} appears.`;
+    return `${withNpcNameCapitalized(npc.entityName, npc.isProperName)} appears.`;
   }
   return npc.template.spawnMessage.replaceAll('{name}', npc.entityName);
 }
@@ -193,6 +199,7 @@ function createNpcCombatEntity(
     // CombatEntity fields
     entityId,
     entityName: displayName,
+    isProperName: template.properName,
     entityType: 'npc',
     vitals: {
       hp: currentHealth,
@@ -305,6 +312,18 @@ export async function initializeNpcManager(): Promise<void> {
 
   // Start periodic persistence
   persistInterval = setInterval(saveAllInstances, PERSIST_INTERVAL_MS);
+
+  // Start merchant restock timer
+  restockInterval = setInterval(async () => {
+    try {
+      const count = await merchantRepo.processRestock();
+      if (count > 0) {
+        console.log(`[NPC Manager] Restocked ${count} non-common merchant items`);
+      }
+    } catch (error) {
+      console.error('[NPC Manager] Restock failed:', error);
+    }
+  }, RESTOCK_INTERVAL_MS);
 
   console.log(`[NPC Manager] Initialized with ${npcTemplates.size} templates, ${npcInstances.size} instances`);
 }
@@ -521,12 +540,12 @@ function initiateAggro(npc: NpcCombatInstance, player: CombatEntity, roomId: num
   // Send messages (only in debug mode — normal play skips the explicit aggro announcement)
   if (npcDebugMode) {
     sendCombatMessage(player, MessageType.OUTPUT,
-      colors.boldRed(`${npc.entityName} attacks you!`)
+      colors.boldRed(`${withNpcNameCapitalized(npc.entityName, npc.isProperName)} attacks you!`)
     );
 
     broadcastCombatToRoom(
       roomId,
-      colors.boldRed(`${npc.entityName} attacks ${player.entityName}!`),
+      colors.boldRed(`${withNpcNameCapitalized(npc.entityName, npc.isProperName)} attacks ${player.entityName}!`),
       [player.entityId]
     );
   }
@@ -726,14 +745,14 @@ export function moveNpc(npc: NpcCombatInstance, direction: string, newRoomId: nu
   // Broadcast exit message to old room
   const exitMsg = npc.template.exitRoomMessage
     ? npc.template.exitRoomMessage.replaceAll('{name}', npc.entityName).replaceAll('{direction}', direction)
-    : `${npc.entityName} leaves ${direction}.`;
+    : `${withNpcNameCapitalized(npc.entityName, npc.isProperName)} leaves ${direction}.`;
   broadcastCombatToRoom(oldRoomId, colors.cyan(exitMsg), []);
 
   // Broadcast enter message to new room ({direction} = where they came from)
   const fromDirection = OPPOSITE_DIRECTIONS[direction] || direction;
   const enterMsg = npc.template.enterRoomMessage
     ? npc.template.enterRoomMessage.replaceAll('{name}', npc.entityName).replaceAll('{direction}', fromDirection)
-    : `${npc.entityName} arrives.`;
+    : `${withNpcNameCapitalized(npc.entityName, npc.isProperName)} arrives.`;
   broadcastCombatToRoom(newRoomId, colors.cyan(enterMsg), []);
 
   return true;
@@ -767,6 +786,137 @@ export function despawnByTemplate(templateId: number): number {
   return toRemove.length;
 }
 
+// ============================================================================
+// MERCHANT HELPERS
+// ============================================================================
+
+/**
+ * Get all merchant NPCs currently in a room.
+ */
+export function getMerchantsInRoom(roomId: number): NpcCombatInstance[] {
+  return getNpcsInRoom(roomId).filter(npc => npc.template.merchantEnabled);
+}
+
+/**
+ * Find a specific merchant NPC in a room by name.
+ * Returns undefined if the NPC is not a merchant.
+ */
+export function findMerchantInRoom(targetName: string, roomId: number): NpcCombatInstance | undefined {
+  if (!targetName || targetName.trim() === '') {
+    return undefined;
+  }
+  const npc = findNpcInRoom(targetName, roomId);
+  if (npc && npc.template.merchantEnabled) {
+    return npc;
+  }
+  // If no direct match, try matching only merchants
+  const merchants = getMerchantsInRoom(roomId);
+  if (merchants.length === 0) return undefined;
+
+  const lowerTarget = targetName.toLowerCase();
+  for (const m of merchants) {
+    if (m.entityName.toLowerCase() === lowerTarget ||
+        m.entityName.toLowerCase().startsWith(lowerTarget) ||
+        m.template.name.toLowerCase() === lowerTarget ||
+        m.template.name.toLowerCase().startsWith(lowerTarget)) {
+      return m;
+    }
+  }
+  return undefined;
+}
+
+/**
+ * Get a template by entity ID (resolves NPC_ID_OFFSET).
+ */
+export function getTemplateByEntityId(entityId: number): NpcTemplate | undefined {
+  const npc = npcInstances.get(entityId);
+  return npc?.template;
+}
+
+// ============================================================================
+// Merchant Response Cache
+// ============================================================================
+
+/** Cache: npcTemplateId → MerchantResponse[] */
+const merchantResponseCache = new Map<number, MerchantResponse[]>();
+
+/**
+ * Load merchant responses for a template (cached).
+ */
+async function loadMerchantResponses(npcTemplateId: number): Promise<MerchantResponse[]> {
+  const cached = merchantResponseCache.get(npcTemplateId);
+  if (cached) return cached;
+  const responses = await merchantResponseRepo.getResponsesForTemplate(npcTemplateId);
+  merchantResponseCache.set(npcTemplateId, responses);
+  return responses;
+}
+
+/**
+ * Get a response matching keywords in a message for a merchant.
+ * Returns the response text or undefined if no match.
+ */
+export async function getResponseForKeywords(npcTemplateId: number, message: string): Promise<string | undefined> {
+  const responses = await loadMerchantResponses(npcTemplateId);
+  const match = merchantResponseRepo.findMatchingResponse(responses, message);
+  return match?.response;
+}
+
+/**
+ * Clear the merchant response cache (for @reload merchantresponses).
+ */
+export function clearMerchantResponseCache(): void {
+  merchantResponseCache.clear();
+}
+
+// ============================================================================
+// Merchant Hostility Tracking
+// ============================================================================
+
+/** Per-player-per-templateId hostile expiry timestamps */
+const merchantHostility = new Map<number, Map<number, number>>();
+
+/** Default hostility duration: 10 minutes */
+const MERCHANT_HOSTILITY_DURATION_MS = 10 * 60 * 1000;
+
+/**
+ * Mark a merchant as hostile to a specific player for a duration.
+ */
+export function setMerchantHostile(
+  characterId: number,
+  npcTemplateId: number,
+  durationMs: number = MERCHANT_HOSTILITY_DURATION_MS
+): void {
+  let playerMap = merchantHostility.get(characterId);
+  if (!playerMap) {
+    playerMap = new Map();
+    merchantHostility.set(characterId, playerMap);
+  }
+  playerMap.set(npcTemplateId, Date.now() + durationMs);
+}
+
+/**
+ * Check if a merchant is hostile to a specific player.
+ */
+export function isMerchantHostileToPlayer(characterId: number, npcTemplateId: number): boolean {
+  const playerMap = merchantHostility.get(characterId);
+  if (!playerMap) return false;
+  const expiresAt = playerMap.get(npcTemplateId);
+  if (!expiresAt) return false;
+  if (Date.now() >= expiresAt) {
+    playerMap.delete(npcTemplateId);
+    if (playerMap.size === 0) merchantHostility.delete(characterId);
+    return false;
+  }
+  return true;
+}
+
+/**
+ * Clear all merchant hostility for a player (on disconnect).
+ */
+export function clearMerchantHostility(characterId: number): void {
+  merchantHostility.delete(characterId);
+}
+
 /**
  * Shutdown: save instances and clear timers.
  */
@@ -782,6 +932,10 @@ export async function shutdownNpcManager(): Promise<void> {
   if (persistInterval) {
     clearInterval(persistInterval);
     persistInterval = null;
+  }
+  if (restockInterval) {
+    clearInterval(restockInterval);
+    restockInterval = null;
   }
   await saveAllInstances();
   console.log('[NPC Manager] Shut down, instances persisted');

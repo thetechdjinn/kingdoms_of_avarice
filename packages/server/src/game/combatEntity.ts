@@ -33,6 +33,7 @@ export interface CombatState {
 export interface CombatEntity {
   entityId: number;          // playerId for players, npcInstanceId for NPCs
   entityName: string;        // Display name in combat messages
+  isProperName: boolean;     // True for players and proper-noun NPCs (no article prefix)
   entityType: 'player' | 'npc';
   characterId?: number;      // DB character ID (players only)
 

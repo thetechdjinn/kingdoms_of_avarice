@@ -47,14 +47,17 @@ export async function processNpcDeath(
     participants.push(attacker);
   }
 
-  // Drop gold (visible to room, before COMBAT OFF)
-  if (template.goldMin > 0 || template.goldMax > 0) {
-    await dropGold(npc, roomId);
-  }
+  // Merchants don't drop gold or loot — their inventory persists through death/respawn
+  if (!template.merchantEnabled) {
+    // Drop gold (visible to room, before COMBAT OFF)
+    if (template.goldMin > 0 || template.goldMax > 0) {
+      await dropGold(npc, roomId);
+    }
 
-  // Process drop table (loot, before COMBAT OFF)
-  if (template.dropTableId) {
-    await processDropTable(template.dropTableId, roomId);
+    // Process drop table (loot, before COMBAT OFF)
+    if (template.dropTableId) {
+      await processDropTable(template.dropTableId, roomId);
+    }
   }
 
   // Defer XP/essence to send after COMBAT OFF
