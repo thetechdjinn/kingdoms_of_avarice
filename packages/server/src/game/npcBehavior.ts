@@ -25,7 +25,7 @@ import { isPlayerEntity } from './combatEntity.js';
 import { sendCombatMessage, broadcastCombatToRoom, resolveCombatTarget } from './combatMessaging.js';
 import { clearCombatState } from './combatCommands.js';
 import { colors } from '../utils/colors.js';
-import { withNpcName, withNpcNameCapitalized } from '../utils/textFormat.js';
+import { withNpcNameCapitalized } from '../utils/textFormat.js';
 
 // ============================================================================
 // TARGET SELECTION

@@ -229,7 +229,7 @@ function formatSwingMessage(
       return `${colors.combatDefender(defSubject)} ${colors.combatDodge('blocks')} ${atkPossessive} attack.`;
 
     default:
-      return `${atkSubject} attacks ${defObject}.`;
+      return isAttacker ? `You attack ${defObject}.` : `${atkSubject} attacks ${defObject}.`;
   }
 }
 

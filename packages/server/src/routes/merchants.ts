@@ -159,6 +159,18 @@ export function setupMerchantRoutes(app: Express): void {
         res.status(400).json({ success: false, message: 'baseValue must be >= 0' });
         return;
       }
+      if (factionRep !== undefined && typeof factionRep !== 'number') {
+        res.status(400).json({ success: false, message: 'factionRep must be a number' });
+        return;
+      }
+      if (charisma !== undefined && (typeof charisma !== 'number' || charisma < 1)) {
+        res.status(400).json({ success: false, message: 'charisma must be a positive number' });
+        return;
+      }
+      if (haggleRep !== undefined && (typeof haggleRep !== 'number' || !Number.isInteger(haggleRep) || haggleRep < 0)) {
+        res.status(400).json({ success: false, message: 'haggleRep must be a non-negative integer' });
+        return;
+      }
       const buyResult = calculateMerchantPrice(baseValue, factionRep ?? 0, charisma ?? 50, true, haggleRep ?? 0);
       const sellResult = calculateMerchantPrice(baseValue, factionRep ?? 0, charisma ?? 50, false, haggleRep ?? 0);
       res.json({ success: true, buy: buyResult, sell: sellResult });
