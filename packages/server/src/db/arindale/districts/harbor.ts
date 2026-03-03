@@ -108,8 +108,8 @@ export function getHarborDistrict(): DistrictData {
       { fromTag: 'harbor_tavern', toTag: 'ew_0_1_2', direction: 'south' },
       { fromTag: 'harbor_tavern', toTag: 'harbor_tavern_back', direction: 'east' },
       { fromTag: 'harbor_tavern_back', toTag: 'harbor_tavern', direction: 'west' },
-      { fromTag: 'harbor_tavern_back', toTag: 'harbor_tavern_storage', direction: 'east' },
-      { fromTag: 'harbor_tavern_storage', toTag: 'harbor_tavern_back', direction: 'west' },
+      { fromTag: 'harbor_tavern', toTag: 'harbor_tavern_storage', direction: 'west' },
+      { fromTag: 'harbor_tavern_storage', toTag: 'harbor_tavern', direction: 'east' },
 
       // Inn — near Town Square: two entrances (Main St south, King's Rd east)
       { fromTag: 'ew_2_2_1', toTag: 'harbor_inn', direction: 'south' },

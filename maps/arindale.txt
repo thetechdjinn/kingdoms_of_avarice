@@ -60,7 +60,7 @@
 |                                                      |                                            |
 |                                                      c                                            |
 |                                                      |                                            |
-|                              w   w - K - K - V - V - c                                            |
+|                              w   w - K - K - V - V   c                                            |
 |                              |   |   |       |       |                                            |
 |       Harbor Rd      % - * - * - * - * - * - * - * - * - * - * - * - * - * - * - * - %            |
 |                      |       |       |               |               |               |            |
@@ -232,10 +232,10 @@
     K  ( 3,-1)  Fishing Dock                   [harbor_dock_2]
     K  ( 4,-1)  Central Dock                   [harbor_dock_3]
     K  ( 5,-1)  Trade Dock                     [harbor_dock_4]
+    V  ( 5,-1)  Tavern Storage Room            [harbor_tavern_storage]
     V  ( 6,-1)  The Salty Dog Tavern           [harbor_tavern]
     K  ( 6,-1)  Eastern Dock                   [harbor_dock_5]
     V  ( 7,-1)  Tavern Back Room               [harbor_tavern_back]
-    V  ( 8,-1)  Tavern Storage Room            [harbor_tavern_storage]
     I  ( 9, 9)  The Traveler's Rest            [harbor_inn]
     I  ( 9,10)  Inn Dining Room                [harbor_inn_dining]
     I  (10,10)  Inn Stairway                   [harbor_inn_stairs]  {up → harbor_inn_hallway}
@@ -325,12 +325,12 @@
   Building density overlaps (two buildings share a block position):
      (3,-1) L0: "Fishing Dock" [harbor_dock_2]
        overlaps "Old Warehouse" [harbor_warehouse_2]
+     (5,-1) L0: "Tavern Storage Room" [harbor_tavern_storage]
+       overlaps "Trade Dock" [harbor_dock_4]
      (2,-1) L0: "Western Dock" [harbor_dock_1]
        overlaps "Harbor Warehouse" [harbor_warehouse_1]
      (6,-1) L0: "Eastern Dock" [harbor_dock_5]
        overlaps "The Salty Dog Tavern" [harbor_tavern]
-     (8,-1) L0: "Tavern Storage Room" [harbor_tavern_storage]
-       overlaps "Castle Road" [castle_road_1]
      (13,7) L-1: "Jail Cell" [garrison_jail_cell_2]
        overlaps "Underground Chamber" [garrison_training_underground]
 

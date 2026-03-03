@@ -364,6 +364,12 @@ async function verify(client: import('pg').PoolClient): Promise<void> {
 // ── Main ─────────────────────────────────────────────────────────────
 
 async function main(): Promise<void> {
+  // Safety guard: require explicit flag to run in production
+  if (process.env.NODE_ENV === 'production' && !process.env.SEED_CONFIRM) {
+    console.error('ERROR: Refusing to run seed in production without SEED_CONFIRM=1');
+    process.exit(1);
+  }
+
   console.log('=== Arindale City Seed ===\n');
 
   const { rooms, exits, doors } = collectAll();

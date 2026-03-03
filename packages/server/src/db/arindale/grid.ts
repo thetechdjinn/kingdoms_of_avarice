@@ -27,12 +27,6 @@ function nsTag(col: number, seg: number, pos: number): string {
   return `ns_${col}_${seg}_${pos}`;
 }
 
-// Opposite directions
-const OPPOSITE: Record<string, string> = {
-  north: 'south', south: 'north',
-  east: 'west', west: 'east',
-  up: 'down', down: 'up',
-};
 
 export function generateGrid(): { rooms: RoomDef[]; exits: ExitDef[] } {
   const rooms: RoomDef[] = [];
