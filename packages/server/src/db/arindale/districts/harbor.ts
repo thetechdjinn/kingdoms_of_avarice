@@ -154,7 +154,8 @@ export function getHarborDistrict(): DistrictData {
     ],
 
     doors: [
-      // Inn stairway door — between dining room and stairs, requires ticket
+      // Inn stairway door — between dining room and stairs
+      // TODO: Re-lock with requiredItemTag: 'inn_room_ticket' once innkeeper merchant sells tickets
       {
         name: 'inn stairway door',
         doorType: 'physical',
@@ -162,14 +163,12 @@ export function getHarborDistrict(): DistrictData {
         entryDirection: 'east',
         exitTag: 'harbor_inn_stairs',
         exitDirection: 'west',
-        defaultState: 'locked',
+        defaultState: 'closed',
         autoResetSeconds: 30,
-        hasLock: true,
-        requiredItemTag: 'inn_room_ticket',
-        denialMessage: 'The stairway door is locked. You need a room ticket from the innkeeper.',
+        hasLock: false,
         pickDifficultyMin: 0,
         pickDifficultyMax: 0,
-        bashDifficulty: 500,
+        bashDifficulty: 0,
       },
     ],
   };
