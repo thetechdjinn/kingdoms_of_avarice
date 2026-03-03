@@ -1,0 +1,341 @@
+================================================================================
+  ARINDALE CITY MAP
+  Generated for spatial validation
+  Format follows MajorMUD map conventions (maps.mud.fyi)
+================================================================================
+
+  Arindale — Upper Level (City Walls & Upper Floors)
+  (15 rooms)
+
++-----------------------------------------------------------------------------+
+|                                                                             |
+|    W                                                               W        |
+|    |                                                               |        |
+|    W                                                               W        |
+|                                                                             |
+|                                                                             |
+|                                                                             |
+|                                                                             |
+|                                                                             |
+|                                                                             |
+|                                                                             |
+|                                                                             |
+|                                                                             |
+|                                                                             |
+|                                                                             |
+|                                                                             |
+|                                                                             |
+|                                                                             |
+|                                                                             |
+|                                            I                                |
+|                                            |                                |
+|                                        I - I - I                       R    |
+|                                                                             |
+|                                                                             |
+|                                                                             |
+|                                                                             |
+|                                                                             |
+|                                                                             |
+|                                                                             |
+|                                                                             |
+|                                                                             |
+|    W                                                               W        |
+|    |                                                               |        |
+|    W - W                                                       W - W        |
+|                                                                             |
++-----------------------------------------------------------------------------+
+
+  Arindale — Ground Level
+  (212 rooms)
+
++---------------------------------------------------------------------------------------------------+
+|                 Westwall St      Market St       King's Rd    Cathedral Lane    Eastwall St       |
+|                                                                                                   |
+|                                                                                                   |
+|                                                      D                                            |
+|                                                      |                                            |
+|                                                      c                                            |
+|                                                      |                                            |
+|                                                      c                                            |
+|                                                      |                                            |
+|                                                      c                                            |
+|                                                      |                                            |
+|                              w   w - K - K - V - V - c                                            |
+|                              |   |   |       |       |                                            |
+|       Harbor Rd      % - * - * - * - * - * - * - * - * - * - * - * - * - * - * - * - %            |
+|                      |       |       |               |               |               |            |
+|                      *   P - P - P   *               *               *               *            |
+|                      |   |   |   |   |               |               |               |            |
+|                      * - P - P - P - *               *               *               *            |
+|                      |   |   |   |   |               |               |               |            |
+|                      *   P - P - P   *               *               *               *            |
+|                      |       |       |               |               |               |            |
+|      Marshal St      * - * - * - * - * - * - * - * - * - * - * - * - * - * - * - * - *            |
+|                      |               |               |               |               |            |
+|                      *               *           $ - *               * - b - b - b   *            |
+|                      |               |               |               |       |       |            |
+|                      *               *       $   $ - * - $ - $       *   T   b       *            |
+|                      |               |       |       |               |   |           |            |
+|                      *               *       $ - $ - * - $   $       *   %   S   M   *            |
+|                      |               |           |   |   |   |       |   |   |   |   |            |
+|         Main St  G - * - * - * - * - * - * - * - * - @ - * - * - * - * - * - * - * - * - G        |
+|                      |               |   |   |       |   |   |       |               |            |
+|                      *               *   $   $   B - * - I   $       * - + - + - +   *            |
+|                      |               |               |   |           |   |   |   |   |            |
+|                      *               *           $ - *   I - I       *   +   + - +   * - R        |
+|                      |               |               |               |   |   |   |   |            |
+|                      *               *               * - $           *   +   + - +   *            |
+|                      |               |               |               |               |            |
+|  Cloister Court      * - * - * - * - * - * - * - * - * - * - * - * - * - * - * - * - *            |
+|                      |               |               |               |   |   |       |            |
+|                      *               *               *               *   R   R       * - R - R    |
+|                      |               |               |               |               |            |
+|                      *               *               *               * - R           * - R        |
+|                      |               |               |               |               |            |
+|                      *               *               *               *               *            |
+|                      |               |               |               |               |            |
+|    Southwall Rd      % - * - * - * - * - * - * - * - * - * - * - * - * - * - * - * - %            |
+|                                                      |                   |                        |
+|                                                      G                   R                        |
+|                                                                          |                        |
+|                                                                          R                        |
+|                                                                                                   |
++---------------------------------------------------------------------------------------------------+
+
+  Arindale — Below Ground (Level 1)
+  (10 rooms)
+
++-----------------+
+|                 |
+|    % - % - J    |
+|        |        |
+|    J - * - J    |
+|        |        |
+|    J - * - J    |
+|                 |
+|            +    |
+|                 |
++-----------------+
+
+  Arindale — Below Ground (Level 2)
+  (5 rooms)
+
++-----------------+
+|                 |
+|    + - + - +    |
+|            |    |
+|        + - +    |
+|                 |
++-----------------+
+
+  Arindale — Below Ground (Level 3)
+  (1 rooms)
+
++---------+
+|         |
+|    +    |
+|         |
++---------+
+
+  Arindale — Below Ground (Level 4)
+  (1 rooms)
+
++---------+
+|         |
+|    H    |
+|         |
++---------+
+
+  STREET GRID REFERENCE
+  --------------------------------------------------
+
+  Row 0 (y= 0): Harbor Road       (northernmost)
+  Row 1 (y= 4): Marshal Street
+  Row 2 (y= 8): Main Street        (Town Square row)
+  Row 3 (y=12): Cloister Court
+  Row 4 (y=16): Southwall Road     (southernmost)
+
+  Col 0 (x= 0): Westwall Street    (westernmost)
+  Col 1 (x= 4): Market Street
+  Col 2 (x= 8): King's Road        (Town Square column)
+  Col 3 (x=12): Cathedral Lane
+  Col 4 (x=16): Eastwall Street     (easternmost)
+
+  Intersections at (col*4, row*4). 3 mid-street rooms between each.
+  Buildings extend into block interiors from their street entry points.
+
+  LEGEND
+  --------------------------------------------------
+
+  Rooms:
+    @  Town Square
+    *  Street / Generic Room
+    %  Room with Up/Down access
+
+  Districts:
+    $  Market — Shop / Merchant
+    B  Market — Bank
+    +  Cathedral / Church / Crypt
+    H  Halls of the Dead (Respawn)
+    T  Garrison — Training Room
+    S  Garrison — Sheriff's Office
+    M  Garrison — Mayor's Office
+    J  Garrison — Jail Cell
+    b  Garrison — Barracks
+    V  Harbor — Tavern
+    I  Harbor — Inn
+    K  Harbor — Dock
+    w  Harbor — Warehouse
+    P  Park
+    R  Residential
+    G  City Gate
+    D  Castle Drawbridge
+    W  Wall Walk / Guard Tower
+    c  Castle Road
+
+  Connections:
+    -  East/West passage
+    |  North/South passage
+    %  Up/Down access (see room index for details)
+
+  BUILDING ROOM INDEX
+  ------------------------------------------------------------
+
+  Gates & Walls:
+    W  ( 0, 0) [L1]  Northwest Guard Tower          [wall_west_tower_n]  {down → int_0_0}
+    W  (16, 0) [L1]  Northeast Guard Tower          [wall_east_tower_n]  {down → int_0_4}
+    W  ( 0, 1) [L1]  Western Wall Walk              [wall_west_walk_2]
+    W  (16, 1) [L1]  Eastern Wall Walk              [wall_east_walk_2]
+    W  ( 0,15) [L1]  Western Wall Walk              [wall_west_walk_1]
+    W  (16,15) [L1]  Eastern Wall Walk              [wall_east_walk_1]
+    W  ( 0,16) [L1]  Southwest Guard Tower          [wall_south_tower_w]  {down → int_4_0}
+    W  ( 1,16) [L1]  Southern Wall Walk             [wall_south_walk_2]
+    W  (15,16) [L1]  Southern Wall Walk             [wall_south_walk_1]
+    W  (16,16) [L1]  Southeast Guard Tower          [wall_south_tower_e]  {down → int_4_4}
+    D  ( 8,-5)  Castle Drawbridge              [castle_drawbridge]
+    c  ( 8,-4)  Castle Road                    [castle_road_4]
+    c  ( 8,-3)  Castle Road                    [castle_road_3]
+    c  ( 8,-2)  Castle Road                    [castle_road_2]
+    c  ( 8,-1)  Castle Road                    [castle_road_1]
+    G  (-1, 8)  West Gate                      [gate_west]
+    G  (17, 8)  East Gate                      [gate_east]
+    G  ( 8,17)  South Gate                     [gate_south]
+
+  Harbor:
+    I  (10, 9) [L1]  Guest Room                     [harbor_inn_room_3]
+    I  ( 9,10) [L1]  Guest Room                     [harbor_inn_room_2]
+    I  (10,10) [L1]  Upstairs Hallway               [harbor_inn_hallway]  {down → harbor_inn_stairs}
+    I  (11,10) [L1]  Guest Room                     [harbor_inn_room]
+    w  ( 2,-1)  Harbor Warehouse               [harbor_warehouse_1]
+    K  ( 2,-1)  Western Dock                   [harbor_dock_1]
+    w  ( 3,-1)  Old Warehouse                  [harbor_warehouse_2]
+    K  ( 3,-1)  Fishing Dock                   [harbor_dock_2]
+    K  ( 4,-1)  Central Dock                   [harbor_dock_3]
+    K  ( 5,-1)  Trade Dock                     [harbor_dock_4]
+    V  ( 6,-1)  The Salty Dog Tavern           [harbor_tavern]
+    K  ( 6,-1)  Eastern Dock                   [harbor_dock_5]
+    V  ( 7,-1)  Tavern Back Room               [harbor_tavern_back]
+    V  ( 8,-1)  Tavern Storage Room            [harbor_tavern_storage]
+    I  ( 9, 9)  The Traveler's Rest            [harbor_inn]
+    I  ( 9,10)  Inn Dining Room                [harbor_inn_dining]
+    I  (10,10)  Inn Stairway                   [harbor_inn_stairs]  {up → harbor_inn_hallway}
+
+  Park:
+    P  ( 1, 1)  Shaded Grove                   [park_shaded_grove]
+    P  ( 2, 1)  Park Overlook                  [park_overlook]
+    P  ( 3, 1)  Quiet Bench                    [park_quiet_bench]
+    P  ( 1, 2)  Flower Garden                  [park_flower_garden]
+    P  ( 2, 2)  Reflecting Pool                [park_reflecting_pool]
+    P  ( 3, 2)  King's Statue                  [park_kings_statue]
+    P  ( 1, 3)  Grand Promenade                [park_promenade]
+    P  ( 2, 3)  Park Entrance                  [park_entrance]
+    P  ( 3, 3)  Mossy Steps                    [park_mossy_steps]
+
+  Market:
+    $  ( 7, 5)  Blunt Weapons Shop             [market_blunts]
+    $  ( 6, 6)  Armorer's Shop — Helms and Shields [market_armorer_helms]
+    $  ( 7, 6)  Bladed Weapons Shop            [market_blades]
+    $  ( 9, 6)  Leather Merchant               [market_leather_main]
+    $  (10, 6)  Leather Merchant — Leggings and Boots [market_leather_back]
+    $  ( 6, 7)  Armorer's Shop — Greaves and Boots [market_armorer_legs]
+    $  ( 7, 7)  Armorer's Shop                 [market_armorer_main]
+    $  ( 9, 7)  Clothier's Shop                [market_clothier]
+    $  (10, 7)  Curio Shop                     [market_curios]
+    $  ( 5, 9)  Alchemist's Shop               [market_alchemist]
+    $  ( 6, 9)  Arcane Scroll Emporium         [market_mage_spells]
+    B  ( 7, 9)  Bank of Arindale               [market_bank]
+    $  (10, 9)  General Store                  [market_general]
+    $  ( 7,10)  Jeweler's Shop                 [market_jeweler]
+    $  ( 9,11)  City Stable                    [market_stable]
+
+  Garrison:
+    b  (13, 5)  Guard Barracks                 [garrison_barracks_entrance]
+    b  (14, 5)  Bunk Room                      [garrison_barracks_bunks]
+    b  (15, 5)  Captain's Quarters             [garrison_barracks_captain]
+    T  (13, 6)  Training Room                  [garrison_training_room]
+    b  (14, 6)  Barracks Armory                [garrison_barracks_armory]
+    *  (13, 7)  Training Hall                  [garrison_training_entrance]  {down → garrison_training_underground}
+    S  (14, 7)  Sheriff's Office               [garrison_sheriff]  {down → garrison_jail_corridor_1}
+    M  (15, 7)  Mayor's Office                 [garrison_mayor]
+    *  (13, 7) [L-1]  Underground Chamber            [garrison_training_underground]  {up → garrison_training_entrance}
+    J  (13, 7) [L-1]  Jail Cell                      [garrison_jail_cell_2]
+    *  (14, 7) [L-1]  Jail Corridor                  [garrison_jail_corridor_1]  {up → garrison_sheriff}
+    J  (15, 7) [L-1]  Jail Cell                      [garrison_jail_cell_1]
+    J  (13, 8) [L-1]  Jail Cell                      [garrison_jail_cell_4]
+    *  (14, 8) [L-1]  Jail Corridor                  [garrison_jail_corridor_2]
+    J  (15, 8) [L-1]  Jail Cell                      [garrison_jail_cell_3]
+    J  (13, 9) [L-1]  Jail Cell                      [garrison_jail_cell_6]
+    *  (14, 9) [L-1]  Jail Corridor                  [garrison_jail_corridor_3]
+    J  (15, 9) [L-1]  Jail Cell                      [garrison_jail_cell_5]
+
+  Residential:
+    R  (17,10) [L1]  Upstairs Bedroom               [residential_house_3_upper]  {down → residential_house_3_front}
+    R  (17,10)  Narrow Townhouse               [residential_house_3_front]  {up → residential_house_3_upper}
+    R  (13,13)  Community Well                 [residential_well]
+    R  (14,13)  Stone Cottage                  [residential_house_2_front]
+    R  (17,13)  Modest Home                    [residential_house_1_front]
+    R  (18,13)  Back Room                      [residential_house_1_back]
+    R  (13,14)  Clergy Residence               [residential_house_4_front]
+    R  (17,14)  Residential Courtyard          [residential_courtyard]
+    R  (13,17)  Gardener's Cottage             [residential_house_5_front]
+    R  (13,18)  Garden Shed                    [residential_house_5_back]
+
+  Cathedral:
+    +  (13, 9)  Cathedral Courtyard            [cathedral_courtyard]
+    +  (14, 9)  Cathedral Entrance             [cathedral_entrance]
+    +  (15, 9)  Cathedral Nave                 [cathedral_nave]
+    +  (13,10)  Cathedral Garden               [cathedral_garden]
+    +  (14,10)  Priest Healer                  [cathedral_healer]
+    +  (15,10)  Inner Sanctum                  [cathedral_sanctum]  {down → cathedral_crypt_stairs}
+    +  (13,11)  Cathedral Graveyard            [cathedral_graveyard]
+    +  (14,11)  Holy Items Repository          [cathedral_holy_items]
+    +  (15,11)  Divine Spell Chamber           [cathedral_divine_spells]
+    +  (15,10) [L-1]  Crypt Stairs                   [cathedral_crypt_stairs]  {up → cathedral_sanctum, down → cathedral_crypt_upper}
+    +  (15,10) [L-2]  Upper Crypt                    [cathedral_crypt_upper]  {up → cathedral_crypt_stairs}
+    +  (16,10) [L-2]  Crypt Passage                  [cathedral_crypt_passage]
+    +  (17,10) [L-2]  Crypt Chamber                  [cathedral_crypt_chamber]  {down → cathedral_crypt_descent}
+    +  (16,11) [L-2]  Crypt Alcove                   [cathedral_crypt_alcove]
+    +  (17,11) [L-2]  Deep Crypt                     [cathedral_crypt_deep]
+    +  (17,10) [L-3]  Crypt Descent                  [cathedral_crypt_descent]  {up → cathedral_crypt_chamber, down → cathedral_halls_dead}
+    H  (17,10) [L-4]  Halls of the Dead              [cathedral_halls_dead]  {up → cathedral_crypt_descent}
+
+  MAP CONFLICTS (rooms sharing same grid position)
+  ------------------------------------------------------------
+
+  Building density overlaps (two buildings share a block position):
+     (3,-1) L0: "Fishing Dock" [harbor_dock_2]
+       overlaps "Old Warehouse" [harbor_warehouse_2]
+     (2,-1) L0: "Western Dock" [harbor_dock_1]
+       overlaps "Harbor Warehouse" [harbor_warehouse_1]
+     (6,-1) L0: "Eastern Dock" [harbor_dock_5]
+       overlaps "The Salty Dog Tavern" [harbor_tavern]
+     (8,-1) L0: "Tavern Storage Room" [harbor_tavern_storage]
+       overlaps "Castle Road" [castle_road_1]
+     (13,7) L-1: "Jail Cell" [garrison_jail_cell_2]
+       overlaps "Underground Chamber" [garrison_training_underground]
+
+  Street overlaps indicate a building extends into an adjacent street
+  and should be reviewed. Building density overlaps are expected when
+  multiple buildings share a city block interior.
+
+================================================================================

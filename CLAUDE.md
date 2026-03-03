@@ -29,6 +29,13 @@ npm run migrate                                    # Run migrations and seed dat
 cd packages/server && npx tsx src/db/create-admin.ts <username>  # Grant admin role
 ```
 
+**Area Data:**
+
+```bash
+npm run seed:arindale    # Seed Arindale city rooms (replaces all room data)
+npm run map:arindale     # Generate ANSI map → maps/arindale.txt
+```
+
 **Test account:** `testuser` / `password`
 
 ## Architecture
@@ -100,6 +107,26 @@ Vite serves multiple pages: `index.html` (game), `editor.html` (rooms), `item-ed
 
 - Use `.js` extension for local imports (ESM requirement)
 - Group: external packages first, then internal modules
+
+### Room Spatial Consistency
+
+Room exits must be geographically consistent. Two different paths covering the same geographic distance must arrive at the same room (e.g., east-then-south must reach the same place as south-then-east). Room descriptions must match exit directions (don't write "a stairway leads north" if the exit is `down`). Organic/natural areas (parks, forests, caves) may intentionally break grid consistency but must be explicitly marked as non-Euclidean in the source.
+
+**Corner rule for grid-based areas:** Never place two buildings at the (1,1) corner of the same intersection — that is, one building 1 step along one street and another building 1 step along the perpendicular street, both pointing into the same block. This creates a conflict where south-then-west reaches a different room than west-then-south. Fix by moving at least one building 2+ steps from the intersection, or to the opposite side of its street.
+
+**Block boundary rule:** Buildings entering from a street must fit within the block interior (3 positions between streets). A building chain of 4+ rooms in one direction will overflow onto the adjacent street. Fix by changing direction mid-chain (e.g., east-east-south instead of east-east-east-east).
+
+### ANSI Map Generator
+
+Run `npm run map:arindale` to generate `maps/arindale.txt` — a text-based spatial validation map following MajorMUD conventions ([maps.mud.fyi](https://maps.mud.fyi)). **Always regenerate the map after modifying room/exit data** and check for new conflicts.
+
+The generator places rooms on a coordinate grid via BFS from the street grid, then reports:
+- **Street overlaps**: Building room at a street grid position (needs fixing)
+- **Building density overlaps**: Two buildings share a block interior position (expected in dense blocks)
+
+**Map symbols** (see legend in generated file): `@` Town Square, `*` generic room, `$` shop, `B` bank, `T` training, `H` respawn, `J` jail, `G` gate, `+` cathedral, `P` park, `I` inn, `V` tavern, `K` dock, `W` wall walk, `c` castle road, `R` residential, `%` up/down access.
+
+**When creating new areas:** Write district data → run seed → run map generator → check for street overlaps → fix any conflicts → commit. The map is the source of truth for spatial validation.
 
 ### Command Handlers
 

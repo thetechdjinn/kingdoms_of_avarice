@@ -83,7 +83,7 @@ export function setupAuthRoutes(app: Express): void {
           return;
         }
 
-        const bcrypt = await import('bcrypt');
+        const bcrypt = await import('bcryptjs');
         const valid = await bcrypt.compare(password, user.passwordHash);
         if (!valid) {
           const response: AuthResponse = { success: false, message: 'Invalid credentials' };
@@ -155,7 +155,7 @@ export function setupAuthRoutes(app: Express): void {
           return;
         }
 
-        const bcrypt = await import('bcrypt');
+        const bcrypt = await import('bcryptjs');
         const hash = await bcrypt.hash(password, 10);
         const id = fallbackUsers.size + 1;
         fallbackUsers.set(username, { id, passwordHash: hash });
