@@ -760,7 +760,7 @@ export async function ensureCopperConversion(): Promise<void> {
 export async function seedInitialData(): Promise<void> {
   // If Arindale has been seeded, skip all legacy Silverton room/NPC seeds
   const arindaleCheck = await getPool().query(
-    `SELECT 1 FROM game_settings WHERE key = 'arindale_seeded'`
+    `SELECT 1 FROM game_settings WHERE key = 'arindale_seeded' AND value = 'true'`
   );
   const arindaleSeeded = arindaleCheck.rows.length > 0;
 
@@ -826,6 +826,8 @@ export async function seedInitialData(): Promise<void> {
     console.log('NPC seed data already exists, skipping NPCs...');
   } else if (!arindaleSeeded) {
     await seedNpcs();
+  } else {
+    console.log('Arindale seeded but no NPCs found. Populate NPCs via the NPC Editor or import.');
   }
 
   // Seed merchant NPC (has its own existence check, runs after rooms/items/npcs are ready)

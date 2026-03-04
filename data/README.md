@@ -1,8 +1,10 @@
 # Game Data
 
-Portable JSON data files that populate the game database. These files are the distributable game content — anyone setting up a server loads these into their PostgreSQL instance.
+> **Status: Planned** — The data loader and JSON export pipeline have not been built yet. Currently, game data is seeded via TypeScript files in `packages/server/src/db/` (e.g., `npm run seed:arindale`).
 
-## Structure
+Portable JSON data files that will populate the game database. These files are the intended distributable game content — anyone setting up a server will load these into their PostgreSQL instance.
+
+## Planned Structure
 
 ```
 data/
@@ -12,7 +14,7 @@ data/
     status_effects.json   # Status effect definitions
     actions.json          # Social action definitions
   areas/                  # Per-area content
-    silverton/
+    arindale/
       rooms.json          # Rooms with exits and features
       doors.json          # Doors, locks, triggers
       npcs.json           # NPC templates with attacks and spells
@@ -21,10 +23,10 @@ data/
       factions.json       # Faction definitions
 ```
 
-## Loading Data
+## Loading Data (Not Yet Implemented)
 
 ```bash
-npm run load-data          # Load all data files per manifest
+npm run load-data          # Load all data files per manifest (planned)
 ```
 
 ## Workflow

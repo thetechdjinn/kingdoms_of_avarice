@@ -8,12 +8,11 @@ Design documents for game areas. Each area gets its own directory containing pla
 areas/
   _template/              # Blank template — copy this to start a new area
     plan.md               # Area plan template
-  silverton/              # Example: Silverton starting town
+  arindale/               # Starting town (fully generated)
     plan.md               # Design plan (rooms, NPCs, items, quests, etc.)
-    notes.md              # Optional freeform design notes
-  wraithwood/
+  [your_area]/            # Future areas follow the same pattern
     plan.md
-    notes.md
+    notes.md              # Optional freeform design notes
 ```
 
 ## Creating a New Area

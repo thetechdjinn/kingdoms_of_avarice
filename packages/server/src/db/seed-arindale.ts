@@ -15,7 +15,7 @@ const __dirname = dirname(__filename);
 dotenv.config({ path: join(__dirname, '..', '..', '..', '..', '.env') });
 
 import { pool as getPool, withTransaction } from './index.js';
-import { RoomDef, ExitDef, DoorDef } from './arindale/types.js';
+import { RoomDef, ExitDef, DoorDef, Direction } from './arindale/types.js';
 import { generateGrid } from './arindale/grid.js';
 import { getMarketDistrict } from './arindale/districts/market.js';
 import { getCathedralDistrict } from './arindale/districts/cathedral.js';
@@ -96,6 +96,24 @@ function validate(rooms: RoomDef[], exits: ExitDef[], doors: DoorDef[]): void {
   }
   console.log(`  Direction uniqueness: OK`);
 
+  // Bidirectional exit check (every A→dir→B should have B→reverse→A)
+  const REVERSE: Record<Direction, Direction> = {
+    north: 'south', south: 'north', east: 'west', west: 'east', up: 'down', down: 'up',
+  };
+  const exitSet = new Set(exits.map(e => `${e.fromTag}:${e.direction}:${e.toTag}`));
+  const missingReverse: string[] = [];
+  for (const e of exits) {
+    const rev = `${e.toTag}:${REVERSE[e.direction]}:${e.fromTag}`;
+    if (!exitSet.has(rev)) {
+      missingReverse.push(`${e.fromTag} → ${e.direction} → ${e.toTag} (no reverse)`);
+    }
+  }
+  if (missingReverse.length > 0) {
+    console.warn(`  WARNING: ${missingReverse.length} exits missing reverse:\n    ${missingReverse.join('\n    ')}`);
+  } else {
+    console.log(`  Bidirectional exits: all paired (OK)`);
+  }
+
   // Room count in expected range
   if (rooms.length < 200 || rooms.length > 350) {
     console.warn(`  WARNING: Room count ${rooms.length} outside expected range (200-350)`);
@@ -120,7 +138,10 @@ function validate(rooms: RoomDef[], exits: ExitDef[], doors: DoorDef[]): void {
 async function cleanup(client: import('pg').PoolClient): Promise<void> {
   console.log('Cleaning up old data...');
 
-  // Delete in FK-safe order
+  // NPCs must be deleted because they have spawn_room_id FK to rooms,
+  // and rooms are renumbered on each seed run.
+  // Drop tables, factions, and player reputation are NOT deleted —
+  // they have no FK dependency on rooms and should survive re-seeding.
   await client.query('DELETE FROM npc_spells');
   await client.query('DELETE FROM npc_attacks');
   await client.query('DELETE FROM npc_instances');
@@ -133,10 +154,6 @@ async function cleanup(client: import('pg').PoolClient): Promise<void> {
   // Delete room-located items only
   await client.query(`DELETE FROM item_instances WHERE location_type = 'room'`);
   await client.query('DELETE FROM rooms');
-  await client.query('DELETE FROM drop_table_entries');
-  await client.query('DELETE FROM drop_tables');
-  await client.query('DELETE FROM player_faction_reputation');
-  await client.query('DELETE FROM factions');
 
   // Reset sequences
   await client.query("SELECT setval('rooms_id_seq', 1, false)");
@@ -145,9 +162,6 @@ async function cleanup(client: import('pg').PoolClient): Promise<void> {
   await client.query("SELECT setval('npcs_id_seq', 1, false)");
   await client.query("SELECT setval('npc_attacks_id_seq', 1, false)");
   await client.query("SELECT setval('npc_instances_id_seq', 1, false)");
-  await client.query("SELECT setval('drop_tables_id_seq', 1, false)");
-  await client.query("SELECT setval('drop_table_entries_id_seq', 1, false)");
-  await client.query("SELECT setval('factions_id_seq', 1, false)");
 
   console.log('  Old data cleaned.');
 }

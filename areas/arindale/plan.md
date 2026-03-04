@@ -1,8 +1,8 @@
 # Arindale
 
-> **Status:** BRIEF
+> **Status:** GENERATED
 > **Level Range:** 1-5 (starting town, safe zone)
-> **Room Count:** ~200-250
+> **Room Count:** ~255
 > **Connected To:** First town — other areas will connect outward from here
 
 ---
@@ -215,7 +215,7 @@ The remaining rooms in the Cathedral District are the streets (Cathedral Lane, C
 
 ### 3. Garrison District — ~40-50 rooms
 
-**Grid Location:** Northwest quadrant — between Harbor Road and Main Street, west of King's Road. Centered around the Marshal Street / Westwall Street area.
+**Grid Location:** Northeast quadrant — between Harbor Road and Main Street, east of King's Road. Centered around the Marshal Street / Cathedral Lane area, near the East Gate.
 
 The military and civic center of Arindale. This is where order is maintained — the training grounds, the jail, and the seat of city government.
 
@@ -329,9 +329,9 @@ The remaining rooms are the streets (Harbor Road, connecting segments), warehous
 
 ### 5. Park District — ~15-20 rooms
 
-**Grid Location:** Northeast quadrant — between Marshal Street and Main Street, east of King's Road to Eastwall Street. An open green space on the quieter side of the city, away from the bustle of the harbor and market.
+**Grid Location:** Northwest quadrant — between Marshal Street and Harbor Road, west of King's Road to Westwall Street. An open green space on the quieter side of the city, away from the bustle of the harbor and market.
 
-A large park that gives the city a sense of life beyond commerce and combat. A contrast to the rough docks on the northwest side — this is the gentler face of Arindale's north end.
+A large park that gives the city a sense of life beyond commerce and combat. A contrast to the rough docks on the northeast side — this is the gentler face of Arindale's north end.
 
 #### Arindale Park
 
@@ -404,7 +404,7 @@ A patrol path along the top of the city walls connecting the gates. Guard towers
 
 **Rooms: ~12-17**
 
-### 8. Castle Approach — ~10-15 rooms
+### 8. Castle Approach — ~5 rooms
 
 **Grid Location:** North of Harbor Road, continuing up King's Road beyond the docks.
 
@@ -425,21 +425,21 @@ The road leading from the city to the King's castle. A grand avenue that rises n
           WEST                    CENTER                   EAST
      ┌─────────────┬──────────────────────┬─────────────────────┐
      │             │                      │                     │
-N    │   HARBOR    │    HARBOR DISTRICT   │  CASTLE APPROACH    │
-     │   DISTRICT  │    (docks, tavern,   │  (King's Road north)│
+N    │             │    HARBOR DISTRICT   │  CASTLE APPROACH    │
+     │             │    (docks, tavern,   │  (King's Road north)│
      │             │     inn, warehouses) │                     │
      ├─ Harbor Rd ─┼── Harbor Rd ─────────┼── Harbor Rd ────────┤
      │             │                      │                     │
-     │  GARRISON   │    GARRISON          │   PARK DISTRICT     │
-     │  DISTRICT   │    DISTRICT          │   (gardens, gazebo, │
-     │             │                      │    pond, chapel)    │
-     ├─ Garrison ──┼── Marshal Street ──────┼── Marshal Street ─────┤
+     │   PARK      │                      │   GARRISON          │
+     │   DISTRICT  │                      │   DISTRICT          │
+     │  (gardens)  │                      │  (training, jail)   │
+     ├─ Westwall ──┼── Marshal Street ────┼── Marshal Street ───┤
      │             │                      │                     │
      │             │   ╔══════════════╗   │                     │
 W.Gate── Main St ──┼── ║ TOWN SQUARE  ║ ──┼── Main St ──────── E.Gate
      │             │   ╚══════════════╝   │                     │
      │   MARKET    │    MARKET DISTRICT   │  CATHEDRAL DISTRICT │
-     ├─ Temple ────┼── Cloister Court ────────┼── Cloister Court ───────┤
+     ├─ Market St ─┼── Cloister Court ────┼── Cathedral Lane ───┤
      │  DISTRICT   │                      │  RESIDENTIAL        │
      │             │                      │  DISTRICT           │
      ├─ Southwall ─┼── Southwall Rd ──────┼── Southwall Rd ─────┤

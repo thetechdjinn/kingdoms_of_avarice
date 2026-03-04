@@ -16,7 +16,7 @@
  *       |       |                  |           [down] |      |
  *    2: |     Garden           Healer ---------- Sanctum     |
  *       |       |                  |                |        |
- *    3: |     Graveyard ------ Holy Items --- Divine Spells  |
+ *    3: |     Graveyard        Holy Items --- Divine Spells  |
  *       |                                                    |
  *   Rooms go south from entry row. Crypt is below the Sanctum.
  */

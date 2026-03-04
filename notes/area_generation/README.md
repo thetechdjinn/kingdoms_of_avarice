@@ -11,13 +11,12 @@ AI-assisted area generation for Kingdoms of Avarice. Areas are designed in markd
 ```
 areas/                    # Area design plans (project root)
   _template/plan.md       # Blank template — copy to start a new area
-  silverton/plan.md       # Design docs per area
-  wraithwood/plan.md
+  arindale/plan.md        # Arindale starting town (fully generated)
 
-data/                     # Exported game data (project root)
+data/                     # Exported game data (project root, planned)
   _manifest.json          # Load order
   global/                 # Spells, effects, actions
-  areas/silverton/        # Per-area JSON data files
+  areas/arindale/         # Per-area JSON data files
 ```
 
 ## Quick Start

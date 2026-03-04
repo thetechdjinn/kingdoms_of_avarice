@@ -1,5 +1,5 @@
 /**
- * Harbor District — ~15 building rooms.
+ * Harbor District — 17 building rooms.
  * North of Marshal Street, along Harbor Road.
  * Tavern, inn, docks, warehouses.
  */

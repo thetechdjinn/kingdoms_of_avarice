@@ -1,5 +1,5 @@
 /**
- * City Gates, Walls, and Castle Approach — ~22 rooms.
+ * City Gates, Walls, and Castle Approach — 18 rooms.
  * 3 gates (closed), wall walk segments, guard towers, castle road.
  */
 import { DistrictData } from '../types.js';

@@ -500,7 +500,9 @@ Currency drops are converted to physical coins. Allowed denominations control wh
 | platinum | 1,000 |
 | runic | 10,000 |
 
-Example: A drop of 150 copper with allowed denominations `["copper", "silver"]` would drop 1 silver coin (10 copper) and 50 copper coins, totaling 60 copper. The remaining 90 copper is lost because gold coins aren't allowed.
+Example: A drop of 150 copper with allowed denominations `["copper", "silver"]` would drop 15 silver coins (150 copper total). No value is lost — copper is always included as a fallback denomination to prevent silent value loss.
+
+Example: A drop of 35 copper with allowed denominations `["silver"]` would drop 3 silver coins (30 copper) and 5 copper coins (the system always adds copper as a fallback).
 
 If allowed denominations is left empty (all), the system uses the most efficient denomination breakdown.
 
@@ -580,7 +582,7 @@ Example - Level 8 dark mage:
   - Dark Shield (buff): Priority 20, Cast Chance 80%, Condition: Combat Start, Cooldown: 10
   - Drain Life (heal): Priority 10, Cast Chance 75%, Condition: HP Below 40%, Cooldown: 3
 
-**Reading this configuration**: The mage always tries to self-buff on the first round (priority 10 Combat Start). When hurt below 40%, it prioritizes Drain Life (priority 10). Otherwise, it has a 60% chance to cast Shadow Bolt each round, falling back to its staff attack the other 40% of the time.
+**Reading this configuration**: The mage always tries to self-buff on the first round (priority 20 Combat Start). When hurt below 40%, it prioritizes Drain Life (priority 10). Otherwise, it has a 60% chance to cast Shadow Bolt each round, falling back to its staff attack the other 40% of the time.
 
 ### Boss Mob
 
@@ -748,7 +750,7 @@ SPAWN ──> IDLE ──> COMBAT ──> FLEEING ──> RETURNING
 - Set self-healing spells to the lowest priority number (highest priority) with an HP condition
 - Use cast chance below 100% to prevent predictable NPC behavior
 - Cooldowns prevent spell spam - a heal with cooldown 3 can only fire every 4 rounds
-- The `no_effect` condition prevents NPCs from wasting turns reapplying a debuff that's already active
+- The "Missing Effect" (`no_effect`) condition prevents NPCs from wasting turns reapplying a debuff that's already active
 - `combat_start` is great for opening buffs (shield, haste) that only need to be cast once
 - If the cast chance roll fails, the NPC does not try the next spell - it melees instead
 

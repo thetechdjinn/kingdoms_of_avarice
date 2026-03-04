@@ -187,8 +187,8 @@ export function getGarrisonDistrict(): DistrictData {
            'garrison_jail_cell_4', 'garrison_jail_cell_5', 'garrison_jail_cell_6'] as const).map((cellTag, i) => {
         const corridorNum = Math.floor(i / 2) + 1;
         const corridorTag = `garrison_jail_corridor_${corridorNum}`;
-        const dir = i % 2 === 0 ? 'east' : 'west';
-        const oppDir = i % 2 === 0 ? 'west' : 'east';
+        const dir = i % 2 === 0 ? 'east' as const : 'west' as const;
+        const oppDir = i % 2 === 0 ? 'west' as const : 'east' as const;
         return {
           name: `jail cell door ${i + 1}`,
           doorType: 'physical' as const,

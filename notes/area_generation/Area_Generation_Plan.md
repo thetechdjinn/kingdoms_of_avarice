@@ -429,7 +429,7 @@ These tables should be refined as the game matures and can be provided as part o
 - Room names use title case ("The Whispering Hollow")
 - Room descriptions are 2-4 sentences, present tense, second person perspective avoided
 - Exits should be mentioned naturally in descriptions ("A path continues north")
-- Available terrain types: indoor, outdoor, underground, water
+- Available terrain types: indoor, outdoor, underground, water, road
 - Available directions: north, south, east, west, up, down, northeast, northwest, southeast, southwest
 
 ---
@@ -515,7 +515,7 @@ Every proposed item gets a status tag that the designer sets:
 
 ### Working Process
 
-1. Designer creates a new area folder and copies `_area_template.md`
+1. Designer creates a new area folder and copies `areas/_template/plan.md`
 2. Designer fills in the Brief section with whatever they have in mind
 3. In a Claude Code conversation, designer says "expand the brief for [area name]"
 4. AI reads the plan file, fills in proposal sections, marks everything `[PENDING]`

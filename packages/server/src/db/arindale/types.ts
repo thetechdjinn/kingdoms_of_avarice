@@ -1,3 +1,5 @@
+export type Direction = 'north' | 'south' | 'east' | 'west' | 'up' | 'down';
+
 export interface RoomDef {
   tag: string;
   name: string;
@@ -10,16 +12,16 @@ export interface RoomDef {
 export interface ExitDef {
   fromTag: string;
   toTag: string;
-  direction: string;
+  direction: Direction;
 }
 
 export interface DoorDef {
   name: string;
   doorType: 'physical' | 'open_passageway' | 'special' | 'triggered_passageway';
   entryTag: string;
-  entryDirection: string;
+  entryDirection: Direction;
   exitTag: string;
-  exitDirection: string;
+  exitDirection: Direction;
   defaultState: 'open' | 'closed' | 'locked';
   autoResetSeconds?: number;
   hasLock?: boolean;
