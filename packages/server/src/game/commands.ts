@@ -40,6 +40,7 @@ import {
 } from './socialCommands.js';
 import {
   handleInvite, handleJoinGroup, handleLeaveGroup, handleKick, handleGroupChat,
+  getGroupForPlayer, isGroupLeader,
 } from './groupManager.js';
 import { handleBank, handleDeposit, handleWithdraw } from './bankCommands.js';
 import { handleList, handleBuy, handleSell, handlePrice, handleHaggle } from './merchantCommands.js';
@@ -446,7 +447,7 @@ export async function processCommand(
   if (command === 'broadcast' || command === 'br') {
     // "broadcast create <name> [password]"
     if (args.length >= 2 && args[0].toLowerCase() === 'create') {
-      return handleBroadcastCreate(socket, args.slice(1));
+      return handleBroadcastCreate(socket, args.slice(1), _connectedPlayers);
     }
     return handleBroadcast(socket, args, _connectedPlayers);
   }
@@ -454,7 +455,7 @@ export async function processCommand(
   // Join: disambiguate broadcast vs group
   if (command === 'join') {
     if (args.length > 1 && args[0].toLowerCase() === 'br') {
-      return handleJoinBroadcast(socket, args.slice(1));
+      return handleJoinBroadcast(socket, args.slice(1), _connectedPlayers);
     }
     return handleJoinGroup(socket, args, _connectedPlayers);
   }
@@ -465,7 +466,7 @@ export async function processCommand(
       // If the player is in a broadcast channel matching the argument, leave that channel.
       // Otherwise treat it as a group leave (which will give its own error if not in a group).
       if (socket.broadcastChannel && socket.broadcastChannel === args[0].toLowerCase()) {
-        return handleLeaveBroadcast(socket, args);
+        return handleLeaveBroadcast(socket, args, _connectedPlayers);
       }
       return { type: MessageType.ERROR, message: `You are not in broadcast channel "${args[0]}". To leave your group, type "leave" with no arguments.` };
     }
@@ -971,6 +972,101 @@ const OPPOSITE_DIRECTIONS: Record<string, string> = {
   southwest: 'northeast',
 };
 
+/**
+ * Move a group follower to the same room the leader just entered.
+ * Mirrors the relevant parts of handleMove but skips direction validation
+ * and recursive auto-follow. Door/permission checks are enforced per-follower.
+ */
+async function moveFollower(
+  follower: AuthenticatedSocket,
+  oldRoomId: number,
+  direction: string,
+  world: GameWorld,
+  connectedPlayers: Map<number, AuthenticatedSocket>
+): Promise<void> {
+  // Re-check: follower may have moved or entered combat since setImmediate was scheduled
+  if (getPlayerLocation(follower.playerId) !== oldRoomId) return;
+  if (follower.regenState.inCombat) return;
+  if (isPlayerDead(follower) || isPlayerDropped(follower)) return;
+
+  // Check door restrictions for this follower individually
+  const door = doorStateManager.getDoorByRoomAndDirection(oldRoomId, direction);
+  if (door) {
+    // Block special/triggered/temporary doors
+    if (
+      door.doorType === DoorType.SPECIAL ||
+      door.doorType === DoorType.TRIGGERED_PASSAGEWAY ||
+      door.doorType === DoorType.TEMPORARY_PORTAL
+    ) {
+      sendMessage(follower, MessageType.OUTPUT, colors.yellow(`You cannot follow through that passage.`));
+      return;
+    }
+
+    // Check per-player permissions (level, class, required item)
+    const permissionError = await checkDoorPermissionsForPlayer(door, follower);
+    if (permissionError) {
+      sendMessage(follower, MessageType.OUTPUT, permissionError.message);
+      return;
+    }
+
+    // Check door state (closed/locked)
+    const passageCheck = doorStateManager.canPassThrough(door.id, oldRoomId);
+    if (!passageCheck.allowed) {
+      sendMessage(follower, MessageType.OUTPUT, colors.yellow(passageCheck.reason || 'You cannot follow that way.'));
+      return;
+    }
+  }
+
+  const newRoom = world.getRoomInDirection(oldRoomId, direction);
+  if (!newRoom) return; // Should never happen since leader already moved
+
+  // Save to DB
+  await characterRepo.updateCharacterRoom(follower.characterId!, newRoom.id);
+
+  // Handle stealth: hidden → sneaking for movement
+  if (isHidden(follower)) {
+    setStealthMode(follower, 'sneaking');
+  }
+
+  // Exit announcement
+  if (isSneaking(follower)) {
+    sendMessage(follower, MessageType.OUTPUT, colors.cyan('Sneaking...'));
+  } else {
+    broadcastToRoom(oldRoomId, colors.green(`${colors.red(follower.username)} left to the ${direction}.`), follower.playerId);
+  }
+
+  // Update in-memory location
+  setPlayerLocation(follower.playerId, newRoom.id);
+
+  // Entry announcement
+  const oppositeDir = OPPOSITE_DIRECTIONS[direction] || direction;
+
+  if (isSneaking(follower)) {
+    const observers = await getObserversInRoom(newRoom.id, follower.playerId, connectedPlayers);
+    if (observers.length > 0) {
+      const stealthValue = await calculatePlayerStealth(follower);
+      const detectionResult = rollCumulativeDetection(stealthValue, observers);
+      if (detectionResult.detected) {
+        breakStealth(follower, 'movement_failed', false);
+        broadcastToRoom(newRoom.id, colors.green(`You notice ${colors.red(follower.username)} sneaking into the room.`), follower.playerId);
+        broadcastToRoom(oldRoomId, colors.green(`You notice ${colors.red(follower.username)} slipping away.`), follower.playerId);
+      }
+    }
+  } else {
+    broadcastToRoom(newRoom.id, colors.green(`${colors.red(follower.username)} walks in from the ${oppositeDir}.`), follower.playerId);
+  }
+
+  // Send room description to follower
+  const otherPlayers = getOtherPlayersInRoom(newRoom.id, follower.playerId, connectedPlayers, follower.canSeeHidden);
+  const npcNames = getNpcDisplayNames(newRoom.id);
+  const itemDescriptions = await getRoomItemsDescription(newRoom.id);
+  const roomDescription = world.formatRoomDescription(newRoom, otherPlayers, follower.briefMode, itemDescriptions, npcNames);
+  sendMessage(follower, MessageType.OUTPUT, roomDescription);
+
+  // Trigger aggro check in new room
+  setImmediate(() => checkHostileAggro(newRoom.id, follower));
+}
+
 async function handleMove(
   socket: AuthenticatedSocket,
   currentRoomId: number,
@@ -1104,6 +1200,40 @@ async function handleMove(
   // description is only sent after processCommand returns. Without deferring, the
   // "attacks you!" message arrives before the player sees the room.
   setImmediate(() => checkHostileAggro(newRoom.id, socket));
+
+  // Auto-follow: if the mover is a group leader, move followers who are in the old room
+  if (isGroupLeader(socket.playerId)) {
+    const group = getGroupForPlayer(socket.playerId);
+    if (group) {
+      // Collect eligible followers before any async work
+      const followers: AuthenticatedSocket[] = [];
+      for (const memberId of group.members) {
+        if (memberId === socket.playerId) continue;
+        const memberSocket = connectedPlayers.get(memberId);
+        if (!memberSocket) continue;
+        // Must be in the room the leader just left
+        if (getPlayerLocation(memberId) !== currentRoomId) continue;
+        // Cannot follow if dead or dropped
+        if (isPlayerDead(memberSocket) || isPlayerDropped(memberSocket)) continue;
+        // Cannot follow if in combat
+        if (memberSocket.regenState.inCombat) continue;
+        followers.push(memberSocket);
+      }
+
+      // Move each follower asynchronously (fire-and-forget so leader isn't delayed)
+      if (followers.length > 0) {
+        setImmediate(async () => {
+          for (const follower of followers) {
+            try {
+              await moveFollower(follower, currentRoomId, fullDirection, world, connectedPlayers);
+            } catch (err) {
+              console.error(`Auto-follow failed for ${follower.username}:`, err);
+            }
+          }
+        });
+      }
+    }
+  }
 
   return { type: MessageType.OUTPUT, message: roomDescription };
 }

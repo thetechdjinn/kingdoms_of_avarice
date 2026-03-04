@@ -216,6 +216,14 @@ export async function runMigrations(): Promise<void> {
         ALTER TABLE rooms ADD COLUMN IF NOT EXISTS features JSONB DEFAULT '{}'
       `);
 
+      // Add tag column to rooms (portable string identifier for export/import)
+      await client.query(`
+        ALTER TABLE rooms ADD COLUMN IF NOT EXISTS tag VARCHAR(100)
+      `);
+      await client.query(`
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_rooms_tag ON rooms(tag) WHERE tag IS NOT NULL
+      `);
+
       // Migrate status_effect_definitions from dice notation to damage/healing ranges
       // Check if old columns exist and migrate if needed
       const oldDiceColumnsCheck = await client.query(`

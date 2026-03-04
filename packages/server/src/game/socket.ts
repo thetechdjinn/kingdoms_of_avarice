@@ -609,7 +609,7 @@ export function setupGameSocket(wss: WebSocketServer): void {
       // Prevents a race where an old socket's close handler clobbers a newer connection.
       if (connectedPlayers.get(payload.playerId) === authWs) {
         // Clean up social system state (broadcast channels, groups)
-        cleanupBroadcastMembership(authWs);
+        cleanupBroadcastMembership(authWs, connectedPlayers);
         cleanupPlayerGroup(authWs.playerId);
 
         // Clean up merchant state (haggle reputation, hostility)

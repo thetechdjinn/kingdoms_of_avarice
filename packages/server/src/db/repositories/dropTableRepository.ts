@@ -70,6 +70,14 @@ export async function getDropTableById(id: number): Promise<DropTable | null> {
   return result.rows[0] ? dbToDropTable(result.rows[0]) : null;
 }
 
+export async function getDropTableByName(name: string): Promise<DropTable | null> {
+  const result = await query<DbDropTable>(
+    'SELECT * FROM drop_tables WHERE LOWER(name) = LOWER($1)',
+    [name]
+  );
+  return result.rows[0] ? dbToDropTable(result.rows[0]) : null;
+}
+
 export interface CreateDropTableInput {
   name: string;
   description?: string;

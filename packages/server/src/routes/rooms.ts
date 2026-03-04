@@ -15,6 +15,7 @@ export function setupRoomRoutes(app: Express): void {
         area: room.area,
         terrain: room.terrain || 'indoor',
         features: room.features || {},
+        tag: room.tag || null,
         exits: Object.fromEntries(room.exits),
       }));
       res.json({ success: true, rooms: roomsData });
@@ -48,6 +49,7 @@ export function setupRoomRoutes(app: Express): void {
           area: room.area,
           terrain: room.terrain || 'indoor',
           features: room.features || {},
+          tag: room.tag || null,
           exits: Object.fromEntries(room.exits),
         },
       });
@@ -60,14 +62,28 @@ export function setupRoomRoutes(app: Express): void {
   // Create room (requires Developer role)
   app.post('/api/rooms', requireDeveloper, async (req: Request, res: Response) => {
     try {
-      const { name, description, area, terrain, features } = req.body;
+      const { name, description, area, terrain, features, tag } = req.body;
 
       if (!name) {
         res.status(400).json({ success: false, message: 'Name is required' });
         return;
       }
 
-      const room = await roomRepo.createRoom({ name, description, area, terrain, features });
+      const room = await roomRepo.createRoom({ name, description, area, terrain, features, tag });
+
+      // Auto-generate tag if none provided: area_name, area_name_2, area_name_3, ...
+      if (!room.tag) {
+        const areaPrefix = (room.area || 'unknown').toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
+        const sanitized = room.name.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
+        const baseTag = `${areaPrefix}_${sanitized}`.slice(0, 90);
+        let candidate = baseTag;
+        let suffix = 2;
+        while (await roomRepo.getRoomByTag(candidate)) {
+          candidate = `${baseTag}_${suffix++}`;
+        }
+        await roomRepo.updateRoom(room.id, { tag: candidate });
+        room.tag = candidate;
+      }
 
       // Sync with in-memory GameWorld
       await getGameWorld().reloadRoom(room.id);
@@ -81,6 +97,7 @@ export function setupRoomRoutes(app: Express): void {
           area: room.area,
           terrain: room.terrain || 'indoor',
           features: room.features || {},
+          tag: room.tag,
           exits: {},
         },
       });
@@ -99,8 +116,8 @@ export function setupRoomRoutes(app: Express): void {
         return;
       }
 
-      const { name, description, area, terrain, features } = req.body;
-      const room = await roomRepo.updateRoom(id, { name, description, area, terrain, features });
+      const { name, description, area, terrain, features, tag } = req.body;
+      const room = await roomRepo.updateRoom(id, { name, description, area, terrain, features, tag });
 
       if (!room) {
         res.status(404).json({ success: false, message: 'Room not found' });
@@ -120,6 +137,7 @@ export function setupRoomRoutes(app: Express): void {
           area: roomWithExits!.area,
           terrain: roomWithExits!.terrain || 'indoor',
           features: roomWithExits!.features || {},
+          tag: roomWithExits!.tag || null,
           exits: Object.fromEntries(roomWithExits!.exits),
         },
       });
@@ -203,6 +221,7 @@ export function setupRoomRoutes(app: Express): void {
           area: updatedRoom!.area,
           terrain: updatedRoom!.terrain || 'indoor',
           features: updatedRoom!.features || {},
+          tag: updatedRoom!.tag || null,
           exits: Object.fromEntries(updatedRoom!.exits),
         },
       });
@@ -249,6 +268,7 @@ export function setupRoomRoutes(app: Express): void {
           area: updatedRoom.area,
           terrain: updatedRoom.terrain || 'indoor',
           features: updatedRoom.features || {},
+          tag: updatedRoom.tag || null,
           exits: Object.fromEntries(updatedRoom.exits),
         } : null,
       });

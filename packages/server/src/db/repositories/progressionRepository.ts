@@ -843,6 +843,19 @@ export async function removeClassAbility(classId: string, abilityId: string): Pr
   return (result.rowCount ?? 0) > 0;
 }
 
+export async function getAllClassAbilities(): Promise<ClassAbilityMapping[]> {
+  const result = await query<DbClassAbility>(
+    'SELECT * FROM class_abilities ORDER BY class_id, required_level'
+  );
+  return result.rows.map((row) => ({
+    class_id: row.class_id,
+    ability_id: row.ability_id,
+    required_level: row.required_level,
+    auto_learn: row.auto_learn,
+    training_cost: row.training_cost,
+  }));
+}
+
 // ============================================================================
 // CHARACTER PROGRESSION
 // ============================================================================
