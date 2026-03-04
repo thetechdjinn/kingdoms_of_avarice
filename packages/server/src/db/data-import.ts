@@ -50,8 +50,13 @@ function readJsonFile(relativePath: string): { type: string; data: unknown[] } |
     console.warn(`  WARNING: File not found: ${relativePath}`);
     return null;
   }
-  const content = JSON.parse(readFileSync(fullPath, 'utf-8'));
-  return { type: content.type, data: content.data };
+  try {
+    const content = JSON.parse(readFileSync(fullPath, 'utf-8'));
+    return { type: content.type, data: content.data };
+  } catch (err) {
+    console.error(`  ERROR: Failed to parse ${relativePath}: ${(err as Error).message}`);
+    return null;
+  }
 }
 
 // ============================================================================
@@ -616,36 +621,40 @@ async function importRooms(data: unknown[]): Promise<ImportResult> {
       const existingDoor = await doorRepo.getDoorByRoomAndDirection(fromId, entryDir);
       if (existingDoor) {
         // Update existing door
-        await doorRepo.updateDoor(existingDoor.id, {
-          name: door.name as string,
-          displayName: door.displayName as string | null | undefined,
-          doorType: door.doorType as string,
-          description: door.description as string | undefined,
-          exitRoomId,
-          exitDirection: door.exitDirection as string | null | undefined,
-          defaultState: door.defaultState as string | undefined,
-          autoResetSeconds: door.autoResetSeconds as number | null | undefined,
-          hasLock: door.hasLock as boolean | undefined,
-          keyItemTag: door.keyItemTag as string | undefined,
-          pickDifficultyMin: door.pickDifficultyMin as number | undefined,
-          pickDifficultyMax: door.pickDifficultyMax as number | undefined,
-          bashDifficulty: door.bashDifficulty as number | undefined,
-          isHidden: door.isHidden as boolean | undefined,
-          triggerText: door.triggerText as string | undefined,
-          passageMessageSelf: door.passageMessageSelf as string | undefined,
-          passageMessageRoom: door.passageMessageRoom as string | undefined,
-          itemDisplayName: door.itemDisplayName as string | undefined,
-          isTemporary: door.isTemporary as boolean | undefined,
-          spawnTriggerText: door.spawnTriggerText as string | undefined,
-          durationSeconds: door.durationSeconds as number | null | undefined,
-          appearMessage: door.appearMessage as string | undefined,
-          disappearMessage: door.disappearMessage as string | undefined,
-          requiredLevel: door.requiredLevel as number | null | undefined,
-          requiredClasses: door.requiredClasses as string[] | null | undefined,
-          requiredQuestFlag: door.requiredQuestFlag as string | null | undefined,
-          requiredItemTag: door.requiredItemTag as string | null | undefined,
-          denialMessage: door.denialMessage as string | null | undefined,
-        } as unknown as Parameters<typeof doorRepo.updateDoor>[1]);
+        try {
+          await doorRepo.updateDoor(existingDoor.id, {
+            name: door.name as string,
+            displayName: door.displayName as string | null | undefined,
+            doorType: door.doorType as string,
+            description: door.description as string | undefined,
+            exitRoomId,
+            exitDirection: door.exitDirection as string | null | undefined,
+            defaultState: door.defaultState as string | undefined,
+            autoResetSeconds: door.autoResetSeconds as number | null | undefined,
+            hasLock: door.hasLock as boolean | undefined,
+            keyItemTag: door.keyItemTag as string | undefined,
+            pickDifficultyMin: door.pickDifficultyMin as number | undefined,
+            pickDifficultyMax: door.pickDifficultyMax as number | undefined,
+            bashDifficulty: door.bashDifficulty as number | undefined,
+            isHidden: door.isHidden as boolean | undefined,
+            triggerText: door.triggerText as string | undefined,
+            passageMessageSelf: door.passageMessageSelf as string | undefined,
+            passageMessageRoom: door.passageMessageRoom as string | undefined,
+            itemDisplayName: door.itemDisplayName as string | undefined,
+            isTemporary: door.isTemporary as boolean | undefined,
+            spawnTriggerText: door.spawnTriggerText as string | undefined,
+            durationSeconds: door.durationSeconds as number | null | undefined,
+            appearMessage: door.appearMessage as string | undefined,
+            disappearMessage: door.disappearMessage as string | undefined,
+            requiredLevel: door.requiredLevel as number | null | undefined,
+            requiredClasses: door.requiredClasses as string[] | null | undefined,
+            requiredQuestFlag: door.requiredQuestFlag as string | null | undefined,
+            requiredItemTag: door.requiredItemTag as string | null | undefined,
+            denialMessage: door.denialMessage as string | null | undefined,
+          } as unknown as Parameters<typeof doorRepo.updateDoor>[1]);
+        } catch (err) {
+          result.errors.push(`Door "${door.name}" update in room "${tag}": ${(err as Error).message}`);
+        }
       } else {
         try {
           await doorRepo.createDoor({
@@ -973,7 +982,13 @@ async function main(): Promise<void> {
     process.exit(1);
   }
 
-  const manifest = JSON.parse(readFileSync(manifestPath, 'utf-8'));
+  let manifest: { version: string; import_order: string[] };
+  try {
+    manifest = JSON.parse(readFileSync(manifestPath, 'utf-8'));
+  } catch (err) {
+    console.error(`Failed to parse _manifest.json: ${(err as Error).message}`);
+    process.exit(1);
+  }
   const importOrder: string[] = manifest.import_order;
 
   console.log(`Manifest version: ${manifest.version}`);

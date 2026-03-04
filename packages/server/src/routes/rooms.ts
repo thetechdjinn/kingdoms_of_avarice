@@ -79,7 +79,7 @@ export function setupRoomRoutes(app: Express): void {
         let candidate = baseTag;
         let suffix = 2;
         while (await roomRepo.getRoomByTag(candidate)) {
-          candidate = `${baseTag}_${suffix++}`;
+          candidate = `${baseTag}_${suffix++}`.slice(0, 100);
         }
         await roomRepo.updateRoom(room.id, { tag: candidate });
         room.tag = candidate;

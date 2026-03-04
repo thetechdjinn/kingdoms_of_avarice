@@ -29,7 +29,7 @@ export interface CreateRoomInput {
   area?: string;
   terrain?: string;
   features?: RoomFeatures;
-  tag?: string;
+  tag?: string | null;
 }
 
 export interface CreateExitInput {
