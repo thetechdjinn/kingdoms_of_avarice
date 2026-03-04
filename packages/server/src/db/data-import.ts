@@ -612,7 +612,7 @@ async function importRooms(data: unknown[]): Promise<ImportResult> {
     const importedDoorDirections = new Set<string>();
     for (const doorRaw of doors) {
       const door = doorRaw as Record<string, unknown>;
-      const entryDir = door.entryDirection as string;
+      const entryDir = (door.entryDirection as string).toLowerCase();
       importedDoorDirections.add(entryDir);
       const exitTag = door.exitTag as string | null;
       const exitRoomId = exitTag ? (tagToId.get(exitTag) ?? null) : null;
