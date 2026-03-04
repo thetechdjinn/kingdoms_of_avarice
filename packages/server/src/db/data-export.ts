@@ -405,9 +405,19 @@ async function exportNpcs(
     // FK references → portable strings
     if (tmpl.dropTableId) {
       npcData.dropTableName = dropTableIdToName.get(tmpl.dropTableId) ?? null;
+      if (!npcData.dropTableName) {
+        const msg = `NPC "${tmpl.name}" references unknown drop table ID ${tmpl.dropTableId}`;
+        warnings.push(msg);
+        console.warn(`    WARNING: ${msg}`);
+      }
     }
     if (tmpl.primaryFactionId) {
       npcData.primaryFactionName = factionIdToName.get(tmpl.primaryFactionId) ?? null;
+      if (!npcData.primaryFactionName) {
+        const msg = `NPC "${tmpl.name}" references unknown faction ID ${tmpl.primaryFactionId}`;
+        warnings.push(msg);
+        console.warn(`    WARNING: ${msg}`);
+      }
     }
 
     // Inline attacks
@@ -429,25 +439,41 @@ async function exportNpcs(
 
     // Inline spells
     if (tmpl.spells && tmpl.spells.length > 0) {
-      npcData.spells = tmpl.spells.map(ns => ({
-        spellMnemonic: spellIdToMnemonic.get(ns.spellId) ?? null,
-        priority: ns.priority,
-        castChance: ns.castChance,
-        conditionType: ns.conditionType,
-        conditionValue: ns.conditionValue,
-        cooldownRounds: ns.cooldownRounds,
-      }));
+      npcData.spells = tmpl.spells.map(ns => {
+        const spellMnemonic = spellIdToMnemonic.get(ns.spellId) ?? null;
+        if (!spellMnemonic) {
+          const msg = `NPC "${tmpl.name}" spell references unknown spell ID ${ns.spellId}`;
+          warnings.push(msg);
+          console.warn(`    WARNING: ${msg}`);
+        }
+        return {
+          spellMnemonic,
+          priority: ns.priority,
+          castChance: ns.castChance,
+          conditionType: ns.conditionType,
+          conditionValue: ns.conditionValue,
+          cooldownRounds: ns.cooldownRounds,
+        };
+      });
     }
 
     // Inline merchant data
     if (tmpl.merchantEnabled) {
       const inv = allMerchantInventory.get(tmpl.id) || [];
       if (inv.length > 0) {
-        npcData.merchantInventory = inv.map(entry => ({
-          itemName: itemIdToName.get(entry.itemTemplateId) ?? null,
-          maxStock: entry.maxStock,
-          restockChance: entry.restockChance,
-        }));
+        npcData.merchantInventory = inv.map(entry => {
+          const itemName = itemIdToName.get(entry.itemTemplateId) ?? null;
+          if (!itemName) {
+            const msg = `NPC "${tmpl.name}" merchant inventory references unknown item ID ${entry.itemTemplateId}`;
+            warnings.push(msg);
+            console.warn(`    WARNING: ${msg}`);
+          }
+          return {
+            itemName,
+            maxStock: entry.maxStock,
+            restockChance: entry.restockChance,
+          };
+        });
       }
 
       const responses = responsesByNpc.get(tmpl.id) || [];
