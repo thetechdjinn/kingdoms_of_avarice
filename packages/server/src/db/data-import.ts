@@ -698,7 +698,7 @@ async function importRooms(data: unknown[]): Promise<ImportResult> {
     // Delete stale doors that exist in DB but not in import data
     const existingDoors = await doorRepo.getDoorsFromRoom(fromId);
     for (const existing of existingDoors) {
-      if (!importedDoorDirections.has(existing.entryDirection)) {
+      if (!importedDoorDirections.has(existing.entryDirection.toLowerCase())) {
         await doorRepo.deleteDoor(existing.id);
       }
     }

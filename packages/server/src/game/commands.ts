@@ -1021,7 +1021,13 @@ async function moveFollower(
   if (!newRoom) return; // Should never happen since leader already moved
 
   // Save to DB
-  await characterRepo.updateCharacterRoom(follower.characterId!, newRoom.id);
+  try {
+    await characterRepo.updateCharacterRoom(follower.characterId!, newRoom.id);
+  } catch (error) {
+    console.error('Failed to save follower room location:', error);
+    sendMessage(follower, MessageType.ERROR, 'Something prevents you from following.');
+    return;
+  }
 
   // Handle stealth: hidden → sneaking for movement
   if (isHidden(follower)) {

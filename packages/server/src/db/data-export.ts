@@ -136,6 +136,8 @@ async function exportDropTables(itemIdToName: Map<number, string>): Promise<void
         if (!obj.itemName) {
           console.warn(`    WARNING: Drop table "${table.name}" entry references unknown item ID ${entry.itemTemplateId}`);
         }
+      } else {
+        obj.itemName = null;
       }
       return obj;
     });
