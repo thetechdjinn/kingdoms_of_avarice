@@ -1,7 +1,7 @@
 import pg from 'pg';
 import crypto from 'node:crypto';
 import { query } from '../index.js';
-import bcrypt from 'bcrypt';
+import bcrypt from 'bcryptjs';
 
 export interface Player {
   id: number;

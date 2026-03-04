@@ -44,7 +44,7 @@ import { ipAccessMiddleware } from './middleware/ipAccess.js';
 import { startDnsResolver } from './services/dnsResolver.js';
 
 const app = express();
-const PORT = process.env.PORT || 3001;
+const PORT = Number(process.env.PORT) || 3001;
 
 // Limit JSON payload size to prevent DOS attacks
 app.use(express.json({ limit: '100kb' }));
@@ -94,8 +94,8 @@ async function start() {
     setDatabaseMode(false);
   }
 
-  server.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
+  server.listen(PORT, '0.0.0.0', () => {
+    console.log(`Server running on 0.0.0.0:${PORT}`);
   });
 }
 

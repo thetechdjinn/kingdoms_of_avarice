@@ -612,9 +612,11 @@ export async function runMigrations(): Promise<void> {
       await client.query(`ALTER TABLE npcs ADD COLUMN IF NOT EXISTS primary_faction_id INTEGER REFERENCES factions(id)`);
       await client.query(`ALTER TABLE npcs ADD COLUMN IF NOT EXISTS proper_name BOOLEAN DEFAULT FALSE`);
       // Goran is a proper noun — set proper_name for existing installs
-      await client.query(`UPDATE npcs SET proper_name = TRUE WHERE LOWER(name) = LOWER('goran the weaponsmith') AND proper_name = FALSE`);
+      await client.query(`UPDATE npcs SET proper_name = TRUE WHERE LOWER(name) IN ('goran the weaponsmith', 'goran') AND proper_name = FALSE`);
       // Fix Goran's health column (was missing from original seed)
-      await client.query(`UPDATE npcs SET health = max_health WHERE LOWER(name) = LOWER('goran the weaponsmith') AND health IS NULL`);
+      await client.query(`UPDATE npcs SET health = max_health WHERE LOWER(name) IN ('goran the weaponsmith', 'goran') AND health IS NULL`);
+      // Rename Goran the Weaponsmith -> Goran
+      await client.query(`UPDATE npcs SET name = 'goran' WHERE LOWER(name) = 'goran the weaponsmith'`);
 
       // Indexes for faction tables
       await client.query(`CREATE INDEX IF NOT EXISTS idx_npc_factions_npc ON npc_factions(npc_id)`);
@@ -756,13 +758,23 @@ export async function ensureCopperConversion(): Promise<void> {
 }
 
 export async function seedInitialData(): Promise<void> {
+  // If Arindale has been seeded, skip all legacy Silverton room/NPC seeds
+  const arindaleCheck = await getPool().query(
+    `SELECT 1 FROM game_settings WHERE key = 'arindale_seeded' AND value = 'true'`
+  );
+  const arindaleSeeded = arindaleCheck.rows.length > 0;
+
+  if (arindaleSeeded) {
+    console.log('Arindale data detected, skipping legacy Silverton seeds...');
+  }
+
   // Check if rooms already exist
   const roomCheck = await getPool().query('SELECT COUNT(*) FROM rooms');
   const roomsExist = parseInt(roomCheck.rows[0].count) > 0;
-  
+
   if (roomsExist) {
     console.log('Room seed data already exists, skipping rooms...');
-  } else {
+  } else if (!arindaleSeeded) {
     await seedRooms();
   }
 
@@ -812,12 +824,16 @@ export async function seedInitialData(): Promise<void> {
 
   if (npcsExist) {
     console.log('NPC seed data already exists, skipping NPCs...');
-  } else {
+  } else if (!arindaleSeeded) {
     await seedNpcs();
+  } else {
+    console.log('Arindale seeded but no NPCs found. Populate NPCs via the NPC Editor or import.');
   }
 
   // Seed merchant NPC (has its own existence check, runs after rooms/items/npcs are ready)
-  await seedMerchant();
+  if (!arindaleSeeded) {
+    await seedMerchant();
+  }
 }
 
 async function seedRooms(): Promise<void> {
@@ -1068,9 +1084,9 @@ async function seedNpcs(): Promise<void> {
 async function seedMerchant(): Promise<void> {
   const pool = getPool();
 
-  // Check if Goran already exists
+  // Check if Goran already exists (check both old and new name)
   const goranExists = await pool.query(
-    "SELECT 1 FROM npcs WHERE LOWER(name) = LOWER('goran the weaponsmith')"
+    "SELECT 1 FROM npcs WHERE LOWER(name) IN ('goran the weaponsmith', 'goran')"
   );
   if (goranExists.rows.length > 0) return;
 
@@ -1095,7 +1111,7 @@ async function seedMerchant(): Promise<void> {
         base_accuracy, base_defense, base_crit_chance, base_dodge, damage_reduction,
         flee_enabled, max_active, interactable, merchant_enabled, primary_faction_id, proper_name
       ) VALUES (
-        'goran the weaponsmith',
+        'goran',
         'A burly man with soot-stained hands and a leather apron. His arms are thick from years at the forge, and his eyes hold the steady gaze of a master craftsman.',
         3, 200, 200, false, 120,
         5, 0, 0, 0, 0,
@@ -1118,7 +1134,7 @@ async function seedMerchant(): Promise<void> {
       );
     }
 
-    console.log('Merchant NPC "Goran the Weaponsmith" seeded successfully');
+    console.log('Merchant NPC "Goran" seeded successfully');
   } catch (error) {
     console.error('Failed to seed merchant NPC:', error);
   }
