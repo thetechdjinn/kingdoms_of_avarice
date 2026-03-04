@@ -17,7 +17,7 @@ const __dirname = dirname(__filename);
 
 dotenv.config({ path: join(__dirname, '..', '..', '..', '..', '.env') });
 
-import { pool as getPool } from './index.js';
+import { pool as getPool, withTransaction } from './index.js';
 import * as roomRepo from './repositories/roomRepository.js';
 import * as itemRepo from './repositories/itemRepository.js';
 import * as spellRepo from './repositories/spellRepository.js';
@@ -810,25 +810,10 @@ async function importNpcs(data: unknown[]): Promise<ImportResult> {
       };
 
       const existing = existingByName.get(name.toLowerCase());
-      let npcId: number;
 
-      if (existing) {
-        await npcRepo.updateTemplate(existing.id, templateInput as unknown as Parameters<typeof npcRepo.updateTemplate>[1]);
-        npcId = existing.id;
-        result.updated++;
-      } else {
-        const created = await npcRepo.createTemplate(templateInput as unknown as Parameters<typeof npcRepo.createTemplate>[0]);
-        npcId = created.id;
-        result.created++;
-      }
-
-      // Replace attacks (always replace, even with empty array to clear old data)
-      const attacks = (item.attacks as unknown[]) || [];
-      await npcRepo.replaceAttacks(npcId, attacks as unknown as Parameters<typeof npcRepo.replaceAttacks>[1]);
-
-      // Replace spells (always replace, even with empty array to clear old data)
+      // Resolve spells before the transaction so errors are non-fatal
       const spells = (item.spells as unknown[]) || [];
-      const resolvedSpells = [];
+      const resolvedSpells: Parameters<typeof npcSpellRepo.replaceSpells>[1] = [];
       for (const spellRaw of spells) {
         const spell = spellRaw as Record<string, unknown>;
         const mnemonic = spell.spellMnemonic as string;
@@ -847,10 +832,33 @@ async function importNpcs(data: unknown[]): Promise<ImportResult> {
           cooldownRounds: spell.cooldownRounds as number | undefined,
         });
       }
-      await npcSpellRepo.replaceSpells(npcId, resolvedSpells);
 
-      // Replace merchant inventory and responses
-      // Always clean up old data, then re-create if merchant is enabled
+      // Wrap template + attacks + spells in a transaction so partial writes
+      // are rolled back on failure. Merchant repos don't accept a client
+      // param yet, so they run outside the transaction.
+      const npcId = await withTransaction(async (client) => {
+        let id: number;
+        if (existing) {
+          await npcRepo.updateTemplate(existing.id, templateInput as unknown as Parameters<typeof npcRepo.updateTemplate>[1], client);
+          id = existing.id;
+          result.updated++;
+        } else {
+          const created = await npcRepo.createTemplate(templateInput as unknown as Parameters<typeof npcRepo.createTemplate>[0], client);
+          id = created.id;
+          result.created++;
+        }
+
+        // Replace attacks (always replace, even with empty array to clear old data)
+        const attacks = (item.attacks as unknown[]) || [];
+        await npcRepo.replaceAttacks(id, attacks as unknown as Parameters<typeof npcRepo.replaceAttacks>[1], client);
+
+        // Replace spells
+        await npcSpellRepo.replaceSpells(id, resolvedSpells, client);
+
+        return id;
+      });
+
+      // Merchant inventory/responses (outside transaction — repos lack client param)
       await merchantRepo.deleteAllInventoryForTemplate(npcId);
       await merchantResponseRepo.deleteAllResponsesForTemplate(npcId);
 
