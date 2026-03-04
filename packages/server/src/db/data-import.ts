@@ -859,6 +859,7 @@ async function importNpcs(data: unknown[]): Promise<ImportResult> {
       });
 
       // Merchant inventory/responses (outside transaction — repos lack client param)
+      // Wrapped in try-catch per entry so failures don't leave wiped merchant data.
       await merchantRepo.deleteAllInventoryForTemplate(npcId);
       await merchantResponseRepo.deleteAllResponsesForTemplate(npcId);
 
@@ -873,22 +874,30 @@ async function importNpcs(data: unknown[]): Promise<ImportResult> {
             result.errors.push(`NPC "${name}": merchant item "${itemName}" not found`);
             continue;
           }
-          await merchantRepo.createInventoryEntry({
-            npcTemplateId: npcId,
-            itemTemplateId,
-            maxStock: inv.maxStock as number,
-            restockChance: inv.restockChance as number,
-          } as unknown as Parameters<typeof merchantRepo.createInventoryEntry>[0]);
+          try {
+            await merchantRepo.createInventoryEntry({
+              npcTemplateId: npcId,
+              itemTemplateId,
+              maxStock: inv.maxStock as number,
+              restockChance: inv.restockChance as number,
+            } as unknown as Parameters<typeof merchantRepo.createInventoryEntry>[0]);
+          } catch (err) {
+            result.errors.push(`NPC "${name}": merchant inventory "${itemName}": ${(err as Error).message}`);
+          }
         }
 
         const responses = (item.merchantResponses as unknown[]) || [];
         for (const respRaw of responses) {
           const resp = respRaw as Record<string, unknown>;
-          await merchantResponseRepo.createResponse({
-            npcTemplateId: npcId,
-            triggerKeywords: resp.triggerKeywords as string[],
-            response: resp.response as string,
-          });
+          try {
+            await merchantResponseRepo.createResponse({
+              npcTemplateId: npcId,
+              triggerKeywords: resp.triggerKeywords as string[],
+              response: resp.response as string,
+            });
+          } catch (err) {
+            result.errors.push(`NPC "${name}": merchant response: ${(err as Error).message}`);
+          }
         }
       }
     } catch (err) {
