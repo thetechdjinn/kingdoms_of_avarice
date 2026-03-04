@@ -250,7 +250,8 @@ export function handleShout(
 // ---------------------------------------------------------------------------
 export function handleBroadcastCreate(
   socket: AuthenticatedSocket,
-  args: string[]
+  args: string[],
+  connectedPlayers: Map<number, AuthenticatedSocket>
 ): CommandResponse {
   if (args.length === 0) {
     return { type: MessageType.ERROR, message: 'Usage: broadcast create <name> [password]' };
@@ -265,7 +266,7 @@ export function handleBroadcastCreate(
 
   // Leave current channel if any
   if (socket.broadcastChannel) {
-    removeMemberFromChannel(socket);
+    removeMemberFromChannel(socket, connectedPlayers);
   }
 
   const channel: BroadcastChannel = {
@@ -282,7 +283,8 @@ export function handleBroadcastCreate(
 
 export function handleJoinBroadcast(
   socket: AuthenticatedSocket,
-  args: string[]
+  args: string[],
+  connectedPlayers: Map<number, AuthenticatedSocket>
 ): CommandResponse {
   if (args.length === 0) {
     return { type: MessageType.ERROR, message: 'Usage: join br <name> [password]' };
@@ -302,12 +304,15 @@ export function handleJoinBroadcast(
 
   // Leave current channel if different
   if (socket.broadcastChannel && socket.broadcastChannel !== channelName) {
-    removeMemberFromChannel(socket);
+    removeMemberFromChannel(socket, connectedPlayers);
   }
 
   if (socket.broadcastChannel === channelName) {
     return { type: MessageType.SYSTEM, message: `You are already in broadcast channel "${channelName}".` };
   }
+
+  // Notify existing members before adding
+  notifyChannel(channel, `${socket.username} has joined the channel.`, connectedPlayers);
 
   channel.members.add(socket.playerId);
   socket.broadcastChannel = channelName;
@@ -317,7 +322,8 @@ export function handleJoinBroadcast(
 
 export function handleLeaveBroadcast(
   socket: AuthenticatedSocket,
-  args: string[]
+  args: string[],
+  connectedPlayers: Map<number, AuthenticatedSocket>
 ): CommandResponse {
   if (args.length === 0) {
     return { type: MessageType.ERROR, message: 'Usage: leave <channelname>' };
@@ -329,7 +335,7 @@ export function handleLeaveBroadcast(
     return { type: MessageType.ERROR, message: `You are not in broadcast channel "${channelName}".` };
   }
 
-  removeMemberFromChannel(socket);
+  removeMemberFromChannel(socket, connectedPlayers);
   return { type: MessageType.SYSTEM, message: `Left broadcast channel "${channelName}".` };
 }
 
@@ -381,10 +387,32 @@ export function handleBroadcast(
 }
 
 /**
- * Remove player from their current broadcast channel.
- * Auto-deletes the channel if empty.
+ * Send a system notification to all members of a broadcast channel.
  */
-function removeMemberFromChannel(socket: AuthenticatedSocket): void {
+function notifyChannel(
+  channel: BroadcastChannel,
+  message: string,
+  connectedPlayers: Map<number, AuthenticatedSocket>,
+  excludePlayerId?: number
+): void {
+  const formatted = colors.cyan(`[${channel.name}] ${message}`);
+  for (const memberId of channel.members) {
+    if (memberId === excludePlayerId) continue;
+    const memberSocket = connectedPlayers.get(memberId);
+    if (memberSocket) {
+      sendMessage(memberSocket, MessageType.OUTPUT, formatted);
+    }
+  }
+}
+
+/**
+ * Remove player from their current broadcast channel.
+ * Auto-deletes the channel if empty. Notifies remaining members.
+ */
+function removeMemberFromChannel(
+  socket: AuthenticatedSocket,
+  connectedPlayers?: Map<number, AuthenticatedSocket>
+): void {
   if (!socket.broadcastChannel) return;
 
   const channel = broadcastChannels.get(socket.broadcastChannel);
@@ -392,6 +420,8 @@ function removeMemberFromChannel(socket: AuthenticatedSocket): void {
     channel.members.delete(socket.playerId);
     if (channel.members.size === 0) {
       broadcastChannels.delete(socket.broadcastChannel);
+    } else if (connectedPlayers) {
+      notifyChannel(channel, `${socket.username} has left the channel.`, connectedPlayers);
     }
   }
   socket.broadcastChannel = null;
@@ -401,6 +431,9 @@ function removeMemberFromChannel(socket: AuthenticatedSocket): void {
  * Clean up broadcast membership on disconnect.
  * Called from socket.ts close handler.
  */
-export function cleanupBroadcastMembership(socket: AuthenticatedSocket): void {
-  removeMemberFromChannel(socket);
+export function cleanupBroadcastMembership(
+  socket: AuthenticatedSocket,
+  connectedPlayers?: Map<number, AuthenticatedSocket>
+): void {
+  removeMemberFromChannel(socket, connectedPlayers);
 }

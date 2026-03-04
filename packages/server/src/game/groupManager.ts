@@ -58,6 +58,14 @@ export function getGroupMemberCount(playerId: number): number {
 }
 
 /**
+ * Check if a player is the leader of their group.
+ */
+export function isGroupLeader(playerId: number): boolean {
+  const group = getGroupForPlayer(playerId);
+  return group !== null && group.leaderId === playerId;
+}
+
+/**
  * Clean up a player's group membership on disconnect.
  * Notifies remaining group members. Handles leader succession.
  */

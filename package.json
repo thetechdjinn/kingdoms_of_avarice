@@ -17,6 +17,8 @@
     "migrate": "npm run migrate --workspace=@koa/server",
     "seed:arindale": "npx tsx packages/server/src/db/seed-arindale.ts",
     "map:arindale": "npx tsx packages/server/src/db/arindale/generate-map.ts",
+    "data:export": "npx tsx packages/server/src/db/data-export.ts",
+    "data:import": "npx tsx packages/server/src/db/data-import.ts",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage"

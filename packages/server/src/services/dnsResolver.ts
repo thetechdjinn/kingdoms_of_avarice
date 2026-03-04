@@ -32,7 +32,7 @@ async function resolveHostname(hostname: string): Promise<string[]> {
 /**
  * Resolve all hostname entries in the database and update their cached IPs
  */
-export async function resolveAllHostnames(): Promise<void> {
+export async function resolveAllHostnames(quiet = false): Promise<void> {
   try {
     const hostnameEntries = await ipAccessRepo.getHostnameEntries();
 
@@ -42,7 +42,9 @@ export async function resolveAllHostnames(): Promise<void> {
 
         if (resolvedIps.length > 0) {
           await ipAccessRepo.updateResolvedIps(entry.id, resolvedIps);
-          console.log(`[DNS] Resolved ${entry.entry} to ${resolvedIps.join(', ')}`);
+          if (!quiet) {
+            console.log(`[DNS] Resolved ${entry.entry} to ${resolvedIps.join(', ')}`);
+          }
         } else {
           console.warn(`[DNS] No IPs resolved for hostname: ${entry.entry}`);
           // Keep existing resolved_ips if resolution fails
@@ -78,9 +80,9 @@ export function startDnsResolver(): void {
     console.error('[DNS] Initial resolution failed:', error);
   });
 
-  // Then run periodically
+  // Then run periodically (quiet — only log failures)
   resolverInterval = setInterval(() => {
-    resolveAllHostnames().catch((error) => {
+    resolveAllHostnames(true).catch((error) => {
       console.error('[DNS] Periodic resolution failed:', error);
     });
   }, DNS_RESOLVE_INTERVAL_MS);

@@ -9,6 +9,7 @@ export interface DbRoom {
   area: string | null;
   terrain: string | null;
   features: RoomFeatures;
+  tag: string | null;
 }
 
 export interface DbRoomExit {
@@ -28,6 +29,7 @@ export interface CreateRoomInput {
   area?: string;
   terrain?: string;
   features?: RoomFeatures;
+  tag?: string | null;
 }
 
 export interface CreateExitInput {
@@ -44,6 +46,29 @@ export async function getAllRooms(): Promise<DbRoom[]> {
 export async function getRoomById(id: number): Promise<DbRoom | null> {
   const result = await query<DbRoom>('SELECT * FROM rooms WHERE id = $1', [id]);
   return result.rows[0] || null;
+}
+
+export async function getRoomByTag(tag: string): Promise<DbRoom | null> {
+  const result = await query<DbRoom>('SELECT * FROM rooms WHERE tag = $1', [tag]);
+  return result.rows[0] || null;
+}
+
+export async function getIdToTagMap(): Promise<Map<number, string>> {
+  const result = await query<{ id: number; tag: string }>('SELECT id, tag FROM rooms WHERE tag IS NOT NULL');
+  const map = new Map<number, string>();
+  for (const row of result.rows) {
+    map.set(row.id, row.tag);
+  }
+  return map;
+}
+
+export async function getTagToIdMap(): Promise<Map<string, number>> {
+  const result = await query<{ id: number; tag: string }>('SELECT id, tag FROM rooms WHERE tag IS NOT NULL');
+  const map = new Map<string, number>();
+  for (const row of result.rows) {
+    map.set(row.tag, row.id);
+  }
+  return map;
 }
 
 export async function getRoomExits(roomId: number): Promise<DbRoomExit[]> {
@@ -90,12 +115,13 @@ export async function getAllRoomsWithExits(): Promise<RoomWithExits[]> {
   }));
 }
 
-export async function createRoom(input: CreateRoomInput): Promise<DbRoom> {
+export async function createRoom(input: CreateRoomInput, client?: pg.PoolClient): Promise<DbRoom> {
   const result = await query<DbRoom>(
-    `INSERT INTO rooms (name, description, area, terrain, features)
-     VALUES ($1, $2, $3, $4, $5)
+    `INSERT INTO rooms (name, description, area, terrain, features, tag)
+     VALUES ($1, $2, $3, $4, $5, $6)
      RETURNING *`,
-    [input.name, input.description || null, input.area || null, input.terrain || 'indoor', JSON.stringify(input.features || {})]
+    [input.name, input.description || null, input.area || null, input.terrain || 'indoor', JSON.stringify(input.features || {}), input.tag || null],
+    client
   );
   return result.rows[0];
 }
@@ -127,6 +153,10 @@ export async function updateRoom(
   if (updates.features !== undefined) {
     setClauses.push(`features = $${paramIndex++}`);
     values.push(JSON.stringify(updates.features));
+  }
+  if (updates.tag !== undefined) {
+    setClauses.push(`tag = $${paramIndex++}`);
+    values.push(updates.tag);
   }
 
   if (setClauses.length === 0) return getRoomById(id);

@@ -36,6 +36,13 @@ npm run seed:arindale    # Seed Arindale city rooms (replaces all room data)
 npm run map:arindale     # Generate ANSI map → maps/arindale.txt
 ```
 
+**Game Data Export/Import:**
+
+```bash
+npm run data:export      # Export all game content to data/ as JSON
+npm run data:import      # Import game content from data/ (merge/upsert)
+```
+
 **Test account:** `testuser` / `password`
 
 ## Architecture
