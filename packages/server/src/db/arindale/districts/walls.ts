@@ -1,6 +1,6 @@
 /**
- * City Gates, Walls, and Castle Approach — 18 rooms.
- * 3 gates (closed), wall walk segments, guard towers, castle road.
+ * City Gates, Walls, and Castle Approach — 12 rooms.
+ * 3 gates (closed), 4 guard towers (up/down only), castle road.
  */
 import { DistrictData } from '../types.js';
 
@@ -25,58 +25,22 @@ export function getWallsDistrict(): DistrictData {
         description: `The southern gate is smaller than its counterparts but no less sturdy. Twin guard towers bracket the closed doors. Through the iron grating, the southern road disappears into rolling farmland. A posted notice reads: "Gate closed by order of the city council."`,
       },
 
-      // ── Wall Walk — Southern Wall (east to west) ───────────────────────
+      // ── Guard Towers (corner towers, up/down only) ──────────────────────
 
       {
         tag: 'wall_south_tower_e',
         name: 'Southeast Guard Tower',
-        description: `A square stone tower at the corner of the city wall, its top offering a sweeping view south and east. A brazier for signal fires stands ready, and a rack holds crossbows and bolts. Stairs lead down to the street.`,
-      },
-      {
-        tag: 'wall_south_walk_1',
-        name: 'Southern Wall Walk',
-        description: `The stone walkway atop the city wall offers a broad view south across rolling farmland fading into haze. A crenellated parapet lines the outer edge while the city's rooftops spread below to the north.`,
-      },
-      {
-        tag: 'wall_south_walk_2',
-        name: 'Southern Wall Walk',
-        description: `Wind sweeps along the top of the southern wall. The view stretches unbroken to the horizon, where dark forests mark the edge of settled lands. A guard post with a small shelter sits against the inner parapet.`,
+        description: `A square stone tower at the corner of the city wall, its top offering a sweeping view south and east. A brazier for signal fires stands ready, and a rack holds crossbows and bolts. Stairs lead down to the street below.`,
       },
       {
         tag: 'wall_south_tower_w',
         name: 'Southwest Guard Tower',
         description: `This corner tower commands views south and west. A spiral stair connects to the street below. A watchman's logbook lies open on a stone ledge, its pages fluttering in the breeze.`,
       },
-
-      // ── Wall Walk — Western Wall (south to north) ──────────────────────
-
-      {
-        tag: 'wall_west_walk_1',
-        name: 'Western Wall Walk',
-        description: `The walkway along the western wall looks out over fields and scattered farmsteads. The afternoon sun warms the stone underfoot. A flight of startled doves bursts from a gap in the parapet.`,
-      },
-      {
-        tag: 'wall_west_walk_2',
-        name: 'Western Wall Walk',
-        description: `The wall walk continues north, offering glimpses of the countryside through the crenellations. A sentry paces the walkway, his shadow stretching long across the stones.`,
-      },
       {
         tag: 'wall_west_tower_n',
         name: 'Northwest Guard Tower',
         description: `The northwestern tower overlooks the harbor and the open sea beyond. The salt wind is strong up here, and the calls of gulls mingle with the snap of the tower's pennant. Stairs descend to the street.`,
-      },
-
-      // ── Wall Walk — Eastern Wall (south to north) ──────────────────────
-
-      {
-        tag: 'wall_east_walk_1',
-        name: 'Eastern Wall Walk',
-        description: `The eastern wall walk offers a view over open terrain beyond the city. The road from the east gate stretches like a ribbon through farmland. A telescope is mounted on the parapet for the watch.`,
-      },
-      {
-        tag: 'wall_east_walk_2',
-        name: 'Eastern Wall Walk',
-        description: `The walkway narrows where the wall angles slightly. A wooden shelter provides cover from rain, its bench occupied by a napping guard. The view east is peaceful — fields, a distant copse, and the faint blue of hills.`,
       },
       {
         tag: 'wall_east_tower_n',
@@ -133,47 +97,21 @@ export function getWallsDistrict(): DistrictData {
       { fromTag: 'int_4_2', toTag: 'gate_south', direction: 'south' },
       { fromTag: 'gate_south', toTag: 'int_4_2', direction: 'north' },
 
-      // ── Southern Wall Walk ─────────────────────────────────────────────
+      // ── Guard Towers (up/down only) ────────────────────────────────────
 
-      // SE tower — accessed from Eastwall/Southwall intersection
+      // SE tower — from Eastwall/Southwall intersection
       { fromTag: 'int_4_4', toTag: 'wall_south_tower_e', direction: 'up' },
       { fromTag: 'wall_south_tower_e', toTag: 'int_4_4', direction: 'down' },
 
-      // Walk E→W
-      { fromTag: 'wall_south_tower_e', toTag: 'wall_south_walk_1', direction: 'west' },
-      { fromTag: 'wall_south_walk_1', toTag: 'wall_south_tower_e', direction: 'east' },
-      { fromTag: 'wall_south_walk_1', toTag: 'wall_south_walk_2', direction: 'west' },
-      { fromTag: 'wall_south_walk_2', toTag: 'wall_south_walk_1', direction: 'east' },
-      { fromTag: 'wall_south_walk_2', toTag: 'wall_south_tower_w', direction: 'west' },
-      { fromTag: 'wall_south_tower_w', toTag: 'wall_south_walk_2', direction: 'east' },
-
-      // SW tower — accessed from Westwall/Southwall intersection
+      // SW tower — from Westwall/Southwall intersection
       { fromTag: 'int_4_0', toTag: 'wall_south_tower_w', direction: 'up' },
       { fromTag: 'wall_south_tower_w', toTag: 'int_4_0', direction: 'down' },
 
-      // ── Western Wall Walk ──────────────────────────────────────────────
-
-      { fromTag: 'wall_south_tower_w', toTag: 'wall_west_walk_1', direction: 'north' },
-      { fromTag: 'wall_west_walk_1', toTag: 'wall_south_tower_w', direction: 'south' },
-      { fromTag: 'wall_west_walk_1', toTag: 'wall_west_walk_2', direction: 'north' },
-      { fromTag: 'wall_west_walk_2', toTag: 'wall_west_walk_1', direction: 'south' },
-      { fromTag: 'wall_west_walk_2', toTag: 'wall_west_tower_n', direction: 'north' },
-      { fromTag: 'wall_west_tower_n', toTag: 'wall_west_walk_2', direction: 'south' },
-
-      // NW tower — accessed from Westwall/Harbor intersection
+      // NW tower — from Westwall/Harbor intersection
       { fromTag: 'int_0_0', toTag: 'wall_west_tower_n', direction: 'up' },
       { fromTag: 'wall_west_tower_n', toTag: 'int_0_0', direction: 'down' },
 
-      // ── Eastern Wall Walk ──────────────────────────────────────────────
-
-      { fromTag: 'wall_south_tower_e', toTag: 'wall_east_walk_1', direction: 'north' },
-      { fromTag: 'wall_east_walk_1', toTag: 'wall_south_tower_e', direction: 'south' },
-      { fromTag: 'wall_east_walk_1', toTag: 'wall_east_walk_2', direction: 'north' },
-      { fromTag: 'wall_east_walk_2', toTag: 'wall_east_walk_1', direction: 'south' },
-      { fromTag: 'wall_east_walk_2', toTag: 'wall_east_tower_n', direction: 'north' },
-      { fromTag: 'wall_east_tower_n', toTag: 'wall_east_walk_2', direction: 'south' },
-
-      // NE tower — accessed from Eastwall/Harbor intersection
+      // NE tower — from Eastwall/Harbor intersection
       { fromTag: 'int_0_4', toTag: 'wall_east_tower_n', direction: 'up' },
       { fromTag: 'wall_east_tower_n', toTag: 'int_0_4', direction: 'down' },
 

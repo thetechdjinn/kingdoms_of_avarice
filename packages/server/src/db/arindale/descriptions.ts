@@ -153,8 +153,29 @@ const nsDescriptionPools: Record<number, string[]> = {
 // ── Intersection descriptions ──────────────────────────────────────────
 
 export function intersectionDescription(row: number, col: number, tag: string): string {
+  // Town Square — manhole to Central Hub
   if (row === 2 && col === 2) {
-    return `You stand in the center of Arindale's town square, where Main Street crosses King's Road. A weathered stone fountain bubbles quietly at the heart of the open plaza. Townsfolk cross in every direction, and the sounds of the city echo off the surrounding buildings.`;
+    return `You stand in the center of Arindale's town square, where Main Street crosses King's Road. A weathered stone fountain bubbles quietly at the heart of the open plaza. Townsfolk cross in every direction, and the sounds of the city echo off the surrounding buildings. A heavy iron manhole cover is set into the cobblestones near the fountain's base.`;
+  }
+
+  // Harbor Rd & King's Rd — manhole to North Tunnels
+  if (row === 0 && col === 2) {
+    return `Harbor Road meets King's Road at this windswept intersection. The smell of salt and tar blows in from the docks to the north. Cart ruts groove the cobblestones where goods are hauled between the harbor and the city center. A heavy iron manhole cover sits at the edge of the road, its rim crusted with salt.`;
+  }
+
+  // Main St & Market St — manhole to West Tunnels
+  if (row === 2 && col === 1) {
+    return `Main Street meets Market Street at a busy intersection thronged with shoppers and merchants. Colorful awnings shade the storefronts on every corner. The cobblestones are stained with spilled dye and ground produce from decades of market traffic. A heavy iron manhole cover is set into the stones near the gutter.`;
+  }
+
+  // Marshal St & Eastwall St — manhole to East Tunnels
+  if (row === 1 && col === 4) {
+    return `Marshal Street meets Eastwall Street at a quiet intersection on the garrison quarter's eastern edge. The orderly architecture of the barracks district gives way to the more modest buildings along the wall. A heavy iron manhole cover sits in the cobblestones, partly obscured by a thin layer of dust.`;
+  }
+
+  // Southwall Rd & King's Rd — manhole to South Tunnels
+  if (row === 4 && col === 2) {
+    return `Southwall Road meets King's Road beneath the shadow of the southern city wall. The massive fortification looms overhead, its crenellated top patrolled by distant guards. The intersection is quieter than those closer to the city center. A heavy iron manhole cover is half-hidden by weeds growing between the cobblestones.`;
   }
 
   const ew = ewStreetName(row);
