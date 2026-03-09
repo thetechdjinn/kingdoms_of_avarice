@@ -301,16 +301,6 @@ const handWritten: Record<string, { name: string; description: string }> = {
   },
 };
 
-// ==================== Description Section Mapping ====================
-
-function descSection(section: string, tag: string): string {
-  if (tag.includes('flooded')) return 'flooded';
-  if (tag.includes('blockage')) return 'blockage';
-  if (tag.includes('tg_approach') || tag === 'sewer_entrance_tg')
-    return 'tg_approach';
-  return section;
-}
-
 // ==================== Exit Generation ====================
 
 interface Exit {
