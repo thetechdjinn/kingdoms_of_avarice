@@ -20,8 +20,8 @@ export interface DoorDef {
   doorType: 'physical' | 'open_passageway' | 'special' | 'triggered_passageway';
   entryTag: string;
   entryDirection: Direction;
-  exitTag: string;
-  exitDirection: Direction;
+  exitTag?: string;
+  exitDirection?: Direction;
   defaultState: 'open' | 'closed' | 'locked';
   autoResetSeconds?: number;
   hasLock?: boolean;
@@ -31,6 +31,10 @@ export interface DoorDef {
   bashDifficulty?: number;
   denialMessage?: string;
   requiredItemTag?: string;
+  triggerText?: string;
+  isHidden?: boolean;
+  passageMessageSelf?: string;
+  passageMessageRoom?: string;
 }
 
 export interface DistrictData {

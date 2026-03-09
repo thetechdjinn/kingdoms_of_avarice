@@ -1,7 +1,7 @@
 /**
- * Arindale City Seed Script
+ * Arindale City & Sewer Seed Script
  *
- * Generates ~250+ rooms for the Arindale starting city.
+ * Generates ~620 rooms for the Arindale starting city, sewer, and sub-zones.
  * Run: npx tsx packages/server/src/db/seed-arindale.ts
  * Or:  npm run seed:arindale
  */
@@ -24,6 +24,16 @@ import { getHarborDistrict } from './arindale/districts/harbor.js';
 import { getParkDistrict } from './arindale/districts/park.js';
 import { getResidentialDistrict } from './arindale/districts/residential.js';
 import { getWallsDistrict } from './arindale/districts/walls.js';
+import { getCentralHub } from './sewer/sections/central_hub.js';
+import { getNorthTunnels } from './sewer/sections/north_tunnels.js';
+import { getWestTunnels } from './sewer/sections/west_tunnels.js';
+import { getEastTunnels } from './sewer/sections/east_tunnels.js';
+import { getSouthTunnels } from './sewer/sections/south_tunnels.js';
+import { getCrossConnections } from './sewer/sections/cross_connections.js';
+import { getWarrens } from './warrens/warrens.js';
+import { getThievesGuild } from './thieves-guild/thieves-guild.js';
+import { getIridescentMenagerie } from './menagerie/menagerie.js';
+import { getSanctumOfTheDamned } from './sanctum/sanctum.js';
 
 // ── Collect all data ─────────────────────────────────────────────────
 
@@ -39,11 +49,27 @@ function collectAll(): { rooms: RoomDef[]; exits: ExitDef[]; doors: DoorDef[] } 
     getWallsDistrict(),
   ];
 
+  const sewerSections = [
+    getCentralHub(),
+    getNorthTunnels(),
+    getWestTunnels(),
+    getEastTunnels(),
+    getSouthTunnels(),
+    getCrossConnections(),
+  ];
+
+  const subZones = [
+    getWarrens(),
+    getThievesGuild(),
+    getIridescentMenagerie(),
+    getSanctumOfTheDamned(),
+  ];
+
   const rooms = [...grid.rooms];
   const exits = [...grid.exits];
   const doors: DoorDef[] = [];
 
-  for (const d of districts) {
+  for (const d of [...districts, ...sewerSections, ...subZones]) {
     rooms.push(...d.rooms);
     exits.push(...d.exits);
     if (d.doors) doors.push(...d.doors);
@@ -77,7 +103,15 @@ function validate(rooms: RoomDef[], exits: ExitDef[], doors: DoorDef[]): void {
   }
   for (const d of doors) {
     if (!tags.has(d.entryTag)) missingExitTags.push(`door.entryTag=${d.entryTag}`);
-    if (!tags.has(d.exitTag)) missingExitTags.push(`door.exitTag=${d.exitTag}`);
+    if (d.exitTag && !tags.has(d.exitTag)) missingExitTags.push(`door.exitTag=${d.exitTag}`);
+    // Ensure exitTag and exitDirection are provided as a pair (both or neither)
+    if ((d.exitTag && !d.exitDirection) || (!d.exitTag && d.exitDirection)) {
+      throw new Error(
+        `Door '${d.name}' at ${d.entryTag} has mismatched exit pair: ` +
+        `exitTag=${d.exitTag ?? 'undefined'}, exitDirection=${d.exitDirection ?? 'undefined'} ` +
+        `(must provide both or neither)`
+      );
+    }
   }
   if (missingExitTags.length > 0) {
     throw new Error(`Unresolved tags:\n  ${missingExitTags.join('\n  ')}`);
@@ -115,8 +149,8 @@ function validate(rooms: RoomDef[], exits: ExitDef[], doors: DoorDef[]): void {
   }
 
   // Room count in expected range
-  if (rooms.length < 200 || rooms.length > 350) {
-    console.warn(`  WARNING: Room count ${rooms.length} outside expected range (200-350)`);
+  if (rooms.length < 200 || rooms.length > 700) {
+    console.warn(`  WARNING: Room count ${rooms.length} outside expected range (200-700)`);
   } else {
     console.log(`  Room count: ${rooms.length} (OK)`);
   }
@@ -174,7 +208,7 @@ async function insertAll(
   exits: ExitDef[],
   doors: DoorDef[]
 ): Promise<void> {
-  console.log('Inserting Arindale data...');
+  console.log('Inserting Arindale + Sewer data...');
 
   // Bulk insert rooms and build tag→id map
   const tagToId = new Map<string, number>();
@@ -246,9 +280,12 @@ async function insertAll(
   // Insert doors
   for (const d of doors) {
     const entryId = tagToId.get(d.entryTag);
-    const exitId = tagToId.get(d.exitTag);
-    if (!entryId || !exitId) {
-      throw new Error(`Door tag resolution failed: ${d.entryTag} → ${d.exitTag}`);
+    const exitId = d.exitTag ? tagToId.get(d.exitTag) : null;
+    if (!entryId) {
+      throw new Error(`Door tag resolution failed: entryTag=${d.entryTag}`);
+    }
+    if (d.exitTag && !exitId) {
+      throw new Error(`Door tag resolution failed: exitTag=${d.exitTag}`);
     }
 
     await client.query(
@@ -257,15 +294,16 @@ async function insertAll(
         exit_room_id, exit_direction, default_state,
         auto_reset_seconds, has_lock, key_item_tag,
         pick_difficulty_min, pick_difficulty_max, bash_difficulty,
-        denial_message, required_item_tag
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`,
+        denial_message, required_item_tag,
+        is_hidden, trigger_text, passage_message_self, passage_message_room
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)`,
       [
         d.name,
         d.doorType,
         entryId,
         d.entryDirection,
-        exitId,
-        d.exitDirection,
+        exitId ?? null,
+        d.exitDirection ?? null,
         d.defaultState,
         d.autoResetSeconds ?? 120,
         d.hasLock ?? false,
@@ -275,6 +313,10 @@ async function insertAll(
         d.bashDifficulty ?? 0,
         d.denialMessage ?? null,
         d.requiredItemTag ?? null,
+        d.isHidden ?? false,
+        d.triggerText ?? null,
+        d.passageMessageSelf ?? null,
+        d.passageMessageRoom ?? null,
       ]
     );
   }
@@ -385,7 +427,7 @@ async function main(): Promise<void> {
     process.exit(1);
   }
 
-  console.log('=== Arindale City Seed ===\n');
+  console.log('=== Arindale City & Sewer Seed ===\n');
 
   const { rooms, exits, doors } = collectAll();
 

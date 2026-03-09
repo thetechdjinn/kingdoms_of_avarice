@@ -10,6 +10,16 @@ areas/
     plan.md               # Area plan template
   arindale/               # Starting town (fully generated)
     plan.md               # Design plan (rooms, NPCs, items, quests, etc.)
+  arindale_sewer/         # Sewer system beneath Arindale (in progress)
+    plan.md               # Level 3-6 exploration area
+  sanctum_of_the_damned/  # Forbidden cult shrine within the sewer (in progress)
+    plan.md               # Separate area string for NPC containment
+  warrens_of_filth/       # Rat King's territory within the sewer (in progress)
+    plan.md               # First low-level quest area
+  the_iridescent_menagerie/ # Mad alchemist's lab within the sewer (in progress)
+    plan.md               # Introduces alchemy system
+  thieves_guild/          # Hidden guild beneath the sewer (in progress)
+    plan.md               # Below sewer level, accessed via "go conduit"
   [your_area]/            # Future areas follow the same pattern
     plan.md
     notes.md              # Optional freeform design notes

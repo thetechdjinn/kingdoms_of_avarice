@@ -432,6 +432,14 @@ These tables should be refined as the game matures and can be provided as part o
 - Available terrain types: indoor, outdoor, underground, water, road
 - Available directions: north, south, east, west, up, down, northeast, northwest, southeast, southwest
 
+**ASCII Map Conformance (ABSOLUTE RULE):**
+- The ASCII map in `areas/<area_name>/plan.md` is the authoritative source of truth for every area's room layout
+- Seed data MUST exactly match the ASCII map: same room count, same connections, same labeled room types
+- Every node in the ASCII map (labeled or `*`) becomes exactly one room. Every `---` or `|` connector becomes a bidirectional exit pair
+- After any change to seed data, re-verify against the ASCII map. If the map needs to change, update the map FIRST, then update the seed
+- When building a new area seed, always parse or trace the ASCII map first — count every room and every connection before writing code
+- This rule is non-negotiable. No rooms may be added, removed, or reconnected without updating the ASCII map first
+
 ---
 
 ## Area Plan Files

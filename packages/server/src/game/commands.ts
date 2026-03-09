@@ -1974,8 +1974,13 @@ async function handleSpecialDoorTrigger(
     return { type: MessageType.ERROR, message: passageCheck.reason || 'You cannot go that way.' };
   }
 
-  // Get the destination room
-  const destinationRoomId = doorStateManager.getDestinationRoom(door.id, currentRoomId);
+  // Get the destination room — for one-directional doors (no exitRoomId),
+  // fall back to the room's normal exit in the door's entry direction
+  let destinationRoomId = doorStateManager.getDestinationRoom(door.id, currentRoomId);
+  if (!destinationRoomId) {
+    const exitRoom = world.getRoomInDirection(currentRoomId, door.entryDirection);
+    destinationRoomId = exitRoom?.id ?? null;
+  }
   if (!destinationRoomId) {
     return { type: MessageType.ERROR, message: 'The passage leads nowhere.' };
   }
@@ -1996,9 +2001,9 @@ async function handleSpecialDoorTrigger(
   // Database succeeded, now update in-memory state and broadcast
 
   // Broadcast departure message to current room (custom or default)
-  const departureMessage = door.passageMessageRoom
+  const departureMessage = wordWrap(door.passageMessageRoom
     ? door.passageMessageRoom.replace('{player}', colors.red(socket.username))
-    : `${colors.red(socket.username)} passes through ${door.itemDisplayName || door.name}.`;
+    : `${colors.red(socket.username)} passes through ${door.itemDisplayName || door.name}.`, 80);
   broadcastToRoom(currentRoomId, colors.green(departureMessage), socket.playerId);
 
   // Update player location
@@ -2009,9 +2014,9 @@ async function handleSpecialDoorTrigger(
   broadcastToRoom(newRoom.id, arrivalMessage, socket.playerId);
 
   // Build player's passage message (custom or default)
-  const playerMessage = door.passageMessageSelf
+  const playerMessage = wordWrap(door.passageMessageSelf
     ? door.passageMessageSelf
-    : `You pass through ${door.itemDisplayName || door.name}.`;
+    : `You pass through ${door.itemDisplayName || door.name}.`, 80);
 
   // Get the new room display
   const otherPlayers = getOtherPlayersInRoom(newRoom.id, socket.playerId, connectedPlayers, socket.canSeeHidden);

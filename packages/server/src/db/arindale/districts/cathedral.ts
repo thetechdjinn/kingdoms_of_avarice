@@ -117,7 +117,7 @@ export function getCathedralDistrict(): DistrictData {
       {
         tag: 'cathedral_halls_dead',
         name: 'Halls of the Dead',
-        description: `A vast subterranean hall stretches into dimness, its ceiling lost in shadow. Pale light emanates from the stone itself, casting no shadows. The air is neither warm nor cold, and all sound seems muffled, as if the world above has ceased to exist. A narrow stairway carved into the far wall leads back up toward the living city.`,
+        description: `A vast subterranean hall stretches into dimness, its ceiling lost in shadow. Pale light emanates from the stone itself, casting no shadows. The air is neither warm nor cold, and all sound seems muffled, as if the world above has ceased to exist. A narrow stairway carved into the far wall leads back up toward the living city. In the eastern wall, a jagged crack runs from floor to ceiling — barely wide enough to squeeze through, but passable.`,
         features: { respawn: { enabled: true, priority: 0, servedAreas: ['Arindale'] } },
       },
     ],

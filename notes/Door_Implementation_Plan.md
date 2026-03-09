@@ -104,12 +104,38 @@ When a door locks, it will tell the room:  "The door to the [direction] just loc
 
 To pass through a triggered passageway, you must say the correct words.
 
-Example:  
+Example:
 
 Player says: go hole
 Players slips through a small hole and vanishes.
 
 Triggered passageways do not show up as an obvious exit.
+
+#### One-Way Triggered Passageway Pattern
+
+For passages that should be hidden on one side but visible on the other (e.g., manholes, secret entrances), use a **one-way door + normal room exit** combination:
+
+1. **Create a one-way triggered passageway** — set `entryTag`/`entryDirection` only, omit `exitTag`/`exitDirection`. The door handles movement from the hidden side via trigger text (e.g., `go manhole`). The door is hidden (`isHidden: true`) so it doesn't appear on the obvious exits line.
+
+2. **Create a normal room exit** for the return path — add a standard `room_exit` from the destination back to the entry room (e.g., sewer room → street room, direction `up`). This shows as a visible obvious exit and allows normal direction-based movement.
+
+**Result:** From the street, players see no "down" exit — they must know to type `go manhole`. From the sewer, players see "up" as a normal exit and can type `up` to climb back to the street.
+
+**Example (sewer manhole):**
+```
+// One-way door: street → sewer (hidden, requires trigger text)
+Door: {
+  doorType: 'triggered_passageway',
+  entryTag: 'town_square',
+  entryDirection: 'down',
+  isHidden: true,
+  triggerText: 'go manhole',
+  // No exitTag/exitDirection — one-way only
+}
+
+// Normal room exit: sewer → street (visible, walkable)
+Exit: { fromTag: 'sewer_hub', toTag: 'town_square', direction: 'up' }
+```
 
 ### Triggered Opening Doors
 

@@ -135,6 +135,16 @@ The generator places rooms on a coordinate grid via BFS from the street grid, th
 
 **When creating new areas:** Write district data → run seed → run map generator → check for street overlaps → fix any conflicts → commit. The map is the source of truth for spatial validation.
 
+### ASCII Map Conformance (ABSOLUTE RULE)
+
+**Every area's seed data MUST exactly match its ASCII map in `areas/<area_name>/plan.md`.** This is non-negotiable. The ASCII map is the authoritative source of truth for room count, room connectivity, and spatial layout. Seed files are derived from the map, never the other way around.
+
+- **Room count must match exactly.** Every node in the ASCII map (labeled or `*`) becomes a room in the seed. No rooms may be added or removed.
+- **Connections must match exactly.** Every `---` (east/west) and `|` (north/south) in the ASCII map becomes a bidirectional exit pair. No connections may be added, removed, or redirected unless the map explicitly uses non-standard notation (e.g., `>>` for sub-zone entrances placed with spaces instead of dashes).
+- **Labeled rooms must use their designated names/types** as specified in the map's legend (e.g., `B` = Bone Heap, `L` = Retchtail's Lair, `[EN]` = Entrance).
+- **After any change to seed data**, re-verify against the ASCII map. If the map needs to change, update the map FIRST in plan.md, then update the seed to match.
+- **When building a new area seed**, always parse or carefully trace the ASCII map before writing any code. Count every room and every connection. Do not estimate or approximate.
+
 ### Command Handlers
 
 Return `CommandResponse` objects:
