@@ -19,6 +19,7 @@ import * as itemRepo from '../db/repositories/itemRepository.js';
 import * as characterRepo from '../db/repositories/characterRepository.js';
 import type { AuthenticatedSocket } from './socket.js';
 import { getGroupMembers } from './groupManager.js';
+import { checkKillTrigger } from './questManager.js';
 
 /** Level gap for XP eligibility: players more than this many levels apart get nothing */
 const XP_LEVEL_GAP = 5;
@@ -70,6 +71,12 @@ export async function processNpcDeath(
   if (template.essenceReward > 0 && participants.length > 0) {
     const essenceParticipants = [...participants];
     deferredRewards.push(() => distributeEssence(npc, essenceParticipants));
+  }
+
+  // Defer quest kill trigger check
+  if (participants.length > 0) {
+    const questParticipants = [...participants];
+    deferredRewards.push(() => checkKillTrigger(npc.templateId, questParticipants));
   }
 
   // Despawn the NPC instance

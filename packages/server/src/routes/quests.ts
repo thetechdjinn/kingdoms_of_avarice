@@ -1,0 +1,252 @@
+import { Express, Request, Response } from 'express';
+import * as questRepo from '../db/repositories/questRepository.js';
+import { reloadQuests } from '../game/questManager.js';
+import { requireDeveloper } from '../middleware/auth.js';
+import { withTransaction } from '../db/index.js';
+
+const VALID_TRIGGER_TYPES = new Set(['talk', 'kill', 'visit']);
+
+export function setupQuestRoutes(app: Express): void {
+  // List all quests
+  app.get('/api/quests', requireDeveloper, async (_req: Request, res: Response) => {
+    try {
+      const quests = await questRepo.getAllQuests();
+      res.json({ success: true, quests });
+    } catch (error) {
+      console.error('Failed to load quests:', error);
+      res.status(500).json({ success: false, message: 'Failed to load quests' });
+    }
+  });
+
+  // Export quests
+  app.get('/api/quests/export', requireDeveloper, async (_req: Request, res: Response) => {
+    try {
+      const quests = await questRepo.getAllQuests();
+      res.json({ success: true, quests });
+    } catch (error) {
+      console.error('Failed to export quests:', error);
+      res.status(500).json({ success: false, message: 'Failed to export quests' });
+    }
+  });
+
+  // Get single quest
+  app.get('/api/quests/:id', requireDeveloper, async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        res.status(400).json({ success: false, message: 'Invalid quest ID' });
+        return;
+      }
+      const quest = await questRepo.getQuestById(id);
+      if (!quest) {
+        res.status(404).json({ success: false, message: 'Quest not found' });
+        return;
+      }
+      res.json({ success: true, quest });
+    } catch (error) {
+      console.error('Failed to load quest:', error);
+      res.status(500).json({ success: false, message: 'Failed to load quest' });
+    }
+  });
+
+  // Create quest
+  app.post('/api/quests', requireDeveloper, async (req: Request, res: Response) => {
+    try {
+      const { tag, name } = req.body;
+      if (!name || typeof name !== 'string' || name.trim().length === 0) {
+        res.status(400).json({ success: false, message: 'Name is required' });
+        return;
+      }
+      // Auto-generate tag if not provided
+      const questTag = tag?.trim() || name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
+
+      const existing = await questRepo.getQuestByTag(questTag);
+      if (existing) {
+        res.status(409).json({ success: false, message: 'A quest with that tag already exists' });
+        return;
+      }
+
+      const quest = await questRepo.createQuest({
+        ...req.body,
+        tag: questTag,
+        name: name.trim(),
+      });
+
+      await reloadQuests();
+      res.json({ success: true, quest });
+    } catch (error) {
+      console.error('Failed to create quest:', error);
+      res.status(500).json({ success: false, message: 'Failed to create quest' });
+    }
+  });
+
+  // Update quest
+  app.put('/api/quests/:id', requireDeveloper, async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        res.status(400).json({ success: false, message: 'Invalid quest ID' });
+        return;
+      }
+
+      const { name, steps } = req.body;
+      if (name !== undefined && (typeof name !== 'string' || name.trim().length === 0)) {
+        res.status(400).json({ success: false, message: 'Name cannot be empty' });
+        return;
+      }
+
+      // Whitelist allowed fields to prevent unexpected overwrites
+      const allowedFields = [
+        'tag', 'description', 'questGiverNpcId', 'minLevel', 'maxLevel',
+        'requiredRaces', 'requiredClasses', 'requiredFactionId',
+        'requiredFactionMin', 'requiredFactionMax', 'requiredQuestIds',
+        'xpReward', 'essenceReward', 'currencyReward', 'itemRewards',
+        'factionRewards', 'questFlag', 'denialDialogue', 'completedDialogue',
+        'enabled', 'sortOrder',
+      ] as const;
+      const updateFields: Record<string, unknown> = {};
+      for (const field of allowedFields) {
+        if (req.body[field] !== undefined) {
+          updateFields[field] = req.body[field];
+        }
+      }
+
+      // Validate steps if provided
+      if (steps && Array.isArray(steps)) {
+        for (let i = 0; i < steps.length; i++) {
+          const step = steps[i];
+          if (!step.description || typeof step.description !== 'string') {
+            res.status(400).json({ success: false, message: `Step ${i + 1}: description is required` });
+            return;
+          }
+          if (!VALID_TRIGGER_TYPES.has(step.triggerType)) {
+            res.status(400).json({ success: false, message: `Step ${i + 1}: invalid trigger type "${step.triggerType}"` });
+            return;
+          }
+        }
+      }
+
+      // Update quest fields and steps atomically
+      const updated = await withTransaction(async (client) => {
+        const quest = await questRepo.updateQuest(id, {
+          ...updateFields,
+          name: name?.trim(),
+        }, client);
+        if (!quest) return null;
+
+        // Replace steps if provided
+        if (steps && Array.isArray(steps)) {
+          await questRepo.replaceSteps(id, steps.map((s: Record<string, unknown>, i: number) => ({
+            questId: id,
+            stepOrder: i + 1,
+            triggerType: s.triggerType as string,
+            triggerNpcId: (s.triggerNpcId ?? null) as number | null,
+            triggerItemTemplateId: (s.triggerItemTemplateId ?? null) as number | null,
+            triggerRoomId: (s.triggerRoomId ?? null) as number | null,
+            triggerText: (s.triggerText ?? null) as string | null,
+            requiredCount: (s.requiredCount ?? 1) as number,
+            consumeItem: (s.consumeItem ?? true) as boolean,
+            description: s.description as string,
+            completionDialogue: (s.completionDialogue ?? null) as string | null,
+            inProgressDialogue: (s.inProgressDialogue ?? null) as string | null,
+            stepXpReward: (s.stepXpReward ?? 0) as number,
+            stepEssenceReward: (s.stepEssenceReward ?? 0) as number,
+            stepCurrencyReward: (s.stepCurrencyReward ?? 0) as number,
+            stepItemRewards: (s.stepItemRewards ?? []) as { itemTemplateId: number; quantity: number }[],
+            stepFactionRewards: (s.stepFactionRewards ?? []) as { factionId: number; amount: number }[],
+          })), client);
+        }
+
+        return quest;
+      });
+
+      if (!updated) {
+        res.status(404).json({ success: false, message: 'Quest not found' });
+        return;
+      }
+
+      // Re-fetch with updated steps
+      const result = await questRepo.getQuestById(id);
+      await reloadQuests();
+      res.json({ success: true, quest: result });
+    } catch (error) {
+      console.error('Failed to update quest:', error);
+      res.status(500).json({ success: false, message: 'Failed to update quest' });
+    }
+  });
+
+  // Delete quest
+  app.delete('/api/quests/:id', requireDeveloper, async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        res.status(400).json({ success: false, message: 'Invalid quest ID' });
+        return;
+      }
+      const deleted = await questRepo.deleteQuest(id);
+      if (!deleted) {
+        res.status(404).json({ success: false, message: 'Quest not found' });
+        return;
+      }
+      await reloadQuests();
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Failed to delete quest:', error);
+      res.status(500).json({ success: false, message: 'Failed to delete quest' });
+    }
+  });
+
+  // Import quests
+  app.post('/api/quests/import', requireDeveloper, async (req: Request, res: Response) => {
+    try {
+      const { quests: importData, merge } = req.body;
+      if (!Array.isArray(importData)) {
+        res.status(400).json({ success: false, message: 'Expected { quests: [...] }' });
+        return;
+      }
+
+      let created = 0;
+      let updated = 0;
+      let skipped = 0;
+
+      await withTransaction(async (client) => {
+        for (const item of importData) {
+          const tag = item.tag;
+          if (!tag || !item.name) { skipped++; continue; }
+
+          const existing = await questRepo.getQuestByTag(tag);
+
+          if (existing && merge) {
+            await questRepo.updateQuest(existing.id, item, client);
+            if (item.steps && Array.isArray(item.steps)) {
+              await questRepo.replaceSteps(existing.id, item.steps.map((s: Record<string, unknown>, i: number) => ({
+                questId: existing.id,
+                stepOrder: i + 1,
+                ...s,
+              })), client);
+            }
+            updated++;
+          } else if (!existing) {
+            const quest = await questRepo.createQuest(item, client);
+            if (item.steps && Array.isArray(item.steps)) {
+              await questRepo.replaceSteps(quest.id, item.steps.map((s: Record<string, unknown>, i: number) => ({
+                questId: quest.id,
+                stepOrder: i + 1,
+                ...s,
+              })), client);
+            }
+            created++;
+          } else {
+            skipped++;
+          }
+        }
+      });
+
+      await reloadQuests();
+      res.json({ success: true, created, updated, skipped });
+    } catch (error) {
+      console.error('Failed to import quests:', error);
+      res.status(500).json({ success: false, message: 'Failed to import quests' });
+    }
+  });
+}

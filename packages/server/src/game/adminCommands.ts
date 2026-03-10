@@ -54,6 +54,9 @@ import { resolveCombatTarget } from './combatMessaging.js';
 import * as merchantRepo from '../db/repositories/merchantRepository.js';
 import { clearDenominationCache } from './npcDeathHandler.js';
 import * as factionRepo from '../db/repositories/factionRepository.js';
+import * as questRepo from '../db/repositories/questRepository.js';
+import { reloadQuests, getQuestByTag, getQuestById as getCachedQuest, getAllCachedQuests, grantStepRewardsForCharacter, grantQuestRewardsForCharacter } from './questManager.js';
+import { formatCopperAsDenominations } from '../utils/textFormat.js';
 
 interface CommandResponse {
   type: MessageType;
@@ -71,7 +74,7 @@ export function setPlayerLocation(playerId: number, roomId: number): void {
 }
 
 // Commands that require Developer role
-const developerCommands = ['create', 'link', 'unlink', 'edit', 'delete', 'reload', 'spawn', 'purge', 'items', 'iteminfo', 'setstealth', 'testbackstab', 'testspell', 'lockpicking', 'npcs', 'mobbehavior', 'npcdebug', 'merchants'];
+const developerCommands = ['create', 'link', 'unlink', 'edit', 'delete', 'reload', 'spawn', 'purge', 'items', 'iteminfo', 'setstealth', 'testbackstab', 'testspell', 'lockpicking', 'npcs', 'mobbehavior', 'npcdebug', 'merchants', 'quest'];
 
 // Commands that any staff can use (Moderator+)
 const staffCommands = ['goto', 'rooms', 'roominfo', 'help', 'give', 'hurt', 'heal', 'drain', 'revive', 'teleport', 'learn', 'spells', 'effect', 'cleareffect', 'effects', 'stealth'];
@@ -176,6 +179,8 @@ export async function processAdminCommand(
       return handleNpcDebug(args[0] || '');
     case 'merchants':
       return await handleMerchantsDebug(socket);
+    case 'quest':
+      return handleQuestAdmin(args, socket);
     case 'help':
       return handleAdminHelp(userRoles);
     default:
@@ -476,7 +481,7 @@ async function handleReload(
   // @reload [rooms|items|mobs|effects|doors|actions|droptables|all]
   const target = args[0]?.toLowerCase() || 'all';
 
-  const validTargets = ['rooms', 'items', 'mobs', 'effects', 'doors', 'actions', 'droptables', 'factions', 'merchants', 'merchantresponses', 'all'];
+  const validTargets = ['rooms', 'items', 'mobs', 'effects', 'doors', 'actions', 'droptables', 'factions', 'merchants', 'merchantresponses', 'quests', 'all'];
   if (!validTargets.includes(target)) {
     return { type: MessageType.ERROR, message: `Usage: @reload [${validTargets.join('|')}]` };
   }
@@ -534,6 +539,11 @@ async function handleReload(
     if (target === 'merchantresponses' || target === 'all') {
       clearMerchantResponseCache();
       results.push(`${colors.green('✓')} Cleared merchant response cache`);
+    }
+
+    if (target === 'quests' || target === 'all') {
+      const count = await reloadQuests();
+      results.push(`${colors.green('✓')} Reloaded ${count} quest definitions`);
     }
 
     return {
@@ -1514,6 +1524,319 @@ async function handleMerchantsDebug(socket: AuthenticatedSocket): Promise<Comman
   return { type: MessageType.OUTPUT, message: lines.join('\r\n') };
 }
 
+// ============================================================================
+// QUEST ADMIN COMMANDS
+// ============================================================================
+
+async function handleQuestAdmin(
+  args: string[],
+  socket: AuthenticatedSocket
+): Promise<CommandResponse> {
+  const sub = args[0]?.toLowerCase();
+
+  if (!sub) {
+    return { type: MessageType.ERROR, message: 'Usage: @quest <list|info|reset|complete|start|advance|reload>' };
+  }
+
+  if (sub === 'reload') {
+    const count = await reloadQuests();
+    return { type: MessageType.OUTPUT, message: colors.green(`Reloaded ${count} quest definitions.`) };
+  }
+
+  if (sub === 'list') {
+    return handleQuestAdminList();
+  }
+
+  if (sub === 'info') {
+    return handleQuestAdminInfo(args.slice(1));
+  }
+
+  if (sub === 'reset') {
+    return handleQuestAdminReset(args.slice(1));
+  }
+
+  if (sub === 'complete') {
+    return handleQuestAdminComplete(args.slice(1), socket);
+  }
+
+  if (sub === 'start') {
+    return handleQuestAdminStart(args.slice(1));
+  }
+
+  if (sub === 'advance') {
+    return handleQuestAdminAdvance(args.slice(1), socket);
+  }
+
+  return { type: MessageType.ERROR, message: 'Usage: @quest <list|info|reset|complete|start|advance|reload>' };
+}
+
+function handleQuestAdminList(): CommandResponse {
+  const quests = getAllCachedQuests();
+
+  if (quests.length === 0) {
+    return { type: MessageType.OUTPUT, message: colors.cyan('No quest definitions loaded.') };
+  }
+
+  const lines: string[] = [colors.boldYellow('Quest Definitions:'), ''];
+
+  for (const quest of quests) {
+    const status = quest.enabled ? colors.green('ON') : colors.red('OFF');
+    lines.push(`  ${colors.white(`#${quest.id}`)} ${colors.boldCyan(quest.name)} [${status}]`);
+    lines.push(`    Tag: ${quest.tag} | Steps: ${quest.steps.length} | Level: ${quest.minLevel}${quest.maxLevel ? `-${quest.maxLevel}` : '+'}`);
+  }
+
+  return { type: MessageType.OUTPUT, message: lines.join('\r\n') };
+}
+
+function handleQuestAdminInfo(args: string[]): CommandResponse {
+  if (args.length === 0) {
+    return { type: MessageType.ERROR, message: 'Usage: @quest info <id|tag>' };
+  }
+
+  const search = args.join(' ');
+  let quest = getCachedQuest(parseInt(search));
+  if (!quest) {
+    quest = getQuestByTag(search);
+  }
+  if (!quest) {
+    return { type: MessageType.ERROR, message: `Quest not found: ${search}` };
+  }
+
+  const lines: string[] = [
+    colors.boldYellow(`Quest: ${quest.name}`),
+    `  ID: ${quest.id} | Tag: ${quest.tag} | Enabled: ${quest.enabled}`,
+    `  Level: ${quest.minLevel}${quest.maxLevel ? `-${quest.maxLevel}` : '+'}`,
+  ];
+
+  if (quest.description) {
+    lines.push(`  Description: ${quest.description}`);
+  }
+  if (quest.questGiverNpcId) {
+    lines.push(`  Quest Giver NPC: #${quest.questGiverNpcId}`);
+  }
+  if (quest.requiredRaces?.length) {
+    lines.push(`  Required Races: ${quest.requiredRaces.join(', ')}`);
+  }
+  if (quest.requiredClasses?.length) {
+    lines.push(`  Required Classes: ${quest.requiredClasses.join(', ')}`);
+  }
+  if (quest.requiredQuestIds.length > 0) {
+    lines.push(`  Prerequisite Quests: ${quest.requiredQuestIds.join(', ')}`);
+  }
+  if (quest.requiredFactionId) {
+    lines.push(`  Required Faction: #${quest.requiredFactionId} (${quest.requiredFactionMin ?? 'any'} - ${quest.requiredFactionMax ?? 'any'})`);
+  }
+
+  // Rewards
+  const rewards: string[] = [];
+  if (quest.xpReward > 0) rewards.push(`${quest.xpReward} XP`);
+  if (quest.essenceReward > 0) rewards.push(`${quest.essenceReward} essence`);
+  if (quest.currencyReward > 0) rewards.push(formatCopperAsDenominations(quest.currencyReward));
+  if (quest.itemRewards.length > 0) rewards.push(`${quest.itemRewards.length} item(s)`);
+  if (quest.factionRewards.length > 0) rewards.push(`${quest.factionRewards.length} faction reward(s)`);
+  if (quest.questFlag) rewards.push(`flag: ${quest.questFlag}`);
+  if (rewards.length > 0) {
+    lines.push(`  Rewards: ${rewards.join(', ')}`);
+  }
+
+  // Steps
+  lines.push('');
+  lines.push(colors.boldCyan('  Steps:'));
+  for (const step of quest.steps) {
+    lines.push(`    ${step.stepOrder}. [${step.triggerType}] ${step.description}`);
+    if (step.triggerNpcId) lines.push(`       NPC: #${step.triggerNpcId}`);
+    if (step.triggerRoomId) lines.push(`       Room: #${step.triggerRoomId}`);
+    if (step.triggerText) lines.push(`       Text: "${step.triggerText}"`);
+    if (step.triggerItemTemplateId) lines.push(`       Requires item: #${step.triggerItemTemplateId} (consume: ${step.consumeItem})`);
+    if (step.requiredCount > 1) lines.push(`       Count: ${step.requiredCount}`);
+
+    const stepRewards: string[] = [];
+    if (step.stepXpReward > 0) stepRewards.push(`${step.stepXpReward} XP`);
+    if (step.stepEssenceReward > 0) stepRewards.push(`${step.stepEssenceReward} essence`);
+    if (step.stepCurrencyReward > 0) stepRewards.push(formatCopperAsDenominations(step.stepCurrencyReward));
+    if (step.stepItemRewards.length > 0) stepRewards.push(`${step.stepItemRewards.length} item(s)`);
+    if (stepRewards.length > 0) lines.push(`       Step rewards: ${stepRewards.join(', ')}`);
+  }
+
+  // Dialogue
+  if (quest.denialDialogue) {
+    lines.push('');
+    lines.push(`  Denial: "${quest.denialDialogue}"`);
+  }
+  if (quest.completedDialogue) {
+    lines.push(`  Completed: "${quest.completedDialogue}"`);
+  }
+
+  return { type: MessageType.OUTPUT, message: lines.join('\r\n') };
+}
+
+async function handleQuestAdminReset(args: string[]): Promise<CommandResponse> {
+  if (args.length < 2) {
+    return { type: MessageType.ERROR, message: 'Usage: @quest reset <player> <quest_tag>' };
+  }
+
+  const playerName = args[0];
+  const questTag = args[1];
+
+  const character = await characterRepo.findCharacterByName(playerName);
+  if (!character) {
+    return { type: MessageType.ERROR, message: `Character not found: ${playerName}` };
+  }
+
+  const quest = getQuestByTag(questTag);
+  if (!quest) {
+    return { type: MessageType.ERROR, message: `Quest not found: ${questTag}` };
+  }
+
+  await questRepo.resetQuest(character.id, quest.id, quest.questFlag);
+
+  return {
+    type: MessageType.OUTPUT,
+    message: colors.green(`Reset quest "${quest.name}" for ${character.name}.`),
+  };
+}
+
+async function handleQuestAdminComplete(
+  args: string[],
+  socket: AuthenticatedSocket
+): Promise<CommandResponse> {
+  if (args.length < 2) {
+    return { type: MessageType.ERROR, message: 'Usage: @quest complete <player> <quest_tag>' };
+  }
+
+  const playerName = args[0];
+  const questTag = args[1];
+
+  const character = await characterRepo.findCharacterByName(playerName);
+  if (!character) {
+    return { type: MessageType.ERROR, message: `Character not found: ${playerName}` };
+  }
+
+  const quest = getQuestByTag(questTag);
+  if (!quest) {
+    return { type: MessageType.ERROR, message: `Quest not found: ${questTag}` };
+  }
+
+  // Check if already completed
+  const existing = await questRepo.getCharacterQuest(character.id, quest.id);
+  if (existing?.status === 'completed') {
+    return { type: MessageType.ERROR, message: `${character.name} has already completed "${quest.name}".` };
+  }
+
+  // If not started, create the record
+  if (!existing) {
+    await questRepo.startQuest(character.id, quest.id);
+  }
+
+  // Mark as completed
+  await questRepo.completeQuest(character.id, quest.id);
+
+  // Set quest flag
+  if (quest.questFlag) {
+    await questRepo.setQuestFlag(character.id, quest.questFlag);
+  }
+
+  // Grant rewards
+  await grantQuestRewardsForCharacter(character.id, quest);
+
+  return {
+    type: MessageType.OUTPUT,
+    message: colors.green(`Force-completed quest "${quest.name}" for ${character.name} (rewards granted).`),
+  };
+}
+
+async function handleQuestAdminStart(args: string[]): Promise<CommandResponse> {
+  if (args.length < 2) {
+    return { type: MessageType.ERROR, message: 'Usage: @quest start <player> <quest_tag>' };
+  }
+
+  const playerName = args[0];
+  const questTag = args[1];
+
+  const character = await characterRepo.findCharacterByName(playerName);
+  if (!character) {
+    return { type: MessageType.ERROR, message: `Character not found: ${playerName}` };
+  }
+
+  const quest = getQuestByTag(questTag);
+  if (!quest) {
+    return { type: MessageType.ERROR, message: `Quest not found: ${questTag}` };
+  }
+
+  const existing = await questRepo.getCharacterQuest(character.id, quest.id);
+  if (existing) {
+    return { type: MessageType.ERROR, message: `${character.name} already has quest "${quest.name}" (status: ${existing.status}).` };
+  }
+
+  await questRepo.startQuest(character.id, quest.id);
+
+  return {
+    type: MessageType.OUTPUT,
+    message: colors.green(`Started quest "${quest.name}" for ${character.name} at step 1.`),
+  };
+}
+
+async function handleQuestAdminAdvance(
+  args: string[],
+  socket: AuthenticatedSocket
+): Promise<CommandResponse> {
+  if (args.length < 2) {
+    return { type: MessageType.ERROR, message: 'Usage: @quest advance <player> <quest_tag>' };
+  }
+
+  const playerName = args[0];
+  const questTag = args[1];
+
+  const character = await characterRepo.findCharacterByName(playerName);
+  if (!character) {
+    return { type: MessageType.ERROR, message: `Character not found: ${playerName}` };
+  }
+
+  const quest = getQuestByTag(questTag);
+  if (!quest) {
+    return { type: MessageType.ERROR, message: `Quest not found: ${questTag}` };
+  }
+
+  const charQuest = await questRepo.getCharacterQuest(character.id, quest.id);
+  if (!charQuest || charQuest.status !== 'active') {
+    return { type: MessageType.ERROR, message: `${character.name} does not have an active "${quest.name}" quest.` };
+  }
+
+  const currentStep = quest.steps.find(s => s.stepOrder === charQuest.currentStep);
+  const nextStepOrder = charQuest.currentStep + 1;
+  const isLastStep = nextStepOrder > quest.steps.length;
+
+  // Grant current step rewards
+  if (currentStep) {
+    await grantStepRewardsForCharacter(character.id, currentStep);
+  }
+
+  if (isLastStep) {
+    // Complete the quest
+    await questRepo.completeQuest(character.id, quest.id);
+    if (quest.questFlag) {
+      await questRepo.setQuestFlag(character.id, quest.questFlag);
+    }
+
+    // Grant quest completion rewards
+    await grantQuestRewardsForCharacter(character.id, quest);
+
+    return {
+      type: MessageType.OUTPUT,
+      message: colors.green(`Advanced and completed quest "${quest.name}" for ${character.name} (all rewards granted).`),
+    };
+  }
+
+  // Advance to next step
+  await questRepo.advanceStep(character.id, quest.id, nextStepOrder);
+  const nextStep = quest.steps.find(s => s.stepOrder === nextStepOrder);
+
+  return {
+    type: MessageType.OUTPUT,
+    message: colors.green(`Advanced ${character.name} to step ${nextStepOrder} of "${quest.name}": ${nextStep?.description ?? 'unknown'}`),
+  };
+}
+
 function handleAdminHelp(userRoles: Role[]): CommandResponse {
   const isDeveloper = hasAnyRole(userRoles, [Role.DEVELOPER, Role.ADMIN]);
   
@@ -1570,6 +1893,16 @@ function handleAdminHelp(userRoles: Role[]): CommandResponse {
     lines.push(`  ${colors.boldCyan('@testbackstab <target>')}  - Test backstab without stealth requirement`);
     lines.push(`  ${colors.boldCyan('@testspell <npc>')}       - Show NPC spell AI evaluation report`);
     lines.push(`  ${colors.boldCyan('@lockpicking [player]')}   - Show lockpicking skill breakdown`);
+
+    lines.push('');
+    lines.push(colors.boldYellow('Developer Commands (Quests):'));
+    lines.push(`  ${colors.boldCyan('@quest list')}                - List all quest definitions`);
+    lines.push(`  ${colors.boldCyan('@quest info <id|tag>')}       - Show full quest definition`);
+    lines.push(`  ${colors.boldCyan('@quest reset <player> <tag>')} - Reset a player's quest`);
+    lines.push(`  ${colors.boldCyan('@quest complete <player> <tag>')} - Force-complete a quest`);
+    lines.push(`  ${colors.boldCyan('@quest start <player> <tag>')} - Force-start a quest`);
+    lines.push(`  ${colors.boldCyan('@quest advance <player> <tag>')} - Advance to next step`);
+    lines.push(`  ${colors.boldCyan('@quest reload')}              - Reload quest definitions`);
 
     // Add progression commands help
     lines.push(getProgressionHelpText());

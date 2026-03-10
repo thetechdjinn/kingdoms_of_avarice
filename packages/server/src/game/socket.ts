@@ -37,6 +37,7 @@ import { initializeNpcManager, checkHostileAggro, initializeNpcWorld, clearMerch
 import { cleanupBroadcastMembership } from './socialCommands.js';
 import { cleanupPlayerGroup } from './groupManager.js';
 import { clearHaggleState } from './merchantCommands.js';
+import { initializeQuestManager } from './questManager.js';
 
 interface AuthenticatedSocket extends WebSocket {
   playerId: number;
@@ -159,6 +160,13 @@ export async function initializeGameWorld(): Promise<void> {
   } catch (error) {
     console.error('[NPC Manager] Failed to initialize:', error);
     // Server continues but NPCs will be unavailable
+  }
+
+  // Initialize quest manager (load quest definitions into cache)
+  try {
+    await initializeQuestManager();
+  } catch (error) {
+    console.error('[Quest Manager] Failed to initialize:', error);
   }
 
   // Initialize command queue system

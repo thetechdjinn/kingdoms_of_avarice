@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Quest Editor - Kingdoms of Avarice</title>
+    <link rel="stylesheet" href="/src/editor.css" />
+    <link rel="stylesheet" href="/src/quest-editor.css" />
+  </head>
+  <body>
+    <div id="editor-app">
+      <nav id="main-nav">
+        <div class="nav-brand">Kingdoms of Avarice</div>
+        <div class="nav-links">
+          <a href="/" class="nav-link">Game</a>
+          <div class="nav-dropdown" id="nav-dev-dropdown">
+            <button class="nav-link nav-dropdown-btn active">Developer</button>
+            <div class="nav-dropdown-menu">
+              <a href="/editor.html" class="nav-dropdown-item">Room Editor</a>
+              <a href="/item-editor.html" class="nav-dropdown-item">Item Editor</a>
+              <a href="/spell-editor.html" class="nav-dropdown-item">Spell Editor</a>
+              <a href="/status-editor.html" class="nav-dropdown-item">Status Effects Editor</a>
+              <a href="/progression-editor.html" class="nav-dropdown-item">Progression Editor</a>
+              <a href="/door-editor.html" class="nav-dropdown-item">Door Editor</a>
+              <a href="/action-editor.html" class="nav-dropdown-item">Action Editor</a>
+              <a href="/npc-editor.html" class="nav-dropdown-item">NPC Editor</a>
+              <a href="/drop-table-editor.html" class="nav-dropdown-item">Drop Table Editor</a>
+              <a href="/faction-editor.html" class="nav-dropdown-item">Faction Editor</a>
+              <a href="/quest-editor.html" class="nav-dropdown-item active">Quest Editor</a>
+              <a href="/swing-calculator.html" class="nav-dropdown-item">Swing Calculator</a>
+            </div>
+          </div>
+          <div class="nav-dropdown" id="nav-admin-dropdown" style="display: none;">
+            <button class="nav-link nav-dropdown-btn">Admin</button>
+            <div class="nav-dropdown-menu">
+              <a href="/admin.html" class="nav-dropdown-item">Admin Panel</a>
+              <a href="/game-settings-editor.html" class="nav-dropdown-item">Game Settings</a>
+              <a href="/user-editor.html" class="nav-dropdown-item">User Editor</a>
+            </div>
+          </div>
+        </div>
+        <div class="nav-spacer"></div>
+        <a href="/docs.html?file=Quest_System_Guide.md" target="_blank" rel="noopener noreferrer" class="help-link nav-help" title="View Documentation">?</a>
+        <div class="nav-user-menu">
+          <button class="nav-user-btn" id="nav-username">User</button>
+          <div class="dropdown-menu" id="user-dropdown">
+            <button class="dropdown-item" id="logout-btn">Logout</button>
+          </div>
+        </div>
+      </nav>
+
+      <div id="editor-layout">
+        <aside id="quest-list-panel">
+          <div class="panel-header">
+            <h2>Quests</h2>
+            <button id="new-quest-btn" class="btn-primary">+ New Quest</button>
+          </div>
+          <div id="quest-search">
+            <input type="text" id="search-input" placeholder="Search quests..." />
+          </div>
+          <ul id="quest-list"></ul>
+
+          <div class="panel-footer">
+            <button id="import-btn" class="btn-small">Import</button>
+            <button id="export-btn" class="btn-small">Export</button>
+          </div>
+        </aside>
+
+        <main id="quest-editor-panel">
+          <div id="no-quest-selected">
+            <p>Select a quest from the list or create a new one.</p>
+          </div>
+
+          <form id="quest-form" style="display: none;">
+            <div class="form-header">
+              <h2 id="quest-form-title">Edit Quest</h2>
+              <span id="quest-id-display"></span>
+            </div>
+
+            <div class="form-tabs">
+              <button type="button" class="tab-btn active" data-tab="basic">Basic</button>
+              <button type="button" class="tab-btn" data-tab="requirements">Requirements</button>
+              <button type="button" class="tab-btn" data-tab="steps">Steps</button>
+              <button type="button" class="tab-btn" data-tab="rewards">Rewards</button>
+              <button type="button" class="tab-btn" data-tab="dialogue">Dialogue</button>
+            </div>
+
+            <!-- Basic Tab -->
+            <div class="tab-content active" id="tab-basic">
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="quest-tag">Tag</label>
+                  <input type="text" id="quest-tag" required placeholder="unique_quest_tag" />
+                </div>
+                <div class="form-group">
+                  <label for="quest-name">Name</label>
+                  <input type="text" id="quest-name" required placeholder="Quest Name" />
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label for="quest-description">Description</label>
+                <textarea id="quest-description" rows="3" placeholder="Quest description shown to players..."></textarea>
+              </div>
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="quest-giver-npc">Quest Giver NPC ID</label>
+                  <input type="number" id="quest-giver-npc" min="1" placeholder="None" />
+                </div>
+                <div class="form-group">
+                  <label for="quest-sort-order">Sort Order</label>
+                  <input type="number" id="quest-sort-order" min="0" value="0" />
+                </div>
+              </div>
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="quest-flag">Quest Flag <span class="hint-inline">(set on completion, used for door access)</span></label>
+                  <input type="text" id="quest-flag" placeholder="e.g., sewer_access" />
+                </div>
+                <div class="form-group">
+                  <label class="checkbox-label">
+                    <input type="checkbox" id="quest-enabled" checked />
+                    Enabled
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <!-- Requirements Tab -->
+            <div class="tab-content" id="tab-requirements">
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="quest-min-level">Min Level</label>
+                  <input type="number" id="quest-min-level" min="1" value="1" />
+                </div>
+                <div class="form-group">
+                  <label for="quest-max-level">Max Level <span class="hint-inline">(0 = no max)</span></label>
+                  <input type="number" id="quest-max-level" min="0" value="0" />
+                </div>
+              </div>
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="quest-required-races">Required Races <span class="hint-inline">(comma-separated, empty = any)</span></label>
+                  <input type="text" id="quest-required-races" placeholder="e.g., human, elf" />
+                </div>
+                <div class="form-group">
+                  <label for="quest-required-classes">Required Classes <span class="hint-inline">(comma-separated, empty = any)</span></label>
+                  <input type="text" id="quest-required-classes" placeholder="e.g., warrior, mage" />
+                </div>
+              </div>
+
+              <h3>Faction Requirement</h3>
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="quest-required-faction">Required Faction ID</label>
+                  <input type="number" id="quest-required-faction" min="1" placeholder="None" />
+                </div>
+                <div class="form-group">
+                  <label for="quest-required-faction-min">Min Reputation</label>
+                  <input type="number" id="quest-required-faction-min" placeholder="None" />
+                </div>
+                <div class="form-group">
+                  <label for="quest-required-faction-max">Max Reputation</label>
+                  <input type="number" id="quest-required-faction-max" placeholder="None" />
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label for="quest-required-quests">Prerequisite Quest IDs <span class="hint-inline">(comma-separated)</span></label>
+                <input type="text" id="quest-required-quests" placeholder="e.g., 1, 5, 12" />
+              </div>
+            </div>
+
+            <!-- Steps Tab -->
+            <div class="tab-content" id="tab-steps">
+              <div id="steps-container"></div>
+              <button type="button" id="add-step-btn">+ Add Step</button>
+            </div>
+
+            <!-- Rewards Tab -->
+            <div class="tab-content" id="tab-rewards">
+              <h3>Quest Completion Rewards</h3>
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="quest-xp-reward">XP Reward</label>
+                  <input type="number" id="quest-xp-reward" min="0" value="0" />
+                </div>
+                <div class="form-group">
+                  <label for="quest-essence-reward">Essence Reward</label>
+                  <input type="number" id="quest-essence-reward" min="0" value="0" />
+                </div>
+                <div class="form-group">
+                  <label for="quest-currency-reward">Currency Reward (copper)</label>
+                  <input type="number" id="quest-currency-reward" min="0" value="0" />
+                </div>
+              </div>
+
+              <h3>Item Rewards</h3>
+              <div id="item-rewards-container"></div>
+              <button type="button" id="add-item-reward-btn" class="btn-small btn-secondary">+ Add Item Reward</button>
+
+              <h3>Faction Rewards</h3>
+              <div id="faction-rewards-container"></div>
+              <button type="button" id="add-faction-reward-btn" class="btn-small btn-secondary">+ Add Faction Reward</button>
+            </div>
+
+            <!-- Dialogue Tab -->
+            <div class="tab-content" id="tab-dialogue">
+              <div class="form-group">
+                <label for="quest-denial-dialogue">Denial Dialogue <span class="hint-inline">(NPC says this if player doesn't meet requirements)</span></label>
+                <textarea id="quest-denial-dialogue" rows="3" placeholder="I cannot help you yet..."></textarea>
+              </div>
+
+              <div class="form-group">
+                <label for="quest-completed-dialogue">Completed Dialogue <span class="hint-inline">(NPC says this if player already completed quest)</span></label>
+                <textarea id="quest-completed-dialogue" rows="3" placeholder="You've already done this for me..."></textarea>
+              </div>
+            </div>
+
+            <div class="form-actions">
+              <button type="submit" class="btn-primary">Save Quest</button>
+              <button type="button" id="duplicate-quest-btn" class="btn-secondary">Duplicate</button>
+              <button type="button" id="delete-quest-btn" class="btn-danger">Delete Quest</button>
+            </div>
+          </form>
+        </main>
+
+        <aside id="preview-panel">
+          <div class="panel-header">
+            <h2>Preview</h2>
+          </div>
+          <div id="quest-preview">
+            <div id="preview-content">
+              <p class="hint">Select a quest to see preview</p>
+            </div>
+          </div>
+        </aside>
+      </div>
+    </div>
+
+    <!-- Import Modal -->
+    <div id="import-modal" class="modal" style="display: none;">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>Import Quests</h3>
+          <button id="close-import-modal" class="close-btn" aria-label="Close">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label for="import-file">Select JSON file:</label>
+            <input type="file" id="import-file" accept=".json" />
+          </div>
+          <label class="checkbox-label">
+            <input type="checkbox" id="import-merge" checked />
+            Merge with existing (update if tag matches)
+          </label>
+        </div>
+        <div class="modal-footer">
+          <button id="do-import-btn" class="btn-primary">Import</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="toast-container"></div>
+
+    <script type="module" src="/src/quest-editor.ts"></script>
+  </body>
+</html>

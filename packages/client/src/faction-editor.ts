@@ -1,3 +1,5 @@
+(function() {
+
 interface Faction {
   id: number;
   name: string;
@@ -283,3 +285,5 @@ document.addEventListener('DOMContentLoaded', async () => {
     el.addEventListener('change', updatePreview);
   });
 });
+
+})();

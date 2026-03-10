@@ -1,0 +1,283 @@
+/* Quest Editor Specific Styles */
+
+#quest-editor-panel {
+  flex: 1;
+  overflow-y: auto;
+  max-height: calc(100vh - 60px);
+}
+
+#quest-list-panel {
+  width: 280px;
+  min-width: 200px;
+}
+
+#quest-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+#quest-list li {
+  padding: 8px 12px;
+  cursor: pointer;
+  border-bottom: 1px solid #1a1a2e;
+  transition: background 0.2s;
+}
+
+#quest-list li:hover {
+  background: #1a1a2e;
+}
+
+#quest-list li.active {
+  background: #0e4429;
+  border-left: 3px solid #00ff00;
+}
+
+#quest-list li .quest-name {
+  font-weight: 600;
+  color: #e0e0e0;
+}
+
+#quest-list li .quest-tag {
+  font-size: 0.8rem;
+  color: #888;
+  margin-top: 2px;
+}
+
+#quest-list li .quest-disabled {
+  color: #666;
+  font-style: italic;
+}
+
+#quest-search {
+  padding: 8px;
+}
+
+#quest-search input {
+  width: 100%;
+  padding: 6px 8px;
+  background: #0d1117;
+  border: 1px solid #333;
+  color: #e0e0e0;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  box-sizing: border-box;
+}
+
+#quest-form textarea {
+  width: 100%;
+  resize: vertical;
+  box-sizing: border-box;
+}
+
+/* Tabs */
+.form-tabs {
+  display: flex;
+  border-bottom: 2px solid #333;
+  margin-bottom: 16px;
+  gap: 0;
+}
+
+.form-tabs button {
+  padding: 8px 16px;
+  background: none;
+  border: none;
+  color: #888;
+  cursor: pointer;
+  font-size: 0.9rem;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  transition: color 0.2s, border-color 0.2s;
+}
+
+.form-tabs button:hover {
+  color: #ccc;
+}
+
+.form-tabs button.active {
+  color: #00ff00;
+  border-bottom-color: #00ff00;
+}
+
+.tab-content {
+  display: none;
+}
+
+.tab-content.active {
+  display: block;
+}
+
+/* Steps list */
+.steps-container {
+  margin-top: 8px;
+}
+
+.step-card {
+  background: #161b22;
+  border: 1px solid #333;
+  border-radius: 6px;
+  padding: 12px;
+  margin-bottom: 10px;
+  position: relative;
+}
+
+.step-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.step-number {
+  font-weight: 700;
+  color: #00ff00;
+  font-size: 0.85rem;
+}
+
+.step-actions {
+  display: flex;
+  gap: 4px;
+}
+
+.step-actions button {
+  padding: 2px 8px;
+  font-size: 0.75rem;
+  background: #21262d;
+  border: 1px solid #444;
+  color: #ccc;
+  cursor: pointer;
+  border-radius: 3px;
+}
+
+.step-actions button:hover {
+  background: #30363d;
+}
+
+.step-actions button.btn-remove {
+  color: #f85149;
+  border-color: #f85149;
+}
+
+.step-actions button.btn-remove:hover {
+  background: #3d1214;
+}
+
+.step-field {
+  margin-bottom: 8px;
+}
+
+.step-field label {
+  display: block;
+  font-size: 0.8rem;
+  color: #888;
+  margin-bottom: 2px;
+}
+
+.step-field input,
+.step-field select,
+.step-field textarea {
+  width: 100%;
+  padding: 4px 8px;
+  background: #0d1117;
+  border: 1px solid #333;
+  color: #e0e0e0;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  box-sizing: border-box;
+}
+
+.step-field textarea {
+  resize: vertical;
+  min-height: 40px;
+}
+
+.step-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.step-row-3 {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 8px;
+}
+
+#add-step-btn {
+  width: 100%;
+  padding: 8px;
+  background: #21262d;
+  border: 1px dashed #444;
+  color: #8b949e;
+  cursor: pointer;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  margin-top: 8px;
+}
+
+#add-step-btn:hover {
+  background: #30363d;
+  color: #e0e0e0;
+}
+
+/* Inline form rows */
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.form-row-3 {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 12px;
+}
+
+/* Preview */
+.preview-name {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #00ff00;
+  margin-bottom: 12px;
+}
+
+.preview-section {
+  margin-bottom: 12px;
+}
+
+.preview-section-title {
+  font-size: 0.8rem;
+  color: #00ff00;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
+}
+
+.preview-stat {
+  padding: 2px 0;
+  font-size: 0.85rem;
+}
+
+.preview-stat .label {
+  color: #888;
+}
+
+.preview-stat .value {
+  color: #e0e0e0;
+}
+
+.preview-step {
+  padding: 4px 0;
+  font-size: 0.85rem;
+  color: #ccc;
+}
+
+.preview-step .step-num {
+  color: #00ff00;
+  font-weight: 600;
+}
+
+.preview-step .trigger-type {
+  color: #888;
+  font-size: 0.8rem;
+}
