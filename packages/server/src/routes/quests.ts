@@ -145,6 +145,18 @@ export function setupQuestRoutes(app: Express): void {
             res.status(400).json({ success: false, message: `Step ${i + 1}: invalid trigger type "${step.triggerType}"` });
             return;
           }
+          if (step.triggerType === 'kill' && !step.triggerNpcId) {
+            res.status(400).json({ success: false, message: `Step ${i + 1}: kill trigger requires an NPC ID` });
+            return;
+          }
+          if (step.triggerType === 'visit' && !step.triggerRoomId) {
+            res.status(400).json({ success: false, message: `Step ${i + 1}: visit trigger requires a Room ID` });
+            return;
+          }
+          if (step.triggerType === 'talk' && !step.triggerNpcId) {
+            res.status(400).json({ success: false, message: `Step ${i + 1}: talk trigger requires an NPC ID` });
+            return;
+          }
         }
       }
 

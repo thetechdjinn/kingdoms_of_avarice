@@ -620,16 +620,19 @@ function sendQuestStartMessage(
 ): void {
   const lines: string[] = [];
   const header = ` New Quest: ${quest.name} `;
-  const border = '\u2500'.repeat(Math.max(header.length, 40));
+  const prefix = '\u2500\u2500\u2500\u2500\u2500';
+  const suffix = '\u2500'.repeat(Math.max(0, 40 - header.length));
+  const topBorder = `${prefix}${header}${suffix}`;
+  const bottomBorder = '\u2500'.repeat(topBorder.length);
 
   lines.push('');
-  lines.push(colors.boldCyan(` \u2500\u2500\u2500\u2500\u2500${header}${ '\u2500'.repeat(Math.max(0, 40 - header.length))}`));
+  lines.push(colors.boldCyan(` ${topBorder}`));
 
   if (completedStep.completionDialogue) {
     lines.push(wordWrap(` ${completedStep.completionDialogue}`, 78));
   }
 
-  lines.push(colors.cyan(` ${border}`));
+  lines.push(colors.cyan(` ${bottomBorder}`));
 
   if (nextStep) {
     lines.push('');
@@ -646,16 +649,19 @@ function sendStepCompleteMessage(
 ): void {
   const lines: string[] = [];
   const header = ` Quest Update: ${quest.name} `;
-  const border = '\u2500'.repeat(Math.max(header.length, 40));
+  const prefix = '\u2500\u2500\u2500\u2500\u2500';
+  const suffix = '\u2500'.repeat(Math.max(0, 40 - header.length));
+  const topBorder = `${prefix}${header}${suffix}`;
+  const bottomBorder = '\u2500'.repeat(topBorder.length);
 
   lines.push('');
-  lines.push(colors.boldCyan(` \u2500\u2500\u2500\u2500\u2500${header}${'\u2500'.repeat(Math.max(0, 40 - header.length))}`));
+  lines.push(colors.boldCyan(` ${topBorder}`));
 
   if (step.completionDialogue) {
     lines.push(wordWrap(` ${step.completionDialogue}`, 78));
   }
 
-  lines.push(colors.cyan(` ${border}`));
+  lines.push(colors.cyan(` ${bottomBorder}`));
 
   sendMessage(socket, MessageType.SYSTEM, lines.join('\r\n'));
 }
