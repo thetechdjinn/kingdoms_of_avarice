@@ -135,6 +135,16 @@ export function setupQuestRoutes(app: Express): void {
         return;
       }
 
+      // Validate tag uniqueness if changing
+      const { tag } = req.body;
+      if (tag !== undefined && typeof tag === 'string' && tag.trim().length > 0) {
+        const existingTag = await questRepo.getQuestByTag(tag.trim());
+        if (existingTag && existingTag.id !== id) {
+          res.status(409).json({ success: false, message: 'A quest with that tag already exists' });
+          return;
+        }
+      }
+
       // Whitelist allowed fields to prevent unexpected overwrites
       const allowedFields = [
         'tag', 'description', 'questGiverNpcId', 'minLevel', 'maxLevel',
@@ -241,6 +251,14 @@ export function setupQuestRoutes(app: Express): void {
           const existing = await questRepo.getQuestByTag(tag);
 
           if (existing && merge) {
+            // If import changes the tag, verify the new tag doesn't collide
+            if (item.tag && item.tag !== existing.tag) {
+              const tagCollision = await questRepo.getQuestByTag(item.tag);
+              if (tagCollision && tagCollision.id !== existing.id) {
+                skipped++;
+                continue;
+              }
+            }
             await questRepo.updateQuest(existing.id, item, client);
             if (item.steps && Array.isArray(item.steps)) {
               await questRepo.replaceSteps(existing.id, item.steps.map((s: Record<string, unknown>, i: number) =>

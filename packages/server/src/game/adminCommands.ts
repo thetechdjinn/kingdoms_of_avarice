@@ -1803,6 +1803,10 @@ async function handleQuestAdminAdvance(
   }
 
   const currentStep = quest.steps.find(s => s.stepOrder === charQuest.currentStep);
+  if (!currentStep) {
+    return { type: MessageType.ERROR, message: `Quest "${quest.name}" has no step at order ${charQuest.currentStep}. Quest data may be out of sync — try @quest reload.` };
+  }
+
   const nextStepOrder = charQuest.currentStep + 1;
   const isLastStep = nextStepOrder > quest.steps.length;
 
