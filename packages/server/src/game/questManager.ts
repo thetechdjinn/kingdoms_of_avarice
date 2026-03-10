@@ -477,6 +477,11 @@ export async function grantStepRewardsForCharacter(
     await characterRepo.addCurrency(characterId, 'copper', step.stepCurrencyReward);
   }
   for (const reward of step.stepItemRewards) {
+    const template = await itemRepo.getTemplateById(reward.itemTemplateId);
+    if (!template) {
+      console.warn(`[Quest] Step reward references invalid item template #${reward.itemTemplateId}, skipping`);
+      continue;
+    }
     for (let i = 0; i < reward.quantity; i++) {
       await itemRepo.createInstance({
         template_id: reward.itemTemplateId,
@@ -486,6 +491,11 @@ export async function grantStepRewardsForCharacter(
     }
   }
   for (const reward of step.stepFactionRewards) {
+    const faction = await factionRepo.getFactionById(reward.factionId);
+    if (!faction) {
+      console.warn(`[Quest] Step reward references invalid faction #${reward.factionId}, skipping`);
+      continue;
+    }
     await factionRepo.adjustPlayerReputation(characterId, reward.factionId, reward.amount);
   }
 }
@@ -513,6 +523,11 @@ export async function grantQuestRewardsForCharacter(
     await characterRepo.addCurrency(characterId, 'copper', quest.currencyReward);
   }
   for (const reward of quest.itemRewards) {
+    const template = await itemRepo.getTemplateById(reward.itemTemplateId);
+    if (!template) {
+      console.warn(`[Quest] Completion reward references invalid item template #${reward.itemTemplateId}, skipping`);
+      continue;
+    }
     for (let i = 0; i < reward.quantity; i++) {
       await itemRepo.createInstance({
         template_id: reward.itemTemplateId,
@@ -522,6 +537,11 @@ export async function grantQuestRewardsForCharacter(
     }
   }
   for (const reward of quest.factionRewards) {
+    const faction = await factionRepo.getFactionById(reward.factionId);
+    if (!faction) {
+      console.warn(`[Quest] Completion reward references invalid faction #${reward.factionId}, skipping`);
+      continue;
+    }
     await factionRepo.adjustPlayerReputation(characterId, reward.factionId, reward.amount);
   }
 }

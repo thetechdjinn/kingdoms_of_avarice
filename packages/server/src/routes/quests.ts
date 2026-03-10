@@ -1,4 +1,5 @@
 import { Express, Request, Response } from 'express';
+import type { QuestTriggerType } from '@koa/shared';
 import * as questRepo from '../db/repositories/questRepository.js';
 import { reloadQuests } from '../game/questManager.js';
 import { requireDeveloper } from '../middleware/auth.js';
@@ -16,7 +17,7 @@ function mapStepInput(questId: number, s: Record<string, unknown>, index: number
   return {
     questId,
     stepOrder: index + 1,
-    triggerType: String(s.triggerType ?? 'talk'),
+    triggerType: String(s.triggerType ?? 'talk') as QuestTriggerType,
     triggerNpcId: toNumberOrNull(s.triggerNpcId),
     triggerItemTemplateId: toNumberOrNull(s.triggerItemTemplateId),
     triggerRoomId: toNumberOrNull(s.triggerRoomId),

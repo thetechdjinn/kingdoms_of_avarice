@@ -409,7 +409,7 @@ export interface CreateQuestInput {
 export interface CreateStepInput {
   questId: number;
   stepOrder: number;
-  triggerType: string;
+  triggerType: QuestTriggerType;
   triggerNpcId?: number | null;
   triggerItemTemplateId?: number | null;
   triggerRoomId?: number | null;
