@@ -773,7 +773,7 @@ async function duplicateQuest(): Promise<void> {
 
 async function exportQuests(): Promise<void> {
   try {
-    const response = await fetch('/api/quests/export');
+    const response = await fetch('/api/quests');
     const data = await response.json();
     if (!data.success) {
       showToast('Export failed', 'error');

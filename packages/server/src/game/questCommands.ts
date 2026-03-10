@@ -10,7 +10,7 @@ import { CommandResponse } from './commands.js';
 import type { AuthenticatedSocket } from './socket.js';
 import { colors } from '../utils/colors.js';
 import { wordWrap } from '../utils/textFormat.js';
-import { getAllCachedQuests, getQuestById } from './questManager.js';
+import { getQuestById } from './questManager.js';
 import * as questRepo from '../db/repositories/questRepository.js';
 
 // ============================================================================

@@ -40,17 +40,6 @@ export function setupQuestRoutes(app: Express): void {
     }
   });
 
-  // Export quests
-  app.get('/api/quests/export', requireDeveloper, async (_req: Request, res: Response) => {
-    try {
-      const quests = await questRepo.getAllQuests();
-      res.json({ success: true, quests });
-    } catch (error) {
-      console.error('Failed to export quests:', error);
-      res.status(500).json({ success: false, message: 'Failed to export quests' });
-    }
-  });
-
   // Get single quest
   app.get('/api/quests/:id', requireDeveloper, async (req: Request, res: Response) => {
     try {
