@@ -6,6 +6,28 @@ import { withTransaction } from '../db/index.js';
 
 const VALID_TRIGGER_TYPES = new Set(['talk', 'kill', 'visit']);
 
+function mapStepInput(questId: number, s: Record<string, unknown>, index: number): questRepo.CreateStepInput {
+  return {
+    questId,
+    stepOrder: index + 1,
+    triggerType: s.triggerType as string,
+    triggerNpcId: (s.triggerNpcId ?? null) as number | null,
+    triggerItemTemplateId: (s.triggerItemTemplateId ?? null) as number | null,
+    triggerRoomId: (s.triggerRoomId ?? null) as number | null,
+    triggerText: (s.triggerText ?? null) as string | null,
+    requiredCount: (s.requiredCount ?? 1) as number,
+    consumeItem: (s.consumeItem ?? true) as boolean,
+    description: s.description as string,
+    completionDialogue: (s.completionDialogue ?? null) as string | null,
+    inProgressDialogue: (s.inProgressDialogue ?? null) as string | null,
+    stepXpReward: (s.stepXpReward ?? 0) as number,
+    stepEssenceReward: (s.stepEssenceReward ?? 0) as number,
+    stepCurrencyReward: (s.stepCurrencyReward ?? 0) as number,
+    stepItemRewards: (s.stepItemRewards ?? []) as { itemTemplateId: number; quantity: number }[],
+    stepFactionRewards: (s.stepFactionRewards ?? []) as { factionId: number; amount: number }[],
+  };
+}
+
 export function setupQuestRoutes(app: Express): void {
   // List all quests
   app.get('/api/quests', requireDeveloper, async (_req: Request, res: Response) => {
@@ -136,25 +158,9 @@ export function setupQuestRoutes(app: Express): void {
 
         // Replace steps if provided
         if (steps && Array.isArray(steps)) {
-          await questRepo.replaceSteps(id, steps.map((s: Record<string, unknown>, i: number) => ({
-            questId: id,
-            stepOrder: i + 1,
-            triggerType: s.triggerType as string,
-            triggerNpcId: (s.triggerNpcId ?? null) as number | null,
-            triggerItemTemplateId: (s.triggerItemTemplateId ?? null) as number | null,
-            triggerRoomId: (s.triggerRoomId ?? null) as number | null,
-            triggerText: (s.triggerText ?? null) as string | null,
-            requiredCount: (s.requiredCount ?? 1) as number,
-            consumeItem: (s.consumeItem ?? true) as boolean,
-            description: s.description as string,
-            completionDialogue: (s.completionDialogue ?? null) as string | null,
-            inProgressDialogue: (s.inProgressDialogue ?? null) as string | null,
-            stepXpReward: (s.stepXpReward ?? 0) as number,
-            stepEssenceReward: (s.stepEssenceReward ?? 0) as number,
-            stepCurrencyReward: (s.stepCurrencyReward ?? 0) as number,
-            stepItemRewards: (s.stepItemRewards ?? []) as { itemTemplateId: number; quantity: number }[],
-            stepFactionRewards: (s.stepFactionRewards ?? []) as { factionId: number; amount: number }[],
-          })), client);
+          await questRepo.replaceSteps(id, steps.map((s: Record<string, unknown>, i: number) =>
+            mapStepInput(id, s, i)
+          ), client);
         }
 
         return quest;
@@ -219,21 +225,17 @@ export function setupQuestRoutes(app: Express): void {
           if (existing && merge) {
             await questRepo.updateQuest(existing.id, item, client);
             if (item.steps && Array.isArray(item.steps)) {
-              await questRepo.replaceSteps(existing.id, item.steps.map((s: Record<string, unknown>, i: number) => ({
-                questId: existing.id,
-                stepOrder: i + 1,
-                ...s,
-              })), client);
+              await questRepo.replaceSteps(existing.id, item.steps.map((s: Record<string, unknown>, i: number) =>
+                mapStepInput(existing.id, s, i)
+              ), client);
             }
             updated++;
           } else if (!existing) {
             const quest = await questRepo.createQuest(item, client);
             if (item.steps && Array.isArray(item.steps)) {
-              await questRepo.replaceSteps(quest.id, item.steps.map((s: Record<string, unknown>, i: number) => ({
-                questId: quest.id,
-                stepOrder: i + 1,
-                ...s,
-              })), client);
+              await questRepo.replaceSteps(quest.id, item.steps.map((s: Record<string, unknown>, i: number) =>
+                mapStepInput(quest.id, s, i)
+              ), client);
             }
             created++;
           } else {

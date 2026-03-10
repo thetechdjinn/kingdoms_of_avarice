@@ -233,7 +233,7 @@ function selectQuest(id: number): void {
   const minLevelInput = getElement<HTMLInputElement>('quest-min-level');
   if (minLevelInput) minLevelInput.value = quest.minLevel.toString();
   const maxLevelInput = getElement<HTMLInputElement>('quest-max-level');
-  if (maxLevelInput) maxLevelInput.value = (quest.maxLevel ?? 0).toString();
+  if (maxLevelInput) maxLevelInput.value = quest.maxLevel?.toString() || '';
   const racesInput = getElement<HTMLInputElement>('quest-required-races');
   if (racesInput) racesInput.value = quest.requiredRaces?.join(', ') || '';
   const classesInput = getElement<HTMLInputElement>('quest-required-classes');
@@ -748,13 +748,13 @@ async function duplicateQuest(): Promise<void> {
       return;
     }
 
-    // Save steps to the new quest
+    // Save steps to the new quest (POST only creates the quest record)
     const steps = formData.steps as QuestStep[];
     if (steps.length > 0) {
       await fetch(`/api/quests/${data.quest.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...formData, tag: formData.tag, name: formData.name }),
+        body: JSON.stringify({ steps }),
       });
     }
 

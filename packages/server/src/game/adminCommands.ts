@@ -56,7 +56,7 @@ import { clearDenominationCache } from './npcDeathHandler.js';
 import * as factionRepo from '../db/repositories/factionRepository.js';
 import * as questRepo from '../db/repositories/questRepository.js';
 import { reloadQuests, getQuestByTag, getQuestById as getCachedQuest, getAllCachedQuests, grantStepRewardsForCharacter, grantQuestRewardsForCharacter } from './questManager.js';
-import { formatCopperAsDenominations } from '../utils/textFormat.js';
+import { formatCopperAsDenominations, wordWrap } from '../utils/textFormat.js';
 
 interface CommandResponse {
   type: MessageType;
@@ -180,7 +180,7 @@ export async function processAdminCommand(
     case 'merchants':
       return await handleMerchantsDebug(socket);
     case 'quest':
-      return handleQuestAdmin(args, socket);
+      return await handleQuestAdmin(args, socket);
     case 'help':
       return handleAdminHelp(userRoles);
     default:
@@ -1609,7 +1609,7 @@ function handleQuestAdminInfo(args: string[]): CommandResponse {
   ];
 
   if (quest.description) {
-    lines.push(`  Description: ${quest.description}`);
+    lines.push(wordWrap(`  Description: ${quest.description}`, 80));
   }
   if (quest.questGiverNpcId) {
     lines.push(`  Quest Giver NPC: #${quest.questGiverNpcId}`);
@@ -1661,10 +1661,10 @@ function handleQuestAdminInfo(args: string[]): CommandResponse {
   // Dialogue
   if (quest.denialDialogue) {
     lines.push('');
-    lines.push(`  Denial: "${quest.denialDialogue}"`);
+    lines.push(wordWrap(`  Denial: "${quest.denialDialogue}"`, 80));
   }
   if (quest.completedDialogue) {
-    lines.push(`  Completed: "${quest.completedDialogue}"`);
+    lines.push(wordWrap(`  Completed: "${quest.completedDialogue}"`, 80));
   }
 
   return { type: MessageType.OUTPUT, message: lines.join('\r\n') };

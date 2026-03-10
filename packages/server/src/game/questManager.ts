@@ -689,8 +689,10 @@ function sendQuestCompleteMessage(
 }
 
 function centerText(text: string, width: number): string {
-  const padding = Math.max(0, Math.floor((width - text.length) / 2));
-  return ' '.repeat(padding + 1) + text;
+  // +1 accounts for the leading space used by border lines (` ${border}`)
+  const totalWidth = width + 1;
+  const padding = Math.max(0, Math.floor((totalWidth - text.length) / 2));
+  return ' '.repeat(padding) + text;
 }
 
 // ============================================================================
