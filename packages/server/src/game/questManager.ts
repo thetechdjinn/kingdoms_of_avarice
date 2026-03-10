@@ -291,7 +291,7 @@ export async function checkKillTrigger(
       } else {
         // Progress update
         sendMessage(socket, MessageType.SYSTEM,
-          colors.cyan(`Quest progress: ${step.description} (${newCount}/${step.requiredCount})`)
+          colors.cyan(wordWrap(`Quest progress: ${step.description} (${newCount}/${step.requiredCount})`, 80))
         );
       }
     }
@@ -364,7 +364,7 @@ async function advanceQuestStep(
     const nextStep = getStepByOrder(quest, nextStepOrder);
     if (nextStep) {
       sendMessage(socket, MessageType.SYSTEM,
-        colors.cyan(`  New objective: ${nextStep.description}`)
+        colors.cyan(wordWrap(`  New objective: ${nextStep.description}`, 80))
       );
     }
   }

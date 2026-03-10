@@ -6,26 +6,54 @@ import { withTransaction } from '../db/index.js';
 
 const VALID_TRIGGER_TYPES = new Set(['talk', 'kill', 'visit']);
 
+function toNumberOrNull(value: unknown): number | null {
+  if (value === null || value === undefined) return null;
+  const n = Number(value);
+  return isNaN(n) ? null : n;
+}
+
 function mapStepInput(questId: number, s: Record<string, unknown>, index: number): questRepo.CreateStepInput {
   return {
     questId,
     stepOrder: index + 1,
-    triggerType: s.triggerType as string,
-    triggerNpcId: (s.triggerNpcId ?? null) as number | null,
-    triggerItemTemplateId: (s.triggerItemTemplateId ?? null) as number | null,
-    triggerRoomId: (s.triggerRoomId ?? null) as number | null,
-    triggerText: (s.triggerText ?? null) as string | null,
-    requiredCount: (s.requiredCount ?? 1) as number,
-    consumeItem: (s.consumeItem ?? true) as boolean,
-    description: s.description as string,
-    completionDialogue: (s.completionDialogue ?? null) as string | null,
-    inProgressDialogue: (s.inProgressDialogue ?? null) as string | null,
-    stepXpReward: (s.stepXpReward ?? 0) as number,
-    stepEssenceReward: (s.stepEssenceReward ?? 0) as number,
-    stepCurrencyReward: (s.stepCurrencyReward ?? 0) as number,
-    stepItemRewards: (s.stepItemRewards ?? []) as { itemTemplateId: number; quantity: number }[],
-    stepFactionRewards: (s.stepFactionRewards ?? []) as { factionId: number; amount: number }[],
+    triggerType: String(s.triggerType ?? 'talk'),
+    triggerNpcId: toNumberOrNull(s.triggerNpcId),
+    triggerItemTemplateId: toNumberOrNull(s.triggerItemTemplateId),
+    triggerRoomId: toNumberOrNull(s.triggerRoomId),
+    triggerText: s.triggerText != null ? String(s.triggerText) : null,
+    requiredCount: Number(s.requiredCount) || 1,
+    consumeItem: s.consumeItem !== false,
+    description: String(s.description ?? ''),
+    completionDialogue: s.completionDialogue != null ? String(s.completionDialogue) : null,
+    inProgressDialogue: s.inProgressDialogue != null ? String(s.inProgressDialogue) : null,
+    stepXpReward: Number(s.stepXpReward) || 0,
+    stepEssenceReward: Number(s.stepEssenceReward) || 0,
+    stepCurrencyReward: Number(s.stepCurrencyReward) || 0,
+    stepItemRewards: Array.isArray(s.stepItemRewards) ? s.stepItemRewards as { itemTemplateId: number; quantity: number }[] : [],
+    stepFactionRewards: Array.isArray(s.stepFactionRewards) ? s.stepFactionRewards as { factionId: number; amount: number }[] : [],
   };
+}
+
+function validateSteps(steps: Record<string, unknown>[]): string | null {
+  for (let i = 0; i < steps.length; i++) {
+    const step = steps[i];
+    if (!step.description || typeof step.description !== 'string') {
+      return `Step ${i + 1}: description is required`;
+    }
+    if (!VALID_TRIGGER_TYPES.has(step.triggerType as string)) {
+      return `Step ${i + 1}: invalid trigger type "${step.triggerType}"`;
+    }
+    if (step.triggerType === 'kill' && !step.triggerNpcId) {
+      return `Step ${i + 1}: kill trigger requires an NPC ID`;
+    }
+    if (step.triggerType === 'visit' && !step.triggerRoomId) {
+      return `Step ${i + 1}: visit trigger requires a Room ID`;
+    }
+    if (step.triggerType === 'talk' && !step.triggerNpcId) {
+      return `Step ${i + 1}: talk trigger requires an NPC ID`;
+    }
+  }
+  return null;
 }
 
 export function setupQuestRoutes(app: Express): void {
@@ -124,28 +152,10 @@ export function setupQuestRoutes(app: Express): void {
 
       // Validate steps if provided
       if (steps && Array.isArray(steps)) {
-        for (let i = 0; i < steps.length; i++) {
-          const step = steps[i];
-          if (!step.description || typeof step.description !== 'string') {
-            res.status(400).json({ success: false, message: `Step ${i + 1}: description is required` });
-            return;
-          }
-          if (!VALID_TRIGGER_TYPES.has(step.triggerType)) {
-            res.status(400).json({ success: false, message: `Step ${i + 1}: invalid trigger type "${step.triggerType}"` });
-            return;
-          }
-          if (step.triggerType === 'kill' && !step.triggerNpcId) {
-            res.status(400).json({ success: false, message: `Step ${i + 1}: kill trigger requires an NPC ID` });
-            return;
-          }
-          if (step.triggerType === 'visit' && !step.triggerRoomId) {
-            res.status(400).json({ success: false, message: `Step ${i + 1}: visit trigger requires a Room ID` });
-            return;
-          }
-          if (step.triggerType === 'talk' && !step.triggerNpcId) {
-            res.status(400).json({ success: false, message: `Step ${i + 1}: talk trigger requires an NPC ID` });
-            return;
-          }
+        const stepError = validateSteps(steps);
+        if (stepError) {
+          res.status(400).json({ success: false, message: stepError });
+          return;
         }
       }
 
@@ -220,6 +230,12 @@ export function setupQuestRoutes(app: Express): void {
         for (const item of importData) {
           const tag = item.tag;
           if (!tag || !item.name) { skipped++; continue; }
+
+          // Validate steps if present
+          if (item.steps && Array.isArray(item.steps)) {
+            const stepError = validateSteps(item.steps);
+            if (stepError) { skipped++; continue; }
+          }
 
           const existing = await questRepo.getQuestByTag(tag);
 

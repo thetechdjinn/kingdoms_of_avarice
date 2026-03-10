@@ -734,9 +734,11 @@ async function duplicateQuest(): Promise<void> {
   const formData = collectFormData();
   formData.tag = (formData.tag as string) + '_copy';
   formData.name = (formData.name as string) + ' (Copy)';
+  const steps = formData.steps as QuestStep[];
+  delete formData.steps;
 
   try {
-    // Create the quest
+    // Create the quest (POST only creates the quest record, not steps)
     const response = await fetch('/api/quests', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -748,13 +750,12 @@ async function duplicateQuest(): Promise<void> {
       return;
     }
 
-    // Save steps to the new quest (POST only creates the quest record)
-    const steps = formData.steps as QuestStep[];
+    // Save steps and full data to the new quest
     if (steps.length > 0) {
       await fetch(`/api/quests/${data.quest.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ steps }),
+        body: JSON.stringify({ ...formData, steps }),
       });
     }
 
