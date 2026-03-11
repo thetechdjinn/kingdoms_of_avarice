@@ -402,6 +402,9 @@ export interface MerchantResponse {
   response: string;
 }
 
+// Re-export quest system
+export * from "./quest.js";
+
 // Action (social emote) data
 export interface Action {
   id: number;

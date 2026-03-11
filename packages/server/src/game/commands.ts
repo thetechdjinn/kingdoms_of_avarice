@@ -42,6 +42,9 @@ import {
   handleInvite, handleJoinGroup, handleLeaveGroup, handleKick, handleGroupChat,
   getGroupForPlayer, isGroupLeader,
 } from './groupManager.js';
+import { checkTalkTrigger, checkVisitTrigger } from './questManager.js';
+import { handleQuest } from './questCommands.js';
+import * as questRepo from '../db/repositories/questRepository.js';
 import { handleBank, handleDeposit, handleWithdraw } from './bankCommands.js';
 import { handleList, handleBuy, handleSell, handlePrice, handleHaggle } from './merchantCommands.js';
 
@@ -109,7 +112,8 @@ export async function processCommand(
     const allowedDead = ['respawn', 'look', 'l', 'who', 'say', "'", 'help', '?',
       'gossip', 'gos', 'auction', 'auc', 'tel', 'telepath', 'shout', 'yel',
       'group', 'gr', 'br', 'broadcast', '/block', '/unblock',
-      'bank', 'bal', 'balance'];
+      'bank', 'bal', 'balance',
+      'quest', 'qu'];
     if (!allowedDead.includes(command)) {
       return { type: MessageType.ERROR, message: 'You are dead. Type "respawn" to return to life.' };
     }
@@ -120,7 +124,8 @@ export async function processCommand(
       'gossip', 'gos', 'auction', 'auc', 'tel', 'telepath', 'shout', 'yel',
       'group', 'gr', 'br', 'broadcast', '/block', '/unblock',
       'invite', 'join', 'kick', 'leave',
-      'bank', 'bal', 'balance'];
+      'bank', 'bal', 'balance',
+      'quest', 'qu'];
     // Also allow action commands while dropped
     if (!allowedDropped.includes(command) && !isActionCommand(command)) {
       return { type: MessageType.ERROR, message: 'You cannot do that while on the ground. Wait for aid or bleed out.' };
@@ -500,6 +505,12 @@ export async function processCommand(
 
   if (command === 'withdraw' || command === 'wit') {
     return handleWithdraw(socket, args);
+  }
+
+  // ---------- Quest commands ----------
+
+  if (command === 'quest' || command === 'qu') {
+    return handleQuest(socket, args);
   }
 
   // ---------- Merchant commands ----------
@@ -1071,6 +1082,9 @@ async function moveFollower(
 
   // Trigger aggro check in new room
   setImmediate(() => checkHostileAggro(newRoom.id, follower));
+
+  // Check for quest visit triggers
+  setImmediate(() => checkVisitTrigger(follower, newRoom.id));
 }
 
 async function handleMove(
@@ -1206,6 +1220,9 @@ async function handleMove(
   // description is only sent after processCommand returns. Without deferring, the
   // "attacks you!" message arrives before the player sees the room.
   setImmediate(() => checkHostileAggro(newRoom.id, socket));
+
+  // Check for quest visit triggers after room description
+  setImmediate(() => checkVisitTrigger(socket, newRoom.id));
 
   // Auto-follow: if the mover is a group leader, move followers who are in the old room
   if (isGroupLeader(socket.playerId)) {
@@ -1408,9 +1425,16 @@ async function checkDoorPermissionsForPlayer(
     hasRequiredItem = await playerHasItemWithTag(socket.characterId!, door.requiredItemTag);
   }
 
+  // Check quest flag (only query DB if door requires one)
+  let questFlags: string[] | undefined;
+  if (door.requiredQuestFlag) {
+    const hasFlag = await questRepo.hasQuestFlag(socket.characterId!, door.requiredQuestFlag);
+    questFlags = hasFlag ? [door.requiredQuestFlag] : [];
+  }
+
   const permissionCheck = doorStateManager.checkDoorPermissions(
     door,
-    { level: character.level, class: character.class },
+    { level: character.level, class: character.class, questFlags },
     hasRequiredItem
   );
 
@@ -2205,6 +2229,27 @@ async function handleDirectedSpeech(
       }
     }
 
+    // Check for quest trigger
+    const questResponse = await checkTalkTrigger(socket, npcTarget.templateId, message);
+    if (questResponse !== null) {
+      // Quest system handled this speech
+      if (questResponse) {
+        // NPC has dialogue to show (denial, in-progress, completed)
+        const npcLine = `${colors.sayName(npcTarget.entityName + ' says:')} ${colors.say('"' + questResponse + '"')}`;
+        setTimeout(() => {
+          if (socket.readyState === socket.OPEN) {
+            sendMessage(socket, MessageType.OUTPUT, npcLine);
+          }
+          broadcastToRoom(roomId, npcLine, socket.playerId);
+        }, 0);
+      }
+      // Empty string = quest event handled, messages sent via setTimeout
+      return {
+        type: MessageType.OUTPUT,
+        message: `${colors.sayName('You say to ' + npcTarget.entityName + ':')} ${colors.say('"' + message + '"')}`,
+      };
+    }
+
     return {
       type: MessageType.OUTPUT,
       message: `${colors.sayName('You say to ' + npcTarget.entityName + ':')} ${colors.say('"' + message + '"')}`,
@@ -2335,6 +2380,11 @@ function handleHelp(userRoles: Role[], category?: string): CommandResponse {
     `    ${colors.white('deposit <amt> [type]')}  - Deposit currency (in bank)`,
     `    ${colors.white('withdraw all')} (wit)    - Withdraw all funds`,
     `    ${colors.white('withdraw <amt> [type]')} - Withdraw currency (in bank)`,
+    '',
+    colors.boldCyan('  Quests:'),
+    `    ${colors.white('quest')} (qu)             - List active quests`,
+    `    ${colors.white('quest log')}              - Detailed quest journal`,
+    `    ${colors.white('quest info <name>')}      - View a specific quest's details`,
     '',
     colors.boldCyan('  Merchants:'),
     `    ${colors.white('list')}                  - View merchant inventory and prices`,

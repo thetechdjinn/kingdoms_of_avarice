@@ -55,6 +55,11 @@ export async function runMigrations(): Promise<void> {
       const statusEffectsSchema = readFileSync(statusEffectsSchemaPath, 'utf-8');
       await client.query(statusEffectsSchema);
 
+      // Run quests schema (depends on npcs, item_templates, rooms, factions, characters)
+      const questsSchemaPath = join(sqlDir, 'schema_quests.sql');
+      const questsSchema = readFileSync(questsSchemaPath, 'utf-8');
+      await client.query(questsSchema);
+
       // Add brief_mode column if it doesn't exist (for existing databases)
       await client.query(`
         ALTER TABLE players ADD COLUMN IF NOT EXISTS brief_mode BOOLEAN DEFAULT FALSE

@@ -31,6 +31,7 @@ import { setupDropTableRoutes } from './routes/dropTables.js';
 import { setupNpcRoutes } from './routes/npcs.js';
 import { setupFactionRoutes } from './routes/factions.js';
 import { setupMerchantRoutes } from './routes/merchants.js';
+import { setupQuestRoutes } from './routes/quests.js';
 import { setupGameSocket, initializeGameWorld } from './game/socket.js';
 import { stopCharacterSaveLoop } from './game/characterSaveLoop.js';
 import { stopCombatLoop } from './game/combat.js';
@@ -72,6 +73,7 @@ setupDropTableRoutes(app);
 setupNpcRoutes(app);
 setupFactionRoutes(app);
 setupMerchantRoutes(app);
+setupQuestRoutes(app);
 
 const server = createServer(app);
 

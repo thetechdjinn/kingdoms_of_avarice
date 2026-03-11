@@ -10,6 +10,7 @@ Kingdoms of Avarice is a web-based MUD (Multi-User Dungeon) inspired by MajorMUD
 
 - Always ensure any libraries, frameworks, or dependencies are up to date and secure
 - Use the latest stable versions of libraries, frameworks, and dependencies
+- Never use worktrees unless explicitly asked to do so
 
 ## Commands
 

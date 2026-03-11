@@ -902,8 +902,7 @@ export function getPortalTimerCount(): number {
 export interface PermissionCheckCharacter {
   level: number;
   class: string;
-  // For quest flags - not implemented yet, but reserve the interface
-  // questFlags?: string[];
+  questFlags?: string[];
 }
 
 /**
@@ -948,15 +947,12 @@ export function checkDoorPermissions(
     }
   }
 
-  // Check quest flag requirement (placeholder for future implementation)
+  // Check quest flag requirement
   if (door.requiredQuestFlag) {
-    // TODO: Implement quest system check
-    // For now, quest flags always pass (no quest system yet)
-    // When implemented:
-    // if (!character.questFlags?.includes(door.requiredQuestFlag)) {
-    //   const message = door.denialMessage || 'You have not completed the required quest.';
-    //   return { allowed: false, reason: message };
-    // }
+    if (!character.questFlags?.includes(door.requiredQuestFlag)) {
+      const message = door.denialMessage || 'You have not completed the required quest.';
+      return { allowed: false, reason: message };
+    }
   }
 
   // Check item requirement (item must be in inventory, not consumed)
