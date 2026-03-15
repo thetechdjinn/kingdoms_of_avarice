@@ -1,6 +1,6 @@
-// Side-effect import: loads .env from process.cwd() before any other modules.
+// Side-effect import: loads .env from monorepo root before any other modules.
 // Must be the very first import so all modules see env vars at load time.
-import 'dotenv/config';
+import './env.js';
 
 import './utils/logger.js';
 import { fileURLToPath } from 'url';
