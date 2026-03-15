@@ -517,12 +517,15 @@ async function handleDebuffSpell(
       return { type: MessageType.ERROR, message: `${spell.name} has no effect defined.` };
     }
 
-    // Deduct mana
-    socket.vitals.resource = (socket.vitals.resource ?? 0) - spell.manaCost;
-
     // Apply the status effect to the NPC
     const durationMs = (spell.effectDuration ?? 60) * 1000;
     const effectResult = applyEffectToEntity(npcTarget, spell.statusEffect, durationMs, spell.id);
+    if (!effectResult.success) {
+      return { type: MessageType.ERROR, message: effectResult.message };
+    }
+
+    // Deduct mana (only after successful effect application)
+    socket.vitals.resource = (socket.vitals.resource ?? 0) - spell.manaCost;
 
     // Add NPC to targets and vice versa
     if (!socket.combatState.targets.has(npcTarget.entityId)) {

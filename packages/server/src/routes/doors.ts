@@ -172,6 +172,16 @@ export function setupDoorRoutes(app: Express): void {
         return;
       }
 
+      // Validate level range consistency
+      {
+        const lvlMin = (requiredLevel && requiredLevel > 0) ? requiredLevel : null;
+        const lvlMax = (maxLevel && maxLevel > 0) ? maxLevel : null;
+        if (lvlMin !== null && lvlMax !== null && lvlMin > lvlMax) {
+          res.status(400).json({ success: false, message: `Min level (${lvlMin}) cannot exceed max level (${lvlMax})` });
+          return;
+        }
+      }
+
       if (requiredClasses !== undefined && requiredClasses !== null && !Array.isArray(requiredClasses)) {
         res.status(400).json({ success: false, message: 'Required classes must be an array' });
         return;
@@ -367,6 +377,16 @@ export function setupDoorRoutes(app: Express): void {
       if (maxLevel !== undefined && maxLevel !== null && (typeof maxLevel !== 'number' || maxLevel < 1)) {
         res.status(400).json({ success: false, message: 'Max level must be a positive number' });
         return;
+      }
+
+      // Validate level range consistency (use existing values for partial updates)
+      {
+        const lvlMin = (requiredLevel !== undefined ? requiredLevel : existingDoor.requiredLevel) || null;
+        const lvlMax = (maxLevel !== undefined ? maxLevel : existingDoor.maxLevel) || null;
+        if (lvlMin !== null && lvlMax !== null && lvlMin > lvlMax) {
+          res.status(400).json({ success: false, message: `Min level (${lvlMin}) cannot exceed max level (${lvlMax})` });
+          return;
+        }
       }
 
       if (requiredClasses !== undefined && requiredClasses !== null && !Array.isArray(requiredClasses)) {

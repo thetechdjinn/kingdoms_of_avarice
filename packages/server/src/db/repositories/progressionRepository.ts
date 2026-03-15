@@ -308,7 +308,9 @@ export async function createClass(classDef: ClassDefinition & { resource_type?: 
       JSON.stringify(classDef.special_abilities ?? []),
     ]
   );
-  return dbToClassDefinition(result.rows[0]);
+  const created = dbToClassDefinition(result.rows[0]);
+  classCache.set(created.class_id, created);
+  return created;
 }
 
 export async function updateClass(classId: string, updates: Partial<ClassDefinition>): Promise<ClassDefinition | null> {
@@ -382,11 +384,14 @@ export async function updateClass(classId: string, updates: Partial<ClassDefinit
     `UPDATE class_definitions SET ${setClauses.join(', ')} WHERE class_id = $${paramIndex} RETURNING *`,
     values
   );
-  return result.rows[0] ? dbToClassDefinition(result.rows[0]) : null;
+  const updated = result.rows[0] ? dbToClassDefinition(result.rows[0]) : null;
+  if (updated) classCache.set(classId, updated);
+  return updated;
 }
 
 export async function deleteClass(classId: string): Promise<boolean> {
   const result = await query('DELETE FROM class_definitions WHERE class_id = $1', [classId]);
+  classCache.delete(classId);
   return (result.rowCount ?? 0) > 0;
 }
 
@@ -440,7 +445,9 @@ export async function createRace(raceDef: RaceDefinition): Promise<RaceDefinitio
       raceDef.dodge_bonus ?? 0,
     ]
   );
-  return dbToRaceDefinition(result.rows[0]);
+  const created = dbToRaceDefinition(result.rows[0]);
+  raceCache.set(created.race_id, created);
+  return created;
 }
 
 export async function updateRace(raceId: string, updates: Partial<RaceDefinition>): Promise<RaceDefinition | null> {
@@ -490,11 +497,14 @@ export async function updateRace(raceId: string, updates: Partial<RaceDefinition
     `UPDATE race_definitions SET ${setClauses.join(', ')} WHERE race_id = $${paramIndex} RETURNING *`,
     values
   );
-  return result.rows[0] ? dbToRaceDefinition(result.rows[0]) : null;
+  const updated = result.rows[0] ? dbToRaceDefinition(result.rows[0]) : null;
+  if (updated) raceCache.set(raceId, updated);
+  return updated;
 }
 
 export async function deleteRace(raceId: string): Promise<boolean> {
   const result = await query('DELETE FROM race_definitions WHERE race_id = $1', [raceId]);
+  raceCache.delete(raceId);
   return (result.rowCount ?? 0) > 0;
 }
 

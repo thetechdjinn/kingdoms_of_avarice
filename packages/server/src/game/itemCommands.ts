@@ -197,6 +197,7 @@ async function pickUpItem(
       socket.characterId!
     );
   }
+  invalidateEquipmentCache(socket.characterId!);
 
   const itemName = getItemName(item);
   
@@ -590,6 +591,7 @@ async function dropItem(
       currentRoomId
     );
   }
+  invalidateEquipmentCache(socket.characterId!);
 
   const itemName = getItemName(item);
 

@@ -57,6 +57,8 @@ import * as factionRepo from '../db/repositories/factionRepository.js';
 import * as questRepo from '../db/repositories/questRepository.js';
 import { reloadQuests, getQuestByTag, getQuestById as getCachedQuest, getAllCachedQuests, grantStepRewardsForCharacter, grantQuestRewardsForCharacter } from './questManager.js';
 import { formatCopperAsDenominations, wordWrap } from '../utils/textFormat.js';
+import { clearProgressionCaches } from '../db/repositories/progressionRepository.js';
+import { clearEquipmentCache } from './combatStats.js';
 
 interface CommandResponse {
   type: MessageType;
@@ -483,7 +485,7 @@ async function handleReload(
   // @reload [rooms|items|mobs|effects|doors|actions|droptables|all]
   const target = args[0]?.toLowerCase() || 'all';
 
-  const validTargets = ['rooms', 'items', 'mobs', 'effects', 'doors', 'actions', 'droptables', 'factions', 'merchants', 'merchantresponses', 'quests', 'all'];
+  const validTargets = ['rooms', 'items', 'mobs', 'effects', 'doors', 'actions', 'droptables', 'factions', 'merchants', 'merchantresponses', 'quests', 'progression', 'all'];
   if (!validTargets.includes(target)) {
     return { type: MessageType.ERROR, message: `Usage: @reload [${validTargets.join('|')}]` };
   }
@@ -546,6 +548,12 @@ async function handleReload(
     if (target === 'quests' || target === 'all') {
       const count = await reloadQuests();
       results.push(`${colors.green('✓')} Reloaded ${count} quest definitions`);
+    }
+
+    if (target === 'progression' || target === 'all') {
+      clearProgressionCaches();
+      clearEquipmentCache();
+      results.push(`${colors.green('✓')} Cleared progression and equipment caches`);
     }
 
     return {
