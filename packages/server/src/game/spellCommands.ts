@@ -17,7 +17,7 @@ import { applyEffect, getEffectDefinition, formatDuration } from './statusEffect
 import { isOnCooldown, startCooldown, getCooldownMessage } from './cooldownTracker.js';
 import { isPlayerDropped, isPlayerDead, clearDeathState } from './damageHandler.js';
 import { findPlayerInRoom } from './playerUtils.js';
-import { findNpcInRoom } from './npcManager.js';
+import { findNpcInRoom, setMerchantHostile } from './npcManager.js';
 import type { NpcCombatInstance } from './npcManager.js';
 import { withNpcName, withNpcNameCapitalized } from '../utils/textFormat.js';
 import { isStealthing, breakStealth } from './stealth/stealthState.js';
@@ -184,6 +184,11 @@ async function handleOffensiveSpell(
     socket.regenState.inCombat = true;
     npcTarget.regenState.inCombat = true;
     npcTarget.behaviorState = 'combat';
+
+    // Mark merchant as hostile to this player
+    if (npcTarget.template.merchantEnabled && socket.characterId) {
+      setMerchantHostile(socket.characterId, npcTarget.template.id);
+    }
 
     // Clear resting state
     socket.regenState.enhancedRegen.clear();
@@ -529,6 +534,11 @@ async function handleDebuffSpell(
     socket.regenState.inCombat = true;
     npcTarget.regenState.inCombat = true;
     npcTarget.behaviorState = 'combat';
+
+    // Mark merchant as hostile to this player
+    if (npcTarget.template.merchantEnabled && socket.characterId) {
+      setMerchantHostile(socket.characterId, npcTarget.template.id);
+    }
 
     // Clear resting state
     socket.regenState.enhancedRegen.clear();
