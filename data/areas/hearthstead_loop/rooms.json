@@ -1,0 +1,503 @@
+{
+  "version": "1.0",
+  "exported_at": "2026-03-15T13:33:32.896Z",
+  "type": "rooms",
+  "data": [
+    {
+      "tag": "hs_loop_l",
+      "name": "Forest Crossing",
+      "description": "A well-worn junction where several trails converge. The main path from the south meets a loop trail that circles Hearthstead, and a narrower track leads northeast toward the village center. The grass is trampled flat here from regular foot traffic. A weathered wooden sign points in several directions, though the paint has faded to near-illegibility.",
+      "area": "Hearthstead Loop",
+      "terrain": "outdoor",
+      "features": {},
+      "exits": [
+        {
+          "direction": "south",
+          "toTag": "hs_road_6"
+        },
+        {
+          "direction": "east",
+          "toTag": "hs_loop_1"
+        },
+        {
+          "direction": "northwest",
+          "toTag": "hs_loop_4"
+        },
+        {
+          "direction": "northeast",
+          "toTag": "hs_hamlet_app1"
+        }
+      ]
+    },
+    {
+      "tag": "hs_loop_1",
+      "name": "Hearthstead Trail",
+      "description": "Open ground with a clear view of Hearthstead below. The trail is well-trodden here, the earth packed hard by years of use. A wooden fence post marks the boundary between the trail and a farmer's field, its top worn smooth.",
+      "area": "Hearthstead Loop",
+      "terrain": "outdoor",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "hs_loop_l"
+        },
+        {
+          "direction": "east",
+          "toTag": "hs_loop_2"
+        }
+      ]
+    },
+    {
+      "tag": "hs_loop_2",
+      "name": "Hearthstead Trail",
+      "description": "The path follows the edge of a shallow stream that trickles through a rocky bed. The water is clear and cold, barely ankle-deep. Mossy stones line the banks. The stream probably feeds Hearthstead's wells.",
+      "area": "Hearthstead Loop",
+      "terrain": "outdoor",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "hs_loop_1"
+        },
+        {
+          "direction": "east",
+          "toTag": "hs_loop_3"
+        }
+      ]
+    },
+    {
+      "tag": "hs_loop_3",
+      "name": "Hearthstead Trail",
+      "description": "A stretch of trail through an old orchard, the fruit trees unpruned and growing wild. Gnarled branches hang low over the path, heavy with small green apples. Fallen fruit rots in the grass, attracting wasps.",
+      "area": "Hearthstead Loop",
+      "terrain": "outdoor",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "hs_loop_2"
+        },
+        {
+          "direction": "north",
+          "toTag": "hs_loop_23"
+        }
+      ]
+    },
+    {
+      "tag": "hs_loop_4",
+      "name": "Hearthstead Trail",
+      "description": "The trail climbs a gentle slope through tall grass and scattered boulders. From the top, the path splits. One way continues around Hearthstead, another disappears into the brush. Wind whispers through the grass.",
+      "area": "Hearthstead Loop",
+      "terrain": "outdoor",
+      "features": {},
+      "exits": [
+        {
+          "direction": "southeast",
+          "toTag": "hs_loop_l"
+        },
+        {
+          "direction": "northwest",
+          "toTag": "hs_loop_5"
+        }
+      ]
+    },
+    {
+      "tag": "hs_loop_5",
+      "name": "Hearthstead Trail",
+      "description": "A dirt trail winds through scrubby grassland at the edge of Hearthstead. The grass is tall here, waist-high in places, and the path is barely wide enough for two to walk abreast. Insects buzz in the warm air.",
+      "area": "Hearthstead Loop",
+      "terrain": "outdoor",
+      "features": {},
+      "exits": [
+        {
+          "direction": "southeast",
+          "toTag": "hs_loop_4"
+        },
+        {
+          "direction": "west",
+          "toTag": "hs_loop_6"
+        }
+      ]
+    },
+    {
+      "tag": "hs_loop_6",
+      "name": "Hearthstead Trail",
+      "description": "The trail passes through a stand of young birch trees, their white bark peeling in papery strips. Dappled light filters through the canopy. Animal tracks cross the path. Rabbits, perhaps deer.",
+      "area": "Hearthstead Loop",
+      "terrain": "outdoor",
+      "features": {},
+      "exits": [
+        {
+          "direction": "east",
+          "toTag": "hs_loop_5"
+        },
+        {
+          "direction": "north",
+          "toTag": "hs_loop_7"
+        }
+      ]
+    },
+    {
+      "tag": "hs_loop_7",
+      "name": "Hearthstead Trail",
+      "description": "A section of trail along a low ridge overlooking the fields around Hearthstead. The ground is rocky and uneven, with exposed tree roots snaking across the path. The breeze carries the smell of earth and growing things.",
+      "area": "Hearthstead Loop",
+      "terrain": "outdoor",
+      "features": {},
+      "exits": [
+        {
+          "direction": "south",
+          "toTag": "hs_loop_6"
+        },
+        {
+          "direction": "northwest",
+          "toTag": "hs_loop_8"
+        }
+      ]
+    },
+    {
+      "tag": "hs_loop_8",
+      "name": "Hearthstead Trail",
+      "description": "The path descends into a shallow depression where water collects after rain. The ground is soft and muddy, the grass replaced by reeds and rushes. Frogs scatter at the sound of footsteps.",
+      "area": "Hearthstead Loop",
+      "terrain": "outdoor",
+      "features": {},
+      "exits": [
+        {
+          "direction": "southeast",
+          "toTag": "hs_loop_7"
+        },
+        {
+          "direction": "north",
+          "toTag": "hs_loop_9"
+        }
+      ]
+    },
+    {
+      "tag": "hs_loop_9",
+      "name": "Hearthstead Trail",
+      "description": "A meadow clearing where the trail widens briefly before narrowing again. Wildflowers blanket the ground in patches of yellow and purple. A large flat rock beside the path looks like it has served as a rest stop for generations.",
+      "area": "Hearthstead Loop",
+      "terrain": "outdoor",
+      "features": {},
+      "exits": [
+        {
+          "direction": "south",
+          "toTag": "hs_loop_8"
+        },
+        {
+          "direction": "northeast",
+          "toTag": "hs_loop_10"
+        }
+      ]
+    },
+    {
+      "tag": "hs_loop_10",
+      "name": "Hearthstead Trail",
+      "description": "Open ground with a clear view of Hearthstead below. The trail is well-trodden here, the earth packed hard by years of use. A wooden fence post marks the boundary between the trail and a farmer's field, its top worn smooth.",
+      "area": "Hearthstead Loop",
+      "terrain": "outdoor",
+      "features": {},
+      "exits": [
+        {
+          "direction": "southwest",
+          "toTag": "hs_loop_9"
+        },
+        {
+          "direction": "northeast",
+          "toTag": "hs_loop_11"
+        }
+      ]
+    },
+    {
+      "tag": "hs_loop_11",
+      "name": "Hearthstead Trail",
+      "description": "The path follows the edge of a shallow stream that trickles through a rocky bed. The water is clear and cold, barely ankle-deep. Mossy stones line the banks. The stream probably feeds Hearthstead's wells.",
+      "area": "Hearthstead Loop",
+      "terrain": "outdoor",
+      "features": {},
+      "exits": [
+        {
+          "direction": "southwest",
+          "toTag": "hs_loop_10"
+        },
+        {
+          "direction": "east",
+          "toTag": "hs_loop_12"
+        }
+      ]
+    },
+    {
+      "tag": "hs_loop_12",
+      "name": "Hearthstead Trail",
+      "description": "A stretch of trail through an old orchard, the fruit trees unpruned and growing wild. Gnarled branches hang low over the path, heavy with small green apples. Fallen fruit rots in the grass, attracting wasps.",
+      "area": "Hearthstead Loop",
+      "terrain": "outdoor",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "hs_loop_11"
+        },
+        {
+          "direction": "east",
+          "toTag": "hs_loop_13"
+        }
+      ]
+    },
+    {
+      "tag": "hs_loop_13",
+      "name": "Hearthstead Trail",
+      "description": "The trail climbs a gentle slope through tall grass and scattered boulders. From the top, the path splits. One way continues around Hearthstead, another disappears into the brush. Wind whispers through the grass.",
+      "area": "Hearthstead Loop",
+      "terrain": "outdoor",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "hs_loop_12"
+        },
+        {
+          "direction": "northeast",
+          "toTag": "hs_loop_14"
+        }
+      ]
+    },
+    {
+      "tag": "hs_loop_14",
+      "name": "Hearthstead Trail",
+      "description": "A dirt trail winds through scrubby grassland at the edge of Hearthstead. The grass is tall here, waist-high in places, and the path is barely wide enough for two to walk abreast. Insects buzz in the warm air.",
+      "area": "Hearthstead Loop",
+      "terrain": "outdoor",
+      "features": {},
+      "exits": [
+        {
+          "direction": "southwest",
+          "toTag": "hs_loop_13"
+        },
+        {
+          "direction": "north",
+          "toTag": "hs_loop_g"
+        },
+        {
+          "direction": "southeast",
+          "toTag": "hs_loop_15"
+        }
+      ]
+    },
+    {
+      "tag": "hs_loop_g",
+      "name": "Overgrown Clearing",
+      "description": "A wide spot on the trail where the grass grows tall and wild. The path continues south along the Hearthstead ring, but here at the northern edge, the vegetation is thicker and wilder. Tangled brush and young saplings crowd the trail's edge. Through the undergrowth to the north, a narrow, almost-hidden path disappears into denser forest. The air smells of earth and green growing things.",
+      "area": "Hearthstead Loop",
+      "terrain": "outdoor",
+      "features": {},
+      "exits": [
+        {
+          "direction": "south",
+          "toTag": "hs_loop_14"
+        },
+        {
+          "direction": "north",
+          "toTag": "hs_wilds_1"
+        }
+      ],
+      "doors": [
+        {
+          "name": "overgrown path",
+          "displayName": null,
+          "doorType": "triggered_passageway",
+          "description": null,
+          "entryDirection": "north",
+          "exitTag": "hs_wilds_1",
+          "exitDirection": "south",
+          "defaultState": "closed",
+          "autoResetSeconds": 10,
+          "hasLock": false,
+          "keyItemTag": null,
+          "pickDifficultyMin": 0,
+          "pickDifficultyMax": 0,
+          "bashDifficulty": 0,
+          "isHidden": true,
+          "triggerText": "go path",
+          "passageMessageSelf": "You push through the overgrown brush and find a narrow trail leading north into the forest.",
+          "passageMessageRoom": "{player} pushes through the undergrowth and disappears into the forest.",
+          "itemDisplayName": null,
+          "isTemporary": false,
+          "spawnTriggerText": null,
+          "durationSeconds": null,
+          "appearMessage": null,
+          "disappearMessage": null,
+          "requiredLevel": null,
+          "maxLevel": null,
+          "requiredClasses": null,
+          "requiredQuestFlag": null,
+          "requiredItemTag": null,
+          "denialMessage": null
+        }
+      ]
+    },
+    {
+      "tag": "hs_loop_15",
+      "name": "Hearthstead Trail",
+      "description": "The trail passes through a stand of young birch trees, their white bark peeling in papery strips. Dappled light filters through the canopy. Animal tracks cross the path. Rabbits, perhaps deer.",
+      "area": "Hearthstead Loop",
+      "terrain": "outdoor",
+      "features": {},
+      "exits": [
+        {
+          "direction": "northwest",
+          "toTag": "hs_loop_14"
+        },
+        {
+          "direction": "east",
+          "toTag": "hs_loop_16"
+        }
+      ]
+    },
+    {
+      "tag": "hs_loop_16",
+      "name": "Hearthstead Trail",
+      "description": "A section of trail along a low ridge overlooking the fields around Hearthstead. The ground is rocky and uneven, with exposed tree roots snaking across the path. The breeze carries the smell of earth and growing things.",
+      "area": "Hearthstead Loop",
+      "terrain": "outdoor",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "hs_loop_15"
+        },
+        {
+          "direction": "east",
+          "toTag": "hs_loop_17"
+        }
+      ]
+    },
+    {
+      "tag": "hs_loop_17",
+      "name": "Hearthstead Trail",
+      "description": "The path descends into a shallow depression where water collects after rain. The ground is soft and muddy, the grass replaced by reeds and rushes. Frogs scatter at the sound of footsteps.",
+      "area": "Hearthstead Loop",
+      "terrain": "outdoor",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "hs_loop_16"
+        },
+        {
+          "direction": "southeast",
+          "toTag": "hs_loop_18"
+        }
+      ]
+    },
+    {
+      "tag": "hs_loop_18",
+      "name": "Hearthstead Trail",
+      "description": "A meadow clearing where the trail widens briefly before narrowing again. Wildflowers blanket the ground in patches of yellow and purple. A large flat rock beside the path looks like it has served as a rest stop for generations.",
+      "area": "Hearthstead Loop",
+      "terrain": "outdoor",
+      "features": {},
+      "exits": [
+        {
+          "direction": "northwest",
+          "toTag": "hs_loop_17"
+        },
+        {
+          "direction": "south",
+          "toTag": "hs_loop_19"
+        }
+      ]
+    },
+    {
+      "tag": "hs_loop_19",
+      "name": "Hearthstead Trail",
+      "description": "The trail passes through a thicket of hawthorn and blackberry bushes. Thorny branches arch overhead, forming a natural tunnel. The berries are small and hard, not yet ripe. Bird nests hide in the dense tangles.",
+      "area": "Hearthstead Loop",
+      "terrain": "outdoor",
+      "features": {},
+      "exits": [
+        {
+          "direction": "north",
+          "toTag": "hs_loop_18"
+        },
+        {
+          "direction": "south",
+          "toTag": "hs_loop_20"
+        }
+      ]
+    },
+    {
+      "tag": "hs_loop_20",
+      "name": "Hearthstead Trail",
+      "description": "The path follows the edge of a shallow stream that trickles through a rocky bed. The water is clear and cold, barely ankle-deep. Mossy stones line the banks. The stream probably feeds Hearthstead's wells.",
+      "area": "Hearthstead Loop",
+      "terrain": "outdoor",
+      "features": {},
+      "exits": [
+        {
+          "direction": "north",
+          "toTag": "hs_loop_19"
+        },
+        {
+          "direction": "southwest",
+          "toTag": "hs_loop_21"
+        }
+      ]
+    },
+    {
+      "tag": "hs_loop_21",
+      "name": "Hearthstead Trail",
+      "description": "A stretch of trail through an old orchard, the fruit trees unpruned and growing wild. Gnarled branches hang low over the path, heavy with small green apples. Fallen fruit rots in the grass, attracting wasps.",
+      "area": "Hearthstead Loop",
+      "terrain": "outdoor",
+      "features": {},
+      "exits": [
+        {
+          "direction": "northeast",
+          "toTag": "hs_loop_20"
+        },
+        {
+          "direction": "southwest",
+          "toTag": "hs_loop_22"
+        }
+      ]
+    },
+    {
+      "tag": "hs_loop_22",
+      "name": "Hearthstead Trail",
+      "description": "The trail climbs a gentle slope through tall grass and scattered boulders. From the top, the path splits. One way continues around Hearthstead, another disappears into the brush. Wind whispers through the grass.",
+      "area": "Hearthstead Loop",
+      "terrain": "outdoor",
+      "features": {},
+      "exits": [
+        {
+          "direction": "northeast",
+          "toTag": "hs_loop_21"
+        },
+        {
+          "direction": "south",
+          "toTag": "hs_loop_23"
+        }
+      ]
+    },
+    {
+      "tag": "hs_loop_23",
+      "name": "Hearthstead Trail",
+      "description": "A dirt trail winds through scrubby grassland at the edge of Hearthstead. The grass is tall here, waist-high in places, and the path is barely wide enough for two to walk abreast. Insects buzz in the warm air.",
+      "area": "Hearthstead Loop",
+      "terrain": "outdoor",
+      "features": {},
+      "exits": [
+        {
+          "direction": "north",
+          "toTag": "hs_loop_22"
+        },
+        {
+          "direction": "south",
+          "toTag": "hs_loop_3"
+        }
+      ]
+    }
+  ]
+}

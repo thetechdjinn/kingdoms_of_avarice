@@ -1,0 +1,27 @@
+{
+  "version": "1.0",
+  "exported_at": "2026-03-15T13:33:32.877Z",
+  "type": "factions",
+  "data": [
+    {
+      "name": "Arindale Merchants Guild",
+      "description": "The trade guild of Arindale, controlling commerce in the city.",
+      "factionType": "merchant"
+    },
+    {
+      "name": "Arindale City Guard",
+      "description": "The city guard of Arindale, maintaining order and justice.",
+      "factionType": "city"
+    },
+    {
+      "name": "Silverton Merchants Guild",
+      "description": "The trade guild of Silverton, controlling commerce in the city.",
+      "factionType": "merchant"
+    },
+    {
+      "name": "Silverton City Guard",
+      "description": "The city guard of Silverton, maintaining order and justice.",
+      "factionType": "city"
+    }
+  ]
+}

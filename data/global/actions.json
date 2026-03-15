@@ -1,0 +1,196 @@
+{
+  "version": "1.0",
+  "exported_at": "2026-03-15T13:33:32.862Z",
+  "type": "actions",
+  "data": [
+    {
+      "command": "bow",
+      "description": "Bow respectfully",
+      "firstPersonNoTarget": "You bow respectfully.",
+      "roomNoTarget": "{player} bows respectfully.",
+      "firstPersonWithTarget": "You bow to {target}.",
+      "targetPerspective": "{player} bows to you.",
+      "roomWithTarget": "{player} bows to {target}."
+    },
+    {
+      "command": "cackle",
+      "description": "Cackle with glee",
+      "firstPersonNoTarget": "You cackle with glee!",
+      "roomNoTarget": "{player} cackles with glee!",
+      "firstPersonWithTarget": "You cackle at {target}!",
+      "targetPerspective": "{player} cackles at you!",
+      "roomWithTarget": "{player} cackles at {target}!"
+    },
+    {
+      "command": "cheer",
+      "description": "Cheer enthusiastically",
+      "firstPersonNoTarget": "You cheer!",
+      "roomNoTarget": "{player} cheers!",
+      "firstPersonWithTarget": "You cheer for {target}!",
+      "targetPerspective": "{player} cheers for you!",
+      "roomWithTarget": "{player} cheers for {target}!"
+    },
+    {
+      "command": "clap",
+      "description": "Clap your hands",
+      "firstPersonNoTarget": "You clap your hands!",
+      "roomNoTarget": "{player} claps their hands!",
+      "firstPersonWithTarget": "You clap for {target}!",
+      "targetPerspective": "{player} claps for you!",
+      "roomWithTarget": "{player} claps for {target}!"
+    },
+    {
+      "command": "cry",
+      "description": "Cry tears",
+      "firstPersonNoTarget": "You cry.",
+      "roomNoTarget": "{player} cries.",
+      "firstPersonWithTarget": "You cry on {target}'s shoulder.",
+      "targetPerspective": "{player} cries on your shoulder.",
+      "roomWithTarget": "{player} cries on {target}'s shoulder."
+    },
+    {
+      "command": "dance",
+      "description": "Dance a jig",
+      "firstPersonNoTarget": "You dance a little jig!",
+      "roomNoTarget": "{player} dances a little jig!",
+      "firstPersonWithTarget": "You dance with {target}!",
+      "targetPerspective": "{player} dances with you!",
+      "roomWithTarget": "{player} dances with {target}!"
+    },
+    {
+      "command": "fart",
+      "description": "Farts in your general direction!",
+      "firstPersonNoTarget": "You lifts a leg and let out a greasy long drawn out fart!",
+      "roomNoTarget": "{player} lifts his leg and lets out a greasy long drawn our fart!",
+      "firstPersonWithTarget": "You fart in {target}'s general direction!",
+      "targetPerspective": "{player} farts in your general direction!",
+      "roomWithTarget": "{player} farts in {target}'s general direction!"
+    },
+    {
+      "command": "grin",
+      "description": "Grin mischievously",
+      "firstPersonNoTarget": "You grin mischievously.",
+      "roomNoTarget": "{player} grins mischievously.",
+      "firstPersonWithTarget": "You grin at {target}.",
+      "targetPerspective": "{player} grins at you.",
+      "roomWithTarget": "{player} grins at {target}."
+    },
+    {
+      "command": "grovel",
+      "description": "Grovel pathetically",
+      "firstPersonNoTarget": "You grovel pathetically.",
+      "roomNoTarget": "{player} grovels pathetically.",
+      "firstPersonWithTarget": "You grovel before {target}.",
+      "targetPerspective": "{player} grovels before you.",
+      "roomWithTarget": "{player} grovels before {target}."
+    },
+    {
+      "command": "hug",
+      "description": "Give a warm hug",
+      "firstPersonNoTarget": "You spread your arms wide for a hug.",
+      "roomNoTarget": "{player} spreads their arms wide.",
+      "firstPersonWithTarget": "You hug {target} warmly.",
+      "targetPerspective": "{player} hugs you warmly.",
+      "roomWithTarget": "{player} hugs {target} warmly."
+    },
+    {
+      "command": "laugh",
+      "description": "Laugh out loud",
+      "firstPersonNoTarget": "You laugh out loud!",
+      "roomNoTarget": "{player} laughs out loud!",
+      "firstPersonWithTarget": "You laugh at {target}!",
+      "targetPerspective": "{player} laughs at you!",
+      "roomWithTarget": "{player} laughs at {target}!"
+    },
+    {
+      "command": "nod",
+      "description": "Nod in agreement",
+      "firstPersonNoTarget": "You nod.",
+      "roomNoTarget": "{player} nods.",
+      "firstPersonWithTarget": "You nod at {target}.",
+      "targetPerspective": "{player} nods at you.",
+      "roomWithTarget": "{player} nods at {target}."
+    },
+    {
+      "command": "poke",
+      "description": "Poke someone",
+      "firstPersonNoTarget": "You poke at the air.",
+      "roomNoTarget": "{player} pokes at the air.",
+      "firstPersonWithTarget": "You poke {target}.",
+      "targetPerspective": "{player} pokes you.",
+      "roomWithTarget": "{player} pokes {target}."
+    },
+    {
+      "command": "salute",
+      "description": "Salute smartly",
+      "firstPersonNoTarget": "You salute smartly.",
+      "roomNoTarget": "{player} salutes smartly.",
+      "firstPersonWithTarget": "You salute {target}.",
+      "targetPerspective": "{player} salutes you.",
+      "roomWithTarget": "{player} salutes {target}."
+    },
+    {
+      "command": "shrug",
+      "description": "Shrug your shoulders",
+      "firstPersonNoTarget": "You shrug.",
+      "roomNoTarget": "{player} shrugs.",
+      "firstPersonWithTarget": "You shrug at {target}.",
+      "targetPerspective": "{player} shrugs at you.",
+      "roomWithTarget": "{player} shrugs at {target}."
+    },
+    {
+      "command": "sigh",
+      "description": "Sigh heavily",
+      "firstPersonNoTarget": "You sigh.",
+      "roomNoTarget": "{player} sighs.",
+      "firstPersonWithTarget": "You sigh at {target}.",
+      "targetPerspective": "{player} sighs at you.",
+      "roomWithTarget": "{player} sighs at {target}."
+    },
+    {
+      "command": "slap",
+      "description": "You slap a fool!",
+      "firstPersonNoTarget": "You really want to slap someone...",
+      "roomNoTarget": "{player} wants to slap someone so badly.",
+      "firstPersonWithTarget": "You slap the taste out of {target}'s mouth!",
+      "targetPerspective": "{player} slaps the taste out yo mouth!",
+      "roomWithTarget": "{player} slaps the taste out of {target}'s mouth!"
+    },
+    {
+      "command": "smirk",
+      "description": "Smirk knowingly",
+      "firstPersonNoTarget": "You smirk knowingly.",
+      "roomNoTarget": "{player} smirks knowingly.",
+      "firstPersonWithTarget": "You smirk at {target}.",
+      "targetPerspective": "{player} smirks at you.",
+      "roomWithTarget": "{player} smirks at {target}."
+    },
+    {
+      "command": "wave",
+      "description": "Wave to others",
+      "firstPersonNoTarget": "You wave.",
+      "roomNoTarget": "{player} waves.",
+      "firstPersonWithTarget": "You wave at {target}.",
+      "targetPerspective": "{player} waves at you.",
+      "roomWithTarget": "{player} waves at {target}."
+    },
+    {
+      "command": "wink",
+      "description": "Wink playfully",
+      "firstPersonNoTarget": "You wink.",
+      "roomNoTarget": "{player} winks.",
+      "firstPersonWithTarget": "You wink at {target}.",
+      "targetPerspective": "{player} winks at you.",
+      "roomWithTarget": "{player} winks at {target}."
+    },
+    {
+      "command": "yawn",
+      "description": "Yawn sleepily",
+      "firstPersonNoTarget": "You yawn sleepily.",
+      "roomNoTarget": "{player} yawns sleepily.",
+      "firstPersonWithTarget": "You yawn at {target}.",
+      "targetPerspective": "{player} yawns at you.",
+      "roomWithTarget": "{player} yawns at {target}."
+    }
+  ]
+}

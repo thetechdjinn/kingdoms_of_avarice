@@ -1,0 +1,26 @@
+{
+  "version": "1.0",
+  "exported_at": "2026-03-15T13:33:32.879Z",
+  "type": "drop_tables",
+  "data": [
+    {
+      "name": "Sheriff Blackthorne's Drop Table",
+      "description": "Sheriff Blackthorne's drop table",
+      "entries": [
+        {
+          "dropChance": 50,
+          "minQuantity": 1,
+          "maxQuantity": 1,
+          "currencyMin": 350,
+          "currencyMax": 1250,
+          "allowedDenominations": [
+            "copper",
+            "silver",
+            "gold"
+          ],
+          "itemName": null
+        }
+      ]
+    }
+  ]
+}

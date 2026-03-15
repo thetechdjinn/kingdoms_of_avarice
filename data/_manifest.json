@@ -1,0 +1,30 @@
+{
+  "version": "1.0",
+  "exported_at": "2026-03-15T13:33:32.913Z",
+  "import_order": [
+    "global/spells.json",
+    "global/status_effects.json",
+    "global/actions.json",
+    "global/progression/classes.json",
+    "global/progression/races.json",
+    "global/progression/abilities.json",
+    "global/progression/talents.json",
+    "global/progression/game_events.json",
+    "global/progression/progression_table.json",
+    "global/progression/class_abilities.json",
+    "global/items.json",
+    "global/factions.json",
+    "global/drop_tables.json",
+    "areas/arindale/rooms.json",
+    "areas/arindale_sewer/rooms.json",
+    "areas/hearthstead/rooms.json",
+    "areas/hearthstead/npcs.json",
+    "areas/hearthstead_loop/rooms.json",
+    "areas/hearthstead_wilds/rooms.json",
+    "areas/sanctum_of_the_damned/rooms.json",
+    "areas/the_iridescent_menagerie/rooms.json",
+    "areas/the_thieves_guild/rooms.json",
+    "areas/warrens_of_filth/rooms.json"
+  ],
+  "warnings": []
+}
