@@ -538,6 +538,7 @@ export function markAsCorpse(npc: NpcCombatInstance): void {
   npc.behaviorState = 'idle';
   npc.combatState.targets.clear();
   npc.regenState.inCombat = false;
+  npc.activeEffects.clear();
   npc.corpseRemoveAt = Date.now() + (npc.template.corpseDuration * 1000);
 }
 
@@ -547,10 +548,16 @@ export function markAsCorpse(npc: NpcCombatInstance): void {
  */
 function processCorpseCleanup(): void {
   const now = Date.now();
-  for (const npc of npcInstances.values()) {
-    if (!npc.isCorpse) continue;
-    if (now < npc.corpseRemoveAt) continue;
 
+  // Collect expired corpses first, then remove (avoid mutating Map during iteration)
+  const expiredCorpses: NpcCombatInstance[] = [];
+  for (const npc of npcInstances.values()) {
+    if (npc.isCorpse && now >= npc.corpseRemoveAt) {
+      expiredCorpses.push(npc);
+    }
+  }
+
+  for (const npc of expiredCorpses) {
     const template = npc.template;
     removeFromRoomIndex(npc.entityId, npc.currentRoomId);
     npcInstances.delete(npc.entityId);
@@ -571,6 +578,10 @@ function processCorpseCleanup(): void {
  * Queue a respawn for a template.
  */
 export function queueRespawn(templateId: number, spawnRoomId: number, respawnTimeSeconds: number): void {
+  // Dedup: don't queue if this template already has a pending respawn
+  const alreadyQueued = respawnQueue.some(entry => entry.templateId === templateId);
+  if (alreadyQueued) return;
+
   respawnQueue.push({
     templateId,
     spawnRoomId,
@@ -739,11 +750,13 @@ function processNpcRegen(): void {
       npc.vitals.hp = Math.min(npc.vitals.hp + hpRegen, npc.vitals.maxHp);
     }
 
-    // Mana regen
-    if (npc.template.maxMana > 0 && npc.currentMana < npc.template.maxMana) {
+    // Mana regen — use vitals.resource as source of truth (spells deduct from it)
+    const currentMana = npc.vitals.resource ?? 0;
+    if (npc.template.maxMana > 0 && currentMana < npc.template.maxMana) {
       const manaRegen = Math.max(1, Math.ceil(npc.template.maxMana * NPC_MANA_REGEN_PERCENT / 100));
-      npc.currentMana = Math.min(npc.currentMana + manaRegen, npc.template.maxMana);
-      npc.vitals.resource = npc.currentMana;
+      const newMana = Math.min(currentMana + manaRegen, npc.template.maxMana);
+      npc.vitals.resource = newMana;
+      npc.currentMana = newMana;
     }
   }
 

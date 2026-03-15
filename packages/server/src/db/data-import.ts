@@ -638,6 +638,10 @@ async function processDeferredRoomExits(): Promise<void> {
       const importedDoorDirections = new Set<string>();
       for (const doorRaw of doors) {
         const door = doorRaw as Record<string, unknown>;
+        if (!door.entryDirection) {
+          result.errors.push(`Room "${tag}": door "${door.name}" missing entryDirection, skipping`);
+          continue;
+        }
         const entryDir = (door.entryDirection as string).toLowerCase();
         importedDoorDirections.add(entryDir);
         const exitTag = door.exitTag as string | null;
@@ -802,11 +806,17 @@ async function importNpcs(data: unknown[]): Promise<ImportResult> {
       let dropTableId: number | null = null;
       if (item.dropTableName) {
         dropTableId = dropTableNameToId.get((item.dropTableName as string).toLowerCase()) ?? null;
+        if (!dropTableId) {
+          result.errors.push(`NPC "${name}": drop table "${item.dropTableName}" not found, setting to null`);
+        }
       }
 
       let primaryFactionId: number | null = null;
       if (item.primaryFactionName) {
         primaryFactionId = factionNameToId.get((item.primaryFactionName as string).toLowerCase()) ?? null;
+        if (!primaryFactionId) {
+          result.errors.push(`NPC "${name}": faction "${item.primaryFactionName}" not found, setting to null`);
+        }
       }
 
       const templateInput: Record<string, unknown> = {
@@ -901,9 +911,15 @@ async function importNpcs(data: unknown[]): Promise<ImportResult> {
       });
 
       // Merchant inventory/responses (outside transaction — repos lack client param)
-      // Wrapped in try-catch per entry so failures don't leave wiped merchant data.
-      await merchantRepo.deleteAllInventoryForTemplate(npcId);
-      await merchantResponseRepo.deleteAllResponsesForTemplate(npcId);
+      // Only delete+recreate for merchant NPCs to avoid wiping data for non-merchants.
+      if (item.merchantEnabled) {
+        try {
+          await merchantRepo.deleteAllInventoryForTemplate(npcId);
+          await merchantResponseRepo.deleteAllResponsesForTemplate(npcId);
+        } catch (err) {
+          result.errors.push(`NPC "${name}": failed to clear merchant data: ${(err as Error).message}`);
+        }
+      }
 
       if (item.merchantEnabled) {
         const inventory = (item.merchantInventory as unknown[]) || [];

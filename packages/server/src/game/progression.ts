@@ -431,6 +431,9 @@ export async function performLevelUp(characterId: number): Promise<LevelUpResult
   progression.essence_earned_this_level = 0;
   progression.level = newLevel;
 
+  // Invalidate the DB-level progression cache so subsequent reads see the new level
+  progressionRepo.invalidateProgressionCache(characterId);
+
   // Reset activity tracker for diminishing returns
   const tracker = activityTrackers.get(characterId);
   if (tracker) {

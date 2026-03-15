@@ -5,7 +5,7 @@
  * Attack spells replace melee combat and persist until combat ends or mana runs out.
  */
 
-import { MessageType, Spell, SpellType, SpellTargetType } from '@koa/shared';
+import { MessageType, Spell, SpellType } from '@koa/shared';
 import { CommandResponse } from './commands.js';
 import { AuthenticatedSocket, broadcastToRoom, sendMessage, sendVitals } from './socket.js';
 import { getPlayerLocation } from './adminCommands.js';
@@ -101,11 +101,6 @@ export async function handleSpellCommand(
   // Check mana
   if ((socket.vitals.resource ?? 0) < spell.manaCost) {
     return { type: MessageType.ERROR, message: `You don't have enough mana to cast ${spell.name}. (Need ${spell.manaCost})` };
-  }
-
-  // Break stealth when casting any spell
-  if (isStealthing(socket)) {
-    breakStealth(socket, 'spell_cast', true);
   }
 
   // Handle different spell types
@@ -388,6 +383,7 @@ async function handleHealingSpell(
       `${socket.username} casts ${colors.cyan(spell.name.toLowerCase())} and is healed.`,
       socket.playerId
     );
+    sendVitals(socket);
     return {
       type: MessageType.OUTPUT,
       message: `You cast ${colors.cyan(spell.name.toLowerCase())} and heal for ${colors.green(actualHeal.toString())} HP!${combatBreakMsg}`,
@@ -435,19 +431,10 @@ async function handleBuffSpell(
     };
   }
 
-  // Deduct mana
-  socket.vitals.resource = (socket.vitals.resource ?? 0) - spell.manaCost;
-
-  // Combat break: non-offensive spells break combat
-  const hadCombatTargets = socket.combatState.targets.size > 0;
-  if (hadCombatTargets) {
-    breakCasterCombat(socket);
-  }
-
   // Calculate duration in milliseconds (effectDuration is in seconds)
   const durationMs = (spell.effectDuration ?? 60) * 1000;
 
-  // Apply the status effect
+  // Apply the status effect (check before deducting mana or breaking combat)
   const result = await applyEffect(socket, spell.statusEffect, durationMs, spell.id);
 
   if (!result.success) {
@@ -455,6 +442,15 @@ async function handleBuffSpell(
       type: MessageType.ERROR,
       message: result.message,
     };
+  }
+
+  // Deduct mana (only after successful effect application)
+  socket.vitals.resource = (socket.vitals.resource ?? 0) - spell.manaCost;
+
+  // Combat break: non-offensive spells break combat
+  const hadCombatTargets = socket.combatState.targets.size > 0;
+  if (hadCombatTargets) {
+    breakCasterCombat(socket);
   }
 
   // Start cooldown (buff spells are instant - call both modes)
@@ -592,7 +588,20 @@ async function handleDebuffSpell(
     };
   }
 
-  // Deduct mana
+  // Calculate duration in milliseconds (effectDuration is in seconds)
+  const durationMs = (spell.effectDuration ?? 60) * 1000;
+
+  // Apply the status effect to the target (check before deducting mana or setting combat flags)
+  const result = await applyEffect(target!, spell.statusEffect, durationMs, spell.id);
+
+  if (!result.success) {
+    return {
+      type: MessageType.ERROR,
+      message: result.message,
+    };
+  }
+
+  // Deduct mana (only after successful effect application)
   socket.vitals.resource = (socket.vitals.resource ?? 0) - spell.manaCost;
 
   // Combat break: non-offensive spells break combat
@@ -600,12 +609,6 @@ async function handleDebuffSpell(
   if (hadCombatTargets) {
     breakCasterCombat(socket);
   }
-
-  // Calculate duration in milliseconds (effectDuration is in seconds)
-  const durationMs = (spell.effectDuration ?? 60) * 1000;
-
-  // Apply the status effect to the target
-  const result = await applyEffect(target!, spell.statusEffect, durationMs, spell.id);
 
   // Set combat flags if this is an aggressive action
   socket.regenState.inCombat = true;
@@ -632,7 +635,8 @@ async function handleDebuffSpell(
   startCooldown(socket, spell.mnemonic, 'use');
   startCooldown(socket, spell.mnemonic, 'complete');
 
-  // Send updated vitals to target
+  // Send updated vitals to both caster and target
+  sendVitals(socket);
   sendVitals(target!);
 
   const combatBreakMsg = hadCombatTargets ? `\r\n${colors.yellow('*COMBAT BREAK* You must attack again to re-engage.')}` : '';
@@ -647,28 +651,15 @@ async function handleDebuffSpell(
  * Handle utility spell casting (placeholder)
  */
 async function handleUtilitySpell(
-  socket: AuthenticatedSocket,
+  _socket: AuthenticatedSocket,
   spell: Spell,
   _args: string[],
   _connectedPlayers: Map<number, AuthenticatedSocket>
 ): Promise<CommandResponse> {
-  // Deduct mana
-  socket.vitals.resource = (socket.vitals.resource ?? 0) - spell.manaCost;
-
-  // Start cooldown (utility spells are instant - call both modes)
-  startCooldown(socket, spell.mnemonic, 'use');
-  startCooldown(socket, spell.mnemonic, 'complete');
-
-  const currentRoomId = getPlayerLocation(socket.playerId);
-  broadcastToRoom(
-    currentRoomId,
-    `${socket.username} casts ${colors.cyan(spell.name.toLowerCase())}.`,
-    socket.playerId
-  );
-
+  // Utility effects not yet implemented — refuse to cast rather than consume mana
   return {
-    type: MessageType.OUTPUT,
-    message: `You cast ${colors.cyan(spell.name.toLowerCase())}. (Utility effects not yet implemented)`,
+    type: MessageType.ERROR,
+    message: `${spell.name} cannot be cast yet. (Utility effects not yet implemented)`,
   };
 }
 

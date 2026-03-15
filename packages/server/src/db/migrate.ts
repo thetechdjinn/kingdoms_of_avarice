@@ -299,31 +299,41 @@ export async function runMigrations(): Promise<void> {
 
       // Migrate item_instances location_id from players.id to characters.id
       // For items with location_type 'player' or 'equipped', update location_id
-      // to point to the player's first character instead of the player account
+      // to point to the player's first character instead of the player account.
+      // One-time migration: uses a flag to prevent re-running on subsequent startups,
+      // which would corrupt data due to player/character ID overlap.
+      const itemMigrationFlag = await client.query(
+        `SELECT 1 FROM game_settings WHERE key = 'item_location_migrated'`
+      );
+      if (itemMigrationFlag.rows.length === 0) {
+        // First, delete orphaned items belonging to players with no characters
+        // These items would become inaccessible after migration
+        await client.query(`
+          DELETE FROM item_instances ii
+          WHERE ii.location_type IN ('player', 'equipped')
+            AND EXISTS (SELECT 1 FROM players p WHERE p.id = ii.location_id)
+            AND NOT EXISTS (SELECT 1 FROM characters c WHERE c.player_id = ii.location_id)
+        `);
 
-      // First, delete orphaned items belonging to players with no characters
-      // These items would become inaccessible after migration
-      await client.query(`
-        DELETE FROM item_instances ii
-        WHERE ii.location_type IN ('player', 'equipped')
-          AND EXISTS (SELECT 1 FROM players p WHERE p.id = ii.location_id)
-          AND NOT EXISTS (SELECT 1 FROM characters c WHERE c.player_id = ii.location_id)
-      `);
+        // Now migrate remaining items to the player's first character
+        await client.query(`
+          WITH player_first_char AS (
+            SELECT DISTINCT ON (player_id) player_id, id AS character_id
+            FROM characters
+            ORDER BY player_id, id
+          )
+          UPDATE item_instances ii
+          SET location_id = pfc.character_id
+          FROM player_first_char pfc
+          WHERE ii.location_type IN ('player', 'equipped')
+            AND ii.location_id = pfc.player_id
+            AND EXISTS (SELECT 1 FROM players p WHERE p.id = ii.location_id)
+        `);
 
-      // Now migrate remaining items to the player's first character
-      await client.query(`
-        WITH player_first_char AS (
-          SELECT DISTINCT ON (player_id) player_id, id AS character_id
-          FROM characters
-          ORDER BY player_id, id
-        )
-        UPDATE item_instances ii
-        SET location_id = pfc.character_id
-        FROM player_first_char pfc
-        WHERE ii.location_type IN ('player', 'equipped')
-          AND ii.location_id = pfc.player_id
-          AND EXISTS (SELECT 1 FROM players p WHERE p.id = ii.location_id)
-      `);
+        await client.query(
+          `INSERT INTO game_settings (key, value) VALUES ('item_location_migrated', 'true') ON CONFLICT (key) DO NOTHING`
+        );
+      }
 
       // Purge old classes and races to reseed with new MajorMUD data
       // Check if we need to reseed by looking for old-style class IDs
@@ -345,20 +355,13 @@ export async function runMigrations(): Promise<void> {
       // Weapon speeds should now be in the 800-2000 range (dagger ~900, greatsword ~1800).
 
       // Add missing door columns (for existing databases created before full door schema)
-      await client.query(`
-        ALTER TABLE doors ADD COLUMN IF NOT EXISTS auto_close_seconds INTEGER DEFAULT 120
-      `);
+      // Note: auto_close_seconds, auto_lock_seconds, and pick_difficulty are NOT re-added here
+      // because they are superseded by auto_reset_seconds and pick_difficulty_min/max below.
       await client.query(`
         ALTER TABLE doors ADD COLUMN IF NOT EXISTS has_lock BOOLEAN DEFAULT FALSE
       `);
       await client.query(`
         ALTER TABLE doors ADD COLUMN IF NOT EXISTS key_item_tag VARCHAR(100)
-      `);
-      await client.query(`
-        ALTER TABLE doors ADD COLUMN IF NOT EXISTS auto_lock_seconds INTEGER
-      `);
-      await client.query(`
-        ALTER TABLE doors ADD COLUMN IF NOT EXISTS pick_difficulty INTEGER DEFAULT 0
       `);
       await client.query(`
         ALTER TABLE doors ADD COLUMN IF NOT EXISTS bash_difficulty INTEGER DEFAULT 0
@@ -522,18 +525,25 @@ export async function runMigrations(): Promise<void> {
       await client.query(`
         ALTER TABLE doors ADD COLUMN IF NOT EXISTS auto_reset_seconds INTEGER DEFAULT 120
       `);
-      // Migrate data: prefer auto_lock_seconds (if set), else use auto_close_seconds
-      await client.query(`
-        UPDATE doors
-        SET auto_reset_seconds = COALESCE(auto_lock_seconds, auto_close_seconds)
-        WHERE auto_lock_seconds IS NOT NULL OR (auto_close_seconds IS NOT NULL AND auto_close_seconds != 120)
+      // Migrate data only if old columns still exist (first run only)
+      const hasAutoClose = await client.query(`
+        SELECT column_name FROM information_schema.columns
+        WHERE table_name = 'doors' AND column_name = 'auto_close_seconds'
       `);
-      await client.query(`
-        ALTER TABLE doors DROP COLUMN IF EXISTS auto_close_seconds
-      `);
-      await client.query(`
-        ALTER TABLE doors DROP COLUMN IF EXISTS auto_lock_seconds
-      `);
+      if (hasAutoClose.rows.length > 0) {
+        // Prefer auto_lock_seconds (if set), else use auto_close_seconds
+        await client.query(`
+          UPDATE doors
+          SET auto_reset_seconds = COALESCE(auto_lock_seconds, auto_close_seconds)
+          WHERE auto_lock_seconds IS NOT NULL OR (auto_close_seconds IS NOT NULL AND auto_close_seconds != 120)
+        `);
+        await client.query(`
+          ALTER TABLE doors DROP COLUMN IF EXISTS auto_close_seconds
+        `);
+        await client.query(`
+          ALTER TABLE doors DROP COLUMN IF EXISTS auto_lock_seconds
+        `);
+      }
 
       // Lockpicking System Phase 1: Migrate pick_difficulty to min/max range
       // First add the new columns
@@ -753,24 +763,25 @@ export async function runMigrations(): Promise<void> {
  * Uses a game_settings flag to ensure this only runs once.
  */
 export async function ensureCopperConversion(): Promise<void> {
-  const pool = getPool();
-  const flagResult = await pool.query(
-    `SELECT 1 FROM game_settings WHERE key = 'item_base_value_copper_migrated'`
-  );
-  if (flagResult.rows.length === 0) {
-    await withTransaction(async (client) => {
-      await client.query(`
-        UPDATE item_templates
-        SET base_value = base_value * 100
-        WHERE item_type != 'currency'
-          AND base_value > 0
-      `);
-      await client.query(
-        `INSERT INTO game_settings (key, value) VALUES ('item_base_value_copper_migrated', 'true') ON CONFLICT (key) DO NOTHING`
-      );
-    });
+  await withTransaction(async (client) => {
+    // Check flag inside the transaction to prevent race conditions
+    // (two concurrent startups both seeing no flag and double-multiplying values)
+    const flagResult = await client.query(
+      `SELECT 1 FROM game_settings WHERE key = 'item_base_value_copper_migrated'`
+    );
+    if (flagResult.rows.length > 0) return;
+
+    await client.query(`
+      UPDATE item_templates
+      SET base_value = base_value * 100
+      WHERE item_type != 'currency'
+        AND base_value > 0
+    `);
+    await client.query(
+      `INSERT INTO game_settings (key, value) VALUES ('item_base_value_copper_migrated', 'true') ON CONFLICT (key) DO NOTHING`
+    );
     console.log('Item base_value copper conversion completed');
-  }
+  });
 }
 
 /**

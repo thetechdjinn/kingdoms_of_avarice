@@ -837,8 +837,8 @@ function handleLookAtNpc(npc: import('./npcManager.js').NpcCombatInstance): Comm
   }
   lines.push(`${withNpcNameCapitalized(npc.entityName, npc.isProperName)} ${hpStatus}`);
 
-  // Hostile indicator
-  if (npc.template.hostile) {
+  // Hostile indicator (skip for corpse NPCs)
+  if (npc.template.hostile && !npc.isCorpse && npc.vitals.hp > 0) {
     lines.push(colors.red(`${withNpcNameThe(npc.entityName, npc.isProperName)} looks hostile.`));
   }
 
