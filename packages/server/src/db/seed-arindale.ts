@@ -34,6 +34,7 @@ import { getWarrens } from './warrens/warrens.js';
 import { getThievesGuild } from './thieves-guild/thieves-guild.js';
 import { getIridescentMenagerie } from './menagerie/menagerie.js';
 import { getSanctumOfTheDamned } from './sanctum/sanctum.js';
+import { getHearthstead } from './hearthstead/hearthstead.js';
 
 // ── Collect all data ─────────────────────────────────────────────────
 
@@ -63,6 +64,7 @@ function collectAll(): { rooms: RoomDef[]; exits: ExitDef[]; doors: DoorDef[] } 
     getThievesGuild(),
     getIridescentMenagerie(),
     getSanctumOfTheDamned(),
+    getHearthstead(),
   ];
 
   const rooms = [...grid.rooms];
@@ -133,6 +135,7 @@ function validate(rooms: RoomDef[], exits: ExitDef[], doors: DoorDef[]): void {
   // Bidirectional exit check (every A→dir→B should have B→reverse→A)
   const REVERSE: Record<Direction, Direction> = {
     north: 'south', south: 'north', east: 'west', west: 'east', up: 'down', down: 'up',
+    northeast: 'southwest', southwest: 'northeast', northwest: 'southeast', southeast: 'northwest',
   };
   const exitSet = new Set(exits.map(e => `${e.fromTag}:${e.direction}:${e.toTag}`));
   const missingReverse: string[] = [];
@@ -149,8 +152,8 @@ function validate(rooms: RoomDef[], exits: ExitDef[], doors: DoorDef[]): void {
   }
 
   // Room count in expected range
-  if (rooms.length < 200 || rooms.length > 700) {
-    console.warn(`  WARNING: Room count ${rooms.length} outside expected range (200-700)`);
+  if (rooms.length < 200 || rooms.length > 800) {
+    console.warn(`  WARNING: Room count ${rooms.length} outside expected range (200-800)`);
   } else {
     console.log(`  Room count: ${rooms.length} (OK)`);
   }

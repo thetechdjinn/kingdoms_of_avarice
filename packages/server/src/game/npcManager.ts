@@ -61,6 +61,9 @@ export interface NpcCombatInstance extends CombatEntity {
   // Phase B: Spell AI runtime fields
   spellCooldowns: Map<number, number>;  // spellId → rounds remaining
   combatRoundCount: number;             // rounds in current combat engagement
+  // Corpse state
+  isCorpse: boolean;              // true if this NPC is a corpse awaiting cleanup
+  corpseRemoveAt: number;         // Date.now() timestamp for corpse removal
 }
 
 interface RespawnEntry {
@@ -250,6 +253,8 @@ function createNpcCombatEntity(
     nextRoamAt: Date.now() + (template.roamInterval * 1000),
     spellCooldowns: new Map(),
     combatRoundCount: 0,
+    isCorpse: false,
+    corpseRemoveAt: 0,
   };
 }
 
@@ -288,10 +293,24 @@ export async function initializeNpcManager(): Promise<void> {
 
   // Load existing instances from DB
   const instances = await npcRepo.getAllInstances();
+  const deadInstanceTemplateIds: number[] = [];
   for (const inst of instances) {
     const template = npcTemplates.get(inst.npc_id);
     if (!template) {
       console.warn(`[NPC Manager] Instance ${inst.id} references unknown template ${inst.npc_id}, skipping`);
+      continue;
+    }
+
+    // Dead instances (corpses from before restart) should be cleaned up, not loaded.
+    // Corpse state is in-memory only, so these would load as broken 0-HP NPCs.
+    if (inst.current_health <= 0) {
+      deadInstanceTemplateIds.push(inst.npc_id);
+      npcRepo.deleteInstance(inst.id).catch(error => {
+        console.error(`[NPC Manager] Failed to delete dead instance ${inst.id}:`, error);
+      });
+      if (template.respawnTime && template.respawnTime > 0 && template.spawnRoomId) {
+        queueRespawn(template.id, template.spawnRoomId, template.respawnTime);
+      }
       continue;
     }
 
@@ -308,12 +327,16 @@ export async function initializeNpcManager(): Promise<void> {
     addToRoomIndex(npc.entityId, npc.currentRoomId);
   }
 
-  // If no instances exist but templates have spawn rooms, spawn one of each
-  if (instances.length === 0) {
-    for (const template of templates) {
-      if (template.spawnRoomId) {
-        await spawnNpcFromTemplate(template, template.spawnRoomId);
-      }
+  // Spawn instances for any templates that have a spawn room but no live instance
+  // (also covers templates whose only instance was a dead corpse cleaned up above)
+  const templatesWithInstances = new Set(
+    instances
+      .filter(i => i.current_health > 0)
+      .map(i => i.npc_id)
+  );
+  for (const template of templates) {
+    if (template.spawnRoomId && !templatesWithInstances.has(template.id)) {
+      await spawnNpcFromTemplate(template, template.spawnRoomId);
     }
   }
 
@@ -385,8 +408,11 @@ async function spawnNpcFromTemplate(
 
 /**
  * Process the respawn queue — spawn NPCs whose timer has expired.
+ * Also cleans up expired corpses.
  */
 async function processRespawnQueue(): Promise<void> {
+  processCorpseCleanup();
+
   const now = Date.now();
   const toSpawn: RespawnEntry[] = [];
 
@@ -505,6 +531,44 @@ export function removeNpcInstance(entityId: number): void {
 }
 
 /**
+ * Mark an NPC instance as a corpse. It stays in the room for display
+ * but does not act, aggro, or roam. Scheduled for removal after corpseDuration.
+ */
+export function markAsCorpse(npc: NpcCombatInstance): void {
+  npc.isCorpse = true;
+  npc.behaviorState = 'idle';
+  npc.combatState.targets.clear();
+  npc.regenState.inCombat = false;
+  npc.corpseRemoveAt = Date.now() + (npc.template.corpseDuration * 1000);
+}
+
+/**
+ * Process corpse cleanup — remove corpses whose duration has expired.
+ * Called on the same timer as the respawn queue.
+ */
+function processCorpseCleanup(): void {
+  const now = Date.now();
+  for (const npc of npcInstances.values()) {
+    if (!npc.isCorpse) continue;
+    if (now < npc.corpseRemoveAt) continue;
+
+    const template = npc.template;
+    removeFromRoomIndex(npc.entityId, npc.currentRoomId);
+    npcInstances.delete(npc.entityId);
+
+    // Delete from DB
+    npcRepo.deleteInstance(npc.dbInstanceId).catch(error => {
+      console.error(`[NPC Manager] Failed to delete corpse instance ${npc.dbInstanceId} (${template.name}):`, error);
+    });
+
+    // Queue respawn now that corpse is gone
+    if (template.respawnTime && template.respawnTime > 0 && template.spawnRoomId) {
+      queueRespawn(template.id, template.spawnRoomId, template.respawnTime);
+    }
+  }
+}
+
+/**
  * Queue a respawn for a template.
  */
 export function queueRespawn(templateId: number, spawnRoomId: number, respawnTimeSeconds: number): void {
@@ -519,14 +583,15 @@ export function queueRespawn(templateId: number, spawnRoomId: number, respawnTim
  * Save all live instances to DB for persistence.
  */
 export async function saveAllInstances(): Promise<void> {
-  const instances = Array.from(npcInstances.values()).map(npc => ({
-    id: npc.dbInstanceId,
-    npcId: npc.templateId,
-    currentRoomId: npc.currentRoomId,
-    currentHealth: npc.vitals.hp,
-    currentMana: npc.currentMana,
-    augmentation: npc.augmentation,
-  }));
+  const instances = Array.from(npcInstances.values())
+    .map(npc => ({
+      id: npc.dbInstanceId,
+      npcId: npc.templateId,
+      currentRoomId: npc.currentRoomId,
+      currentHealth: npc.isCorpse ? 0 : npc.vitals.hp, // Save corpses with 0 HP so startup detects them as dead
+      currentMana: npc.currentMana,
+      augmentation: npc.augmentation,
+    }));
 
   if (instances.length === 0) return;
 
@@ -709,6 +774,21 @@ export async function reloadNpcTemplates(): Promise<number> {
     if (updatedTemplate) {
       npc.template = updatedTemplate;
     }
+  }
+
+  // Spawn instances for any new templates that have a spawn room but no live instance
+  const templatesWithInstances = new Set(
+    Array.from(npcInstances.values()).map(npc => npc.templateId)
+  );
+  let spawned = 0;
+  for (const template of templates) {
+    if (template.spawnRoomId && !templatesWithInstances.has(template.id)) {
+      await spawnNpcFromTemplate(template, template.spawnRoomId);
+      spawned++;
+    }
+  }
+  if (spawned > 0) {
+    console.log(`[NPC Manager] Spawned ${spawned} new NPC(s) from reload`);
   }
 
   return templates.length;

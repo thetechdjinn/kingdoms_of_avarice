@@ -1291,13 +1291,9 @@ async function handleLearn(
   args: string[],
   socket: AuthenticatedSocket
 ): Promise<CommandResponse> {
-  // @learn <mnemonic> - Learn a spell for your current character
+  // @learn <mnemonic> [player] - Learn a spell for yourself or another player
   if (args.length < 1) {
-    return { type: MessageType.ERROR, message: 'Usage: @learn <mnemonic>' };
-  }
-
-  if (!socket.characterId) {
-    return { type: MessageType.ERROR, message: 'No character selected.' };
+    return { type: MessageType.ERROR, message: 'Usage: @learn <mnemonic> [player]' };
   }
 
   const mnemonic = args[0].toLowerCase();
@@ -1307,14 +1303,41 @@ async function handleLearn(
     return { type: MessageType.ERROR, message: `Unknown spell mnemonic: ${mnemonic}` };
   }
 
+  // Resolve target: self or named player
+  let targetSocket: AuthenticatedSocket = socket;
+  let targetName = socket.username;
+
+  if (args.length >= 2) {
+    const playerName = args.slice(1).join(' ').toLowerCase();
+    let found = false;
+    for (const [, playerSocket] of connectedPlayers) {
+      if (playerSocket.username.toLowerCase() === playerName) {
+        targetSocket = playerSocket;
+        targetName = playerSocket.username;
+        found = true;
+        break;
+      }
+    }
+    if (!found) {
+      return { type: MessageType.ERROR, message: `Player not found: ${args.slice(1).join(' ')}` };
+    }
+  }
+
+  if (!targetSocket.characterId) {
+    return { type: MessageType.ERROR, message: args.length >= 2 ? `${targetName} has no character selected.` : 'No character selected.' };
+  }
+
   // Check if already learned
-  const hasSpell = await spellRepo.hasSpell(socket.characterId, spell.id);
+  const hasSpell = await spellRepo.hasSpell(targetSocket.characterId, spell.id);
   if (hasSpell) {
-    return { type: MessageType.SYSTEM, message: `You already know ${colors.cyan(spell.name)}.` };
+    if (targetSocket === socket) {
+      return { type: MessageType.SYSTEM, message: `You already know ${colors.cyan(spell.name)}.` };
+    }
+    return { type: MessageType.SYSTEM, message: `${targetName} already knows ${colors.cyan(spell.name)}.` };
   }
 
   // Get character info for class check
-  const character = await characterRepo.findCharacterById(socket.characterId);
+  const character = await characterRepo.findCharacterById(targetSocket.characterId);
   if (!character) {
     return { type: MessageType.ERROR, message: 'Character not found.' };
   }
@@ -1333,15 +1356,23 @@ async function handleLearn(
   }
 
   // Learn the spell
-  const result = await spellRepo.learnSpell(socket.characterId, spell.id);
+  const result = await spellRepo.learnSpell(targetSocket.characterId, spell.id);
   if (!result) {
     return { type: MessageType.ERROR, message: 'Failed to learn spell.' };
   }
 
-  return {
-    type: MessageType.SYSTEM,
-    message: `${colors.boldGreen('Learned:')} ${colors.cyan(spell.name)} (${colors.white(spell.mnemonic)}) - ${spell.manaCost} mana`,
-  };
+  const learnedMsg = `${colors.boldGreen('Learned:')} ${colors.cyan(spell.name)} (${colors.white(spell.mnemonic)}) - ${spell.manaCost} mana`;
+
+  // If teaching another player, notify them too
+  if (targetSocket !== socket) {
+    sendMessage(targetSocket, MessageType.SYSTEM, learnedMsg);
+    return {
+      type: MessageType.SYSTEM,
+      message: `Taught ${colors.cyan(spell.name)} to ${colors.boldWhite(targetName)}.`,
+    };
+  }
+
+  return { type: MessageType.SYSTEM, message: learnedMsg };
 }
 
 async function handleListSpells(): Promise<CommandResponse> {
@@ -1860,7 +1891,7 @@ function handleAdminHelp(userRoles: Role[]): CommandResponse {
   lines.push(`  ${colors.boldCyan('@revive <player>')}        - Revive a dead/dropped player`);
   lines.push(`  ${colors.boldCyan('@teleport <player> <room>')} - Teleport player to a room`);
   lines.push(`  ${colors.boldCyan('@spells')}                 - List all spells in the game`);
-  lines.push(`  ${colors.boldCyan('@learn <mnemonic>')}       - Learn a spell for your character`);
+  lines.push(`  ${colors.boldCyan('@learn <mnemonic> [player]')} - Learn a spell (self or player)`);
   lines.push(`  ${colors.boldCyan('@effect <id> [duration] [player]')} - Apply effect (default 60s, self)`);
   lines.push(`  ${colors.boldCyan('@cleareffect <id|all>')}  - Remove a status effect`);
   lines.push(`  ${colors.boldCyan('@effects')}                - List available effects`);

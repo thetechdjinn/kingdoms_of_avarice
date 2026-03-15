@@ -1,6 +1,7 @@
 import pg from 'pg';
 import { query } from '../index.js';
 import { Character, CharacterStats, Gender, Currency } from '@koa/shared';
+import { getClassById } from './progressionRepository.js';
 
 export interface DbCharacter {
   id: number;
@@ -63,17 +64,21 @@ function calculateInitialHealth(constitution: number, characterClass: string): n
   return (baseHealth[characterClass.toLowerCase()] || 20) + constitution * 2;
 }
 
-function calculateInitialMana(intelligence: number, wisdom: number, characterClass: string): number {
+function calculateInitialMana(intelligence: number, wisdom: number, characterClass: string, resourceType: string): number {
+  // Classes with no resource type get 0 mana
+  if (!resourceType || resourceType === 'none') {
+    return 0;
+  }
+
   const baseMana: Record<string, number> = {
     mage: 30,
     cleric: 20,
     paladin: 15,
     ranger: 10,
-    warrior: 0,
     thief: 5,
   };
   const normalized = characterClass.toLowerCase();
-  const base = baseMana[normalized] || 0;
+  const base = baseMana[normalized] || 10;
   // Clerics and Paladins scale with wisdom, others with intelligence
   if (normalized === 'cleric' || normalized === 'paladin') {
     return base + wisdom;
@@ -83,7 +88,9 @@ function calculateInitialMana(intelligence: number, wisdom: number, characterCla
 
 export async function createCharacter(input: CreateCharacterInput, client?: pg.PoolClient): Promise<DbCharacter> {
   const maxHealth = calculateInitialHealth(input.stats.constitution, input.characterClass);
-  const maxMana = calculateInitialMana(input.stats.intelligence, input.stats.wisdom, input.characterClass);
+  const classDef = await getClassById(input.characterClass);
+  const resourceType = classDef?.resource_type ?? 'none';
+  const maxMana = calculateInitialMana(input.stats.intelligence, input.stats.wisdom, input.characterClass, resourceType);
 
   const result = await query<DbCharacter>(
     `INSERT INTO characters (

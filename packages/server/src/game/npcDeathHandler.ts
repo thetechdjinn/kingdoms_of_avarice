@@ -9,7 +9,7 @@ import type { CurrencyDenomination } from '@koa/shared';
 import type { CombatEntity } from './combatEntity.js';
 import { isPlayerEntity } from './combatEntity.js';
 import type { NpcCombatInstance } from './npcManager.js';
-import { removeNpcInstance, queueRespawn } from './npcManager.js';
+import { removeNpcInstance, queueRespawn, markAsCorpse } from './npcManager.js';
 import { sendCombatMessage, broadcastCombatToRoom } from './combatMessaging.js';
 import { colors } from '../utils/colors.js';
 import { awardEssence } from './progression.js';
@@ -79,12 +79,17 @@ export async function processNpcDeath(
     deferredRewards.push(() => checkKillTrigger(npc.templateId, questParticipants));
   }
 
-  // Despawn the NPC instance
-  removeNpcInstance(npc.entityId);
+  // Despawn or leave corpse
+  if (template.leaveCorpse) {
+    // Corpse stays in room; respawn is queued when corpse expires (processCorpseCleanup)
+    markAsCorpse(npc);
+  } else {
+    removeNpcInstance(npc.entityId);
 
-  // Queue respawn if template has a respawn time
-  if (template.respawnTime && template.respawnTime > 0 && template.spawnRoomId) {
-    queueRespawn(template.id, template.spawnRoomId, template.respawnTime);
+    // Queue respawn if template has a respawn time
+    if (template.respawnTime && template.respawnTime > 0 && template.spawnRoomId) {
+      queueRespawn(template.id, template.spawnRoomId, template.respawnTime);
+    }
   }
 }
 

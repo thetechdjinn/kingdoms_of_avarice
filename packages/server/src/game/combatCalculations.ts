@@ -526,8 +526,8 @@ export function calculateDamage(
     damage = minDamage + Math.floor(Math.random() * (range + 1));
   }
 
-  // Apply damage reduction
-  damage = damage - damageReduction;
+  // Apply damage reduction (always round down to whole number)
+  damage = damage - Math.floor(damageReduction);
 
   // Minimum 1 damage on a hit
   return Math.max(1, damage);

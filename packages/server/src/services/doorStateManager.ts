@@ -928,11 +928,19 @@ export function checkDoorPermissions(
   character: PermissionCheckCharacter,
   hasRequiredItem: boolean = true
 ): PermissionCheckResult {
-  // Check level requirement
+  // Check minimum level requirement
   if (door.requiredLevel !== null && character.level < door.requiredLevel) {
     const message =
       door.denialMessage ||
       `You must be at least level ${door.requiredLevel} to use this passage.`;
+    return { allowed: false, reason: message };
+  }
+
+  // Check maximum level requirement
+  if (door.maxLevel !== null && character.level > door.maxLevel) {
+    const message =
+      door.denialMessage ||
+      `You must be level ${door.maxLevel} or below to use this passage.`;
     return { allowed: false, reason: message };
   }
 
@@ -972,6 +980,7 @@ export function checkDoorPermissions(
 export function doorHasPermissionRequirements(door: Door): boolean {
   return (
     door.requiredLevel !== null ||
+    door.maxLevel !== null ||
     (door.requiredClasses !== null && door.requiredClasses.length > 0) ||
     door.requiredQuestFlag !== null ||
     door.requiredItemTag !== null

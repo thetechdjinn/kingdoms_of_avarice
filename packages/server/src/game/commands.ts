@@ -1,4 +1,4 @@
-import { MessageType, GameMessage, Role, hasAnyRole, StatusEffectCategory, DoorType, DoorState, Door } from '@koa/shared';
+import { MessageType, GameMessage, Role, hasAnyRole, StatusEffectCategory, DoorType, DoorState, Door, ResourceType } from '@koa/shared';
 import { getActiveEffectsDisplay, formatDuration } from './statusEffects.js';
 import { getDelayModifierDescriptions, getStatusEffectDelayMultiplier } from './delayModifiers.js';
 import { getPlayerQueueStatus } from './tickProcessor.js';
@@ -611,12 +611,16 @@ function getOtherPlayersInRoom(
 }
 
 // Get display names of NPCs in a room (for "Also here:" line)
-// Returns pre-colored names: hostile NPCs in red, non-hostile in blue
+// Returns pre-colored names: hostile NPCs in red, non-hostile in blue, corpses in gray
 function getNpcDisplayNames(roomId: number): string[] {
   const npcs = getNpcsInRoom(roomId);
   const names: string[] = [];
   for (const npc of npcs) {
-    if (npc.vitals.hp <= 0) continue; // Skip dead NPCs
+    if (npc.isCorpse) {
+      names.push(colors.gray(`corpse of ${npc.entityName}`));
+      continue;
+    }
+    if (npc.vitals.hp <= 0) continue; // Skip dead NPCs without corpse flag
     const name = npc.template.hostile
       ? colors.hostileInRoom(npc.entityName)
       : colors.npcInRoom(npc.entityName);
@@ -2192,9 +2196,9 @@ async function handleDirectedSpeech(
     };
   }
 
-  // Check NPCs in room
+  // Check NPCs in room (skip dead/corpse NPCs)
   const npcTarget = findNpcInRoom(targetName, roomId);
-  if (npcTarget) {
+  if (npcTarget && npcTarget.vitals.hp > 0 && !npcTarget.isCorpse) {
     // Broadcast to room
     for (const [playerId, playerSocket] of connectedPlayers) {
       if (playerId !== socket.playerId && getPlayerLocation(playerId) === roomId) {
@@ -2726,11 +2730,9 @@ async function handleStatus(socket: AuthenticatedSocket): Promise<CommandRespons
 
   // Get actual armor stats from equipped items
   const equipmentStats = await getEquipmentCombatStats(socket.characterId);
-  const ac = equipmentStats.armor.totalArmorClass;
-  const dr = equipmentStats.armor.damageReduction;
-  // Format damage resistance: show as integer if whole number, otherwise show decimal
-  const drDisplay = Number.isInteger(dr) ? dr.toString() : dr.toFixed(1);
-  const armourClass = `${ac}/${drDisplay}`;
+  const ac = Math.floor(equipmentStats.armor.totalArmorClass);
+  const dr = Math.floor(equipmentStats.armor.damageReduction);
+  const armourClass = `${ac}/${dr}`;
 
   // Row 1: Name (spans col1+col2+gap) | Lives/CP
   // Add extra GAP to match the space that would be between col1 and col2 in other rows
@@ -2761,9 +2763,11 @@ async function handleStatus(socket: AuthenticatedSocket): Promise<CommandRespons
     cellRight('Pickpocket:', pickpocket.toString(), COL3)
   );
 
-  // Row 5: Mana | (empty) | Traps
+  // Row 5: Mana/Kai (if applicable) | (empty) | Traps
+  const hasResource = socket.vitals.resourceType !== ResourceType.NONE;
+  const resourceLabel = socket.vitals.resourceType === ResourceType.KAI ? 'Kai:' : 'Mana:';
   lines.push(
-    cellRight('Mana:', `${resource}/${maxResource}`, COL1) +
+    (hasResource ? cellRight(resourceLabel, `${resource}/${maxResource}`, COL1) : empty(COL1)) +
     empty(COL2) +
     cellRight('Traps:', traps.toString(), COL3)
   );

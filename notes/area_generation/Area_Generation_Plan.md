@@ -24,15 +24,10 @@ Build an AI-assisted tool for generating complete game areas — rooms, NPCs, it
 
 ### What Exists Today
 
-**Seed Data (hardcoded in migrate.ts and SQL files):**
-- 7 rooms in the "Silverton" area (Town Square, North Road, Merchant District, etc.)
-- 1 hostile NPC: serpentine warrior (City Gates)
-- 1 merchant NPC: Goran (Merchant District)
-- Items via `seed_items.sql`
-- Spells via `seed_spells.sql`
-- Actions via `seed_actions.sql`
-- 2 factions: Silverton Merchants Guild, Silverton City Guard
-- 1 drop table: serpentine warrior loot
+**Game Data (managed via npm run data:export / data:import):**
+- All rooms, NPCs, items, spells, actions, factions, drop tables, doors, etc.
+- Legacy hardcoded seed functions have been removed from migrate.ts
+- Infrastructure data (game_settings, currency templates, roles) is still seeded in migrations
 
 **Import/Export Already Supported:**
 
@@ -99,7 +94,7 @@ The designer provides a short creative brief. This should be low-effort — a pa
 | **Layout Ideas** | How rooms should connect | "Branching paths from a central clearing" |
 | **NPC Ideas** | Specific creatures or characters | "Undead, corrupted wildlife, one hermit merchant" |
 | **Special Features** | Training rooms, banks, locked areas | "Locked passage to the shrine" |
-| **Connection Points** | How this area links to existing areas | "Connects to Silverton's City Gates" |
+| **Connection Points** | How this area links to existing areas | "Connects to Arindale's City Gates" |
 | **Lore Notes** | Backstory the AI should weave in | "Cursed 100 years ago by a banished necromancer" |
 
 The less the designer provides, the more the AI proposes. A designer who just says "dark forest, level 8-15, 20 rooms" gets a full slate of AI suggestions. A designer who provides detailed landmark descriptions gets proposals that respect those specifics.
@@ -435,10 +430,133 @@ These tables should be refined as the game matures and can be provided as part o
 **ASCII Map Conformance (ABSOLUTE RULE):**
 - The ASCII map in `areas/<area_name>/plan.md` is the authoritative source of truth for every area's room layout
 - Seed data MUST exactly match the ASCII map: same room count, same connections, same labeled room types
-- Every node in the ASCII map (labeled or `*`) becomes exactly one room. Every `---` or `|` connector becomes a bidirectional exit pair
+- Every node in the ASCII map (labeled or `*`) becomes exactly one room. Every connector becomes a bidirectional exit pair
 - After any change to seed data, re-verify against the ASCII map. If the map needs to change, update the map FIRST, then update the seed
 - When building a new area seed, always parse or trace the ASCII map first — count every room and every connection before writing code
 - This rule is non-negotiable. No rooms may be added, removed, or reconnected without updating the ASCII map first
+
+---
+
+## Creating and Validating Euclidean ASCII Maps
+
+All area maps MUST be Euclidean (spatially consistent on a 2D grid) unless explicitly marked otherwise. This section defines the format rules, the coordinate system, and how to validate a map before committing it.
+
+### Map Format Rules
+
+**Rooms:**
+- Every room is exactly 1 character: `*` (generic) or a single uppercase letter (labeled/special)
+- No multi-character room labels (`[SP]`, `$a1`, `*4` are all WRONG)
+- No inline direction text (`ne`, `sw`, `north` are NOT connectors — never place them in the map)
+
+**Connectors (the ONLY valid path characters):**
+
+| Connector | Direction | Grid Delta (col, row) | Example |
+|-----------|-----------|----------------------|---------|
+| `---` | E/W | col ±4, row 0 | `*---*` |
+| `\|` | N/S | col 0, row ±2 | `*` / `\|` / `*` |
+| `/` | NE/SW | col ±2, row ∓2 | lower-left to upper-right |
+| `\` | NW/SE | col ∓2, row ∓2 | upper-left to lower-right |
+
+**Structure:**
+- Room lines and connector lines alternate (rooms never on adjacent text lines)
+- Every connector must link exactly two rooms (no dangling paths)
+- A legend at the top explains what each letter code means
+- Reference points outside the area (e.g., `[Arindale]`) may use brackets but are NOT rooms
+
+### Coordinate System
+
+Each room occupies a position on a 2D grid. Connectors encode direction:
+
+```
+              North (|, row decreases)
+                 ^
+                 |
+West (---)  <--- * ---> East (---)
+                 |
+                 v
+              South (|, row increases)
+
+    NW (\)                   NE (/)
+        upper-left       upper-right
+
+    SW (/)                   SE (\)
+        lower-left       lower-right
+```
+
+**Grid unit mapping from ASCII character positions:**
+- `---` spans ~4 columns horizontally = 1 grid unit E or W
+- `|` spans ~2 rows vertically = 1 grid unit N or S
+- `/` and `\` span ~2 columns and ~2 rows = 1 grid unit diagonally
+
+### How to Draw a Euclidean Map
+
+**Step 1: Plan the layout on a grid.** Before drawing ASCII, sketch rooms on graph paper or a grid with (x, y) coordinates. Every room gets a unique coordinate. Verify that no two rooms share a position.
+
+**Step 2: Assign compass directions to connections.** For each pair of connected rooms, the direction is determined by the coordinate delta:
+
+| Delta | Direction | Connector |
+|-------|-----------|-----------|
+| (+1, 0) | East | `---` |
+| (-1, 0) | West | `---` |
+| (0, +1) | North | `\|` |
+| (0, -1) | South | `\|` |
+| (+1, +1) | Northeast | `/` |
+| (-1, -1) | Southwest | `/` |
+| (-1, +1) | Northwest | `\` |
+| (+1, -1) | Southeast | `\` |
+
+**Step 3: Convert grid to ASCII.** Map grid coordinates to character positions:
+- x=0 → col 0, each +1 x → +4 columns (for `---` spacing) or +2 columns (for diagonal spacing)
+- y=0 → bottom row, each +1 y → -2 rows (north = up in text)
+
+**Step 4: Validate.** See validation procedure below.
+
+### How to Validate a Euclidean Map
+
+After drawing or modifying a map, perform this validation to catch spatial conflicts:
+
+**1. Count rooms.** Scan every line for single-character room markers (`*` or letters). Sum them. This is the authoritative room count.
+
+**2. Count connections.** Count every `---`, `|`, `/`, and `\` that sits between two rooms. Each connector = one bidirectional exit pair.
+
+**3. Assign coordinates via BFS.** Pick any room as the origin (0, 0). For each connector, compute the neighbor's coordinate using the delta table above. If a room is reached by two different paths, both paths MUST produce the same coordinate. If they don't, the map has a spatial conflict.
+
+**4. Check for overlaps.** No two rooms may occupy the same grid coordinate. If they do, one room must be moved.
+
+**5. Verify loops close.** For any loop in the map, trace the full path back to the starting room. The coordinate deltas must sum to (0, 0). If they don't, the loop is non-Euclidean and must be redrawn.
+
+**Quick loop-closure check:** Sum all direction vectors around the loop. Example for a 4-room square:
+```
+E(+1,0) + S(0,-1) + W(-1,0) + N(0,+1) = (0, 0) ✓  Loop closes.
+```
+
+If the sum is not (0, 0), the loop cannot be drawn on a Euclidean grid. Adjust directions until it balances.
+
+### Common Mistakes
+
+| Mistake | Why it's wrong | Fix |
+|---------|---------------|-----|
+| Multi-char room labels: `[SP]`, `$a1` | Parser expects single chars | Use `S`, `*`, or a letter |
+| Inline direction text: `--ne--` | Not a valid connector | Use `/` for NE |
+| Non-Euclidean loops | Two paths to same room give different coords | Redraw loop so direction vectors sum to (0,0) |
+| Rooms on adjacent text lines | No connector line between them | Alternate room lines and connector lines |
+| Connector to nothing | Dangling `/` or `\|` with no room at one end | Every connector must touch two rooms |
+| Direction labels in map art | `north`, `sw` etc. as text between rooms | Connectors encode direction; no text needed |
+
+### Reference: Arindale Sewer Map
+
+The sewer map (`areas/arindale_sewer/plan.md`) is the canonical example of a well-formed Euclidean ASCII map:
+- 169 rooms, all cardinal directions (no diagonals)
+- Single-char rooms, `---` and `|` connectors only
+- Compact legend with letter codes
+- Parsed by `parse-map.ts` into structured data
+
+### Reference: Hearthstead Map
+
+The Hearthstead map (`areas/hearthstead/plan.md`) is the canonical example of a Euclidean map using all 8 compass directions including diagonals:
+- 43 rooms with a 25-room loop surrounding a 12-room hamlet
+- Uses all four connector types: `---`, `|`, `/`, `\`
+- Loop verified to close on a 2D grid (all coordinates unique, direction vectors sum to zero)
 
 ---
 
@@ -466,7 +584,7 @@ notes/area_generation/              # Process docs and reference (you are here)
 areas/                              # Area design plans
   _template/                        # Blank template — copy to start a new area
     plan.md
-  silverton/                        # One folder per area
+  arindale/                        # One folder per area
     plan.md                         # Design plan (rooms, NPCs, items, quests)
     notes.md                        # Optional freeform design notes
   wraithwood/
@@ -479,7 +597,7 @@ data/                               # Exported game data for database import
     status_effects.json
     actions.json
   areas/                            # Per-area exported data
-    silverton/
+    arindale/
       rooms.json
       npcs.json
       items.json
@@ -559,7 +677,7 @@ data/
     classes.json              # Class definitions (future)
     races.json                # Race definitions (future)
   areas/
-    silverton/
+    arindale/
       rooms.json              # Rooms with exits and features
       doors.json              # Doors, locks, triggers
       npcs.json               # NPC templates with attacks and spells
@@ -585,12 +703,12 @@ data/
     "global/status_effects.json",
     "global/spells.json",
     "global/actions.json",
-    "areas/silverton/items.json",
-    "areas/silverton/factions.json",
-    "areas/silverton/rooms.json",
-    "areas/silverton/doors.json",
-    "areas/silverton/drop_tables.json",
-    "areas/silverton/npcs.json",
+    "areas/arindale/items.json",
+    "areas/arindale/factions.json",
+    "areas/arindale/rooms.json",
+    "areas/arindale/doors.json",
+    "areas/arindale/drop_tables.json",
+    "areas/arindale/npcs.json",
     "areas/wraithwood/items.json",
     "areas/wraithwood/factions.json",
     "areas/wraithwood/rooms.json",
@@ -660,7 +778,7 @@ Rooms need special handling because exits reference other rooms by name (not ID)
 }
 ```
 
-Cross-area room references (like `@room:City Gates` referencing a Silverton room) require that the referenced area is loaded first.
+Cross-area room references (like `@room:City Gates` referencing a Arindale room) require that the referenced area is loaded first.
 
 ---
 
@@ -694,7 +812,7 @@ This replaces the hardcoded seed functions in `migrate.ts`.
 
 Convert all existing seed data from `migrate.ts` and SQL files into the data file format.
 
-- Export current Silverton area data using Phase 1 endpoints
+- Export current Arindale area data using Phase 1 endpoints
 - Export global data (spells, effects, actions)
 - Verify the data loader can recreate the world from files alone
 - Remove seed functions from `migrate.ts` (schema-only migrations remain)
@@ -770,6 +888,85 @@ Server operators can:
 - Add new areas by adding files and updating the manifest
 - Use the web editors to modify loaded content
 - Export modified content back to data files for redistribution
+
+---
+
+## Spatial Validation Tools
+
+Existing tools for parsing ASCII maps, validating spatial consistency, and generating visual maps. All are TypeScript scripts run via `npx tsx`.
+
+### ASCII Map Parser
+
+**File:** `packages/server/src/db/sewer/parse-map.ts`
+**Run:** `npx tsx packages/server/src/db/sewer/parse-map.ts`
+
+Parses an ASCII map from a plan.md file into structured room/connection data. Currently hardcoded for the Arindale Sewer map format.
+
+- Reads the map block between `` ``` `` markers
+- Identifies rooms by single-character codes (`*` for generic, letters for labeled rooms)
+- Detects horizontal connections (`---`) and vertical connections (`|`)
+- Assigns rooms to sections based on position relative to hub landmarks
+- Outputs `parsed-map.json` with rooms, connections, and section assignments
+- Reports isolated rooms (no connections) as warnings
+
+**ASCII Map Format Rules:**
+- Every room is exactly 1 character: `*` (generic) or a single letter (labeled)
+- Valid connectors: `---` (E/W), `|` (N/S), `/` (NE/SW), `\` (NW/SE)
+- Every connector must link exactly two rooms (no dangling paths)
+- Room lines and connector lines alternate
+- Legend at the top explains letter codes
+- `North ^` compass indicator
+
+### Spatial Validator
+
+**File:** `packages/server/src/db/sewer/validate-spatial.ts`
+**Run:** `npx tsx packages/server/src/db/sewer/validate-spatial.ts`
+
+Validates that room connections are spatially consistent on a 2D grid. Assigns coordinates via BFS from a starting room and checks that two different paths to the same room arrive at the same grid position.
+
+- Only validates cardinal directions (N/S/E/W) — skips `up`/`down` and diagonal exits
+- Reports **conflicts**: a room placed at two different coordinates (path A says it's at (3,2) but path B says (4,1))
+- Reports **overlaps**: two rooms assigned to the same grid position
+- Reports **unreached rooms**: rooms with cardinal exits that weren't connected to the starting room
+- Currently hardcoded for sewer section data
+
+**When to use:** After generating seed data. All areas should be Euclidean. See "Creating and Validating Euclidean ASCII Maps" above for the full validation procedure.
+
+### ANSI Map Generator
+
+**File:** `packages/server/src/db/arindale/generate-map.ts`
+**Run:** `npm run map:arindale`
+**Output:** `maps/arindale.txt`
+
+Generates a visual text-based map from room/exit database data, following MajorMUD map conventions.
+
+- BFS room placement from the street grid
+- Multi-level rendering (ground, upper, below-ground)
+- Symbol legend and room index by district
+- Reports street overlaps (room at a street grid position) and building density overlaps
+- Reports unplaced rooms
+
+**When to use:** After seeding room data. Always regenerate the map after modifying rooms/exits and check for new conflicts.
+
+### Section Generator
+
+**File:** `packages/server/src/db/sewer/generate-sections.ts`
+**Run:** `npx tsx packages/server/src/db/sewer/generate-sections.ts`
+
+Generates TypeScript seed data files from `parsed-map.json`. Produces one file per section with room definitions, exit definitions, and door definitions.
+
+- Assigns room names from description pools using deterministic hashing
+- Generates bidirectional exits from the parsed connection data
+- Detects duplicate exits
+- Outputs to `packages/server/src/db/sewer/sections/`
+
+### Future Work
+
+These tools are currently hardcoded for Arindale/Sewer data. To support new areas:
+1. Generalize `parse-map.ts` to accept any plan.md path and legend configuration
+2. Generalize `validate-spatial.ts` to accept any seed data source and support diagonal directions
+3. Create a unified `map:*` script that works for any area
+4. Add BFS coordinate validation to the parser so maps are validated at parse time
 
 ---
 

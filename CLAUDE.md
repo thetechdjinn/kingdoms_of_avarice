@@ -15,6 +15,7 @@ Kingdoms of Avarice is a web-based MUD (Multi-User Dungeon) inspired by MajorMUD
 ## Commands
 
 ```bash
+npm run setup            # Fresh install: install, build, migrate, and import game data
 npm install              # Install all dependencies
 npm run build:shared     # Build shared types (run first, or after changing shared/)
 npm run dev              # Start both frontend (localhost:3000) and backend (localhost:3001)
@@ -95,6 +96,7 @@ Vite serves multiple pages: `index.html` (game), `editor.html` (rooms), `item-ed
 - Use `\r\n` for line endings in MUD output
 - Word-wrap to 80 characters using `wordWrap()` from `utils/textFormat.js`
 - Use `.join('\r\n')` when combining lines
+- **Never use em dashes (`—`) in player-visible text** (room descriptions, item descriptions, NPC dialogue, system messages). Use periods, commas, colons, or semicolons instead. Em dashes in code comments are fine.
 
 ### Items
 

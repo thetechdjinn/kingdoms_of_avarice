@@ -28,6 +28,7 @@ interface Door {
   appearMessage: string | null;
   disappearMessage: string | null;
   requiredLevel: number | null;
+  maxLevel: number | null;
   requiredClasses: string[] | null;
   requiredQuestFlag: string | null;
   requiredItemTag: string | null;
@@ -631,12 +632,14 @@ function selectDoor(id: number): void {
 
   // Permission fields
   const reqLevelInput = getElement<HTMLInputElement>('required-level');
+  const maxLevelInput = getElement<HTMLInputElement>('max-level');
   const reqClassesInput = getElement<HTMLInputElement>('required-classes');
   const reqQuestInput = getElement<HTMLInputElement>('required-quest-flag');
   const reqItemInput = getElement<HTMLInputElement>('required-item-tag');
   const denialMsgInput = getElement<HTMLTextAreaElement>('denial-message');
 
   if (reqLevelInput) reqLevelInput.value = String(door.requiredLevel || 0);
+  if (maxLevelInput) maxLevelInput.value = String(door.maxLevel || 0);
   if (reqClassesInput) reqClassesInput.value = (door.requiredClasses || []).join(', ');
   if (reqQuestInput) reqQuestInput.value = door.requiredQuestFlag || '';
   if (reqItemInput) reqItemInput.value = door.requiredItemTag || '';
@@ -708,7 +711,13 @@ function updatePreview(door: Door): void {
   const props: string[] = [];
   if (door.isHidden) props.push('Hidden');
   if (door.hasLock) props.push('Locked');
-  if (door.requiredLevel && door.requiredLevel > 0) props.push(`Level ${door.requiredLevel}+`);
+  if (door.requiredLevel && door.requiredLevel > 0 && door.maxLevel && door.maxLevel > 0) {
+    props.push(`Level ${door.requiredLevel}-${door.maxLevel}`);
+  } else if (door.requiredLevel && door.requiredLevel > 0) {
+    props.push(`Level ${door.requiredLevel}+`);
+  } else if (door.maxLevel && door.maxLevel > 0) {
+    props.push(`Level ${door.maxLevel} max`);
+  }
 
   if (props.length > 0) {
     html += `
@@ -1019,6 +1028,9 @@ function gatherFormData(): Partial<Door> {
   if (doorType !== 'open_passageway') {
     const reqLevel = parseInt(getElement<HTMLInputElement>('required-level')?.value || '0');
     data.requiredLevel = reqLevel > 0 ? reqLevel : null;
+
+    const maxLvl = parseInt(getElement<HTMLInputElement>('max-level')?.value || '0');
+    data.maxLevel = maxLvl > 0 ? maxLvl : null;
 
     const reqClassesStr = getElement<HTMLInputElement>('required-classes')?.value || '';
     const reqClasses = reqClassesStr.split(',').map(c => c.trim()).filter(c => c);

@@ -35,9 +35,21 @@
 
 ### Layout
 
-<!-- ASCII or text description of how rooms connect -->
+<!-- ASCII map of the area. This is the authoritative source of truth for room count and connectivity. -->
+<!-- MAP FORMAT RULES (see notes/area_generation/Area_Generation_Plan.md for full details):
+     - Every room is exactly 1 character: * (generic) or a single letter (labeled)
+     - Valid connectors ONLY: --- (E/W)  | (N/S)  / (NE/SW)  \ (NW/SE)
+     - Room lines and connector lines must alternate (no rooms on adjacent text lines)
+     - Every connector must link exactly two rooms
+     - No multi-char labels, no inline direction text, no other symbols
+     - Maps must be Euclidean: all grid coordinates unique, loops must close
+     - Legend at top explains letter codes
+-->
 
 ```
+Legend:  * = generic room
+
+North ^
 ```
 
 ### Room Features

@@ -52,7 +52,7 @@ Fields:
 ```
 @edit name The Haunted Cellar
 @edit desc A damp, musty cellar filled with cobwebs and the faint sound of dripping water.
-@edit area Silverton Underground
+@edit area Arindale Underground
 ```
 
 ### Linking Rooms
@@ -203,7 +203,7 @@ GET /api/rooms
       "id": 1,
       "name": "Town Square",
       "description": "A bustling town square...",
-      "area": "Silverton",
+      "area": "Arindale",
       "exits": {
         "north": 2,
         "east": 3,

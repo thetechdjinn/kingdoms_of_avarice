@@ -30,6 +30,7 @@ interface DbDoor {
   appear_message: string | null;
   disappear_message: string | null;
   required_level: number | null;
+  max_level: number | null;
   required_classes: string[] | null;
   required_quest_flag: string | null;
   required_item_tag: string | null;
@@ -68,6 +69,7 @@ function dbToDoor(row: DbDoor): Door {
     appearMessage: row.appear_message,
     disappearMessage: row.disappear_message,
     requiredLevel: row.required_level,
+    maxLevel: row.max_level,
     requiredClasses: row.required_classes,
     requiredQuestFlag: row.required_quest_flag,
     requiredItemTag: row.required_item_tag,
@@ -213,6 +215,7 @@ export interface CreateDoorInput {
   appearMessage?: string;
   disappearMessage?: string;
   requiredLevel?: number | null;
+  maxLevel?: number | null;
   requiredClasses?: string[] | null;
   requiredQuestFlag?: string | null;
   requiredItemTag?: string | null;
@@ -233,9 +236,9 @@ export async function createDoor(input: CreateDoorInput): Promise<Door> {
       item_display_name,
       is_temporary, spawn_trigger_text, duration_seconds,
       appear_message, disappear_message,
-      required_level, required_classes, required_quest_flag,
+      required_level, max_level, required_classes, required_quest_flag,
       required_item_tag, denial_message
-    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30)
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31)
     RETURNING *`,
     [
       input.name,
@@ -264,6 +267,7 @@ export async function createDoor(input: CreateDoorInput): Promise<Door> {
       input.appearMessage ?? null,
       input.disappearMessage ?? null,
       input.requiredLevel ?? null,
+      input.maxLevel ?? null,
       input.requiredClasses ?? null,
       input.requiredQuestFlag ?? null,
       input.requiredItemTag ?? null,
@@ -384,6 +388,10 @@ export async function updateDoor(
   if (updates.requiredLevel !== undefined) {
     setClauses.push(`required_level = $${paramIndex++}`);
     values.push(updates.requiredLevel);
+  }
+  if (updates.maxLevel !== undefined) {
+    setClauses.push(`max_level = $${paramIndex++}`);
+    values.push(updates.maxLevel);
   }
   if (updates.requiredClasses !== undefined) {
     setClauses.push(`required_classes = $${paramIndex++}`);

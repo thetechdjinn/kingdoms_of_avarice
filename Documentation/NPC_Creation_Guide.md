@@ -180,7 +180,7 @@ Roaming details:
 The allowed areas list restricts where an NPC can go during roaming, fleeing, and return-to-spawn pathfinding. Each entry must match a room's `area` field exactly.
 
 - **Empty list**: No restriction, NPC can go anywhere
-- **Example**: `["Silverton"]` restricts the NPC to rooms with area "Silverton"
+- **Example**: `["Arindale"]` restricts the NPC to rooms with area "Arindale"
 - Affects roaming exits, flee movement, call-for-help responder movement, and return pathfinding
 
 ---
@@ -398,7 +398,7 @@ Keyword-triggered dialogue for when players speak to the merchant using directed
 
 Example:
 - Keywords: `["sword", "swords", "weapons"]`
-- Response: `"I have the finest blades in all of Silverton! Use 'list' to see my wares."`
+- Response: `"I have the finest blades in all of Arindale! Use 'list' to see my wares."`
 
 When a player says `>goran tell me about your swords`, the system checks for keyword matches and the merchant responds.
 
@@ -521,7 +521,7 @@ Factions affect merchant pricing through reputation. Manage them in the Faction 
 1. Open the Faction Editor
 2. Click **+ New Faction**
 3. Fill in:
-   - **Name**: Faction name (e.g., "Silverton Merchants Guild")
+   - **Name**: Faction name (e.g., "Arindale Merchants Guild")
    - **Description**: Lore and background
    - **Type**: city, tribal, merchant, or guild
 
@@ -636,7 +636,7 @@ Example - City guard:
 - Name: "city guard", Level: 10, Max Health: 100
 - Hostile: On, Respawn: 120
 - Roam Enabled: On, Interval: 45, Chance: 20%
-- Allowed Areas: ["Silverton"]
+- Allowed Areas: ["Arindale"]
 - Call for Help: 75%
 - Attack: "sword slash" (melee, 8-16, 1/round, 100%)
 
@@ -651,7 +651,7 @@ A non-hostile NPC that sells items:
 Example - Blacksmith:
 - Name: "Brendan the Blacksmith", Proper Name: On
 - Merchant Enabled: On, Hostile: Off
-- Primary Faction: "Silverton Merchants Guild"
+- Primary Faction: "Arindale Merchants Guild"
 - Spawn Room: Forge (room 10)
 - Respawn: 60
 - Inventory: iron sword (stock 5), iron shield (stock 3), chain mail (stock 2)

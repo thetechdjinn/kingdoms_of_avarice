@@ -73,6 +73,7 @@ export function setupDoorRoutes(app: Express): void {
         appearMessage,
         disappearMessage,
         requiredLevel,
+        maxLevel,
         requiredClasses,
         requiredQuestFlag,
         requiredItemTag,
@@ -166,6 +167,11 @@ export function setupDoorRoutes(app: Express): void {
         return;
       }
 
+      if (maxLevel !== undefined && maxLevel !== null && (typeof maxLevel !== 'number' || maxLevel < 0)) {
+        res.status(400).json({ success: false, message: 'Max level must be a non-negative number' });
+        return;
+      }
+
       if (requiredClasses !== undefined && requiredClasses !== null && !Array.isArray(requiredClasses)) {
         res.status(400).json({ success: false, message: 'Required classes must be an array' });
         return;
@@ -198,6 +204,7 @@ export function setupDoorRoutes(app: Express): void {
         appearMessage: appearMessage || null,
         disappearMessage: disappearMessage || null,
         requiredLevel: requiredLevel ?? null,
+        maxLevel: maxLevel ?? null,
         requiredClasses: requiredClasses || null,
         requiredQuestFlag: requiredQuestFlag || null,
         requiredItemTag: requiredItemTag || null,
@@ -261,6 +268,7 @@ export function setupDoorRoutes(app: Express): void {
         appearMessage,
         disappearMessage,
         requiredLevel,
+        maxLevel,
         requiredClasses,
         requiredQuestFlag,
         requiredItemTag,
@@ -356,6 +364,11 @@ export function setupDoorRoutes(app: Express): void {
         return;
       }
 
+      if (maxLevel !== undefined && maxLevel !== null && (typeof maxLevel !== 'number' || maxLevel < 0)) {
+        res.status(400).json({ success: false, message: 'Max level must be a non-negative number' });
+        return;
+      }
+
       if (requiredClasses !== undefined && requiredClasses !== null && !Array.isArray(requiredClasses)) {
         res.status(400).json({ success: false, message: 'Required classes must be an array' });
         return;
@@ -390,6 +403,7 @@ export function setupDoorRoutes(app: Express): void {
       if (appearMessage !== undefined) updates.appearMessage = appearMessage || null;
       if (disappearMessage !== undefined) updates.disappearMessage = disappearMessage || null;
       if (requiredLevel !== undefined) updates.requiredLevel = requiredLevel;
+      if (maxLevel !== undefined) updates.maxLevel = maxLevel;
       if (requiredClasses !== undefined) updates.requiredClasses = requiredClasses;
       if (requiredQuestFlag !== undefined) updates.requiredQuestFlag = requiredQuestFlag || null;
       if (requiredItemTag !== undefined) updates.requiredItemTag = requiredItemTag || null;

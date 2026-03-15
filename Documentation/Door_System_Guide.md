@@ -287,7 +287,8 @@ These parameters are used automatically when clicking doors or buttons in the Ro
 
 | Field | Description |
 |-------|-------------|
-| Required Level | Minimum character level to use door |
+| Min Level | Minimum character level to use door (0 = no minimum) |
+| Max Level | Maximum character level to use door (0 = no maximum) |
 | Required Classes | Comma-separated list of classes that can use door |
 | Required Quest Flag | Quest flag that must be set |
 | Required Item Tag | Item that must be in inventory (not consumed) |
@@ -383,8 +384,18 @@ An area only accessible to higher-level characters.
 
 **Setup:**
 - Door Type: Physical (or any type)
-- Required Level: 10
+- Min Level: 10
 - Denial Message: "The ancient wards prevent those below level 10 from passing."
+
+### Pattern 5b: Newbie Zone (Level-Bracketed Area)
+
+An area restricted to low-level characters, keeping high-level players out.
+
+**Setup:**
+- Door Type: Physical (or any type)
+- Min Level: 1
+- Max Level: 5
+- Denial Message: "You have grown too powerful for these training grounds."
 
 ### Pattern 6: Class-Restricted Guild Hall
 
@@ -454,8 +465,10 @@ Doors can have multiple permission requirements. All requirements must be met to
 ### Requirement Types
 
 1. **Level Requirement**
-   - Player must be at least the specified level
-   - Set to 0 or leave empty for no level requirement
+   - **Min Level**: Player must be at least this level to pass
+   - **Max Level**: Player must be at or below this level to pass
+   - Set either to 0 for no restriction on that end
+   - Use both together to create level-bracketed areas (e.g., Min 1 / Max 5 for a newbie zone)
 
 2. **Class Requirement**
    - Player must be one of the listed classes

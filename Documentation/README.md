@@ -4,8 +4,9 @@ Welcome to the Kingdoms of Avarice documentation. This guide covers all aspects 
 
 ## Table of Contents
 
-- [Commands](commands.md) - Complete list of in-game commands
 - [Getting Started](getting-started.md) - How to set up and run the game
+- [Database Setup](Database_Setup.md) - PostgreSQL configuration (existing install or Docker)
+- [Commands](commands.md) - Complete list of in-game commands
 - [Architecture](architecture.md) - Technical overview of the codebase
 
 ### Content Creation
