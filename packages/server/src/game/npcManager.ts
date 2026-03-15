@@ -801,11 +801,19 @@ export function checkHostileAggro(
   if (npcs.length === 0) return;
 
   for (const npc of npcs) {
-    // Skip non-hostile, already-in-combat, dead, fleeing, or returning NPCs
-    if (!npc.template.hostile) continue;
+    // Skip already-in-combat, dead, fleeing, or returning NPCs
     if (npc.combatState.targets.size > 0) continue;
     if (npc.vitals.hp <= 0) continue;
     if (npc.behaviorState === 'fleeing' || npc.behaviorState === 'returning') continue;
+
+    // Determine if this NPC should aggro: either naturally hostile,
+    // or a merchant that was previously attacked by this player
+    const isHostile = npc.template.hostile;
+    const isAngryMerchant = npc.template.merchantEnabled
+      && isPlayerEntity(player)
+      && isMerchantHostileToPlayer((player as AuthenticatedSocket).characterId!, npc.templateId);
+
+    if (!isHostile && !isAngryMerchant) continue;
 
     // Skip if player is hidden and NPC can't see hidden
     if (player.stealthMode === 'hidden' && !npc.canSeeHidden) continue;
