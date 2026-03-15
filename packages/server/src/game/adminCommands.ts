@@ -77,7 +77,7 @@ export function setPlayerLocation(playerId: number, roomId: number): void {
 const developerCommands = ['create', 'link', 'unlink', 'edit', 'delete', 'reload', 'spawn', 'purge', 'items', 'iteminfo', 'setstealth', 'testbackstab', 'testspell', 'lockpicking', 'npcs', 'mobbehavior', 'npcdebug', 'merchants', 'quest'];
 
 // Commands that any staff can use (Moderator+)
-const staffCommands = ['goto', 'rooms', 'roominfo', 'help', 'give', 'hurt', 'heal', 'drain', 'revive', 'teleport', 'learn', 'spells', 'effect', 'cleareffect', 'effects', 'stealth'];
+const staffCommands = ['goto', 'rooms', 'roominfo', 'help', 'give', 'hurt', 'heal', 'drain', 'revive', 'teleport', 'learn', 'unlearn', 'spells', 'effect', 'cleareffect', 'effects', 'stealth'];
 
 export async function processAdminCommand(
   input: string,
@@ -153,6 +153,8 @@ export async function processAdminCommand(
       return await handleTeleport(args, socket, world);
     case 'learn':
       return handleLearn(args, socket);
+    case 'unlearn':
+      return handleUnlearn(args, socket);
     case 'spells':
       return handleListSpells();
     case 'effect':
@@ -1336,26 +1338,7 @@ async function handleLearn(
     return { type: MessageType.SYSTEM, message: `${targetName} already knows ${colors.cyan(spell.name)}.` };
   }
 
-  // Get character info for class check
-  const character = await characterRepo.findCharacterById(targetSocket.characterId);
-  if (!character) {
-    return { type: MessageType.ERROR, message: 'Character not found.' };
-  }
-
-  // Get class display name for restriction check
-  const { getClassById } = await import('../db/repositories/progressionRepository.js');
-  const classDef = await getClassById(character.class);
-  const classDisplayName = classDef?.display_name || character.class;
-
-  // Check class restriction
-  if (spell.classRestrictions.length > 0 && !spell.classRestrictions.includes(classDisplayName)) {
-    return {
-      type: MessageType.ERROR,
-      message: `Only ${spell.classRestrictions.join(', ')} can learn ${spell.name}.`
-    };
-  }
-
-  // Learn the spell
+  // Learn the spell (admin bypasses class restrictions)
   const result = await spellRepo.learnSpell(targetSocket.characterId, spell.id);
   if (!result) {
     return { type: MessageType.ERROR, message: 'Failed to learn spell.' };
@@ -1373,6 +1356,75 @@ async function handleLearn(
   }
 
   return { type: MessageType.SYSTEM, message: learnedMsg };
+}
+
+async function handleUnlearn(
+  args: string[],
+  socket: AuthenticatedSocket
+): Promise<CommandResponse> {
+  // @unlearn <mnemonic> [player] - Remove a spell from yourself or another player
+  if (args.length < 1) {
+    return { type: MessageType.ERROR, message: 'Usage: @unlearn <mnemonic> [player]' };
+  }
+
+  const mnemonic = args[0].toLowerCase();
+  const spell = await spellRepo.getSpellByMnemonic(mnemonic);
+
+  if (!spell) {
+    return { type: MessageType.ERROR, message: `Unknown spell mnemonic: ${mnemonic}` };
+  }
+
+  // Resolve target: self or named player
+  let targetSocket: AuthenticatedSocket = socket;
+  let targetName = socket.username;
+
+  if (args.length >= 2) {
+    const playerName = args.slice(1).join(' ').toLowerCase();
+    let found = false;
+    for (const [, playerSocket] of connectedPlayers) {
+      if (playerSocket.username.toLowerCase() === playerName) {
+        targetSocket = playerSocket;
+        targetName = playerSocket.username;
+        found = true;
+        break;
+      }
+    }
+    if (!found) {
+      return { type: MessageType.ERROR, message: `Player not found: ${args.slice(1).join(' ')}` };
+    }
+  }
+
+  if (!targetSocket.characterId) {
+    return { type: MessageType.ERROR, message: args.length >= 2 ? `${targetName} has no character selected.` : 'No character selected.' };
+  }
+
+  // Check if they know the spell
+  const hasSpell = await spellRepo.hasSpell(targetSocket.characterId, spell.id);
+  if (!hasSpell) {
+    if (targetSocket === socket) {
+      return { type: MessageType.SYSTEM, message: `You don't know ${colors.cyan(spell.name)}.` };
+    }
+    return { type: MessageType.SYSTEM, message: `${targetName} doesn't know ${colors.cyan(spell.name)}.` };
+  }
+
+  // Remove the spell
+  const removed = await spellRepo.forgetSpell(targetSocket.characterId, spell.id);
+  if (!removed) {
+    return { type: MessageType.ERROR, message: 'Failed to remove spell.' };
+  }
+
+  const forgotMsg = `${colors.boldRed('Forgot:')} ${colors.cyan(spell.name)} (${colors.white(spell.mnemonic)})`;
+
+  // If removing from another player, notify them too
+  if (targetSocket !== socket) {
+    sendMessage(targetSocket, MessageType.SYSTEM, forgotMsg);
+    return {
+      type: MessageType.SYSTEM,
+      message: `Removed ${colors.cyan(spell.name)} from ${colors.boldWhite(targetName)}.`,
+    };
+  }
+
+  return { type: MessageType.SYSTEM, message: forgotMsg };
 }
 
 async function handleListSpells(): Promise<CommandResponse> {
@@ -1892,6 +1944,7 @@ function handleAdminHelp(userRoles: Role[]): CommandResponse {
   lines.push(`  ${colors.boldCyan('@teleport <player> <room>')} - Teleport player to a room`);
   lines.push(`  ${colors.boldCyan('@spells')}                 - List all spells in the game`);
   lines.push(`  ${colors.boldCyan('@learn <mnemonic> [player]')} - Learn a spell (self or player)`);
+  lines.push(`  ${colors.boldCyan('@unlearn <mnemonic> [player]')} - Remove a spell (self or player)`);
   lines.push(`  ${colors.boldCyan('@effect <id> [duration] [player]')} - Apply effect (default 60s, self)`);
   lines.push(`  ${colors.boldCyan('@cleareffect <id|all>')}  - Remove a status effect`);
   lines.push(`  ${colors.boldCyan('@effects')}                - List available effects`);
