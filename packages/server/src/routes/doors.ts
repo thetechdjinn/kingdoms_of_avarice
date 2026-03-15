@@ -381,8 +381,8 @@ export function setupDoorRoutes(app: Express): void {
 
       // Validate level range consistency (use existing values for partial updates)
       {
-        const lvlMin = (requiredLevel !== undefined ? requiredLevel : existingDoor.requiredLevel) || null;
-        const lvlMax = (maxLevel !== undefined ? maxLevel : existingDoor.maxLevel) || null;
+        const lvlMin = (requiredLevel !== undefined ? requiredLevel : existingDoor.requiredLevel) ?? null;
+        const lvlMax = (maxLevel !== undefined ? maxLevel : existingDoor.maxLevel) ?? null;
         if (lvlMin !== null && lvlMax !== null && lvlMin > lvlMax) {
           res.status(400).json({ success: false, message: `Min level (${lvlMin}) cannot exceed max level (${lvlMax})` });
           return;

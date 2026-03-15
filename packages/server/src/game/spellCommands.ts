@@ -241,6 +241,11 @@ async function handleOffensiveSpell(
   socket.regenState.enhancedRegen.clear();
   target!.regenState.enhancedRegen.clear();
 
+  // Break stealth
+  if (isStealthing(socket)) {
+    breakStealth(socket, 'spell_cast', true);
+  }
+
   // Cancel meditation for both players if they were meditating
   if (socket.exitTimer) {
     clearTimeout(socket.exitTimer);
@@ -619,6 +624,11 @@ async function handleDebuffSpell(
   target!.regenState.inCombat = true;
   socket.regenState.enhancedRegen.clear();
   target!.regenState.enhancedRegen.clear();
+
+  // Break stealth
+  if (isStealthing(socket)) {
+    breakStealth(socket, 'spell_cast', true);
+  }
 
   // Broadcast to room (exclude caster and target)
   broadcastToRoom(

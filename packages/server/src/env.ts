@@ -3,7 +3,7 @@
  *
  * ESM hoists all static imports, so this module's top-level code runs
  * before any other module reads process.env. Loads .env from the
- * monorepo root (two levels above packages/server/).
+ * monorepo root (three levels up from packages/server/src/).
  */
 import dotenv from 'dotenv';
 import { fileURLToPath } from 'url';

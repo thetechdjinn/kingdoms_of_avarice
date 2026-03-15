@@ -755,7 +755,7 @@ async function calculatePlayerStealth(socket: AuthenticatedSocket): Promise<numb
  */
 function formatEffectsForLook(effects: Array<{ name: string; category: StatusEffectCategory; remainingMs: number; stacks: number }>): string {
   const lines: string[] = [];
-  lines.push(colors.boldWhite('Afflictions:'));
+  lines.push(colors.boldWhite('Active Effects:'));
   for (const effect of effects) {
     const duration = formatDuration(effect.remainingMs);
     const stackInfo = effect.stacks > 1 ? ` (x${effect.stacks})` : '';
