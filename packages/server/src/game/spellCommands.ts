@@ -216,6 +216,10 @@ async function handleOffensiveSpell(
   }
 
   // Player target
+  if (isPlayerDead(target!) || isPlayerDropped(target!)) {
+    return { type: MessageType.ERROR, message: `${target!.username} is already down.` };
+  }
+
   // Set up spell casting state
   socket.combatState.combatAction = 'spell';
   socket.combatState.activeSpell = {
@@ -610,13 +614,7 @@ async function handleDebuffSpell(
   // Deduct mana (only after successful effect application)
   socket.vitals.resource = (socket.vitals.resource ?? 0) - spell.manaCost;
 
-  // Combat break: non-offensive spells break existing combat before establishing new engagement
-  const hadCombatTargets = socket.combatState.targets.size > 0;
-  if (hadCombatTargets) {
-    breakCasterCombat(socket);
-  }
-
-  // Establish mutual combat targets (consistent with NPC debuff path)
+  // Add target to combat (debuffs are aggressive - add alongside existing targets, don't break combat)
   socket.combatState.targets.add(target!.playerId);
 
   // Set combat flags if this is an aggressive action
@@ -653,11 +651,10 @@ async function handleDebuffSpell(
   sendVitals(socket);
   sendVitals(target!);
 
-  const combatBreakMsg = hadCombatTargets ? `\r\n${colors.yellow('*COMBAT BREAK* You must attack again to re-engage.')}` : '';
   const durationStr = formatDuration(durationMs);
   return {
     type: MessageType.OUTPUT,
-    message: `You cast ${colors.cyan(spell.name.toLowerCase())} on ${colors.magenta(target!.username)}. ${result.message} (${durationStr})${combatBreakMsg}`,
+    message: `You cast ${colors.cyan(spell.name.toLowerCase())} on ${colors.magenta(target!.username)}. ${result.message} (${durationStr})`,
   };
 }
 

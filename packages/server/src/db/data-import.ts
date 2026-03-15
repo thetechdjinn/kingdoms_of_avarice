@@ -268,10 +268,10 @@ async function importTalents(data: unknown[]): Promise<ImportResult> {
       const talentId = (item.talent_id ?? item.talentId) as string;
       if (!talentId) { result.skipped++; continue; }
 
-      // Ensure prerequisite_talents is an array (export may write {} for empty arrays)
+      // Ensure prerequisite_talents is an array (export may write {} for empty arrays, or a single string)
       const prereqs = item.prerequisite_talents;
       if (prereqs && !Array.isArray(prereqs)) {
-        item.prerequisite_talents = [];
+        item.prerequisite_talents = typeof prereqs === 'string' ? [prereqs] : [];
       }
 
       const existing = await progressionRepo.getTalentById(talentId);

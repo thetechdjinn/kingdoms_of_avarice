@@ -326,15 +326,16 @@ export async function initializeNpcManager(): Promise<void> {
     addToRoomIndex(npc.entityId, npc.currentRoomId);
   }
 
-  // Spawn instances for any templates that have a spawn room but no live instance
-  // (also covers templates whose only instance was a dead corpse cleaned up above)
+  // Spawn instances for any templates that have a spawn room but no live instance.
+  // Skip templates that already have a pending respawn (dead corpses cleaned up above).
   const templatesWithInstances = new Set(
     instances
       .filter(i => i.current_health > 0)
       .map(i => i.npc_id)
   );
+  const templatesWithPendingRespawn = new Set(respawnQueue.map(e => e.templateId));
   for (const template of templates) {
-    if (template.spawnRoomId && !templatesWithInstances.has(template.id)) {
+    if (template.spawnRoomId && !templatesWithInstances.has(template.id) && !templatesWithPendingRespawn.has(template.id)) {
       await spawnNpcFromTemplate(template, template.spawnRoomId);
     }
   }
