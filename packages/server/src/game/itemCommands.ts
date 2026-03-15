@@ -2676,6 +2676,9 @@ export async function dropAllItemsOnDeath(characterId: number, roomId: number): 
     await itemRepo.updateInstanceLocation(item.id, ItemLocationType.ROOM, roomId);
   }
 
+  // Invalidate equipment cache since all gear was dropped
+  invalidateEquipmentCache(characterId);
+
   // Get character currency and drop it
   const character = await characterRepo.findCharacterById(characterId);
   if (character) {

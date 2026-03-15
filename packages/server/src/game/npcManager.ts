@@ -579,9 +579,12 @@ function processCorpseCleanup(): void {
  * Queue a respawn for a template.
  */
 export function queueRespawn(templateId: number, spawnRoomId: number, respawnTimeSeconds: number): void {
-  // Dedup: don't queue if this template already has a pending respawn
-  const alreadyQueued = respawnQueue.some(entry => entry.templateId === templateId);
-  if (alreadyQueued) return;
+  // Dedup: don't queue beyond maxActive (live instances + pending respawns)
+  const template = npcTemplates.get(templateId);
+  const maxActive = template?.maxActive ?? 1;
+  const liveCount = Array.from(npcInstances.values()).filter(n => n.templateId === templateId && !n.isCorpse).length;
+  const pendingCount = respawnQueue.filter(e => e.templateId === templateId).length;
+  if (liveCount + pendingCount >= maxActive) return;
 
   respawnQueue.push({
     templateId,

@@ -723,8 +723,9 @@ export function processNpcEffectsTick(npc: CombatEntity): {
 
       if (npc.vitals.hp <= 0) {
         npc.vitals.hp = 0;
-        // Clean up all effects on death
+        // Clean up all effects and regen flags on death
         npc.activeEffects.clear();
+        npc.regenState.isPoisoned = false;
         return { died: true, damaged: true };
       }
     }
