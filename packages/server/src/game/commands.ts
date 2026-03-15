@@ -1,5 +1,5 @@
 import { MessageType, GameMessage, Role, hasAnyRole, StatusEffectCategory, DoorType, DoorState, Door, ResourceType } from '@koa/shared';
-import { getActiveEffectsDisplay, formatDuration } from './statusEffects.js';
+import { getActiveEffectsDisplay, getEntityActiveEffects, formatDuration } from './statusEffects.js';
 import { getDelayModifierDescriptions, getStatusEffectDelayMultiplier } from './delayModifiers.js';
 import { getPlayerQueueStatus } from './tickProcessor.js';
 import { getRemainingCooldown, formatAbilityName } from './cooldownTracker.js';
@@ -750,6 +750,23 @@ async function calculatePlayerStealth(socket: AuthenticatedSocket): Promise<numb
  * Handle looking at another player
  * Returns their description based on stats, appearance, and equipment
  */
+/**
+ * Format active effects for display when looking at a player or NPC.
+ */
+function formatEffectsForLook(effects: Array<{ name: string; category: StatusEffectCategory; remainingMs: number; stacks: number }>): string {
+  const lines: string[] = [];
+  lines.push(colors.boldWhite('Afflictions:'));
+  for (const effect of effects) {
+    const duration = formatDuration(effect.remainingMs);
+    const stackInfo = effect.stacks > 1 ? ` (x${effect.stacks})` : '';
+    const colorFn = effect.category === StatusEffectCategory.BUFF || effect.category === StatusEffectCategory.HOT
+      ? colors.green
+      : colors.red;
+    lines.push(`  ${colorFn(effect.name)}${stackInfo} ${colors.gray(`(${duration})`)}`);
+  }
+  return lines.join('\r\n');
+}
+
 async function handleLookAtPlayer(
   targetSocket: AuthenticatedSocket
 ): Promise<CommandResponse> {
@@ -772,6 +789,12 @@ async function handleLookAtPlayer(
     maxHp: targetSocket.vitals.maxHp,
     equippedItems,
   });
+
+  // Append active effects if any
+  const effects = getEntityActiveEffects(targetSocket);
+  if (effects.length > 0) {
+    return { type: MessageType.OUTPUT, message: description + '\r\n\r\n' + formatEffectsForLook(effects) };
+  }
 
   return { type: MessageType.OUTPUT, message: description };
 }
@@ -817,6 +840,13 @@ function handleLookAtNpc(npc: import('./npcManager.js').NpcCombatInstance): Comm
   // Hostile indicator
   if (npc.template.hostile) {
     lines.push(colors.red(`${withNpcNameThe(npc.entityName, npc.isProperName)} looks hostile.`));
+  }
+
+  // Active effects
+  const effects = getEntityActiveEffects(npc);
+  if (effects.length > 0) {
+    lines.push('');
+    lines.push(formatEffectsForLook(effects));
   }
 
   return { type: MessageType.OUTPUT, message: lines.join('\r\n') };

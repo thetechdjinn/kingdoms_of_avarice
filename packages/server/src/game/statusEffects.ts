@@ -1104,6 +1104,51 @@ export function getActiveEffectsDisplay(socket: AuthenticatedSocket): Array<{
 }
 
 /**
+ * Get active effects for any CombatEntity (players and NPCs).
+ * Returns display-ready effect info sorted by category then remaining time.
+ */
+export function getEntityActiveEffects(entity: CombatEntity): Array<{
+  name: string;
+  category: StatusEffectCategory;
+  remainingMs: number;
+  stacks: number;
+}> {
+  const result: Array<{
+    name: string;
+    category: StatusEffectCategory;
+    remainingMs: number;
+    stacks: number;
+  }> = [];
+
+  if (!entity.activeEffects || entity.activeEffects.size === 0) {
+    return result;
+  }
+
+  const now = Date.now();
+
+  for (const [, effect] of entity.activeEffects) {
+    if (effect.expiresAt <= now) continue;
+
+    const definition = getEffectDefinition(effect.definitionId);
+    if (!definition) continue;
+
+    result.push({
+      name: definition.name,
+      category: definition.category,
+      remainingMs: effect.expiresAt - now,
+      stacks: effect.stacks,
+    });
+  }
+
+  result.sort((a, b) => {
+    if (a.category !== b.category) return a.category.localeCompare(b.category);
+    return a.remainingMs - b.remainingMs;
+  });
+
+  return result;
+}
+
+/**
  * Format a duration in milliseconds to a human-readable string
  */
 export function formatDuration(ms: number): string {
