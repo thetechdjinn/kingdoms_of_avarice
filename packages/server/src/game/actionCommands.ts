@@ -93,7 +93,7 @@ export async function handleActionCommand(
     }
 
     const selfMsg = replacePlaceholders(action.firstPersonWithTarget, socket.username, 'yourself');
-    const roomMsg = replacePlaceholders(action.roomWithTarget, socket.username, socket.username);
+    const roomMsg = replacePlaceholders(action.roomWithTarget, socket.username, 'themselves');
 
     broadcastToRoom(currentRoomId, roomMsg, socket.playerId);
     return { type: MessageType.OUTPUT, message: selfMsg };

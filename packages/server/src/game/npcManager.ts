@@ -589,7 +589,7 @@ export async function saveAllInstances(): Promise<void> {
       npcId: npc.templateId,
       currentRoomId: npc.currentRoomId,
       currentHealth: npc.isCorpse ? 0 : npc.vitals.hp, // Save corpses with 0 HP so startup detects them as dead
-      currentMana: npc.currentMana,
+      currentMana: npc.isCorpse ? 0 : npc.currentMana,
       augmentation: npc.augmentation,
     }));
 

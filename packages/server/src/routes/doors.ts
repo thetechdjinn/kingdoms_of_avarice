@@ -167,8 +167,8 @@ export function setupDoorRoutes(app: Express): void {
         return;
       }
 
-      if (maxLevel !== undefined && maxLevel !== null && (typeof maxLevel !== 'number' || maxLevel < 0)) {
-        res.status(400).json({ success: false, message: 'Max level must be a non-negative number' });
+      if (maxLevel !== undefined && maxLevel !== null && (typeof maxLevel !== 'number' || maxLevel < 1)) {
+        res.status(400).json({ success: false, message: 'Max level must be a positive number' });
         return;
       }
 
@@ -364,8 +364,8 @@ export function setupDoorRoutes(app: Express): void {
         return;
       }
 
-      if (maxLevel !== undefined && maxLevel !== null && (typeof maxLevel !== 'number' || maxLevel < 0)) {
-        res.status(400).json({ success: false, message: 'Max level must be a non-negative number' });
+      if (maxLevel !== undefined && maxLevel !== null && (typeof maxLevel !== 'number' || maxLevel < 1)) {
+        res.status(400).json({ success: false, message: 'Max level must be a positive number' });
         return;
       }
 

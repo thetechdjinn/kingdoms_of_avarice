@@ -711,7 +711,7 @@ function updatePreview(door: Door): void {
   const props: string[] = [];
   if (door.isHidden) props.push('Hidden');
   if (door.hasLock) props.push('Locked');
-  if (door.requiredLevel && door.requiredLevel > 0 && door.maxLevel && door.maxLevel > 0) {
+  if (door.requiredLevel && door.requiredLevel > 0 && door.maxLevel && door.maxLevel > 0 && door.requiredLevel <= door.maxLevel) {
     props.push(`Level ${door.requiredLevel}-${door.maxLevel}`);
   } else if (door.requiredLevel && door.requiredLevel > 0) {
     props.push(`Level ${door.requiredLevel}+`);
