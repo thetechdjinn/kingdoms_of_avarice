@@ -329,22 +329,29 @@ async function insertAll(
   // ── Post-insert: game settings and character positions ─────────────
 
   // Find key rooms
-  const townSquareId = tagToId.get('int_2_2');
   const hallsDeadId = tagToId.get('cathedral_halls_dead');
+  const hearthsteadCenterId = tagToId.get('hs_hamlet_s');
 
-  if (!townSquareId) throw new Error('Town Square room not found');
   if (!hallsDeadId) throw new Error('Halls of the Dead room not found');
+  if (!hearthsteadCenterId) throw new Error('Hearthstead Village Center room not found');
 
-  // Set default respawn room
+  // Set default respawn room (Hall of the Dead — fallback for areas without their own)
   await client.query(
     `INSERT INTO game_settings (key, value) VALUES ('default_respawn_room_id', $1)
      ON CONFLICT (key) DO UPDATE SET value = $1`,
     [String(hallsDeadId)]
   );
 
-  // Move all characters to Town Square
-  await client.query('UPDATE characters SET current_room_id = $1', [townSquareId]);
-  await client.query('UPDATE players SET current_room_id = $1', [townSquareId]);
+  // Set default starting room for new characters (Hearthstead Village Center)
+  await client.query(
+    `INSERT INTO game_settings (key, value) VALUES ('default_starting_room_id', $1)
+     ON CONFLICT (key) DO UPDATE SET value = $1`,
+    [String(hearthsteadCenterId)]
+  );
+
+  // Move all characters to Hearthstead Village Center
+  await client.query('UPDATE characters SET current_room_id = $1', [hearthsteadCenterId]);
+  await client.query('UPDATE players SET current_room_id = $1', [hearthsteadCenterId]);
 
   // Set arindale_seeded flag
   await client.query(
@@ -360,9 +367,10 @@ async function insertAll(
     ON CONFLICT (name) DO NOTHING
   `);
 
-  console.log(`  Town Square ID: ${townSquareId}`);
+  console.log(`  Hearthstead Village Center ID: ${hearthsteadCenterId}`);
   console.log(`  Halls of the Dead ID: ${hallsDeadId}`);
-  console.log(`  All characters moved to Town Square.`);
+  console.log(`  All characters moved to Hearthstead Village Center.`);
+  console.log(`  Default starting room set to Hearthstead Village Center.`);
   console.log(`  Default respawn set to Halls of the Dead.`);
 }
 

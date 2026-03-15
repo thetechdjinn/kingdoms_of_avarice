@@ -203,7 +203,7 @@ export function getHearthstead(): DistrictData {
         description: `The heart of Hearthstead. A handful of modest buildings cluster around a small unpaved square. A stone well stands at the center, its bucket resting on the lip. The air is quiet, broken only by the occasional sound of a chicken, a distant hammer, wind in the eaves. Geelee's armor shop lies to the west and Perguth's weapon shop to the east. A wider street continues north toward more buildings. To the south, a track leads back toward the countryside.`,
         area: AREA_SAFE,
         terrain: 'outdoor',
-        features: { respawn: true },
+        features: { respawn: { enabled: true, servedAreas: ['Hearthstead Loop', 'Hearthstead Wilds'] } },
       },
 
       // --- Street above S ---

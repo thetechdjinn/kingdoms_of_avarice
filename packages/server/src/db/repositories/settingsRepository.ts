@@ -555,6 +555,18 @@ export async function getDefaultRespawnRoomId(): Promise<number | null> {
   return null;
 }
 
+/**
+ * Get the default starting room ID for new characters.
+ * Returns null if not configured (will fall back to Room 1).
+ */
+export async function getDefaultStartingRoomId(): Promise<number | null> {
+  const value = await getSetting<number>('default_starting_room_id');
+  if (typeof value === 'number' && Number.isInteger(value) && value > 0) {
+    return value;
+  }
+  return null;
+}
+
 // ============================================================================
 // DEATH MECHANIC SETTINGS
 // ============================================================================

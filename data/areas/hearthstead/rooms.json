@@ -240,7 +240,10 @@
       "area": "Hearthstead",
       "terrain": "outdoor",
       "features": {
-        "respawn": true
+        "respawn": {
+          "enabled": true,
+          "servedAreas": ["Hearthstead Loop", "Hearthstead Wilds"]
+        }
       },
       "exits": [
         {
