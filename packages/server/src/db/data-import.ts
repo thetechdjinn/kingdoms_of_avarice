@@ -17,7 +17,7 @@ const __dirname = dirname(__filename);
 
 dotenv.config({ path: join(__dirname, '..', '..', '..', '..', '.env') });
 
-import { pool as getPool, withTransaction } from './index.js';
+import { pool as getPool, query, withTransaction } from './index.js';
 import * as roomRepo from './repositories/roomRepository.js';
 import * as itemRepo from './repositories/itemRepository.js';
 import * as spellRepo from './repositories/spellRepository.js';
@@ -1032,6 +1032,36 @@ async function importFile(relativePath: string): Promise<void> {
   }
 }
 
+/**
+ * Set game settings that depend on imported room data.
+ * Uses room tags to look up IDs, so this must run after all rooms are imported.
+ */
+async function configureGameSettings(): Promise<void> {
+  const tagToId = await roomRepo.getTagToIdMap();
+
+  // Default starting room for new characters (Hearthstead Village Center)
+  const startingRoomId = tagToId.get('hs_hamlet_s');
+  if (startingRoomId) {
+    await query(
+      `INSERT INTO game_settings (key, value) VALUES ('default_starting_room_id', $1)
+       ON CONFLICT (key) DO UPDATE SET value = $1`,
+      [String(startingRoomId)]
+    );
+    console.log(`  Default starting room: Hearthstead Village Center (ID ${startingRoomId})`);
+  }
+
+  // Default respawn room (Hall of the Dead — fallback for areas without their own)
+  const respawnRoomId = tagToId.get('cathedral_halls_dead');
+  if (respawnRoomId) {
+    await query(
+      `INSERT INTO game_settings (key, value) VALUES ('default_respawn_room_id', $1)
+       ON CONFLICT (key) DO UPDATE SET value = $1`,
+      [String(respawnRoomId)]
+    );
+    console.log(`  Default respawn room: Halls of the Dead (ID ${respawnRoomId})`);
+  }
+}
+
 async function main(): Promise<void> {
   console.log('=== Game Data Import ===\n');
 
@@ -1084,6 +1114,9 @@ async function main(): Promise<void> {
       }
     }
   }
+
+  // Configure game settings based on imported rooms
+  await configureGameSettings();
 
   console.log('\n=== Import Complete ===');
 
