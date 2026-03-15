@@ -1,17 +1,13 @@
+// Side-effect import: loads .env from process.cwd() before any other modules.
+// Must be the very first import so all modules see env vars at load time.
+import 'dotenv/config';
+
 import './utils/logger.js';
-import dotenv from 'dotenv';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
-
-// Load .env from project root
-const envPath = join(__dirname, '..', '..', '..', '.env');
-const result = dotenv.config({ path: envPath });
-if (result.error) {
-  console.warn('Could not load .env file:', envPath);
-}
 import express from 'express';
 import { createServer } from 'http';
 import { WebSocketServer } from 'ws';

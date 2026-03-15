@@ -4,27 +4,15 @@ import { AuthResponse, Role } from '@koa/shared';
 import * as playerRepo from '../db/repositories/playerRepository.js';
 import * as roleRepo from '../db/repositories/roleRepository.js';
 
+const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-change-in-production';
 const COOKIE_NAME = 'koa_token';
 
-// Lazy accessor — reads process.env at call time (after dotenv has loaded)
-let _jwtSecret: string | null = null;
-function getJwtSecret(): string {
-  if (!_jwtSecret) {
-    _jwtSecret = process.env.JWT_SECRET || 'dev-secret-change-in-production';
-  }
-  return _jwtSecret;
-}
-
-let _jwtWarningLogged = false;
-function checkJwtWarning(): void {
-  if (_jwtWarningLogged) return;
-  _jwtWarningLogged = true;
-  if (!process.env.JWT_SECRET) {
-    if (process.env.NODE_ENV === 'production') {
-      console.error('[AUTH] CRITICAL: JWT_SECRET is not set! Tokens are signed with a hardcoded default. Set JWT_SECRET in your environment.');
-    } else {
-      console.warn('[AUTH] WARNING: JWT_SECRET is not set. Using default dev secret. Do not use this in production.');
-    }
+// Warn at startup if JWT_SECRET is not configured
+if (!process.env.JWT_SECRET) {
+  if (process.env.NODE_ENV === 'production') {
+    console.error('[AUTH] CRITICAL: JWT_SECRET is not set! Tokens are signed with a hardcoded default. Set JWT_SECRET in your environment.');
+  } else {
+    console.warn('[AUTH] WARNING: JWT_SECRET is not set. Using default dev secret. Do not use this in production.');
   }
 }
 
@@ -37,9 +25,6 @@ export function setDatabaseMode(enabled: boolean): void {
 }
 
 export function setupAuthRoutes(app: Express): void {
-  // Check JWT_SECRET now that dotenv has loaded
-  checkJwtWarning();
-
   app.post('/api/login', async (req: Request, res: Response) => {
     const { username, password } = req.body;
 
@@ -78,7 +63,7 @@ export function setupAuthRoutes(app: Express): void {
         // Get player roles for token
         const roles = await roleRepo.getPlayerRoles(player.id);
 
-        const token = jwt.sign({ playerId: player.id, username: player.username, roles }, getJwtSecret(), { expiresIn: '24h' });
+        const token = jwt.sign({ playerId: player.id, username: player.username, roles }, JWT_SECRET, { expiresIn: '24h' });
 
         res.cookie(COOKIE_NAME, token, {
           httpOnly: true,
@@ -106,7 +91,7 @@ export function setupAuthRoutes(app: Express): void {
           return;
         }
 
-        const token = jwt.sign({ playerId: user.id, username, roles: [] }, getJwtSecret(), { expiresIn: '24h' });
+        const token = jwt.sign({ playerId: user.id, username, roles: [] }, JWT_SECRET, { expiresIn: '24h' });
 
         res.cookie(COOKIE_NAME, token, {
           httpOnly: true,
@@ -294,7 +279,7 @@ export interface TokenPayload {
 
 export function verifyToken(token: string): TokenPayload | null {
   try {
-    return jwt.verify(token, getJwtSecret()) as TokenPayload;
+    return jwt.verify(token, JWT_SECRET) as TokenPayload;
   } catch {
     return null;
   }
