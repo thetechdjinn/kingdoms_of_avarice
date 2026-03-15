@@ -21,6 +21,7 @@ import { findNpcInRoom } from './npcManager.js';
 import type { NpcCombatInstance } from './npcManager.js';
 import { withNpcName, withNpcNameCapitalized } from '../utils/textFormat.js';
 import { isStealthing, breakStealth } from './stealth/stealthState.js';
+import { applyEffectToEntity } from './statusEffects.js';
 import { breakCasterCombat } from './combatCommands.js';
 
 /**
@@ -500,14 +501,23 @@ async function handleDebuffSpell(
     return { type: MessageType.ERROR, message: `You don't see ${targetName} here.` };
   }
 
-  // NPC target — engage combat (NPC status effect support is not yet implemented)
+  // NPC target — apply effect and engage combat
   if (npcTarget) {
     if (npcTarget.vitals.hp <= 0 || npcTarget.isCorpse) {
       return { type: MessageType.ERROR, message: `${withNpcNameCapitalized(npcTarget.entityName, npcTarget.isProperName)} is already dead.` };
     }
 
+    // Check if spell has a status effect defined
+    if (!spell.statusEffect) {
+      return { type: MessageType.ERROR, message: `${spell.name} has no effect defined.` };
+    }
+
     // Deduct mana
     socket.vitals.resource = (socket.vitals.resource ?? 0) - spell.manaCost;
+
+    // Apply the status effect to the NPC
+    const durationMs = (spell.effectDuration ?? 60) * 1000;
+    const effectResult = applyEffectToEntity(npcTarget, spell.statusEffect, durationMs, spell.id);
 
     // Add NPC to targets and vice versa
     if (!socket.combatState.targets.has(npcTarget.entityId)) {
@@ -545,9 +555,10 @@ async function handleDebuffSpell(
     startCooldown(socket, spell.mnemonic, 'use');
     startCooldown(socket, spell.mnemonic, 'complete');
 
+    const durationStr = formatDuration(durationMs);
     return {
       type: MessageType.OUTPUT,
-      message: `${colors.yellow('*COMBAT ENGAGED*')} You cast ${colors.cyan(spell.name.toLowerCase())} at ${npcDisplayName}!`,
+      message: `${colors.yellow('*COMBAT ENGAGED*')} You cast ${colors.cyan(spell.name.toLowerCase())} at ${npcDisplayName}. ${effectResult.message} (${durationStr})`,
     };
   }
 

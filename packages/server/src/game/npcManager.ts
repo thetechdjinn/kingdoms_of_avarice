@@ -18,6 +18,7 @@ import type { AuthenticatedSocket } from './socket.js';
 import type { GameWorld } from './world.js';
 import * as doorStateManager from '../services/doorStateManager.js';
 import * as merchantRepo from '../db/repositories/merchantRepository.js';
+import { processNpcEffectsTick, getEffectDefinition } from './statusEffects.js';
 import * as merchantResponseRepo from '../db/repositories/merchantResponseRepository.js';
 import type { MerchantResponse } from '@koa/shared';
 
@@ -698,20 +699,39 @@ function processRoaming(): void {
 }
 
 /**
- * Process regeneration for all living NPCs not in combat.
- * Ticks HP and mana at the same base rate as players.
+ * Process regeneration and status effect ticks for all living NPCs.
  * Called on a timer every REGEN_TICK_MS.
  */
 function processNpcRegen(): void {
+  const dotDeaths: NpcCombatInstance[] = [];
+
   for (const npc of npcInstances.values()) {
-    // Skip dead NPCs
-    if (npc.vitals.hp <= 0) continue;
+    // Skip dead/corpse NPCs
+    if (npc.vitals.hp <= 0 || npc.isCorpse) continue;
 
-    // Skip NPCs in combat
+    // Process status effect ticks (DoT damage, HoT healing, expiration)
+    const effectResult = processNpcEffectsTick(npc);
+    if (effectResult.died) {
+      dotDeaths.push(npc);
+      continue;
+    }
+
+    // Natural regen: skip if in combat or has regen-blocking effects
     if (npc.regenState.inCombat) continue;
-
-    // Skip poisoned NPCs (same rule as players)
     if (npc.regenState.isPoisoned) continue;
+
+    // Also check for any active effect that blocks regen (e.g., poison)
+    if (npc.activeEffects && npc.activeEffects.size > 0) {
+      let blocksRegen = false;
+      for (const [, effect] of npc.activeEffects) {
+        const effectDef = getEffectDefinition(effect.definitionId);
+        if (effectDef?.blocksRegen) {
+          blocksRegen = true;
+          break;
+        }
+      }
+      if (blocksRegen) continue;
+    }
 
     // Health regen
     if (npc.vitals.hp < npc.vitals.maxHp) {
@@ -724,6 +744,45 @@ function processNpcRegen(): void {
       const manaRegen = Math.max(1, Math.ceil(npc.template.maxMana * NPC_MANA_REGEN_PERCENT / 100));
       npc.currentMana = Math.min(npc.currentMana + manaRegen, npc.template.maxMana);
       npc.vitals.resource = npc.currentMana;
+    }
+  }
+
+  // Process DoT deaths outside the iteration loop
+  for (const npc of dotDeaths) {
+    handleNpcDotDeath(npc).catch(error => {
+      console.error(`[NPC Manager] Failed to process DoT death for ${npc.entityName}:`, error);
+    });
+  }
+}
+
+/**
+ * Handle NPC death from DoT damage (outside combat loop).
+ * Delegates to processNpcDeath with the connected players who were fighting it.
+ */
+async function handleNpcDotDeath(npc: NpcCombatInstance): Promise<void> {
+  if (!connectedPlayersRef) return;
+
+  const { processNpcDeath } = await import('./npcDeathHandler.js');
+  const { broadcastToRoom } = await import('./socket.js');
+
+  const roomId = npc.currentRoomId;
+
+  // Broadcast death message
+  broadcastToRoom(
+    roomId,
+    colors.boldRed(`${npc.entityName} collapses and dies!`)
+  );
+
+  // Process death (XP, loot, despawn, respawn)
+  await processNpcDeath(npc, null, roomId, connectedPlayersRef);
+
+  // Clear combat state for all players who were fighting this NPC
+  for (const [, socket] of connectedPlayersRef) {
+    if (socket.combatState.targets.has(npc.entityId)) {
+      socket.combatState.targets.delete(npc.entityId);
+      if (socket.combatState.targets.size === 0) {
+        socket.regenState.inCombat = false;
+      }
     }
   }
 }

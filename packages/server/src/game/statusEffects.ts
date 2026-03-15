@@ -681,6 +681,71 @@ export function applyEffectToEntity(
 }
 
 /**
+ * Process status effect ticks for an NPC.
+ * Handles DoT damage, HoT healing, and effect expiration.
+ * Returns true if the NPC died from DoT damage.
+ */
+export function processNpcEffectsTick(npc: CombatEntity): {
+  died: boolean;
+  damaged: boolean;
+} {
+  if (!npc.activeEffects || npc.activeEffects.size === 0) {
+    return { died: false, damaged: false };
+  }
+
+  const now = Date.now();
+  const expiredEffects: string[] = [];
+  let damaged = false;
+
+  for (const [effectId, effect] of npc.activeEffects) {
+    // Check for expiration
+    if (effect.expiresAt <= now) {
+      expiredEffects.push(effectId);
+      continue;
+    }
+
+    const definition = getEffectDefinition(effectId);
+    if (!definition) continue;
+
+    // Process DoT damage
+    if (definition.tickDamageMin !== undefined && definition.tickDamageMax !== undefined) {
+      if (npc.vitals.hp <= 0) continue;
+
+      const baseDamage = rollRange(definition.tickDamageMin, definition.tickDamageMax);
+      const totalDamage = baseDamage * effect.stacks;
+
+      npc.vitals.hp -= totalDamage;
+      damaged = true;
+
+      if (npc.vitals.hp <= 0) {
+        npc.vitals.hp = 0;
+        // Clean up all effects on death
+        npc.activeEffects.clear();
+        return { died: true, damaged: true };
+      }
+    }
+
+    // Process HoT healing (only if alive)
+    if (definition.tickHealingMin !== undefined && definition.tickHealingMax !== undefined && npc.vitals.hp > 0) {
+      const baseHealing = rollRange(definition.tickHealingMin, definition.tickHealingMax);
+      const totalHealing = baseHealing * effect.stacks;
+      npc.vitals.hp = Math.min(npc.vitals.maxHp, npc.vitals.hp + totalHealing);
+    }
+  }
+
+  // Remove expired effects
+  for (const effectId of expiredEffects) {
+    npc.activeEffects.delete(effectId);
+    // Update isPoisoned flag for regen compatibility
+    if (effectId === 'poisoned') {
+      npc.regenState.isPoisoned = false;
+    }
+  }
+
+  return { died: false, damaged };
+}
+
+/**
  * Remove a status effect from a character
  */
 export async function removeEffect(
