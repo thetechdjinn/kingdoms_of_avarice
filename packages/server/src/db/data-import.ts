@@ -268,6 +268,12 @@ async function importTalents(data: unknown[]): Promise<ImportResult> {
       const talentId = (item.talent_id ?? item.talentId) as string;
       if (!talentId) { result.skipped++; continue; }
 
+      // Ensure prerequisite_talents is an array (export may write {} for empty arrays)
+      const prereqs = item.prerequisite_talents;
+      if (prereqs && !Array.isArray(prereqs)) {
+        item.prerequisite_talents = [];
+      }
+
       const existing = await progressionRepo.getTalentById(talentId);
       if (existing) {
         await progressionRepo.updateTalent(talentId, item as unknown as Parameters<typeof progressionRepo.updateTalent>[1]);

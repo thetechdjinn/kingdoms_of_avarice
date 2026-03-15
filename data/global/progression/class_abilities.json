@@ -4,7 +4,7 @@
   "type": "class_abilities",
   "data": [
     {
-      "class_id": "mage_01",
+      "class_id": "mage",
       "ability_id": "arcane_intellect",
       "required_level": 1,
       "auto_learn": false,
