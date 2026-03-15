@@ -2730,7 +2730,7 @@ async function handleStatus(socket: AuthenticatedSocket): Promise<CommandRespons
 
   // Get actual armor stats from equipped items
   const equipmentStats = await getEquipmentCombatStats(socket.characterId);
-  const ac = Math.floor(equipmentStats.armor.totalArmorClass);
+  const ac = equipmentStats.armor.totalArmorClass;
   const dr = Math.floor(equipmentStats.armor.damageReduction);
   const armourClass = `${ac}/${dr}`;
 

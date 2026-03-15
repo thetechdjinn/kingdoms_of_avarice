@@ -293,7 +293,6 @@ export async function initializeNpcManager(): Promise<void> {
 
   // Load existing instances from DB
   const instances = await npcRepo.getAllInstances();
-  const deadInstanceTemplateIds: number[] = [];
   for (const inst of instances) {
     const template = npcTemplates.get(inst.npc_id);
     if (!template) {
@@ -304,7 +303,6 @@ export async function initializeNpcManager(): Promise<void> {
     // Dead instances (corpses from before restart) should be cleaned up, not loaded.
     // Corpse state is in-memory only, so these would load as broken 0-HP NPCs.
     if (inst.current_health <= 0) {
-      deadInstanceTemplateIds.push(inst.npc_id);
       npcRepo.deleteInstance(inst.id).catch(error => {
         console.error(`[NPC Manager] Failed to delete dead instance ${inst.id}:`, error);
       });
