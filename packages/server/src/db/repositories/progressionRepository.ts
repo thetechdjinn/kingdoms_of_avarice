@@ -14,6 +14,27 @@ import {
 } from '@koa/shared';
 
 // ============================================================================
+// IN-MEMORY CACHES (static data that rarely changes at runtime)
+// ============================================================================
+
+const classCache = new Map<string, ClassDefinition>();
+const raceCache = new Map<string, RaceDefinition>();
+const progressionCache = new Map<number, { data: CharacterProgression; cachedAt: number }>();
+const PROGRESSION_CACHE_TTL = 60_000; // 1 minute — invalidated on level up
+
+/** Clear all progression caches. Called by @reload and editor updates. */
+export function clearProgressionCaches(): void {
+  classCache.clear();
+  raceCache.clear();
+  progressionCache.clear();
+}
+
+/** Invalidate a single character's progression cache (e.g., on level up). */
+export function invalidateProgressionCache(characterId: number): void {
+  progressionCache.delete(characterId);
+}
+
+// ============================================================================
 // DATABASE ROW TYPES
 // ============================================================================
 
@@ -249,11 +270,16 @@ export async function getPlayableClasses(): Promise<ClassDefinition[]> {
 }
 
 export async function getClassById(classId: string): Promise<ClassDefinition | null> {
+  const cached = classCache.get(classId);
+  if (cached) return cached;
+
   const result = await query<DbClassDefinition>(
     'SELECT * FROM class_definitions WHERE class_id = $1',
     [classId]
   );
-  return result.rows[0] ? dbToClassDefinition(result.rows[0]) : null;
+  const classDef = result.rows[0] ? dbToClassDefinition(result.rows[0]) : null;
+  if (classDef) classCache.set(classId, classDef);
+  return classDef;
 }
 
 export async function createClass(classDef: ClassDefinition & { resource_type?: string; playable?: boolean }): Promise<ClassDefinition> {
@@ -383,11 +409,16 @@ export async function getPlayableRaces(): Promise<RaceDefinition[]> {
 }
 
 export async function getRaceById(raceId: string): Promise<RaceDefinition | null> {
+  const cached = raceCache.get(raceId);
+  if (cached) return cached;
+
   const result = await query<DbRaceDefinition>(
     'SELECT * FROM race_definitions WHERE race_id = $1',
     [raceId]
   );
-  return result.rows[0] ? dbToRaceDefinition(result.rows[0]) : null;
+  const raceDef = result.rows[0] ? dbToRaceDefinition(result.rows[0]) : null;
+  if (raceDef) raceCache.set(raceId, raceDef);
+  return raceDef;
 }
 
 export async function createRace(raceDef: RaceDefinition): Promise<RaceDefinition> {
@@ -861,6 +892,12 @@ export async function getAllClassAbilities(): Promise<ClassAbilityMapping[]> {
 // ============================================================================
 
 export async function getCharacterProgression(characterId: number): Promise<CharacterProgression | null> {
+  const now = Date.now();
+  const cached = progressionCache.get(characterId);
+  if (cached && (now - cached.cachedAt) < PROGRESSION_CACHE_TTL) {
+    return cached.data;
+  }
+
   const result = await query<DbCharacterProgression & { calculated_level: number }>(
     `SELECT cp.*,
       COALESCE(
@@ -871,7 +908,11 @@ export async function getCharacterProgression(characterId: number): Promise<Char
      WHERE cp.character_id = $1`,
     [characterId]
   );
-  return result.rows[0] ? dbToCharacterProgressionWithLevel(result.rows[0]) : null;
+  const progression = result.rows[0] ? dbToCharacterProgressionWithLevel(result.rows[0]) : null;
+  if (progression) {
+    progressionCache.set(characterId, { data: progression, cachedAt: now });
+  }
+  return progression;
 }
 
 export async function createCharacterProgression(
