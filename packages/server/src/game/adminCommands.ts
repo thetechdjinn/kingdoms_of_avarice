@@ -1297,23 +1297,14 @@ function handleDrain(
   }
 }
 
-async function handleLearn(
+/**
+ * Resolve a spell target from command args: self if no player name given,
+ * or look up the named online player. Used by @learn and @unlearn.
+ */
+function resolveSpellTarget(
   args: string[],
   socket: AuthenticatedSocket
-): Promise<CommandResponse> {
-  // @learn <mnemonic> [player] - Learn a spell for yourself or another player
-  if (args.length < 1) {
-    return { type: MessageType.ERROR, message: 'Usage: @learn <mnemonic> [player]' };
-  }
-
-  const mnemonic = args[0].toLowerCase();
-  const spell = await spellRepo.getSpellByMnemonic(mnemonic);
-
-  if (!spell) {
-    return { type: MessageType.ERROR, message: `Unknown spell mnemonic: ${mnemonic}` };
-  }
-
-  // Resolve target: self or named player
+): { targetSocket: AuthenticatedSocket; targetName: string; characterId: number } | CommandResponse {
   let targetSocket: AuthenticatedSocket = socket;
   let targetName = socket.username;
 
@@ -1337,8 +1328,31 @@ async function handleLearn(
     return { type: MessageType.ERROR, message: args.length >= 2 ? `${targetName} has no character selected.` : 'No character selected.' };
   }
 
+  return { targetSocket, targetName, characterId: targetSocket.characterId };
+}
+
+async function handleLearn(
+  args: string[],
+  socket: AuthenticatedSocket
+): Promise<CommandResponse> {
+  // @learn <mnemonic> [player] - Learn a spell for yourself or another player
+  if (args.length < 1) {
+    return { type: MessageType.ERROR, message: 'Usage: @learn <mnemonic> [player]' };
+  }
+
+  const mnemonic = args[0].toLowerCase();
+  const spell = await spellRepo.getSpellByMnemonic(mnemonic);
+
+  if (!spell) {
+    return { type: MessageType.ERROR, message: `Unknown spell mnemonic: ${mnemonic}` };
+  }
+
+  const resolved = resolveSpellTarget(args, socket);
+  if ('type' in resolved) return resolved;
+  const { targetSocket, targetName, characterId } = resolved;
+
   // Check if already learned
-  const hasSpell = await spellRepo.hasSpell(targetSocket.characterId, spell.id);
+  const hasSpell = await spellRepo.hasSpell(characterId, spell.id);
   if (hasSpell) {
     if (targetSocket === socket) {
       return { type: MessageType.SYSTEM, message: `You already know ${colors.cyan(spell.name)}.` };
@@ -1347,7 +1361,7 @@ async function handleLearn(
   }
 
   // Learn the spell (admin bypasses class restrictions)
-  const result = await spellRepo.learnSpell(targetSocket.characterId, spell.id);
+  const result = await spellRepo.learnSpell(characterId, spell.id);
   if (!result) {
     return { type: MessageType.ERROR, message: 'Failed to learn spell.' };
   }
@@ -1382,32 +1396,12 @@ async function handleUnlearn(
     return { type: MessageType.ERROR, message: `Unknown spell mnemonic: ${mnemonic}` };
   }
 
-  // Resolve target: self or named player
-  let targetSocket: AuthenticatedSocket = socket;
-  let targetName = socket.username;
-
-  if (args.length >= 2) {
-    const playerName = args.slice(1).join(' ').toLowerCase();
-    let found = false;
-    for (const [, playerSocket] of connectedPlayers) {
-      if (playerSocket.username.toLowerCase() === playerName) {
-        targetSocket = playerSocket;
-        targetName = playerSocket.username;
-        found = true;
-        break;
-      }
-    }
-    if (!found) {
-      return { type: MessageType.ERROR, message: `Player not found: ${args.slice(1).join(' ')}` };
-    }
-  }
-
-  if (!targetSocket.characterId) {
-    return { type: MessageType.ERROR, message: args.length >= 2 ? `${targetName} has no character selected.` : 'No character selected.' };
-  }
+  const resolved = resolveSpellTarget(args, socket);
+  if ('type' in resolved) return resolved;
+  const { targetSocket, targetName, characterId } = resolved;
 
   // Check if they know the spell
-  const hasSpell = await spellRepo.hasSpell(targetSocket.characterId, spell.id);
+  const hasSpell = await spellRepo.hasSpell(characterId, spell.id);
   if (!hasSpell) {
     if (targetSocket === socket) {
       return { type: MessageType.SYSTEM, message: `You don't know ${colors.cyan(spell.name)}.` };
@@ -1416,7 +1410,7 @@ async function handleUnlearn(
   }
 
   // Remove the spell
-  const removed = await spellRepo.forgetSpell(targetSocket.characterId, spell.id);
+  const removed = await spellRepo.forgetSpell(characterId, spell.id);
   if (!removed) {
     return { type: MessageType.ERROR, message: 'Failed to remove spell.' };
   }

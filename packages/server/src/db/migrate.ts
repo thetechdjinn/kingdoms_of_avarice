@@ -764,12 +764,14 @@ export async function runMigrations(): Promise<void> {
  */
 export async function ensureCopperConversion(): Promise<void> {
   await withTransaction(async (client) => {
-    // Check flag inside the transaction to prevent race conditions
-    // (two concurrent startups both seeing no flag and double-multiplying values)
-    const flagResult = await client.query(
-      `SELECT 1 FROM game_settings WHERE key = 'item_base_value_copper_migrated'`
+    // Atomically claim the migration via INSERT ... ON CONFLICT DO NOTHING RETURNING.
+    // If we get a row back, we inserted the flag first and should run the migration.
+    // If no row, another transaction already claimed it. This prevents the race where
+    // two concurrent startups both read "no flag" and double-multiply values.
+    const claimed = await client.query(
+      `INSERT INTO game_settings (key, value) VALUES ('item_base_value_copper_migrated', 'true') ON CONFLICT (key) DO NOTHING RETURNING key`
     );
-    if (flagResult.rows.length > 0) return;
+    if (claimed.rows.length === 0) return;
 
     await client.query(`
       UPDATE item_templates
@@ -777,9 +779,6 @@ export async function ensureCopperConversion(): Promise<void> {
       WHERE item_type != 'currency'
         AND base_value > 0
     `);
-    await client.query(
-      `INSERT INTO game_settings (key, value) VALUES ('item_base_value_copper_migrated', 'true') ON CONFLICT (key) DO NOTHING`
-    );
     console.log('Item base_value copper conversion completed');
   });
 }

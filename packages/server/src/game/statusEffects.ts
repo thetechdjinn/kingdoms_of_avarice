@@ -701,10 +701,14 @@ export function processNpcEffectsTick(npc: CombatEntity): {
     // Check for expiration
     if (effect.expiresAt <= now) {
       expiredEffects.push(effectId);
+      // Update poisoned flag immediately on expiry
+      if (effect.definitionId === 'poisoned') {
+        npc.regenState.isPoisoned = false;
+      }
       continue;
     }
 
-    const definition = getEffectDefinition(effectId);
+    const definition = getEffectDefinition(effect.definitionId);
     if (!definition) continue;
 
     // Process DoT damage
@@ -736,10 +740,6 @@ export function processNpcEffectsTick(npc: CombatEntity): {
   // Remove expired effects
   for (const effectId of expiredEffects) {
     npc.activeEffects.delete(effectId);
-    // Update isPoisoned flag for regen compatibility
-    if (effectId === 'poisoned') {
-      npc.regenState.isPoisoned = false;
-    }
   }
 
   return { died: false, damaged };
