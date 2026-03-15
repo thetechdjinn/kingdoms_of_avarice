@@ -1,0 +1,14 @@
+{
+  "version": "1.0",
+  "exported_at": "2026-03-15T13:33:32.873Z",
+  "type": "class_abilities",
+  "data": [
+    {
+      "class_id": "mage",
+      "ability_id": "arcane_intellect",
+      "required_level": 1,
+      "auto_learn": false,
+      "training_cost": 0
+    }
+  ]
+}

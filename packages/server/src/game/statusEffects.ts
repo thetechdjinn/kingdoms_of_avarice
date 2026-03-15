@@ -681,6 +681,72 @@ export function applyEffectToEntity(
 }
 
 /**
+ * Process status effect ticks for an NPC.
+ * Handles DoT damage, HoT healing, and effect expiration.
+ * Returns true if the NPC died from DoT damage.
+ */
+export function processNpcEffectsTick(npc: CombatEntity): {
+  died: boolean;
+  damaged: boolean;
+} {
+  if (!npc.activeEffects || npc.activeEffects.size === 0) {
+    return { died: false, damaged: false };
+  }
+
+  const now = Date.now();
+  const expiredEffects: string[] = [];
+  let damaged = false;
+
+  for (const [effectId, effect] of npc.activeEffects) {
+    // Check for expiration
+    if (effect.expiresAt <= now) {
+      expiredEffects.push(effectId);
+      // Update poisoned flag immediately on expiry
+      if (effect.definitionId === 'poisoned') {
+        npc.regenState.isPoisoned = false;
+      }
+      continue;
+    }
+
+    const definition = getEffectDefinition(effect.definitionId);
+    if (!definition) continue;
+
+    // Process DoT damage
+    if (definition.tickDamageMin !== undefined && definition.tickDamageMax !== undefined) {
+      if (npc.vitals.hp <= 0) continue;
+
+      const baseDamage = rollRange(definition.tickDamageMin, definition.tickDamageMax);
+      const totalDamage = baseDamage * effect.stacks;
+
+      npc.vitals.hp -= totalDamage;
+      damaged = true;
+
+      if (npc.vitals.hp <= 0) {
+        npc.vitals.hp = 0;
+        // Clean up all effects and regen flags on death
+        npc.activeEffects.clear();
+        npc.regenState.isPoisoned = false;
+        return { died: true, damaged: true };
+      }
+    }
+
+    // Process HoT healing (only if alive)
+    if (definition.tickHealingMin !== undefined && definition.tickHealingMax !== undefined && npc.vitals.hp > 0) {
+      const baseHealing = rollRange(definition.tickHealingMin, definition.tickHealingMax);
+      const totalHealing = baseHealing * effect.stacks;
+      npc.vitals.hp = Math.min(npc.vitals.maxHp, npc.vitals.hp + totalHealing);
+    }
+  }
+
+  // Remove expired effects
+  for (const effectId of expiredEffects) {
+    npc.activeEffects.delete(effectId);
+  }
+
+  return { died: false, damaged };
+}
+
+/**
  * Remove a status effect from a character
  */
 export async function removeEffect(
@@ -1032,6 +1098,51 @@ export function getActiveEffectsDisplay(socket: AuthenticatedSocket): Array<{
     if (a.category !== b.category) {
       return a.category.localeCompare(b.category);
     }
+    return a.remainingMs - b.remainingMs;
+  });
+
+  return result;
+}
+
+/**
+ * Get active effects for any CombatEntity (players and NPCs).
+ * Returns display-ready effect info sorted by category then remaining time.
+ */
+export function getEntityActiveEffects(entity: CombatEntity): Array<{
+  name: string;
+  category: StatusEffectCategory;
+  remainingMs: number;
+  stacks: number;
+}> {
+  const result: Array<{
+    name: string;
+    category: StatusEffectCategory;
+    remainingMs: number;
+    stacks: number;
+  }> = [];
+
+  if (!entity.activeEffects || entity.activeEffects.size === 0) {
+    return result;
+  }
+
+  const now = Date.now();
+
+  for (const [, effect] of entity.activeEffects) {
+    if (effect.expiresAt <= now) continue;
+
+    const definition = getEffectDefinition(effect.definitionId);
+    if (!definition) continue;
+
+    result.push({
+      name: definition.name,
+      category: definition.category,
+      remainingMs: effect.expiresAt - now,
+      stacks: effect.stacks,
+    });
+  }
+
+  result.sort((a, b) => {
+    if (a.category !== b.category) return a.category.localeCompare(b.category);
     return a.remainingMs - b.remainingMs;
   });
 

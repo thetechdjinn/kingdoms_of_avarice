@@ -4,7 +4,7 @@ AI-assisted area generation for Kingdoms of Avarice. Areas are designed in markd
 
 ## Documents
 
-- [Area Generation Plan](Area_Generation_Plan.md) — Process, workflow, data format, and implementation phases
+- [Area Generation Plan](Area_Generation_Plan.md) — Process, workflow, data format, implementation phases, and **Euclidean map creation/validation rules**
 
 ## Directory Structure
 
@@ -23,6 +23,15 @@ data/                     # Exported game data (project root, planned)
 
 1. Copy `areas/_template/` to `areas/[your_area_name]/`
 2. Fill in the Brief section of `plan.md`
-3. Ask Claude to expand the proposals
-4. Review, tag, iterate until approved
-5. Generate game data into `data/areas/[your_area_name]/`
+3. Draw the ASCII map in the Layout section following format rules (see template comments and Area_Generation_Plan.md § "Creating and Validating Euclidean ASCII Maps")
+4. Ask Claude to expand the proposals
+5. Review, tag, iterate until approved
+6. Generate game data into `data/areas/[your_area_name]/`
+
+## ASCII Map Format (Quick Reference)
+
+- Rooms: single char only (`*` or letter)
+- Connectors: `---` (E/W), `|` (N/S), `/` (NE/SW), `\` (NW/SE)
+- Room lines and connector lines alternate
+- Maps must be Euclidean (loops close, no coordinate conflicts)
+- See [Area Generation Plan § Euclidean Maps](Area_Generation_Plan.md#creating-and-validating-euclidean-ascii-maps) for full rules

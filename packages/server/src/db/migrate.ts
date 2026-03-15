@@ -299,31 +299,41 @@ export async function runMigrations(): Promise<void> {
 
       // Migrate item_instances location_id from players.id to characters.id
       // For items with location_type 'player' or 'equipped', update location_id
-      // to point to the player's first character instead of the player account
+      // to point to the player's first character instead of the player account.
+      // One-time migration: uses a flag to prevent re-running on subsequent startups,
+      // which would corrupt data due to player/character ID overlap.
+      const itemMigrationFlag = await client.query(
+        `SELECT 1 FROM game_settings WHERE key = 'item_location_migrated'`
+      );
+      if (itemMigrationFlag.rows.length === 0) {
+        // First, delete orphaned items belonging to players with no characters
+        // These items would become inaccessible after migration
+        await client.query(`
+          DELETE FROM item_instances ii
+          WHERE ii.location_type IN ('player', 'equipped')
+            AND EXISTS (SELECT 1 FROM players p WHERE p.id = ii.location_id)
+            AND NOT EXISTS (SELECT 1 FROM characters c WHERE c.player_id = ii.location_id)
+        `);
 
-      // First, delete orphaned items belonging to players with no characters
-      // These items would become inaccessible after migration
-      await client.query(`
-        DELETE FROM item_instances ii
-        WHERE ii.location_type IN ('player', 'equipped')
-          AND EXISTS (SELECT 1 FROM players p WHERE p.id = ii.location_id)
-          AND NOT EXISTS (SELECT 1 FROM characters c WHERE c.player_id = ii.location_id)
-      `);
+        // Now migrate remaining items to the player's first character
+        await client.query(`
+          WITH player_first_char AS (
+            SELECT DISTINCT ON (player_id) player_id, id AS character_id
+            FROM characters
+            ORDER BY player_id, id
+          )
+          UPDATE item_instances ii
+          SET location_id = pfc.character_id
+          FROM player_first_char pfc
+          WHERE ii.location_type IN ('player', 'equipped')
+            AND ii.location_id = pfc.player_id
+            AND EXISTS (SELECT 1 FROM players p WHERE p.id = ii.location_id)
+        `);
 
-      // Now migrate remaining items to the player's first character
-      await client.query(`
-        WITH player_first_char AS (
-          SELECT DISTINCT ON (player_id) player_id, id AS character_id
-          FROM characters
-          ORDER BY player_id, id
-        )
-        UPDATE item_instances ii
-        SET location_id = pfc.character_id
-        FROM player_first_char pfc
-        WHERE ii.location_type IN ('player', 'equipped')
-          AND ii.location_id = pfc.player_id
-          AND EXISTS (SELECT 1 FROM players p WHERE p.id = ii.location_id)
-      `);
+        await client.query(
+          `INSERT INTO game_settings (key, value) VALUES ('item_location_migrated', 'true') ON CONFLICT (key) DO NOTHING`
+        );
+      }
 
       // Purge old classes and races to reseed with new MajorMUD data
       // Check if we need to reseed by looking for old-style class IDs
@@ -345,20 +355,13 @@ export async function runMigrations(): Promise<void> {
       // Weapon speeds should now be in the 800-2000 range (dagger ~900, greatsword ~1800).
 
       // Add missing door columns (for existing databases created before full door schema)
-      await client.query(`
-        ALTER TABLE doors ADD COLUMN IF NOT EXISTS auto_close_seconds INTEGER DEFAULT 120
-      `);
+      // Note: auto_close_seconds, auto_lock_seconds, and pick_difficulty are NOT re-added here
+      // because they are superseded by auto_reset_seconds and pick_difficulty_min/max below.
       await client.query(`
         ALTER TABLE doors ADD COLUMN IF NOT EXISTS has_lock BOOLEAN DEFAULT FALSE
       `);
       await client.query(`
         ALTER TABLE doors ADD COLUMN IF NOT EXISTS key_item_tag VARCHAR(100)
-      `);
-      await client.query(`
-        ALTER TABLE doors ADD COLUMN IF NOT EXISTS auto_lock_seconds INTEGER
-      `);
-      await client.query(`
-        ALTER TABLE doors ADD COLUMN IF NOT EXISTS pick_difficulty INTEGER DEFAULT 0
       `);
       await client.query(`
         ALTER TABLE doors ADD COLUMN IF NOT EXISTS bash_difficulty INTEGER DEFAULT 0
@@ -420,6 +423,9 @@ export async function runMigrations(): Promise<void> {
       // Add permission columns to doors (Phase 10 - for existing databases)
       await client.query(`
         ALTER TABLE doors ADD COLUMN IF NOT EXISTS required_level INTEGER
+      `);
+      await client.query(`
+        ALTER TABLE doors ADD COLUMN IF NOT EXISTS max_level INTEGER
       `);
       await client.query(`
         ALTER TABLE doors ADD COLUMN IF NOT EXISTS required_classes TEXT[]
@@ -519,18 +525,25 @@ export async function runMigrations(): Promise<void> {
       await client.query(`
         ALTER TABLE doors ADD COLUMN IF NOT EXISTS auto_reset_seconds INTEGER DEFAULT 120
       `);
-      // Migrate data: prefer auto_lock_seconds (if set), else use auto_close_seconds
-      await client.query(`
-        UPDATE doors
-        SET auto_reset_seconds = COALESCE(auto_lock_seconds, auto_close_seconds)
-        WHERE auto_lock_seconds IS NOT NULL OR (auto_close_seconds IS NOT NULL AND auto_close_seconds != 120)
+      // Migrate data only if old columns still exist (first run only)
+      const hasAutoClose = await client.query(`
+        SELECT column_name FROM information_schema.columns
+        WHERE table_name = 'doors' AND column_name = 'auto_close_seconds'
       `);
-      await client.query(`
-        ALTER TABLE doors DROP COLUMN IF EXISTS auto_close_seconds
-      `);
-      await client.query(`
-        ALTER TABLE doors DROP COLUMN IF EXISTS auto_lock_seconds
-      `);
+      if (hasAutoClose.rows.length > 0) {
+        // Prefer auto_lock_seconds (if set), else use auto_close_seconds
+        await client.query(`
+          UPDATE doors
+          SET auto_reset_seconds = COALESCE(auto_lock_seconds, auto_close_seconds)
+          WHERE auto_lock_seconds IS NOT NULL OR (auto_close_seconds IS NOT NULL AND auto_close_seconds != 120)
+        `);
+        await client.query(`
+          ALTER TABLE doors DROP COLUMN IF EXISTS auto_close_seconds
+        `);
+        await client.query(`
+          ALTER TABLE doors DROP COLUMN IF EXISTS auto_lock_seconds
+        `);
+      }
 
       // Lockpicking System Phase 1: Migrate pick_difficulty to min/max range
       // First add the new columns
@@ -682,8 +695,8 @@ export async function runMigrations(): Promise<void> {
       // Seed default factions
       await client.query(`
         INSERT INTO factions (name, description, faction_type) VALUES
-          ('Silverton Merchants Guild', 'The trade guild of Silverton, controlling commerce in the city.', 'merchant'),
-          ('Silverton City Guard', 'The city guard of Silverton, maintaining order and justice.', 'city')
+          ('Arindale Merchants Guild', 'The trade guild of Arindale, controlling commerce in the city.', 'merchant'),
+          ('Arindale City Guard', 'The city guard of Arindale, maintaining order and justice.', 'city')
         ON CONFLICT (name) DO NOTHING
       `);
 
@@ -750,420 +763,44 @@ export async function runMigrations(): Promise<void> {
  * Uses a game_settings flag to ensure this only runs once.
  */
 export async function ensureCopperConversion(): Promise<void> {
-  const pool = getPool();
-  const flagResult = await pool.query(
-    `SELECT 1 FROM game_settings WHERE key = 'item_base_value_copper_migrated'`
-  );
-  if (flagResult.rows.length === 0) {
-    await withTransaction(async (client) => {
-      await client.query(`
-        UPDATE item_templates
-        SET base_value = base_value * 100
-        WHERE item_type != 'currency'
-          AND base_value > 0
-      `);
-      await client.query(
-        `INSERT INTO game_settings (key, value) VALUES ('item_base_value_copper_migrated', 'true') ON CONFLICT (key) DO NOTHING`
-      );
-    });
+  await withTransaction(async (client) => {
+    // Atomically claim the migration via INSERT ... ON CONFLICT DO NOTHING RETURNING.
+    // If we get a row back, we inserted the flag first and should run the migration.
+    // If no row, another transaction already claimed it. This prevents the race where
+    // two concurrent startups both read "no flag" and double-multiply values.
+    const claimed = await client.query(
+      `INSERT INTO game_settings (key, value) VALUES ('item_base_value_copper_migrated', 'true') ON CONFLICT (key) DO NOTHING RETURNING key`
+    );
+    if (claimed.rows.length === 0) return;
+
+    await client.query(`
+      UPDATE item_templates
+      SET base_value = base_value * 100
+      WHERE item_type != 'currency'
+        AND base_value > 0
+    `);
     console.log('Item base_value copper conversion completed');
-  }
+  });
 }
 
+/**
+ * Legacy seed function - no longer needed.
+ * All game data is now managed via npm run data:export / data:import.
+ * Infrastructure data (game_settings, currency templates, roles) is handled in runMigrations().
+ * Kept as a no-op for backward compatibility with callers.
+ */
 export async function seedInitialData(): Promise<void> {
-  // If Arindale has been seeded, skip all legacy Silverton room/NPC seeds
-  const arindaleCheck = await getPool().query(
-    `SELECT 1 FROM game_settings WHERE key = 'arindale_seeded' AND value = 'true'`
-  );
-  const arindaleSeeded = arindaleCheck.rows.length > 0;
-
-  if (arindaleSeeded) {
-    console.log('Arindale data detected, skipping legacy Silverton seeds...');
-  }
-
-  // Check if rooms already exist
-  const roomCheck = await getPool().query('SELECT COUNT(*) FROM rooms');
-  const roomsExist = parseInt(roomCheck.rows[0].count) > 0;
-
-  if (roomsExist) {
-    console.log('Room seed data already exists, skipping rooms...');
-  } else if (!arindaleSeeded) {
-    await seedRooms();
-  }
-
-  // Check if item templates already exist
-  const itemCheck = await getPool().query('SELECT COUNT(*) FROM item_templates');
-  const itemsExist = parseInt(itemCheck.rows[0].count) > 0;
-
-  if (itemsExist) {
-    console.log('Item seed data already exists, skipping items...');
-  } else {
-    await seedItems();
-  }
-
-  // Check if spells already exist
-  const spellCheck = await getPool().query('SELECT COUNT(*) FROM spells');
-  const spellsExist = parseInt(spellCheck.rows[0].count) > 0;
-
-  if (spellsExist) {
-    console.log('Spell seed data already exists, skipping spells...');
-  } else {
-    await seedSpells();
-  }
-
-  // Check if status effect definitions already exist
-  const effectDefCheck = await getPool().query('SELECT COUNT(*) FROM status_effect_definitions');
-  const effectDefsExist = parseInt(effectDefCheck.rows[0].count) > 0;
-
-  if (effectDefsExist) {
-    console.log('Status effect definitions already exist, skipping...');
-  } else {
-    await seedStatusEffectDefinitions();
-  }
-
-  // Check if actions already exist
-  const actionCheck = await getPool().query('SELECT COUNT(*) FROM actions');
-  const actionsExist = parseInt(actionCheck.rows[0].count) > 0;
-
-  if (actionsExist) {
-    console.log('Action seed data already exists, skipping actions...');
-  } else {
-    await seedActions();
-  }
-
-  // Check if NPCs already exist
-  const npcCheck = await getPool().query('SELECT COUNT(*) FROM npcs');
-  const npcsExist = parseInt(npcCheck.rows[0].count) > 0;
-
-  if (npcsExist) {
-    console.log('NPC seed data already exists, skipping NPCs...');
-  } else if (!arindaleSeeded) {
-    await seedNpcs();
-  } else {
-    console.log('Arindale seeded but no NPCs found. Populate NPCs via the NPC Editor or import.');
-  }
-
-  // Seed merchant NPC (has its own existence check, runs after rooms/items/npcs are ready)
-  if (!arindaleSeeded) {
-    await seedMerchant();
-  }
+  // No-op: game data is imported via npm run data:import
 }
 
-async function seedRooms(): Promise<void> {
-
-  console.log('Seeding initial room data...');
-
-  // Insert rooms (including training hall)
-  await getPool().query(`
-    INSERT INTO rooms (id, name, description, area, features) VALUES
-    (1, 'Town Square', 'You stand in the center of a bustling town square. A weathered stone fountain bubbles quietly in the center. Merchants hawk their wares from wooden stalls, and townsfolk hurry about their daily business.', 'Silverton', '{}'),
-    (2, 'North Road', 'A cobblestone road stretches northward toward the city gates. Guards in polished armor stand watch at their posts.', 'Silverton', '{}'),
-    (3, 'Merchant District', 'Colorful awnings shade the entrances to various shops. The smell of fresh bread mingles with the scent of leather and metal.', 'Silverton', '{}'),
-    (4, 'Temple Steps', 'Marble steps lead up to an imposing temple dedicated to the old gods. Incense smoke drifts from within.', 'Silverton', '{}'),
-    (5, 'The Rusty Blade Tavern', 'A warm glow emanates from this well-worn tavern. The sound of laughter and clinking mugs spills out into the street.', 'Silverton', '{}'),
-    (6, 'City Gates', 'Massive iron-bound wooden gates mark the boundary between civilization and the wilderness beyond. A guard eyes you warily.', 'Silverton', '{}'),
-    (7, 'Training Hall', 'A spacious hall with high ceilings and weapon racks lining the walls. Training dummies stand in neat rows, their surfaces showing the marks of countless practice sessions. A grizzled instructor watches newcomers with a critical eye.', 'Silverton', '{"training": {"enabled": true, "minLevel": 1, "maxLevel": 999}}')
-  `);
-
-  // Reset sequence to max id so next insert gets id 8
-  await getPool().query(`SELECT setval('rooms_id_seq', (SELECT MAX(id) FROM rooms))`);
-
-  // Insert room exits (including training hall connected to town square)
-  await getPool().query(`
-    INSERT INTO room_exits (from_room_id, to_room_id, direction) VALUES
-    (1, 2, 'north'),
-    (1, 3, 'east'),
-    (1, 4, 'south'),
-    (1, 5, 'west'),
-    (1, 7, 'up'),
-    (2, 1, 'south'),
-    (2, 6, 'north'),
-    (3, 1, 'west'),
-    (4, 1, 'north'),
-    (5, 1, 'east'),
-    (6, 2, 'south'),
-    (7, 1, 'down')
-  `);
-
-  console.log('Room seed data inserted successfully');
-}
-
-async function seedItems(): Promise<void> {
-  console.log('Seeding initial item data...');
-
-  try {
-    const seedPath = join(sqlDir, 'seed_items.sql');
-    const seedSql = readFileSync(seedPath, 'utf-8');
-    await getPool().query(seedSql);
-    console.log('Item seed data inserted successfully');
-
-    // Normalize item names only for freshly seeded items
-    await normalizeItemNames();
-  } catch (error) {
-    console.error('Failed to seed items:', error);
-    // Don't throw - items are optional, game can run without them
-  }
-}
-
-async function seedSpells(): Promise<void> {
-  console.log('Seeding initial spell data...');
-
-  try {
-    const seedPath = join(sqlDir, 'seed_spells.sql');
-    const seedSql = readFileSync(seedPath, 'utf-8');
-    await getPool().query(seedSql);
-    console.log('Spell seed data inserted successfully');
-  } catch (error) {
-    console.error('Failed to seed spells:', error);
-    // Don't throw - spells are optional, game can run without them
-  }
-}
-
-async function seedStatusEffectDefinitions(): Promise<void> {
-  console.log('Seeding default status effect definitions...');
-
-  try {
-    // Seed the default status effect definitions from code registry
-    // Uses damage/healing ranges instead of dice notation for easier scaling
-    await getPool().query(`
-      INSERT INTO status_effect_definitions (
-        id, name, description, category, stacking_behavior, max_stacks,
-        accuracy_modifier, defense_modifier, energy_modifier, damage_modifier,
-        tick_damage_min, tick_damage_max, tick_healing_min, tick_healing_max,
-        tick_message, silent_tick, wear_off_message,
-        blocks_regen, blocks_movement, is_blind
-      ) VALUES
-      ('blessed', 'Blessed', 'Divine favor grants improved accuracy', 'buff', 'refresh', 1,
-       10, 0, 0, 0,
-       NULL, NULL, NULL, NULL,
-       NULL, TRUE, 'The divine blessing fades.',
-       FALSE, FALSE, FALSE),
-      ('shielded', 'Shielded', 'A magical barrier provides extra protection', 'buff', 'refresh', 1,
-       0, 15, 0, 0,
-       NULL, NULL, NULL, NULL,
-       NULL, TRUE, 'Your magical shield dissipates.',
-       FALSE, FALSE, FALSE),
-      ('hasted', 'Hasted', 'Magical speed increases combat energy regeneration', 'buff', 'refresh', 1,
-       0, 0, 25, 0,
-       NULL, NULL, NULL, NULL,
-       NULL, TRUE, 'The haste spell wears off.',
-       FALSE, FALSE, FALSE),
-      ('empowered', 'Empowered', 'Raw magical power increases damage dealt', 'buff', 'refresh', 1,
-       0, 0, 0, 20,
-       NULL, NULL, NULL, NULL,
-       NULL, TRUE, 'The empowerment fades.',
-       FALSE, FALSE, FALSE),
-      ('cursed', 'Cursed', 'A dark curse hampers combat effectiveness', 'debuff', 'refresh', 1,
-       -10, -10, 0, 0,
-       NULL, NULL, NULL, NULL,
-       NULL, TRUE, 'The curse lifts.',
-       FALSE, FALSE, FALSE),
-      ('weakened', 'Weakened', 'Magical weakness reduces damage dealt', 'debuff', 'refresh', 1,
-       0, 0, 0, -25,
-       NULL, NULL, NULL, NULL,
-       NULL, TRUE, 'Your strength returns.',
-       FALSE, FALSE, FALSE),
-      ('blinded', 'Blinded', 'Unable to see, suffering major accuracy penalties', 'debuff', 'refresh', 1,
-       0, 0, 0, 0,
-       NULL, NULL, NULL, NULL,
-       NULL, TRUE, 'Your vision clears.',
-       FALSE, FALSE, TRUE),
-      ('poisoned', 'Poisoned', 'Venom courses through your veins', 'dot', 'refresh', 1,
-       0, 0, 0, 0,
-       1, 4, NULL, NULL,
-       'The poison burns through your veins.', FALSE, 'The poison runs its course.',
-       TRUE, FALSE, FALSE),
-      ('burning', 'Burning', 'Magical flames sear your flesh', 'dot', 'refresh', 1,
-       0, 0, 0, 0,
-       1, 6, NULL, NULL,
-       'The flames sear your flesh!', FALSE, 'The flames die out.',
-       FALSE, FALSE, FALSE),
-      ('regenerating', 'Regenerating', 'Healing magic mends your wounds over time', 'hot', 'refresh', 1,
-       0, 0, 0, 0,
-       NULL, NULL, 1, 6,
-       'Healing energy flows through you.', FALSE, 'The regeneration effect fades.',
-       FALSE, FALSE, FALSE),
-      ('entangled', 'Entangled', 'Magical vines restrict your movement', 'control', 'refresh', 1,
-       0, -5, 0, 0,
-       NULL, NULL, NULL, NULL,
-       'The vines tighten around you.', FALSE, 'The vines wither and release you.',
-       FALSE, TRUE, FALSE)
-      ON CONFLICT (id) DO NOTHING
-    `);
-    console.log('Status effect definitions seeded successfully');
-  } catch (error) {
-    console.error('Failed to seed status effect definitions:', error);
-  }
-}
-
-async function seedActions(): Promise<void> {
-  console.log('Seeding default action data...');
-
-  try {
-    const seedPath = join(sqlDir, 'seed_actions.sql');
-    const seedSql = readFileSync(seedPath, 'utf-8');
-    await getPool().query(seedSql);
-    console.log('Action seed data inserted successfully');
-  } catch (error) {
-    console.error('Failed to seed actions:', error);
-    // Don't throw - actions are optional, game can run without them
-  }
-}
-
-async function seedNpcs(): Promise<void> {
-  console.log('Seeding initial NPC data...');
-
-  try {
-    // Insert a test NPC template - serpentine warrior at City Gates
-    const templateResult = await getPool().query(`
-      INSERT INTO npcs (
-        name, description, spawn_room_id, health, max_health, hostile,
-        respawn_time, level, experience_reward, gold_min, gold_max,
-        max_mana, base_accuracy, base_defense, base_crit_chance, damage_reduction,
-        spell_power, traits, max_active, essence_reward, essence_class,
-        roam_enabled, roam_interval, roam_chance, allowed_areas,
-        augmentation_enabled, augmentations,
-        enter_room_message, exit_room_message, spawn_message
-      ) VALUES (
-        'serpentine warrior', 'A fearsome warrior with serpentine features, its scaled skin glistening in the dim light.',
-        6, 30, 30, TRUE,
-        60, 2, 25, 5, 15,
-        20, 35, 12, 5, 1,
-        10, '{}', 1, 5, NULL,
-        TRUE, 60, 10, '{Silverton}',
-        TRUE, '{fierce,scarred,young}',
-        '{name} slithers in from the {direction}.', '{name} slithers away {direction}.', '{name} slithers in.'
-      ) RETURNING id
-    `);
-
-    const npcId = templateResult.rows[0].id;
-
-    // Insert attack for the NPC
-    await getPool().query(`
-      INSERT INTO npc_attacks (
-        npc_id, attack_type, name, min_damage, max_damage,
-        attacks_per_round, percentage, mana_cost,
-        hit_verb, hit_verb_3p, miss_verb, miss_verb_3p
-      ) VALUES (
-        $1, 'melee', 'claw strike', 2, 6,
-        1, 100, 0,
-        'claw', 'claws', 'swipe at', 'swipes at'
-      )
-    `, [npcId]);
-
-    // Assign Minor Heal spell to serpentine warrior (heals when HP below 50%)
-    const minorHealResult = await getPool().query(
-      "SELECT id FROM spells WHERE mnemonic = 'mhea' LIMIT 1"
-    );
-    if (minorHealResult.rows.length > 0) {
-      const spellId = minorHealResult.rows[0].id;
-      await getPool().query(`
-        INSERT INTO npc_spells (npc_id, spell_id, priority, cast_chance, condition_type, condition_value, cooldown_rounds)
-        VALUES ($1, $2, 80, 75, 'hp_below', 50, 3)
-      `, [npcId, spellId]);
-    }
-
-    // Create drop table for serpentine warrior
-    const dropTableResult = await getPool().query(`
-      INSERT INTO drop_tables (name, description)
-      VALUES ('serpentine warrior loot', 'Loot table for the serpentine warrior')
-      RETURNING id
-    `);
-    const dropTableId = dropTableResult.rows[0].id;
-
-    // Add currency entry: 75% chance, 10-50 copper, only copper and silver denominations
-    await getPool().query(`
-      INSERT INTO drop_table_entries (drop_table_id, drop_chance, min_quantity, max_quantity, currency_min, currency_max, allowed_denominations)
-      VALUES ($1, 75, 1, 1, 10, 50, '{copper,silver}')
-    `, [dropTableId]);
-
-    // Link drop table to NPC template
-    await getPool().query(`
-      UPDATE npcs SET drop_table_id = $1 WHERE id = $2
-    `, [dropTableId, npcId]);
-
-    // Spawn an instance of the NPC
-    await getPool().query(`
-      INSERT INTO npc_instances (npc_id, current_room_id, current_health)
-      VALUES ($1, 6, 30)
-    `, [npcId]);
-
-    console.log('NPC seed data inserted successfully');
-  } catch (error) {
-    console.error('Failed to seed NPCs:', error);
-  }
-}
-
-async function seedMerchant(): Promise<void> {
-  const pool = getPool();
-
-  // Check if Goran already exists (check both old and new name)
-  const goranExists = await pool.query(
-    "SELECT 1 FROM npcs WHERE LOWER(name) IN ('goran the weaponsmith', 'goran')"
-  );
-  if (goranExists.rows.length > 0) return;
-
-  // Verify room 3 exists (required FK)
-  const roomExists = await pool.query('SELECT 1 FROM rooms WHERE id = 3');
-  if (roomExists.rows.length === 0) {
-    console.log('Room 3 does not exist, skipping merchant seed.');
-    return;
-  }
-
-  try {
-    // Get the Silverton Merchants Guild faction ID
-    const guildResult = await pool.query(
-      "SELECT id FROM factions WHERE name = 'Silverton Merchants Guild'"
-    );
-    const guildId = guildResult.rows[0]?.id ?? null;
-
-    const goranResult = await pool.query(
-      `INSERT INTO npcs (
-        name, description, spawn_room_id, health, max_health, hostile, respawn_time,
-        level, experience_reward, gold_min, gold_max, max_mana,
-        base_accuracy, base_defense, base_crit_chance, base_dodge, damage_reduction,
-        flee_enabled, max_active, interactable, merchant_enabled, primary_faction_id, proper_name
-      ) VALUES (
-        'goran',
-        'A burly man with soot-stained hands and a leather apron. His arms are thick from years at the forge, and his eyes hold the steady gaze of a master craftsman.',
-        3, 200, 200, false, 120,
-        5, 0, 0, 0, 0,
-        60, 60, 5, 10, 5,
-        true, 1, true, true, $1, true
-      ) RETURNING id`,
-      [guildId]
-    );
-    const goranId = goranResult.rows[0]?.id;
-
-    if (goranId) {
-      // Add default merchant responses
-      await pool.query(
-        `INSERT INTO merchant_responses (npc_template_id, trigger_keywords, response) VALUES
-          ($1, '{hello,hi,greetings,hey}', 'Welcome to my shop! Take a look around. Type "list" to see what I have for sale.'),
-          ($1, '{help,how,buy,sell}', 'You can "list" my wares, "buy" an item, "sell" me something, or check the "price" of goods.'),
-          ($1, '{bye,farewell,goodbye}', 'Safe travels! Come back when you need good steel.')
-        ON CONFLICT DO NOTHING`,
-        [goranId]
-      );
-    }
-
-    console.log('Merchant NPC "Goran" seeded successfully');
-  } catch (error) {
-    console.error('Failed to seed merchant NPC:', error);
-  }
-}
-
-async function normalizeItemNames(): Promise<void> {
-  // Convert all item names to lowercase for consistency
-  await getPool().query(`UPDATE item_templates SET name = LOWER(name)`);
-  await getPool().query(`UPDATE item_templates SET short_desc = LOWER(short_desc)`);
-  console.log('Item names normalized to lowercase');
-}
+// Legacy seed functions (seedRooms, seedItems, seedSpells, seedStatusEffectDefinitions,
+// seedActions, seedNpcs, seedMerchant, normalizeItemNames) have been removed.
+// All game data is now managed via npm run data:export / data:import.
+// Infrastructure data (game_settings, currency templates, roles) is seeded in runMigrations().
 
 // Run if called directly
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   runMigrations()
-    .then(() => seedInitialData())
     .then(() => ensureCopperConversion())
     .then(() => process.exit(0))
     .catch(() => process.exit(1));

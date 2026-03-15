@@ -1,0 +1,18 @@
+/**
+ * Dotenv preload — must be the first import in index.ts.
+ *
+ * ESM hoists all static imports, so this module's top-level code runs
+ * before any other module reads process.env. Loads .env from the
+ * monorepo root (three levels up from packages/server/src/).
+ */
+import dotenv from 'dotenv';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+const result = dotenv.config({ path: join(__dirname, '..', '..', '..', '.env') });
+if (result.error) {
+  console.warn('Could not load .env file:', join(__dirname, '..', '..', '..', '.env'));
+}

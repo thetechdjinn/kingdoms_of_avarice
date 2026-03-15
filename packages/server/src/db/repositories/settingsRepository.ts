@@ -543,16 +543,32 @@ export async function getAllSettingsRaw(): Promise<Record<string, unknown>> {
 // ============================================================================
 
 /**
+ * Get a room ID setting by key, validating it is a positive integer.
+ * Returns null if not configured or invalid.
+ */
+async function getRoomIdSetting(key: string): Promise<number | null> {
+  const value = await getSetting<number>(key);
+  if (typeof value === 'number' && Number.isInteger(value) && value > 0) {
+    return value;
+  }
+  return null;
+}
+
+/**
  * Get the default respawn room ID.
  * This is used as a fallback when a player dies in an area with no designated
  * respawn room. Returns null if not configured (will fall back to Room 1).
  */
 export async function getDefaultRespawnRoomId(): Promise<number | null> {
-  const value = await getSetting<number>('default_respawn_room_id');
-  if (typeof value === 'number' && Number.isInteger(value) && value > 0) {
-    return value;
-  }
-  return null;
+  return getRoomIdSetting('default_respawn_room_id');
+}
+
+/**
+ * Get the default starting room ID for new characters.
+ * Returns null if not configured (will fall back to Room 1).
+ */
+export async function getDefaultStartingRoomId(): Promise<number | null> {
+  return getRoomIdSetting('default_starting_room_id');
 }
 
 // ============================================================================

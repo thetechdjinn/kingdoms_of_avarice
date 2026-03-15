@@ -162,6 +162,8 @@ function createMockNpc(overrides: Partial<NpcCombatInstance> = {}): NpcCombatIns
     nextRoamAt: 0,
     spellCooldowns: new Map(),
     combatRoundCount: 0,
+    isCorpse: false,
+    corpseRemoveAt: 0,
     ...overrides,
   } as NpcCombatInstance;
 }

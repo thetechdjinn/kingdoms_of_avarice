@@ -14,6 +14,27 @@ import {
 } from '@koa/shared';
 
 // ============================================================================
+// IN-MEMORY CACHES (static data that rarely changes at runtime)
+// ============================================================================
+
+const classCache = new Map<string, ClassDefinition>();
+const raceCache = new Map<string, RaceDefinition>();
+const progressionCache = new Map<number, { data: CharacterProgression; cachedAt: number }>();
+const PROGRESSION_CACHE_TTL = 60_000; // 1 minute — invalidated on level up
+
+/** Clear all progression caches. Called by @reload and editor updates. */
+export function clearProgressionCaches(): void {
+  classCache.clear();
+  raceCache.clear();
+  progressionCache.clear();
+}
+
+/** Invalidate a single character's progression cache (e.g., on level up). */
+export function invalidateProgressionCache(characterId: number): void {
+  progressionCache.delete(characterId);
+}
+
+// ============================================================================
 // DATABASE ROW TYPES
 // ============================================================================
 
@@ -249,11 +270,16 @@ export async function getPlayableClasses(): Promise<ClassDefinition[]> {
 }
 
 export async function getClassById(classId: string): Promise<ClassDefinition | null> {
+  const cached = classCache.get(classId);
+  if (cached) return cached;
+
   const result = await query<DbClassDefinition>(
     'SELECT * FROM class_definitions WHERE class_id = $1',
     [classId]
   );
-  return result.rows[0] ? dbToClassDefinition(result.rows[0]) : null;
+  const classDef = result.rows[0] ? dbToClassDefinition(result.rows[0]) : null;
+  if (classDef) classCache.set(classId, classDef);
+  return classDef;
 }
 
 export async function createClass(classDef: ClassDefinition & { resource_type?: string; playable?: boolean }): Promise<ClassDefinition> {
@@ -282,7 +308,9 @@ export async function createClass(classDef: ClassDefinition & { resource_type?: 
       JSON.stringify(classDef.special_abilities ?? []),
     ]
   );
-  return dbToClassDefinition(result.rows[0]);
+  const created = dbToClassDefinition(result.rows[0]);
+  classCache.set(created.class_id, created);
+  return created;
 }
 
 export async function updateClass(classId: string, updates: Partial<ClassDefinition>): Promise<ClassDefinition | null> {
@@ -356,11 +384,14 @@ export async function updateClass(classId: string, updates: Partial<ClassDefinit
     `UPDATE class_definitions SET ${setClauses.join(', ')} WHERE class_id = $${paramIndex} RETURNING *`,
     values
   );
-  return result.rows[0] ? dbToClassDefinition(result.rows[0]) : null;
+  const updated = result.rows[0] ? dbToClassDefinition(result.rows[0]) : null;
+  if (updated) classCache.set(classId, updated);
+  return updated;
 }
 
 export async function deleteClass(classId: string): Promise<boolean> {
   const result = await query('DELETE FROM class_definitions WHERE class_id = $1', [classId]);
+  classCache.delete(classId);
   return (result.rowCount ?? 0) > 0;
 }
 
@@ -383,11 +414,16 @@ export async function getPlayableRaces(): Promise<RaceDefinition[]> {
 }
 
 export async function getRaceById(raceId: string): Promise<RaceDefinition | null> {
+  const cached = raceCache.get(raceId);
+  if (cached) return cached;
+
   const result = await query<DbRaceDefinition>(
     'SELECT * FROM race_definitions WHERE race_id = $1',
     [raceId]
   );
-  return result.rows[0] ? dbToRaceDefinition(result.rows[0]) : null;
+  const raceDef = result.rows[0] ? dbToRaceDefinition(result.rows[0]) : null;
+  if (raceDef) raceCache.set(raceId, raceDef);
+  return raceDef;
 }
 
 export async function createRace(raceDef: RaceDefinition): Promise<RaceDefinition> {
@@ -409,7 +445,9 @@ export async function createRace(raceDef: RaceDefinition): Promise<RaceDefinitio
       raceDef.dodge_bonus ?? 0,
     ]
   );
-  return dbToRaceDefinition(result.rows[0]);
+  const created = dbToRaceDefinition(result.rows[0]);
+  raceCache.set(created.race_id, created);
+  return created;
 }
 
 export async function updateRace(raceId: string, updates: Partial<RaceDefinition>): Promise<RaceDefinition | null> {
@@ -459,11 +497,14 @@ export async function updateRace(raceId: string, updates: Partial<RaceDefinition
     `UPDATE race_definitions SET ${setClauses.join(', ')} WHERE race_id = $${paramIndex} RETURNING *`,
     values
   );
-  return result.rows[0] ? dbToRaceDefinition(result.rows[0]) : null;
+  const updated = result.rows[0] ? dbToRaceDefinition(result.rows[0]) : null;
+  if (updated) raceCache.set(raceId, updated);
+  return updated;
 }
 
 export async function deleteRace(raceId: string): Promise<boolean> {
   const result = await query('DELETE FROM race_definitions WHERE race_id = $1', [raceId]);
+  raceCache.delete(raceId);
   return (result.rowCount ?? 0) > 0;
 }
 
@@ -619,8 +660,8 @@ export async function createTalent(talentDef: TalentDefinition & { tree_tier?: n
       talentDef.class_restriction ?? null,
       talentDef.essence_cost,
       talentDef.prerequisite_level ?? 1,
-      talentDef.prerequisite_talents ?? [],
-      talentDef.effect_modifiers ?? null,
+      JSON.stringify(talentDef.prerequisite_talents ?? []),
+      talentDef.effect_modifiers ? JSON.stringify(talentDef.effect_modifiers) : null,
       talentDef.grants_ability ?? null,
       talentDef.tree_tier ?? 1,
       talentDef.tree_position ?? 0,
@@ -861,6 +902,12 @@ export async function getAllClassAbilities(): Promise<ClassAbilityMapping[]> {
 // ============================================================================
 
 export async function getCharacterProgression(characterId: number): Promise<CharacterProgression | null> {
+  const now = Date.now();
+  const cached = progressionCache.get(characterId);
+  if (cached && (now - cached.cachedAt) < PROGRESSION_CACHE_TTL) {
+    return cached.data;
+  }
+
   const result = await query<DbCharacterProgression & { calculated_level: number }>(
     `SELECT cp.*,
       COALESCE(
@@ -871,7 +918,11 @@ export async function getCharacterProgression(characterId: number): Promise<Char
      WHERE cp.character_id = $1`,
     [characterId]
   );
-  return result.rows[0] ? dbToCharacterProgressionWithLevel(result.rows[0]) : null;
+  const progression = result.rows[0] ? dbToCharacterProgressionWithLevel(result.rows[0]) : null;
+  if (progression) {
+    progressionCache.set(characterId, { data: progression, cachedAt: now });
+  }
+  return progression;
 }
 
 export async function createCharacterProgression(
@@ -951,7 +1002,14 @@ export async function updateCharacterProgression(
     FROM updated`,
     values
   );
-  return result.rows[0] ? dbToCharacterProgressionWithLevel(result.rows[0]) : null;
+  const progression = result.rows[0] ? dbToCharacterProgressionWithLevel(result.rows[0]) : null;
+  // Update cache with fresh data from the write (prevents stale reads)
+  if (progression) {
+    progressionCache.set(characterId, { data: progression, cachedAt: Date.now() });
+  } else {
+    progressionCache.delete(characterId);
+  }
+  return progression;
 }
 
 /**

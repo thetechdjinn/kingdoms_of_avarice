@@ -5,7 +5,7 @@
  * Attack spells replace melee combat and persist until combat ends or mana runs out.
  */
 
-import { MessageType, Spell, SpellType, SpellTargetType } from '@koa/shared';
+import { MessageType, Spell, SpellType } from '@koa/shared';
 import { CommandResponse } from './commands.js';
 import { AuthenticatedSocket, broadcastToRoom, sendMessage, sendVitals } from './socket.js';
 import { getPlayerLocation } from './adminCommands.js';
@@ -17,7 +17,11 @@ import { applyEffect, getEffectDefinition, formatDuration } from './statusEffect
 import { isOnCooldown, startCooldown, getCooldownMessage } from './cooldownTracker.js';
 import { isPlayerDropped, isPlayerDead, clearDeathState } from './damageHandler.js';
 import { findPlayerInRoom } from './playerUtils.js';
+import { findNpcInRoom, setMerchantHostile } from './npcManager.js';
+import type { NpcCombatInstance } from './npcManager.js';
+import { withNpcName, withNpcNameCapitalized } from '../utils/textFormat.js';
 import { isStealthing, breakStealth } from './stealth/stealthState.js';
+import { applyEffectToEntity } from './statusEffects.js';
 import { breakCasterCombat } from './combatCommands.js';
 
 /**
@@ -99,11 +103,6 @@ export async function handleSpellCommand(
     return { type: MessageType.ERROR, message: `You don't have enough mana to cast ${spell.name}. (Need ${spell.manaCost})` };
   }
 
-  // Break stealth when casting any spell
-  if (isStealthing(socket)) {
-    breakStealth(socket, 'spell_cast', true);
-  }
-
   // Handle different spell types
   switch (spell.spellType) {
     case SpellType.OFFENSIVE:
@@ -144,10 +143,81 @@ async function handleOffensiveSpell(
   const targetName = args.join(' ');
   const currentRoomId = getPlayerLocation(socket.playerId);
 
-  // Find the target (respects stealth - can't target what you can't see)
+  // Find the target — try players first, then NPCs
   const target = findPlayerInRoom(targetName, currentRoomId, connectedPlayers, socket.playerId, socket.canSeeHidden);
-  if (!target) {
+  const npcTarget = !target ? findNpcInRoom(targetName, currentRoomId) : null;
+
+  if (!target && !npcTarget) {
     return { type: MessageType.ERROR, message: `You don't see ${targetName} here.` };
+  }
+
+  // NPC target
+  if (npcTarget) {
+    if (npcTarget.vitals.hp <= 0 || npcTarget.isCorpse) {
+      return { type: MessageType.ERROR, message: `${withNpcNameCapitalized(npcTarget.entityName, npcTarget.isProperName)} is already dead.` };
+    }
+
+    // Set up spell casting state
+    socket.combatState.combatAction = 'spell';
+    socket.combatState.activeSpell = {
+      spellId: spell.id,
+      spellName: spell.name,
+      mnemonic: spell.mnemonic,
+      manaCost: spell.manaCost,
+      damageDice: spell.damageDice || '1d4',
+      damageScalingStat: spell.damageScalingStat,
+      damageScalingFactor: spell.damageScalingFactor,
+    };
+
+    // Add NPC to targets and vice versa
+    if (!socket.combatState.targets.has(npcTarget.entityId)) {
+      socket.combatState.targets.add(npcTarget.entityId);
+    }
+    npcTarget.combatState.targets.add(socket.playerId);
+
+    // Set combat flags
+    socket.regenState.inCombat = true;
+    npcTarget.regenState.inCombat = true;
+    npcTarget.behaviorState = 'combat';
+
+    // Mark merchant as hostile to this player
+    if (npcTarget.template.merchantEnabled && socket.characterId) {
+      setMerchantHostile(socket.characterId, npcTarget.template.id);
+    }
+
+    // Clear resting state
+    socket.regenState.enhancedRegen.clear();
+
+    if (socket.exitTimer) {
+      clearTimeout(socket.exitTimer);
+      socket.exitTimer = undefined;
+    }
+
+    sendVitals(socket);
+
+    // Break stealth
+    if (isStealthing(socket)) {
+      breakStealth(socket, 'spell_cast', true);
+    }
+
+    const npcDisplayName = withNpcName(npcTarget.entityName, npcTarget.isProperName);
+    broadcastToRoom(
+      currentRoomId,
+      `${socket.username} begins casting ${spell.name.toLowerCase()} at ${npcDisplayName}.`,
+      socket.playerId
+    );
+
+    startCooldown(socket, spell.mnemonic, 'use');
+
+    return {
+      type: MessageType.OUTPUT,
+      message: colors.yellow('*COMBAT ENGAGED*'),
+    };
+  }
+
+  // Player target
+  if (isPlayerDead(target!) || isPlayerDropped(target!)) {
+    return { type: MessageType.ERROR, message: `${target!.username} is already down.` };
   }
 
   // Set up spell casting state
@@ -163,37 +233,42 @@ async function handleOffensiveSpell(
   };
 
   // Add target if not already in combat with them
-  if (!socket.combatState.targets.has(target.playerId)) {
-    socket.combatState.targets.add(target.playerId);
+  if (!socket.combatState.targets.has(target!.playerId)) {
+    socket.combatState.targets.add(target!.playerId);
   }
 
   // Set combat flags
   socket.regenState.inCombat = true;
-  target.regenState.inCombat = true;
+  target!.regenState.inCombat = true;
 
   // Clear resting state
   socket.regenState.enhancedRegen.clear();
-  target.regenState.enhancedRegen.clear();
+  target!.regenState.enhancedRegen.clear();
+
+  // Break stealth
+  if (isStealthing(socket)) {
+    breakStealth(socket, 'spell_cast', true);
+  }
 
   // Cancel meditation for both players if they were meditating
   if (socket.exitTimer) {
     clearTimeout(socket.exitTimer);
     socket.exitTimer = undefined;
   }
-  if (target.exitTimer) {
-    clearTimeout(target.exitTimer);
-    target.exitTimer = undefined;
+  if (target!.exitTimer) {
+    clearTimeout(target!.exitTimer);
+    target!.exitTimer = undefined;
   }
 
   // Update vitals to reflect status change (removes resting/meditating from statline)
   sendVitals(socket);
-  sendVitals(target);
+  sendVitals(target!);
 
   // Broadcast to room (exclude both caster and target - they get personalized messages)
   broadcastToRoom(
     currentRoomId,
-    `${socket.username} begins casting ${spell.name.toLowerCase()} at ${target.username}.`,
-    [socket.playerId, target.playerId]
+    `${socket.username} begins casting ${spell.name.toLowerCase()} at ${target!.username}.`,
+    [socket.playerId, target!.playerId]
   );
 
   // Notify target
@@ -202,14 +277,14 @@ async function handleOffensiveSpell(
     payload: `${colors.combatAttacker(socket.username)} begins casting ${colors.cyan(spell.name.toLowerCase())} at you!`,
     timestamp: Date.now(),
   };
-  target.send(JSON.stringify(targetMessage));
+  target!.send(JSON.stringify(targetMessage));
 
   // Start cooldown on use (offensive spells initiate combat, cooldown starts now)
   startCooldown(socket, spell.mnemonic, 'use');
 
   return {
     type: MessageType.OUTPUT,
-    message: `${colors.yellow('*COMBAT ENGAGED*')} You begin casting ${colors.cyan(spell.name.toLowerCase())} at ${colors.combatDefender(target.username)}!`,
+    message: `${colors.yellow('*COMBAT ENGAGED*')} You begin casting ${colors.cyan(spell.name.toLowerCase())} at ${colors.combatDefender(target!.username)}!`,
   };
 }
 
@@ -317,6 +392,7 @@ async function handleHealingSpell(
       `${socket.username} casts ${colors.cyan(spell.name.toLowerCase())} and is healed.`,
       socket.playerId
     );
+    sendVitals(socket);
     return {
       type: MessageType.OUTPUT,
       message: `You cast ${colors.cyan(spell.name.toLowerCase())} and heal for ${colors.green(actualHeal.toString())} HP!${combatBreakMsg}`,
@@ -364,19 +440,10 @@ async function handleBuffSpell(
     };
   }
 
-  // Deduct mana
-  socket.vitals.resource = (socket.vitals.resource ?? 0) - spell.manaCost;
-
-  // Combat break: non-offensive spells break combat
-  const hadCombatTargets = socket.combatState.targets.size > 0;
-  if (hadCombatTargets) {
-    breakCasterCombat(socket);
-  }
-
   // Calculate duration in milliseconds (effectDuration is in seconds)
   const durationMs = (spell.effectDuration ?? 60) * 1000;
 
-  // Apply the status effect
+  // Apply the status effect (check before deducting mana or breaking combat)
   const result = await applyEffect(socket, spell.statusEffect, durationMs, spell.id);
 
   if (!result.success) {
@@ -384,6 +451,15 @@ async function handleBuffSpell(
       type: MessageType.ERROR,
       message: result.message,
     };
+  }
+
+  // Deduct mana (only after successful effect application)
+  socket.vitals.resource = (socket.vitals.resource ?? 0) - spell.manaCost;
+
+  // Combat break: non-offensive spells break combat
+  const hadCombatTargets = socket.combatState.targets.size > 0;
+  if (hadCombatTargets) {
+    breakCasterCombat(socket);
   }
 
   // Start cooldown (buff spells are instant - call both modes)
@@ -427,10 +503,82 @@ async function handleDebuffSpell(
   const targetName = args.join(' ');
   const currentRoomId = getPlayerLocation(socket.playerId);
 
-  // Find the target player (respects stealth - can't target what you can't see)
+  // Find the target — try players first, then NPCs
   const target = findPlayerInRoom(targetName, currentRoomId, connectedPlayers, socket.playerId, socket.canSeeHidden);
-  if (!target) {
+  const npcTarget = !target ? findNpcInRoom(targetName, currentRoomId) : null;
+
+  if (!target && !npcTarget) {
     return { type: MessageType.ERROR, message: `You don't see ${targetName} here.` };
+  }
+
+  // NPC target — apply effect and engage combat
+  if (npcTarget) {
+    if (npcTarget.vitals.hp <= 0 || npcTarget.isCorpse) {
+      return { type: MessageType.ERROR, message: `${withNpcNameCapitalized(npcTarget.entityName, npcTarget.isProperName)} is already dead.` };
+    }
+
+    // Check if spell has a status effect defined
+    if (!spell.statusEffect) {
+      return { type: MessageType.ERROR, message: `${spell.name} has no effect defined.` };
+    }
+
+    // Apply the status effect to the NPC
+    const durationMs = (spell.effectDuration ?? 60) * 1000;
+    const effectResult = applyEffectToEntity(npcTarget, spell.statusEffect, durationMs, spell.id);
+    if (!effectResult.success) {
+      return { type: MessageType.ERROR, message: effectResult.message };
+    }
+
+    // Deduct mana (only after successful effect application)
+    socket.vitals.resource = (socket.vitals.resource ?? 0) - spell.manaCost;
+
+    // Add NPC to targets and vice versa
+    if (!socket.combatState.targets.has(npcTarget.entityId)) {
+      socket.combatState.targets.add(npcTarget.entityId);
+    }
+    npcTarget.combatState.targets.add(socket.playerId);
+
+    // Set combat flags
+    socket.regenState.inCombat = true;
+    npcTarget.regenState.inCombat = true;
+    npcTarget.behaviorState = 'combat';
+
+    // Mark merchant as hostile to this player
+    if (npcTarget.template.merchantEnabled && socket.characterId) {
+      setMerchantHostile(socket.characterId, npcTarget.template.id);
+    }
+
+    // Clear resting state
+    socket.regenState.enhancedRegen.clear();
+    npcTarget.regenState.enhancedRegen.clear();
+
+    if (socket.exitTimer) {
+      clearTimeout(socket.exitTimer);
+      socket.exitTimer = undefined;
+    }
+
+    // Break stealth
+    if (isStealthing(socket)) {
+      breakStealth(socket, 'spell_cast', true);
+    }
+
+    sendVitals(socket);
+
+    const npcDisplayName = withNpcName(npcTarget.entityName, npcTarget.isProperName);
+    broadcastToRoom(
+      currentRoomId,
+      `${socket.username} casts ${colors.cyan(spell.name.toLowerCase())} at ${npcDisplayName}!`,
+      socket.playerId
+    );
+
+    startCooldown(socket, spell.mnemonic, 'use');
+    startCooldown(socket, spell.mnemonic, 'complete');
+
+    const durationStr = formatDuration(durationMs);
+    return {
+      type: MessageType.OUTPUT,
+      message: `${colors.yellow('*COMBAT ENGAGED*')} You cast ${colors.cyan(spell.name.toLowerCase())} at ${colors.magenta(npcDisplayName)}. ${effectResult.message} (${durationStr})`,
+    };
   }
 
   // Check if spell has a status effect defined
@@ -450,32 +598,41 @@ async function handleDebuffSpell(
     };
   }
 
-  // Deduct mana
-  socket.vitals.resource = (socket.vitals.resource ?? 0) - spell.manaCost;
-
-  // Combat break: non-offensive spells break combat
-  const hadCombatTargets = socket.combatState.targets.size > 0;
-  if (hadCombatTargets) {
-    breakCasterCombat(socket);
-  }
-
   // Calculate duration in milliseconds (effectDuration is in seconds)
   const durationMs = (spell.effectDuration ?? 60) * 1000;
 
-  // Apply the status effect to the target
-  const result = await applyEffect(target, spell.statusEffect, durationMs, spell.id);
+  // Apply the status effect to the target (check before deducting mana or setting combat flags)
+  const result = await applyEffect(target!, spell.statusEffect, durationMs, spell.id);
+
+  if (!result.success) {
+    return {
+      type: MessageType.ERROR,
+      message: result.message,
+    };
+  }
+
+  // Deduct mana (only after successful effect application)
+  socket.vitals.resource = (socket.vitals.resource ?? 0) - spell.manaCost;
+
+  // Add target to combat (debuffs are aggressive - add alongside existing targets, don't break combat)
+  socket.combatState.targets.add(target!.playerId);
 
   // Set combat flags if this is an aggressive action
   socket.regenState.inCombat = true;
-  target.regenState.inCombat = true;
+  target!.regenState.inCombat = true;
   socket.regenState.enhancedRegen.clear();
-  target.regenState.enhancedRegen.clear();
+  target!.regenState.enhancedRegen.clear();
+
+  // Break stealth
+  if (isStealthing(socket)) {
+    breakStealth(socket, 'spell_cast', true);
+  }
 
   // Broadcast to room (exclude caster and target)
   broadcastToRoom(
     currentRoomId,
-    `${socket.username} casts ${colors.cyan(spell.name.toLowerCase())} on ${target.username}!`,
-    [socket.playerId, target.playerId]
+    `${socket.username} casts ${colors.cyan(spell.name.toLowerCase())} on ${target!.username}!`,
+    [socket.playerId, target!.playerId]
   );
 
   // Notify target
@@ -484,20 +641,20 @@ async function handleDebuffSpell(
     payload: `${colors.combatAttacker(socket.username)} casts ${colors.cyan(spell.name.toLowerCase())} on you! ${result.message}`,
     timestamp: Date.now(),
   };
-  target.send(JSON.stringify(targetMessage));
+  target!.send(JSON.stringify(targetMessage));
 
   // Start cooldown (debuff spells are instant - call both modes)
   startCooldown(socket, spell.mnemonic, 'use');
   startCooldown(socket, spell.mnemonic, 'complete');
 
-  // Send updated vitals to target
-  sendVitals(target);
+  // Send updated vitals to both caster and target
+  sendVitals(socket);
+  sendVitals(target!);
 
-  const combatBreakMsg = hadCombatTargets ? `\r\n${colors.yellow('*COMBAT BREAK* You must attack again to re-engage.')}` : '';
   const durationStr = formatDuration(durationMs);
   return {
     type: MessageType.OUTPUT,
-    message: `You cast ${colors.cyan(spell.name.toLowerCase())} on ${colors.magenta(target.username)}. ${result.message} (${durationStr})${combatBreakMsg}`,
+    message: `You cast ${colors.cyan(spell.name.toLowerCase())} on ${colors.magenta(target!.username)}. ${result.message} (${durationStr})`,
   };
 }
 
@@ -505,28 +662,15 @@ async function handleDebuffSpell(
  * Handle utility spell casting (placeholder)
  */
 async function handleUtilitySpell(
-  socket: AuthenticatedSocket,
+  _socket: AuthenticatedSocket,
   spell: Spell,
   _args: string[],
   _connectedPlayers: Map<number, AuthenticatedSocket>
 ): Promise<CommandResponse> {
-  // Deduct mana
-  socket.vitals.resource = (socket.vitals.resource ?? 0) - spell.manaCost;
-
-  // Start cooldown (utility spells are instant - call both modes)
-  startCooldown(socket, spell.mnemonic, 'use');
-  startCooldown(socket, spell.mnemonic, 'complete');
-
-  const currentRoomId = getPlayerLocation(socket.playerId);
-  broadcastToRoom(
-    currentRoomId,
-    `${socket.username} casts ${colors.cyan(spell.name.toLowerCase())}.`,
-    socket.playerId
-  );
-
+  // Utility effects not yet implemented — refuse to cast rather than consume mana
   return {
-    type: MessageType.OUTPUT,
-    message: `You cast ${colors.cyan(spell.name.toLowerCase())}. (Utility effects not yet implemented)`,
+    type: MessageType.ERROR,
+    message: `${spell.name} cannot be cast yet. (Utility effects not yet implemented)`,
   };
 }
 

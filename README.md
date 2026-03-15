@@ -14,17 +14,40 @@ A web-based MUD (Multi-User Dungeon) game inspired by the classic MajorMUD.
 
 - Node.js 18+
 - npm 9+
+- PostgreSQL 14+
 
-### Installation
+### 1. Set Up PostgreSQL
+
+You need a running PostgreSQL server. See the [Database Setup Guide](Documentation/Database_Setup.md) for detailed instructions, including a Docker quick start option.
+
+### 2. Configure Environment
+
+Create a `.env` file in the project root:
+
+```env
+DB_NAME=kingdoms_of_avarice
+DB_USER=koa
+DB_PASSWORD=<password>
+DB_HOST=localhost
+DB_PORT=5432
+JWT_SECRET=<secret>
+```
+
+### 3. Install and Set Up
 
 ```bash
-# Install dependencies
-npm install
+npm run setup
+```
 
-# Build shared types
-npm run build:shared
+This single command:
+1. Installs all dependencies
+2. Builds shared TypeScript types
+3. Runs database migrations (creates tables, seeds settings)
+4. Imports all game data (rooms, NPCs, items, spells, doors, etc.)
 
-# Start development servers
+### 4. Start the Game
+
+```bash
 npm run dev
 ```
 
@@ -33,12 +56,26 @@ This will start:
 - Frontend on http://localhost:3000
 - Backend on http://localhost:3001
 
-### Test Login
+### 5. Create an Account
 
-Use these credentials to test:
+1. Open http://localhost:3000 and register a new account
+2. To grant admin access:
 
-- **Username:** testuser
-- **Password:** password
+```bash
+cd packages/server && npx tsx src/db/create-admin.ts <username>
+```
+
+### Manual Setup (Step by Step)
+
+If you prefer to run each step individually instead of `npm run setup`:
+
+```bash
+npm install              # Install dependencies
+npm run build:shared     # Build shared types
+npm run migrate          # Create database tables and seed settings
+npm run data:import      # Import all game data
+npm run dev              # Start development servers
+```
 
 ## Project Structure
 

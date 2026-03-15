@@ -20,6 +20,23 @@ import * as itemRepo from '../db/repositories/itemRepository.js';
 import * as characterRepo from '../db/repositories/characterRepository.js';
 import { getCombatSettings, getCurrencyEncumbranceSettings } from '../db/repositories/settingsRepository.js';
 
+// ============================================================================
+// EQUIPMENT STATS CACHE (invalidated on equip/unequip/drop/pickup)
+// ============================================================================
+
+const equipmentCache = new Map<number, { stats: EquipmentCombatStats; cachedAt: number }>();
+const EQUIPMENT_CACHE_TTL = 30_000; // 30 seconds fallback TTL
+
+/** Invalidate a character's cached equipment stats. Call on equip/unequip/drop/pickup. */
+export function invalidateEquipmentCache(characterId: number): void {
+  equipmentCache.delete(characterId);
+}
+
+/** Clear all equipment caches. */
+export function clearEquipmentCache(): void {
+  equipmentCache.clear();
+}
+
 /**
  * Weapon stats used in combat calculations
  */
@@ -209,6 +226,13 @@ async function calculateCurrencyWeight(character: characterRepo.DbCharacter | nu
  * @returns Equipment combat stats including weapon, armor, and modifiers
  */
 export async function getEquipmentCombatStats(characterId: number): Promise<EquipmentCombatStats> {
+  // Check cache first
+  const now = Date.now();
+  const cached = equipmentCache.get(characterId);
+  if (cached && (now - cached.cachedAt) < EQUIPMENT_CACHE_TTL) {
+    return cached.stats;
+  }
+
   // Fetch equipped items, inventory, character data, and combat settings in parallel
   const [equipped, inventory, character, combatSettings] = await Promise.all([
     itemRepo.getCharacterEquipped(characterId),
@@ -226,7 +250,7 @@ export async function getEquipmentCombatStats(characterId: number): Promise<Equi
   const itemWeight = calculateTotalWeight(inventory, equipped);
   const currencyWeight = await calculateCurrencyWeight(character);
 
-  return {
+  const stats: EquipmentCombatStats = {
     weapon: getWeaponStats(
       mainHandWeapon,
       combatSettings.unarmed_speed,
@@ -236,6 +260,9 @@ export async function getEquipmentCombatStats(characterId: number): Promise<Equi
     statModifiers: calculateStatModifiers(equipped),
     totalWeight: itemWeight + currencyWeight,
   };
+
+  equipmentCache.set(characterId, { stats, cachedAt: Date.now() });
+  return stats;
 }
 
 /**

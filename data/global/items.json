@@ -1,0 +1,1156 @@
+{
+  "version": "1.0",
+  "exported_at": "2026-03-15T13:33:32.875Z",
+  "type": "items",
+  "data": [
+    {
+      "name": "rusty iron sword",
+      "short_desc": "a rusty iron sword",
+      "long_desc": "This iron sword has seen better days. Rust covers most of the blade, but it still looks sharp enough to do some damage.",
+      "room_desc": "A rusty iron sword lies here.",
+      "keywords": [
+        "sword",
+        "iron sword",
+        "rusty sword",
+        "rusty iron sword"
+      ],
+      "weight": 5,
+      "size": 2,
+      "base_value": 1500,
+      "item_type": "weapon",
+      "equipment_slot": "main_hand",
+      "flags": {
+        "cursed": false,
+        "hidden": false,
+        "no_drop": false,
+        "takeable": true,
+        "stackable": true,
+        "throwable": false,
+        "two_handed": false
+      },
+      "max_stack": 1,
+      "weapon_data": {
+        "range": "melee",
+        "max_damage": 6,
+        "min_damage": 2,
+        "damage_type": "slashing",
+        "attack_speed": 9375,
+        "attack_verbs": {
+          "hit": "slash",
+          "miss": "swing at",
+          "hit_3p": "slashes",
+          "miss_3p": "swings at"
+        },
+        "crit_modifier": 2
+      },
+      "requirements": {
+        "strength": 5,
+        "dexterity": 5
+      },
+      "stat_modifiers": {},
+      "stealth_modifier": 0,
+      "effect_slots": 0,
+      "rarity": "common"
+    },
+    {
+      "name": "steel longsword",
+      "short_desc": "a gleaming steel longsword",
+      "long_desc": "A well-crafted longsword made of polished steel. The blade is perfectly balanced and razor-sharp.",
+      "room_desc": "A gleaming steel longsword rests against the wall.",
+      "keywords": [
+        "sword",
+        "longsword",
+        "steel sword",
+        "steel longsword"
+      ],
+      "weight": 6,
+      "size": 2,
+      "base_value": 10000,
+      "item_type": "weapon",
+      "equipment_slot": "main_hand",
+      "flags": {
+        "cursed": false,
+        "hidden": false,
+        "no_drop": false,
+        "takeable": true,
+        "stackable": true,
+        "throwable": false,
+        "two_handed": false
+      },
+      "max_stack": 1,
+      "weapon_data": {
+        "range": "melee",
+        "max_damage": 7,
+        "min_damage": 3,
+        "damage_type": "slashing",
+        "attack_speed": 9000,
+        "attack_verbs": {
+          "hit": "slash",
+          "miss": "swing at",
+          "hit_3p": "slashes",
+          "miss_3p": "swings at"
+        },
+        "crit_modifier": 2
+      },
+      "requirements": {
+        "strength": 5,
+        "dexterity": 5
+      },
+      "stat_modifiers": {},
+      "stealth_modifier": 0,
+      "effect_slots": 0,
+      "rarity": "common"
+    },
+    {
+      "name": "iron dagger",
+      "short_desc": "an iron dagger",
+      "long_desc": "A simple iron dagger with a leather-wrapped handle. Small but deadly in the right hands.",
+      "room_desc": "An iron dagger lies on the ground.",
+      "keywords": [
+        "dagger",
+        "iron dagger",
+        "knife"
+      ],
+      "weight": 1,
+      "size": 1,
+      "base_value": 1000,
+      "item_type": "weapon",
+      "equipment_slot": "main_hand",
+      "flags": {
+        "cursed": false,
+        "hidden": false,
+        "no_drop": false,
+        "takeable": true,
+        "stackable": true,
+        "throwable": false,
+        "two_handed": false
+      },
+      "max_stack": 1,
+      "weapon_data": {
+        "range": "melee",
+        "max_damage": 4,
+        "min_damage": 1,
+        "damage_type": "piercing",
+        "attack_speed": 4500,
+        "attack_verbs": {
+          "hit": "stab",
+          "miss": "thrust at",
+          "hit_3p": "stabs",
+          "miss_3p": "thrusts at"
+        },
+        "crit_modifier": 2
+      },
+      "requirements": {},
+      "stat_modifiers": {},
+      "stealth_modifier": 0,
+      "effect_slots": 0,
+      "rarity": "common"
+    },
+    {
+      "name": "wooden club",
+      "short_desc": "a wooden club",
+      "long_desc": "A crude but effective weapon - just a thick piece of hardwood shaped into a club.",
+      "room_desc": "wooden club",
+      "keywords": [
+        "club",
+        "wooden club"
+      ],
+      "weight": 150,
+      "size": 2,
+      "base_value": 0,
+      "item_type": "weapon",
+      "equipment_slot": "main_hand",
+      "flags": {
+        "cursed": false,
+        "hidden": false,
+        "no_drop": false,
+        "takeable": true,
+        "stackable": false,
+        "throwable": false,
+        "two_handed": false
+      },
+      "max_stack": 1,
+      "weapon_data": {
+        "range": "melee",
+        "max_damage": 8,
+        "min_damage": 3,
+        "damage_type": "bludgeoning",
+        "attack_speed": 1000,
+        "attack_verbs": {
+          "hit": "swipe",
+          "miss": "swing at",
+          "hit_3p": "swipes",
+          "miss_3p": "swings at"
+        },
+        "crit_modifier": 1
+      },
+      "requirements": {
+        "strength": 40
+      },
+      "stat_modifiers": {},
+      "stealth_modifier": 0,
+      "effect_slots": 0,
+      "rarity": "common"
+    },
+    {
+      "name": "battle axe",
+      "short_desc": "a fearsome battle axe",
+      "long_desc": "A large two-handed axe with a crescent-shaped blade. It requires both hands to wield effectively.",
+      "room_desc": "A fearsome battle axe leans against the wall.",
+      "keywords": [
+        "axe",
+        "battle axe",
+        "battleaxe"
+      ],
+      "weight": 10,
+      "size": 3,
+      "base_value": 15000,
+      "item_type": "weapon",
+      "equipment_slot": "main_hand",
+      "flags": {
+        "cursed": false,
+        "hidden": false,
+        "no_drop": false,
+        "takeable": true,
+        "stackable": false,
+        "throwable": false,
+        "two_handed": true
+      },
+      "max_stack": 1,
+      "weapon_data": {
+        "range": "melee",
+        "max_damage": 9,
+        "min_damage": 4,
+        "damage_type": "slashing",
+        "attack_speed": 6250,
+        "attack_verbs": {
+          "hit": "chop",
+          "miss": "swing at",
+          "hit_3p": "chops",
+          "miss_3p": "swings at"
+        },
+        "crit_modifier": 2
+      },
+      "requirements": {
+        "strength": 5,
+        "dexterity": 5
+      },
+      "stat_modifiers": {},
+      "stealth_modifier": 0,
+      "effect_slots": 0,
+      "rarity": "common"
+    },
+    {
+      "name": "leather cap",
+      "short_desc": "a leather cap",
+      "long_desc": "A simple cap made of hardened leather. It offers minimal protection but is better than nothing.",
+      "room_desc": "A leather cap lies here.",
+      "keywords": [
+        "cap",
+        "leather cap",
+        "hat"
+      ],
+      "weight": 1,
+      "size": 1,
+      "base_value": 800,
+      "item_type": "armor",
+      "equipment_slot": "head",
+      "flags": {
+        "takeable": true
+      },
+      "max_stack": 1,
+      "armor_data": {
+        "armor_class": 1,
+        "weight_class": "light"
+      },
+      "stealth_modifier": 0,
+      "effect_slots": 0,
+      "rarity": "common"
+    },
+    {
+      "name": "iron helm",
+      "short_desc": "an iron helm",
+      "long_desc": "A sturdy iron helmet that covers the head and cheeks. Dented but still functional.",
+      "room_desc": "An iron helm sits on the ground.",
+      "keywords": [
+        "helm",
+        "helmet",
+        "iron helm",
+        "iron helmet"
+      ],
+      "weight": 4,
+      "size": 2,
+      "base_value": 3500,
+      "item_type": "armor",
+      "equipment_slot": "head",
+      "flags": {
+        "takeable": true
+      },
+      "max_stack": 1,
+      "armor_data": {
+        "armor_class": 3,
+        "weight_class": "heavy"
+      },
+      "stealth_modifier": 0,
+      "effect_slots": 0,
+      "rarity": "common"
+    },
+    {
+      "name": "leather vest",
+      "short_desc": "a leather vest",
+      "long_desc": "A vest made of thick, boiled leather. It provides decent protection while remaining flexible.",
+      "room_desc": "A leather vest lies crumpled on the floor.",
+      "keywords": [
+        "vest",
+        "leather vest",
+        "armor"
+      ],
+      "weight": 5,
+      "size": 2,
+      "base_value": 2500,
+      "item_type": "armor",
+      "equipment_slot": "body",
+      "flags": {
+        "takeable": true
+      },
+      "max_stack": 1,
+      "armor_data": {
+        "armor_class": 2,
+        "weight_class": "light"
+      },
+      "stealth_modifier": 0,
+      "effect_slots": 0,
+      "rarity": "common"
+    },
+    {
+      "name": "chainmail shirt",
+      "short_desc": "a chainmail shirt",
+      "long_desc": "A shirt made of interlocking iron rings. Heavy but offers excellent protection.",
+      "room_desc": "A chainmail shirt lies in a heap.",
+      "keywords": [
+        "chainmail",
+        "chain mail",
+        "chain shirt",
+        "mail"
+      ],
+      "weight": 15,
+      "size": 3,
+      "base_value": 15000,
+      "item_type": "armor",
+      "equipment_slot": "body",
+      "flags": {
+        "takeable": true
+      },
+      "max_stack": 1,
+      "armor_data": {
+        "armor_class": 5,
+        "weight_class": "medium"
+      },
+      "stealth_modifier": 0,
+      "effect_slots": 0,
+      "rarity": "common"
+    },
+    {
+      "name": "wooden shield",
+      "short_desc": "a wooden shield",
+      "long_desc": "A round shield made of oak planks bound with iron. Battered but serviceable.",
+      "room_desc": "A wooden shield leans against the wall.",
+      "keywords": [
+        "shield",
+        "wooden shield"
+      ],
+      "weight": 6,
+      "size": 2,
+      "base_value": 2000,
+      "item_type": "armor",
+      "equipment_slot": "off_hand",
+      "flags": {
+        "takeable": true
+      },
+      "max_stack": 1,
+      "armor_data": {
+        "armor_class": 2,
+        "weight_class": "medium"
+      },
+      "stealth_modifier": 0,
+      "effect_slots": 0,
+      "rarity": "common"
+    },
+    {
+      "name": "leather gloves",
+      "short_desc": "a pair of leather gloves",
+      "long_desc": "Simple leather gloves that protect the hands while maintaining dexterity.",
+      "room_desc": "A pair of leather gloves lies here.",
+      "keywords": [
+        "gloves",
+        "leather gloves"
+      ],
+      "weight": 1,
+      "size": 1,
+      "base_value": 500,
+      "item_type": "armor",
+      "equipment_slot": "hands",
+      "flags": {
+        "takeable": true
+      },
+      "max_stack": 1,
+      "armor_data": {
+        "armor_class": 1,
+        "weight_class": "light"
+      },
+      "stealth_modifier": 0,
+      "effect_slots": 0,
+      "rarity": "common"
+    },
+    {
+      "name": "leather boots",
+      "short_desc": "a pair of leather boots",
+      "long_desc": "Sturdy leather boots with thick soles. Good for long journeys.",
+      "room_desc": "A pair of leather boots sits here.",
+      "keywords": [
+        "boots",
+        "leather boots",
+        "shoes"
+      ],
+      "weight": 2,
+      "size": 1,
+      "base_value": 1200,
+      "item_type": "armor",
+      "equipment_slot": "feet",
+      "flags": {
+        "takeable": true
+      },
+      "max_stack": 1,
+      "armor_data": {
+        "armor_class": 1,
+        "weight_class": "light"
+      },
+      "stealth_modifier": 0,
+      "effect_slots": 0,
+      "rarity": "common"
+    },
+    {
+      "name": "old key",
+      "short_desc": "an old brass key",
+      "long_desc": "A tarnished brass key with an ornate handle. It must open something important.",
+      "room_desc": "An old brass key lies here.",
+      "keywords": [
+        "key",
+        "brass key",
+        "old key"
+      ],
+      "weight": 0,
+      "size": 1,
+      "base_value": 0,
+      "item_type": "key",
+      "equipment_slot": null,
+      "flags": {
+        "no_drop": false,
+        "takeable": true
+      },
+      "max_stack": 1,
+      "stealth_modifier": 0,
+      "effect_slots": 0,
+      "rarity": "common"
+    },
+    {
+      "name": "stone statue",
+      "short_desc": "a large stone statue",
+      "long_desc": "A life-sized statue of a warrior carved from granite. It is far too heavy to move.",
+      "room_desc": "A large stone statue stands here, watching silently.",
+      "keywords": [
+        "statue",
+        "stone statue"
+      ],
+      "weight": 500,
+      "size": 5,
+      "base_value": 0,
+      "item_type": "misc",
+      "equipment_slot": null,
+      "flags": {
+        "takeable": false
+      },
+      "max_stack": 1,
+      "stealth_modifier": 0,
+      "effect_slots": 0,
+      "rarity": "common"
+    },
+    {
+      "name": "healing potion",
+      "short_desc": "a red healing potion",
+      "long_desc": "A small glass vial filled with a glowing red liquid. Drinking it will restore health.",
+      "room_desc": "A red healing potion sits here.",
+      "keywords": [
+        "potion",
+        "healing potion",
+        "red potion",
+        "heal"
+      ],
+      "weight": 1,
+      "size": 1,
+      "base_value": 5000,
+      "item_type": "consumable",
+      "equipment_slot": null,
+      "flags": {
+        "takeable": true
+      },
+      "max_stack": 1,
+      "consumable_data": {
+        "effect_type": "heal",
+        "effect_value": 25
+      },
+      "stealth_modifier": 0,
+      "effect_slots": 0,
+      "rarity": "common"
+    },
+    {
+      "name": "torch",
+      "short_desc": "a wooden torch",
+      "long_desc": "A wooden torch wrapped in oil-soaked rags. It can be lit to provide illumination.",
+      "room_desc": "A wooden torch lies here.",
+      "keywords": [
+        "torch",
+        "light"
+      ],
+      "weight": 1,
+      "size": 1,
+      "base_value": 200,
+      "item_type": "light",
+      "equipment_slot": null,
+      "flags": {
+        "takeable": true
+      },
+      "max_stack": 1,
+      "light_data": {
+        "radius": 2,
+        "fuel_max": 60,
+        "fuel_rate": 1
+      },
+      "stealth_modifier": 0,
+      "effect_slots": 0,
+      "rarity": "common"
+    },
+    {
+      "name": "lantern",
+      "short_desc": "an iron lantern",
+      "long_desc": "A sturdy iron lantern with a glass enclosure. It provides steady light and can be refueled.",
+      "room_desc": "An iron lantern sits here.",
+      "keywords": [
+        "lantern",
+        "lamp",
+        "light"
+      ],
+      "weight": 2,
+      "size": 1,
+      "base_value": 1500,
+      "item_type": "light",
+      "equipment_slot": null,
+      "flags": {
+        "takeable": true
+      },
+      "max_stack": 1,
+      "light_data": {
+        "radius": 3,
+        "fuel_max": 120,
+        "fuel_rate": 1
+      },
+      "stealth_modifier": 0,
+      "effect_slots": 0,
+      "rarity": "common"
+    },
+    {
+      "name": "sparkling ruby",
+      "short_desc": "a sparkling ruby",
+      "long_desc": "A beautiful ruby that catches the light. It must be worth a fortune.  Give it to Dave!",
+      "room_desc": "A sparkling ruby lies here.",
+      "keywords": [
+        "gem",
+        "ruby",
+        "jewel",
+        "hidden gem"
+      ],
+      "weight": 0,
+      "size": 1,
+      "base_value": 50000,
+      "item_type": "misc",
+      "equipment_slot": null,
+      "flags": {
+        "cursed": false,
+        "hidden": false,
+        "no_drop": false,
+        "takeable": true,
+        "stackable": false,
+        "throwable": false,
+        "two_handed": false
+      },
+      "max_stack": 1,
+      "requirements": {},
+      "stat_modifiers": {},
+      "stealth_modifier": 0,
+      "effect_slots": 0,
+      "rarity": "common"
+    },
+    {
+      "name": "leather scraps",
+      "short_desc": "some leather scraps",
+      "long_desc": "Pieces of leather suitable for crafting.",
+      "room_desc": "Some leather scraps lie here.",
+      "keywords": [
+        "leather",
+        "scraps",
+        "hide"
+      ],
+      "weight": 1,
+      "size": 1,
+      "base_value": 300,
+      "item_type": "misc",
+      "equipment_slot": null,
+      "flags": {
+        "takeable": true,
+        "stackable": true
+      },
+      "max_stack": 1,
+      "stealth_modifier": 0,
+      "effect_slots": 0,
+      "rarity": "common"
+    },
+    {
+      "name": "ebony greataxe",
+      "short_desc": "a ebony greataxe",
+      "long_desc": "The shaft of this large, double-bladed axe is crafted with a dark ebony wood. The wood is polished to a blackened shine, and knobs on the grip are shaped crudely in to the form of skulls. The three foot long handle is topped by a large axe head of darkened steel, sharpened to a razor edge along both blades.",
+      "room_desc": "ebony greataxe",
+      "keywords": [
+        "ebony greataxe"
+      ],
+      "weight": 7,
+      "size": 3,
+      "base_value": 200000,
+      "item_type": "weapon",
+      "equipment_slot": null,
+      "flags": {
+        "cursed": false,
+        "hidden": false,
+        "no_drop": false,
+        "takeable": true,
+        "stackable": false,
+        "throwable": false,
+        "two_handed": true
+      },
+      "max_stack": 1,
+      "weapon_data": {
+        "range": "melee",
+        "max_damage": 23,
+        "min_damage": 7,
+        "damage_type": "slashing",
+        "attack_speed": 4000,
+        "attack_verbs": {
+          "hit": "cleave",
+          "miss": "swing at",
+          "hit_3p": "cleaves",
+          "miss_3p": "swings at"
+        },
+        "crit_modifier": 2
+      },
+      "requirements": {
+        "level": 1,
+        "strength": 40,
+        "dexterity": 40
+      },
+      "stat_modifiers": {},
+      "stealth_modifier": 0,
+      "effect_slots": 0,
+      "rarity": "common"
+    },
+    {
+      "name": "starsteel greatsword",
+      "short_desc": "a starsteel greatsword",
+      "long_desc": "Forged from ore that fell screaming from the heavens, this massive two-handed blade pulses with a faint inner light, as though the metal itself remembers the stars. Its edge carries an almost imperceptible hum, and the dark, lustrous steel seems to drink in torchlight while casting back a cold, silvery glow of its own. Faint whorls pattern the flat of the blade like frozen nebulae, each one unique and the telltale signature of starsteel that no earthly forge can replicate.",
+      "room_desc": "starsteel greatsword",
+      "keywords": [
+        "starsteel greatsword"
+      ],
+      "weight": 10,
+      "size": 1,
+      "base_value": 0,
+      "item_type": "weapon",
+      "equipment_slot": null,
+      "flags": {
+        "cursed": false,
+        "hidden": false,
+        "no_drop": false,
+        "takeable": true,
+        "stackable": false,
+        "throwable": false,
+        "two_handed": false
+      },
+      "max_stack": 1,
+      "weapon_data": {
+        "range": "melee",
+        "max_damage": 24,
+        "min_damage": 12,
+        "damage_type": "slashing",
+        "attack_speed": 1800,
+        "attack_verbs": {
+          "hit": "cleave",
+          "miss": "swing at",
+          "hit_3p": "cleaves",
+          "miss_3p": "swings at"
+        },
+        "crit_modifier": 3
+      },
+      "requirements": {},
+      "stat_modifiers": {},
+      "stealth_modifier": 0,
+      "effect_slots": 0,
+      "rarity": "common"
+    },
+    {
+      "name": "crusty key",
+      "short_desc": "crusty key",
+      "long_desc": "This rusty dilapidated key looks like it's about to fall apart.",
+      "room_desc": "a crusty dilapidated key",
+      "keywords": [
+        "crusty key"
+      ],
+      "weight": 2,
+      "size": 1,
+      "base_value": 0,
+      "item_type": "key",
+      "equipment_slot": null,
+      "flags": {
+        "cursed": false,
+        "hidden": false,
+        "key_tag": "crusty_key",
+        "no_drop": false,
+        "takeable": true,
+        "stackable": false,
+        "throwable": false,
+        "two_handed": false,
+        "consumeChance": 100
+      },
+      "max_stack": 1,
+      "requirements": {},
+      "stat_modifiers": {},
+      "stealth_modifier": 0,
+      "effect_slots": 0,
+      "rarity": "common"
+    },
+    {
+      "name": "basic lockpick set",
+      "short_desc": "basic lockpick set",
+      "long_desc": "A relatively cheap lockpick set made for beginners. ",
+      "room_desc": "basic lockpicks",
+      "keywords": [
+        "basic lockpick set"
+      ],
+      "weight": 3,
+      "size": 1,
+      "base_value": 0,
+      "item_type": "tool",
+      "equipment_slot": null,
+      "flags": {
+        "cursed": false,
+        "hidden": false,
+        "no_drop": false,
+        "takeable": true,
+        "stackable": false,
+        "throwable": false,
+        "two_handed": false
+      },
+      "max_stack": 1,
+      "tool_data": {
+        "quality": 5,
+        "toolType": "lockpick",
+        "durability": 50
+      },
+      "requirements": {
+        "class": [
+          "thief"
+        ]
+      },
+      "stat_modifiers": {},
+      "stealth_modifier": 0,
+      "effect_slots": 0,
+      "rarity": "common"
+    },
+    {
+      "name": "starsteel breastplate",
+      "short_desc": "a starsteel breastplate",
+      "long_desc": "Bitchin Brestplate",
+      "room_desc": "starsteel breastplate",
+      "keywords": [
+        "starsteel breastplate"
+      ],
+      "weight": 200,
+      "size": 1,
+      "base_value": 0,
+      "item_type": "armor",
+      "equipment_slot": "body",
+      "flags": {
+        "cursed": false,
+        "hidden": false,
+        "no_drop": false,
+        "takeable": true,
+        "stackable": false,
+        "throwable": false,
+        "two_handed": false
+      },
+      "max_stack": 1,
+      "armor_data": {
+        "armor_class": 75,
+        "weight_class": "medium",
+        "damage_resistance": 8
+      },
+      "requirements": {},
+      "stat_modifiers": {},
+      "stealth_modifier": 0,
+      "effect_slots": 0,
+      "rarity": "limited",
+      "max_in_world": 3
+    },
+    {
+      "name": "quarterstaff",
+      "short_desc": "a quarterstaff",
+      "long_desc": "This is a six-foot wooden staff, bound about the middle with stripes of cloth. It is a simple weapon, and does not deal very much damage, but provides good defense as it is quite quick to use.",
+      "room_desc": "quarterstaff",
+      "keywords": [
+        "quarterstaff"
+      ],
+      "weight": 100,
+      "size": 1,
+      "base_value": 0,
+      "item_type": "weapon",
+      "equipment_slot": null,
+      "flags": {
+        "cursed": false,
+        "hidden": false,
+        "no_drop": false,
+        "takeable": true,
+        "stackable": false,
+        "throwable": false,
+        "two_handed": false
+      },
+      "max_stack": 1,
+      "weapon_data": {
+        "range": "melee",
+        "max_damage": 12,
+        "min_damage": 2,
+        "damage_type": "bludgeoning",
+        "attack_speed": 1200,
+        "attack_verbs": {
+          "hit": "smacks",
+          "miss": "swings at",
+          "hit_3p": "smacks",
+          "miss_3p": "swings at"
+        },
+        "crit_modifier": 1
+      },
+      "requirements": {
+        "strength": 30
+      },
+      "stat_modifiers": {},
+      "stealth_modifier": 0,
+      "effect_slots": 0,
+      "rarity": "common"
+    },
+    {
+      "name": "padded vest",
+      "short_desc": "padded vest",
+      "long_desc": "This is a heavy vest made out of crudely-quilted cloth. It is one-size-fits-all, with a rope belt to cinch the waste.  It provides decent protection,. but is very heavy for its combat worth.",
+      "room_desc": "padded vest",
+      "keywords": [
+        "padded vest",
+        "vest",
+        "padded"
+      ],
+      "weight": 240,
+      "size": 1,
+      "base_value": 0,
+      "item_type": "misc",
+      "equipment_slot": "body",
+      "flags": {
+        "cursed": false,
+        "hidden": false,
+        "no_drop": false,
+        "takeable": true,
+        "stackable": false,
+        "throwable": false,
+        "two_handed": false
+      },
+      "max_stack": 1,
+      "requirements": {},
+      "stat_modifiers": {},
+      "stealth_modifier": 0,
+      "effect_slots": 0,
+      "rarity": "common"
+    },
+    {
+      "name": "padded pants",
+      "short_desc": "padded pants",
+      "long_desc": "This is a simple pair of heavy cloth pants.  They are of questionable quality, and are tailored to fit nearly anyone.  A rope is tied about the waist to keep them up.",
+      "room_desc": "padded pants",
+      "keywords": [
+        "padded pants",
+        "padded",
+        "pants"
+      ],
+      "weight": 40,
+      "size": 1,
+      "base_value": 0,
+      "item_type": "armor",
+      "equipment_slot": "legs",
+      "flags": {
+        "cursed": false,
+        "hidden": false,
+        "no_drop": false,
+        "takeable": true,
+        "stackable": false,
+        "throwable": false,
+        "two_handed": false
+      },
+      "max_stack": 1,
+      "armor_data": {
+        "armor_class": 10,
+        "weight_class": "light",
+        "damage_resistance": 0.1
+      },
+      "requirements": {},
+      "stat_modifiers": {},
+      "stealth_modifier": 0,
+      "effect_slots": 0,
+      "rarity": "common"
+    },
+    {
+      "name": "padded helm",
+      "short_desc": "padded helm",
+      "long_desc": "This is an open-face helmet made out of heavy quilted cloth.  Its multiple layers of crude cloth make it fairly heavy for its meager protection, but it is better than entering combat without one.  A bare head makes an inviting target to opponents.",
+      "room_desc": "padded helm",
+      "keywords": [
+        "padded helm",
+        "padded",
+        "helm"
+      ],
+      "weight": 40,
+      "size": 1,
+      "base_value": 0,
+      "item_type": "armor",
+      "equipment_slot": "head",
+      "flags": {
+        "cursed": false,
+        "hidden": false,
+        "no_drop": false,
+        "takeable": true,
+        "stackable": false,
+        "throwable": false,
+        "two_handed": false
+      },
+      "max_stack": 1,
+      "armor_data": {
+        "armor_class": 10,
+        "weight_class": "light",
+        "damage_resistance": 0.1
+      },
+      "requirements": {},
+      "stat_modifiers": {},
+      "stealth_modifier": 0,
+      "effect_slots": 0,
+      "rarity": "common"
+    },
+    {
+      "name": "padded gloves",
+      "short_desc": "padded gloves",
+      "long_desc": "These heavy gloves are made of a canvas-like cloth, crudely stitched.  They are a common sight on any working man's hands as they protect well from chafing, and provide some protection from damage.",
+      "room_desc": "padded gloves",
+      "keywords": [
+        "padded gloves",
+        "padded",
+        "gloves"
+      ],
+      "weight": 40,
+      "size": 1,
+      "base_value": 0,
+      "item_type": "armor",
+      "equipment_slot": "hands",
+      "flags": {
+        "cursed": false,
+        "hidden": false,
+        "no_drop": false,
+        "takeable": true,
+        "stackable": false,
+        "throwable": false,
+        "two_handed": false
+      },
+      "max_stack": 1,
+      "armor_data": {
+        "armor_class": 10,
+        "weight_class": "light",
+        "damage_resistance": 0.1
+      },
+      "requirements": {},
+      "stat_modifiers": {},
+      "stealth_modifier": 0,
+      "effect_slots": 0,
+      "rarity": "common"
+    },
+    {
+      "name": "padded boots",
+      "short_desc": "padded boots",
+      "long_desc": "These knee-length boots are made of heavy quilted cloth with coiled rope soles.  They provide little protection and are fairly heavy, but they are better than nothing.",
+      "room_desc": "padded boots",
+      "keywords": [
+        "padded boots",
+        "padded",
+        "boots"
+      ],
+      "weight": 40,
+      "size": 1,
+      "base_value": 0,
+      "item_type": "armor",
+      "equipment_slot": "feet",
+      "flags": {
+        "cursed": false,
+        "hidden": false,
+        "no_drop": false,
+        "takeable": true,
+        "stackable": false,
+        "throwable": false,
+        "two_handed": false
+      },
+      "max_stack": 1,
+      "armor_data": {
+        "armor_class": 10,
+        "weight_class": "light",
+        "damage_resistance": 0.1
+      },
+      "requirements": {},
+      "stat_modifiers": {},
+      "stealth_modifier": 0,
+      "effect_slots": 0,
+      "rarity": "common"
+    },
+    {
+      "name": "copper coins",
+      "short_desc": "copper farthings",
+      "long_desc": "The copper farthings look like they've been around forever.",
+      "keywords": [
+        "copper",
+        "coins",
+        "farthings",
+        "money",
+        "currency"
+      ],
+      "weight": 4,
+      "size": 1,
+      "base_value": 1,
+      "item_type": "currency",
+      "equipment_slot": null,
+      "flags": {
+        "takeable": true,
+        "stackable": true
+      },
+      "max_stack": 9999999,
+      "stealth_modifier": 0,
+      "effect_slots": 0,
+      "rarity": "common"
+    },
+    {
+      "name": "silver coins",
+      "short_desc": "silver nobles",
+      "long_desc": "The silver nobles glitter with use.",
+      "keywords": [
+        "silver",
+        "coins",
+        "nobles",
+        "money",
+        "currency"
+      ],
+      "weight": 4,
+      "size": 1,
+      "base_value": 10,
+      "item_type": "currency",
+      "equipment_slot": null,
+      "flags": {
+        "takeable": true,
+        "stackable": true
+      },
+      "max_stack": 9999999,
+      "stealth_modifier": 0,
+      "effect_slots": 0,
+      "rarity": "common"
+    },
+    {
+      "name": "gold coins",
+      "short_desc": "gold crowns",
+      "long_desc": "The gold crowns are rustic and used.",
+      "keywords": [
+        "gold",
+        "coins",
+        "crowns",
+        "money",
+        "currency"
+      ],
+      "weight": 7,
+      "size": 1,
+      "base_value": 100,
+      "item_type": "currency",
+      "equipment_slot": null,
+      "flags": {
+        "takeable": true,
+        "stackable": true
+      },
+      "max_stack": 9999999,
+      "stealth_modifier": 0,
+      "effect_slots": 0,
+      "rarity": "common"
+    },
+    {
+      "name": "platinum coins",
+      "short_desc": "platinum pieces",
+      "long_desc": "The platinum pieces shine as though they were new.",
+      "keywords": [
+        "platinum",
+        "coins",
+        "pieces",
+        "money",
+        "currency"
+      ],
+      "weight": 10,
+      "size": 1,
+      "base_value": 1000,
+      "item_type": "currency",
+      "equipment_slot": null,
+      "flags": {
+        "takeable": true,
+        "stackable": true
+      },
+      "max_stack": 9999999,
+      "stealth_modifier": 0,
+      "effect_slots": 0,
+      "rarity": "common"
+    },
+    {
+      "name": "runic coins",
+      "short_desc": "runic coins",
+      "long_desc": "The runic coins glitter like nothing you have ever seen before.",
+      "keywords": [
+        "runic",
+        "coins",
+        "money",
+        "currency"
+      ],
+      "weight": 25,
+      "size": 1,
+      "base_value": 100000,
+      "item_type": "currency",
+      "equipment_slot": null,
+      "flags": {
+        "takeable": true,
+        "stackable": true
+      },
+      "max_stack": 9999999,
+      "stealth_modifier": 0,
+      "effect_slots": 0,
+      "rarity": "common"
+    }
+  ]
+}

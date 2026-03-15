@@ -5,7 +5,9 @@ import { getPlayerLocation } from './adminCommands.js';
 import { colors } from '../utils/colors.js';
 import { CommandResponse } from './commands.js';
 import { findPlayerInRoom } from './playerUtils.js';
+import { findNpcInRoom } from './npcManager.js';
 import { isStealthing, breakStealth } from './stealth/stealthState.js';
+import { withNpcNameCapitalized } from '../utils/textFormat.js';
 
 // In-memory cache of action commands
 let actionCommandSet: Set<string> = new Set();
@@ -76,38 +78,72 @@ export async function handleActionCommand(
   }
 
   // Target specified - check if action supports targeting
-  if (!action.firstPersonWithTarget || !action.targetPerspective || !action.roomWithTarget) {
+  if (!action.firstPersonWithTarget || !action.roomWithTarget) {
     return { type: MessageType.ERROR, message: `The ${action.command} action doesn't support targeting.` };
+  }
+
+  // Check if targeting self (exact match only to avoid ambiguity with other players)
+  const lowerTarget = targetName.toLowerCase();
+  const isSelfTarget = socket.username.toLowerCase() === lowerTarget;
+
+  if (isSelfTarget) {
+    // Break stealth when using a targeted social action
+    if (isStealthing(socket)) {
+      breakStealth(socket, 'social_action', true);
+    }
+
+    const selfMsg = replacePlaceholders(action.firstPersonWithTarget, socket.username, 'yourself');
+    const roomMsg = replacePlaceholders(action.roomWithTarget, socket.username, 'themselves');
+
+    broadcastToRoom(currentRoomId, roomMsg, socket.playerId);
+    return { type: MessageType.OUTPUT, message: selfMsg };
   }
 
   // Find the target player (respects stealth - can't target what you can't see)
   const target = findPlayerInRoom(targetName, currentRoomId, connectedPlayers, socket.playerId, socket.canSeeHidden);
-  if (!target) {
-    return { type: MessageType.ERROR, message: `You don't see ${targetName} here.` };
+
+  if (target) {
+    // Break stealth when using a targeted social action
+    if (isStealthing(socket)) {
+      breakStealth(socket, 'social_action', true);
+    }
+
+    const selfMsg = replacePlaceholders(action.firstPersonWithTarget, socket.username, target.username);
+    const roomMsg = replacePlaceholders(action.roomWithTarget, socket.username, target.username);
+
+    // Send target perspective if the action has one
+    if (action.targetPerspective) {
+      const targetMsg = replacePlaceholders(action.targetPerspective, socket.username, target.username);
+      const targetGameMsg: GameMessage = {
+        type: MessageType.OUTPUT,
+        payload: targetMsg,
+        timestamp: Date.now(),
+      };
+      target.send(JSON.stringify(targetGameMsg));
+    }
+
+    // Send to room (excluding self and target)
+    broadcastToRoom(currentRoomId, roomMsg, [socket.playerId, target.playerId]);
+    return { type: MessageType.OUTPUT, message: selfMsg };
   }
 
-  // Break stealth when using a targeted social action
-  if (isStealthing(socket)) {
-    breakStealth(socket, 'social_action', true);
+  // Check for NPC target (skip dead/corpse NPCs)
+  const npcTarget = findNpcInRoom(targetName, currentRoomId);
+  if (npcTarget && npcTarget.vitals.hp > 0 && !npcTarget.isCorpse) {
+    // Break stealth when using a targeted social action
+    if (isStealthing(socket)) {
+      breakStealth(socket, 'social_action', true);
+    }
+
+    const npcDisplayName = withNpcNameCapitalized(npcTarget.entityName, npcTarget.isProperName);
+    const selfMsg = replacePlaceholders(action.firstPersonWithTarget, socket.username, npcDisplayName);
+    const roomMsg = replacePlaceholders(action.roomWithTarget, socket.username, npcDisplayName);
+
+    broadcastToRoom(currentRoomId, roomMsg, socket.playerId);
+    return { type: MessageType.OUTPUT, message: selfMsg };
   }
 
-  // Build messages with target
-  const selfMsg = replacePlaceholders(action.firstPersonWithTarget, socket.username, target.username);
-  const targetMsg = replacePlaceholders(action.targetPerspective, socket.username, target.username);
-  const roomMsg = replacePlaceholders(action.roomWithTarget, socket.username, target.username);
-
-  // Send to target
-  const targetGameMsg: GameMessage = {
-    type: MessageType.OUTPUT,
-    payload: targetMsg,
-    timestamp: Date.now(),
-  };
-  target.send(JSON.stringify(targetGameMsg));
-
-  // Send to room (excluding self and target)
-  broadcastToRoom(currentRoomId, roomMsg, [socket.playerId, target.playerId]);
-
-  return { type: MessageType.OUTPUT, message: selfMsg };
+  return { type: MessageType.ERROR, message: `You don't see ${targetName} here.` };
 }
 
 /**

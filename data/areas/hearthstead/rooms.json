@@ -1,0 +1,400 @@
+{
+  "version": "1.0",
+  "exported_at": "2026-03-15T13:33:32.896Z",
+  "type": "rooms",
+  "data": [
+    {
+      "tag": "hs_road_1",
+      "name": "Coastal Road",
+      "description": "A well-worn dirt path cuts through rolling grassland. Wagon ruts and footprints mark the packed earth, evidence of regular traffic between Hearthstead and the city. Wildflowers grow along the edges where the grass hasn't been trampled flat.",
+      "area": "Hearthstead",
+      "terrain": "outdoor",
+      "features": {},
+      "exits": [
+        {
+          "direction": "southwest",
+          "toTag": "ew_0_3_2"
+        },
+        {
+          "direction": "northeast",
+          "toTag": "hs_road_2"
+        }
+      ]
+    },
+    {
+      "tag": "hs_road_2",
+      "name": "Coastal Road",
+      "description": "The road follows a gentle rise through open country. Low stone walls border the path in places, remnants of old field boundaries now overgrown with moss and creeping vines. The air smells of cut grass and distant salt.",
+      "area": "Hearthstead",
+      "terrain": "outdoor",
+      "features": {},
+      "exits": [
+        {
+          "direction": "southwest",
+          "toTag": "hs_road_1"
+        },
+        {
+          "direction": "northeast",
+          "toTag": "hs_road_r"
+        }
+      ]
+    },
+    {
+      "tag": "hs_road_r",
+      "name": "South Riverbank",
+      "description": "The road ends at the bank of a wide, slow-moving river. The water is dark and deep in the center but shallows near the edges, lapping gently against a muddy shore. On the far bank, the road continues northeast toward a cluster of buildings visible on the low bluff above, the village of Hearthstead. There is no bridge. The river must be crossed by swimming.",
+      "area": "Hearthstead",
+      "terrain": "outdoor",
+      "features": {},
+      "exits": [
+        {
+          "direction": "southwest",
+          "toTag": "hs_road_2"
+        },
+        {
+          "direction": "north",
+          "toTag": "hs_road_n"
+        }
+      ],
+      "doors": [
+        {
+          "name": "river",
+          "displayName": null,
+          "doorType": "triggered_passageway",
+          "description": null,
+          "entryDirection": "north",
+          "exitTag": "hs_road_n",
+          "exitDirection": "south",
+          "defaultState": "closed",
+          "autoResetSeconds": 10,
+          "hasLock": false,
+          "keyItemTag": null,
+          "pickDifficultyMin": 0,
+          "pickDifficultyMax": 0,
+          "bashDifficulty": 0,
+          "isHidden": true,
+          "triggerText": "swim river",
+          "passageMessageSelf": "You wade into the river and swim across to the far bank.",
+          "passageMessageRoom": "{player} wades into the river and swims across.",
+          "itemDisplayName": null,
+          "isTemporary": false,
+          "spawnTriggerText": null,
+          "durationSeconds": null,
+          "appearMessage": null,
+          "disappearMessage": null,
+          "requiredLevel": null,
+          "maxLevel": null,
+          "requiredClasses": null,
+          "requiredQuestFlag": null,
+          "requiredItemTag": null,
+          "denialMessage": null
+        }
+      ]
+    },
+    {
+      "tag": "hs_road_n",
+      "name": "North Riverbank",
+      "description": "The road resumes on the north bank of the river, climbing gently away from the water. The muddy bank gives way to packed earth and scrubby grass. Behind, the river stretches wide and dark. Swimmable, but not inviting. Ahead, the road continues northeast through open grassland toward Hearthstead, its rooftops just visible above the rise.",
+      "area": "Hearthstead",
+      "terrain": "outdoor",
+      "features": {},
+      "exits": [
+        {
+          "direction": "south",
+          "toTag": "hs_road_r"
+        },
+        {
+          "direction": "northeast",
+          "toTag": "hs_road_5"
+        }
+      ],
+      "doors": [
+        {
+          "name": "river",
+          "displayName": null,
+          "doorType": "triggered_passageway",
+          "description": null,
+          "entryDirection": "south",
+          "exitTag": "hs_road_r",
+          "exitDirection": "north",
+          "defaultState": "closed",
+          "autoResetSeconds": 10,
+          "hasLock": false,
+          "keyItemTag": null,
+          "pickDifficultyMin": 0,
+          "pickDifficultyMax": 0,
+          "bashDifficulty": 0,
+          "isHidden": true,
+          "triggerText": "swim river",
+          "passageMessageSelf": "You wade into the river and swim across to the far bank.",
+          "passageMessageRoom": "{player} wades into the river and swims across.",
+          "itemDisplayName": null,
+          "isTemporary": false,
+          "spawnTriggerText": null,
+          "durationSeconds": null,
+          "appearMessage": null,
+          "disappearMessage": null,
+          "requiredLevel": null,
+          "maxLevel": null,
+          "requiredClasses": null,
+          "requiredQuestFlag": null,
+          "requiredItemTag": null,
+          "denialMessage": null
+        }
+      ]
+    },
+    {
+      "tag": "hs_road_5",
+      "name": "Coastal Road",
+      "description": "A straight section of road across flat ground. The path has been reinforced with gravel in places where mud would otherwise swallow boots and wheels alike. Daisies and clover push up between the stones.",
+      "area": "Hearthstead",
+      "terrain": "outdoor",
+      "features": {},
+      "exits": [
+        {
+          "direction": "southwest",
+          "toTag": "hs_road_n"
+        },
+        {
+          "direction": "northeast",
+          "toTag": "hs_road_6"
+        }
+      ]
+    },
+    {
+      "tag": "hs_road_6",
+      "name": "Coastal Road",
+      "description": "The path curves gently around a low hillock covered in wildflowers. From the slight elevation, Hearthstead's rooftops are visible to the northeast, thin wisps of chimney smoke rising into the sky.",
+      "area": "Hearthstead",
+      "terrain": "outdoor",
+      "features": {},
+      "exits": [
+        {
+          "direction": "southwest",
+          "toTag": "hs_road_5"
+        },
+        {
+          "direction": "north",
+          "toTag": "hs_loop_l"
+        }
+      ]
+    },
+    {
+      "tag": "hs_hamlet_app1",
+      "name": "Hearthstead Approach",
+      "description": "A gentle slope leading up toward Hearthstead. The path widens here, the grass worn away by years of foot traffic. A wooden sign has been planted at the roadside, though the writing on it has faded to near-illegibility.",
+      "area": "Hearthstead",
+      "terrain": "outdoor",
+      "features": {},
+      "exits": [
+        {
+          "direction": "southwest",
+          "toTag": "hs_loop_l"
+        },
+        {
+          "direction": "northeast",
+          "toTag": "hs_hamlet_app2"
+        }
+      ]
+    },
+    {
+      "tag": "hs_hamlet_app2",
+      "name": "Hearthstead Approach",
+      "description": "A path leading from the surrounding countryside toward the cluster of buildings that make up Hearthstead. The trail is well-trodden and easy to follow. Ahead, chimney smoke rises above the rooftops.",
+      "area": "Hearthstead",
+      "terrain": "outdoor",
+      "features": {},
+      "exits": [
+        {
+          "direction": "southwest",
+          "toTag": "hs_hamlet_app1"
+        },
+        {
+          "direction": "north",
+          "toTag": "hs_hamlet_app3"
+        }
+      ]
+    },
+    {
+      "tag": "hs_hamlet_app3",
+      "name": "Hearthstead Approach",
+      "description": "The approach to Hearthstead passes between low hedgerows that have been neatly trimmed. Beyond the hedges, small gardens and animal pens border the path. The sounds of the village grow louder: voices, a hammer on metal.",
+      "area": "Hearthstead",
+      "terrain": "outdoor",
+      "features": {},
+      "exits": [
+        {
+          "direction": "south",
+          "toTag": "hs_hamlet_app2"
+        },
+        {
+          "direction": "north",
+          "toTag": "hs_hamlet_s"
+        }
+      ]
+    },
+    {
+      "tag": "hs_hamlet_s",
+      "name": "Hearthstead Village Center",
+      "description": "The heart of Hearthstead. A handful of modest buildings cluster around a small unpaved square. A stone well stands at the center, its bucket resting on the lip. The air is quiet, broken only by the occasional sound of a chicken, a distant hammer, wind in the eaves. Geelee's armor shop lies to the west and Perguth's weapon shop to the east. A wider street continues north toward more buildings. To the south, a track leads back toward the countryside.",
+      "area": "Hearthstead",
+      "terrain": "outdoor",
+      "features": {
+        "respawn": {
+          "enabled": true,
+          "servedAreas": ["Hearthstead Loop", "Hearthstead Wilds"]
+        }
+      },
+      "exits": [
+        {
+          "direction": "south",
+          "toTag": "hs_hamlet_app3"
+        },
+        {
+          "direction": "west",
+          "toTag": "hs_hamlet_a"
+        },
+        {
+          "direction": "east",
+          "toTag": "hs_hamlet_w"
+        },
+        {
+          "direction": "north",
+          "toTag": "hs_hamlet_st1"
+        }
+      ]
+    },
+    {
+      "tag": "hs_hamlet_st1",
+      "name": "Hearthstead Main Street",
+      "description": "A dirt lane runs through the heart of Hearthstead, lined with a few modest buildings. The road is swept clean, bordered by low stone walls and wooden fences. Flower boxes sit beneath some windows, geraniums bright against weathered wood.",
+      "area": "Hearthstead",
+      "terrain": "outdoor",
+      "features": {},
+      "exits": [
+        {
+          "direction": "south",
+          "toTag": "hs_hamlet_s"
+        },
+        {
+          "direction": "west",
+          "toTag": "hs_hamlet_e"
+        },
+        {
+          "direction": "east",
+          "toTag": "hs_hamlet_i1"
+        },
+        {
+          "direction": "north",
+          "toTag": "hs_hamlet_h"
+        }
+      ]
+    },
+    {
+      "tag": "hs_hamlet_h",
+      "name": "Hearthstead's Mission",
+      "description": "A modest building with a painted sign above the door. Inside, bundles of dried herbs hang from the rafters and the scent of lavender and chamomile fills the air. A wooden counter separates the front room from shelves crowded with clay jars, glass bottles, and neatly labeled pouches. A curtained doorway leads to a back room where a cot is visible. The mission provides healing and spiritual comfort to the people of Hearthstead.",
+      "area": "Hearthstead",
+      "terrain": "outdoor",
+      "features": {},
+      "exits": [
+        {
+          "direction": "south",
+          "toTag": "hs_hamlet_st1"
+        }
+      ]
+    },
+    {
+      "tag": "hs_hamlet_a",
+      "name": "Geelee's Training Armor",
+      "description": "A small workshop run by old Geelee, Hearthstead's only source of protective gear. Padded jerkins and simple leather pieces hang from wooden pegs along the walls. A workbench holds scraps of fabric, needles, and heavy thread. The shop specializes in practical, affordable protection. Nothing fancy, but enough to turn a glancing blow. The smell of leather and linseed oil fills the space.",
+      "area": "Hearthstead",
+      "terrain": "outdoor",
+      "features": {},
+      "exits": [
+        {
+          "direction": "east",
+          "toTag": "hs_hamlet_s"
+        }
+      ]
+    },
+    {
+      "tag": "hs_hamlet_w",
+      "name": "Perguth's Training Weapons",
+      "description": "Perguth's workshop is a lean-to attached to a small forge. Simple training weapons are displayed on a rack: clubs, daggers, short swords, and a few battered spears. The metalwork is plain but serviceable. The forge is small but well-maintained, its bellows patched and its anvil worn smooth from years of use. Heat radiates from the coals. Perguth supplies Hearthstead's travelers with practical arms for the road ahead.",
+      "area": "Hearthstead",
+      "terrain": "outdoor",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "hs_hamlet_s"
+        }
+      ]
+    },
+    {
+      "tag": "hs_hamlet_e",
+      "name": "Zifnab's House of Magic",
+      "description": "A cramped cottage bearing a crooked sign that reads \"Zifnab's House of Magic.\" Inside, it smells of candle wax and old paper. Shelves line every wall, crammed with scrolls, small books, and bundles of dried ingredients. A glass case on the counter holds a few glowing vials and inscribed stones. Zifnab's apprentice minds the shop, dealing in minor enchantments and basic spell instruction. A cat sleeps on a pile of parchment.",
+      "area": "Hearthstead",
+      "terrain": "outdoor",
+      "features": {},
+      "exits": [
+        {
+          "direction": "east",
+          "toTag": "hs_hamlet_st1"
+        }
+      ]
+    },
+    {
+      "tag": "hs_hamlet_i1",
+      "name": "Hearthstead Inn, Common Room",
+      "description": "The front room of Hearthstead's only inn. A stone fireplace dominates one wall, its mantel decorated with dried flowers and a tarnished copper mug. Rough wooden tables and benches fill the space. The bar is a plank laid across two barrels, behind which shelves hold a modest selection of drink. The room is warm and smells of woodsmoke and stew. A doorway leads east to more of the inn.",
+      "area": "Hearthstead",
+      "terrain": "outdoor",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "hs_hamlet_st1"
+        },
+        {
+          "direction": "east",
+          "toTag": "hs_hamlet_i2"
+        }
+      ]
+    },
+    {
+      "tag": "hs_hamlet_i2",
+      "name": "Hearthstead Inn, Back Hall",
+      "description": "A narrow hallway connecting the common room to the inn's back rooms. The floor is worn smooth. Hooks on the wall hold cloaks and a battered lantern. A stairway leads to a room above, and a curtained archway opens to the kitchen. The sounds of the common room are muffled here. Clinking cups, low conversation.",
+      "area": "Hearthstead",
+      "terrain": "outdoor",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "hs_hamlet_i1"
+        },
+        {
+          "direction": "north",
+          "toTag": "hs_hamlet_i3"
+        }
+      ]
+    },
+    {
+      "tag": "hs_hamlet_i3",
+      "name": "Hearthstead Inn, Back Room",
+      "description": "A small but clean room at the back of the inn. A narrow bed with a wool blanket, a three-legged stool, and a basin on a shelf make up the furnishings. A small window looks out over Hearthstead's rooftops. The room is quiet, the sounds from the common room muffled by the thick walls. It smells faintly of lavender from a dried sprig tucked behind the basin.",
+      "area": "Hearthstead",
+      "terrain": "outdoor",
+      "features": {},
+      "exits": [
+        {
+          "direction": "south",
+          "toTag": "hs_hamlet_i2"
+        }
+      ]
+    }
+  ]
+}

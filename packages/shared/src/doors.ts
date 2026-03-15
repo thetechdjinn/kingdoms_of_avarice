@@ -112,6 +112,8 @@ export interface Door {
   // Permission requirements (Phase 10)
   /** Minimum character level required to use this door (null = no requirement) */
   requiredLevel: number | null;
+  /** Maximum character level allowed to use this door (null = no requirement) */
+  maxLevel: number | null;
   /** Array of class IDs that can use this door (null/empty = no restriction) */
   requiredClasses: string[] | null;
   /** Quest flag that must be completed to use this door (null = no requirement) */

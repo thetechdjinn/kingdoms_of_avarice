@@ -17,7 +17,7 @@ const __dirname = dirname(__filename);
 
 dotenv.config({ path: join(__dirname, '..', '..', '..', '..', '.env') });
 
-import { pool as getPool, withTransaction } from './index.js';
+import { pool as getPool, query, withTransaction } from './index.js';
 import * as roomRepo from './repositories/roomRepository.js';
 import * as itemRepo from './repositories/itemRepository.js';
 import * as spellRepo from './repositories/spellRepository.js';
@@ -190,7 +190,7 @@ async function importClasses(data: unknown[]): Promise<ImportResult> {
   for (const raw of data) {
     const item = raw as Record<string, unknown>;
     try {
-      const classId = item.classId as string;
+      const classId = (item.class_id ?? item.classId) as string;
       if (!classId) { result.skipped++; continue; }
 
       const existing = await progressionRepo.getClassById(classId);
@@ -202,7 +202,7 @@ async function importClasses(data: unknown[]): Promise<ImportResult> {
         result.created++;
       }
     } catch (err) {
-      result.errors.push(`Class "${item.classId}": ${(err as Error).message}`);
+      result.errors.push(`Class "${item.class_id ?? item.classId}": ${(err as Error).message}`);
       result.skipped++;
     }
   }
@@ -215,7 +215,7 @@ async function importRaces(data: unknown[]): Promise<ImportResult> {
   for (const raw of data) {
     const item = raw as Record<string, unknown>;
     try {
-      const raceId = item.raceId as string;
+      const raceId = (item.race_id ?? item.raceId) as string;
       if (!raceId) { result.skipped++; continue; }
 
       const existing = await progressionRepo.getRaceById(raceId);
@@ -227,7 +227,7 @@ async function importRaces(data: unknown[]): Promise<ImportResult> {
         result.created++;
       }
     } catch (err) {
-      result.errors.push(`Race "${item.raceId}": ${(err as Error).message}`);
+      result.errors.push(`Race "${item.race_id ?? item.raceId}": ${(err as Error).message}`);
       result.skipped++;
     }
   }
@@ -240,7 +240,7 @@ async function importAbilities(data: unknown[]): Promise<ImportResult> {
   for (const raw of data) {
     const item = raw as Record<string, unknown>;
     try {
-      const abilityId = item.abilityId as string;
+      const abilityId = (item.ability_id ?? item.abilityId) as string;
       if (!abilityId) { result.skipped++; continue; }
 
       const existing = await progressionRepo.getAbilityById(abilityId);
@@ -252,7 +252,7 @@ async function importAbilities(data: unknown[]): Promise<ImportResult> {
         result.created++;
       }
     } catch (err) {
-      result.errors.push(`Ability "${item.abilityId}": ${(err as Error).message}`);
+      result.errors.push(`Ability "${item.ability_id ?? item.abilityId}": ${(err as Error).message}`);
       result.skipped++;
     }
   }
@@ -265,8 +265,14 @@ async function importTalents(data: unknown[]): Promise<ImportResult> {
   for (const raw of data) {
     const item = raw as Record<string, unknown>;
     try {
-      const talentId = item.talentId as string;
+      const talentId = (item.talent_id ?? item.talentId) as string;
       if (!talentId) { result.skipped++; continue; }
+
+      // Ensure prerequisite_talents is an array (export may write {} for empty arrays, or a single string)
+      const prereqs = item.prerequisite_talents;
+      if (prereqs && !Array.isArray(prereqs)) {
+        item.prerequisite_talents = typeof prereqs === 'string' ? [prereqs] : [];
+      }
 
       const existing = await progressionRepo.getTalentById(talentId);
       if (existing) {
@@ -277,7 +283,7 @@ async function importTalents(data: unknown[]): Promise<ImportResult> {
         result.created++;
       }
     } catch (err) {
-      result.errors.push(`Talent "${item.talentId}": ${(err as Error).message}`);
+      result.errors.push(`Talent "${item.talent_id ?? item.talentId}": ${(err as Error).message}`);
       result.skipped++;
     }
   }
@@ -290,7 +296,7 @@ async function importGameEvents(data: unknown[]): Promise<ImportResult> {
   for (const raw of data) {
     const item = raw as Record<string, unknown>;
     try {
-      const eventId = item.eventId as string;
+      const eventId = (item.event_id ?? item.eventId) as string;
       if (!eventId) { result.skipped++; continue; }
 
       const existing = await progressionRepo.getGameEventById(eventId);
@@ -302,7 +308,7 @@ async function importGameEvents(data: unknown[]): Promise<ImportResult> {
         result.created++;
       }
     } catch (err) {
-      result.errors.push(`GameEvent "${item.eventId}": ${(err as Error).message}`);
+      result.errors.push(`GameEvent "${item.event_id ?? item.eventId}": ${(err as Error).message}`);
       result.skipped++;
     }
   }
@@ -373,34 +379,34 @@ async function importItems(data: unknown[]): Promise<ImportResult> {
 
       const existing = await itemRepo.getTemplateByName(name);
 
-      // Convert camelCase to snake_case for the repository input
+      // Read fields using snake_case (export format) with camelCase fallback
       const input = {
         name,
-        short_desc: (item.shortDesc as string) || '',
-        long_desc: item.longDesc as string | undefined,
-        room_desc: item.roomDesc as string | undefined,
+        short_desc: ((item.short_desc ?? item.shortDesc) as string) || '',
+        long_desc: (item.long_desc ?? item.longDesc) as string | undefined,
+        room_desc: (item.room_desc ?? item.roomDesc) as string | undefined,
         keywords: (item.keywords as string[]) || [],
         weight: item.weight as number | undefined,
         size: item.size as number | undefined,
-        base_value: item.baseValue as number | undefined,
-        item_type: item.itemType as string,
-        equipment_slot: item.equipmentSlot as string | undefined,
+        base_value: (item.base_value ?? item.baseValue) as number | undefined,
+        item_type: (item.item_type ?? item.itemType) as string,
+        equipment_slot: (item.equipment_slot ?? item.equipmentSlot) as string | undefined,
         flags: item.flags as Record<string, unknown> | undefined,
-        max_stack: item.maxStack as number | undefined,
-        container_capacity: item.containerCapacity as number | undefined,
-        container_weight_limit: item.containerWeightLimit as number | undefined,
-        weapon_data: item.weaponData as Record<string, unknown> | undefined,
-        armor_data: item.armorData as Record<string, unknown> | undefined,
-        consumable_data: item.consumableData as Record<string, unknown> | undefined,
-        light_data: item.lightData as Record<string, unknown> | undefined,
-        tool_data: item.toolData as Record<string, unknown> | undefined,
+        max_stack: (item.max_stack ?? item.maxStack) as number | undefined,
+        container_capacity: (item.container_capacity ?? item.containerCapacity) as number | undefined,
+        container_weight_limit: (item.container_weight_limit ?? item.containerWeightLimit) as number | undefined,
+        weapon_data: (item.weapon_data ?? item.weaponData) as Record<string, unknown> | undefined,
+        armor_data: (item.armor_data ?? item.armorData) as Record<string, unknown> | undefined,
+        consumable_data: (item.consumable_data ?? item.consumableData) as Record<string, unknown> | undefined,
+        light_data: (item.light_data ?? item.lightData) as Record<string, unknown> | undefined,
+        tool_data: (item.tool_data ?? item.toolData) as Record<string, unknown> | undefined,
         requirements: item.requirements as Record<string, unknown> | undefined,
-        stat_modifiers: item.statModifiers as Record<string, unknown> | undefined,
-        stealth_modifier: item.stealthModifier as number | undefined,
-        effect_slots: item.effectSlots as number | undefined,
-        base_effects: item.baseEffects as unknown | undefined,
+        stat_modifiers: (item.stat_modifiers ?? item.statModifiers) as Record<string, unknown> | undefined,
+        stealth_modifier: (item.stealth_modifier ?? item.stealthModifier) as number | undefined,
+        effect_slots: (item.effect_slots ?? item.effectSlots) as number | undefined,
+        base_effects: (item.base_effects ?? item.baseEffects) as unknown | undefined,
         rarity: item.rarity as string | undefined,
-        max_in_world: item.maxInWorld as number | undefined,
+        max_in_world: (item.max_in_world ?? item.maxInWorld) as number | undefined,
       };
 
       if (existing) {
@@ -428,18 +434,19 @@ async function importFactions(data: unknown[]): Promise<ImportResult> {
       if (!name) { result.skipped++; continue; }
 
       const existing = await factionRepo.getFactionByName(name);
+      const factionType = (item.factionType ?? item.faction_type) as string;
       if (existing) {
         await factionRepo.updateFaction(existing.id, {
           name,
           description: item.description as string | undefined,
-          factionType: item.factionType as string,
+          factionType,
         } as unknown as Parameters<typeof factionRepo.updateFaction>[1]);
         result.updated++;
       } else {
         await factionRepo.createFaction({
           name,
           description: item.description as string | undefined,
-          factionType: item.factionType as string,
+          factionType,
         } as unknown as Parameters<typeof factionRepo.createFaction>[0]);
         result.created++;
       }
@@ -525,7 +532,10 @@ async function importDropTables(data: unknown[]): Promise<ImportResult> {
   return result;
 }
 
-async function importRooms(data: unknown[]): Promise<ImportResult> {
+// Deferred room data for cross-area exit resolution
+const deferredRoomFiles: { filePath: string; data: unknown[] }[] = [];
+
+async function importRooms(data: unknown[], filePath: string): Promise<ImportResult> {
   const result: ImportResult = { file: 'rooms.json', created: 0, updated: 0, skipped: 0, errors: [] };
 
   // Phase 1: Upsert all rooms by tag
@@ -562,149 +572,185 @@ async function importRooms(data: unknown[]): Promise<ImportResult> {
     }
   }
 
-  // Phase 2: Build tag→id map and create exits
+  // Defer exit/door creation until all room files are imported
+  deferredRoomFiles.push({ filePath, data });
+
+  return result;
+}
+
+/**
+ * Process deferred exits and doors for all room files.
+ * Called after all room files are imported so cross-area tags are resolvable.
+ */
+async function processDeferredRoomExits(): Promise<void> {
+  if (deferredRoomFiles.length === 0) return;
+
+  console.log('\n  Resolving cross-area exits and doors...');
   const tagToId = await roomRepo.getTagToIdMap();
 
-  for (const raw of data) {
-    const item = raw as Record<string, unknown>;
-    const tag = item.tag as string | null;
-    if (!tag) continue;
+  for (const { filePath, data: fileData } of deferredRoomFiles) {
+    const result: ImportResult = { file: filePath, created: 0, updated: 0, skipped: 0, errors: [] };
 
-    const fromId = tagToId.get(tag);
-    if (!fromId) continue;
+    for (const raw of fileData) {
+      const item = raw as Record<string, unknown>;
+      const tag = item.tag as string | null;
+      if (!tag) continue;
 
-    // Delete existing exits for this room before re-creating
-    const existingExits = await roomRepo.getRoomExits(fromId);
-    for (const exit of existingExits) {
-      await roomRepo.deleteExit(fromId, exit.direction);
-    }
+      const fromId = tagToId.get(tag);
+      if (!fromId) continue;
 
-    // Create exits
-    const exits = (item.exits as unknown[]) || [];
-    for (const exitRaw of exits) {
-      const exit = exitRaw as Record<string, unknown>;
-      const toTag = exit.toTag as string | null;
-      if (!toTag) continue;
-
-      const toId = tagToId.get(toTag);
-      if (!toId) {
-        result.errors.push(`Room "${tag}" exit ${exit.direction}: target tag "${toTag}" not found`);
-        continue;
+      // Delete existing exits for this room before re-creating
+      const existingExits = await roomRepo.getRoomExits(fromId);
+      for (const exit of existingExits) {
+        await roomRepo.deleteExit(fromId, exit.direction);
       }
 
-      try {
-        await roomRepo.createExit({
-          fromRoomId: fromId,
-          toRoomId: toId,
-          direction: exit.direction as string,
-        });
-      } catch (err) {
-        const msg = (err as Error).message || '';
-        // Only suppress duplicate key violations (Postgres error code 23505)
-        if (!msg.includes('duplicate') && !msg.includes('unique') && !msg.includes('23505')) {
-          result.errors.push(`Room "${tag}" exit ${exit.direction}: ${msg}`);
+      // Create exits
+      const exits = (item.exits as unknown[]) || [];
+      for (const exitRaw of exits) {
+        const exit = exitRaw as Record<string, unknown>;
+        const toTag = exit.toTag as string | null;
+        if (!toTag) continue;
+
+        const toId = tagToId.get(toTag);
+        if (!toId) {
+          result.errors.push(`Room "${tag}" exit ${exit.direction}: target tag "${toTag}" not found`);
+          continue;
         }
-      }
-    }
 
-    // Create doors — track which directions we touch so we can remove stale ones
-    const doors = (item.doors as unknown[]) || [];
-    const importedDoorDirections = new Set<string>();
-    for (const doorRaw of doors) {
-      const door = doorRaw as Record<string, unknown>;
-      const entryDir = (door.entryDirection as string).toLowerCase();
-      importedDoorDirections.add(entryDir);
-      const exitTag = door.exitTag as string | null;
-      const exitRoomId = exitTag ? (tagToId.get(exitTag) ?? null) : null;
-
-      // Check if a door already exists for this room + direction
-      const existingDoor = await doorRepo.getDoorByRoomAndDirection(fromId, entryDir);
-      if (existingDoor) {
-        // Update existing door
         try {
-          await doorRepo.updateDoor(existingDoor.id, {
-            name: door.name as string,
-            displayName: door.displayName as string | null | undefined,
-            doorType: door.doorType as string,
-            description: door.description as string | undefined,
-            exitRoomId,
-            exitDirection: door.exitDirection as string | null | undefined,
-            defaultState: door.defaultState as string | undefined,
-            autoResetSeconds: door.autoResetSeconds as number | null | undefined,
-            hasLock: door.hasLock as boolean | undefined,
-            keyItemTag: door.keyItemTag as string | undefined,
-            pickDifficultyMin: door.pickDifficultyMin as number | undefined,
-            pickDifficultyMax: door.pickDifficultyMax as number | undefined,
-            bashDifficulty: door.bashDifficulty as number | undefined,
-            isHidden: door.isHidden as boolean | undefined,
-            triggerText: door.triggerText as string | undefined,
-            passageMessageSelf: door.passageMessageSelf as string | undefined,
-            passageMessageRoom: door.passageMessageRoom as string | undefined,
-            itemDisplayName: door.itemDisplayName as string | undefined,
-            isTemporary: door.isTemporary as boolean | undefined,
-            spawnTriggerText: door.spawnTriggerText as string | undefined,
-            durationSeconds: door.durationSeconds as number | null | undefined,
-            appearMessage: door.appearMessage as string | undefined,
-            disappearMessage: door.disappearMessage as string | undefined,
-            requiredLevel: door.requiredLevel as number | null | undefined,
-            requiredClasses: door.requiredClasses as string[] | null | undefined,
-            requiredQuestFlag: door.requiredQuestFlag as string | null | undefined,
-            requiredItemTag: door.requiredItemTag as string | null | undefined,
-            denialMessage: door.denialMessage as string | null | undefined,
-          } as unknown as Parameters<typeof doorRepo.updateDoor>[1]);
+          await roomRepo.createExit({
+            fromRoomId: fromId,
+            toRoomId: toId,
+            direction: exit.direction as string,
+          });
         } catch (err) {
-          result.errors.push(`Door "${door.name}" update in room "${tag}": ${(err as Error).message}`);
+          const msg = (err as Error).message || '';
+          // Only suppress duplicate key violations (Postgres error code 23505)
+          if (!msg.includes('duplicate') && !msg.includes('unique') && !msg.includes('23505')) {
+            result.errors.push(`Room "${tag}" exit ${exit.direction}: ${msg}`);
+          }
         }
-      } else {
-        try {
-          await doorRepo.createDoor({
-            name: door.name as string,
-            displayName: door.displayName as string | null | undefined,
-            doorType: door.doorType as string,
-            description: door.description as string | undefined,
-            entryRoomId: fromId,
-            entryDirection: door.entryDirection as string,
-            exitRoomId,
-            exitDirection: door.exitDirection as string | null | undefined,
-            defaultState: door.defaultState as string | undefined,
-            autoResetSeconds: door.autoResetSeconds as number | null | undefined,
-            hasLock: door.hasLock as boolean | undefined,
-            keyItemTag: door.keyItemTag as string | undefined,
-            pickDifficultyMin: door.pickDifficultyMin as number | undefined,
-            pickDifficultyMax: door.pickDifficultyMax as number | undefined,
-            bashDifficulty: door.bashDifficulty as number | undefined,
-            isHidden: door.isHidden as boolean | undefined,
-            triggerText: door.triggerText as string | undefined,
-            passageMessageSelf: door.passageMessageSelf as string | undefined,
-            passageMessageRoom: door.passageMessageRoom as string | undefined,
-            itemDisplayName: door.itemDisplayName as string | undefined,
-            isTemporary: door.isTemporary as boolean | undefined,
-            spawnTriggerText: door.spawnTriggerText as string | undefined,
-            durationSeconds: door.durationSeconds as number | null | undefined,
-            appearMessage: door.appearMessage as string | undefined,
-            disappearMessage: door.disappearMessage as string | undefined,
-            requiredLevel: door.requiredLevel as number | null | undefined,
-            requiredClasses: door.requiredClasses as string[] | null | undefined,
-            requiredQuestFlag: door.requiredQuestFlag as string | null | undefined,
-            requiredItemTag: door.requiredItemTag as string | null | undefined,
-            denialMessage: door.denialMessage as string | null | undefined,
-          } as unknown as Parameters<typeof doorRepo.createDoor>[0]);
-        } catch (err) {
-          result.errors.push(`Door "${door.name}" in room "${tag}": ${(err as Error).message}`);
+      }
+
+      // Create doors — track which directions we touch so we can remove stale ones
+      const doors = (item.doors as unknown[]) || [];
+      const importedDoorDirections = new Set<string>();
+      for (const doorRaw of doors) {
+        const door = doorRaw as Record<string, unknown>;
+        if (!door.entryDirection) {
+          result.errors.push(`Room "${tag}": door "${door.name}" missing entryDirection, skipping`);
+          continue;
+        }
+        const entryDir = (door.entryDirection as string).toLowerCase();
+        importedDoorDirections.add(entryDir);
+        const exitTag = door.exitTag as string | null;
+        const exitRoomId = exitTag ? (tagToId.get(exitTag) ?? null) : null;
+
+        // Check if a door already exists for this room + direction
+        const existingDoor = await doorRepo.getDoorByRoomAndDirection(fromId, entryDir);
+        if (existingDoor) {
+          // Update existing door
+          try {
+            await doorRepo.updateDoor(existingDoor.id, {
+              name: door.name as string,
+              displayName: door.displayName as string | null | undefined,
+              doorType: door.doorType as string,
+              description: door.description as string | undefined,
+              exitRoomId,
+              exitDirection: door.exitDirection as string | null | undefined,
+              defaultState: door.defaultState as string | undefined,
+              autoResetSeconds: door.autoResetSeconds as number | null | undefined,
+              hasLock: door.hasLock as boolean | undefined,
+              keyItemTag: door.keyItemTag as string | undefined,
+              pickDifficultyMin: door.pickDifficultyMin as number | undefined,
+              pickDifficultyMax: door.pickDifficultyMax as number | undefined,
+              bashDifficulty: door.bashDifficulty as number | undefined,
+              isHidden: door.isHidden as boolean | undefined,
+              triggerText: door.triggerText as string | undefined,
+              passageMessageSelf: door.passageMessageSelf as string | undefined,
+              passageMessageRoom: door.passageMessageRoom as string | undefined,
+              itemDisplayName: door.itemDisplayName as string | undefined,
+              isTemporary: door.isTemporary as boolean | undefined,
+              spawnTriggerText: door.spawnTriggerText as string | undefined,
+              durationSeconds: door.durationSeconds as number | null | undefined,
+              appearMessage: door.appearMessage as string | undefined,
+              disappearMessage: door.disappearMessage as string | undefined,
+              requiredLevel: door.requiredLevel as number | null | undefined,
+              maxLevel: door.maxLevel as number | null | undefined,
+              requiredClasses: door.requiredClasses as string[] | null | undefined,
+              requiredQuestFlag: door.requiredQuestFlag as string | null | undefined,
+              requiredItemTag: door.requiredItemTag as string | null | undefined,
+              denialMessage: door.denialMessage as string | null | undefined,
+            } as unknown as Parameters<typeof doorRepo.updateDoor>[1]);
+          } catch (err) {
+            result.errors.push(`Door "${door.name}" update in room "${tag}": ${(err as Error).message}`);
+          }
+        } else {
+          try {
+            await doorRepo.createDoor({
+              name: door.name as string,
+              displayName: door.displayName as string | null | undefined,
+              doorType: door.doorType as string,
+              description: door.description as string | undefined,
+              entryRoomId: fromId,
+              entryDirection: door.entryDirection as string,
+              exitRoomId,
+              exitDirection: door.exitDirection as string | null | undefined,
+              defaultState: door.defaultState as string | undefined,
+              autoResetSeconds: door.autoResetSeconds as number | null | undefined,
+              hasLock: door.hasLock as boolean | undefined,
+              keyItemTag: door.keyItemTag as string | undefined,
+              pickDifficultyMin: door.pickDifficultyMin as number | undefined,
+              pickDifficultyMax: door.pickDifficultyMax as number | undefined,
+              bashDifficulty: door.bashDifficulty as number | undefined,
+              isHidden: door.isHidden as boolean | undefined,
+              triggerText: door.triggerText as string | undefined,
+              passageMessageSelf: door.passageMessageSelf as string | undefined,
+              passageMessageRoom: door.passageMessageRoom as string | undefined,
+              itemDisplayName: door.itemDisplayName as string | undefined,
+              isTemporary: door.isTemporary as boolean | undefined,
+              spawnTriggerText: door.spawnTriggerText as string | undefined,
+              durationSeconds: door.durationSeconds as number | null | undefined,
+              appearMessage: door.appearMessage as string | undefined,
+              disappearMessage: door.disappearMessage as string | undefined,
+              requiredLevel: door.requiredLevel as number | null | undefined,
+              maxLevel: door.maxLevel as number | null | undefined,
+              requiredClasses: door.requiredClasses as string[] | null | undefined,
+              requiredQuestFlag: door.requiredQuestFlag as string | null | undefined,
+              requiredItemTag: door.requiredItemTag as string | null | undefined,
+              denialMessage: door.denialMessage as string | null | undefined,
+            } as unknown as Parameters<typeof doorRepo.createDoor>[0]);
+          } catch (err) {
+            result.errors.push(`Door "${door.name}" in room "${tag}": ${(err as Error).message}`);
+          }
+        }
+      }
+
+      // Delete stale doors that exist in DB but not in import data
+      const existingDoors = await doorRepo.getDoorsFromRoom(fromId);
+      for (const existing of existingDoors) {
+        if (!importedDoorDirections.has(existing.entryDirection.toLowerCase())) {
+          await doorRepo.deleteDoor(existing.id);
         }
       }
     }
 
-    // Delete stale doors that exist in DB but not in import data
-    const existingDoors = await doorRepo.getDoorsFromRoom(fromId);
-    for (const existing of existingDoors) {
-      if (!importedDoorDirections.has(existing.entryDirection.toLowerCase())) {
-        await doorRepo.deleteDoor(existing.id);
+    // Merge exit/door results into the original room file result
+    const originalResult = results.find(r => r.file === filePath);
+    if (originalResult) {
+      originalResult.errors.push(...result.errors);
+    } else {
+      results.push(result);
+    }
+
+    if (result.errors.length > 0) {
+      console.log(`  ${filePath} exits/doors: ${result.errors.length} error(s)`);
+      for (const err of result.errors) {
+        console.log(`    ERROR: ${err}`);
       }
     }
   }
-
-  return result;
 }
 
 async function importNpcs(data: unknown[]): Promise<ImportResult> {
@@ -760,11 +806,17 @@ async function importNpcs(data: unknown[]): Promise<ImportResult> {
       let dropTableId: number | null = null;
       if (item.dropTableName) {
         dropTableId = dropTableNameToId.get((item.dropTableName as string).toLowerCase()) ?? null;
+        if (!dropTableId) {
+          result.errors.push(`NPC "${name}": drop table "${item.dropTableName}" not found, setting to null`);
+        }
       }
 
       let primaryFactionId: number | null = null;
       if (item.primaryFactionName) {
         primaryFactionId = factionNameToId.get((item.primaryFactionName as string).toLowerCase()) ?? null;
+        if (!primaryFactionId) {
+          result.errors.push(`NPC "${name}": faction "${item.primaryFactionName}" not found, setting to null`);
+        }
       }
 
       const templateInput: Record<string, unknown> = {
@@ -859,9 +911,15 @@ async function importNpcs(data: unknown[]): Promise<ImportResult> {
       });
 
       // Merchant inventory/responses (outside transaction — repos lack client param)
-      // Wrapped in try-catch per entry so failures don't leave wiped merchant data.
-      await merchantRepo.deleteAllInventoryForTemplate(npcId);
-      await merchantResponseRepo.deleteAllResponsesForTemplate(npcId);
+      // Only delete+recreate for merchant NPCs to avoid wiping data for non-merchants.
+      if (item.merchantEnabled) {
+        try {
+          await merchantRepo.deleteAllInventoryForTemplate(npcId);
+          await merchantResponseRepo.deleteAllResponsesForTemplate(npcId);
+        } catch (err) {
+          result.errors.push(`NPC "${name}": failed to clear merchant data: ${(err as Error).message}`);
+        }
+      }
 
       if (item.merchantEnabled) {
         const inventory = (item.merchantInventory as unknown[]) || [];
@@ -968,7 +1026,7 @@ async function importFile(relativePath: string): Promise<void> {
       importResult = await importDropTables(file.data);
       break;
     case 'rooms':
-      importResult = await importRooms(file.data);
+      importResult = await importRooms(file.data, relativePath);
       break;
     case 'npcs':
       importResult = await importNpcs(file.data);
@@ -987,6 +1045,36 @@ async function importFile(relativePath: string): Promise<void> {
 
   for (const err of importResult.errors) {
     console.log(`    ERROR: ${err}`);
+  }
+}
+
+/**
+ * Set game settings that depend on imported room data.
+ * Uses room tags to look up IDs, so this must run after all rooms are imported.
+ */
+async function configureGameSettings(): Promise<void> {
+  const tagToId = await roomRepo.getTagToIdMap();
+
+  // Default starting room for new characters (Hearthstead Village Center)
+  const startingRoomId = tagToId.get('hs_hamlet_s');
+  if (startingRoomId) {
+    await query(
+      `INSERT INTO game_settings (key, value) VALUES ('default_starting_room_id', $1)
+       ON CONFLICT (key) DO UPDATE SET value = $1`,
+      [String(startingRoomId)]
+    );
+    console.log(`  Default starting room: Hearthstead Village Center (ID ${startingRoomId})`);
+  }
+
+  // Default respawn room (Hall of the Dead — fallback for areas without their own)
+  const respawnRoomId = tagToId.get('cathedral_halls_dead');
+  if (respawnRoomId) {
+    await query(
+      `INSERT INTO game_settings (key, value) VALUES ('default_respawn_room_id', $1)
+       ON CONFLICT (key) DO UPDATE SET value = $1`,
+      [String(respawnRoomId)]
+    );
+    console.log(`  Default respawn room: Halls of the Dead (ID ${respawnRoomId})`);
   }
 }
 
@@ -1015,6 +1103,9 @@ async function main(): Promise<void> {
     await importFile(filePath);
   }
 
+  // Process deferred exits/doors now that all rooms from all area files exist
+  await processDeferredRoomExits();
+
   // Print summary
   console.log('\n=== Import Summary ===');
   let totalCreated = 0;
@@ -1039,6 +1130,9 @@ async function main(): Promise<void> {
       }
     }
   }
+
+  // Configure game settings based on imported rooms
+  await configureGameSettings();
 
   console.log('\n=== Import Complete ===');
 

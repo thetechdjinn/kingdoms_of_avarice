@@ -1,6 +1,8 @@
 import pg from 'pg';
 import { query } from '../index.js';
 import { Character, CharacterStats, Gender, Currency } from '@koa/shared';
+import { getClassById } from './progressionRepository.js';
+import { getDefaultStartingRoomId } from './settingsRepository.js';
 
 export interface DbCharacter {
   id: number;
@@ -63,17 +65,21 @@ function calculateInitialHealth(constitution: number, characterClass: string): n
   return (baseHealth[characterClass.toLowerCase()] || 20) + constitution * 2;
 }
 
-function calculateInitialMana(intelligence: number, wisdom: number, characterClass: string): number {
+function calculateInitialMana(intelligence: number, wisdom: number, characterClass: string, resourceType: string): number {
+  // Classes with no resource type get 0 mana
+  if (!resourceType || resourceType === 'none') {
+    return 0;
+  }
+
   const baseMana: Record<string, number> = {
     mage: 30,
     cleric: 20,
     paladin: 15,
     ranger: 10,
-    warrior: 0,
     thief: 5,
   };
   const normalized = characterClass.toLowerCase();
-  const base = baseMana[normalized] || 0;
+  const base = baseMana[normalized] || 10;
   // Clerics and Paladins scale with wisdom, others with intelligence
   if (normalized === 'cleric' || normalized === 'paladin') {
     return base + wisdom;
@@ -83,7 +89,10 @@ function calculateInitialMana(intelligence: number, wisdom: number, characterCla
 
 export async function createCharacter(input: CreateCharacterInput, client?: pg.PoolClient): Promise<DbCharacter> {
   const maxHealth = calculateInitialHealth(input.stats.constitution, input.characterClass);
-  const maxMana = calculateInitialMana(input.stats.intelligence, input.stats.wisdom, input.characterClass);
+  const classDef = await getClassById(input.characterClass);
+  const resourceType = classDef?.resource_type ?? 'none';
+  const maxMana = calculateInitialMana(input.stats.intelligence, input.stats.wisdom, input.characterClass, resourceType);
+  const startingRoomId = await getDefaultStartingRoomId() ?? 1;
 
   const result = await query<DbCharacter>(
     `INSERT INTO characters (
@@ -92,7 +101,7 @@ export async function createCharacter(input: CreateCharacterInput, client?: pg.P
       strength, intelligence, dexterity, constitution, wisdom, charisma,
       current_room_id, gold, unspent_cp, cp_spent,
       gender, hair, eye_color
-    ) VALUES ($1, $2, $3, $4, $5, $6, $6, $7, $7, $8, $9, $10, $11, $12, $13, 1, 100, 100, '{}', $14, $15, $16)
+    ) VALUES ($1, $2, $3, $4, $5, $6, $6, $7, $7, $8, $9, $10, $11, $12, $13, $14, 100, 100, '{}', $15, $16, $17)
     RETURNING *`,
     [
       input.playerId,
@@ -108,6 +117,7 @@ export async function createCharacter(input: CreateCharacterInput, client?: pg.P
       input.stats.constitution,
       input.stats.wisdom,
       input.stats.charisma,
+      startingRoomId,
       input.gender || 'male',
       input.hair || null,
       input.eyeColor || null,

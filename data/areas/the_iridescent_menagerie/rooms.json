@@ -1,0 +1,1259 @@
+{
+  "version": "1.0",
+  "exported_at": "2026-03-15T13:33:32.894Z",
+  "type": "rooms",
+  "data": [
+    {
+      "tag": "im_nest_1",
+      "name": "Mutant Nest",
+      "description": "A nesting area for mutated creatures. Shredded material and glowing fur line the walls. The bones here are wrong — too large, too numerous.",
+      "area": "The Iridescent Menagerie",
+      "terrain": "underground",
+      "features": {},
+      "exits": [
+        {
+          "direction": "east",
+          "toTag": "im_crystal_1"
+        },
+        {
+          "direction": "south",
+          "toTag": "im_8"
+        }
+      ]
+    },
+    {
+      "tag": "im_crystal_1",
+      "name": "Crystal Chamber",
+      "description": "The reagent has crystallized on the walls and ceiling, forming jagged luminous formations. Beautiful and deeply wrong.",
+      "area": "The Iridescent Menagerie",
+      "terrain": "underground",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "im_nest_1"
+        },
+        {
+          "direction": "south",
+          "toTag": "im_9"
+        }
+      ]
+    },
+    {
+      "tag": "im_1",
+      "name": "Glowing Corridor",
+      "description": "A passage where the first signs of contamination are unmistakable. The walls are smeared with iridescent stains that pulse with a barely perceptible rhythm. The air is damp and chemical-sharp. The sewer structure is still intact, but it won't be for long. A patch of luminous moss clings to the ceiling, pulsing with a slow, organic rhythm unlike the steady glow of the chemical residue.",
+      "area": "The Iridescent Menagerie",
+      "terrain": "underground",
+      "features": {},
+      "exits": [
+        {
+          "direction": "east",
+          "toTag": "im_2"
+        },
+        {
+          "direction": "south",
+          "toTag": "im_10"
+        }
+      ]
+    },
+    {
+      "tag": "im_2",
+      "name": "Stained Tunnel",
+      "description": "Thin trails of luminous liquid run down the walls from somewhere above, pooling in the cracks between floor stones. The contamination is light but persistent — every surface bears a faint iridescent sheen. The chemical smell hangs in the still air.",
+      "area": "The Iridescent Menagerie",
+      "terrain": "underground",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "im_1"
+        },
+        {
+          "direction": "east",
+          "toTag": "im_3"
+        }
+      ]
+    },
+    {
+      "tag": "im_3",
+      "name": "Contaminated Tunnel",
+      "description": "The sewer brickwork here is streaked with faint luminous residue — thin veins of iridescent color bleeding through the mortar. The chemical tang is noticeable but not yet overpowering. Puddles on the floor glow faintly, casting pale reflections onto the low ceiling. A thin crack in the wall leaks a steady trickle of glowing liquid, forming a luminous rivulet that follows the floor's slope into darkness.",
+      "area": "The Iridescent Menagerie",
+      "terrain": "underground",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "im_2"
+        },
+        {
+          "direction": "east",
+          "toTag": "im_4"
+        },
+        {
+          "direction": "south",
+          "toTag": "im_12"
+        }
+      ]
+    },
+    {
+      "tag": "im_4",
+      "name": "Tainted Passage",
+      "description": "A tunnel where the original stonework is still recognizable but stained with patches of soft, unnatural light. The air carries a sharp chemical smell, like overturned reagent bottles. Small luminous droplets weep from cracks in the walls.",
+      "area": "The Iridescent Menagerie",
+      "terrain": "underground",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "im_3"
+        },
+        {
+          "direction": "east",
+          "toTag": "im_5"
+        },
+        {
+          "direction": "south",
+          "toTag": "im_13"
+        }
+      ]
+    },
+    {
+      "tag": "im_5",
+      "name": "Glowing Corridor",
+      "description": "The walls of this passage are mottled with iridescent residue, the colors shifting subtly as the eye moves across them. The floor is damp with glowing runoff. Something about the light feels wrong — too steady, too even, without any visible source.",
+      "area": "The Iridescent Menagerie",
+      "terrain": "underground",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "im_4"
+        },
+        {
+          "direction": "east",
+          "toTag": "im_6"
+        }
+      ]
+    },
+    {
+      "tag": "im_6",
+      "name": "Stained Tunnel",
+      "description": "Faint contamination marks this stretch of tunnel. The brickwork is intact but discolored, stained in bands of pale violet and sickly green. The air has a metallic bite. Luminous puddles collect in the uneven floor, their surfaces still and mirror-bright. A dead rat lies in a luminous puddle, its fur stained iridescent. It has been dead a long time but shows no sign of decay.",
+      "area": "The Iridescent Menagerie",
+      "terrain": "underground",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "im_5"
+        },
+        {
+          "direction": "east",
+          "toTag": "im_7"
+        },
+        {
+          "direction": "south",
+          "toTag": "im_14"
+        }
+      ]
+    },
+    {
+      "tag": "im_7",
+      "name": "Contaminated Tunnel",
+      "description": "A low corridor where chemical residue has begun to seep through the stone. The walls are slick with a thin film that catches the light and throws it back in muted rainbow hues. The smell is acrid, tightening the back of the throat.",
+      "area": "The Iridescent Menagerie",
+      "terrain": "underground",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "im_6"
+        },
+        {
+          "direction": "east",
+          "toTag": "im_8"
+        }
+      ]
+    },
+    {
+      "tag": "im_8",
+      "name": "Tainted Passage",
+      "description": "The tunnel bricks are edged with faintly glowing residue, as if someone painted the mortar lines with dilute luminescence. The contamination is thin here — a warning of what lies ahead. Small puddles glow weakly on the damp floor. A dripping sound echoes from somewhere ahead — slow, rhythmic, each drop producing a soft flash of light as it hits the floor.",
+      "area": "The Iridescent Menagerie",
+      "terrain": "underground",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "im_7"
+        },
+        {
+          "direction": "east",
+          "toTag": "im_9"
+        },
+        {
+          "direction": "north",
+          "toTag": "im_nest_1"
+        },
+        {
+          "direction": "south",
+          "toTag": "im_16"
+        }
+      ]
+    },
+    {
+      "tag": "im_9",
+      "name": "Glowing Corridor",
+      "description": "A passage where the first signs of contamination are unmistakable. The walls are smeared with iridescent stains that pulse with a barely perceptible rhythm. The air is damp and chemical-sharp. The sewer structure is still intact, but it won't be for long.",
+      "area": "The Iridescent Menagerie",
+      "terrain": "underground",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "im_8"
+        },
+        {
+          "direction": "north",
+          "toTag": "im_crystal_1"
+        },
+        {
+          "direction": "south",
+          "toTag": "im_nest_2"
+        }
+      ]
+    },
+    {
+      "tag": "im_entrance",
+      "name": "Iridescent Threshold",
+      "description": "The transition point between sewer and menagerie. Sewer stone gives way to walls streaked with luminous residue. The chemical smell is immediate. A shaft leads up to the sewer tunnels above.",
+      "area": "The Iridescent Menagerie",
+      "terrain": "underground",
+      "features": {},
+      "exits": [
+        {
+          "direction": "up",
+          "toTag": "sewer_entrance_menagerie"
+        },
+        {
+          "direction": "east",
+          "toTag": "im_10"
+        }
+      ]
+    },
+    {
+      "tag": "im_10",
+      "name": "Glowing Corridor",
+      "description": "The walls of this passage are mottled with iridescent residue, the colors shifting subtly as the eye moves across them. The floor is damp with glowing runoff. Something about the light feels wrong — too steady, too even, without any visible source. The chemical smell intensifies near a section of wall where the bricks have partially dissolved, revealing a pocket of crystallized residue behind them.",
+      "area": "The Iridescent Menagerie",
+      "terrain": "underground",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "im_entrance"
+        },
+        {
+          "direction": "east",
+          "toTag": "im_11"
+        },
+        {
+          "direction": "north",
+          "toTag": "im_1"
+        }
+      ]
+    },
+    {
+      "tag": "im_11",
+      "name": "Stained Tunnel",
+      "description": "Faint contamination marks this stretch of tunnel. The brickwork is intact but discolored, stained in bands of pale violet and sickly green. The air has a metallic bite. Luminous puddles collect in the uneven floor, their surfaces still and mirror-bright.",
+      "area": "The Iridescent Menagerie",
+      "terrain": "underground",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "im_10"
+        },
+        {
+          "direction": "east",
+          "toTag": "im_12"
+        }
+      ]
+    },
+    {
+      "tag": "im_12",
+      "name": "Contaminated Tunnel",
+      "description": "A low corridor where chemical residue has begun to seep through the stone. The walls are slick with a thin film that catches the light and throws it back in muted rainbow hues. The smell is acrid, tightening the back of the throat. Faint scratch marks on the wall glow where something has exposed the contaminated stone beneath the surface layer.",
+      "area": "The Iridescent Menagerie",
+      "terrain": "underground",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "im_11"
+        },
+        {
+          "direction": "east",
+          "toTag": "im_13"
+        },
+        {
+          "direction": "north",
+          "toTag": "im_3"
+        },
+        {
+          "direction": "south",
+          "toTag": "im_18"
+        }
+      ]
+    },
+    {
+      "tag": "im_13",
+      "name": "Tainted Passage",
+      "description": "The tunnel bricks are edged with faintly glowing residue, as if someone painted the mortar lines with dilute luminescence. The contamination is thin here — a warning of what lies ahead. Small puddles glow weakly on the damp floor.",
+      "area": "The Iridescent Menagerie",
+      "terrain": "underground",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "im_12"
+        },
+        {
+          "direction": "north",
+          "toTag": "im_4"
+        },
+        {
+          "direction": "south",
+          "toTag": "im_19"
+        }
+      ]
+    },
+    {
+      "tag": "im_pool_1",
+      "name": "Glowing Pool",
+      "description": "A chamber where iridescent liquid has pooled deeply. The glow is intense, casting strange reflections. Things move beneath the surface.",
+      "area": "The Iridescent Menagerie",
+      "terrain": "underground",
+      "features": {},
+      "exits": [
+        {
+          "direction": "east",
+          "toTag": "im_14"
+        }
+      ]
+    },
+    {
+      "tag": "im_14",
+      "name": "Glowing Corridor",
+      "description": "A passage where the first signs of contamination are unmistakable. The walls are smeared with iridescent stains that pulse with a barely perceptible rhythm. The air is damp and chemical-sharp. The sewer structure is still intact, but it won't be for long.",
+      "area": "The Iridescent Menagerie",
+      "terrain": "underground",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "im_pool_1"
+        },
+        {
+          "direction": "east",
+          "toTag": "im_15"
+        },
+        {
+          "direction": "north",
+          "toTag": "im_6"
+        },
+        {
+          "direction": "south",
+          "toTag": "im_21"
+        }
+      ]
+    },
+    {
+      "tag": "im_15",
+      "name": "Stained Tunnel",
+      "description": "Thin trails of luminous liquid run down the walls from somewhere above, pooling in the cracks between floor stones. The contamination is light but persistent — every surface bears a faint iridescent sheen. The chemical smell hangs in the still air. The remains of a leather satchel lie in the corner, its contents spilled — empty vials, a rusted tong, and a journal too water-damaged to read.",
+      "area": "The Iridescent Menagerie",
+      "terrain": "underground",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "im_14"
+        },
+        {
+          "direction": "east",
+          "toTag": "im_16"
+        },
+        {
+          "direction": "south",
+          "toTag": "im_cavern"
+        }
+      ]
+    },
+    {
+      "tag": "im_16",
+      "name": "Contaminated Tunnel",
+      "description": "The sewer brickwork here is streaked with faint luminous residue — thin veins of iridescent color bleeding through the mortar. The chemical tang is noticeable but not yet overpowering. Puddles on the floor glow faintly, casting pale reflections onto the low ceiling.",
+      "area": "The Iridescent Menagerie",
+      "terrain": "underground",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "im_15"
+        },
+        {
+          "direction": "north",
+          "toTag": "im_8"
+        }
+      ]
+    },
+    {
+      "tag": "im_nest_2",
+      "name": "Mutant Nest",
+      "description": "A second nesting chamber, larger and fouler. The creatures here have been exposed longer. Shed skin and luminous secretions coat every surface.",
+      "area": "The Iridescent Menagerie",
+      "terrain": "underground",
+      "features": {},
+      "exits": [
+        {
+          "direction": "north",
+          "toTag": "im_9"
+        },
+        {
+          "direction": "south",
+          "toTag": "im_23"
+        }
+      ]
+    },
+    {
+      "tag": "im_17",
+      "name": "Shimmering Passage",
+      "description": "A passage consumed by alchemical contamination. The walls are warped, the stone softened and reshaped by whatever reagent has saturated it. Clusters of luminous crystals grow from the ceiling like inverted teeth. The air shimmers with suspended particles. A pool of liquid reagent has collected in a depression, its surface perfectly still and mirror-bright. The reflection shows the ceiling — or something else.",
+      "area": "The Iridescent Menagerie",
+      "terrain": "underground",
+      "features": {},
+      "exits": [
+        {
+          "direction": "east",
+          "toTag": "im_18"
+        },
+        {
+          "direction": "south",
+          "toTag": "im_26"
+        }
+      ]
+    },
+    {
+      "tag": "im_18",
+      "name": "Luminous Corridor",
+      "description": "The tunnel has been transformed by contamination. The floor is glazed with hardened residue, the walls encrusted with crystal growths that pulse with inner light. The chemical vapor is so thick it obscures the far end of the passage. Each breath burns.",
+      "area": "The Iridescent Menagerie",
+      "terrain": "underground",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "im_17"
+        },
+        {
+          "direction": "north",
+          "toTag": "im_12"
+        }
+      ]
+    },
+    {
+      "tag": "im_19",
+      "name": "Contaminated Chamber",
+      "description": "Heavy contamination has remade this section of tunnel. The sewer is barely recognizable — walls bulge with crystal formations, the floor is slick with luminous residue, and the air itself glows faintly. The chemical smell has become a physical presence, pressing against the skin. A crystal formation has grown around the remains of an iron bracket, absorbing the metal into its structure. The iron is visible inside the translucent growth.",
+      "area": "The Iridescent Menagerie",
+      "terrain": "underground",
+      "features": {},
+      "exits": [
+        {
+          "direction": "east",
+          "toTag": "im_20"
+        },
+        {
+          "direction": "north",
+          "toTag": "im_13"
+        },
+        {
+          "direction": "south",
+          "toTag": "im_27"
+        }
+      ]
+    },
+    {
+      "tag": "im_20",
+      "name": "Shimmering Passage",
+      "description": "A passage consumed by alchemical contamination. The walls are warped, the stone softened and reshaped by whatever reagent has saturated it. Clusters of luminous crystals grow from the ceiling like inverted teeth. The air shimmers with suspended particles.",
+      "area": "The Iridescent Menagerie",
+      "terrain": "underground",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "im_19"
+        },
+        {
+          "direction": "east",
+          "toTag": "im_21"
+        }
+      ]
+    },
+    {
+      "tag": "im_21",
+      "name": "Luminous Corridor",
+      "description": "The tunnel has been transformed by contamination. The floor is glazed with hardened residue, the walls encrusted with crystal growths that pulse with inner light. The chemical vapor is so thick it obscures the far end of the passage. Each breath burns.",
+      "area": "The Iridescent Menagerie",
+      "terrain": "underground",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "im_20"
+        },
+        {
+          "direction": "north",
+          "toTag": "im_14"
+        },
+        {
+          "direction": "south",
+          "toTag": "im_29"
+        }
+      ]
+    },
+    {
+      "tag": "im_cavern",
+      "name": "Iridescent Cavern",
+      "description": "A large open chamber saturated with contamination. The air itself shimmers with suspended reagent particles, making distances hard to judge.",
+      "area": "The Iridescent Menagerie",
+      "terrain": "underground",
+      "features": {},
+      "exits": [
+        {
+          "direction": "north",
+          "toTag": "im_15"
+        }
+      ]
+    },
+    {
+      "tag": "im_22",
+      "name": "Contaminated Chamber",
+      "description": "Heavy contamination has remade this section of tunnel. The sewer is barely recognizable — walls bulge with crystal formations, the floor is slick with luminous residue, and the air itself glows faintly. The chemical smell has become a physical presence, pressing against the skin.",
+      "area": "The Iridescent Menagerie",
+      "terrain": "underground",
+      "features": {},
+      "exits": [
+        {
+          "direction": "east",
+          "toTag": "im_23"
+        },
+        {
+          "direction": "south",
+          "toTag": "im_31"
+        }
+      ]
+    },
+    {
+      "tag": "im_23",
+      "name": "Iridescent Tunnel",
+      "description": "Thick iridescent residue coats every surface, hardened into a glassy shell over the original stonework. Crystal growths jut from the walls at sharp angles, their edges razor-thin and faintly humming. The light here comes from everywhere and nowhere. The air tastes of copper and something worse. The vapor is thicker here — a visible cloud that swirls in slow patterns, disturbed by movement and slow to settle.",
+      "area": "The Iridescent Menagerie",
+      "terrain": "underground",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "im_22"
+        },
+        {
+          "direction": "east",
+          "toTag": "im_24"
+        },
+        {
+          "direction": "north",
+          "toTag": "im_nest_2"
+        }
+      ]
+    },
+    {
+      "tag": "im_24",
+      "name": "Shimmering Passage",
+      "description": "The tunnel walls are alive with crystalline growth, the contamination having eaten into the stone and replaced it with something luminous and wrong. The floor crunches underfoot — thin crystal plates that shatter and reform. Vapor curls in thick ribbons through the stale air.",
+      "area": "The Iridescent Menagerie",
+      "terrain": "underground",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "im_23"
+        },
+        {
+          "direction": "east",
+          "toTag": "im_25"
+        },
+        {
+          "direction": "south",
+          "toTag": "im_32"
+        }
+      ]
+    },
+    {
+      "tag": "im_25",
+      "name": "Luminous Corridor",
+      "description": "A corridor deep in the contaminated zone. The original sewer architecture is a memory — the walls are sculpted by alchemical residue into smooth, glowing surfaces broken by jutting crystal formations. The air is heavy, syrupy, tasting of metal and ozone. Something has been feeding on the crystal here — tooth marks score the surface of a formation, and shards of crystal litter the floor below it.",
+      "area": "The Iridescent Menagerie",
+      "terrain": "underground",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "im_24"
+        },
+        {
+          "direction": "south",
+          "toTag": "im_33"
+        }
+      ]
+    },
+    {
+      "tag": "im_26",
+      "name": "Contaminated Chamber",
+      "description": "The contamination pulses in the walls like a slow heartbeat. Crystal formations have merged into sheets of translucent growth, casting fractured light in every direction. The stone beneath is being consumed, replaced by something that glows and hums. The chemical vapor stings the eyes.",
+      "area": "The Iridescent Menagerie",
+      "terrain": "underground",
+      "features": {},
+      "exits": [
+        {
+          "direction": "north",
+          "toTag": "im_17"
+        },
+        {
+          "direction": "south",
+          "toTag": "im_34"
+        }
+      ]
+    },
+    {
+      "tag": "im_pool_2",
+      "name": "Glowing Pool",
+      "description": "Another chamber flooded with luminous reagent. The pool here is deeper and more turbulent, the liquid bubbling sluggishly with chemical reactions.",
+      "area": "The Iridescent Menagerie",
+      "terrain": "underground",
+      "features": {},
+      "exits": [
+        {
+          "direction": "east",
+          "toTag": "im_27"
+        }
+      ]
+    },
+    {
+      "tag": "im_27",
+      "name": "Iridescent Tunnel",
+      "description": "The contamination here is heavy. The walls glow with a steady, sickly light, the original brickwork barely visible beneath thick crusts of iridescent residue. Crystal formations have begun to sprout from the mortar, small but sharp. The chemical vapor is thick enough to taste. The crystal formations here emit a faint chiming sound when disturbed, a musical note that hangs in the air long after the vibration stops.",
+      "area": "The Iridescent Menagerie",
+      "terrain": "underground",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "im_pool_2"
+        },
+        {
+          "direction": "east",
+          "toTag": "im_28"
+        },
+        {
+          "direction": "north",
+          "toTag": "im_19"
+        },
+        {
+          "direction": "south",
+          "toTag": "im_36"
+        }
+      ]
+    },
+    {
+      "tag": "im_28",
+      "name": "Shimmering Passage",
+      "description": "A passage consumed by alchemical contamination. The walls are warped, the stone softened and reshaped by whatever reagent has saturated it. Clusters of luminous crystals grow from the ceiling like inverted teeth. The air shimmers with suspended particles.",
+      "area": "The Iridescent Menagerie",
+      "terrain": "underground",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "im_27"
+        },
+        {
+          "direction": "east",
+          "toTag": "im_29"
+        }
+      ]
+    },
+    {
+      "tag": "im_29",
+      "name": "Luminous Corridor",
+      "description": "The tunnel has been transformed by contamination. The floor is glazed with hardened residue, the walls encrusted with crystal growths that pulse with inner light. The chemical vapor is so thick it obscures the far end of the passage. Each breath burns.",
+      "area": "The Iridescent Menagerie",
+      "terrain": "underground",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "im_28"
+        },
+        {
+          "direction": "east",
+          "toTag": "im_30"
+        },
+        {
+          "direction": "north",
+          "toTag": "im_21"
+        },
+        {
+          "direction": "south",
+          "toTag": "im_38"
+        }
+      ]
+    },
+    {
+      "tag": "im_30",
+      "name": "Iridescent Tunnel",
+      "description": "The contamination here is heavy. The walls glow with a steady, sickly light, the original brickwork barely visible beneath thick crusts of iridescent residue. Crystal formations have begun to sprout from the mortar, small but sharp. The chemical vapor is thick enough to taste.",
+      "area": "The Iridescent Menagerie",
+      "terrain": "underground",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "im_29"
+        },
+        {
+          "direction": "east",
+          "toTag": "im_31"
+        }
+      ]
+    },
+    {
+      "tag": "im_31",
+      "name": "Shimmering Passage",
+      "description": "A passage consumed by alchemical contamination. The walls are warped, the stone softened and reshaped by whatever reagent has saturated it. Clusters of luminous crystals grow from the ceiling like inverted teeth. The air shimmers with suspended particles. A pool of liquid reagent has collected in a depression, its surface perfectly still and mirror-bright. The reflection shows the ceiling — or something else.",
+      "area": "The Iridescent Menagerie",
+      "terrain": "underground",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "im_30"
+        },
+        {
+          "direction": "north",
+          "toTag": "im_22"
+        },
+        {
+          "direction": "south",
+          "toTag": "im_40"
+        }
+      ]
+    },
+    {
+      "tag": "im_lab",
+      "name": "Wrecked Laboratory",
+      "description": "Remnants of alchemical equipment — overturned tables, shattered glass vessels, burst copper pipes. All overrun by crystallized contamination.",
+      "area": "The Iridescent Menagerie",
+      "terrain": "underground",
+      "features": {},
+      "exits": [
+        {
+          "direction": "east",
+          "toTag": "im_32"
+        }
+      ]
+    },
+    {
+      "tag": "im_32",
+      "name": "Luminous Corridor",
+      "description": "The tunnel has been transformed by contamination. The floor is glazed with hardened residue, the walls encrusted with crystal growths that pulse with inner light. The chemical vapor is so thick it obscures the far end of the passage. Each breath burns.",
+      "area": "The Iridescent Menagerie",
+      "terrain": "underground",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "im_lab"
+        },
+        {
+          "direction": "north",
+          "toTag": "im_24"
+        },
+        {
+          "direction": "south",
+          "toTag": "im_42"
+        }
+      ]
+    },
+    {
+      "tag": "im_33",
+      "name": "Contaminated Chamber",
+      "description": "Heavy contamination has remade this section of tunnel. The sewer is barely recognizable — walls bulge with crystal formations, the floor is slick with luminous residue, and the air itself glows faintly. The chemical smell has become a physical presence, pressing against the skin. A crystal formation has grown around the remains of an iron bracket, absorbing the metal into its structure. The iron is visible inside the translucent growth.",
+      "area": "The Iridescent Menagerie",
+      "terrain": "underground",
+      "features": {},
+      "exits": [
+        {
+          "direction": "north",
+          "toTag": "im_25"
+        },
+        {
+          "direction": "south",
+          "toTag": "im_43"
+        }
+      ]
+    },
+    {
+      "tag": "im_34",
+      "name": "Crystallized Passage",
+      "description": "Massive crystal spires crowd this passage, their surfaces rippling with internal light. The floor is a sheet of fused crystal, slick and treacherous. The hum here is constant and deep, vibrating in the chest. The air tastes of lightning and molten glass.",
+      "area": "The Iridescent Menagerie",
+      "terrain": "underground",
+      "features": {},
+      "exits": [
+        {
+          "direction": "north",
+          "toTag": "im_26"
+        },
+        {
+          "direction": "south",
+          "toTag": "im_44"
+        }
+      ]
+    },
+    {
+      "tag": "im_35",
+      "name": "Warped Tunnel",
+      "description": "The tunnel has become a crystal cavern. Formations the size of a person jut from the walls at wild angles, their facets throwing fractured light in every direction. The original tunnel dimensions are lost beneath the growth. The air is thick with luminous vapor. A formation near the floor has grown around something organic — bones, perhaps, or the remains of a creature consumed by the crystallization.",
+      "area": "The Iridescent Menagerie",
+      "terrain": "underground",
+      "features": {},
+      "exits": [
+        {
+          "direction": "east",
+          "toTag": "im_36"
+        },
+        {
+          "direction": "south",
+          "toTag": "im_45"
+        }
+      ]
+    },
+    {
+      "tag": "im_36",
+      "name": "Saturated Corridor",
+      "description": "Encrusted crystal covers everything in a dense, glowing layer. The passage narrows where formations have grown inward, leaving barely enough room to squeeze through. The light is painful — pure and intense, casting no shadows. The humming vibration is deafening in the enclosed space.",
+      "area": "The Iridescent Menagerie",
+      "terrain": "underground",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "im_35"
+        },
+        {
+          "direction": "east",
+          "toTag": "im_37"
+        },
+        {
+          "direction": "north",
+          "toTag": "im_27"
+        }
+      ]
+    },
+    {
+      "tag": "im_37",
+      "name": "Encrusted Tunnel",
+      "description": "A warped tunnel where crystalline contamination has reached its most extreme expression. The formations pulse and shift with visible movement — still growing, still spreading. The air is saturated with reagent vapor, each breath depositing a faint iridescent film on the lips.",
+      "area": "The Iridescent Menagerie",
+      "terrain": "underground",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "im_36"
+        },
+        {
+          "direction": "east",
+          "toTag": "im_38"
+        },
+        {
+          "direction": "south",
+          "toTag": "im_crystal_2"
+        }
+      ]
+    },
+    {
+      "tag": "im_38",
+      "name": "Crystallized Passage",
+      "description": "The tunnel is barely recognizable as a former sewer. Massive crystal formations dominate the passage — jagged spires of luminous growth that force navigation between their razor edges. The glow is intense, almost blinding. A deep hum vibrates through the floor. The air is so thick with luminous particles that each breath leaves a faint glow on exhaled vapor. The contamination is being inhaled with every breath.",
+      "area": "The Iridescent Menagerie",
+      "terrain": "underground",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "im_37"
+        },
+        {
+          "direction": "east",
+          "toTag": "im_39"
+        },
+        {
+          "direction": "north",
+          "toTag": "im_29"
+        },
+        {
+          "direction": "south",
+          "toTag": "im_vessel"
+        }
+      ]
+    },
+    {
+      "tag": "im_39",
+      "name": "Warped Tunnel",
+      "description": "Saturated crystallization has consumed this section entirely. The walls, floor, and ceiling are fused into a single mass of iridescent crystal, carved into a rough passage by the flow of liquid reagent. The light is overwhelming, the air electric with suspended particles.",
+      "area": "The Iridescent Menagerie",
+      "terrain": "underground",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "im_38"
+        },
+        {
+          "direction": "east",
+          "toTag": "im_40"
+        }
+      ]
+    },
+    {
+      "tag": "im_40",
+      "name": "Encrusted Tunnel",
+      "description": "A warped tunnel where crystalline contamination has reached its most extreme expression. The formations pulse and shift with visible movement — still growing, still spreading. The air is saturated with reagent vapor, each breath depositing a faint iridescent film on the lips.",
+      "area": "The Iridescent Menagerie",
+      "terrain": "underground",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "im_39"
+        },
+        {
+          "direction": "east",
+          "toTag": "im_41"
+        },
+        {
+          "direction": "north",
+          "toTag": "im_31"
+        },
+        {
+          "direction": "south",
+          "toTag": "im_48"
+        }
+      ]
+    },
+    {
+      "tag": "im_41",
+      "name": "Crystallized Passage",
+      "description": "The tunnel is barely recognizable as a former sewer. Massive crystal formations dominate the passage — jagged spires of luminous growth that force navigation between their razor edges. The glow is intense, almost blinding. A deep hum vibrates through the floor. The air is so thick with luminous particles that each breath leaves a faint glow on exhaled vapor. The contamination is being inhaled with every breath.",
+      "area": "The Iridescent Menagerie",
+      "terrain": "underground",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "im_40"
+        },
+        {
+          "direction": "east",
+          "toTag": "im_42"
+        }
+      ]
+    },
+    {
+      "tag": "im_42",
+      "name": "Warped Tunnel",
+      "description": "Saturated crystallization has consumed this section entirely. The walls, floor, and ceiling are fused into a single mass of iridescent crystal, carved into a rough passage by the flow of liquid reagent. The light is overwhelming, the air electric with suspended particles.",
+      "area": "The Iridescent Menagerie",
+      "terrain": "underground",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "im_41"
+        },
+        {
+          "direction": "north",
+          "toTag": "im_32"
+        }
+      ]
+    },
+    {
+      "tag": "im_43",
+      "name": "Saturated Corridor",
+      "description": "A passage through solid crystal. The original stonework is gone, replaced by translucent formations that glow from within with shifting colors. The air hums with a frequency felt in the bones. Walking here feels like walking through the inside of a geode.",
+      "area": "The Iridescent Menagerie",
+      "terrain": "underground",
+      "features": {},
+      "exits": [
+        {
+          "direction": "north",
+          "toTag": "im_33"
+        },
+        {
+          "direction": "south",
+          "toTag": "im_51"
+        }
+      ]
+    },
+    {
+      "tag": "im_44",
+      "name": "Encrusted Tunnel",
+      "description": "The crystallization is total. Every surface is encrusted with luminous formations — some smooth and flowing, others jagged and sharp as broken glass. The light they emit is so intense it washes out color. The chemical vapor has condensed into a visible haze.",
+      "area": "The Iridescent Menagerie",
+      "terrain": "underground",
+      "features": {},
+      "exits": [
+        {
+          "direction": "east",
+          "toTag": "im_45"
+        },
+        {
+          "direction": "north",
+          "toTag": "im_34"
+        }
+      ]
+    },
+    {
+      "tag": "im_45",
+      "name": "Crystallized Passage",
+      "description": "Massive crystal spires crowd this passage, their surfaces rippling with internal light. The floor is a sheet of fused crystal, slick and treacherous. The hum here is constant and deep, vibrating in the chest. The air tastes of lightning and molten glass.",
+      "area": "The Iridescent Menagerie",
+      "terrain": "underground",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "im_44"
+        },
+        {
+          "direction": "east",
+          "toTag": "im_46"
+        },
+        {
+          "direction": "north",
+          "toTag": "im_35"
+        }
+      ]
+    },
+    {
+      "tag": "im_46",
+      "name": "Warped Tunnel",
+      "description": "The tunnel has become a crystal cavern. Formations the size of a person jut from the walls at wild angles, their facets throwing fractured light in every direction. The original tunnel dimensions are lost beneath the growth. The air is thick with luminous vapor. A formation near the floor has grown around something organic — bones, perhaps, or the remains of a creature consumed by the crystallization.",
+      "area": "The Iridescent Menagerie",
+      "terrain": "underground",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "im_45"
+        }
+      ]
+    },
+    {
+      "tag": "im_crystal_2",
+      "name": "Crystal Chamber",
+      "description": "A cavern dominated by massive crystal growths. The formations pulse with inner light, humming at a frequency felt in the teeth.",
+      "area": "The Iridescent Menagerie",
+      "terrain": "underground",
+      "features": {},
+      "exits": [
+        {
+          "direction": "north",
+          "toTag": "im_37"
+        },
+        {
+          "direction": "south",
+          "toTag": "im_52"
+        }
+      ]
+    },
+    {
+      "tag": "im_vessel",
+      "name": "Containment Vessel",
+      "description": "The cracked vessel — source of the leak. A massive copper and iron container, its seams split, iridescent reagent streaming from the fractures in thick luminous rivulets.",
+      "area": "The Iridescent Menagerie",
+      "terrain": "underground",
+      "features": {},
+      "exits": [
+        {
+          "direction": "north",
+          "toTag": "im_38"
+        }
+      ]
+    },
+    {
+      "tag": "im_47",
+      "name": "Saturated Corridor",
+      "description": "Encrusted crystal covers everything in a dense, glowing layer. The passage narrows where formations have grown inward, leaving barely enough room to squeeze through. The light is painful — pure and intense, casting no shadows. The humming vibration is deafening in the enclosed space.",
+      "area": "The Iridescent Menagerie",
+      "terrain": "underground",
+      "features": {},
+      "exits": [
+        {
+          "direction": "east",
+          "toTag": "im_48"
+        },
+        {
+          "direction": "south",
+          "toTag": "im_53"
+        }
+      ]
+    },
+    {
+      "tag": "im_48",
+      "name": "Encrusted Tunnel",
+      "description": "A warped tunnel where crystalline contamination has reached its most extreme expression. The formations pulse and shift with visible movement — still growing, still spreading. The air is saturated with reagent vapor, each breath depositing a faint iridescent film on the lips. Shattered crystal fragments cover the floor where a formation has collapsed. The edges are sharp enough to cut through leather.",
+      "area": "The Iridescent Menagerie",
+      "terrain": "underground",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "im_47"
+        },
+        {
+          "direction": "east",
+          "toTag": "im_49"
+        },
+        {
+          "direction": "north",
+          "toTag": "im_40"
+        }
+      ]
+    },
+    {
+      "tag": "im_49",
+      "name": "Crystallized Passage",
+      "description": "The tunnel is barely recognizable as a former sewer. Massive crystal formations dominate the passage — jagged spires of luminous growth that force navigation between their razor edges. The glow is intense, almost blinding. A deep hum vibrates through the floor.",
+      "area": "The Iridescent Menagerie",
+      "terrain": "underground",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "im_48"
+        },
+        {
+          "direction": "east",
+          "toTag": "im_50"
+        }
+      ]
+    },
+    {
+      "tag": "im_50",
+      "name": "Saturated Corridor",
+      "description": "Encrusted crystal covers everything in a dense, glowing layer. The passage narrows where formations have grown inward, leaving barely enough room to squeeze through. The light is painful — pure and intense, casting no shadows. The humming vibration is deafening in the enclosed space.",
+      "area": "The Iridescent Menagerie",
+      "terrain": "underground",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "im_49"
+        },
+        {
+          "direction": "east",
+          "toTag": "im_51"
+        }
+      ]
+    },
+    {
+      "tag": "im_51",
+      "name": "Encrusted Tunnel",
+      "description": "A warped tunnel where crystalline contamination has reached its most extreme expression. The formations pulse and shift with visible movement — still growing, still spreading. The air is saturated with reagent vapor, each breath depositing a faint iridescent film on the lips.",
+      "area": "The Iridescent Menagerie",
+      "terrain": "underground",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "im_50"
+        },
+        {
+          "direction": "north",
+          "toTag": "im_43"
+        }
+      ]
+    },
+    {
+      "tag": "im_52",
+      "name": "Reagent Conduit",
+      "description": "A narrow channel carved by the flow of concentrated reagent. The walls are smooth and glassy, polished by years of liquid contamination. The glow is blinding. The passage leads toward the source.",
+      "area": "The Iridescent Menagerie",
+      "terrain": "underground",
+      "features": {},
+      "exits": [
+        {
+          "direction": "east",
+          "toTag": "im_den"
+        },
+        {
+          "direction": "north",
+          "toTag": "im_crystal_2"
+        }
+      ]
+    },
+    {
+      "tag": "im_den",
+      "name": "Alchemist's Den",
+      "description": "A crude workshop carved from the tunnel wall. Cult robes hang from an iron hook. Malachi symbols are scratched into the stone. Scattered notes and vials litter a rough workbench.",
+      "area": "The Iridescent Menagerie",
+      "terrain": "underground",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "im_52"
+        },
+        {
+          "direction": "east",
+          "toTag": "im_53"
+        }
+      ]
+    },
+    {
+      "tag": "im_53",
+      "name": "Reagent Conduit",
+      "description": "Another section of the narrow conduit, its crystallized walls pulsing with the same deep rhythm as the containment vessel above. The reagent flow has shaped this passage into an almost organic form.",
+      "area": "The Iridescent Menagerie",
+      "terrain": "underground",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "im_den"
+        },
+        {
+          "direction": "north",
+          "toTag": "im_47"
+        }
+      ]
+    }
+  ]
+}

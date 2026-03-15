@@ -57,6 +57,8 @@ import * as factionRepo from '../db/repositories/factionRepository.js';
 import * as questRepo from '../db/repositories/questRepository.js';
 import { reloadQuests, getQuestByTag, getQuestById as getCachedQuest, getAllCachedQuests, grantStepRewardsForCharacter, grantQuestRewardsForCharacter } from './questManager.js';
 import { formatCopperAsDenominations, wordWrap } from '../utils/textFormat.js';
+import { clearProgressionCaches } from '../db/repositories/progressionRepository.js';
+import { clearEquipmentCache } from './combatStats.js';
 
 interface CommandResponse {
   type: MessageType;
@@ -77,7 +79,7 @@ export function setPlayerLocation(playerId: number, roomId: number): void {
 const developerCommands = ['create', 'link', 'unlink', 'edit', 'delete', 'reload', 'spawn', 'purge', 'items', 'iteminfo', 'setstealth', 'testbackstab', 'testspell', 'lockpicking', 'npcs', 'mobbehavior', 'npcdebug', 'merchants', 'quest'];
 
 // Commands that any staff can use (Moderator+)
-const staffCommands = ['goto', 'rooms', 'roominfo', 'help', 'give', 'hurt', 'heal', 'drain', 'revive', 'teleport', 'learn', 'spells', 'effect', 'cleareffect', 'effects', 'stealth'];
+const staffCommands = ['goto', 'rooms', 'roominfo', 'help', 'give', 'hurt', 'heal', 'drain', 'revive', 'teleport', 'learn', 'unlearn', 'spells', 'effect', 'cleareffect', 'effects', 'stealth'];
 
 export async function processAdminCommand(
   input: string,
@@ -153,6 +155,8 @@ export async function processAdminCommand(
       return await handleTeleport(args, socket, world);
     case 'learn':
       return handleLearn(args, socket);
+    case 'unlearn':
+      return handleUnlearn(args, socket);
     case 'spells':
       return handleListSpells();
     case 'effect':
@@ -481,7 +485,7 @@ async function handleReload(
   // @reload [rooms|items|mobs|effects|doors|actions|droptables|all]
   const target = args[0]?.toLowerCase() || 'all';
 
-  const validTargets = ['rooms', 'items', 'mobs', 'effects', 'doors', 'actions', 'droptables', 'factions', 'merchants', 'merchantresponses', 'quests', 'all'];
+  const validTargets = ['rooms', 'items', 'mobs', 'effects', 'doors', 'actions', 'droptables', 'factions', 'merchants', 'merchantresponses', 'quests', 'progression', 'all'];
   if (!validTargets.includes(target)) {
     return { type: MessageType.ERROR, message: `Usage: @reload [${validTargets.join('|')}]` };
   }
@@ -544,6 +548,12 @@ async function handleReload(
     if (target === 'quests' || target === 'all') {
       const count = await reloadQuests();
       results.push(`${colors.green('✓')} Reloaded ${count} quest definitions`);
+    }
+
+    if (target === 'progression' || target === 'all') {
+      clearProgressionCaches();
+      clearEquipmentCache();
+      results.push(`${colors.green('✓')} Cleared progression and equipment caches`);
     }
 
     return {
@@ -1287,17 +1297,47 @@ function handleDrain(
   }
 }
 
+/**
+ * Resolve a spell target from command args: self if no player name given,
+ * or look up the named online player. Used by @learn and @unlearn.
+ */
+function resolveSpellTarget(
+  args: string[],
+  socket: AuthenticatedSocket
+): { targetSocket: AuthenticatedSocket; targetName: string; characterId: number } | CommandResponse {
+  let targetSocket: AuthenticatedSocket = socket;
+  let targetName = socket.username;
+
+  if (args.length >= 2) {
+    const playerName = args.slice(1).join(' ').toLowerCase();
+    let found = false;
+    for (const [, playerSocket] of connectedPlayers) {
+      if (playerSocket.username.toLowerCase() === playerName) {
+        targetSocket = playerSocket;
+        targetName = playerSocket.username;
+        found = true;
+        break;
+      }
+    }
+    if (!found) {
+      return { type: MessageType.ERROR, message: `Player not found: ${args.slice(1).join(' ')}` };
+    }
+  }
+
+  if (!targetSocket.characterId) {
+    return { type: MessageType.ERROR, message: args.length >= 2 ? `${targetName} has no character selected.` : 'No character selected.' };
+  }
+
+  return { targetSocket, targetName, characterId: targetSocket.characterId };
+}
+
 async function handleLearn(
   args: string[],
   socket: AuthenticatedSocket
 ): Promise<CommandResponse> {
-  // @learn <mnemonic> - Learn a spell for your current character
+  // @learn <mnemonic> [player] - Learn a spell for yourself or another player
   if (args.length < 1) {
-    return { type: MessageType.ERROR, message: 'Usage: @learn <mnemonic>' };
-  }
-
-  if (!socket.characterId) {
-    return { type: MessageType.ERROR, message: 'No character selected.' };
+    return { type: MessageType.ERROR, message: 'Usage: @learn <mnemonic> [player]' };
   }
 
   const mnemonic = args[0].toLowerCase();
@@ -1307,41 +1347,86 @@ async function handleLearn(
     return { type: MessageType.ERROR, message: `Unknown spell mnemonic: ${mnemonic}` };
   }
 
+  const resolved = resolveSpellTarget(args, socket);
+  if ('type' in resolved) return resolved;
+  const { targetSocket, targetName, characterId } = resolved;
+
   // Check if already learned
-  const hasSpell = await spellRepo.hasSpell(socket.characterId, spell.id);
+  const hasSpell = await spellRepo.hasSpell(characterId, spell.id);
   if (hasSpell) {
-    return { type: MessageType.SYSTEM, message: `You already know ${colors.cyan(spell.name)}.` };
+    if (targetSocket === socket) {
+      return { type: MessageType.SYSTEM, message: `You already know ${colors.cyan(spell.name)}.` };
+    }
+    return { type: MessageType.SYSTEM, message: `${targetName} already knows ${colors.cyan(spell.name)}.` };
   }
 
-  // Get character info for class check
-  const character = await characterRepo.findCharacterById(socket.characterId);
-  if (!character) {
-    return { type: MessageType.ERROR, message: 'Character not found.' };
-  }
-
-  // Get class display name for restriction check
-  const { getClassById } = await import('../db/repositories/progressionRepository.js');
-  const classDef = await getClassById(character.class);
-  const classDisplayName = classDef?.display_name || character.class;
-
-  // Check class restriction
-  if (spell.classRestrictions.length > 0 && !spell.classRestrictions.includes(classDisplayName)) {
-    return {
-      type: MessageType.ERROR,
-      message: `Only ${spell.classRestrictions.join(', ')} can learn ${spell.name}.`
-    };
-  }
-
-  // Learn the spell
-  const result = await spellRepo.learnSpell(socket.characterId, spell.id);
+  // Learn the spell (admin bypasses class restrictions)
+  const result = await spellRepo.learnSpell(characterId, spell.id);
   if (!result) {
     return { type: MessageType.ERROR, message: 'Failed to learn spell.' };
   }
 
-  return {
-    type: MessageType.SYSTEM,
-    message: `${colors.boldGreen('Learned:')} ${colors.cyan(spell.name)} (${colors.white(spell.mnemonic)}) - ${spell.manaCost} mana`,
-  };
+  const learnedMsg = `${colors.boldGreen('Learned:')} ${colors.cyan(spell.name)} (${colors.white(spell.mnemonic)}) - ${spell.manaCost} mana`;
+
+  // If teaching another player, notify them too
+  if (targetSocket !== socket) {
+    sendMessage(targetSocket, MessageType.SYSTEM, learnedMsg);
+    return {
+      type: MessageType.SYSTEM,
+      message: `Taught ${colors.cyan(spell.name)} to ${colors.boldWhite(targetName)}.`,
+    };
+  }
+
+  return { type: MessageType.SYSTEM, message: learnedMsg };
+}
+
+async function handleUnlearn(
+  args: string[],
+  socket: AuthenticatedSocket
+): Promise<CommandResponse> {
+  // @unlearn <mnemonic> [player] - Remove a spell from yourself or another player
+  if (args.length < 1) {
+    return { type: MessageType.ERROR, message: 'Usage: @unlearn <mnemonic> [player]' };
+  }
+
+  const mnemonic = args[0].toLowerCase();
+  const spell = await spellRepo.getSpellByMnemonic(mnemonic);
+
+  if (!spell) {
+    return { type: MessageType.ERROR, message: `Unknown spell mnemonic: ${mnemonic}` };
+  }
+
+  const resolved = resolveSpellTarget(args, socket);
+  if ('type' in resolved) return resolved;
+  const { targetSocket, targetName, characterId } = resolved;
+
+  // Check if they know the spell
+  const hasSpell = await spellRepo.hasSpell(characterId, spell.id);
+  if (!hasSpell) {
+    if (targetSocket === socket) {
+      return { type: MessageType.SYSTEM, message: `You don't know ${colors.cyan(spell.name)}.` };
+    }
+    return { type: MessageType.SYSTEM, message: `${targetName} doesn't know ${colors.cyan(spell.name)}.` };
+  }
+
+  // Remove the spell
+  const removed = await spellRepo.forgetSpell(characterId, spell.id);
+  if (!removed) {
+    return { type: MessageType.ERROR, message: 'Failed to remove spell.' };
+  }
+
+  const forgotMsg = `${colors.boldRed('Forgot:')} ${colors.cyan(spell.name)} (${colors.white(spell.mnemonic)})`;
+
+  // If removing from another player, notify them too
+  if (targetSocket !== socket) {
+    sendMessage(targetSocket, MessageType.SYSTEM, forgotMsg);
+    return {
+      type: MessageType.SYSTEM,
+      message: `Removed ${colors.cyan(spell.name)} from ${colors.boldWhite(targetName)}.`,
+    };
+  }
+
+  return { type: MessageType.SYSTEM, message: forgotMsg };
 }
 
 async function handleListSpells(): Promise<CommandResponse> {
@@ -1860,7 +1945,8 @@ function handleAdminHelp(userRoles: Role[]): CommandResponse {
   lines.push(`  ${colors.boldCyan('@revive <player>')}        - Revive a dead/dropped player`);
   lines.push(`  ${colors.boldCyan('@teleport <player> <room>')} - Teleport player to a room`);
   lines.push(`  ${colors.boldCyan('@spells')}                 - List all spells in the game`);
-  lines.push(`  ${colors.boldCyan('@learn <mnemonic>')}       - Learn a spell for your character`);
+  lines.push(`  ${colors.boldCyan('@learn <mnemonic> [player]')} - Learn a spell (self or player)`);
+  lines.push(`  ${colors.boldCyan('@unlearn <mnemonic> [player]')} - Remove a spell (self or player)`);
   lines.push(`  ${colors.boldCyan('@effect <id> [duration] [player]')} - Apply effect (default 60s, self)`);
   lines.push(`  ${colors.boldCyan('@cleareffect <id|all>')}  - Remove a status effect`);
   lines.push(`  ${colors.boldCyan('@effects')}                - List available effects`);

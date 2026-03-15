@@ -1,4 +1,5 @@
-export type Direction = 'north' | 'south' | 'east' | 'west' | 'up' | 'down';
+export type Direction = 'north' | 'south' | 'east' | 'west' | 'up' | 'down'
+  | 'northeast' | 'northwest' | 'southeast' | 'southwest';
 
 export interface RoomDef {
   tag: string;

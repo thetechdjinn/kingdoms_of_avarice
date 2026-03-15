@@ -426,6 +426,11 @@ export async function performLevelUp(characterId: number): Promise<LevelUpResult
     return { success: false, newLevel: 0, cpEarned: 0 };
   }
 
+  // Invalidate the DB-level progression cache immediately after DB success,
+  // before updating in-memory state, to prevent concurrent reads from
+  // returning stale cached data during the in-memory update window.
+  progressionRepo.invalidateProgressionCache(characterId);
+
   // Database succeeded, now update in-memory state
   progression.std_xp = newStdXp;
   progression.essence_earned_this_level = 0;

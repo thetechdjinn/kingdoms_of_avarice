@@ -269,6 +269,7 @@ async function exportRooms(
         appearMessage: door.appearMessage,
         disappearMessage: door.disappearMessage,
         requiredLevel: door.requiredLevel,
+        maxLevel: door.maxLevel,
         requiredClasses: door.requiredClasses,
         requiredQuestFlag: door.requiredQuestFlag,
         requiredItemTag: door.requiredItemTag,

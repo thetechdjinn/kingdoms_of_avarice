@@ -1,0 +1,5179 @@
+{
+  "version": "1.0",
+  "exported_at": "2026-03-15T13:33:32.890Z",
+  "type": "rooms",
+  "data": [
+    {
+      "tag": "int_0_0",
+      "name": "Corner of Harbor Road and Westwall Street",
+      "description": "Harbor Road meets Westwall Street at this busy intersection. The cobblestones are worn smooth where foot traffic converges from all four directions.",
+      "area": "Arindale",
+      "terrain": "road",
+      "features": {},
+      "exits": [
+        {
+          "direction": "east",
+          "toTag": "ew_0_0_1"
+        },
+        {
+          "direction": "south",
+          "toTag": "ns_0_0_1"
+        },
+        {
+          "direction": "up",
+          "toTag": "wall_west_tower_n"
+        }
+      ]
+    },
+    {
+      "tag": "int_0_1",
+      "name": "Corner of Harbor Road and Market Street",
+      "description": "The crossing of Harbor Road and Market Street opens into a small square where a weathered signpost points in four directions.",
+      "area": "Arindale",
+      "terrain": "road",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "ew_0_0_3"
+        },
+        {
+          "direction": "east",
+          "toTag": "ew_0_1_1"
+        },
+        {
+          "direction": "south",
+          "toTag": "ns_1_0_1"
+        },
+        {
+          "direction": "north",
+          "toTag": "harbor_dock_3"
+        }
+      ]
+    },
+    {
+      "tag": "int_0_2",
+      "name": "Corner of Harbor Road and King's Road",
+      "description": "Harbor Road meets King's Road at this windswept intersection. The smell of salt and tar blows in from the docks to the north. Cart ruts groove the cobblestones where goods are hauled between the harbor and the city center. A heavy iron manhole cover sits at the edge of the road, its rim crusted with salt.",
+      "area": "Arindale",
+      "terrain": "road",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "ew_0_1_3"
+        },
+        {
+          "direction": "east",
+          "toTag": "ew_0_2_1"
+        },
+        {
+          "direction": "south",
+          "toTag": "ns_2_0_1"
+        },
+        {
+          "direction": "north",
+          "toTag": "castle_road_1"
+        },
+        {
+          "direction": "down",
+          "toTag": "sewer_north_hub"
+        }
+      ],
+      "doors": [
+        {
+          "name": "manhole",
+          "displayName": null,
+          "doorType": "triggered_passageway",
+          "description": null,
+          "entryDirection": "down",
+          "exitTag": null,
+          "exitDirection": null,
+          "defaultState": "closed",
+          "autoResetSeconds": 30,
+          "hasLock": false,
+          "keyItemTag": null,
+          "pickDifficultyMin": 0,
+          "pickDifficultyMax": 0,
+          "bashDifficulty": 0,
+          "isHidden": true,
+          "triggerText": "go manhole",
+          "passageMessageSelf": "You lift the heavy iron grate and climb down into the sewer.",
+          "passageMessageRoom": "{player} lifts a manhole grate and climbs down into the darkness below.",
+          "itemDisplayName": null,
+          "isTemporary": false,
+          "spawnTriggerText": null,
+          "durationSeconds": null,
+          "appearMessage": null,
+          "disappearMessage": null,
+          "requiredLevel": null,
+          "maxLevel": null,
+          "requiredClasses": null,
+          "requiredQuestFlag": null,
+          "requiredItemTag": null,
+          "denialMessage": null
+        }
+      ]
+    },
+    {
+      "tag": "int_0_3",
+      "name": "Corner of Harbor Road and Cathedral Lane",
+      "description": "A wide intersection where Harbor Road crosses Cathedral Lane. An iron lamppost stands at the corner, its base wrapped in handbills and notices.",
+      "area": "Arindale",
+      "terrain": "road",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "ew_0_2_3"
+        },
+        {
+          "direction": "east",
+          "toTag": "ew_0_3_1"
+        },
+        {
+          "direction": "south",
+          "toTag": "ns_3_0_1"
+        }
+      ]
+    },
+    {
+      "tag": "int_0_4",
+      "name": "Corner of Harbor Road and Eastwall Street",
+      "description": "The streets of Harbor Road and Eastwall Street intersect beneath a span of open sky. Cobblestones radiate outward from a worn drain cover at the center.",
+      "area": "Arindale",
+      "terrain": "road",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "ew_0_3_3"
+        },
+        {
+          "direction": "south",
+          "toTag": "ns_4_0_1"
+        },
+        {
+          "direction": "up",
+          "toTag": "wall_east_tower_n"
+        }
+      ]
+    },
+    {
+      "tag": "int_1_0",
+      "name": "Corner of Marshal Street and Westwall Street",
+      "description": "The crossing of Marshal Street and Westwall Street opens into a small square where a weathered signpost points in four directions.",
+      "area": "Arindale",
+      "terrain": "road",
+      "features": {},
+      "exits": [
+        {
+          "direction": "east",
+          "toTag": "ew_1_0_1"
+        },
+        {
+          "direction": "north",
+          "toTag": "ns_0_0_3"
+        },
+        {
+          "direction": "south",
+          "toTag": "ns_0_1_1"
+        }
+      ]
+    },
+    {
+      "tag": "int_1_1",
+      "name": "Corner of Marshal Street and Market Street",
+      "description": "Two of the city's streets converge here — Marshal Street running east and west, Market Street stretching north and south. The buildings at the corners are rounded, worn by the passage of carts.",
+      "area": "Arindale",
+      "terrain": "road",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "ew_1_0_3"
+        },
+        {
+          "direction": "east",
+          "toTag": "ew_1_1_1"
+        },
+        {
+          "direction": "north",
+          "toTag": "ns_1_0_3"
+        },
+        {
+          "direction": "south",
+          "toTag": "ns_1_1_1"
+        }
+      ]
+    },
+    {
+      "tag": "int_1_2",
+      "name": "Corner of Marshal Street and King's Road",
+      "description": "A wide intersection where Marshal Street crosses King's Road. An iron lamppost stands at the corner, its base wrapped in handbills and notices.",
+      "area": "Arindale",
+      "terrain": "road",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "ew_1_1_3"
+        },
+        {
+          "direction": "east",
+          "toTag": "ew_1_2_1"
+        },
+        {
+          "direction": "north",
+          "toTag": "ns_2_0_3"
+        },
+        {
+          "direction": "south",
+          "toTag": "ns_2_1_1"
+        }
+      ]
+    },
+    {
+      "tag": "int_1_3",
+      "name": "Corner of Marshal Street and Cathedral Lane",
+      "description": "The streets of Marshal Street and Cathedral Lane intersect beneath a span of open sky. Cobblestones radiate outward from a worn drain cover at the center.",
+      "area": "Arindale",
+      "terrain": "road",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "ew_1_2_3"
+        },
+        {
+          "direction": "east",
+          "toTag": "ew_1_3_1"
+        },
+        {
+          "direction": "north",
+          "toTag": "ns_3_0_3"
+        },
+        {
+          "direction": "south",
+          "toTag": "ns_3_1_1"
+        }
+      ]
+    },
+    {
+      "tag": "int_1_4",
+      "name": "Corner of Marshal Street and Eastwall Street",
+      "description": "Marshal Street meets Eastwall Street at a quiet intersection on the garrison quarter's eastern edge. The orderly architecture of the barracks district gives way to the more modest buildings along the wall. A heavy iron manhole cover sits in the cobblestones, partly obscured by a thin layer of dust.",
+      "area": "Arindale",
+      "terrain": "road",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "ew_1_3_3"
+        },
+        {
+          "direction": "north",
+          "toTag": "ns_4_0_3"
+        },
+        {
+          "direction": "south",
+          "toTag": "ns_4_1_1"
+        },
+        {
+          "direction": "down",
+          "toTag": "sewer_east_hub"
+        }
+      ],
+      "doors": [
+        {
+          "name": "manhole",
+          "displayName": null,
+          "doorType": "triggered_passageway",
+          "description": null,
+          "entryDirection": "down",
+          "exitTag": null,
+          "exitDirection": null,
+          "defaultState": "closed",
+          "autoResetSeconds": 30,
+          "hasLock": false,
+          "keyItemTag": null,
+          "pickDifficultyMin": 0,
+          "pickDifficultyMax": 0,
+          "bashDifficulty": 0,
+          "isHidden": true,
+          "triggerText": "go manhole",
+          "passageMessageSelf": "You lift the heavy iron grate and climb down into the sewer.",
+          "passageMessageRoom": "{player} lifts a manhole grate and climbs down into the darkness below.",
+          "itemDisplayName": null,
+          "isTemporary": false,
+          "spawnTriggerText": null,
+          "durationSeconds": null,
+          "appearMessage": null,
+          "disappearMessage": null,
+          "requiredLevel": null,
+          "maxLevel": null,
+          "requiredClasses": null,
+          "requiredQuestFlag": null,
+          "requiredItemTag": null,
+          "denialMessage": null
+        }
+      ]
+    },
+    {
+      "tag": "int_2_0",
+      "name": "Corner of Main Street and Westwall Street",
+      "description": "Two of the city's streets converge here — Main Street running east and west, Westwall Street stretching north and south. The buildings at the corners are rounded, worn by the passage of carts.",
+      "area": "Arindale",
+      "terrain": "road",
+      "features": {},
+      "exits": [
+        {
+          "direction": "east",
+          "toTag": "ew_2_0_1"
+        },
+        {
+          "direction": "north",
+          "toTag": "ns_0_1_3"
+        },
+        {
+          "direction": "south",
+          "toTag": "ns_0_2_1"
+        },
+        {
+          "direction": "west",
+          "toTag": "gate_west"
+        }
+      ],
+      "doors": [
+        {
+          "name": "west gate",
+          "displayName": null,
+          "doorType": "physical",
+          "description": null,
+          "entryDirection": "west",
+          "exitTag": "gate_west",
+          "exitDirection": "east",
+          "defaultState": "closed",
+          "autoResetSeconds": 0,
+          "hasLock": false,
+          "keyItemTag": null,
+          "pickDifficultyMin": 0,
+          "pickDifficultyMax": 0,
+          "bashDifficulty": 9999,
+          "isHidden": false,
+          "triggerText": null,
+          "passageMessageSelf": null,
+          "passageMessageRoom": null,
+          "itemDisplayName": null,
+          "isTemporary": false,
+          "spawnTriggerText": null,
+          "durationSeconds": null,
+          "appearMessage": null,
+          "disappearMessage": null,
+          "requiredLevel": null,
+          "maxLevel": null,
+          "requiredClasses": null,
+          "requiredQuestFlag": null,
+          "requiredItemTag": null,
+          "denialMessage": "The heavy oak doors are barred from within. They will not budge."
+        }
+      ]
+    },
+    {
+      "tag": "int_2_1",
+      "name": "Corner of Main Street and Market Street",
+      "description": "Main Street meets Market Street at a busy intersection thronged with shoppers and merchants. Colorful awnings shade the storefronts on every corner. The cobblestones are stained with spilled dye and ground produce from decades of market traffic. A heavy iron manhole cover is set into the stones near the gutter.",
+      "area": "Arindale",
+      "terrain": "road",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "ew_2_0_3"
+        },
+        {
+          "direction": "east",
+          "toTag": "ew_2_1_1"
+        },
+        {
+          "direction": "north",
+          "toTag": "ns_1_1_3"
+        },
+        {
+          "direction": "south",
+          "toTag": "ns_1_2_1"
+        },
+        {
+          "direction": "down",
+          "toTag": "sewer_west_hub"
+        }
+      ],
+      "doors": [
+        {
+          "name": "manhole",
+          "displayName": null,
+          "doorType": "triggered_passageway",
+          "description": null,
+          "entryDirection": "down",
+          "exitTag": null,
+          "exitDirection": null,
+          "defaultState": "closed",
+          "autoResetSeconds": 30,
+          "hasLock": false,
+          "keyItemTag": null,
+          "pickDifficultyMin": 0,
+          "pickDifficultyMax": 0,
+          "bashDifficulty": 0,
+          "isHidden": true,
+          "triggerText": "go manhole",
+          "passageMessageSelf": "You lift the heavy iron grate and climb down into the sewer.",
+          "passageMessageRoom": "{player} lifts a manhole grate and climbs down into the darkness below.",
+          "itemDisplayName": null,
+          "isTemporary": false,
+          "spawnTriggerText": null,
+          "durationSeconds": null,
+          "appearMessage": null,
+          "disappearMessage": null,
+          "requiredLevel": null,
+          "maxLevel": null,
+          "requiredClasses": null,
+          "requiredQuestFlag": null,
+          "requiredItemTag": null,
+          "denialMessage": null
+        }
+      ]
+    },
+    {
+      "tag": "int_2_2",
+      "name": "Town Square",
+      "description": "You stand in the center of Arindale's town square, where Main Street crosses King's Road. A weathered stone fountain bubbles quietly at the heart of the open plaza. Townsfolk cross in every direction, and the sounds of the city echo off the surrounding buildings. A heavy iron manhole cover is set into the cobblestones near the fountain's base.",
+      "area": "Arindale",
+      "terrain": "road",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "ew_2_1_3"
+        },
+        {
+          "direction": "east",
+          "toTag": "ew_2_2_1"
+        },
+        {
+          "direction": "north",
+          "toTag": "ns_2_1_3"
+        },
+        {
+          "direction": "south",
+          "toTag": "ns_2_2_1"
+        },
+        {
+          "direction": "down",
+          "toTag": "sewer_central_hub"
+        }
+      ],
+      "doors": [
+        {
+          "name": "manhole",
+          "displayName": null,
+          "doorType": "triggered_passageway",
+          "description": null,
+          "entryDirection": "down",
+          "exitTag": null,
+          "exitDirection": null,
+          "defaultState": "closed",
+          "autoResetSeconds": 30,
+          "hasLock": false,
+          "keyItemTag": null,
+          "pickDifficultyMin": 0,
+          "pickDifficultyMax": 0,
+          "bashDifficulty": 0,
+          "isHidden": true,
+          "triggerText": "go manhole",
+          "passageMessageSelf": "You lift the heavy iron grate and climb down into the sewer.",
+          "passageMessageRoom": "{player} lifts a manhole grate and climbs down into the darkness below.",
+          "itemDisplayName": null,
+          "isTemporary": false,
+          "spawnTriggerText": null,
+          "durationSeconds": null,
+          "appearMessage": null,
+          "disappearMessage": null,
+          "requiredLevel": null,
+          "maxLevel": null,
+          "requiredClasses": null,
+          "requiredQuestFlag": null,
+          "requiredItemTag": null,
+          "denialMessage": null
+        }
+      ]
+    },
+    {
+      "tag": "int_2_3",
+      "name": "Corner of Main Street and Cathedral Lane",
+      "description": "Main Street meets Cathedral Lane at this busy intersection. The cobblestones are worn smooth where foot traffic converges from all four directions.",
+      "area": "Arindale",
+      "terrain": "road",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "ew_2_2_3"
+        },
+        {
+          "direction": "east",
+          "toTag": "ew_2_3_1"
+        },
+        {
+          "direction": "north",
+          "toTag": "ns_3_1_3"
+        },
+        {
+          "direction": "south",
+          "toTag": "ns_3_2_1"
+        }
+      ]
+    },
+    {
+      "tag": "int_2_4",
+      "name": "Corner of Main Street and Eastwall Street",
+      "description": "The crossing of Main Street and Eastwall Street opens into a small square where a weathered signpost points in four directions.",
+      "area": "Arindale",
+      "terrain": "road",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "ew_2_3_3"
+        },
+        {
+          "direction": "north",
+          "toTag": "ns_4_1_3"
+        },
+        {
+          "direction": "south",
+          "toTag": "ns_4_2_1"
+        },
+        {
+          "direction": "east",
+          "toTag": "gate_east"
+        }
+      ],
+      "doors": [
+        {
+          "name": "east gate",
+          "displayName": null,
+          "doorType": "physical",
+          "description": null,
+          "entryDirection": "east",
+          "exitTag": "gate_east",
+          "exitDirection": "west",
+          "defaultState": "closed",
+          "autoResetSeconds": 0,
+          "hasLock": false,
+          "keyItemTag": null,
+          "pickDifficultyMin": 0,
+          "pickDifficultyMax": 0,
+          "bashDifficulty": 9999,
+          "isHidden": false,
+          "triggerText": null,
+          "passageMessageSelf": null,
+          "passageMessageRoom": null,
+          "itemDisplayName": null,
+          "isTemporary": false,
+          "spawnTriggerText": null,
+          "durationSeconds": null,
+          "appearMessage": null,
+          "disappearMessage": null,
+          "requiredLevel": null,
+          "maxLevel": null,
+          "requiredClasses": null,
+          "requiredQuestFlag": null,
+          "requiredItemTag": null,
+          "denialMessage": "The massive gates are sealed shut. They cannot be opened from this side."
+        }
+      ]
+    },
+    {
+      "tag": "int_3_0",
+      "name": "Corner of Cloister Court and Westwall Street",
+      "description": "A wide intersection where Cloister Court crosses Westwall Street. An iron lamppost stands at the corner, its base wrapped in handbills and notices.",
+      "area": "Arindale",
+      "terrain": "road",
+      "features": {},
+      "exits": [
+        {
+          "direction": "east",
+          "toTag": "ew_3_0_1"
+        },
+        {
+          "direction": "north",
+          "toTag": "ns_0_2_3"
+        },
+        {
+          "direction": "south",
+          "toTag": "ns_0_3_1"
+        }
+      ]
+    },
+    {
+      "tag": "int_3_1",
+      "name": "Corner of Cloister Court and Market Street",
+      "description": "The streets of Cloister Court and Market Street intersect beneath a span of open sky. Cobblestones radiate outward from a worn drain cover at the center.",
+      "area": "Arindale",
+      "terrain": "road",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "ew_3_0_3"
+        },
+        {
+          "direction": "east",
+          "toTag": "ew_3_1_1"
+        },
+        {
+          "direction": "north",
+          "toTag": "ns_1_2_3"
+        },
+        {
+          "direction": "south",
+          "toTag": "ns_1_3_1"
+        }
+      ]
+    },
+    {
+      "tag": "int_3_2",
+      "name": "Corner of Cloister Court and King's Road",
+      "description": "Cloister Court meets King's Road at this busy intersection. The cobblestones are worn smooth where foot traffic converges from all four directions.",
+      "area": "Arindale",
+      "terrain": "road",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "ew_3_1_3"
+        },
+        {
+          "direction": "east",
+          "toTag": "ew_3_2_1"
+        },
+        {
+          "direction": "north",
+          "toTag": "ns_2_2_3"
+        },
+        {
+          "direction": "south",
+          "toTag": "ns_2_3_1"
+        }
+      ]
+    },
+    {
+      "tag": "int_3_3",
+      "name": "Corner of Cloister Court and Cathedral Lane",
+      "description": "The crossing of Cloister Court and Cathedral Lane opens into a small square where a weathered signpost points in four directions.",
+      "area": "Arindale",
+      "terrain": "road",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "ew_3_2_3"
+        },
+        {
+          "direction": "east",
+          "toTag": "ew_3_3_1"
+        },
+        {
+          "direction": "north",
+          "toTag": "ns_3_2_3"
+        },
+        {
+          "direction": "south",
+          "toTag": "ns_3_3_1"
+        }
+      ]
+    },
+    {
+      "tag": "int_3_4",
+      "name": "Corner of Cloister Court and Eastwall Street",
+      "description": "Two of the city's streets converge here — Cloister Court running east and west, Eastwall Street stretching north and south. The buildings at the corners are rounded, worn by the passage of carts.",
+      "area": "Arindale",
+      "terrain": "road",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "ew_3_3_3"
+        },
+        {
+          "direction": "north",
+          "toTag": "ns_4_2_3"
+        },
+        {
+          "direction": "south",
+          "toTag": "ns_4_3_1"
+        }
+      ]
+    },
+    {
+      "tag": "int_4_0",
+      "name": "Corner of Southwall Road and Westwall Street",
+      "description": "The streets of Southwall Road and Westwall Street intersect beneath a span of open sky. Cobblestones radiate outward from a worn drain cover at the center.",
+      "area": "Arindale",
+      "terrain": "road",
+      "features": {},
+      "exits": [
+        {
+          "direction": "east",
+          "toTag": "ew_4_0_1"
+        },
+        {
+          "direction": "north",
+          "toTag": "ns_0_3_3"
+        },
+        {
+          "direction": "up",
+          "toTag": "wall_south_tower_w"
+        }
+      ]
+    },
+    {
+      "tag": "int_4_1",
+      "name": "Corner of Southwall Road and Market Street",
+      "description": "Southwall Road meets Market Street at this busy intersection. The cobblestones are worn smooth where foot traffic converges from all four directions.",
+      "area": "Arindale",
+      "terrain": "road",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "ew_4_0_3"
+        },
+        {
+          "direction": "east",
+          "toTag": "ew_4_1_1"
+        },
+        {
+          "direction": "north",
+          "toTag": "ns_1_3_3"
+        }
+      ]
+    },
+    {
+      "tag": "int_4_2",
+      "name": "Corner of Southwall Road and King's Road",
+      "description": "Southwall Road meets King's Road beneath the shadow of the southern city wall. The massive fortification looms overhead, its crenellated top patrolled by distant guards. The intersection is quieter than those closer to the city center. A heavy iron manhole cover is half-hidden by weeds growing between the cobblestones.",
+      "area": "Arindale",
+      "terrain": "road",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "ew_4_1_3"
+        },
+        {
+          "direction": "east",
+          "toTag": "ew_4_2_1"
+        },
+        {
+          "direction": "north",
+          "toTag": "ns_2_3_3"
+        },
+        {
+          "direction": "south",
+          "toTag": "gate_south"
+        },
+        {
+          "direction": "down",
+          "toTag": "sewer_south_hub"
+        }
+      ],
+      "doors": [
+        {
+          "name": "south gate",
+          "displayName": null,
+          "doorType": "physical",
+          "description": null,
+          "entryDirection": "south",
+          "exitTag": "gate_south",
+          "exitDirection": "north",
+          "defaultState": "closed",
+          "autoResetSeconds": 0,
+          "hasLock": false,
+          "keyItemTag": null,
+          "pickDifficultyMin": 0,
+          "pickDifficultyMax": 0,
+          "bashDifficulty": 9999,
+          "isHidden": false,
+          "triggerText": null,
+          "passageMessageSelf": null,
+          "passageMessageRoom": null,
+          "itemDisplayName": null,
+          "isTemporary": false,
+          "spawnTriggerText": null,
+          "durationSeconds": null,
+          "appearMessage": null,
+          "disappearMessage": null,
+          "requiredLevel": null,
+          "maxLevel": null,
+          "requiredClasses": null,
+          "requiredQuestFlag": null,
+          "requiredItemTag": null,
+          "denialMessage": "The southern gates are closed by order of the city council."
+        },
+        {
+          "name": "manhole",
+          "displayName": null,
+          "doorType": "triggered_passageway",
+          "description": null,
+          "entryDirection": "down",
+          "exitTag": null,
+          "exitDirection": null,
+          "defaultState": "closed",
+          "autoResetSeconds": 30,
+          "hasLock": false,
+          "keyItemTag": null,
+          "pickDifficultyMin": 0,
+          "pickDifficultyMax": 0,
+          "bashDifficulty": 0,
+          "isHidden": true,
+          "triggerText": "go manhole",
+          "passageMessageSelf": "You lift the heavy iron grate and climb down into the sewer.",
+          "passageMessageRoom": "{player} lifts a manhole grate and climbs down into the darkness below.",
+          "itemDisplayName": null,
+          "isTemporary": false,
+          "spawnTriggerText": null,
+          "durationSeconds": null,
+          "appearMessage": null,
+          "disappearMessage": null,
+          "requiredLevel": null,
+          "maxLevel": null,
+          "requiredClasses": null,
+          "requiredQuestFlag": null,
+          "requiredItemTag": null,
+          "denialMessage": null
+        }
+      ]
+    },
+    {
+      "tag": "int_4_3",
+      "name": "Corner of Southwall Road and Cathedral Lane",
+      "description": "Two of the city's streets converge here — Southwall Road running east and west, Cathedral Lane stretching north and south. The buildings at the corners are rounded, worn by the passage of carts.",
+      "area": "Arindale",
+      "terrain": "road",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "ew_4_2_3"
+        },
+        {
+          "direction": "east",
+          "toTag": "ew_4_3_1"
+        },
+        {
+          "direction": "north",
+          "toTag": "ns_3_3_3"
+        }
+      ]
+    },
+    {
+      "tag": "int_4_4",
+      "name": "Corner of Southwall Road and Eastwall Street",
+      "description": "A wide intersection where Southwall Road crosses Eastwall Street. An iron lamppost stands at the corner, its base wrapped in handbills and notices.",
+      "area": "Arindale",
+      "terrain": "road",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "ew_4_3_3"
+        },
+        {
+          "direction": "north",
+          "toTag": "ns_4_3_3"
+        },
+        {
+          "direction": "up",
+          "toTag": "wall_south_tower_e"
+        }
+      ]
+    },
+    {
+      "tag": "ew_0_0_1",
+      "name": "Harbor Road",
+      "description": "A salt-crusted sign creaks overhead in the harbor breeze. The cobblestones are slick with sea spray, and the air tastes of the open water.",
+      "area": "Arindale",
+      "terrain": "road",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "int_0_0"
+        },
+        {
+          "direction": "east",
+          "toTag": "ew_0_0_2"
+        }
+      ]
+    },
+    {
+      "tag": "ew_0_0_2",
+      "name": "Harbor Road",
+      "description": "Weathered planks patch the road where the cobblestones have crumbled. The smell of smoked fish drifts from a nearby smokehouse, mingling with the ever-present salt air.",
+      "area": "Arindale",
+      "terrain": "road",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "ew_0_0_1"
+        },
+        {
+          "direction": "east",
+          "toTag": "ew_0_0_3"
+        },
+        {
+          "direction": "north",
+          "toTag": "harbor_warehouse_1"
+        },
+        {
+          "direction": "south",
+          "toTag": "park_overlook"
+        }
+      ]
+    },
+    {
+      "tag": "ew_0_0_3",
+      "name": "Harbor Road",
+      "description": "Canvas tarps flutter over a row of market stalls selling the morning catch. The gutters run with fish-scale water, and dock workers shoulder past with heavy loads.",
+      "area": "Arindale",
+      "terrain": "road",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "ew_0_0_2"
+        },
+        {
+          "direction": "east",
+          "toTag": "int_0_1"
+        },
+        {
+          "direction": "north",
+          "toTag": "harbor_warehouse_2"
+        }
+      ]
+    },
+    {
+      "tag": "ew_0_1_1",
+      "name": "Harbor Road",
+      "description": "Canvas tarps flutter over a row of market stalls selling the morning catch. The gutters run with fish-scale water, and dock workers shoulder past with heavy loads.",
+      "area": "Arindale",
+      "terrain": "road",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "int_0_1"
+        },
+        {
+          "direction": "east",
+          "toTag": "ew_0_1_2"
+        }
+      ]
+    },
+    {
+      "tag": "ew_0_1_2",
+      "name": "Harbor Road",
+      "description": "The road widens near a loading yard where barrels are stacked three high. A sailor sits on an upturned crate, mending a torn sail with thick fingers.",
+      "area": "Arindale",
+      "terrain": "road",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "ew_0_1_1"
+        },
+        {
+          "direction": "east",
+          "toTag": "ew_0_1_3"
+        },
+        {
+          "direction": "north",
+          "toTag": "harbor_tavern"
+        }
+      ]
+    },
+    {
+      "tag": "ew_0_1_3",
+      "name": "Harbor Road",
+      "description": "Salt wind carries the cries of gulls and the creak of rigging from the docks to the north. Weathered timber buildings lean close along the road, their paint peeling in the sea air.",
+      "area": "Arindale",
+      "terrain": "road",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "ew_0_1_2"
+        },
+        {
+          "direction": "east",
+          "toTag": "int_0_2"
+        }
+      ]
+    },
+    {
+      "tag": "ew_0_2_1",
+      "name": "Harbor Road",
+      "description": "Salt wind carries the cries of gulls and the creak of rigging from the docks to the north. Weathered timber buildings lean close along the road, their paint peeling in the sea air.",
+      "area": "Arindale",
+      "terrain": "road",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "int_0_2"
+        },
+        {
+          "direction": "east",
+          "toTag": "ew_0_2_2"
+        }
+      ]
+    },
+    {
+      "tag": "ew_0_2_2",
+      "name": "Harbor Road",
+      "description": "The road here smells of brine and tar. Coils of rope and stacked crates sit outside a ship chandler's door. Gulls wheel above the rooftops.",
+      "area": "Arindale",
+      "terrain": "road",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "ew_0_2_1"
+        },
+        {
+          "direction": "east",
+          "toTag": "ew_0_2_3"
+        }
+      ]
+    },
+    {
+      "tag": "ew_0_2_3",
+      "name": "Harbor Road",
+      "description": "Fishing nets hang drying over a low wall alongside the road. The sound of waves slapping against wooden hulls echoes from the harbor beyond.",
+      "area": "Arindale",
+      "terrain": "road",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "ew_0_2_2"
+        },
+        {
+          "direction": "east",
+          "toTag": "int_0_3"
+        }
+      ]
+    },
+    {
+      "tag": "ew_0_3_1",
+      "name": "Harbor Road",
+      "description": "Fishing nets hang drying over a low wall alongside the road. The sound of waves slapping against wooden hulls echoes from the harbor beyond.",
+      "area": "Arindale",
+      "terrain": "road",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "int_0_3"
+        },
+        {
+          "direction": "east",
+          "toTag": "ew_0_3_2"
+        }
+      ]
+    },
+    {
+      "tag": "ew_0_3_2",
+      "name": "Harbor Road",
+      "description": "A salt-crusted sign creaks overhead in the harbor breeze. The cobblestones are slick with sea spray, and the air tastes of the open water.",
+      "area": "Arindale",
+      "terrain": "road",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "ew_0_3_1"
+        },
+        {
+          "direction": "east",
+          "toTag": "ew_0_3_3"
+        },
+        {
+          "direction": "northeast",
+          "toTag": "hs_road_1"
+        }
+      ]
+    },
+    {
+      "tag": "ew_0_3_3",
+      "name": "Harbor Road",
+      "description": "Weathered planks patch the road where the cobblestones have crumbled. The smell of smoked fish drifts from a nearby smokehouse, mingling with the ever-present salt air.",
+      "area": "Arindale",
+      "terrain": "road",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "ew_0_3_2"
+        },
+        {
+          "direction": "east",
+          "toTag": "int_0_4"
+        }
+      ]
+    },
+    {
+      "tag": "ew_1_0_1",
+      "name": "Marshal Street",
+      "description": "Sturdy brick buildings with iron-banded doors line this wide street in the garrison quarter. The clatter of a training yard echoes from somewhere nearby.",
+      "area": "Arindale",
+      "terrain": "road",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "int_1_0"
+        },
+        {
+          "direction": "east",
+          "toTag": "ew_1_0_2"
+        }
+      ]
+    },
+    {
+      "tag": "ew_1_0_2",
+      "name": "Marshal Street",
+      "description": "An iron bulletin board mounted on the barracks wall displays duty rosters and wanted notices. The cobblestones here are laid in precise rows.",
+      "area": "Arindale",
+      "terrain": "road",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "ew_1_0_1"
+        },
+        {
+          "direction": "east",
+          "toTag": "ew_1_0_3"
+        },
+        {
+          "direction": "north",
+          "toTag": "park_entrance"
+        }
+      ]
+    },
+    {
+      "tag": "ew_1_0_3",
+      "name": "Marshal Street",
+      "description": "A pair of city guards march past in step, their mail shirts clinking softly. The buildings along this stretch are solid and well-maintained.",
+      "area": "Arindale",
+      "terrain": "road",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "ew_1_0_2"
+        },
+        {
+          "direction": "east",
+          "toTag": "int_1_1"
+        }
+      ]
+    },
+    {
+      "tag": "ew_1_1_1",
+      "name": "Marshal Street",
+      "description": "A pair of city guards march past in step, their mail shirts clinking softly. The buildings along this stretch are solid and well-maintained.",
+      "area": "Arindale",
+      "terrain": "road",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "int_1_1"
+        },
+        {
+          "direction": "east",
+          "toTag": "ew_1_1_2"
+        }
+      ]
+    },
+    {
+      "tag": "ew_1_1_2",
+      "name": "Marshal Street",
+      "description": "The street runs straight and wide between barracks walls and administrative buildings. Boot prints mark the dust where patrols have worn a path.",
+      "area": "Arindale",
+      "terrain": "road",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "ew_1_1_1"
+        },
+        {
+          "direction": "east",
+          "toTag": "ew_1_1_3"
+        }
+      ]
+    },
+    {
+      "tag": "ew_1_1_3",
+      "name": "Marshal Street",
+      "description": "A flagpole bearing the city's standard stands at the edge of the street. The garrison quarter's orderly architecture contrasts with the busier districts to the south.",
+      "area": "Arindale",
+      "terrain": "road",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "ew_1_1_2"
+        },
+        {
+          "direction": "east",
+          "toTag": "int_1_2"
+        }
+      ]
+    },
+    {
+      "tag": "ew_1_2_1",
+      "name": "Marshal Street",
+      "description": "A flagpole bearing the city's standard stands at the edge of the street. The garrison quarter's orderly architecture contrasts with the busier districts to the south.",
+      "area": "Arindale",
+      "terrain": "road",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "int_1_2"
+        },
+        {
+          "direction": "east",
+          "toTag": "ew_1_2_2"
+        }
+      ]
+    },
+    {
+      "tag": "ew_1_2_2",
+      "name": "Marshal Street",
+      "description": "Weapon racks stand outside a guardhouse door, empty but for a forgotten practice sword. The street smells of leather polish and lamp oil.",
+      "area": "Arindale",
+      "terrain": "road",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "ew_1_2_1"
+        },
+        {
+          "direction": "east",
+          "toTag": "ew_1_2_3"
+        }
+      ]
+    },
+    {
+      "tag": "ew_1_2_3",
+      "name": "Marshal Street",
+      "description": "A horse trough sits against the garrison wall, its water still and green. The clang of a blacksmith's hammer rings out from behind a high fence.",
+      "area": "Arindale",
+      "terrain": "road",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "ew_1_2_2"
+        },
+        {
+          "direction": "east",
+          "toTag": "int_1_3"
+        }
+      ]
+    },
+    {
+      "tag": "ew_1_3_1",
+      "name": "Marshal Street",
+      "description": "A horse trough sits against the garrison wall, its water still and green. The clang of a blacksmith's hammer rings out from behind a high fence.",
+      "area": "Arindale",
+      "terrain": "road",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "int_1_3"
+        },
+        {
+          "direction": "east",
+          "toTag": "ew_1_3_2"
+        }
+      ]
+    },
+    {
+      "tag": "ew_1_3_2",
+      "name": "Marshal Street",
+      "description": "Sturdy brick buildings with iron-banded doors line this wide street in the garrison quarter. The clatter of a training yard echoes from somewhere nearby.",
+      "area": "Arindale",
+      "terrain": "road",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "ew_1_3_1"
+        },
+        {
+          "direction": "east",
+          "toTag": "ew_1_3_3"
+        }
+      ]
+    },
+    {
+      "tag": "ew_1_3_3",
+      "name": "Marshal Street",
+      "description": "An iron bulletin board mounted on the barracks wall displays duty rosters and wanted notices. The cobblestones here are laid in precise rows.",
+      "area": "Arindale",
+      "terrain": "road",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "ew_1_3_2"
+        },
+        {
+          "direction": "east",
+          "toTag": "int_1_4"
+        }
+      ]
+    },
+    {
+      "tag": "ew_2_0_1",
+      "name": "Main Street",
+      "description": "Window boxes overflow with trailing greenery along the upper floors. The street curves gently, opening a view of rooftops and the cathedral spires beyond.",
+      "area": "Arindale",
+      "terrain": "road",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "int_2_0"
+        },
+        {
+          "direction": "east",
+          "toTag": "ew_2_0_2"
+        }
+      ]
+    },
+    {
+      "tag": "ew_2_0_2",
+      "name": "Main Street",
+      "description": "A busker plays a lute on the corner, his cap at his feet. The crowd parts around him without slowing, each person intent on their own errand.",
+      "area": "Arindale",
+      "terrain": "road",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "ew_2_0_1"
+        },
+        {
+          "direction": "east",
+          "toTag": "ew_2_0_3"
+        }
+      ]
+    },
+    {
+      "tag": "ew_2_0_3",
+      "name": "Main Street",
+      "description": "Worn grooves in the cobblestones trace the paths of countless cart wheels. The buildings here are older, their stone facades darkened by years of coal smoke. A pigeon pecks at crumbs between the cobblestones, indifferent to the passing feet.",
+      "area": "Arindale",
+      "terrain": "road",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "ew_2_0_2"
+        },
+        {
+          "direction": "east",
+          "toTag": "int_2_1"
+        }
+      ]
+    },
+    {
+      "tag": "ew_2_1_1",
+      "name": "Main Street",
+      "description": "Worn grooves in the cobblestones trace the paths of countless cart wheels. The buildings here are older, their stone facades darkened by years of coal smoke.",
+      "area": "Arindale",
+      "terrain": "road",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "int_2_1"
+        },
+        {
+          "direction": "east",
+          "toTag": "ew_2_1_2"
+        },
+        {
+          "direction": "south",
+          "toTag": "market_alchemist"
+        }
+      ]
+    },
+    {
+      "tag": "ew_2_1_2",
+      "name": "Main Street",
+      "description": "The city's main thoroughfare stretches east and west, wide enough for two carts to pass abreast. Buildings of pale stone line both sides, their upper stories leaning slightly toward each other.",
+      "area": "Arindale",
+      "terrain": "road",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "ew_2_1_1"
+        },
+        {
+          "direction": "east",
+          "toTag": "ew_2_1_3"
+        },
+        {
+          "direction": "south",
+          "toTag": "market_mage_spells"
+        }
+      ]
+    },
+    {
+      "tag": "ew_2_1_3",
+      "name": "Main Street",
+      "description": "Foot traffic flows steadily along Main Street. A street vendor's cart selling roasted chestnuts sends a curl of fragrant smoke across the cobblestones. A stray cat watches from beneath a handcart, its eyes gleaming.",
+      "area": "Arindale",
+      "terrain": "road",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "ew_2_1_2"
+        },
+        {
+          "direction": "east",
+          "toTag": "int_2_2"
+        },
+        {
+          "direction": "north",
+          "toTag": "market_armorer_main"
+        }
+      ]
+    },
+    {
+      "tag": "ew_2_2_1",
+      "name": "Main Street",
+      "description": "Foot traffic flows steadily along Main Street. A street vendor's cart selling roasted chestnuts sends a curl of fragrant smoke across the cobblestones.",
+      "area": "Arindale",
+      "terrain": "road",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "int_2_2"
+        },
+        {
+          "direction": "east",
+          "toTag": "ew_2_2_2"
+        },
+        {
+          "direction": "north",
+          "toTag": "market_clothier"
+        },
+        {
+          "direction": "south",
+          "toTag": "harbor_inn"
+        }
+      ]
+    },
+    {
+      "tag": "ew_2_2_2",
+      "name": "Main Street",
+      "description": "Sunlight falls between the buildings onto worn cobblestones polished by generations of footsteps. A carved stone milestone marks the distance to the city gates.",
+      "area": "Arindale",
+      "terrain": "road",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "ew_2_2_1"
+        },
+        {
+          "direction": "east",
+          "toTag": "ew_2_2_3"
+        },
+        {
+          "direction": "north",
+          "toTag": "market_curios"
+        },
+        {
+          "direction": "south",
+          "toTag": "market_general"
+        }
+      ]
+    },
+    {
+      "tag": "ew_2_2_3",
+      "name": "Main Street",
+      "description": "The broad street hums with the business of the day. A lamplighter's ladder leans against a post, left behind from the morning rounds.",
+      "area": "Arindale",
+      "terrain": "road",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "ew_2_2_2"
+        },
+        {
+          "direction": "east",
+          "toTag": "int_2_3"
+        }
+      ]
+    },
+    {
+      "tag": "ew_2_3_1",
+      "name": "Main Street",
+      "description": "The broad street hums with the business of the day. A lamplighter's ladder leans against a post, left behind from the morning rounds.",
+      "area": "Arindale",
+      "terrain": "road",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "int_2_3"
+        },
+        {
+          "direction": "east",
+          "toTag": "ew_2_3_2"
+        },
+        {
+          "direction": "north",
+          "toTag": "garrison_training_entrance"
+        }
+      ]
+    },
+    {
+      "tag": "ew_2_3_2",
+      "name": "Main Street",
+      "description": "Window boxes overflow with trailing greenery along the upper floors. The street curves gently, opening a view of rooftops and the cathedral spires beyond.",
+      "area": "Arindale",
+      "terrain": "road",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "ew_2_3_1"
+        },
+        {
+          "direction": "east",
+          "toTag": "ew_2_3_3"
+        },
+        {
+          "direction": "north",
+          "toTag": "garrison_sheriff"
+        }
+      ]
+    },
+    {
+      "tag": "ew_2_3_3",
+      "name": "Main Street",
+      "description": "A busker plays a lute on the corner, his cap at his feet. The crowd parts around him without slowing, each person intent on their own errand.",
+      "area": "Arindale",
+      "terrain": "road",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "ew_2_3_2"
+        },
+        {
+          "direction": "east",
+          "toTag": "int_2_4"
+        },
+        {
+          "direction": "north",
+          "toTag": "garrison_mayor"
+        }
+      ]
+    },
+    {
+      "tag": "ew_3_0_1",
+      "name": "Cloister Court",
+      "description": "Moss creeps along the base of the walls where sunlight seldom reaches. The street is quieter here than in the bustling market district to the west. A drain grate emits a thin thread of steam, carrying a faint sulfurous smell from below.",
+      "area": "Arindale",
+      "terrain": "road",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "int_3_0"
+        },
+        {
+          "direction": "east",
+          "toTag": "ew_3_0_2"
+        }
+      ]
+    },
+    {
+      "tag": "ew_3_0_2",
+      "name": "Cloister Court",
+      "description": "Carved stone lintels mark the doorways along this sedate street. A cat watches from a high window ledge, its tail curling lazily. A pigeon pecks at crumbs between the cobblestones, indifferent to the passing feet.",
+      "area": "Arindale",
+      "terrain": "road",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "ew_3_0_1"
+        },
+        {
+          "direction": "east",
+          "toTag": "ew_3_0_3"
+        }
+      ]
+    },
+    {
+      "tag": "ew_3_0_3",
+      "name": "Cloister Court",
+      "description": "The cobblestones give way to smooth flagstones worn concave by centuries of foot traffic. A wrought-iron gate stands open beside a small walled garden.",
+      "area": "Arindale",
+      "terrain": "road",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "ew_3_0_2"
+        },
+        {
+          "direction": "east",
+          "toTag": "int_3_1"
+        }
+      ]
+    },
+    {
+      "tag": "ew_3_1_1",
+      "name": "Cloister Court",
+      "description": "The cobblestones give way to smooth flagstones worn concave by centuries of foot traffic. A wrought-iron gate stands open beside a small walled garden. A pigeon pecks at crumbs between the cobblestones, indifferent to the passing feet.",
+      "area": "Arindale",
+      "terrain": "road",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "int_3_1"
+        },
+        {
+          "direction": "east",
+          "toTag": "ew_3_1_2"
+        }
+      ]
+    },
+    {
+      "tag": "ew_3_1_2",
+      "name": "Cloister Court",
+      "description": "Ivy climbs the stone facades of the buildings lining this quiet court. The distant sound of chanting drifts from the direction of the cathedral. A stray cat watches from beneath a handcart, its eyes gleaming.",
+      "area": "Arindale",
+      "terrain": "road",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "ew_3_1_1"
+        },
+        {
+          "direction": "east",
+          "toTag": "ew_3_1_3"
+        }
+      ]
+    },
+    {
+      "tag": "ew_3_1_3",
+      "name": "Cloister Court",
+      "description": "A stone bench sits in a nook between two buildings, shaded by an old plane tree. Fallen leaves gather in the gutters, undisturbed.",
+      "area": "Arindale",
+      "terrain": "road",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "ew_3_1_2"
+        },
+        {
+          "direction": "east",
+          "toTag": "int_3_2"
+        }
+      ]
+    },
+    {
+      "tag": "ew_3_2_1",
+      "name": "Cloister Court",
+      "description": "A stone bench sits in a nook between two buildings, shaded by an old plane tree. Fallen leaves gather in the gutters, undisturbed. A stray cat watches from beneath a handcart, its eyes gleaming.",
+      "area": "Arindale",
+      "terrain": "road",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "int_3_2"
+        },
+        {
+          "direction": "east",
+          "toTag": "ew_3_2_2"
+        }
+      ]
+    },
+    {
+      "tag": "ew_3_2_2",
+      "name": "Cloister Court",
+      "description": "The lane narrows slightly where a buttress arcs overhead between two buildings. Pigeons roost on the ledge above, cooing softly in the shade. A crooked lamppost leans over the street, its iron frame bent by some long-forgotten collision.",
+      "area": "Arindale",
+      "terrain": "road",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "ew_3_2_1"
+        },
+        {
+          "direction": "east",
+          "toTag": "ew_3_2_3"
+        }
+      ]
+    },
+    {
+      "tag": "ew_3_2_3",
+      "name": "Cloister Court",
+      "description": "Tall stone buildings cast long shadows across this quiet street. The air carries a faint trace of incense drifting from the cathedral whose spires rise above the rooftops. A puddle in a dip in the cobblestones reflects the sky like a tiny mirror.",
+      "area": "Arindale",
+      "terrain": "road",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "ew_3_2_2"
+        },
+        {
+          "direction": "east",
+          "toTag": "int_3_3"
+        }
+      ]
+    },
+    {
+      "tag": "ew_3_3_1",
+      "name": "Cloister Court",
+      "description": "Tall stone buildings cast long shadows across this quiet street. The air carries a faint trace of incense drifting from the cathedral whose spires rise above the rooftops. A crooked lamppost leans over the street, its iron frame bent by some long-forgotten collision.",
+      "area": "Arindale",
+      "terrain": "road",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "int_3_3"
+        },
+        {
+          "direction": "east",
+          "toTag": "ew_3_3_2"
+        },
+        {
+          "direction": "south",
+          "toTag": "residential_well"
+        }
+      ]
+    },
+    {
+      "tag": "ew_3_3_2",
+      "name": "Cloister Court",
+      "description": "Moss creeps along the base of the walls where sunlight seldom reaches. The street is quieter here than in the bustling market district to the west. A puddle in a dip in the cobblestones reflects the sky like a tiny mirror.",
+      "area": "Arindale",
+      "terrain": "road",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "ew_3_3_1"
+        },
+        {
+          "direction": "east",
+          "toTag": "ew_3_3_3"
+        },
+        {
+          "direction": "south",
+          "toTag": "residential_house_2_front"
+        }
+      ]
+    },
+    {
+      "tag": "ew_3_3_3",
+      "name": "Cloister Court",
+      "description": "Carved stone lintels mark the doorways along this sedate street. A cat watches from a high window ledge, its tail curling lazily. Someone has chalked a crude map on the wall, already half-washed away by rain.",
+      "area": "Arindale",
+      "terrain": "road",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "ew_3_3_2"
+        },
+        {
+          "direction": "east",
+          "toTag": "int_3_4"
+        }
+      ]
+    },
+    {
+      "tag": "ew_4_0_1",
+      "name": "Southwall Road",
+      "description": "Scraggly bushes grow in the strip of dirt between the road and the wall's foundation. A guard descends a narrow stone stairway set into the wall.",
+      "area": "Arindale",
+      "terrain": "road",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "int_4_0"
+        },
+        {
+          "direction": "east",
+          "toTag": "ew_4_0_2"
+        }
+      ]
+    },
+    {
+      "tag": "ew_4_0_2",
+      "name": "Southwall Road",
+      "description": "The stones of the city wall are weathered smooth on this stretch, darkened by rain and age. A faded mural of the city's founding is barely visible on a facing building.",
+      "area": "Arindale",
+      "terrain": "road",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "ew_4_0_1"
+        },
+        {
+          "direction": "east",
+          "toTag": "ew_4_0_3"
+        }
+      ]
+    },
+    {
+      "tag": "ew_4_0_3",
+      "name": "Southwall Road",
+      "description": "The road runs along the inside of the city's southern wall. The massive stone fortification rises to the south, its crenellated top patrolled by distant guards.",
+      "area": "Arindale",
+      "terrain": "road",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "ew_4_0_2"
+        },
+        {
+          "direction": "east",
+          "toTag": "int_4_1"
+        }
+      ]
+    },
+    {
+      "tag": "ew_4_1_1",
+      "name": "Southwall Road",
+      "description": "The road runs along the inside of the city's southern wall. The massive stone fortification rises to the south, its crenellated top patrolled by distant guards.",
+      "area": "Arindale",
+      "terrain": "road",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "int_4_1"
+        },
+        {
+          "direction": "east",
+          "toTag": "ew_4_1_2"
+        }
+      ]
+    },
+    {
+      "tag": "ew_4_1_2",
+      "name": "Southwall Road",
+      "description": "The city wall looms close on the south side of the road, its stones fitted without mortar. Weeds push up through cracks in the cobbles near its base.",
+      "area": "Arindale",
+      "terrain": "road",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "ew_4_1_1"
+        },
+        {
+          "direction": "east",
+          "toTag": "ew_4_1_3"
+        }
+      ]
+    },
+    {
+      "tag": "ew_4_1_3",
+      "name": "Southwall Road",
+      "description": "A guardhouse is built into the wall's base, its narrow windows watching the road. The street here is quieter, far from the bustle of the town center.",
+      "area": "Arindale",
+      "terrain": "road",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "ew_4_1_2"
+        },
+        {
+          "direction": "east",
+          "toTag": "int_4_2"
+        }
+      ]
+    },
+    {
+      "tag": "ew_4_2_1",
+      "name": "Southwall Road",
+      "description": "A guardhouse is built into the wall's base, its narrow windows watching the road. The street here is quieter, far from the bustle of the town center.",
+      "area": "Arindale",
+      "terrain": "road",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "int_4_2"
+        },
+        {
+          "direction": "east",
+          "toTag": "ew_4_2_2"
+        }
+      ]
+    },
+    {
+      "tag": "ew_4_2_2",
+      "name": "Southwall Road",
+      "description": "Sunlight slants over the top of the southern wall, casting a hard line of shadow across the road. Sparrows nest in the gaps between the massive stones.",
+      "area": "Arindale",
+      "terrain": "road",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "ew_4_2_1"
+        },
+        {
+          "direction": "east",
+          "toTag": "ew_4_2_3"
+        }
+      ]
+    },
+    {
+      "tag": "ew_4_2_3",
+      "name": "Southwall Road",
+      "description": "The road follows the gentle curve of the city wall. A drainage channel runs along its base, carrying rainwater toward the eastern gate.",
+      "area": "Arindale",
+      "terrain": "road",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "ew_4_2_2"
+        },
+        {
+          "direction": "east",
+          "toTag": "int_4_3"
+        }
+      ]
+    },
+    {
+      "tag": "ew_4_3_1",
+      "name": "Southwall Road",
+      "description": "The road follows the gentle curve of the city wall. A drainage channel runs along its base, carrying rainwater toward the eastern gate.",
+      "area": "Arindale",
+      "terrain": "road",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "int_4_3"
+        },
+        {
+          "direction": "east",
+          "toTag": "ew_4_3_2"
+        },
+        {
+          "direction": "south",
+          "toTag": "residential_house_5_front"
+        }
+      ]
+    },
+    {
+      "tag": "ew_4_3_2",
+      "name": "Southwall Road",
+      "description": "Scraggly bushes grow in the strip of dirt between the road and the wall's foundation. A guard descends a narrow stone stairway set into the wall.",
+      "area": "Arindale",
+      "terrain": "road",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "ew_4_3_1"
+        },
+        {
+          "direction": "east",
+          "toTag": "ew_4_3_3"
+        }
+      ]
+    },
+    {
+      "tag": "ew_4_3_3",
+      "name": "Southwall Road",
+      "description": "The stones of the city wall are weathered smooth on this stretch, darkened by rain and age. A faded mural of the city's founding is barely visible on a facing building.",
+      "area": "Arindale",
+      "terrain": "road",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "ew_4_3_2"
+        },
+        {
+          "direction": "east",
+          "toTag": "int_4_4"
+        }
+      ]
+    },
+    {
+      "tag": "ns_0_0_1",
+      "name": "Westwall Street",
+      "description": "A narrow stair climbs the inside of the wall, leading up to the wall walk above. The buildings on the east side of the street are modest and functional.",
+      "area": "Arindale",
+      "terrain": "road",
+      "features": {},
+      "exits": [
+        {
+          "direction": "north",
+          "toTag": "int_0_0"
+        },
+        {
+          "direction": "south",
+          "toTag": "ns_0_0_2"
+        }
+      ]
+    },
+    {
+      "tag": "ns_0_0_2",
+      "name": "Westwall Street",
+      "description": "The wall's shadow falls across the street for most of the day, keeping the cobblestones cool and slightly damp. Lichen grows in green patches on the lower stones. A pigeon pecks at crumbs between the cobblestones, indifferent to the passing feet.",
+      "area": "Arindale",
+      "terrain": "road",
+      "features": {},
+      "exits": [
+        {
+          "direction": "north",
+          "toTag": "ns_0_0_1"
+        },
+        {
+          "direction": "south",
+          "toTag": "ns_0_0_3"
+        },
+        {
+          "direction": "east",
+          "toTag": "park_flower_garden"
+        }
+      ]
+    },
+    {
+      "tag": "ns_0_0_3",
+      "name": "Westwall Street",
+      "description": "A tower built into the wall rises above the rooftops, its arrow slits dark. The street bends slightly to follow the wall's course. A stray cat watches from beneath a handcart, its eyes gleaming.",
+      "area": "Arindale",
+      "terrain": "road",
+      "features": {},
+      "exits": [
+        {
+          "direction": "north",
+          "toTag": "ns_0_0_2"
+        },
+        {
+          "direction": "south",
+          "toTag": "int_1_0"
+        }
+      ]
+    },
+    {
+      "tag": "ns_0_1_1",
+      "name": "Westwall Street",
+      "description": "A tower built into the wall rises above the rooftops, its arrow slits dark. The street bends slightly to follow the wall's course.",
+      "area": "Arindale",
+      "terrain": "road",
+      "features": {},
+      "exits": [
+        {
+          "direction": "north",
+          "toTag": "int_1_0"
+        },
+        {
+          "direction": "south",
+          "toTag": "ns_0_1_2"
+        }
+      ]
+    },
+    {
+      "tag": "ns_0_1_2",
+      "name": "Westwall Street",
+      "description": "Stacked lumber and building materials sit along the base of the wall where repairs are underway. A mason's scaffold clings to the stonework above. A stray cat watches from beneath a handcart, its eyes gleaming.",
+      "area": "Arindale",
+      "terrain": "road",
+      "features": {},
+      "exits": [
+        {
+          "direction": "north",
+          "toTag": "ns_0_1_1"
+        },
+        {
+          "direction": "south",
+          "toTag": "ns_0_1_3"
+        }
+      ]
+    },
+    {
+      "tag": "ns_0_1_3",
+      "name": "Westwall Street",
+      "description": "The western wall blocks the afternoon sun, leaving this stretch of street in perpetual shade. A stray dog noses at scraps near a shuttered doorway. A crooked lamppost leans over the street, its iron frame bent by some long-forgotten collision.",
+      "area": "Arindale",
+      "terrain": "road",
+      "features": {},
+      "exits": [
+        {
+          "direction": "north",
+          "toTag": "ns_0_1_2"
+        },
+        {
+          "direction": "south",
+          "toTag": "int_2_0"
+        }
+      ]
+    },
+    {
+      "tag": "ns_0_2_1",
+      "name": "Westwall Street",
+      "description": "The western wall blocks the afternoon sun, leaving this stretch of street in perpetual shade. A stray dog noses at scraps near a shuttered doorway.",
+      "area": "Arindale",
+      "terrain": "road",
+      "features": {},
+      "exits": [
+        {
+          "direction": "north",
+          "toTag": "int_2_0"
+        },
+        {
+          "direction": "south",
+          "toTag": "ns_0_2_2"
+        }
+      ]
+    },
+    {
+      "tag": "ns_0_2_2",
+      "name": "Westwall Street",
+      "description": "Wind whistles through the crenels high above, carrying the faint sounds of the countryside beyond the wall. The street here feels far from the city's center. A crooked lamppost leans over the street, its iron frame bent by some long-forgotten collision.",
+      "area": "Arindale",
+      "terrain": "road",
+      "features": {},
+      "exits": [
+        {
+          "direction": "north",
+          "toTag": "ns_0_2_1"
+        },
+        {
+          "direction": "south",
+          "toTag": "ns_0_2_3"
+        }
+      ]
+    },
+    {
+      "tag": "ns_0_2_3",
+      "name": "Westwall Street",
+      "description": "The western city wall rises to the left, its battlements silhouetted against the sky. The street runs along its base, quieter than the avenues closer to the center. A puddle in a dip in the cobblestones reflects the sky like a tiny mirror.",
+      "area": "Arindale",
+      "terrain": "road",
+      "features": {},
+      "exits": [
+        {
+          "direction": "north",
+          "toTag": "ns_0_2_2"
+        },
+        {
+          "direction": "south",
+          "toTag": "int_3_0"
+        }
+      ]
+    },
+    {
+      "tag": "ns_0_3_1",
+      "name": "Westwall Street",
+      "description": "The western city wall rises to the left, its battlements silhouetted against the sky. The street runs along its base, quieter than the avenues closer to the center.",
+      "area": "Arindale",
+      "terrain": "road",
+      "features": {},
+      "exits": [
+        {
+          "direction": "north",
+          "toTag": "int_3_0"
+        },
+        {
+          "direction": "south",
+          "toTag": "ns_0_3_2"
+        }
+      ]
+    },
+    {
+      "tag": "ns_0_3_2",
+      "name": "Westwall Street",
+      "description": "A narrow stair climbs the inside of the wall, leading up to the wall walk above. The buildings on the east side of the street are modest and functional. A puddle in a dip in the cobblestones reflects the sky like a tiny mirror.",
+      "area": "Arindale",
+      "terrain": "road",
+      "features": {},
+      "exits": [
+        {
+          "direction": "north",
+          "toTag": "ns_0_3_1"
+        },
+        {
+          "direction": "south",
+          "toTag": "ns_0_3_3"
+        }
+      ]
+    },
+    {
+      "tag": "ns_0_3_3",
+      "name": "Westwall Street",
+      "description": "The wall's shadow falls across the street for most of the day, keeping the cobblestones cool and slightly damp. Lichen grows in green patches on the lower stones. Someone has chalked a crude map on the wall, already half-washed away by rain.",
+      "area": "Arindale",
+      "terrain": "road",
+      "features": {},
+      "exits": [
+        {
+          "direction": "north",
+          "toTag": "ns_0_3_2"
+        },
+        {
+          "direction": "south",
+          "toTag": "int_4_0"
+        }
+      ]
+    },
+    {
+      "tag": "ns_1_0_1",
+      "name": "Market Street",
+      "description": "A heavyset woman arranges wheels of cheese in a shop window while two merchants argue prices across the street. Commerce never pauses here. A pigeon pecks at crumbs between the cobblestones, indifferent to the passing feet.",
+      "area": "Arindale",
+      "terrain": "road",
+      "features": {},
+      "exits": [
+        {
+          "direction": "north",
+          "toTag": "int_0_1"
+        },
+        {
+          "direction": "south",
+          "toTag": "ns_1_0_2"
+        }
+      ]
+    },
+    {
+      "tag": "ns_1_0_2",
+      "name": "Market Street",
+      "description": "The smell of fresh-baked pastry drifts from an open bakery door. A queue of customers spills onto the street, chatting as they wait their turn.",
+      "area": "Arindale",
+      "terrain": "road",
+      "features": {},
+      "exits": [
+        {
+          "direction": "north",
+          "toTag": "ns_1_0_1"
+        },
+        {
+          "direction": "south",
+          "toTag": "ns_1_0_3"
+        },
+        {
+          "direction": "west",
+          "toTag": "park_kings_statue"
+        }
+      ]
+    },
+    {
+      "tag": "ns_1_0_3",
+      "name": "Market Street",
+      "description": "Colorful awnings shade the storefronts lining both sides of this busy street. The scent of fresh bread mingles with the tang of oiled leather from a nearby shop.",
+      "area": "Arindale",
+      "terrain": "road",
+      "features": {},
+      "exits": [
+        {
+          "direction": "north",
+          "toTag": "ns_1_0_2"
+        },
+        {
+          "direction": "south",
+          "toTag": "int_1_1"
+        }
+      ]
+    },
+    {
+      "tag": "ns_1_1_1",
+      "name": "Market Street",
+      "description": "Colorful awnings shade the storefronts lining both sides of this busy street. The scent of fresh bread mingles with the tang of oiled leather from a nearby shop. A stray cat watches from beneath a handcart, its eyes gleaming.",
+      "area": "Arindale",
+      "terrain": "road",
+      "features": {},
+      "exits": [
+        {
+          "direction": "north",
+          "toTag": "int_1_1"
+        },
+        {
+          "direction": "south",
+          "toTag": "ns_1_1_2"
+        }
+      ]
+    },
+    {
+      "tag": "ns_1_1_2",
+      "name": "Market Street",
+      "description": "A fruit cart heaped with bright apples and pears sits at the edge of the street. Shoppers weave around it without breaking stride.",
+      "area": "Arindale",
+      "terrain": "road",
+      "features": {},
+      "exits": [
+        {
+          "direction": "north",
+          "toTag": "ns_1_1_1"
+        },
+        {
+          "direction": "south",
+          "toTag": "ns_1_1_3"
+        }
+      ]
+    },
+    {
+      "tag": "ns_1_1_3",
+      "name": "Market Street",
+      "description": "Shop signs of carved wood and painted tin hang over the doorways, creaking in the breeze. The street is alive with the calls of merchants hawking their wares.",
+      "area": "Arindale",
+      "terrain": "road",
+      "features": {},
+      "exits": [
+        {
+          "direction": "north",
+          "toTag": "ns_1_1_2"
+        },
+        {
+          "direction": "south",
+          "toTag": "int_2_1"
+        }
+      ]
+    },
+    {
+      "tag": "ns_1_2_1",
+      "name": "Market Street",
+      "description": "Shop signs of carved wood and painted tin hang over the doorways, creaking in the breeze. The street is alive with the calls of merchants hawking their wares. A crooked lamppost leans over the street, its iron frame bent by some long-forgotten collision.",
+      "area": "Arindale",
+      "terrain": "road",
+      "features": {},
+      "exits": [
+        {
+          "direction": "north",
+          "toTag": "int_2_1"
+        },
+        {
+          "direction": "south",
+          "toTag": "ns_1_2_2"
+        }
+      ]
+    },
+    {
+      "tag": "ns_1_2_2",
+      "name": "Market Street",
+      "description": "Bolts of dyed fabric are draped over a railing outside a tailor's shop, adding splashes of crimson and indigo to the streetscape.",
+      "area": "Arindale",
+      "terrain": "road",
+      "features": {},
+      "exits": [
+        {
+          "direction": "north",
+          "toTag": "ns_1_2_1"
+        },
+        {
+          "direction": "south",
+          "toTag": "ns_1_2_3"
+        }
+      ]
+    },
+    {
+      "tag": "ns_1_2_3",
+      "name": "Market Street",
+      "description": "The cobblestones here are stained with spilled dye and ground-in produce. A boy sweeps the walk in front of a chandler's shop with a straw broom.",
+      "area": "Arindale",
+      "terrain": "road",
+      "features": {},
+      "exits": [
+        {
+          "direction": "north",
+          "toTag": "ns_1_2_2"
+        },
+        {
+          "direction": "south",
+          "toTag": "int_3_1"
+        }
+      ]
+    },
+    {
+      "tag": "ns_1_3_1",
+      "name": "Market Street",
+      "description": "The cobblestones here are stained with spilled dye and ground-in produce. A boy sweeps the walk in front of a chandler's shop with a straw broom. A puddle in a dip in the cobblestones reflects the sky like a tiny mirror.",
+      "area": "Arindale",
+      "terrain": "road",
+      "features": {},
+      "exits": [
+        {
+          "direction": "north",
+          "toTag": "int_3_1"
+        },
+        {
+          "direction": "south",
+          "toTag": "ns_1_3_2"
+        }
+      ]
+    },
+    {
+      "tag": "ns_1_3_2",
+      "name": "Market Street",
+      "description": "A heavyset woman arranges wheels of cheese in a shop window while two merchants argue prices across the street. Commerce never pauses here.",
+      "area": "Arindale",
+      "terrain": "road",
+      "features": {},
+      "exits": [
+        {
+          "direction": "north",
+          "toTag": "ns_1_3_1"
+        },
+        {
+          "direction": "south",
+          "toTag": "ns_1_3_3"
+        }
+      ]
+    },
+    {
+      "tag": "ns_1_3_3",
+      "name": "Market Street",
+      "description": "The smell of fresh-baked pastry drifts from an open bakery door. A queue of customers spills onto the street, chatting as they wait their turn.",
+      "area": "Arindale",
+      "terrain": "road",
+      "features": {},
+      "exits": [
+        {
+          "direction": "north",
+          "toTag": "ns_1_3_2"
+        },
+        {
+          "direction": "south",
+          "toTag": "int_4_1"
+        }
+      ]
+    },
+    {
+      "tag": "ns_2_0_1",
+      "name": "King's Road",
+      "description": "A mounted patrol rides past at a walk, the guards' eyes scanning the crowd. King's Road is the city's spine, connecting the harbor to the castle beyond.",
+      "area": "Arindale",
+      "terrain": "road",
+      "features": {},
+      "exits": [
+        {
+          "direction": "north",
+          "toTag": "int_0_2"
+        },
+        {
+          "direction": "south",
+          "toTag": "ns_2_0_2"
+        }
+      ]
+    },
+    {
+      "tag": "ns_2_0_2",
+      "name": "King's Road",
+      "description": "The avenue is wide and straight, offering a clear view to the north where the road rises toward the castle. A stone planter divides the lanes.",
+      "area": "Arindale",
+      "terrain": "road",
+      "features": {},
+      "exits": [
+        {
+          "direction": "north",
+          "toTag": "ns_2_0_1"
+        },
+        {
+          "direction": "south",
+          "toTag": "ns_2_0_3"
+        }
+      ]
+    },
+    {
+      "tag": "ns_2_0_3",
+      "name": "King's Road",
+      "description": "Tall windows of leaded glass look down from the buildings lining the road. The architecture grows more ornate toward the north end of the avenue.",
+      "area": "Arindale",
+      "terrain": "road",
+      "features": {},
+      "exits": [
+        {
+          "direction": "north",
+          "toTag": "ns_2_0_2"
+        },
+        {
+          "direction": "south",
+          "toTag": "int_1_2"
+        }
+      ]
+    },
+    {
+      "tag": "ns_2_1_1",
+      "name": "King's Road",
+      "description": "Tall windows of leaded glass look down from the buildings lining the road. The architecture grows more ornate toward the north end of the avenue.",
+      "area": "Arindale",
+      "terrain": "road",
+      "features": {},
+      "exits": [
+        {
+          "direction": "north",
+          "toTag": "int_1_2"
+        },
+        {
+          "direction": "south",
+          "toTag": "ns_2_1_2"
+        },
+        {
+          "direction": "west",
+          "toTag": "market_blunts"
+        }
+      ]
+    },
+    {
+      "tag": "ns_2_1_2",
+      "name": "King's Road",
+      "description": "A public fountain stands at the roadside, its basin catching water from a carved lion's mouth. Passersby pause to fill waterskins and splash their faces.",
+      "area": "Arindale",
+      "terrain": "road",
+      "features": {},
+      "exits": [
+        {
+          "direction": "north",
+          "toTag": "ns_2_1_1"
+        },
+        {
+          "direction": "south",
+          "toTag": "ns_2_1_3"
+        },
+        {
+          "direction": "west",
+          "toTag": "market_blades"
+        },
+        {
+          "direction": "east",
+          "toTag": "market_leather_main"
+        }
+      ]
+    },
+    {
+      "tag": "ns_2_1_3",
+      "name": "King's Road",
+      "description": "The road's center is grooved by cart wheels, but the walkways on either side are smooth and well-swept. A flower seller arranges bouquets on a folding table.",
+      "area": "Arindale",
+      "terrain": "road",
+      "features": {},
+      "exits": [
+        {
+          "direction": "north",
+          "toTag": "ns_2_1_2"
+        },
+        {
+          "direction": "south",
+          "toTag": "int_2_2"
+        },
+        {
+          "direction": "west",
+          "toTag": "market_armorer_main"
+        },
+        {
+          "direction": "east",
+          "toTag": "market_clothier"
+        }
+      ]
+    },
+    {
+      "tag": "ns_2_2_1",
+      "name": "King's Road",
+      "description": "The road's center is grooved by cart wheels, but the walkways on either side are smooth and well-swept. A flower seller arranges bouquets on a folding table.",
+      "area": "Arindale",
+      "terrain": "road",
+      "features": {},
+      "exits": [
+        {
+          "direction": "north",
+          "toTag": "int_2_2"
+        },
+        {
+          "direction": "south",
+          "toTag": "ns_2_2_2"
+        },
+        {
+          "direction": "west",
+          "toTag": "market_bank"
+        },
+        {
+          "direction": "east",
+          "toTag": "harbor_inn"
+        }
+      ]
+    },
+    {
+      "tag": "ns_2_2_2",
+      "name": "King's Road",
+      "description": "The broad avenue of King's Road runs north and south through the heart of the city. The pavement is well-maintained, the stones pale and evenly set.",
+      "area": "Arindale",
+      "terrain": "road",
+      "features": {},
+      "exits": [
+        {
+          "direction": "north",
+          "toTag": "ns_2_2_1"
+        },
+        {
+          "direction": "south",
+          "toTag": "ns_2_2_3"
+        },
+        {
+          "direction": "west",
+          "toTag": "market_jeweler"
+        }
+      ]
+    },
+    {
+      "tag": "ns_2_2_3",
+      "name": "King's Road",
+      "description": "Royal banners hang from iron brackets along the road, their gold thread catching the sunlight. The buildings here are grander than those on the side streets.",
+      "area": "Arindale",
+      "terrain": "road",
+      "features": {},
+      "exits": [
+        {
+          "direction": "north",
+          "toTag": "ns_2_2_2"
+        },
+        {
+          "direction": "south",
+          "toTag": "int_3_2"
+        },
+        {
+          "direction": "east",
+          "toTag": "market_stable"
+        }
+      ]
+    },
+    {
+      "tag": "ns_2_3_1",
+      "name": "King's Road",
+      "description": "Royal banners hang from iron brackets along the road, their gold thread catching the sunlight. The buildings here are grander than those on the side streets.",
+      "area": "Arindale",
+      "terrain": "road",
+      "features": {},
+      "exits": [
+        {
+          "direction": "north",
+          "toTag": "int_3_2"
+        },
+        {
+          "direction": "south",
+          "toTag": "ns_2_3_2"
+        }
+      ]
+    },
+    {
+      "tag": "ns_2_3_2",
+      "name": "King's Road",
+      "description": "A mounted patrol rides past at a walk, the guards' eyes scanning the crowd. King's Road is the city's spine, connecting the harbor to the castle beyond.",
+      "area": "Arindale",
+      "terrain": "road",
+      "features": {},
+      "exits": [
+        {
+          "direction": "north",
+          "toTag": "ns_2_3_1"
+        },
+        {
+          "direction": "south",
+          "toTag": "ns_2_3_3"
+        }
+      ]
+    },
+    {
+      "tag": "ns_2_3_3",
+      "name": "King's Road",
+      "description": "The avenue is wide and straight, offering a clear view to the north where the road rises toward the castle. A stone planter divides the lanes.",
+      "area": "Arindale",
+      "terrain": "road",
+      "features": {},
+      "exits": [
+        {
+          "direction": "north",
+          "toTag": "ns_2_3_2"
+        },
+        {
+          "direction": "south",
+          "toTag": "int_4_2"
+        }
+      ]
+    },
+    {
+      "tag": "ns_3_0_1",
+      "name": "Cathedral Lane",
+      "description": "Quiet footsteps echo between the close-set buildings. A priest hurries past with a bundle of books under his arm, nodding a greeting.",
+      "area": "Arindale",
+      "terrain": "road",
+      "features": {},
+      "exits": [
+        {
+          "direction": "north",
+          "toTag": "int_0_3"
+        },
+        {
+          "direction": "south",
+          "toTag": "ns_3_0_2"
+        }
+      ]
+    },
+    {
+      "tag": "ns_3_0_2",
+      "name": "Cathedral Lane",
+      "description": "The lane passes between tall stone buildings whose upper stories nearly touch overhead. The air carries a faint trace of incense and candle wax.",
+      "area": "Arindale",
+      "terrain": "road",
+      "features": {},
+      "exits": [
+        {
+          "direction": "north",
+          "toTag": "ns_3_0_1"
+        },
+        {
+          "direction": "south",
+          "toTag": "ns_3_0_3"
+        }
+      ]
+    },
+    {
+      "tag": "ns_3_0_3",
+      "name": "Cathedral Lane",
+      "description": "Stained glass throws colored light across the paving stones from a high window. The lane is hushed, the bustle of the market seeming far away.",
+      "area": "Arindale",
+      "terrain": "road",
+      "features": {},
+      "exits": [
+        {
+          "direction": "north",
+          "toTag": "ns_3_0_2"
+        },
+        {
+          "direction": "south",
+          "toTag": "int_1_3"
+        }
+      ]
+    },
+    {
+      "tag": "ns_3_1_1",
+      "name": "Cathedral Lane",
+      "description": "Stained glass throws colored light across the paving stones from a high window. The lane is hushed, the bustle of the market seeming far away.",
+      "area": "Arindale",
+      "terrain": "road",
+      "features": {},
+      "exits": [
+        {
+          "direction": "north",
+          "toTag": "int_1_3"
+        },
+        {
+          "direction": "south",
+          "toTag": "ns_3_1_2"
+        },
+        {
+          "direction": "east",
+          "toTag": "garrison_barracks_entrance"
+        }
+      ]
+    },
+    {
+      "tag": "ns_3_1_2",
+      "name": "Cathedral Lane",
+      "description": "A wrought-iron lamp bracket extends from the wall, its glass panes darkened with soot. The cathedral's shadow falls across the lane in the afternoon.",
+      "area": "Arindale",
+      "terrain": "road",
+      "features": {},
+      "exits": [
+        {
+          "direction": "north",
+          "toTag": "ns_3_1_1"
+        },
+        {
+          "direction": "south",
+          "toTag": "ns_3_1_3"
+        }
+      ]
+    },
+    {
+      "tag": "ns_3_1_3",
+      "name": "Cathedral Lane",
+      "description": "Stone steps lead down to a basement door where a herbalist's sign hangs. The buildings along Cathedral Lane are older than most in the city.",
+      "area": "Arindale",
+      "terrain": "road",
+      "features": {},
+      "exits": [
+        {
+          "direction": "north",
+          "toTag": "ns_3_1_2"
+        },
+        {
+          "direction": "south",
+          "toTag": "int_2_3"
+        }
+      ]
+    },
+    {
+      "tag": "ns_3_2_1",
+      "name": "Cathedral Lane",
+      "description": "Stone steps lead down to a basement door where a herbalist's sign hangs. The buildings along Cathedral Lane are older than most in the city.",
+      "area": "Arindale",
+      "terrain": "road",
+      "features": {},
+      "exits": [
+        {
+          "direction": "north",
+          "toTag": "int_2_3"
+        },
+        {
+          "direction": "south",
+          "toTag": "ns_3_2_2"
+        },
+        {
+          "direction": "east",
+          "toTag": "cathedral_courtyard"
+        }
+      ]
+    },
+    {
+      "tag": "ns_3_2_2",
+      "name": "Cathedral Lane",
+      "description": "The lane is narrow and cobbled, flanked by walls of dark stone. A faint bell tolls from the cathedral, marking the passing hour.",
+      "area": "Arindale",
+      "terrain": "road",
+      "features": {},
+      "exits": [
+        {
+          "direction": "north",
+          "toTag": "ns_3_2_1"
+        },
+        {
+          "direction": "south",
+          "toTag": "ns_3_2_3"
+        }
+      ]
+    },
+    {
+      "tag": "ns_3_2_3",
+      "name": "Cathedral Lane",
+      "description": "A small shrine is set into the wall, its niche holding a carved saint and a stub of candle. Someone has left a sprig of dried flowers at its base.",
+      "area": "Arindale",
+      "terrain": "road",
+      "features": {},
+      "exits": [
+        {
+          "direction": "north",
+          "toTag": "ns_3_2_2"
+        },
+        {
+          "direction": "south",
+          "toTag": "int_3_3"
+        }
+      ]
+    },
+    {
+      "tag": "ns_3_3_1",
+      "name": "Cathedral Lane",
+      "description": "A small shrine is set into the wall, its niche holding a carved saint and a stub of candle. Someone has left a sprig of dried flowers at its base.",
+      "area": "Arindale",
+      "terrain": "road",
+      "features": {},
+      "exits": [
+        {
+          "direction": "north",
+          "toTag": "int_3_3"
+        },
+        {
+          "direction": "south",
+          "toTag": "ns_3_3_2"
+        }
+      ]
+    },
+    {
+      "tag": "ns_3_3_2",
+      "name": "Cathedral Lane",
+      "description": "Quiet footsteps echo between the close-set buildings. A priest hurries past with a bundle of books under his arm, nodding a greeting.",
+      "area": "Arindale",
+      "terrain": "road",
+      "features": {},
+      "exits": [
+        {
+          "direction": "north",
+          "toTag": "ns_3_3_1"
+        },
+        {
+          "direction": "south",
+          "toTag": "ns_3_3_3"
+        },
+        {
+          "direction": "east",
+          "toTag": "residential_house_4_front"
+        }
+      ]
+    },
+    {
+      "tag": "ns_3_3_3",
+      "name": "Cathedral Lane",
+      "description": "The lane passes between tall stone buildings whose upper stories nearly touch overhead. The air carries a faint trace of incense and candle wax.",
+      "area": "Arindale",
+      "terrain": "road",
+      "features": {},
+      "exits": [
+        {
+          "direction": "north",
+          "toTag": "ns_3_3_2"
+        },
+        {
+          "direction": "south",
+          "toTag": "int_4_3"
+        }
+      ]
+    },
+    {
+      "tag": "ns_4_0_1",
+      "name": "Eastwall Street",
+      "description": "A well sits at the edge of the street, its rope and bucket worn smooth with use. Housewives gather to draw water and exchange the day's gossip.",
+      "area": "Arindale",
+      "terrain": "road",
+      "features": {},
+      "exits": [
+        {
+          "direction": "north",
+          "toTag": "int_0_4"
+        },
+        {
+          "direction": "south",
+          "toTag": "ns_4_0_2"
+        }
+      ]
+    },
+    {
+      "tag": "ns_4_0_2",
+      "name": "Eastwall Street",
+      "description": "Painted shutters and small front gardens give the street a tidy, domestic feel. The smell of someone's dinner drifts from an open window.",
+      "area": "Arindale",
+      "terrain": "road",
+      "features": {},
+      "exits": [
+        {
+          "direction": "north",
+          "toTag": "ns_4_0_1"
+        },
+        {
+          "direction": "south",
+          "toTag": "ns_4_0_3"
+        }
+      ]
+    },
+    {
+      "tag": "ns_4_0_3",
+      "name": "Eastwall Street",
+      "description": "The street curves gently along the base of the eastern wall. Climbing roses cling to a trellis beside a cottage door.",
+      "area": "Arindale",
+      "terrain": "road",
+      "features": {},
+      "exits": [
+        {
+          "direction": "north",
+          "toTag": "ns_4_0_2"
+        },
+        {
+          "direction": "south",
+          "toTag": "int_1_4"
+        }
+      ]
+    },
+    {
+      "tag": "ns_4_1_1",
+      "name": "Eastwall Street",
+      "description": "The street curves gently along the base of the eastern wall. Climbing roses cling to a trellis beside a cottage door.",
+      "area": "Arindale",
+      "terrain": "road",
+      "features": {},
+      "exits": [
+        {
+          "direction": "north",
+          "toTag": "int_1_4"
+        },
+        {
+          "direction": "south",
+          "toTag": "ns_4_1_2"
+        }
+      ]
+    },
+    {
+      "tag": "ns_4_1_2",
+      "name": "Eastwall Street",
+      "description": "A quiet lane branches off between two houses, barely wide enough for one person. The main street continues along the wall in peaceful routine.",
+      "area": "Arindale",
+      "terrain": "road",
+      "features": {},
+      "exits": [
+        {
+          "direction": "north",
+          "toTag": "ns_4_1_1"
+        },
+        {
+          "direction": "south",
+          "toTag": "ns_4_1_3"
+        }
+      ]
+    },
+    {
+      "tag": "ns_4_1_3",
+      "name": "Eastwall Street",
+      "description": "Modest stone houses with flower boxes in the windows line this quiet street along the eastern wall. A cat dozes on a sunlit doorstep.",
+      "area": "Arindale",
+      "terrain": "road",
+      "features": {},
+      "exits": [
+        {
+          "direction": "north",
+          "toTag": "ns_4_1_2"
+        },
+        {
+          "direction": "south",
+          "toTag": "int_2_4"
+        }
+      ]
+    },
+    {
+      "tag": "ns_4_2_1",
+      "name": "Eastwall Street",
+      "description": "Modest stone houses with flower boxes in the windows line this quiet street along the eastern wall. A cat dozes on a sunlit doorstep.",
+      "area": "Arindale",
+      "terrain": "road",
+      "features": {},
+      "exits": [
+        {
+          "direction": "north",
+          "toTag": "int_2_4"
+        },
+        {
+          "direction": "south",
+          "toTag": "ns_4_2_2"
+        }
+      ]
+    },
+    {
+      "tag": "ns_4_2_2",
+      "name": "Eastwall Street",
+      "description": "Laundry dries on lines strung between second-floor balconies overhead. The distant sounds of the market are a muffled murmur here.",
+      "area": "Arindale",
+      "terrain": "road",
+      "features": {},
+      "exits": [
+        {
+          "direction": "north",
+          "toTag": "ns_4_2_1"
+        },
+        {
+          "direction": "south",
+          "toTag": "ns_4_2_3"
+        },
+        {
+          "direction": "east",
+          "toTag": "residential_house_3_front"
+        }
+      ]
+    },
+    {
+      "tag": "ns_4_2_3",
+      "name": "Eastwall Street",
+      "description": "The eastern wall rises above the rooftops to the right, its stones warmed by the morning sun. Children play a chasing game down the street.",
+      "area": "Arindale",
+      "terrain": "road",
+      "features": {},
+      "exits": [
+        {
+          "direction": "north",
+          "toTag": "ns_4_2_2"
+        },
+        {
+          "direction": "south",
+          "toTag": "int_3_4"
+        }
+      ]
+    },
+    {
+      "tag": "ns_4_3_1",
+      "name": "Eastwall Street",
+      "description": "The eastern wall rises above the rooftops to the right, its stones warmed by the morning sun. Children play a chasing game down the street.",
+      "area": "Arindale",
+      "terrain": "road",
+      "features": {},
+      "exits": [
+        {
+          "direction": "north",
+          "toTag": "int_3_4"
+        },
+        {
+          "direction": "south",
+          "toTag": "ns_4_3_2"
+        },
+        {
+          "direction": "east",
+          "toTag": "residential_house_1_front"
+        }
+      ]
+    },
+    {
+      "tag": "ns_4_3_2",
+      "name": "Eastwall Street",
+      "description": "A well sits at the edge of the street, its rope and bucket worn smooth with use. Housewives gather to draw water and exchange the day's gossip.",
+      "area": "Arindale",
+      "terrain": "road",
+      "features": {},
+      "exits": [
+        {
+          "direction": "north",
+          "toTag": "ns_4_3_1"
+        },
+        {
+          "direction": "south",
+          "toTag": "ns_4_3_3"
+        },
+        {
+          "direction": "east",
+          "toTag": "residential_courtyard"
+        }
+      ]
+    },
+    {
+      "tag": "ns_4_3_3",
+      "name": "Eastwall Street",
+      "description": "Painted shutters and small front gardens give the street a tidy, domestic feel. The smell of someone's dinner drifts from an open window.",
+      "area": "Arindale",
+      "terrain": "road",
+      "features": {},
+      "exits": [
+        {
+          "direction": "north",
+          "toTag": "ns_4_3_2"
+        },
+        {
+          "direction": "south",
+          "toTag": "int_4_4"
+        }
+      ]
+    },
+    {
+      "tag": "market_bank",
+      "name": "Bank of Arindale",
+      "description": "Polished marble counters line the walls of this hushed interior. An iron-barred cage separates the tellers from the public floor. Heavy ledgers lie open behind the bars, and the faint scratch of quill on parchment fills the silence.",
+      "area": "Arindale",
+      "terrain": "indoor",
+      "features": {
+        "bank": {
+          "enabled": true
+        }
+      },
+      "exits": [
+        {
+          "direction": "east",
+          "toTag": "ns_2_2_1"
+        }
+      ]
+    },
+    {
+      "tag": "market_blades",
+      "name": "Bladed Weapons Shop",
+      "description": "Swords, daggers, and axes hang from wall-mounted racks, their edges gleaming in the lamplight. A whetstone sits on the counter beside a jar of polishing oil. The shop smells of steel and leather.",
+      "area": "Arindale",
+      "terrain": "indoor",
+      "features": {},
+      "exits": [
+        {
+          "direction": "east",
+          "toTag": "ns_2_1_2"
+        }
+      ]
+    },
+    {
+      "tag": "market_blunts",
+      "name": "Blunt Weapons Shop",
+      "description": "Maces, hammers, and staves fill the racks in this sturdy shop. A dented practice dummy stands in the corner, its surface battered almost beyond recognition. Iron-bound displays hold the heavier pieces.",
+      "area": "Arindale",
+      "terrain": "indoor",
+      "features": {},
+      "exits": [
+        {
+          "direction": "east",
+          "toTag": "ns_2_1_1"
+        }
+      ]
+    },
+    {
+      "tag": "market_armorer_main",
+      "name": "Armorer's Shop",
+      "description": "Heat radiates from a forge at the back of this crowded shop. Breastplates and chain hauberks hang from ceiling hooks, clanking softly when the door swings. The armorer hammers a dent from a battered pauldron.",
+      "area": "Arindale",
+      "terrain": "indoor",
+      "features": {},
+      "exits": [
+        {
+          "direction": "east",
+          "toTag": "ns_2_1_3"
+        },
+        {
+          "direction": "south",
+          "toTag": "ew_2_1_3"
+        },
+        {
+          "direction": "west",
+          "toTag": "market_armorer_legs"
+        }
+      ]
+    },
+    {
+      "tag": "market_armorer_legs",
+      "name": "Armorer's Shop — Greaves and Boots",
+      "description": "Shelves of greaves, sabatons, and heavy boots line the walls of this back room. A fitting bench sits in the center with leather straps for adjustments. The clang of the forge echoes from the front.",
+      "area": "Arindale",
+      "terrain": "indoor",
+      "features": {},
+      "exits": [
+        {
+          "direction": "east",
+          "toTag": "market_armorer_main"
+        },
+        {
+          "direction": "north",
+          "toTag": "market_armorer_helms"
+        }
+      ]
+    },
+    {
+      "tag": "market_armorer_helms",
+      "name": "Armorer's Shop — Helms and Shields",
+      "description": "Helms of every shape rest on wooden forms along the shelves — open-faced sallets, full greathelms, and light skullcaps. Shields lean against the far wall, bearing the dents and scratches of past owners.",
+      "area": "Arindale",
+      "terrain": "indoor",
+      "features": {},
+      "exits": [
+        {
+          "direction": "south",
+          "toTag": "market_armorer_legs"
+        }
+      ]
+    },
+    {
+      "tag": "market_leather_main",
+      "name": "Leather Merchant",
+      "description": "The rich smell of tanned hide fills this shop. Leather tunics, jerkins, and vests hang from pegs along the walls. Rolls of cured leather sit on shelves behind the counter.",
+      "area": "Arindale",
+      "terrain": "indoor",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "ns_2_1_2"
+        },
+        {
+          "direction": "east",
+          "toTag": "market_leather_back"
+        }
+      ]
+    },
+    {
+      "tag": "market_leather_back",
+      "name": "Leather Merchant — Leggings and Boots",
+      "description": "Leather leggings in various sizes hang from hooks on a back wall. A cobbler's bench sits beneath the window, surrounded by awls, needles, and spools of waxed thread. Sturdy boots line the floor.",
+      "area": "Arindale",
+      "terrain": "indoor",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "market_leather_main"
+        }
+      ]
+    },
+    {
+      "tag": "market_clothier",
+      "name": "Clothier's Shop",
+      "description": "Bolts of cloth in muted earth tones fill the shelves of this tidy shop. Robes, cloaks, and traveling garments hang from a rack near the door. A measuring cord dangles from a hook on the wall.",
+      "area": "Arindale",
+      "terrain": "indoor",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "ns_2_1_3"
+        },
+        {
+          "direction": "south",
+          "toTag": "ew_2_2_1"
+        }
+      ]
+    },
+    {
+      "tag": "market_general",
+      "name": "General Store",
+      "description": "Barrels, crates, and baskets crowd the floor of this cluttered shop. Torches, rope, rations, waterskins, and a hundred other necessities are stacked on shelves that reach the ceiling.",
+      "area": "Arindale",
+      "terrain": "indoor",
+      "features": {},
+      "exits": [
+        {
+          "direction": "north",
+          "toTag": "ew_2_2_2"
+        }
+      ]
+    },
+    {
+      "tag": "market_curios",
+      "name": "Curio Shop",
+      "description": "Odd trinkets and peculiar artifacts crowd every surface in this dim, cramped shop. A stuffed owl watches from a high shelf. Scrolls, charms, and items of dubious provenance fill glass-topped cases.",
+      "area": "Arindale",
+      "terrain": "indoor",
+      "features": {},
+      "exits": [
+        {
+          "direction": "south",
+          "toTag": "ew_2_2_2"
+        }
+      ]
+    },
+    {
+      "tag": "market_jeweler",
+      "name": "Jeweler's Shop",
+      "description": "Velvet-lined cases display rings, amulets, and necklaces under the soft glow of enchanted crystal lamps. The shopkeeper examines a gemstone through a jeweler's loupe, barely glancing up.",
+      "area": "Arindale",
+      "terrain": "indoor",
+      "features": {},
+      "exits": [
+        {
+          "direction": "east",
+          "toTag": "ns_2_2_2"
+        }
+      ]
+    },
+    {
+      "tag": "market_mage_spells",
+      "name": "Arcane Scroll Emporium",
+      "description": "Shelves of scrolls and grimoires line the walls from floor to ceiling, their bindings cracked and worn. A faint hum of residual magic makes the air tingle. The shopkeeper traces a rune in the air, testing a ward.",
+      "area": "Arindale",
+      "terrain": "indoor",
+      "features": {},
+      "exits": [
+        {
+          "direction": "north",
+          "toTag": "ew_2_1_2"
+        }
+      ]
+    },
+    {
+      "tag": "market_alchemist",
+      "name": "Alchemist's Shop",
+      "description": "Glass vials and ceramic jars crowd the shelves, each bearing a handwritten label. Bubbling flasks sit on a workbench beside a mortar and pestle stained with colorful residue. The air smells of herbs and something faintly acidic.",
+      "area": "Arindale",
+      "terrain": "indoor",
+      "features": {},
+      "exits": [
+        {
+          "direction": "north",
+          "toTag": "ew_2_1_1"
+        }
+      ]
+    },
+    {
+      "tag": "market_stable",
+      "name": "City Stable",
+      "description": "Straw-covered floors and the warm smell of horses fill this large stable. Stalls line both walls, some occupied by patient draft horses, others empty and freshly mucked. A groom hauls a bucket of oats from the feed room.",
+      "area": "Arindale",
+      "terrain": "indoor",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "ns_2_2_3"
+        }
+      ]
+    },
+    {
+      "tag": "cathedral_courtyard",
+      "name": "Cathedral Courtyard",
+      "description": "A flagstone courtyard opens before the cathedral's arched entrance. A stone basin of clear water stands at its center, reflecting the stained glass windows above. The bustle of the city feels distant here, muffled by the high walls.",
+      "area": "Arindale",
+      "terrain": "indoor",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "ns_3_2_1"
+        },
+        {
+          "direction": "east",
+          "toTag": "cathedral_entrance"
+        },
+        {
+          "direction": "south",
+          "toTag": "cathedral_garden"
+        }
+      ]
+    },
+    {
+      "tag": "cathedral_graveyard",
+      "name": "Cathedral Graveyard",
+      "description": "Weathered headstones stand in uneven rows among patches of overgrown grass. An iron fence separates the graveyard from the lane. Some markers bear fresh flowers; others have sunk into the earth, their inscriptions lost to time.",
+      "area": "Arindale",
+      "terrain": "indoor",
+      "features": {},
+      "exits": [
+        {
+          "direction": "north",
+          "toTag": "cathedral_garden"
+        }
+      ]
+    },
+    {
+      "tag": "cathedral_garden",
+      "name": "Cathedral Garden",
+      "description": "A walled garden behind the cathedral grows herbs and medicinal plants in neat raised beds. The scent of lavender and rosemary fills the still air. A stone path winds between the beds toward a small wooden gate.",
+      "area": "Arindale",
+      "terrain": "indoor",
+      "features": {},
+      "exits": [
+        {
+          "direction": "north",
+          "toTag": "cathedral_courtyard"
+        },
+        {
+          "direction": "south",
+          "toTag": "cathedral_graveyard"
+        }
+      ]
+    },
+    {
+      "tag": "cathedral_entrance",
+      "name": "Cathedral Entrance",
+      "description": "A grand arched doorway opens into the cathedral's vestibule. Stone columns rise on either side, carved with scenes of divine triumph. The air is cool and still, carrying the faint scent of incense and old stone.",
+      "area": "Arindale",
+      "terrain": "indoor",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "cathedral_courtyard"
+        },
+        {
+          "direction": "east",
+          "toTag": "cathedral_nave"
+        },
+        {
+          "direction": "south",
+          "toTag": "cathedral_healer"
+        }
+      ]
+    },
+    {
+      "tag": "cathedral_nave",
+      "name": "Cathedral Nave",
+      "description": "The cathedral's main hall soars overhead, its vaulted ceiling lost in shadow. Rows of wooden pews face the distant altar. Stained glass windows cast pools of colored light across the stone floor, shifting slowly with the sun.",
+      "area": "Arindale",
+      "terrain": "indoor",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "cathedral_entrance"
+        },
+        {
+          "direction": "south",
+          "toTag": "cathedral_sanctum"
+        }
+      ]
+    },
+    {
+      "tag": "cathedral_sanctum",
+      "name": "Inner Sanctum",
+      "description": "The innermost chamber of the cathedral is hushed and dim. A marble altar stands beneath a dome painted with celestial figures. Silver candlesticks flank the altar, their flames steady in the still air.",
+      "area": "Arindale",
+      "terrain": "indoor",
+      "features": {},
+      "exits": [
+        {
+          "direction": "north",
+          "toTag": "cathedral_nave"
+        },
+        {
+          "direction": "south",
+          "toTag": "cathedral_divine_spells"
+        },
+        {
+          "direction": "west",
+          "toTag": "cathedral_healer"
+        },
+        {
+          "direction": "down",
+          "toTag": "cathedral_crypt_stairs"
+        }
+      ]
+    },
+    {
+      "tag": "cathedral_healer",
+      "name": "Priest Healer",
+      "description": "A small chamber off the inner sanctum serves as the cathedral's healing room. A padded bench sits against one wall, and shelves hold jars of salve and bundles of dried herbs. The faint glow of healing magic lingers in the air.",
+      "area": "Arindale",
+      "terrain": "indoor",
+      "features": {},
+      "exits": [
+        {
+          "direction": "north",
+          "toTag": "cathedral_entrance"
+        },
+        {
+          "direction": "south",
+          "toTag": "cathedral_holy_items"
+        },
+        {
+          "direction": "east",
+          "toTag": "cathedral_sanctum"
+        }
+      ]
+    },
+    {
+      "tag": "cathedral_divine_spells",
+      "name": "Divine Spell Chamber",
+      "description": "Prayer books and illuminated manuscripts fill the shelves of this quiet chamber. A robed cleric sits at a reading desk, copying sacred texts by candlelight. Scrolls of divine magic are stored in a locked cabinet behind the desk.",
+      "area": "Arindale",
+      "terrain": "indoor",
+      "features": {},
+      "exits": [
+        {
+          "direction": "north",
+          "toTag": "cathedral_sanctum"
+        },
+        {
+          "direction": "west",
+          "toTag": "cathedral_holy_items"
+        }
+      ]
+    },
+    {
+      "tag": "cathedral_holy_items",
+      "name": "Holy Items Repository",
+      "description": "Glass-fronted cabinets hold blessed items — vials of holy water, prayer beads of polished bone, and silver amulets bearing the marks of protection. A priest tends the displays, polishing each piece with a soft cloth.",
+      "area": "Arindale",
+      "terrain": "indoor",
+      "features": {},
+      "exits": [
+        {
+          "direction": "north",
+          "toTag": "cathedral_healer"
+        },
+        {
+          "direction": "east",
+          "toTag": "cathedral_divine_spells"
+        }
+      ]
+    },
+    {
+      "tag": "cathedral_crypt_stairs",
+      "name": "Crypt Stairs",
+      "description": "Worn stone steps spiral downward into darkness. The air grows cold and still as the stairway descends. Torches in iron brackets light the way at long intervals, their flames barely flickering in the dead air.",
+      "area": "Arindale",
+      "terrain": "indoor",
+      "features": {},
+      "exits": [
+        {
+          "direction": "up",
+          "toTag": "cathedral_sanctum"
+        },
+        {
+          "direction": "down",
+          "toTag": "cathedral_crypt_upper"
+        }
+      ]
+    },
+    {
+      "tag": "cathedral_crypt_upper",
+      "name": "Upper Crypt",
+      "description": "Stone sarcophagi rest in recessed alcoves along the walls of this underground chamber. The lids are carved with the likenesses of the interred, their hands folded over stone swords. Cobwebs bridge the gaps between the alcoves.",
+      "area": "Arindale",
+      "terrain": "indoor",
+      "features": {},
+      "exits": [
+        {
+          "direction": "up",
+          "toTag": "cathedral_crypt_stairs"
+        },
+        {
+          "direction": "east",
+          "toTag": "cathedral_crypt_passage"
+        }
+      ]
+    },
+    {
+      "tag": "cathedral_crypt_passage",
+      "name": "Crypt Passage",
+      "description": "A low-ceilinged passage runs between burial chambers. The walls are lined with niches holding dusty urns and faded name plaques. A cold draft stirs the air, carrying the scent of damp stone and old earth.",
+      "area": "Arindale",
+      "terrain": "indoor",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "cathedral_crypt_upper"
+        },
+        {
+          "direction": "east",
+          "toTag": "cathedral_crypt_chamber"
+        }
+      ]
+    },
+    {
+      "tag": "cathedral_crypt_chamber",
+      "name": "Crypt Chamber",
+      "description": "A larger chamber opens at the junction of two passages. A cracked stone angel kneels at the center, its wings broken, its face turned upward. The names on the surrounding tombs are too worn to read.",
+      "area": "Arindale",
+      "terrain": "indoor",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "cathedral_crypt_passage"
+        },
+        {
+          "direction": "south",
+          "toTag": "cathedral_crypt_deep"
+        },
+        {
+          "direction": "down",
+          "toTag": "cathedral_crypt_descent"
+        }
+      ]
+    },
+    {
+      "tag": "cathedral_crypt_deep",
+      "name": "Deep Crypt",
+      "description": "The crypt grows darker and colder with each step. The stonework here is older, rougher — predating the cathedral above. A pool of candlewax has hardened on the floor where mourners once knelt.",
+      "area": "Arindale",
+      "terrain": "indoor",
+      "features": {},
+      "exits": [
+        {
+          "direction": "north",
+          "toTag": "cathedral_crypt_chamber"
+        },
+        {
+          "direction": "west",
+          "toTag": "cathedral_crypt_alcove"
+        }
+      ]
+    },
+    {
+      "tag": "cathedral_crypt_alcove",
+      "name": "Crypt Alcove",
+      "description": "A dead-end alcove holds a single ornate sarcophagus of black marble. Gold leaf traces a pattern of vines and thorns across its lid. The air is perfectly still, and the silence is absolute.",
+      "area": "Arindale",
+      "terrain": "indoor",
+      "features": {},
+      "exits": [
+        {
+          "direction": "east",
+          "toTag": "cathedral_crypt_deep"
+        }
+      ]
+    },
+    {
+      "tag": "cathedral_crypt_descent",
+      "name": "Crypt Descent",
+      "description": "A final set of stairs leads down from the deepest part of the crypt. The steps are carved from living rock, and the walls bear no decoration. A faint, otherworldly glow rises from below.",
+      "area": "Arindale",
+      "terrain": "indoor",
+      "features": {},
+      "exits": [
+        {
+          "direction": "up",
+          "toTag": "cathedral_crypt_chamber"
+        },
+        {
+          "direction": "down",
+          "toTag": "cathedral_halls_dead"
+        }
+      ]
+    },
+    {
+      "tag": "cathedral_halls_dead",
+      "name": "Halls of the Dead",
+      "description": "A vast subterranean hall stretches into dimness, its ceiling lost in shadow. Pale light emanates from the stone itself, casting no shadows. The air is neither warm nor cold, and all sound seems muffled, as if the world above has ceased to exist. A narrow stairway carved into the far wall leads back up toward the living city. In the eastern wall, a jagged crack runs from floor to ceiling — barely wide enough to squeeze through, but passable.",
+      "area": "Arindale",
+      "terrain": "indoor",
+      "features": {
+        "respawn": {
+          "enabled": true,
+          "priority": 0,
+          "servedAreas": [
+            "Arindale"
+          ]
+        }
+      },
+      "exits": [
+        {
+          "direction": "up",
+          "toTag": "cathedral_crypt_descent"
+        },
+        {
+          "direction": "west",
+          "toTag": "sewer_east_crack"
+        }
+      ],
+      "doors": [
+        {
+          "name": "crack in the wall",
+          "displayName": null,
+          "doorType": "triggered_passageway",
+          "description": null,
+          "entryDirection": "west",
+          "exitTag": "sewer_east_crack",
+          "exitDirection": "east",
+          "defaultState": "open",
+          "autoResetSeconds": 0,
+          "hasLock": false,
+          "keyItemTag": null,
+          "pickDifficultyMin": 0,
+          "pickDifficultyMax": 0,
+          "bashDifficulty": 0,
+          "isHidden": true,
+          "triggerText": "go crack",
+          "passageMessageSelf": "You squeeze through the narrow crack in the wall, scraping against rough stone.",
+          "passageMessageRoom": "{player} squeezes through a narrow crack in the wall and disappears.",
+          "itemDisplayName": null,
+          "isTemporary": false,
+          "spawnTriggerText": null,
+          "durationSeconds": null,
+          "appearMessage": null,
+          "disappearMessage": null,
+          "requiredLevel": null,
+          "maxLevel": null,
+          "requiredClasses": null,
+          "requiredQuestFlag": null,
+          "requiredItemTag": null,
+          "denialMessage": null
+        }
+      ]
+    },
+    {
+      "tag": "garrison_training_entrance",
+      "name": "Training Hall",
+      "description": "A high-ceilinged hall of pale brick with weapon racks lining the walls. The sound of practice swords clashing echoes from a passage to the north. A stairway descends into darkness beneath the floor.",
+      "area": "Arindale",
+      "terrain": "indoor",
+      "features": {},
+      "exits": [
+        {
+          "direction": "south",
+          "toTag": "ew_2_3_1"
+        },
+        {
+          "direction": "north",
+          "toTag": "garrison_training_room"
+        },
+        {
+          "direction": "down",
+          "toTag": "garrison_training_underground"
+        }
+      ]
+    },
+    {
+      "tag": "garrison_training_room",
+      "name": "Training Room",
+      "description": "A spacious room with sand-covered floors and padded walls. Training dummies stand in neat rows, their surfaces showing the marks of countless practice sessions. A grizzled instructor watches newcomers with a critical eye.",
+      "area": "Arindale",
+      "terrain": "indoor",
+      "features": {
+        "training": {
+          "enabled": true,
+          "maxLevel": 999,
+          "minLevel": 1
+        }
+      },
+      "exits": [
+        {
+          "direction": "south",
+          "toTag": "garrison_training_entrance"
+        }
+      ]
+    },
+    {
+      "tag": "garrison_training_underground",
+      "name": "Underground Chamber",
+      "description": "A rough-hewn chamber beneath the training hall. The ceiling is low and the air is damp. A passage has been started in the far wall but abandoned, its rubble piled to one side. This area seems unused.",
+      "area": "Arindale",
+      "terrain": "indoor",
+      "features": {},
+      "exits": [
+        {
+          "direction": "up",
+          "toTag": "garrison_training_entrance"
+        }
+      ]
+    },
+    {
+      "tag": "garrison_sheriff",
+      "name": "Sheriff's Office",
+      "description": "A tidy office with a large desk covered in reports and writs. Wanted posters line the walls, some fresh, others yellowed with age. A rack of confiscated weapons stands behind the door. An iron ring is bolted to the floor near the back wall, and a heavy trapdoor leads down to the jail beneath.",
+      "area": "Arindale",
+      "terrain": "indoor",
+      "features": {},
+      "exits": [
+        {
+          "direction": "south",
+          "toTag": "ew_2_3_2"
+        },
+        {
+          "direction": "down",
+          "toTag": "garrison_jail_corridor_1"
+        }
+      ]
+    },
+    {
+      "tag": "garrison_jail_corridor_1",
+      "name": "Jail Corridor",
+      "description": "A dank stone corridor lit by guttering torches. Iron-barred cell doors line both sides. The air smells of damp straw and unwashed bodies. Water drips somewhere in the darkness ahead.",
+      "area": "Arindale",
+      "terrain": "indoor",
+      "features": {},
+      "exits": [
+        {
+          "direction": "up",
+          "toTag": "garrison_sheriff"
+        },
+        {
+          "direction": "south",
+          "toTag": "garrison_jail_corridor_2"
+        },
+        {
+          "direction": "east",
+          "toTag": "garrison_jail_cell_1"
+        },
+        {
+          "direction": "west",
+          "toTag": "garrison_jail_cell_2"
+        }
+      ],
+      "doors": [
+        {
+          "name": "jail cell door 1",
+          "displayName": null,
+          "doorType": "physical",
+          "description": null,
+          "entryDirection": "east",
+          "exitTag": "garrison_jail_cell_1",
+          "exitDirection": "west",
+          "defaultState": "locked",
+          "autoResetSeconds": 300,
+          "hasLock": true,
+          "keyItemTag": null,
+          "pickDifficultyMin": 80,
+          "pickDifficultyMax": 150,
+          "bashDifficulty": 500,
+          "isHidden": false,
+          "triggerText": null,
+          "passageMessageSelf": null,
+          "passageMessageRoom": null,
+          "itemDisplayName": null,
+          "isTemporary": false,
+          "spawnTriggerText": null,
+          "durationSeconds": null,
+          "appearMessage": null,
+          "disappearMessage": null,
+          "requiredLevel": null,
+          "maxLevel": null,
+          "requiredClasses": null,
+          "requiredQuestFlag": null,
+          "requiredItemTag": null,
+          "denialMessage": null
+        },
+        {
+          "name": "jail cell door 2",
+          "displayName": null,
+          "doorType": "physical",
+          "description": null,
+          "entryDirection": "west",
+          "exitTag": "garrison_jail_cell_2",
+          "exitDirection": "east",
+          "defaultState": "locked",
+          "autoResetSeconds": 300,
+          "hasLock": true,
+          "keyItemTag": null,
+          "pickDifficultyMin": 80,
+          "pickDifficultyMax": 150,
+          "bashDifficulty": 500,
+          "isHidden": false,
+          "triggerText": null,
+          "passageMessageSelf": null,
+          "passageMessageRoom": null,
+          "itemDisplayName": null,
+          "isTemporary": false,
+          "spawnTriggerText": null,
+          "durationSeconds": null,
+          "appearMessage": null,
+          "disappearMessage": null,
+          "requiredLevel": null,
+          "maxLevel": null,
+          "requiredClasses": null,
+          "requiredQuestFlag": null,
+          "requiredItemTag": null,
+          "denialMessage": null
+        }
+      ]
+    },
+    {
+      "tag": "garrison_jail_corridor_2",
+      "name": "Jail Corridor",
+      "description": "The corridor continues between more cells. Scratched tally marks cover the walls where prisoners have counted their days. A rat skitters along the base of the wall and vanishes into a crack.",
+      "area": "Arindale",
+      "terrain": "indoor",
+      "features": {},
+      "exits": [
+        {
+          "direction": "north",
+          "toTag": "garrison_jail_corridor_1"
+        },
+        {
+          "direction": "south",
+          "toTag": "garrison_jail_corridor_3"
+        },
+        {
+          "direction": "east",
+          "toTag": "garrison_jail_cell_3"
+        },
+        {
+          "direction": "west",
+          "toTag": "garrison_jail_cell_4"
+        }
+      ],
+      "doors": [
+        {
+          "name": "jail cell door 3",
+          "displayName": null,
+          "doorType": "physical",
+          "description": null,
+          "entryDirection": "east",
+          "exitTag": "garrison_jail_cell_3",
+          "exitDirection": "west",
+          "defaultState": "locked",
+          "autoResetSeconds": 300,
+          "hasLock": true,
+          "keyItemTag": null,
+          "pickDifficultyMin": 80,
+          "pickDifficultyMax": 150,
+          "bashDifficulty": 500,
+          "isHidden": false,
+          "triggerText": null,
+          "passageMessageSelf": null,
+          "passageMessageRoom": null,
+          "itemDisplayName": null,
+          "isTemporary": false,
+          "spawnTriggerText": null,
+          "durationSeconds": null,
+          "appearMessage": null,
+          "disappearMessage": null,
+          "requiredLevel": null,
+          "maxLevel": null,
+          "requiredClasses": null,
+          "requiredQuestFlag": null,
+          "requiredItemTag": null,
+          "denialMessage": null
+        },
+        {
+          "name": "jail cell door 4",
+          "displayName": null,
+          "doorType": "physical",
+          "description": null,
+          "entryDirection": "west",
+          "exitTag": "garrison_jail_cell_4",
+          "exitDirection": "east",
+          "defaultState": "locked",
+          "autoResetSeconds": 300,
+          "hasLock": true,
+          "keyItemTag": null,
+          "pickDifficultyMin": 80,
+          "pickDifficultyMax": 150,
+          "bashDifficulty": 500,
+          "isHidden": false,
+          "triggerText": null,
+          "passageMessageSelf": null,
+          "passageMessageRoom": null,
+          "itemDisplayName": null,
+          "isTemporary": false,
+          "spawnTriggerText": null,
+          "durationSeconds": null,
+          "appearMessage": null,
+          "disappearMessage": null,
+          "requiredLevel": null,
+          "maxLevel": null,
+          "requiredClasses": null,
+          "requiredQuestFlag": null,
+          "requiredItemTag": null,
+          "denialMessage": null
+        }
+      ]
+    },
+    {
+      "tag": "garrison_jail_corridor_3",
+      "name": "Jail Corridor",
+      "description": "The deepest stretch of the jail corridor ends at a solid stone wall. The cells here are smaller and darker than those near the stairs. A rusted chain dangles from an empty wall bracket.",
+      "area": "Arindale",
+      "terrain": "indoor",
+      "features": {},
+      "exits": [
+        {
+          "direction": "north",
+          "toTag": "garrison_jail_corridor_2"
+        },
+        {
+          "direction": "east",
+          "toTag": "garrison_jail_cell_5"
+        },
+        {
+          "direction": "west",
+          "toTag": "garrison_jail_cell_6"
+        }
+      ],
+      "doors": [
+        {
+          "name": "jail cell door 5",
+          "displayName": null,
+          "doorType": "physical",
+          "description": null,
+          "entryDirection": "east",
+          "exitTag": "garrison_jail_cell_5",
+          "exitDirection": "west",
+          "defaultState": "locked",
+          "autoResetSeconds": 300,
+          "hasLock": true,
+          "keyItemTag": null,
+          "pickDifficultyMin": 80,
+          "pickDifficultyMax": 150,
+          "bashDifficulty": 500,
+          "isHidden": false,
+          "triggerText": null,
+          "passageMessageSelf": null,
+          "passageMessageRoom": null,
+          "itemDisplayName": null,
+          "isTemporary": false,
+          "spawnTriggerText": null,
+          "durationSeconds": null,
+          "appearMessage": null,
+          "disappearMessage": null,
+          "requiredLevel": null,
+          "maxLevel": null,
+          "requiredClasses": null,
+          "requiredQuestFlag": null,
+          "requiredItemTag": null,
+          "denialMessage": null
+        },
+        {
+          "name": "jail cell door 6",
+          "displayName": null,
+          "doorType": "physical",
+          "description": null,
+          "entryDirection": "west",
+          "exitTag": "garrison_jail_cell_6",
+          "exitDirection": "east",
+          "defaultState": "locked",
+          "autoResetSeconds": 300,
+          "hasLock": true,
+          "keyItemTag": null,
+          "pickDifficultyMin": 80,
+          "pickDifficultyMax": 150,
+          "bashDifficulty": 500,
+          "isHidden": false,
+          "triggerText": null,
+          "passageMessageSelf": null,
+          "passageMessageRoom": null,
+          "itemDisplayName": null,
+          "isTemporary": false,
+          "spawnTriggerText": null,
+          "durationSeconds": null,
+          "appearMessage": null,
+          "disappearMessage": null,
+          "requiredLevel": null,
+          "maxLevel": null,
+          "requiredClasses": null,
+          "requiredQuestFlag": null,
+          "requiredItemTag": null,
+          "denialMessage": null
+        }
+      ]
+    },
+    {
+      "tag": "garrison_jail_cell_1",
+      "name": "Jail Cell",
+      "description": "A cramped cell with a straw pallet on the stone floor and a bucket in the corner. Iron bars form the only wall facing the corridor. Scratches in the stone mark the passage of forgotten days.",
+      "area": "Arindale",
+      "terrain": "indoor",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "garrison_jail_corridor_1"
+        }
+      ]
+    },
+    {
+      "tag": "garrison_jail_cell_2",
+      "name": "Jail Cell",
+      "description": "A narrow cell barely wide enough to lie down in. The straw on the floor is damp and the walls are slick with moisture. Someone has scratched a crude face into the stone.",
+      "area": "Arindale",
+      "terrain": "indoor",
+      "features": {},
+      "exits": [
+        {
+          "direction": "east",
+          "toTag": "garrison_jail_corridor_1"
+        }
+      ]
+    },
+    {
+      "tag": "garrison_jail_cell_3",
+      "name": "Jail Cell",
+      "description": "This cell is slightly larger than the others, perhaps once reserved for prisoners of rank. The straw is fresher, and a wooden stool sits in the corner. The iron bars are as unyielding as the rest.",
+      "area": "Arindale",
+      "terrain": "indoor",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "garrison_jail_corridor_2"
+        }
+      ]
+    },
+    {
+      "tag": "garrison_jail_cell_4",
+      "name": "Jail Cell",
+      "description": "A dark cell at the end of the corridor. A thin crack in the ceiling lets in a thread of light that traces a bright line across the floor. The walls bear deep gouges, as if clawed.",
+      "area": "Arindale",
+      "terrain": "indoor",
+      "features": {},
+      "exits": [
+        {
+          "direction": "east",
+          "toTag": "garrison_jail_corridor_2"
+        }
+      ]
+    },
+    {
+      "tag": "garrison_jail_cell_5",
+      "name": "Jail Cell",
+      "description": "Moldy straw covers the floor of this damp cell. An iron ring set into the wall holds the remains of a broken shackle. The air is thick and still.",
+      "area": "Arindale",
+      "terrain": "indoor",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "garrison_jail_corridor_3"
+        }
+      ]
+    },
+    {
+      "tag": "garrison_jail_cell_6",
+      "name": "Jail Cell",
+      "description": "The deepest cell in the jail. No light reaches here except what spills from the corridor torches. A pile of rags in the corner might once have been a blanket. The silence is oppressive.",
+      "area": "Arindale",
+      "terrain": "indoor",
+      "features": {},
+      "exits": [
+        {
+          "direction": "east",
+          "toTag": "garrison_jail_corridor_3"
+        }
+      ]
+    },
+    {
+      "tag": "garrison_mayor",
+      "name": "Mayor's Office",
+      "description": "A well-appointed office with a mahogany desk and leather chairs. Maps of the city and surrounding lands cover one wall. A seal of office sits on the desk beside a stack of unsigned proclamations.",
+      "area": "Arindale",
+      "terrain": "indoor",
+      "features": {},
+      "exits": [
+        {
+          "direction": "south",
+          "toTag": "ew_2_3_3"
+        }
+      ]
+    },
+    {
+      "tag": "garrison_barracks_entrance",
+      "name": "Guard Barracks",
+      "description": "The entrance hall of the city guard barracks is functional and unadorned. Duty rosters are pinned to a board by the door. A weapons rack holds practice swords and bucklers for the watch rotation.",
+      "area": "Arindale",
+      "terrain": "indoor",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "ns_3_1_1"
+        },
+        {
+          "direction": "east",
+          "toTag": "garrison_barracks_bunks"
+        }
+      ]
+    },
+    {
+      "tag": "garrison_barracks_bunks",
+      "name": "Bunk Room",
+      "description": "Double-stacked bunks line both walls of this long room. Footlockers sit at the end of each bed, secured with simple padlocks. A few off-duty guards sleep or play cards at a table.",
+      "area": "Arindale",
+      "terrain": "indoor",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "garrison_barracks_entrance"
+        },
+        {
+          "direction": "south",
+          "toTag": "garrison_barracks_armory"
+        },
+        {
+          "direction": "east",
+          "toTag": "garrison_barracks_captain"
+        }
+      ]
+    },
+    {
+      "tag": "garrison_barracks_armory",
+      "name": "Barracks Armory",
+      "description": "Racks of spears, swords, and crossbows stand against the walls, each weapon oiled and ready. Stacks of chainmail shirts and leather gambesons fill wooden shelves. A quartermaster's ledger hangs from a chain.",
+      "area": "Arindale",
+      "terrain": "indoor",
+      "features": {},
+      "exits": [
+        {
+          "direction": "north",
+          "toTag": "garrison_barracks_bunks"
+        }
+      ]
+    },
+    {
+      "tag": "garrison_barracks_captain",
+      "name": "Captain's Quarters",
+      "description": "The barracks captain's private room is small but comfortable. A desk covered in reports sits beneath a narrow window. A sword and shield hang on the wall beside a faded campaign map.",
+      "area": "Arindale",
+      "terrain": "indoor",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "garrison_barracks_bunks"
+        }
+      ]
+    },
+    {
+      "tag": "harbor_tavern",
+      "name": "The Salty Dog Tavern",
+      "description": "A warm glow and the buzz of conversation fill this busy harbor tavern. Sailors and dockworkers crowd the bar, and a bard plucks a lute in the far corner. The air is thick with pipe smoke and the smell of cheap ale.",
+      "area": "Arindale",
+      "terrain": "indoor",
+      "features": {},
+      "exits": [
+        {
+          "direction": "south",
+          "toTag": "ew_0_1_2"
+        },
+        {
+          "direction": "east",
+          "toTag": "harbor_tavern_back"
+        },
+        {
+          "direction": "west",
+          "toTag": "harbor_tavern_storage"
+        }
+      ]
+    },
+    {
+      "tag": "harbor_tavern_back",
+      "name": "Tavern Back Room",
+      "description": "A quieter room behind the main bar, furnished with a few scarred tables and benches. A dartboard hangs on the wall, its surface pockmarked with holes. Hushed conversations take place in the dimmer corners.",
+      "area": "Arindale",
+      "terrain": "indoor",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "harbor_tavern"
+        }
+      ]
+    },
+    {
+      "tag": "harbor_tavern_storage",
+      "name": "Tavern Storage Room",
+      "description": "Kegs of ale and crates of bottled spirits fill this cramped storeroom. The floor is sticky with spilled drink. A trapdoor in the floor suggests a cellar below, but it's nailed shut.",
+      "area": "Arindale",
+      "terrain": "indoor",
+      "features": {},
+      "exits": [
+        {
+          "direction": "east",
+          "toTag": "harbor_tavern"
+        }
+      ]
+    },
+    {
+      "tag": "harbor_inn",
+      "name": "The Traveler's Rest",
+      "description": "A welcoming inn with a polished front desk and a sitting area by a stone fireplace. The innkeeper stands behind the counter, sorting room keys on a pegboard. The sounds of the busy town square drift in through the windows.",
+      "area": "Arindale",
+      "terrain": "indoor",
+      "features": {},
+      "exits": [
+        {
+          "direction": "north",
+          "toTag": "ew_2_2_1"
+        },
+        {
+          "direction": "west",
+          "toTag": "ns_2_2_1"
+        },
+        {
+          "direction": "south",
+          "toTag": "harbor_inn_dining"
+        }
+      ]
+    },
+    {
+      "tag": "harbor_inn_dining",
+      "name": "Inn Dining Room",
+      "description": "Round tables with checkered cloths fill this cozy dining room. The smell of stew and fresh bread drifts from the kitchen beyond. A few guests linger over their meals, talking softly.",
+      "area": "Arindale",
+      "terrain": "indoor",
+      "features": {},
+      "exits": [
+        {
+          "direction": "north",
+          "toTag": "harbor_inn"
+        },
+        {
+          "direction": "east",
+          "toTag": "harbor_inn_stairs"
+        }
+      ],
+      "doors": [
+        {
+          "name": "inn stairway door",
+          "displayName": null,
+          "doorType": "physical",
+          "description": null,
+          "entryDirection": "east",
+          "exitTag": "harbor_inn_stairs",
+          "exitDirection": "west",
+          "defaultState": "closed",
+          "autoResetSeconds": 30,
+          "hasLock": false,
+          "keyItemTag": null,
+          "pickDifficultyMin": 0,
+          "pickDifficultyMax": 0,
+          "bashDifficulty": 0,
+          "isHidden": false,
+          "triggerText": null,
+          "passageMessageSelf": null,
+          "passageMessageRoom": null,
+          "itemDisplayName": null,
+          "isTemporary": false,
+          "spawnTriggerText": null,
+          "durationSeconds": null,
+          "appearMessage": null,
+          "disappearMessage": null,
+          "requiredLevel": null,
+          "maxLevel": null,
+          "requiredClasses": null,
+          "requiredQuestFlag": null,
+          "requiredItemTag": null,
+          "denialMessage": null
+        }
+      ]
+    },
+    {
+      "tag": "harbor_inn_stairs",
+      "name": "Inn Stairway",
+      "description": "A narrow wooden stairway leads up from the back of the inn. The steps creak underfoot, and the banister is worn smooth by countless hands.",
+      "area": "Arindale",
+      "terrain": "indoor",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "harbor_inn_dining"
+        },
+        {
+          "direction": "up",
+          "toTag": "harbor_inn_hallway"
+        }
+      ]
+    },
+    {
+      "tag": "harbor_inn_hallway",
+      "name": "Upstairs Hallway",
+      "description": "A carpeted hallway runs between numbered guest room doors. Oil lamps in wall sconces cast a warm glow. The street noise is muffled up here, replaced by the occasional creak of old timbers.",
+      "area": "Arindale",
+      "terrain": "indoor",
+      "features": {},
+      "exits": [
+        {
+          "direction": "down",
+          "toTag": "harbor_inn_stairs"
+        },
+        {
+          "direction": "east",
+          "toTag": "harbor_inn_room"
+        },
+        {
+          "direction": "west",
+          "toTag": "harbor_inn_room_2"
+        },
+        {
+          "direction": "north",
+          "toTag": "harbor_inn_room_3"
+        }
+      ]
+    },
+    {
+      "tag": "harbor_inn_room",
+      "name": "Guest Room",
+      "description": "A small but clean room with a bed, a washstand, and a window overlooking the street below. The linens are freshly laundered, and a candle sits on the nightstand beside a book of local tales.",
+      "area": "Arindale",
+      "terrain": "indoor",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "harbor_inn_hallway"
+        }
+      ]
+    },
+    {
+      "tag": "harbor_inn_room_2",
+      "name": "Guest Room",
+      "description": "A modest room with a straw-stuffed mattress and a wooden chest at the foot of the bed. A basin of water sits on a small table beneath a shuttered window. The room smells of clean linen and beeswax.",
+      "area": "Arindale",
+      "terrain": "indoor",
+      "features": {},
+      "exits": [
+        {
+          "direction": "east",
+          "toTag": "harbor_inn_hallway"
+        }
+      ]
+    },
+    {
+      "tag": "harbor_inn_room_3",
+      "name": "Guest Room",
+      "description": "The largest of the guest rooms, with a proper bed frame and a writing desk by the window. A woven rug covers the floorboards, and a wardrobe stands against the far wall. A vase of dried flowers sits on the desk.",
+      "area": "Arindale",
+      "terrain": "indoor",
+      "features": {},
+      "exits": [
+        {
+          "direction": "south",
+          "toTag": "harbor_inn_hallway"
+        }
+      ]
+    },
+    {
+      "tag": "harbor_dock_1",
+      "name": "Western Dock",
+      "description": "The westernmost dock extends over dark water on thick wooden pilings. Empty mooring posts stand along its length, their ropes coiled and waiting. The planks are weathered gray and slick with spray.",
+      "area": "Arindale",
+      "terrain": "indoor",
+      "features": {},
+      "exits": [
+        {
+          "direction": "east",
+          "toTag": "harbor_dock_2"
+        }
+      ]
+    },
+    {
+      "tag": "harbor_dock_2",
+      "name": "Fishing Dock",
+      "description": "Nets hang drying from wooden frames along this dock. Small fishing boats bob in their moorings, their hulls crusted with barnacles. The sharp smell of fish guts rises from the cleaning tables at the end.",
+      "area": "Arindale",
+      "terrain": "indoor",
+      "features": {},
+      "exits": [
+        {
+          "direction": "east",
+          "toTag": "harbor_dock_3"
+        },
+        {
+          "direction": "west",
+          "toTag": "harbor_dock_1"
+        }
+      ]
+    },
+    {
+      "tag": "harbor_dock_3",
+      "name": "Central Dock",
+      "description": "The largest dock in the harbor, wide enough for heavy cargo. Iron bollards are sunk into the planking at regular intervals. Crane arms swing overhead, ready to load or unload the next vessel.",
+      "area": "Arindale",
+      "terrain": "indoor",
+      "features": {},
+      "exits": [
+        {
+          "direction": "south",
+          "toTag": "int_0_1"
+        },
+        {
+          "direction": "west",
+          "toTag": "harbor_dock_2"
+        },
+        {
+          "direction": "east",
+          "toTag": "harbor_dock_4"
+        }
+      ]
+    },
+    {
+      "tag": "harbor_dock_4",
+      "name": "Trade Dock",
+      "description": "Stacked crates bearing foreign marks line this dock, waiting to be carted into the city. A customs officer's booth sits at the landward end, its shutters open. The dock smells of tar and exotic spices.",
+      "area": "Arindale",
+      "terrain": "indoor",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "harbor_dock_3"
+        },
+        {
+          "direction": "east",
+          "toTag": "harbor_dock_5"
+        }
+      ]
+    },
+    {
+      "tag": "harbor_dock_5",
+      "name": "Eastern Dock",
+      "description": "The easternmost dock is quieter than the others, its berths mostly empty. A lone rowboat is tied to a post, its oars shipped. Gulls perch on the mooring posts, watching the water for fish.",
+      "area": "Arindale",
+      "terrain": "indoor",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "harbor_dock_4"
+        }
+      ]
+    },
+    {
+      "tag": "harbor_warehouse_1",
+      "name": "Harbor Warehouse",
+      "description": "A cavernous warehouse smelling of sawdust and salt. Crates and barrels are stacked to the rafters in orderly rows, each marked with a merchant's seal. A loading door at the far end opens onto the waterfront.",
+      "area": "Arindale",
+      "terrain": "indoor",
+      "features": {},
+      "exits": [
+        {
+          "direction": "south",
+          "toTag": "ew_0_0_2"
+        }
+      ]
+    },
+    {
+      "tag": "harbor_warehouse_2",
+      "name": "Old Warehouse",
+      "description": "This warehouse has seen better days. The roof leaks in places, leaving dark stains on the floor. Most of the storage space is empty, though a few tarped mounds suggest someone still uses it.",
+      "area": "Arindale",
+      "terrain": "indoor",
+      "features": {},
+      "exits": [
+        {
+          "direction": "south",
+          "toTag": "ew_0_0_3"
+        }
+      ]
+    },
+    {
+      "tag": "park_entrance",
+      "name": "Park Entrance",
+      "description": "A wrought-iron archway marks the entrance to Arindale Park. A gravel path leads north beneath the shade of towering oaks into the green heart of the park. A wooden sign lists the park's rules in faded gilt lettering.",
+      "area": "Arindale",
+      "terrain": "outdoor",
+      "features": {},
+      "exits": [
+        {
+          "direction": "south",
+          "toTag": "ew_1_0_2"
+        },
+        {
+          "direction": "west",
+          "toTag": "park_promenade"
+        },
+        {
+          "direction": "east",
+          "toTag": "park_mossy_steps"
+        },
+        {
+          "direction": "north",
+          "toTag": "park_reflecting_pool"
+        }
+      ]
+    },
+    {
+      "tag": "park_flower_garden",
+      "name": "Flower Garden",
+      "description": "Beds of bright flowers line a curving path — marigolds, foxglove, and tall blue delphiniums. Butterflies drift between the blossoms, and the air is sweet with pollen. A gardener kneels nearby, pulling weeds.",
+      "area": "Arindale",
+      "terrain": "outdoor",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "ns_0_0_2"
+        },
+        {
+          "direction": "east",
+          "toTag": "park_reflecting_pool"
+        },
+        {
+          "direction": "south",
+          "toTag": "park_promenade"
+        },
+        {
+          "direction": "north",
+          "toTag": "park_shaded_grove"
+        }
+      ]
+    },
+    {
+      "tag": "park_shaded_grove",
+      "name": "Shaded Grove",
+      "description": "Ancient oaks form a dense canopy overhead, their branches intertwined. The ground is carpeted with moss and fallen leaves. Birdsong echoes in the green shade, and the temperature is noticeably cooler.",
+      "area": "Arindale",
+      "terrain": "outdoor",
+      "features": {},
+      "exits": [
+        {
+          "direction": "east",
+          "toTag": "park_overlook"
+        },
+        {
+          "direction": "south",
+          "toTag": "park_flower_garden"
+        }
+      ]
+    },
+    {
+      "tag": "park_reflecting_pool",
+      "name": "Reflecting Pool",
+      "description": "A long, shallow pool of still water stretches between low stone walls. The surface mirrors the sky with perfect clarity. Stone benches line the pool's edge, worn smooth by generations of visitors.",
+      "area": "Arindale",
+      "terrain": "outdoor",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "park_flower_garden"
+        },
+        {
+          "direction": "east",
+          "toTag": "park_kings_statue"
+        },
+        {
+          "direction": "south",
+          "toTag": "park_entrance"
+        },
+        {
+          "direction": "north",
+          "toTag": "park_overlook"
+        }
+      ]
+    },
+    {
+      "tag": "park_kings_statue",
+      "name": "King's Statue",
+      "description": "A large bronze statue of a past king stands on a granite pedestal at the heart of the park. The king gazes north toward his castle, one hand resting on a sword, the other raised in benediction. Pigeons roost on his shoulders.",
+      "area": "Arindale",
+      "terrain": "outdoor",
+      "features": {},
+      "exits": [
+        {
+          "direction": "east",
+          "toTag": "ns_1_0_2"
+        },
+        {
+          "direction": "west",
+          "toTag": "park_reflecting_pool"
+        },
+        {
+          "direction": "south",
+          "toTag": "park_mossy_steps"
+        },
+        {
+          "direction": "north",
+          "toTag": "park_quiet_bench"
+        }
+      ]
+    },
+    {
+      "tag": "park_overlook",
+      "name": "Park Overlook",
+      "description": "A slight rise at the park's edge offers a view over the treetops toward the harbor. The masts of ships are visible above the rooftops, and the castle's towers rise to the north. A carved stone railing marks the edge.",
+      "area": "Arindale",
+      "terrain": "outdoor",
+      "features": {},
+      "exits": [
+        {
+          "direction": "north",
+          "toTag": "ew_0_0_2"
+        },
+        {
+          "direction": "west",
+          "toTag": "park_shaded_grove"
+        },
+        {
+          "direction": "east",
+          "toTag": "park_quiet_bench"
+        },
+        {
+          "direction": "south",
+          "toTag": "park_reflecting_pool"
+        }
+      ]
+    },
+    {
+      "tag": "park_promenade",
+      "name": "Grand Promenade",
+      "description": "A wide, straight walkway lined with stone columns leads toward a bronze statue visible to the north. Neatly trimmed hedges flank the promenade, and iron benches sit at regular intervals.",
+      "area": "Arindale",
+      "terrain": "outdoor",
+      "features": {},
+      "exits": [
+        {
+          "direction": "east",
+          "toTag": "park_entrance"
+        },
+        {
+          "direction": "north",
+          "toTag": "park_flower_garden"
+        }
+      ]
+    },
+    {
+      "tag": "park_mossy_steps",
+      "name": "Mossy Steps",
+      "description": "Shallow stone steps descend a gentle slope beneath the shade of old trees. Moss fills the cracks between the stones, and ferns grow in the damp gaps. The air smells of earth and green growing things.",
+      "area": "Arindale",
+      "terrain": "outdoor",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "park_entrance"
+        },
+        {
+          "direction": "north",
+          "toTag": "park_kings_statue"
+        }
+      ]
+    },
+    {
+      "tag": "park_quiet_bench",
+      "name": "Quiet Bench",
+      "description": "A solitary wooden bench sits at the park's highest point, half-hidden by overgrown bushes. It faces a small clearing where wildflowers grow in undisturbed profusion. From here you can see the king's statue below and the treetops beyond.",
+      "area": "Arindale",
+      "terrain": "outdoor",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "park_overlook"
+        },
+        {
+          "direction": "south",
+          "toTag": "park_kings_statue"
+        }
+      ]
+    },
+    {
+      "tag": "residential_house_1_front",
+      "name": "Modest Home",
+      "description": "A small, tidy home with whitewashed walls and a low ceiling. A braided rug covers the stone floor, and a fire smolders in a simple hearth. A shelf holds a few clay pots and a bundle of dried herbs.",
+      "area": "Arindale",
+      "terrain": "indoor",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "ns_4_3_1"
+        },
+        {
+          "direction": "east",
+          "toTag": "residential_house_1_back"
+        }
+      ]
+    },
+    {
+      "tag": "residential_house_1_back",
+      "name": "Back Room",
+      "description": "A cramped back room serves as both kitchen and bedroom. A narrow cot is pushed against one wall, its blanket neatly folded. A pot of something savory simmers on a small iron stove.",
+      "area": "Arindale",
+      "terrain": "indoor",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "residential_house_1_front"
+        }
+      ]
+    },
+    {
+      "tag": "residential_house_2_front",
+      "name": "Stone Cottage",
+      "description": "Heavy stone walls and deep-set windows give this cottage a feeling of permanence. A rocking chair sits by the hearth, and a half-finished knitting project rests on its seat. The floor is swept clean.",
+      "area": "Arindale",
+      "terrain": "indoor",
+      "features": {},
+      "exits": [
+        {
+          "direction": "north",
+          "toTag": "ew_3_3_2"
+        }
+      ]
+    },
+    {
+      "tag": "residential_house_3_front",
+      "name": "Narrow Townhouse",
+      "description": "A tall, narrow home squeezed between its neighbors. The front room is small but well-kept, with a writing desk by the window and bookshelves climbing the walls. A steep stair leads up.",
+      "area": "Arindale",
+      "terrain": "indoor",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "ns_4_2_2"
+        },
+        {
+          "direction": "up",
+          "toTag": "residential_house_3_upper"
+        }
+      ]
+    },
+    {
+      "tag": "residential_house_3_upper",
+      "name": "Upstairs Bedroom",
+      "description": "The upper floor of the narrow townhouse is a single room beneath sloping eaves. A bed with a patchwork quilt takes up most of the space. A dormer window looks out over the rooftops toward the eastern wall.",
+      "area": "Arindale",
+      "terrain": "indoor",
+      "features": {},
+      "exits": [
+        {
+          "direction": "down",
+          "toTag": "residential_house_3_front"
+        }
+      ]
+    },
+    {
+      "tag": "residential_house_4_front",
+      "name": "Clergy Residence",
+      "description": "A spare, clean room with a simple wooden cross on the wall. The furniture is plain but well-made — a desk, a chair, and a narrow bed. A shelf holds prayer books and a worn rosary.",
+      "area": "Arindale",
+      "terrain": "indoor",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "ns_3_3_2"
+        }
+      ]
+    },
+    {
+      "tag": "residential_house_5_front",
+      "name": "Gardener's Cottage",
+      "description": "Potted plants crowd every surface in this cluttered cottage. Climbing ivy frames the window, and seed packets are scattered across a workbench. The air smells of soil and green growth.",
+      "area": "Arindale",
+      "terrain": "indoor",
+      "features": {},
+      "exits": [
+        {
+          "direction": "north",
+          "toTag": "ew_4_3_1"
+        },
+        {
+          "direction": "south",
+          "toTag": "residential_house_5_back"
+        }
+      ]
+    },
+    {
+      "tag": "residential_house_5_back",
+      "name": "Garden Shed",
+      "description": "A lean-to shed attached to the back of the cottage, filled with rakes, hoes, and coils of twine. Clay pots are stacked in towers, and bags of soil lean against the wall. A watering can sits by the door.",
+      "area": "Arindale",
+      "terrain": "indoor",
+      "features": {},
+      "exits": [
+        {
+          "direction": "north",
+          "toTag": "residential_house_5_front"
+        }
+      ]
+    },
+    {
+      "tag": "residential_courtyard",
+      "name": "Residential Courtyard",
+      "description": "A small cobbled courtyard shared by several surrounding homes. A stone well stands at its center, its bucket hanging from a worn rope. Children's toys are scattered near a bench beneath an old apple tree.",
+      "area": "Arindale",
+      "terrain": "outdoor",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "ns_4_3_2"
+        }
+      ]
+    },
+    {
+      "tag": "residential_well",
+      "name": "Community Well",
+      "description": "A stone well with a shingled roof sits at the junction of two narrow lanes. The water is clear and cold. Neighbors gather here to fill buckets and share the day's news.",
+      "area": "Arindale",
+      "terrain": "outdoor",
+      "features": {},
+      "exits": [
+        {
+          "direction": "north",
+          "toTag": "ew_3_3_1"
+        }
+      ]
+    },
+    {
+      "tag": "gate_east",
+      "name": "East Gate",
+      "description": "The massive iron-bound gates of Arindale stand beneath a stone archway carved with the city's crest. Guards in polished mail watch the road. The gates are closed, the heavy portcullis lowered. Beyond the bars, the road stretches east into open countryside.",
+      "area": "Arindale",
+      "terrain": "indoor",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "int_2_4"
+        }
+      ]
+    },
+    {
+      "tag": "gate_west",
+      "name": "West Gate",
+      "description": "Thick oak doors banded with iron seal the western entrance to the city. Arrow slits in the flanking towers watch the road outside. The gates are shut tight, and no traffic passes through. A guard leans against the wall, looking bored.",
+      "area": "Arindale",
+      "terrain": "indoor",
+      "features": {},
+      "exits": [
+        {
+          "direction": "east",
+          "toTag": "int_2_0"
+        }
+      ]
+    },
+    {
+      "tag": "gate_south",
+      "name": "South Gate",
+      "description": "The southern gate is smaller than its counterparts but no less sturdy. Twin guard towers bracket the closed doors. Through the iron grating, the southern road disappears into rolling farmland. A posted notice reads: \"Gate closed by order of the city council.\"",
+      "area": "Arindale",
+      "terrain": "indoor",
+      "features": {},
+      "exits": [
+        {
+          "direction": "north",
+          "toTag": "int_4_2"
+        }
+      ]
+    },
+    {
+      "tag": "wall_south_tower_e",
+      "name": "Southeast Guard Tower",
+      "description": "A square stone tower at the corner of the city wall, its top offering a sweeping view south and east. A brazier for signal fires stands ready, and a rack holds crossbows and bolts. Stairs lead down to the street below.",
+      "area": "Arindale",
+      "terrain": "indoor",
+      "features": {},
+      "exits": [
+        {
+          "direction": "down",
+          "toTag": "int_4_4"
+        }
+      ]
+    },
+    {
+      "tag": "wall_south_tower_w",
+      "name": "Southwest Guard Tower",
+      "description": "This corner tower commands views south and west. A spiral stair connects to the street below. A watchman's logbook lies open on a stone ledge, its pages fluttering in the breeze.",
+      "area": "Arindale",
+      "terrain": "indoor",
+      "features": {},
+      "exits": [
+        {
+          "direction": "down",
+          "toTag": "int_4_0"
+        }
+      ]
+    },
+    {
+      "tag": "wall_west_tower_n",
+      "name": "Northwest Guard Tower",
+      "description": "The northwestern tower overlooks the harbor and the open sea beyond. The salt wind is strong up here, and the calls of gulls mingle with the snap of the tower's pennant. Stairs descend to the street.",
+      "area": "Arindale",
+      "terrain": "indoor",
+      "features": {},
+      "exits": [
+        {
+          "direction": "down",
+          "toTag": "int_0_0"
+        }
+      ]
+    },
+    {
+      "tag": "wall_east_tower_n",
+      "name": "Northeast Guard Tower",
+      "description": "The northeastern tower stands where the city wall meets the harbor defenses. The view north shows the docks and the harbor mouth. A signal horn hangs from a hook, ready to raise the alarm.",
+      "area": "Arindale",
+      "terrain": "indoor",
+      "features": {},
+      "exits": [
+        {
+          "direction": "down",
+          "toTag": "int_0_4"
+        }
+      ]
+    },
+    {
+      "tag": "castle_road_1",
+      "name": "Castle Road",
+      "description": "A broad avenue paved in pale stone leads north from the harbor toward the castle, flanked by tall banners bearing the royal standard. The road rises gradually, offering a view of the harbor below.",
+      "area": "Arindale",
+      "terrain": "road",
+      "features": {},
+      "exits": [
+        {
+          "direction": "south",
+          "toTag": "int_0_2"
+        },
+        {
+          "direction": "north",
+          "toTag": "castle_road_2"
+        }
+      ]
+    },
+    {
+      "tag": "castle_road_2",
+      "name": "Castle Road",
+      "description": "Statues of past kings stand on plinths along both sides of the road, their stone faces staring sternly ahead. The royal banners snap in the wind. The castle walls grow larger with each step north.",
+      "area": "Arindale",
+      "terrain": "road",
+      "features": {},
+      "exits": [
+        {
+          "direction": "south",
+          "toTag": "castle_road_1"
+        },
+        {
+          "direction": "north",
+          "toTag": "castle_road_3"
+        }
+      ]
+    },
+    {
+      "tag": "castle_road_3",
+      "name": "Castle Road",
+      "description": "The avenue widens into a small forecourt before the castle's outer wall. Guard checkpoints flank the road, though the guards wave travelers through without challenge. The castle gatehouse looms ahead.",
+      "area": "Arindale",
+      "terrain": "road",
+      "features": {},
+      "exits": [
+        {
+          "direction": "south",
+          "toTag": "castle_road_2"
+        },
+        {
+          "direction": "north",
+          "toTag": "castle_road_4"
+        }
+      ]
+    },
+    {
+      "tag": "castle_road_4",
+      "name": "Castle Road",
+      "description": "The road ends at the foot of the castle's outer gatehouse. Massive towers bracket a stone bridge that crosses a dry moat. The castle's banners fly high above, and the sound of trumpets occasionally drifts from within.",
+      "area": "Arindale",
+      "terrain": "road",
+      "features": {},
+      "exits": [
+        {
+          "direction": "south",
+          "toTag": "castle_road_3"
+        },
+        {
+          "direction": "north",
+          "toTag": "castle_drawbridge"
+        }
+      ]
+    },
+    {
+      "tag": "castle_drawbridge",
+      "name": "Castle Drawbridge",
+      "description": "The drawbridge is raised, its heavy chains taut against the gatehouse winches. The gap between the road and the castle gate is too wide to cross. Across the moat, the castle's iron portcullis is lowered. A sign reads: \"The castle is closed to visitors by royal decree.\"",
+      "area": "Arindale",
+      "terrain": "road",
+      "features": {},
+      "exits": [
+        {
+          "direction": "south",
+          "toTag": "castle_road_4"
+        }
+      ]
+    }
+  ]
+}

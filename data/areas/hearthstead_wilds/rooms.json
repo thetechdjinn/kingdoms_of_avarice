@@ -1,0 +1,919 @@
+{
+  "version": "1.0",
+  "exported_at": "2026-03-15T13:33:32.897Z",
+  "type": "rooms",
+  "data": [
+    {
+      "tag": "hs_wilds_1",
+      "name": "Overgrown Trailhead",
+      "description": "The narrow trail emerges from the brush into a small clearing at the forest's edge. The canopy closes overhead, filtering the light to green-gold dimness. The air is cooler here, damp and earthy. The path continues north, forking almost immediately into diverging trails that disappear into the undergrowth. Behind, the trail leads back south through dense brush toward the Hearthstead loop trail.",
+      "area": "Hearthstead Wilds",
+      "terrain": "outdoor",
+      "features": {},
+      "exits": [
+        {
+          "direction": "south",
+          "toTag": "hs_loop_g"
+        },
+        {
+          "direction": "northwest",
+          "toTag": "hs_wilds_2"
+        },
+        {
+          "direction": "northeast",
+          "toTag": "hs_wilds_3"
+        }
+      ]
+    },
+    {
+      "tag": "hs_wilds_2",
+      "name": "Forest Trail",
+      "description": "The forest floor here is carpeted in soft moss that muffles every footstep. The trees are smaller but grow close together, their thin trunks forming a natural fence. Spider webs stretch between the branches, catching the light. The smell of something dead drifts from deeper in the undergrowth. Faint but unmistakable.",
+      "area": "Hearthstead Wilds",
+      "terrain": "outdoor",
+      "features": {},
+      "exits": [
+        {
+          "direction": "southeast",
+          "toTag": "hs_wilds_1"
+        },
+        {
+          "direction": "northwest",
+          "toTag": "hs_wilds_4"
+        }
+      ]
+    },
+    {
+      "tag": "hs_wilds_3",
+      "name": "Forest Trail",
+      "description": "A section of trail through mixed woodland. Birch, oak, and ash grow together, their different heights creating a layered canopy. Shafts of light angle through gaps in the leaves, illuminating drifting motes of pollen.",
+      "area": "Hearthstead Wilds",
+      "terrain": "outdoor",
+      "features": {},
+      "exits": [
+        {
+          "direction": "southwest",
+          "toTag": "hs_wilds_1"
+        },
+        {
+          "direction": "northeast",
+          "toTag": "hs_wilds_5"
+        }
+      ]
+    },
+    {
+      "tag": "hs_wilds_4",
+      "name": "Forest Trail",
+      "description": "The path winds between towering oaks, their branches interlocking overhead to form a living ceiling. Very little light reaches the forest floor. The undergrowth is sparse here, just dead leaves and pale mushrooms.",
+      "area": "Hearthstead Wilds",
+      "terrain": "outdoor",
+      "features": {},
+      "exits": [
+        {
+          "direction": "southeast",
+          "toTag": "hs_wilds_2"
+        },
+        {
+          "direction": "north",
+          "toTag": "hs_wilds_6"
+        }
+      ]
+    },
+    {
+      "tag": "hs_wilds_5",
+      "name": "Forest Trail",
+      "description": "A stretch of woodland where the trees grow thick and old. Their trunks are wide, bark rough and deeply furrowed. Moss covers everything: the ground, the roots, the lower branches. The air is damp and smells of decay. An animal skull lies half-buried in the leaves, picked clean and bleached white by weather.",
+      "area": "Hearthstead Wilds",
+      "terrain": "outdoor",
+      "features": {},
+      "exits": [
+        {
+          "direction": "southwest",
+          "toTag": "hs_wilds_3"
+        },
+        {
+          "direction": "north",
+          "toTag": "hs_wilds_8"
+        }
+      ]
+    },
+    {
+      "tag": "hs_wilds_6",
+      "name": "Forest Trail",
+      "description": "The forest trail is narrow and hemmed in by undergrowth. Ferns and brambles press close on both sides, their fronds brushing against anyone who passes. The canopy overhead filters the light to a green-gold dimness.",
+      "area": "Hearthstead Wilds",
+      "terrain": "outdoor",
+      "features": {},
+      "exits": [
+        {
+          "direction": "south",
+          "toTag": "hs_wilds_4"
+        },
+        {
+          "direction": "east",
+          "toTag": "hs_wilds_7"
+        },
+        {
+          "direction": "northwest",
+          "toTag": "hs_wilds_9"
+        }
+      ]
+    },
+    {
+      "tag": "hs_wilds_7",
+      "name": "Forest Trail",
+      "description": "A stretch of forest where the trees are visibly unhealthy. Bark peels from the trunks in long strips, and the leaves are yellowed and spotted. A faint, sour smell hangs in the air. Something is wrong with this part of the woods.",
+      "area": "Hearthstead Wilds",
+      "terrain": "outdoor",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "hs_wilds_6"
+        },
+        {
+          "direction": "east",
+          "toTag": "hs_wilds_8"
+        },
+        {
+          "direction": "northwest",
+          "toTag": "hs_wilds_10"
+        },
+        {
+          "direction": "northeast",
+          "toTag": "hs_wilds_11"
+        }
+      ]
+    },
+    {
+      "tag": "hs_wilds_8",
+      "name": "Forest Trail",
+      "description": "The trail passes through a grove of ancient trees, their roots rising from the earth in gnarled arches. The spaces between the roots form natural shelters, some deep enough to crawl into. Leaves rustle overhead in a breeze that doesn't reach the ground.",
+      "area": "Hearthstead Wilds",
+      "terrain": "outdoor",
+      "features": {},
+      "exits": [
+        {
+          "direction": "south",
+          "toTag": "hs_wilds_5"
+        },
+        {
+          "direction": "west",
+          "toTag": "hs_wilds_7"
+        },
+        {
+          "direction": "northeast",
+          "toTag": "hs_wilds_12"
+        }
+      ]
+    },
+    {
+      "tag": "hs_wilds_9",
+      "name": "Forest Trail",
+      "description": "A clearing in the trees where a massive oak has fallen, tearing a gap in the canopy. Sunlight pours through the opening, and new growth has erupted from the forest floor: saplings, wildflowers, thick grass. The fallen trunk is covered in shelf fungi. A small cairn of stones has been stacked beside the path, three stones high. Someone marked this spot.",
+      "area": "Hearthstead Wilds",
+      "terrain": "outdoor",
+      "features": {},
+      "exits": [
+        {
+          "direction": "southeast",
+          "toTag": "hs_wilds_6"
+        },
+        {
+          "direction": "northeast",
+          "toTag": "hs_wilds_13"
+        }
+      ]
+    },
+    {
+      "tag": "hs_wilds_10",
+      "name": "Forest Trail",
+      "description": "A section of trail through mixed woodland. Birch, oak, and ash grow together, their different heights creating a layered canopy. Shafts of light angle through gaps in the leaves, illuminating drifting motes of pollen. A tangle of cobwebs stretches between two bushes, thick enough to catch the light. The spider is nowhere to be seen.",
+      "area": "Hearthstead Wilds",
+      "terrain": "outdoor",
+      "features": {},
+      "exits": [
+        {
+          "direction": "southeast",
+          "toTag": "hs_wilds_7"
+        },
+        {
+          "direction": "east",
+          "toTag": "hs_wilds_11"
+        },
+        {
+          "direction": "northeast",
+          "toTag": "hs_wilds_14"
+        }
+      ]
+    },
+    {
+      "tag": "hs_wilds_11",
+      "name": "Forest Trail",
+      "description": "The path winds between towering oaks, their branches interlocking overhead to form a living ceiling. Very little light reaches the forest floor. The undergrowth is sparse here, just dead leaves and pale mushrooms. The bark of a nearby tree has been stripped away at waist height, the exposed wood gouged with deep scratches.",
+      "area": "Hearthstead Wilds",
+      "terrain": "outdoor",
+      "features": {},
+      "exits": [
+        {
+          "direction": "southwest",
+          "toTag": "hs_wilds_7"
+        },
+        {
+          "direction": "west",
+          "toTag": "hs_wilds_10"
+        },
+        {
+          "direction": "northwest",
+          "toTag": "hs_wilds_14"
+        }
+      ]
+    },
+    {
+      "tag": "hs_wilds_12",
+      "name": "Forest Trail",
+      "description": "A stretch of woodland where the trees grow thick and old. Their trunks are wide, bark rough and deeply furrowed. Moss covers everything: the ground, the roots, the lower branches. The air is damp and smells of decay.",
+      "area": "Hearthstead Wilds",
+      "terrain": "outdoor",
+      "features": {},
+      "exits": [
+        {
+          "direction": "southwest",
+          "toTag": "hs_wilds_8"
+        },
+        {
+          "direction": "northwest",
+          "toTag": "hs_wilds_15"
+        }
+      ]
+    },
+    {
+      "tag": "hs_wilds_13",
+      "name": "Forest Trail",
+      "description": "The forest trail is narrow and hemmed in by undergrowth. Ferns and brambles press close on both sides, their fronds brushing against anyone who passes. The canopy overhead filters the light to a green-gold dimness.",
+      "area": "Hearthstead Wilds",
+      "terrain": "outdoor",
+      "features": {},
+      "exits": [
+        {
+          "direction": "southwest",
+          "toTag": "hs_wilds_9"
+        },
+        {
+          "direction": "north",
+          "toTag": "hs_wilds_17"
+        }
+      ]
+    },
+    {
+      "tag": "hs_wilds_14",
+      "name": "Forest Trail",
+      "description": "A stretch of forest where the trees are visibly unhealthy. Bark peels from the trunks in long strips, and the leaves are yellowed and spotted. A faint, sour smell hangs in the air. Something is wrong with this part of the woods. A bird calls sharply from somewhere above, a warning cry, repeated three times before falling silent.",
+      "area": "Hearthstead Wilds",
+      "terrain": "outdoor",
+      "features": {},
+      "exits": [
+        {
+          "direction": "southwest",
+          "toTag": "hs_wilds_10"
+        },
+        {
+          "direction": "southeast",
+          "toTag": "hs_wilds_11"
+        },
+        {
+          "direction": "north",
+          "toTag": "hs_wilds_18"
+        }
+      ]
+    },
+    {
+      "tag": "hs_wilds_15",
+      "name": "Forest Trail",
+      "description": "The trail passes through a grove of ancient trees, their roots rising from the earth in gnarled arches. The spaces between the roots form natural shelters, some deep enough to crawl into. Leaves rustle overhead in a breeze that doesn't reach the ground.",
+      "area": "Hearthstead Wilds",
+      "terrain": "outdoor",
+      "features": {},
+      "exits": [
+        {
+          "direction": "southeast",
+          "toTag": "hs_wilds_12"
+        },
+        {
+          "direction": "north",
+          "toTag": "hs_wilds_19"
+        }
+      ]
+    },
+    {
+      "tag": "hs_wilds_16",
+      "name": "Scenic Overlook",
+      "description": "The trail ends at a rocky outcrop overlooking the western coast. Through a gap in the trees, the sea stretches to the horizon, grey-blue and restless. Arindale's walls are faintly visible to the southwest, tiny at this distance. The rock is flat and sun-warmed, scattered with old bird droppings. This is a dead end. The only path leads back east.",
+      "area": "Hearthstead Wilds",
+      "terrain": "outdoor",
+      "features": {},
+      "exits": [
+        {
+          "direction": "east",
+          "toTag": "hs_wilds_17"
+        }
+      ]
+    },
+    {
+      "tag": "hs_wilds_17",
+      "name": "Forest Trail",
+      "description": "The path crosses a dry streambed, the stones smooth and pale from years of flowing water. The stream has recently dried up. The banks are still damp, and withered watercress clings to the rocks. The smell of something dead drifts from deeper in the undergrowth. Faint but unmistakable.",
+      "area": "Hearthstead Wilds",
+      "terrain": "outdoor",
+      "features": {},
+      "exits": [
+        {
+          "direction": "south",
+          "toTag": "hs_wilds_13"
+        },
+        {
+          "direction": "west",
+          "toTag": "hs_wilds_16"
+        },
+        {
+          "direction": "east",
+          "toTag": "hs_wilds_18"
+        },
+        {
+          "direction": "northeast",
+          "toTag": "hs_wilds_21"
+        }
+      ]
+    },
+    {
+      "tag": "hs_wilds_18",
+      "name": "Forest Trail",
+      "description": "A dip in the trail where water has collected in a shallow, muddy pool. Animal tracks cluster around the edges: deer, fox, something larger with heavy paw prints. The mud smells earthy and rich. A tangle of cobwebs stretches between two bushes, thick enough to catch the light. The spider is nowhere to be seen.",
+      "area": "Hearthstead Wilds",
+      "terrain": "outdoor",
+      "features": {},
+      "exits": [
+        {
+          "direction": "south",
+          "toTag": "hs_wilds_14"
+        },
+        {
+          "direction": "west",
+          "toTag": "hs_wilds_17"
+        },
+        {
+          "direction": "east",
+          "toTag": "hs_wilds_19"
+        },
+        {
+          "direction": "northwest",
+          "toTag": "hs_wilds_21"
+        },
+        {
+          "direction": "northeast",
+          "toTag": "hs_wilds_22"
+        }
+      ]
+    },
+    {
+      "tag": "hs_wilds_19",
+      "name": "Forest Trail",
+      "description": "The forest floor here is carpeted in soft moss that muffles every footstep. The trees are smaller but grow close together, their thin trunks forming a natural fence. Spider webs stretch between the branches, catching the light.",
+      "area": "Hearthstead Wilds",
+      "terrain": "outdoor",
+      "features": {},
+      "exits": [
+        {
+          "direction": "south",
+          "toTag": "hs_wilds_15"
+        },
+        {
+          "direction": "west",
+          "toTag": "hs_wilds_18"
+        },
+        {
+          "direction": "east",
+          "toTag": "hs_wilds_20"
+        },
+        {
+          "direction": "northwest",
+          "toTag": "hs_wilds_22"
+        }
+      ]
+    },
+    {
+      "tag": "hs_wilds_20",
+      "name": "Abandoned Campsite",
+      "description": "The trail widens into a small clearing where someone once made camp. A ring of fire-blackened stones surrounds a pit of cold ashes. A rotting bedroll lies half-unrolled nearby, and an empty waterskin hangs from a branch. Whoever camped here left in a hurry, or didn't leave willingly. The site has an uneasy stillness. This is a dead end; the path leads back west.",
+      "area": "Hearthstead Wilds",
+      "terrain": "outdoor",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "hs_wilds_19"
+        }
+      ]
+    },
+    {
+      "tag": "hs_wilds_21",
+      "name": "Forest Trail",
+      "description": "A stretch of woodland where the trees grow thick and old. Their trunks are wide, bark rough and deeply furrowed. Moss covers everything: the ground, the roots, the lower branches. The air is damp and smells of decay. A tangle of cobwebs stretches between two bushes, thick enough to catch the light. The spider is nowhere to be seen.",
+      "area": "Hearthstead Wilds",
+      "terrain": "outdoor",
+      "features": {},
+      "exits": [
+        {
+          "direction": "southwest",
+          "toTag": "hs_wilds_17"
+        },
+        {
+          "direction": "southeast",
+          "toTag": "hs_wilds_18"
+        },
+        {
+          "direction": "northwest",
+          "toTag": "hs_wilds_23"
+        },
+        {
+          "direction": "northeast",
+          "toTag": "hs_wilds_24"
+        }
+      ]
+    },
+    {
+      "tag": "hs_wilds_22",
+      "name": "Forest Trail",
+      "description": "The forest trail is narrow and hemmed in by undergrowth. Ferns and brambles press close on both sides, their fronds brushing against anyone who passes. The canopy overhead filters the light to a green-gold dimness.",
+      "area": "Hearthstead Wilds",
+      "terrain": "outdoor",
+      "features": {},
+      "exits": [
+        {
+          "direction": "southwest",
+          "toTag": "hs_wilds_18"
+        },
+        {
+          "direction": "southeast",
+          "toTag": "hs_wilds_19"
+        },
+        {
+          "direction": "northwest",
+          "toTag": "hs_wilds_24"
+        }
+      ]
+    },
+    {
+      "tag": "hs_wilds_23",
+      "name": "Forest Trail",
+      "description": "A stretch of forest where the trees are visibly unhealthy. Bark peels from the trunks in long strips, and the leaves are yellowed and spotted. A faint, sour smell hangs in the air. Something is wrong with this part of the woods.",
+      "area": "Hearthstead Wilds",
+      "terrain": "outdoor",
+      "features": {},
+      "exits": [
+        {
+          "direction": "southeast",
+          "toTag": "hs_wilds_21"
+        },
+        {
+          "direction": "east",
+          "toTag": "hs_wilds_24"
+        }
+      ]
+    },
+    {
+      "tag": "hs_wilds_24",
+      "name": "Forest Trail",
+      "description": "The trail passes through a grove of ancient trees, their roots rising from the earth in gnarled arches. The spaces between the roots form natural shelters, some deep enough to crawl into. Leaves rustle overhead in a breeze that doesn't reach the ground. A patch of mushrooms grows in a ring at the base of a tree, their caps an unhealthy shade of purple.",
+      "area": "Hearthstead Wilds",
+      "terrain": "outdoor",
+      "features": {},
+      "exits": [
+        {
+          "direction": "southwest",
+          "toTag": "hs_wilds_21"
+        },
+        {
+          "direction": "southeast",
+          "toTag": "hs_wilds_22"
+        },
+        {
+          "direction": "west",
+          "toTag": "hs_wilds_23"
+        },
+        {
+          "direction": "north",
+          "toTag": "hs_wilds_25"
+        },
+        {
+          "direction": "east",
+          "toTag": "hs_wilds_26"
+        }
+      ]
+    },
+    {
+      "tag": "hs_wilds_25",
+      "name": "Forest Edge",
+      "description": "The trees thin here, giving way to rocky ground and scrubby bushes. The air changes, growing cooler and carrying a faint mineral smell from somewhere ahead. The forest canopy opens to grey sky. To the north, the hillside rises steeply, and a dark opening gapes in the rock face. Claw marks score the stone around the entrance. The surrounding trees have been stripped of bark at head height.",
+      "area": "Hearthstead Wilds",
+      "terrain": "outdoor",
+      "features": {},
+      "exits": [
+        {
+          "direction": "south",
+          "toTag": "hs_wilds_24"
+        },
+        {
+          "direction": "north",
+          "toTag": "hs_cave_c"
+        }
+      ]
+    },
+    {
+      "tag": "hs_wilds_26",
+      "name": "Overgrown Path",
+      "description": "A narrow side trail nearly swallowed by undergrowth. Brambles and ferns press close, forcing a slow push through tangled vegetation. The ground is soft and damp, scattered with fallen leaves that muffle every footstep. Animal tracks cross the path. Something came this way recently. The trail feels forgotten, as if it once led somewhere but has been abandoned to the forest.",
+      "area": "Hearthstead Wilds",
+      "terrain": "outdoor",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "hs_wilds_24"
+        }
+      ]
+    },
+    {
+      "tag": "hs_cave_c",
+      "name": "Gaping Cave Mouth",
+      "description": "A wide, dark opening in the hillside, framed by rough stone and curtained with hanging moss. The cave mouth is large enough to walk through upright, its edges scored with deep claw marks, old and new overlapping. A draft of cold, damp air pushes outward, carrying the smell of wet stone and something rank underneath. Bones of rabbit, deer, and something larger are scattered near the entrance. The darkness inside is absolute.",
+      "area": "Hearthstead Wilds",
+      "terrain": "outdoor",
+      "features": {},
+      "exits": [
+        {
+          "direction": "south",
+          "toTag": "hs_wilds_25"
+        },
+        {
+          "direction": "northwest",
+          "toTag": "hs_cave_1"
+        },
+        {
+          "direction": "northeast",
+          "toTag": "hs_cave_9"
+        }
+      ]
+    },
+    {
+      "tag": "hs_cave_1",
+      "name": "Cave Passage",
+      "description": "The cave narrows to a tight squeeze between two rock walls. The stone is worn smooth here, as if something large passes through regularly. The air smells of damp fur and something rank underneath.",
+      "area": "Hearthstead Wilds",
+      "terrain": "underground",
+      "features": {},
+      "exits": [
+        {
+          "direction": "southeast",
+          "toTag": "hs_cave_c"
+        },
+        {
+          "direction": "northwest",
+          "toTag": "hs_cave_2"
+        }
+      ]
+    },
+    {
+      "tag": "hs_cave_2",
+      "name": "Cave Passage",
+      "description": "A stretch of passage where water seeps from the ceiling, forming a shallow stream that runs along the floor. The constant dripping echoes off the walls, making it hard to hear anything else. The stone is stained dark with mineral deposits.",
+      "area": "Hearthstead Wilds",
+      "terrain": "underground",
+      "features": {},
+      "exits": [
+        {
+          "direction": "southeast",
+          "toTag": "hs_cave_1"
+        },
+        {
+          "direction": "north",
+          "toTag": "hs_cave_3"
+        }
+      ]
+    },
+    {
+      "tag": "hs_cave_3",
+      "name": "Cave Passage",
+      "description": "A wider section of cave where the ceiling rises to a comfortable height. Stalactites hang overhead, some thick as a man's arm. The floor is littered with fallen stone fragments and the scattered bones of small animals. A pool of water has collected in a depression in the floor, perfectly still and black as ink in the dim light.",
+      "area": "Hearthstead Wilds",
+      "terrain": "underground",
+      "features": {},
+      "exits": [
+        {
+          "direction": "south",
+          "toTag": "hs_cave_2"
+        },
+        {
+          "direction": "northwest",
+          "toTag": "hs_cave_4"
+        },
+        {
+          "direction": "northeast",
+          "toTag": "hs_cave_5"
+        }
+      ]
+    },
+    {
+      "tag": "hs_cave_4",
+      "name": "Cave Passage",
+      "description": "The passage slopes downward at a noticeable angle, the floor rough and uneven. Loose gravel shifts underfoot. The air grows warmer and thicker the deeper the passage descends. A faint animal musk taints every breath.",
+      "area": "Hearthstead Wilds",
+      "terrain": "underground",
+      "features": {},
+      "exits": [
+        {
+          "direction": "southeast",
+          "toTag": "hs_cave_3"
+        },
+        {
+          "direction": "north",
+          "toTag": "hs_cave_6"
+        }
+      ]
+    },
+    {
+      "tag": "hs_cave_5",
+      "name": "Cave Passage",
+      "description": "A junction in the cave where passages branch in different directions. The stone here is lighter in color, veined with quartz that catches any available light. Scratch marks on the walls suggest frequent passage of something with claws.",
+      "area": "Hearthstead Wilds",
+      "terrain": "underground",
+      "features": {},
+      "exits": [
+        {
+          "direction": "southwest",
+          "toTag": "hs_cave_3"
+        },
+        {
+          "direction": "southeast",
+          "toTag": "hs_cave_7"
+        },
+        {
+          "direction": "northeast",
+          "toTag": "hs_cave_17"
+        }
+      ]
+    },
+    {
+      "tag": "hs_cave_6",
+      "name": "Cave Passage",
+      "description": "A narrow passage carved through rough stone. The walls are damp to the touch, slick with condensation and the faint residue of minerals. The ceiling is low enough to force a crouch in places. Water drips somewhere ahead. A gnawed bone lies in the corner, too large to be a rabbit. Tooth marks score the surface.",
+      "area": "Hearthstead Wilds",
+      "terrain": "underground",
+      "features": {},
+      "exits": [
+        {
+          "direction": "south",
+          "toTag": "hs_cave_4"
+        },
+        {
+          "direction": "northeast",
+          "toTag": "hs_cave_b"
+        }
+      ]
+    },
+    {
+      "tag": "hs_cave_7",
+      "name": "Cave Passage",
+      "description": "The tunnel widens slightly here, the rough stone walls giving way to a small natural chamber. The floor is uneven, scattered with loose rocks and patches of slick mud. The air is cool and still.",
+      "area": "Hearthstead Wilds",
+      "terrain": "underground",
+      "features": {},
+      "exits": [
+        {
+          "direction": "northwest",
+          "toTag": "hs_cave_5"
+        },
+        {
+          "direction": "south",
+          "toTag": "hs_cave_8"
+        }
+      ]
+    },
+    {
+      "tag": "hs_cave_8",
+      "name": "Cave Passage",
+      "description": "A twisting passage that turns sharply, the stone walls bearing deep scratches. Claw marks, scored into the rock by something large and powerful. The marks are old, the edges worn smooth, but fresh scrapes overlay them.",
+      "area": "Hearthstead Wilds",
+      "terrain": "underground",
+      "features": {},
+      "exits": [
+        {
+          "direction": "north",
+          "toTag": "hs_cave_7"
+        },
+        {
+          "direction": "southeast",
+          "toTag": "hs_cave_9"
+        }
+      ]
+    },
+    {
+      "tag": "hs_cave_9",
+      "name": "Cave Passage",
+      "description": "The cave narrows to a tight squeeze between two rock walls. The stone is worn smooth here, as if something large passes through regularly. The air smells of damp fur and something rank underneath.",
+      "area": "Hearthstead Wilds",
+      "terrain": "underground",
+      "features": {},
+      "exits": [
+        {
+          "direction": "southwest",
+          "toTag": "hs_cave_c"
+        },
+        {
+          "direction": "northwest",
+          "toTag": "hs_cave_8"
+        },
+        {
+          "direction": "southeast",
+          "toTag": "hs_cave_10"
+        }
+      ]
+    },
+    {
+      "tag": "hs_cave_10",
+      "name": "Cave Passage",
+      "description": "The cave narrows to a tight squeeze between two rock walls. The stone is worn smooth here, as if something large passes through regularly. The air smells of damp fur and something rank underneath.",
+      "area": "Hearthstead Wilds",
+      "terrain": "underground",
+      "features": {},
+      "exits": [
+        {
+          "direction": "northwest",
+          "toTag": "hs_cave_9"
+        },
+        {
+          "direction": "east",
+          "toTag": "hs_cave_11"
+        }
+      ]
+    },
+    {
+      "tag": "hs_cave_11",
+      "name": "Cave Passage",
+      "description": "A twisting passage that turns sharply, the stone walls bearing deep scratches. Claw marks, scored into the rock by something large and powerful. The marks are old, the edges worn smooth, but fresh scrapes overlay them.",
+      "area": "Hearthstead Wilds",
+      "terrain": "underground",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "hs_cave_10"
+        },
+        {
+          "direction": "northwest",
+          "toTag": "hs_cave_12"
+        }
+      ]
+    },
+    {
+      "tag": "hs_cave_12",
+      "name": "Cave Passage",
+      "description": "The tunnel widens slightly here, the rough stone walls giving way to a small natural chamber. The floor is uneven, scattered with loose rocks and patches of slick mud. The air is cool and still. The echo of footsteps changes here. The space ahead must be larger, or the passage branches somewhere close.",
+      "area": "Hearthstead Wilds",
+      "terrain": "underground",
+      "features": {},
+      "exits": [
+        {
+          "direction": "southeast",
+          "toTag": "hs_cave_11"
+        },
+        {
+          "direction": "northeast",
+          "toTag": "hs_cave_13"
+        }
+      ]
+    },
+    {
+      "tag": "hs_cave_13",
+      "name": "Cave Passage",
+      "description": "A narrow passage carved through rough stone. The walls are damp to the touch, slick with condensation and the faint residue of minerals. The ceiling is low enough to force a crouch in places. Water drips somewhere ahead. Bits of animal fur cling to a rough protrusion in the wall where something has squeezed past repeatedly.",
+      "area": "Hearthstead Wilds",
+      "terrain": "underground",
+      "features": {},
+      "exits": [
+        {
+          "direction": "southwest",
+          "toTag": "hs_cave_12"
+        },
+        {
+          "direction": "east",
+          "toTag": "hs_cave_k"
+        },
+        {
+          "direction": "northwest",
+          "toTag": "hs_cave_14"
+        }
+      ]
+    },
+    {
+      "tag": "hs_cave_14",
+      "name": "Cave Passage",
+      "description": "A junction in the cave where passages branch in different directions. The stone here is lighter in color, veined with quartz that catches any available light. Scratch marks on the walls suggest frequent passage of something with claws.",
+      "area": "Hearthstead Wilds",
+      "terrain": "underground",
+      "features": {},
+      "exits": [
+        {
+          "direction": "southeast",
+          "toTag": "hs_cave_13"
+        },
+        {
+          "direction": "north",
+          "toTag": "hs_cave_15"
+        }
+      ]
+    },
+    {
+      "tag": "hs_cave_15",
+      "name": "Cave Passage",
+      "description": "The passage slopes downward at a noticeable angle, the floor rough and uneven. Loose gravel shifts underfoot. The air grows warmer and thicker the deeper the passage descends. A faint animal musk taints every breath.",
+      "area": "Hearthstead Wilds",
+      "terrain": "underground",
+      "features": {},
+      "exits": [
+        {
+          "direction": "south",
+          "toTag": "hs_cave_14"
+        },
+        {
+          "direction": "northwest",
+          "toTag": "hs_cave_16"
+        }
+      ]
+    },
+    {
+      "tag": "hs_cave_16",
+      "name": "Cave Passage",
+      "description": "A wider section of cave where the ceiling rises to a comfortable height. Stalactites hang overhead, some thick as a man's arm. The floor is littered with fallen stone fragments and the scattered bones of small animals. A draft of cold air moves through the passage, carrying the smell of wet stone and something organic.",
+      "area": "Hearthstead Wilds",
+      "terrain": "underground",
+      "features": {},
+      "exits": [
+        {
+          "direction": "southeast",
+          "toTag": "hs_cave_15"
+        },
+        {
+          "direction": "west",
+          "toTag": "hs_cave_17"
+        }
+      ]
+    },
+    {
+      "tag": "hs_cave_17",
+      "name": "Cave Passage",
+      "description": "A stretch of passage where water seeps from the ceiling, forming a shallow stream that runs along the floor. The constant dripping echoes off the walls, making it hard to hear anything else. The stone is stained dark with mineral deposits.",
+      "area": "Hearthstead Wilds",
+      "terrain": "underground",
+      "features": {},
+      "exits": [
+        {
+          "direction": "southwest",
+          "toTag": "hs_cave_5"
+        },
+        {
+          "direction": "east",
+          "toTag": "hs_cave_16"
+        }
+      ]
+    },
+    {
+      "tag": "hs_cave_k",
+      "name": "Goblin's Den",
+      "description": "A foul-smelling chamber littered with crude furnishings. A pile of stained rags serves as a bed, a collection of stolen trinkets is heaped in one corner, and gnawed bones are scattered across the floor. The walls are smeared with filth and scratched with crude markings. The air is thick with the stench of unwashed goblin and rotten food. Something has been living here for a long time, and it has no intention of sharing.",
+      "area": "Hearthstead Wilds",
+      "terrain": "underground",
+      "features": {},
+      "exits": [
+        {
+          "direction": "west",
+          "toTag": "hs_cave_13"
+        }
+      ]
+    },
+    {
+      "tag": "hs_cave_b",
+      "name": "Bone-Littered Burrow",
+      "description": "A large natural chamber at the deepest point of the cave. The floor is carpeted with a nest of shredded bark, matted fur, and bones, the accumulated debris of a large predator's den. The walls bear deep gouges from massive claws. A strange, dark growth clings to the stone in patches, pulsing faintly with a sickly luminescence. The air is thick with animal musk and a sweet, rotten smell that makes the eyes water. Whatever lives here is large, aggressive, and very ill.",
+      "area": "Hearthstead Wilds",
+      "terrain": "underground",
+      "features": {},
+      "exits": [
+        {
+          "direction": "southwest",
+          "toTag": "hs_cave_6"
+        }
+      ]
+    }
+  ]
+}

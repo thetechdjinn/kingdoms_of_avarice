@@ -1,0 +1,67 @@
+{
+  "version": "1.0",
+  "exported_at": "2026-03-15T13:33:32.869Z",
+  "type": "talents",
+  "data": [
+    {
+      "talent_id": "warrior_power_strike",
+      "display_name": "Power Strike",
+      "description": "Increases melee damage by 10%.",
+      "class_restriction": "warrior_01",
+      "essence_cost": 100,
+      "prerequisite_level": 2,
+      "prerequisite_talents": {},
+      "effect_modifiers": {
+        "melee_damage": 1.1
+      }
+    },
+    {
+      "talent_id": "warrior_iron_skin",
+      "display_name": "Iron Skin",
+      "description": "Reduces physical damage taken by 5%.",
+      "class_restriction": "warrior_01",
+      "essence_cost": 150,
+      "prerequisite_level": 4,
+      "prerequisite_talents": {},
+      "effect_modifiers": {
+        "physical_damage_reduction": 0.05
+      }
+    },
+    {
+      "talent_id": "mage_arcane_focus",
+      "display_name": "Arcane Focus",
+      "description": "Increases spell damage by 15%.",
+      "class_restriction": "mage_01",
+      "essence_cost": 120,
+      "prerequisite_level": 2,
+      "prerequisite_talents": {},
+      "effect_modifiers": {
+        "spell_damage": 1.15
+      }
+    },
+    {
+      "talent_id": "mage_mana_efficiency",
+      "display_name": "Mana Efficiency",
+      "description": "Reduces mana cost of spells by 10%.",
+      "class_restriction": "mage_01",
+      "essence_cost": 200,
+      "prerequisite_level": 5,
+      "prerequisite_talents": {},
+      "effect_modifiers": {
+        "mana_cost_reduction": 0.1
+      }
+    },
+    {
+      "talent_id": "rogue_silent_step",
+      "display_name": "Silent Step",
+      "description": "Increases stealth effectiveness by 20%.",
+      "class_restriction": "rogue_01",
+      "essence_cost": 100,
+      "prerequisite_level": 2,
+      "prerequisite_talents": {},
+      "effect_modifiers": {
+        "stealth_bonus": 1.2
+      }
+    }
+  ]
+}

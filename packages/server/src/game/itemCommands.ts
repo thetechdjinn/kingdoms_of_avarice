@@ -9,7 +9,7 @@ import * as craftingRepo from '../db/repositories/craftingRepository.js';
 import * as characterRepo from '../db/repositories/characterRepository.js';
 import * as settingsRepo from '../db/repositories/settingsRepository.js';
 import { withTransaction } from '../db/index.js';
-import { calculateEncumbranceRatio, getEquipmentCombatStats } from './combatStats.js';
+import { calculateEncumbranceRatio, getEquipmentCombatStats, invalidateEquipmentCache } from './combatStats.js';
 import { isHidden, breakStealth } from './stealth/stealthState.js';
 import { rollStealthCheck } from './stealth/stealthCheck.js';
 import { calculateStealth, calculatePerception } from './stats/secondaryStats.js';
@@ -197,6 +197,7 @@ async function pickUpItem(
       socket.characterId!
     );
   }
+  invalidateEquipmentCache(socket.characterId!);
 
   const itemName = getItemName(item);
   
@@ -590,6 +591,7 @@ async function dropItem(
       currentRoomId
     );
   }
+  invalidateEquipmentCache(socket.characterId!);
 
   const itemName = getItemName(item);
 
@@ -1157,6 +1159,7 @@ export async function handleWield(
 
   // Equip the new weapon
   await itemRepo.updateInstanceLocation(item.id, ItemLocationType.EQUIPPED, socket.characterId!, EquipmentSlot.MAIN_HAND);
+  invalidateEquipmentCache(socket.characterId!);
 
   const itemName = template.name;
   broadcastToRoom(currentRoomId, colors.green(`${colors.red(socket.username)} wields ${itemName}.`), socket.playerId);
@@ -1245,6 +1248,7 @@ export async function handleWear(
 
   // Equip the item
   await itemRepo.updateInstanceLocation(item.id, ItemLocationType.EQUIPPED, socket.characterId!, targetSlot);
+  invalidateEquipmentCache(socket.characterId!);
 
   const itemName = template.name;
   broadcastToRoom(currentRoomId, colors.green(`${colors.red(socket.username)} wears ${itemName}.`), socket.playerId);
@@ -1298,6 +1302,7 @@ export async function handleRemove(
 
   // Move to inventory
   await itemRepo.updateInstanceLocation(item.id, ItemLocationType.PLAYER, socket.characterId!);
+  invalidateEquipmentCache(socket.characterId!);
 
   const itemName = getItemName(item);
   broadcastToRoom(currentRoomId, colors.green(`${colors.red(socket.username)} removes ${itemName}.`), socket.playerId);
@@ -2670,6 +2675,9 @@ export async function dropAllItemsOnDeath(characterId: number, roomId: number): 
     // Move item to room (unequip if equipped)
     await itemRepo.updateInstanceLocation(item.id, ItemLocationType.ROOM, roomId);
   }
+
+  // Invalidate equipment cache since all gear was dropped
+  invalidateEquipmentCache(characterId);
 
   // Get character currency and drop it
   const character = await characterRepo.findCharacterById(characterId);
