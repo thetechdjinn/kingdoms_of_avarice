@@ -541,6 +541,7 @@ async function handleDebuffSpell(
 
     // Clear resting state
     socket.regenState.enhancedRegen.clear();
+    npcTarget.regenState.enhancedRegen.clear();
 
     if (socket.exitTimer) {
       clearTimeout(socket.exitTimer);
@@ -567,7 +568,7 @@ async function handleDebuffSpell(
     const durationStr = formatDuration(durationMs);
     return {
       type: MessageType.OUTPUT,
-      message: `${colors.yellow('*COMBAT ENGAGED*')} You cast ${colors.cyan(spell.name.toLowerCase())} at ${npcDisplayName}. ${effectResult.message} (${durationStr})`,
+      message: `${colors.yellow('*COMBAT ENGAGED*')} You cast ${colors.cyan(spell.name.toLowerCase())} at ${colors.magenta(npcDisplayName)}. ${effectResult.message} (${durationStr})`,
     };
   }
 
@@ -604,11 +605,14 @@ async function handleDebuffSpell(
   // Deduct mana (only after successful effect application)
   socket.vitals.resource = (socket.vitals.resource ?? 0) - spell.manaCost;
 
-  // Combat break: non-offensive spells break combat
+  // Combat break: non-offensive spells break existing combat before establishing new engagement
   const hadCombatTargets = socket.combatState.targets.size > 0;
   if (hadCombatTargets) {
     breakCasterCombat(socket);
   }
+
+  // Establish mutual combat targets (consistent with NPC debuff path)
+  socket.combatState.targets.add(target!.playerId);
 
   // Set combat flags if this is an aggressive action
   socket.regenState.inCombat = true;

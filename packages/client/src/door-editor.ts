@@ -880,6 +880,12 @@ async function saveDoor(): Promise<void> {
 
   const doorData = gatherFormData();
 
+  // Validate level range: max must be >= min when both are set
+  if (doorData.requiredLevel && doorData.maxLevel && doorData.maxLevel < doorData.requiredLevel) {
+    alert(`Max level (${doorData.maxLevel}) cannot be less than min level (${doorData.requiredLevel})`);
+    return;
+  }
+
   try {
     const response = await fetch(`/api/doors/${selectedDoorId}`, {
       method: 'PUT',

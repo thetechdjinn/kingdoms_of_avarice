@@ -866,8 +866,12 @@ export async function reloadNpcTemplates(): Promise<number> {
   let spawned = 0;
   for (const template of templates) {
     if (template.spawnRoomId && !templatesWithInstances.has(template.id)) {
-      await spawnNpcFromTemplate(template, template.spawnRoomId);
-      spawned++;
+      try {
+        await spawnNpcFromTemplate(template, template.spawnRoomId);
+        spawned++;
+      } catch (error) {
+        console.error(`[NPC Manager] Failed to spawn template ${template.id} (${template.name}) during reload:`, error);
+      }
     }
   }
   if (spawned > 0) {
