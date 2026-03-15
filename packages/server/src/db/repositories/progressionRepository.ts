@@ -1002,7 +1002,14 @@ export async function updateCharacterProgression(
     FROM updated`,
     values
   );
-  return result.rows[0] ? dbToCharacterProgressionWithLevel(result.rows[0]) : null;
+  const progression = result.rows[0] ? dbToCharacterProgressionWithLevel(result.rows[0]) : null;
+  // Update cache with fresh data from the write (prevents stale reads)
+  if (progression) {
+    progressionCache.set(characterId, { data: progression, cachedAt: Date.now() });
+  } else {
+    progressionCache.delete(characterId);
+  }
+  return progression;
 }
 
 /**
