@@ -17,6 +17,9 @@ import { applyEffect, getEffectDefinition, formatDuration } from './statusEffect
 import { isOnCooldown, startCooldown, getCooldownMessage } from './cooldownTracker.js';
 import { isPlayerDropped, isPlayerDead, clearDeathState } from './damageHandler.js';
 import { findPlayerInRoom } from './playerUtils.js';
+import { findNpcInRoom } from './npcManager.js';
+import type { NpcCombatInstance } from './npcManager.js';
+import { withNpcName, withNpcNameCapitalized } from '../utils/textFormat.js';
 import { isStealthing, breakStealth } from './stealth/stealthState.js';
 import { breakCasterCombat } from './combatCommands.js';
 
@@ -144,12 +147,74 @@ async function handleOffensiveSpell(
   const targetName = args.join(' ');
   const currentRoomId = getPlayerLocation(socket.playerId);
 
-  // Find the target (respects stealth - can't target what you can't see)
+  // Find the target — try players first, then NPCs
   const target = findPlayerInRoom(targetName, currentRoomId, connectedPlayers, socket.playerId, socket.canSeeHidden);
-  if (!target) {
+  const npcTarget = !target ? findNpcInRoom(targetName, currentRoomId) : null;
+
+  if (!target && !npcTarget) {
     return { type: MessageType.ERROR, message: `You don't see ${targetName} here.` };
   }
 
+  // NPC target
+  if (npcTarget) {
+    if (npcTarget.vitals.hp <= 0 || npcTarget.isCorpse) {
+      return { type: MessageType.ERROR, message: `${withNpcNameCapitalized(npcTarget.entityName, npcTarget.isProperName)} is already dead.` };
+    }
+
+    // Set up spell casting state
+    socket.combatState.combatAction = 'spell';
+    socket.combatState.activeSpell = {
+      spellId: spell.id,
+      spellName: spell.name,
+      mnemonic: spell.mnemonic,
+      manaCost: spell.manaCost,
+      damageDice: spell.damageDice || '1d4',
+      damageScalingStat: spell.damageScalingStat,
+      damageScalingFactor: spell.damageScalingFactor,
+    };
+
+    // Add NPC to targets and vice versa
+    if (!socket.combatState.targets.has(npcTarget.entityId)) {
+      socket.combatState.targets.add(npcTarget.entityId);
+    }
+    npcTarget.combatState.targets.add(socket.playerId);
+
+    // Set combat flags
+    socket.regenState.inCombat = true;
+    npcTarget.regenState.inCombat = true;
+    npcTarget.behaviorState = 'combat';
+
+    // Clear resting state
+    socket.regenState.enhancedRegen.clear();
+
+    if (socket.exitTimer) {
+      clearTimeout(socket.exitTimer);
+      socket.exitTimer = undefined;
+    }
+
+    sendVitals(socket);
+
+    // Break stealth
+    if (isStealthing(socket)) {
+      breakStealth(socket, 'spell_cast', true);
+    }
+
+    const npcDisplayName = withNpcName(npcTarget.entityName, npcTarget.isProperName);
+    broadcastToRoom(
+      currentRoomId,
+      `${socket.username} begins casting ${spell.name.toLowerCase()} at ${npcDisplayName}.`,
+      socket.playerId
+    );
+
+    startCooldown(socket, spell.mnemonic, 'use');
+
+    return {
+      type: MessageType.OUTPUT,
+      message: colors.yellow('*COMBAT ENGAGED*'),
+    };
+  }
+
+  // Player target
   // Set up spell casting state
   socket.combatState.combatAction = 'spell';
   socket.combatState.activeSpell = {
@@ -163,37 +228,37 @@ async function handleOffensiveSpell(
   };
 
   // Add target if not already in combat with them
-  if (!socket.combatState.targets.has(target.playerId)) {
-    socket.combatState.targets.add(target.playerId);
+  if (!socket.combatState.targets.has(target!.playerId)) {
+    socket.combatState.targets.add(target!.playerId);
   }
 
   // Set combat flags
   socket.regenState.inCombat = true;
-  target.regenState.inCombat = true;
+  target!.regenState.inCombat = true;
 
   // Clear resting state
   socket.regenState.enhancedRegen.clear();
-  target.regenState.enhancedRegen.clear();
+  target!.regenState.enhancedRegen.clear();
 
   // Cancel meditation for both players if they were meditating
   if (socket.exitTimer) {
     clearTimeout(socket.exitTimer);
     socket.exitTimer = undefined;
   }
-  if (target.exitTimer) {
-    clearTimeout(target.exitTimer);
-    target.exitTimer = undefined;
+  if (target!.exitTimer) {
+    clearTimeout(target!.exitTimer);
+    target!.exitTimer = undefined;
   }
 
   // Update vitals to reflect status change (removes resting/meditating from statline)
   sendVitals(socket);
-  sendVitals(target);
+  sendVitals(target!);
 
   // Broadcast to room (exclude both caster and target - they get personalized messages)
   broadcastToRoom(
     currentRoomId,
-    `${socket.username} begins casting ${spell.name.toLowerCase()} at ${target.username}.`,
-    [socket.playerId, target.playerId]
+    `${socket.username} begins casting ${spell.name.toLowerCase()} at ${target!.username}.`,
+    [socket.playerId, target!.playerId]
   );
 
   // Notify target
@@ -202,14 +267,14 @@ async function handleOffensiveSpell(
     payload: `${colors.combatAttacker(socket.username)} begins casting ${colors.cyan(spell.name.toLowerCase())} at you!`,
     timestamp: Date.now(),
   };
-  target.send(JSON.stringify(targetMessage));
+  target!.send(JSON.stringify(targetMessage));
 
   // Start cooldown on use (offensive spells initiate combat, cooldown starts now)
   startCooldown(socket, spell.mnemonic, 'use');
 
   return {
     type: MessageType.OUTPUT,
-    message: `${colors.yellow('*COMBAT ENGAGED*')} You begin casting ${colors.cyan(spell.name.toLowerCase())} at ${colors.combatDefender(target.username)}!`,
+    message: `${colors.yellow('*COMBAT ENGAGED*')} You begin casting ${colors.cyan(spell.name.toLowerCase())} at ${colors.combatDefender(target!.username)}!`,
   };
 }
 
@@ -430,6 +495,11 @@ async function handleDebuffSpell(
   // Find the target player (respects stealth - can't target what you can't see)
   const target = findPlayerInRoom(targetName, currentRoomId, connectedPlayers, socket.playerId, socket.canSeeHidden);
   if (!target) {
+    // Check if targeting an NPC — debuffs don't apply to NPCs yet
+    const npcTarget = findNpcInRoom(targetName, currentRoomId);
+    if (npcTarget && npcTarget.vitals.hp > 0 && !npcTarget.isCorpse) {
+      return { type: MessageType.ERROR, message: `${spell.name} has no effect on ${withNpcName(npcTarget.entityName, npcTarget.isProperName)}.` };
+    }
     return { type: MessageType.ERROR, message: `You don't see ${targetName} here.` };
   }
 
