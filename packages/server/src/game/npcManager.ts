@@ -818,6 +818,11 @@ export function checkHostileAggro(
     // Skip if player is hidden and NPC can't see hidden
     if (player.stealthMode === 'hidden' && !npc.canSeeHidden) continue;
 
+    // Reset hostility timer when merchant re-aggros
+    if (isAngryMerchant) {
+      setMerchantHostile((player as AuthenticatedSocket).characterId!, npc.templateId);
+    }
+
     initiateAggro(npc, player, roomId);
   }
 }
