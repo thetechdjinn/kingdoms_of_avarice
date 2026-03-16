@@ -114,7 +114,7 @@ interface LevelRow {
       const res = await fetch('/api/progression-table', { credentials: 'include' });
       const data = await res.json();
       if (data.success) {
-        levels = data.levels;
+        levels = (data.levels as LevelRow[]).sort((a, b) => a.level - b.level);
         renderTable();
       } else {
         showStatus(data.message || 'Failed to fetch progression table', 'error');

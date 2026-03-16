@@ -299,6 +299,7 @@ export async function awardXp(characterId: number, amount: number): Promise<bool
 
     // Sync in-memory from the authoritative DB result
     progression.std_xp = result.std_xp;
+    progression.level = result.level;
   } catch (error) {
     console.error(`[Progression] Failed to persist XP award for character ${characterId}:`, error);
     return false;
