@@ -2541,10 +2541,6 @@ function handleHelp(userRoles: Role[], category?: string): CommandResponse {
     );
 
     if (section) {
-      // Stealth has its own detailed help page — redirect
-      if (section.keyword === 'stealth') {
-        return getStealthHelp();
-      }
       const lines = [
         colors.boldYellow(`${section.title}:`),
         '',

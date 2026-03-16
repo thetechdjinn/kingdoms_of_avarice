@@ -284,53 +284,51 @@ export function processGameEvent(
  * Updates in-memory state and persists to DB.
  * Returns false if progression not loaded or amount <= 0.
  */
-export async function awardXp(characterId: number, amount: number): Promise<boolean> {
+async function awardProgression(
+  characterId: number,
+  amount: number,
+  persistFn: (id: number, amt: number) => Promise<CharacterProgression | null>,
+  syncFn: (progression: CharacterProgression, result: CharacterProgression) => void,
+  label: string
+): Promise<boolean> {
   if (typeof amount !== 'number' || !isFinite(amount) || amount <= 0) return false;
 
   const progression = characterProgressions.get(characterId);
   if (!progression) return false;
 
   try {
-    const result = await progressionRepo.incrementStdXp(characterId, amount);
+    const result = await persistFn(characterId, amount);
     if (!result) {
       console.error(`[Progression] No progression row found in DB for character ${characterId}`);
       return false;
     }
 
     // Sync in-memory from the authoritative DB result
-    progression.std_xp = result.std_xp;
-    progression.level = result.level;
+    syncFn(progression, result);
   } catch (error) {
-    console.error(`[Progression] Failed to persist XP award for character ${characterId}:`, error);
+    console.error(`[Progression] Failed to persist ${label} for character ${characterId}:`, error);
     return false;
   }
 
   return true;
 }
 
+export async function awardXp(characterId: number, amount: number): Promise<boolean> {
+  return awardProgression(
+    characterId, amount,
+    progressionRepo.incrementStdXp,
+    (prog, result) => { prog.std_xp = result.std_xp; prog.level = result.level; },
+    'XP award'
+  );
+}
+
 export async function awardEssence(characterId: number, amount: number): Promise<boolean> {
-  if (typeof amount !== 'number' || !isFinite(amount) || amount <= 0) return false;
-
-  const progression = characterProgressions.get(characterId);
-  if (!progression) return false;
-
-  // Persist to DB first with atomic increment to avoid race conditions
-  try {
-    const result = await progressionRepo.incrementEssenceWallet(characterId, amount);
-    if (!result) {
-      console.error(`[Progression] No progression row found in DB for character ${characterId}`);
-      return false;
-    }
-
-    // Sync in-memory from the authoritative DB result
-    progression.essence_wallet = result.essence_wallet;
-    progression.total_essence_earned = result.total_essence_earned;
-  } catch (error) {
-    console.error(`[Progression] Failed to persist essence award for character ${characterId}:`, error);
-    return false;
-  }
-
-  return true;
+  return awardProgression(
+    characterId, amount,
+    progressionRepo.incrementEssenceWallet,
+    (prog, result) => { prog.essence_wallet = result.essence_wallet; prog.total_essence_earned = result.total_essence_earned; },
+    'essence award'
+  );
 }
 
 // ============================================================================
