@@ -6,6 +6,7 @@ import { AuthenticatedSocket, connectedPlayers, sendVitals, sendMessage, broadca
 import { colors } from '../utils/colors.js';
 import * as itemRepo from '../db/repositories/itemRepository.js';
 import { isProgressionCommand, processProgressionCommand, getProgressionHelpText } from './progressionCommands.js';
+import { getNpcDisplayNames, getPlayersInRoom } from './commands.js';
 import { initializeDoorStates } from '../services/doorStateManager.js';
 import {
   applyEffect,
@@ -58,6 +59,7 @@ import * as questRepo from '../db/repositories/questRepository.js';
 import { reloadQuests, getQuestByTag, getQuestById as getCachedQuest, getAllCachedQuests, grantStepRewardsForCharacter, grantQuestRewardsForCharacter } from './questManager.js';
 import { formatCopperAsDenominations, wordWrap } from '../utils/textFormat.js';
 import { clearProgressionCaches } from '../db/repositories/progressionRepository.js';
+import { loadProgressionTableFromDb } from './progressionLoader.js';
 import { clearEquipmentCache } from './combatStats.js';
 
 interface CommandResponse {
@@ -399,11 +401,18 @@ async function handleGoto(
   // Broadcast arrival at new room
   broadcastToRoom(roomId, colors.green(`${colors.red(socket.username)} appears in a flash of light!`), socket.playerId);
 
+  // Persist room to database after successful move
+  if (socket.characterId) {
+    await characterRepo.updateCharacterRoom(socket.characterId, roomId);
+  }
+
   const { getRoomItemsDescription } = await import('./itemCommands.js');
   const itemDescriptions = await getRoomItemsDescription(roomId);
+  const playersInRoom = getPlayersInRoom(roomId, connectedPlayers, socket.canSeeHidden, socket.playerId);
+  const npcNames = getNpcDisplayNames(roomId);
   return {
     type: MessageType.OUTPUT,
-    message: `${colors.system('You teleport...')}\r\n\r\n${world.formatRoomDescription(room, [], false, itemDescriptions)}`,
+    message: `${colors.system('You teleport...')}\r\n\r\n${world.formatRoomDescription(room, playersInRoom, false, itemDescriptions, npcNames)}`,
   };
 }
 
@@ -553,7 +562,8 @@ async function handleReload(
     if (target === 'progression' || target === 'all') {
       clearProgressionCaches();
       clearEquipmentCache();
-      results.push(`${colors.green('✓')} Cleared progression and equipment caches`);
+      const table = await loadProgressionTableFromDb();
+      results.push(`${colors.green('✓')} Reloaded ${table.length} level requirements, cleared progression and equipment caches`);
     }
 
     return {
@@ -1216,8 +1226,10 @@ async function handleTeleport(
   // Send room description to teleported player
   const { getRoomItemsDescription } = await import('./itemCommands.js');
   const itemDescriptions = await getRoomItemsDescription(roomId);
+  const playersInRoom = getPlayersInRoom(roomId, connectedPlayers, targetSocket.canSeeHidden, targetSocket.playerId);
+  const npcNames = getNpcDisplayNames(roomId);
   sendMessage(targetSocket, MessageType.SYSTEM, colors.yellow('You feel a strange pull as you are teleported...'));
-  sendMessage(targetSocket, MessageType.OUTPUT, world.formatRoomDescription(room, [], false, itemDescriptions));
+  sendMessage(targetSocket, MessageType.OUTPUT, world.formatRoomDescription(room, playersInRoom, false, itemDescriptions, npcNames));
 
   return {
     type: MessageType.SYSTEM,

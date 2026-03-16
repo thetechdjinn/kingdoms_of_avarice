@@ -745,6 +745,26 @@ export async function runMigrations(): Promise<void> {
         }
       }
 
+      // One-time migration: copy characters.experience into character_progression.std_xp
+      // This syncs legacy XP earned before the progression system was wired up.
+      const xpMigrationFlag = await client.query(
+        `SELECT 1 FROM game_settings WHERE key = 'xp_to_std_xp_migrated'`
+      );
+      if (xpMigrationFlag.rows.length === 0) {
+        await client.query(`
+          UPDATE character_progression cp
+          SET std_xp = c.experience
+          FROM characters c
+          WHERE cp.character_id = c.id
+            AND c.experience > 0
+            AND cp.std_xp = 0
+        `);
+        await client.query(
+          `INSERT INTO game_settings (key, value) VALUES ('xp_to_std_xp_migrated', 'true') ON CONFLICT (key) DO NOTHING`
+        );
+        console.log('Migrated characters.experience to character_progression.std_xp');
+      }
+
     });
 
     console.log('Database migrations completed successfully');

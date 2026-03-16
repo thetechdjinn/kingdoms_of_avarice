@@ -1,0 +1,222 @@
+/* Progression Table Editor styles */
+
+#progression-table-panel {
+  flex: 1;
+  padding: 2rem;
+  overflow-y: auto;
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.table-header {
+  margin-bottom: 1.5rem;
+}
+
+.table-header h2 {
+  color: var(--primary-color);
+  margin-bottom: 0.5rem;
+}
+
+/* Status message */
+.status-message {
+  padding: 0.75rem 1rem;
+  border-radius: 4px;
+  margin-bottom: 1rem;
+  font-size: 0.9rem;
+}
+
+.status-message.success {
+  background: #0e4429;
+  border: 1px solid #00aa00;
+  color: #00ff00;
+}
+
+.status-message.error {
+  background: #4a1a1a;
+  border: 1px solid #aa0000;
+  color: #ff4444;
+}
+
+/* Table container */
+.table-container {
+  overflow-x: auto;
+}
+
+#progression-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+#progression-table th {
+  text-align: left;
+  padding: 0.75rem 0.5rem;
+  color: var(--primary-color);
+  border-bottom: 2px solid #333;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+}
+
+#progression-table td {
+  padding: 0.5rem;
+  border-bottom: 1px solid #2a2a3e;
+}
+
+/* Alternating row colors */
+#progression-table tbody tr:nth-child(even) {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+#progression-table tbody tr:nth-child(odd) {
+  background: rgba(0, 0, 0, 0.1);
+}
+
+#progression-table tbody tr:hover {
+  background: var(--hover-bg);
+}
+
+/* Column widths */
+.col-level {
+  width: 60px;
+  font-weight: bold;
+  color: var(--text-primary);
+}
+
+.col-xp,
+.col-essence {
+  width: 160px;
+}
+
+.col-growth,
+.col-total {
+  width: 120px;
+}
+
+.col-actions {
+  width: 160px;
+}
+
+/* Auto-calculated columns */
+.col-calculated {
+  color: var(--text-secondary);
+  font-style: italic;
+}
+
+/* Input fields */
+.input-xp,
+.input-essence {
+  width: 130px;
+  padding: 0.4rem 0.5rem;
+  background-color: var(--input-bg);
+  color: var(--text-primary);
+  border: 1px solid #333;
+  border-radius: 4px;
+  font-size: 0.9rem;
+}
+
+.input-xp:focus,
+.input-essence:focus {
+  outline: none;
+  border-color: var(--primary-color);
+}
+
+.input-level {
+  width: 60px;
+  padding: 0.4rem 0.5rem;
+  background-color: var(--input-bg);
+  color: var(--text-primary);
+  border: 1px solid #333;
+  border-radius: 4px;
+  font-size: 0.9rem;
+}
+
+.input-level:focus {
+  outline: none;
+  border-color: var(--primary-color);
+}
+
+/* Action buttons */
+.col-actions-cell {
+  white-space: nowrap;
+}
+
+.btn-save {
+  padding: 0.35rem 0.75rem;
+  background-color: #0f3460;
+  color: #60a5fa;
+  border: 1px solid #1e5090;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  margin-right: 0.25rem;
+  transition: all 0.2s;
+}
+
+.btn-save:hover {
+  background-color: #1a4a80;
+  color: #90c5ff;
+}
+
+.btn-delete {
+  padding: 0.35rem 0.75rem;
+  background-color: #4a1a1a;
+  color: #ff6666;
+  border: 1px solid #661a1a;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  transition: all 0.2s;
+}
+
+.btn-delete:hover {
+  background-color: #661a1a;
+  color: #ff8888;
+}
+
+/* Add row */
+.btn-add {
+  padding: 0.4rem 1rem;
+  background-color: var(--primary-color);
+  color: #1a1a2e;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.btn-add:hover {
+  background-color: #00cc00;
+}
+
+#progression-table tfoot td {
+  padding: 0.75rem 0.5rem;
+  border-top: 2px solid #333;
+}
+
+/* Screen-reader-only labels */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Remove number input spinners for cleaner look */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+input[type="number"] {
+  -moz-appearance: textfield;
+}

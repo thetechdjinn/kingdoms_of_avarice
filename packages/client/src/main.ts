@@ -1,7 +1,7 @@
-import { Terminal } from 'xterm';
+import { Terminal } from '@xterm/xterm';
 import { MessageType, GameMessage, VitalsData, ResourceType, Character, TrainingFormPayload, TrainingSubmitPayload } from '@koa/shared';
 import { TrainingForm, TrainingFormResult } from './forms/TrainingForm.js';
-import 'xterm/css/xterm.css';
+import '@xterm/xterm/css/xterm.css';
 
 let terminal: Terminal | null = null;
 let socket: WebSocket | null = null;

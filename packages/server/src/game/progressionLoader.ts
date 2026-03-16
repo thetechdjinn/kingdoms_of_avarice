@@ -59,8 +59,24 @@ export function loadClasses(): ClassDefinition[] {
 export function loadProgressionTable(): LevelRequirement[] {
   const table = loadJsonFile<LevelRequirement[]>('progression_table.json');
   setProgressionTable(table);
-  console.log(`[Progression] Loaded progression table with ${table.length} levels`);
+  console.log(`[Progression] Loaded progression table with ${table.length} levels (from JSON fallback)`);
   return table;
+}
+
+/**
+ * Load the progression table from the database (authoritative source).
+ * Falls back to JSON file if DB is empty.
+ * Used at startup after DB is ready, and by @reload progression.
+ */
+export async function loadProgressionTableFromDb(): Promise<LevelRequirement[]> {
+  const table = await progressionRepo.getProgressionTable();
+  if (table.length > 0) {
+    setProgressionTable(table);
+    console.log(`[Progression] Loaded progression table with ${table.length} levels (from database)`);
+    return table;
+  }
+  // Fall back to JSON file if DB table is empty
+  return loadProgressionTable();
 }
 
 /**
@@ -251,20 +267,23 @@ async function seedDatabaseIfEmpty(): Promise<void> {
 export async function initializeProgressionData(): Promise<void> {
   console.log('[Progression] Initializing progression system...');
   
-  // Load into in-memory service
+  // Load classes and game events from JSON (these are static)
   loadClasses();
-  loadProgressionTable();
   loadGameEvents();
   // Note: Talents are DB-only for now, no in-memory registration needed
-  
+
   // One-time migration: update class combat levels if they all have the old default value
   await migrateClassCombatLevels();
 
   // Force reseed races if stats are outdated
   await forceReseedRaces();
 
-  // Seed database if empty
+  // Seed database if empty (uses JSON as seed source)
   await seedDatabaseIfEmpty();
-  
+
+  // Load progression table from DB (authoritative source after import).
+  // Falls back to JSON file if DB table is empty.
+  await loadProgressionTableFromDb();
+
   console.log('[Progression] Progression system initialized');
 }

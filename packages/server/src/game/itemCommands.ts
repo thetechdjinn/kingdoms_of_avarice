@@ -1941,7 +1941,7 @@ export async function handleSearch(
   const searcherPerception = perceptionBreakdown.total;
 
   // Search for hidden players in the room
-  const hiddenPlayersFound: string[] = [];
+  const hiddenPlayersFound: Array<{ name: string; playerId: number }> = [];
   for (const [playerId, playerSocket] of connectedPlayers) {
     // Skip self
     if (playerId === socket.playerId) continue;
@@ -1983,30 +1983,23 @@ export async function handleSearch(
     const checkResult = rollStealthCheck(hiddenStealth, searcherPerception);
 
     if (checkResult.detected) {
-      // Found! Break their stealth (don't notify room yet - we'll do custom message)
-      hiddenPlayersFound.push(playerSocket.username);
-
-      // Break the hidden player's stealth without room broadcast
-      // (we send a more specific message below)
+      // Found! Break their stealth — sends "You have been discovered!" to the hidden player
       breakStealth(playerSocket, 'searched', false);
 
-      // Tell the hidden player who found them specifically
-      sendMessage(
-        playerSocket,
-        MessageType.OUTPUT,
-        colors.red(`${socket.username} found you!`)
-      );
+      hiddenPlayersFound.push({ name: playerSocket.username, playerId: playerSocket.playerId });
     }
   }
 
   // Add found players to results
   if (hiddenPlayersFound.length > 0) {
-    for (const name of hiddenPlayersFound) {
-      results.push(`You spot ${colors.player(name)} hiding in the shadows!`);
+    for (const found of hiddenPlayersFound) {
+      // Searcher sees who they found
+      results.push(`You spot ${colors.player(found.name)} hiding in the shadows!`);
+      // Room sees the discovery (exclude both searcher and found player)
       broadcastToRoom(
         currentRoomId,
-        `${socket.username} discovers ${colors.player(name)} hiding in the shadows!`,
-        socket.playerId
+        `${socket.username} discovers ${colors.player(found.name)} hiding in the shadows!`,
+        [socket.playerId, found.playerId]
       );
     }
   }

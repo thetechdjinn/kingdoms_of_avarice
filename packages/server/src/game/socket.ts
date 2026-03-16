@@ -596,7 +596,7 @@ export function setupGameSocket(wss: WebSocketServer): void {
         await handleDroppedDisconnect(authWs);
       }
 
-      // Save character vitals (HP, mana) on disconnect
+      // Save character vitals (HP, mana) and room location on disconnect
       // If dead/dropped, save with 0 HP so they auto-respawn on reconnect
       if (authWs.characterId) {
         try {
@@ -605,8 +605,10 @@ export function setupGameSocket(wss: WebSocketServer): void {
             health: hpToSave,
             mana: authWs.vitals.resource ?? 0,
           });
+          const currentRoomId = getPlayerLocation(authWs.playerId);
+          await characterRepo.updateCharacterRoom(authWs.characterId, currentRoomId);
         } catch (error) {
-          console.error(`Failed to save vitals for character ${authWs.characterId}:`, error);
+          console.error(`Failed to save vitals/room for character ${authWs.characterId}:`, error);
         }
 
         // Unload character progression from memory

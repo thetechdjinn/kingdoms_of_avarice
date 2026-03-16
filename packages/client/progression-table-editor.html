@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Progression Table Editor - Kingdoms of Avarice</title>
+    <link rel="stylesheet" href="/src/editor.css" />
+    <link rel="stylesheet" href="/src/progression-table-editor.css" />
+  </head>
+  <body>
+    <div id="editor-app">
+      <nav id="main-nav">
+        <div class="nav-brand">Kingdoms of Avarice</div>
+        <div class="nav-links">
+          <a href="/" class="nav-link">Game</a>
+          <div class="nav-dropdown" id="nav-dev-dropdown">
+            <button class="nav-link nav-dropdown-btn active">Developer</button>
+            <div class="nav-dropdown-menu">
+              <a href="/editor.html" class="nav-dropdown-item">Room Editor</a>
+              <a href="/item-editor.html" class="nav-dropdown-item">Item Editor</a>
+              <a href="/spell-editor.html" class="nav-dropdown-item">Spell Editor</a>
+              <a href="/status-editor.html" class="nav-dropdown-item">Status Effects Editor</a>
+              <a href="/progression-editor.html" class="nav-dropdown-item">Progression Editor</a>
+              <a href="/door-editor.html" class="nav-dropdown-item">Door Editor</a>
+              <a href="/action-editor.html" class="nav-dropdown-item">Action Editor</a>
+              <a href="/npc-editor.html" class="nav-dropdown-item">NPC Editor</a>
+              <a href="/drop-table-editor.html" class="nav-dropdown-item">Drop Table Editor</a>
+              <a href="/faction-editor.html" class="nav-dropdown-item">Faction Editor</a>
+              <a href="/quest-editor.html" class="nav-dropdown-item">Quest Editor</a>
+              <a href="/progression-table-editor.html" class="nav-dropdown-item active">Progression Table Editor</a>
+              <a href="/swing-calculator.html" class="nav-dropdown-item">Swing Calculator</a>
+            </div>
+          </div>
+          <div class="nav-dropdown" id="nav-admin-dropdown" style="display: none;">
+            <button class="nav-link nav-dropdown-btn">Admin</button>
+            <div class="nav-dropdown-menu">
+              <a href="/admin.html" class="nav-dropdown-item">Admin Panel</a>
+              <a href="/game-settings-editor.html" class="nav-dropdown-item">Game Settings</a>
+              <a href="/user-editor.html" class="nav-dropdown-item">User Editor</a>
+            </div>
+          </div>
+        </div>
+        <div class="nav-spacer"></div>
+        <div class="nav-user-menu">
+          <button class="nav-user-btn" id="nav-username">User</button>
+          <div class="dropdown-menu" id="user-dropdown">
+            <button class="dropdown-item" id="logout-btn">Logout</button>
+          </div>
+        </div>
+      </nav>
+
+      <main id="progression-table-panel">
+        <div class="table-header">
+          <h2>Progression Table</h2>
+          <p class="hint">Define the XP and essence requirements for each character level. Level 1 is implicit (no requirements).</p>
+        </div>
+
+        <div id="status-message" class="status-message" style="display: none;"></div>
+
+        <div class="table-container">
+          <table id="progression-table">
+            <thead>
+              <tr>
+                <th class="col-level">Level</th>
+                <th class="col-xp">XP Required</th>
+                <th class="col-essence">Essence Required</th>
+                <th class="col-growth">Growth</th>
+                <th class="col-total">Total XP</th>
+                <th class="col-actions">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="table-body">
+            </tbody>
+            <tfoot>
+              <tr id="add-row">
+                <td>
+                  <label for="new-level" class="sr-only">Level</label>
+                  <input type="number" id="new-level" min="2" placeholder="Lvl" class="input-level" />
+                </td>
+                <td>
+                  <label for="new-xp" class="sr-only">XP Required</label>
+                  <input type="number" id="new-xp" min="1" placeholder="XP required" class="input-xp" />
+                </td>
+                <td>
+                  <label for="new-essence" class="sr-only">Essence Required</label>
+                  <input type="number" id="new-essence" min="0" placeholder="Essence required" class="input-essence" />
+                </td>
+                <td class="col-calculated">--</td>
+                <td class="col-calculated">--</td>
+                <td>
+                  <button id="add-level-btn" class="btn-add">Add Level</button>
+                </td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </main>
+    </div>
+
+    <script type="module" src="/src/progression-table-editor.ts"></script>
+  </body>
+</html>

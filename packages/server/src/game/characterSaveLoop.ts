@@ -7,15 +7,18 @@
  * What gets saved each tick:
  * - health: Current HP from socket.vitals.hp
  * - mana: Current mana from socket.vitals.resource
+ * - room: Current room from in-memory player location
  *
- * These are the same fields saved on disconnect. Other data (room location,
- * items, status effects) is already saved immediately when changed.
+ * Room location is also saved immediately on movement, but persisting it here
+ * acts as a safety net for any code path that updates the in-memory location
+ * without a corresponding DB write.
  */
 
 import type { WebSocket } from 'ws';
 import type { VitalsData } from '@koa/shared';
 import * as characterRepo from '../db/repositories/characterRepository.js';
 import { getCharacterSaveIntervalMs } from '../db/repositories/settingsRepository.js';
+import { getPlayerLocation } from './adminCommands.js';
 
 // Minimal socket interface needed for saving
 interface SaveCapableSocket extends WebSocket {
@@ -146,9 +149,12 @@ async function processSaveTick(): Promise<void> {
       }
 
       try {
+        // Save vitals and room location in a single query as a safety net
+        const currentRoomId = getPlayerLocation(socket.playerId);
         await characterRepo.updateCharacterStats(socket.characterId, {
           health: socket.vitals.hp,
           mana: socket.vitals.resource ?? 0,
+          current_room_id: currentRoomId,
         });
         savedCount++;
       } catch (error) {

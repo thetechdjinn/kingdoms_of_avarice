@@ -178,7 +178,8 @@ type UpdatableCharacterFields =
   | 'copper' | 'silver' | 'platinum' | 'runic'
   | 'strength' | 'intelligence' | 'dexterity' | 'constitution' | 'wisdom' | 'charisma'
   | 'unspent_cp' | 'cp_spent' | 'max_health' | 'max_mana'
-  | 'last_name' | 'hair' | 'eye_color';
+  | 'last_name' | 'hair' | 'eye_color'
+  | 'current_room_id';
 
 export async function updateCharacterStats(
   characterId: number,

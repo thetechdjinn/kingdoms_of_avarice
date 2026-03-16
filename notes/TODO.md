@@ -20,3 +20,9 @@ fixing, improving, or adding new features to the project.
 
 - Lockpicking is now designed, but I don't yet have a direct translation to a spell that can unlock a lock.
 - The harder the lock, the higher the change the spell should fail.
+
+## Refactor: Move `getPlayerLocation` out of `adminCommands.ts`
+
+- `getPlayerLocation` and `setPlayerLocation` are imported from `adminCommands.ts` by 20+ modules (combat, stealth, social, save loop, etc.). This makes `adminCommands` a dependency hub and creates a fragile circular import risk.
+- Move these functions to a dedicated low-level module (e.g. `playerState.ts` or `world.ts`) and update all imports.
+- Affected imports: `combatCommands`, `trainingCommands`, `groupManager`, `combatMessaging`, `tickProcessor`, `combatEntity`, `droppedStateManager`, `commands`, `spellCommands`, `merchantCommands`, `playerUtils`, `itemCommands`, `npcBehavior`, `stealthState`, `socket`, `characterSaveLoop`, `socialCommands`, `statusEffects`, `stealthCommands`, `actionCommands`, `bankCommands`.

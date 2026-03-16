@@ -3,7 +3,7 @@
  * Provides keyboard navigation and field handling for terminal-based forms
  */
 
-import { Terminal } from 'xterm';
+import { Terminal } from '@xterm/xterm';
 import { FormField, FormFieldConfig, FieldType } from './FormField.js';
 
 export interface FormSection {

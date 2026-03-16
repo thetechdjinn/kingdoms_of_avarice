@@ -14,6 +14,7 @@ import { handleAttack, handleFlee, handleBreak } from './combatCommands.js';
 import { isSpellMnemonic, handleSpellCommand, handleSpellbook } from './spellCommands.js';
 import { isActionCommand, handleActionCommand, handleEmoteCommand, getActionHelpList } from './actionCommands.js';
 import { handleTrain } from './trainingCommands.js';
+import { checkLevelUp, getLevelRequirements } from './progression.js';
 import * as characterRepo from '../db/repositories/characterRepository.js';
 import * as progressionRepo from '../db/repositories/progressionRepository.js';
 import * as itemRepo from '../db/repositories/itemRepository.js';
@@ -55,6 +56,14 @@ export interface CommandResponse {
 
 // Configuration constants
 const EXIT_MEDITATION_TIMEOUT_MS = 10000;
+
+// Commands that break resting state (directions and spells checked separately)
+const BREAKS_REST = new Set([
+  'sneak', 'sn', 'hide', 'visible', 'vis', 'flee', 'fl',
+  'attack', 'att', 'kill', 'k', 'a', 'backstab', 'bs',
+  'pick', 'bash',
+  'train', 'tr',
+]);
 
 // Filter input to printable ASCII characters only (security)
 function sanitizeInput(input: string): string {
@@ -132,11 +141,15 @@ export async function processCommand(
     }
   }
 
-  // Clear enhanced regen state when any command other than 'rest' is entered
-  // This breaks the resting state when the player takes any action
-  if (command !== 'rest' && command !== 're' && socket.regenState.enhancedRegen.size > 0) {
-    socket.regenState.enhancedRegen.clear();
-    sendVitals(socket); // Update statline to remove resting status
+  // Break resting only for actions that logically interrupt rest:
+  // movement, stealth, combat, spellcasting, lock picking, bashing, training
+  if (socket.regenState.enhancedRegen.size > 0) {
+    const isMovement = !!(DIRECTION_ALIASES[command] || isDirection(command));
+    const isSpell = isSpellMnemonic(command);
+    if (BREAKS_REST.has(command) || isMovement || isSpell) {
+      socket.regenState.enhancedRegen.clear();
+      sendVitals(socket); // Update statline to remove resting status
+    }
   }
 
   const currentRoomId = getPlayerLocation(socket.playerId);
@@ -170,7 +183,9 @@ export async function processCommand(
       // Check if looking at an NPC
       const npcTarget = findNpcInRoom(targetName, currentRoomId);
       if (npcTarget) {
-        return handleLookAtNpc(npcTarget);
+        const result = handleLookAtNpc(npcTarget);
+        broadcastToRoom(currentRoomId, colors.green(`${colors.red(socket.username)} looks at ${colors.red(npcTarget.entityName)}.`), socket.playerId);
+        return result;
       }
       // Check if looking at a special door (e.g., "look portal", "look vortex")
       const specialDoor = doorStateManager.findSpecialDoorByDisplayName(currentRoomId, targetName);
@@ -398,6 +413,14 @@ export async function processCommand(
     return trainResult;
   }
 
+  // Experience command
+  if (command === 'experience' || command === 'exp') {
+    if (args.length > 0 && (args[0] === 'table' || args[0] === 'levels')) {
+      return handleExpTable(socket);
+    }
+    return handleExperience(socket);
+  }
+
   // Status/character sheet command (st, sta, stat, statu, status)
   if ('status'.startsWith(command) && command.length >= 2) {
     return handleStatus(socket);
@@ -612,7 +635,7 @@ function getOtherPlayersInRoom(
 
 // Get display names of NPCs in a room (for "Also here:" line)
 // Returns pre-colored names: hostile NPCs in red, non-hostile in blue, corpses in gray
-function getNpcDisplayNames(roomId: number): string[] {
+export function getNpcDisplayNames(roomId: number): string[] {
   const npcs = getNpcsInRoom(roomId);
   const names: string[] = [];
   for (const npc of npcs) {
@@ -631,13 +654,15 @@ function getNpcDisplayNames(roomId: number): string[] {
 
 // Get names of all players in a room (for looking into adjacent rooms)
 // Hidden players are filtered out unless viewer can see hidden
-function getPlayersInRoom(
+export function getPlayersInRoom(
   roomId: number,
   connectedPlayers: Map<number, AuthenticatedSocket>,
-  canSeeHidden: boolean = false
+  canSeeHidden: boolean = false,
+  excludePlayerId?: number
 ): string[] {
   const players: string[] = [];
   for (const [playerId, socket] of connectedPlayers) {
+    if (playerId === excludePlayerId) continue;
     if (socket.isTraining) continue;
     if (getPlayerLocation(playerId) === roomId) {
       const playerIsHidden = isHidden(socket);
@@ -2293,28 +2318,206 @@ async function handleDirectedSpeech(
   return { type: MessageType.ERROR, message: `There is no ${targetName} here.` };
 }
 
+// ── Help section definitions ──────────────────────────────────────────────
+// Each section has a keyword, display title, aliases, and its command lines.
+
+interface HelpSection {
+  keyword: string;
+  title: string;
+  aliases: string[];
+  lines: string[];
+}
+
+function getHelpSections(): HelpSection[] {
+  return [
+    {
+      keyword: 'movement', title: 'Movement', aliases: ['move', 'look', 'doors'],
+      lines: [
+        `  ${colors.white('look')} (l)              - Look around the current room`,
+        `  ${colors.white('look <direction>')}      - Look in a direction`,
+        `  ${colors.white('look <item>')}           - Examine an item`,
+        `  ${colors.white('look in <container>')}   - View container contents`,
+        `  ${colors.white('<direction>')}           - Move (n, s, e, w, ne, nw, se, sw, u, d)`,
+        `  ${colors.white('open <direction>')}      - Open a door`,
+        `  ${colors.white('close <direction>')}     - Close a door`,
+        `  ${colors.white('use <key> <direction>')} - Unlock a door with a key`,
+        `  ${colors.white('lock <direction>')}      - Lock an unlocked door (requires key)`,
+        `  ${colors.white('pick <direction>')}      - Pick the lock on a door (thief skills)`,
+        `  ${colors.white('bash <direction>')}      - Bash a door open (uses strength)`,
+        `  ${colors.white('brief')}                 - Toggle brief mode`,
+      ],
+    },
+    {
+      keyword: 'items', title: 'Items', aliases: ['inventory', 'equipment', 'equip', 'inv'],
+      lines: [
+        `  ${colors.white('get <item>')}            - Pick up an item`,
+        `  ${colors.white('get <item> from <container>')} - Get from container`,
+        `  ${colors.white('drop <item>')}           - Drop an item`,
+        `  ${colors.white('put <item> in <container>')} - Put in container`,
+        `  ${colors.white('inventory')} (i)         - List items you are carrying`,
+        `  ${colors.white('search')}                - Search for hidden items`,
+        `  ${colors.white('wield <item>')}          - Wield a weapon`,
+        `  ${colors.white('wear <item>')}           - Wear armor or accessories`,
+        `  ${colors.white('remove <item>')}         - Remove equipped item`,
+        `  ${colors.white('equipment')} (eq)        - List equipped items`,
+        `  ${colors.white('use <item>')}            - Use a consumable item`,
+        `  ${colors.white('eat/drink/quaff <item>')} - Consume food/drink/potion`,
+        `  ${colors.white('light <item>')}          - Light a torch or lantern`,
+        `  ${colors.white('extinguish <item>')}     - Put out a light source`,
+        `  ${colors.white('repair <item>')}         - Repair a damaged item`,
+      ],
+    },
+    {
+      keyword: 'crafting', title: 'Crafting', aliases: ['craft', 'enchant'],
+      lines: [
+        `  ${colors.white('recipes')}               - List known crafting recipes`,
+        `  ${colors.white('craft <recipe>')}        - Craft an item`,
+        `  ${colors.white('enchantments')}          - List known enchantments`,
+        `  ${colors.white('enchant <item> with <enchantment>')} - Enchant an item`,
+      ],
+    },
+    {
+      keyword: 'combat', title: 'Combat', aliases: ['fight', 'attack'],
+      lines: [
+        `  ${colors.white('attack <target>')} (k)   - Attack a target`,
+        `  ${colors.white('flee')} (fl)             - Attempt to flee from combat`,
+        `  ${colors.white('aid <player>')}          - Stabilize a fallen ally`,
+      ],
+    },
+    {
+      keyword: 'stealth', title: 'Stealth', aliases: ['sneak', 'hide'],
+      lines: [], // Uses dedicated getStealthHelp()
+    },
+    {
+      keyword: 'death', title: 'Death', aliases: ['respawn', 'dying'],
+      lines: [
+        `  ${colors.white('respawn')}               - Return to life at a safe location (when dead)`,
+        `  ${colors.gray('When you drop to 0 HP, you collapse. Allies can "aid" you.')}`,
+        `  ${colors.gray('If you die, your items drop. Type "respawn" to return.')}`,
+      ],
+    },
+    {
+      keyword: 'magic', title: 'Magic', aliases: ['spells', 'casting'],
+      lines: [
+        `  ${colors.white('spells')} (sp)           - View your spellbook`,
+        `  ${colors.white('<mnemonic> <target>')}   - Cast a spell (e.g., mmis goblin)`,
+      ],
+    },
+    {
+      keyword: 'training', title: 'Training', aliases: ['train', 'level'],
+      lines: [
+        `  ${colors.white('train')} (tr)            - Level up (in training room)`,
+        `  ${colors.white('train stats')}           - Allocate CP to stats (in training room)`,
+      ],
+    },
+    {
+      keyword: 'banking', title: 'Banking', aliases: ['bank', 'deposit', 'withdraw'],
+      lines: [
+        `  ${colors.white('bank')} (bal)            - Check your bank balance`,
+        `  ${colors.white('deposit all')} (dep)     - Deposit all currency`,
+        `  ${colors.white('deposit <amt> [type]')}  - Deposit currency (in bank)`,
+        `  ${colors.white('withdraw all')} (wit)    - Withdraw all funds`,
+        `  ${colors.white('withdraw <amt> [type]')} - Withdraw currency (in bank)`,
+      ],
+    },
+    {
+      keyword: 'quests', title: 'Quests', aliases: ['quest'],
+      lines: [
+        `  ${colors.white('quest')} (qu)            - List active quests`,
+        `  ${colors.white('quest log')}             - Detailed quest journal`,
+        `  ${colors.white('quest info <name>')}     - View a specific quest's details`,
+      ],
+    },
+    {
+      keyword: 'merchants', title: 'Merchants', aliases: ['merchant', 'buy', 'sell', 'shop'],
+      lines: [
+        `  ${colors.white('list')}                  - View merchant inventory and prices`,
+        `  ${colors.white('buy <item>')}            - Buy an item from a merchant`,
+        `  ${colors.white('sell <item>')}           - Sell an item to a merchant`,
+        `  ${colors.white('price <item>')}          - Check buy/sell price of an item`,
+        `  ${colors.white('haggle')} (hag)          - Try to get better prices`,
+        `  ${colors.white('>merchant message')}     - Say something to a merchant`,
+      ],
+    },
+    {
+      keyword: 'chat', title: 'Chat', aliases: ['gossip', 'tell', 'broadcast', 'channels'],
+      lines: [
+        `  ${colors.white('gossip <msg>')} (gos)    - Send to gossip channel`,
+        `  ${colors.white('gossip on/off')}         - Toggle gossip channel`,
+        `  ${colors.white('auction <msg>')} (auc)   - Send to auction channel`,
+        `  ${colors.white('auction on/off')}        - Toggle auction channel`,
+        `  ${colors.white('tel <player> <msg>')}    - Send private telepath`,
+        `  ${colors.white('tel on/off')}            - Toggle receiving telepaths`,
+        `  ${colors.white('/block <player>')}       - Block telepaths from player`,
+        `  ${colors.white('/unblock <player>')}     - Unblock a player`,
+        `  ${colors.white('shout <msg>')} (yel)     - Shout to room and adjacent rooms`,
+        `  ${colors.white('broadcast create <name> [pass]')} - Create a channel`,
+        `  ${colors.white('join br <name> [pass]')} - Join a broadcast channel`,
+        `  ${colors.white('leave <channel>')}       - Leave a broadcast channel`,
+        `  ${colors.white('br <msg>')}              - Send to your broadcast channel`,
+        `  ${colors.white('br')}                    - List channel members`,
+      ],
+    },
+    {
+      keyword: 'groups', title: 'Groups', aliases: ['group', 'party'],
+      lines: [
+        `  ${colors.white('invite <player>')}       - Invite a player to your group`,
+        `  ${colors.white('join <leader>')}         - Accept a group invitation`,
+        `  ${colors.white('leave')}                 - Leave your group`,
+        `  ${colors.white('kick <player>')}         - Kick a member (leader only)`,
+        `  ${colors.white('group <msg>')} (gr)      - Send to group chat`,
+        `  ${colors.white('group')}                 - Show group status`,
+      ],
+    },
+    {
+      keyword: 'social', title: 'Social', aliases: ['emote', 'emotes', 'actions'],
+      lines: [
+        `  ${colors.white('/me <text>')}            - Custom emote (e.g., /me waves)`,
+        `  ${colors.white('<action>')}              - Social actions (dance, bow, wave, etc.)`,
+        `  ${colors.white('<action> <player>')}     - Target a player (e.g., wave bob)`,
+        `  ${colors.white('help actions')}          - List all available social actions`,
+      ],
+    },
+    {
+      keyword: 'info', title: 'Info', aliases: ['information', 'system', 'exp', 'status'],
+      lines: [
+        `  ${colors.white('status')} (st)           - View your character sheet`,
+        `  ${colors.white('experience')} (exp)      - View experience and level progress`,
+        `  ${colors.white('exp table')}             - Show exp requirements for next 10 levels`,
+        `  ${colors.white('queue')} (q)             - Show queued commands`,
+        `  ${colors.white('cooldowns')} (cd)        - Show ability cooldowns`,
+        `  ${colors.white('rest')} (re)             - Rest to regenerate faster`,
+        `  ${colors.white('who')}                   - See who is online`,
+        `  ${colors.white('x')}                     - Meditate and leave the realm`,
+        `  ${colors.white('help')} (?)              - Show this help message`,
+      ],
+    },
+  ];
+}
+
 function handleHelp(userRoles: Role[], category?: string): CommandResponse {
   const isStaff = hasAnyRole(userRoles, [Role.MODERATOR, Role.SYSOP, Role.DEVELOPER, Role.ADMIN]);
   const isDeveloper = hasAnyRole(userRoles, [Role.DEVELOPER, Role.ADMIN]);
-  
+  const sections = getHelpSections();
+
   // Handle specific category requests
   if (category) {
     const cat = category.toLowerCase();
-    
+
     if (cat === 'staff') {
       if (!isStaff) {
         return { type: MessageType.ERROR, message: 'You do not have access to staff commands.' };
       }
       return getStaffHelp();
     }
-    
+
     if (cat === 'developer' || cat === 'dev') {
       if (!isDeveloper) {
         return { type: MessageType.ERROR, message: 'You do not have access to developer commands.' };
       }
       return getDeveloperHelp();
     }
-    
+
     if (cat === 'admin') {
       if (!isStaff) {
         return { type: MessageType.ERROR, message: 'You do not have access to admin commands.' };
@@ -2322,166 +2525,57 @@ function handleHelp(userRoles: Role[], category?: string): CommandResponse {
       return { type: MessageType.SYSTEM, message: 'Use @help for the full admin command reference.' };
     }
 
-    if (cat === 'actions' || cat === 'action' || cat === 'emotes' || cat === 'emote') {
-      return getActionsHelp();
-    }
-
-    if (cat === 'stealth') {
+    // Stealth has its own detailed help
+    if (cat === 'stealth' || cat === 'sneak' || cat === 'hide') {
       return getStealthHelp();
     }
 
-    // Unknown category - show player help with note (only suggest staff options if user has access)
-    const suggestions = isStaff
-      ? 'Try: help, help actions, help stealth, help staff, help developer, or @help'
-      : 'Try: help, help actions, help stealth';
-    return { type: MessageType.ERROR, message: `Unknown help category: ${category}. ${suggestions}` };
+    // Social actions list
+    if (cat === 'actions' || cat === 'action') {
+      return getActionsHelp();
+    }
+
+    // Match a section by keyword or alias
+    const section = sections.find(s =>
+      s.keyword === cat || s.aliases.includes(cat)
+    );
+
+    if (section) {
+      const lines = [
+        colors.boldYellow(`${section.title}:`),
+        '',
+        ...section.lines,
+      ];
+      return { type: MessageType.OUTPUT, message: lines.join('\r\n') };
+    }
+
+    // Unknown category
+    return { type: MessageType.ERROR, message: `Unknown help topic: ${category}. Type ${colors.white('help')} to see available topics.` };
   }
-  
-  // Default: show player commands
+
+  // Default: show section index
   const lines = [
-    colors.boldYellow('Player Commands:'),
+    colors.boldYellow('Help Topics:'),
     '',
-    colors.boldCyan('  Movement & Looking:'),
-    `    ${colors.white('look')} (l)              - Look around the current room`,
-    `    ${colors.white('look <direction>')}      - Look in a direction`,
-    `    ${colors.white('look <item>')}           - Examine an item`,
-    `    ${colors.white('look in <container>')}   - View container contents`,
-    `    ${colors.white('<direction>')}           - Move (n, s, e, w, ne, nw, se, sw, u, d)`,
-    `    ${colors.white('open <direction>')}      - Open a door`,
-    `    ${colors.white('close <direction>')}     - Close a door`,
-    `    ${colors.white('use <key> <direction>')} - Unlock a door with a key`,
-    `    ${colors.white('lock <direction>')}      - Lock an unlocked door (requires key)`,
-    `    ${colors.white('pick <direction>')}      - Pick the lock on a door (thief skills)`,
-    `    ${colors.white('bash <direction>')}      - Bash a door open (uses strength)`,
-    `    ${colors.white('brief')}                 - Toggle brief mode`,
-    '',
-    colors.boldCyan('  Items & Inventory:'),
-    `    ${colors.white('get <item>')}            - Pick up an item`,
-    `    ${colors.white('get <item> from <container>')} - Get from container`,
-    `    ${colors.white('drop <item>')}           - Drop an item`,
-    `    ${colors.white('put <item> in <container>')} - Put in container`,
-    `    ${colors.white('inventory')} (i)         - List items you are carrying`,
-    `    ${colors.white('search')}                - Search for hidden items`,
-    '',
-    colors.boldCyan('  Equipment:'),
-    `    ${colors.white('wield <item>')}          - Wield a weapon`,
-    `    ${colors.white('wear <item>')}           - Wear armor or accessories`,
-    `    ${colors.white('remove <item>')}         - Remove equipped item`,
-    `    ${colors.white('equipment')} (eq)        - List equipped items`,
-    '',
-    colors.boldCyan('  Using Items:'),
-    `    ${colors.white('use <item>')}            - Use a consumable item`,
-    `    ${colors.white('use <key> <direction>')} - Unlock a door with a key`,
-    `    ${colors.white('eat/drink/quaff <item>')} - Consume food/drink/potion`,
-    `    ${colors.white('light <item>')}          - Light a torch or lantern`,
-    `    ${colors.white('extinguish <item>')}     - Put out a light source`,
-    `    ${colors.white('repair <item>')}         - Repair a damaged item`,
-    '',
-    colors.boldCyan('  Crafting:'),
-    `    ${colors.white('recipes')}               - List known crafting recipes`,
-    `    ${colors.white('craft <recipe>')}        - Craft an item`,
-    `    ${colors.white('enchantments')}          - List known enchantments`,
-    `    ${colors.white('enchant <item> with <enchantment>')} - Enchant an item`,
-    '',
-    colors.boldCyan('  Combat:'),
-    `    ${colors.white('attack <player>')} (k)   - Attack another player`,
-    `    ${colors.white('flee')} (fl)             - Attempt to flee from combat`,
-    `    ${colors.white('aid <player>')}          - Stabilize a fallen ally`,
-    '',
-    colors.boldCyan('  Stealth:'),
-    `    ${colors.white('hide')}                  - Attempt to hide in the shadows`,
-    `    ${colors.white('sneak')} (sn)            - Attempt to move stealthily`,
-    `    ${colors.white('backstab <player>')} (bs) - Surprise attack from stealth`,
-    `    ${colors.white('visible')} (vis)         - Stop hiding or sneaking`,
-    `    ${colors.gray('Stealth requires a race or class with the stealth ability.')}`,
-    '',
-    colors.boldCyan('  Death & Revival:'),
-    `    ${colors.white('respawn')}               - Return to life at a safe location (when dead)`,
-    `    ${colors.gray('When you drop to 0 HP, you collapse. Allies can "aid" you.')}`,
-    `    ${colors.gray('If you die, your items drop. Type "respawn" to return.')}`,'',
-    '',
-    colors.boldCyan('  Magic:'),
-    `    ${colors.white('spells')} (sp)           - View your spellbook`,
-    `    ${colors.white('<mnemonic> <target>')}   - Cast a spell (e.g., mmis goblin)`,
-    '',
-    colors.boldCyan('  Progression:'),
-    `    ${colors.white('train')} (tr)            - Level up (in training room)`,
-    `    ${colors.white('train stats')}           - Allocate CP to stats (in training room)`,
-    '',
-    colors.boldCyan('  Banking:'),
-    `    ${colors.white('bank')} (bal)            - Check your bank balance`,
-    `    ${colors.white('deposit all')} (dep)     - Deposit all currency`,
-    `    ${colors.white('deposit <amt> [type]')}  - Deposit currency (in bank)`,
-    `    ${colors.white('withdraw all')} (wit)    - Withdraw all funds`,
-    `    ${colors.white('withdraw <amt> [type]')} - Withdraw currency (in bank)`,
-    '',
-    colors.boldCyan('  Quests:'),
-    `    ${colors.white('quest')} (qu)             - List active quests`,
-    `    ${colors.white('quest log')}              - Detailed quest journal`,
-    `    ${colors.white('quest info <name>')}      - View a specific quest's details`,
-    '',
-    colors.boldCyan('  Merchants:'),
-    `    ${colors.white('list')}                  - View merchant inventory and prices`,
-    `    ${colors.white('buy <item>')}            - Buy an item from a merchant`,
-    `    ${colors.white('sell <item>')}           - Sell an item to a merchant`,
-    `    ${colors.white('price <item>')}          - Check buy/sell price of an item`,
-    `    ${colors.white('haggle')} (hag)          - Try to get better prices`,
-    `    ${colors.white('>merchant message')}     - Say something to a merchant`,
-    '',
-    colors.boldCyan('  Chat Channels:'),
-    `    ${colors.white('gossip <msg>')} (gos)    - Send to gossip channel`,
-    `    ${colors.white('gossip on/off')}         - Toggle gossip channel`,
-    `    ${colors.white('auction <msg>')} (auc)   - Send to auction channel`,
-    `    ${colors.white('auction on/off')}        - Toggle auction channel`,
-    `    ${colors.white('tel <player> <msg>')}    - Send private telepath`,
-    `    ${colors.white('tel on/off')}            - Toggle receiving telepaths`,
-    `    ${colors.white('/block <player>')}       - Block telepaths from player`,
-    `    ${colors.white('/unblock <player>')}     - Unblock a player`,
-    `    ${colors.white('shout <msg>')} (yel)     - Shout to room and adjacent rooms`,
-    '',
-    colors.boldCyan('  Broadcast Channels:'),
-    `    ${colors.white('broadcast create <name> [pass]')} - Create a channel`,
-    `    ${colors.white('join br <name> [pass]')} - Join a broadcast channel`,
-    `    ${colors.white('leave <channel>')}       - Leave a broadcast channel`,
-    `    ${colors.white('br <msg>')}              - Send to your broadcast channel`,
-    `    ${colors.white('br')}                    - List channel members`,
-    '',
-    colors.boldCyan('  Groups:'),
-    `    ${colors.white('invite <player>')}       - Invite a player to your group`,
-    `    ${colors.white('join <leader>')}         - Accept a group invitation`,
-    `    ${colors.white('leave')}                 - Leave your group`,
-    `    ${colors.white('kick <player>')}         - Kick a member (leader only)`,
-    `    ${colors.white('group <msg>')} (gr)      - Send to group chat`,
-    `    ${colors.white('group')}                 - Show group status`,
-    '',
-    colors.boldCyan('  Social:'),
-    `    ${colors.white('/me <text>')}            - Custom emote (e.g., /me waves)`,
-    `    ${colors.white('<action>')}              - Social actions (dance, bow, wave, etc.)`,
-    `    ${colors.white('<action> <player>')}     - Target a player (e.g., wave bob)`,
-    `    ${colors.white('help actions')}          - List all available social actions`,
-    '',
-    colors.boldCyan('  Information & System:'),
-    `    ${colors.white('status')} (st)            - View your character sheet`,
-    `    ${colors.white('queue')} (q)              - Show queued commands`,
-    `    ${colors.white('cooldowns')} (cd)         - Show ability cooldowns`,
-    `    ${colors.white('rest')} (re)             - Rest to regenerate faster`,
-    `    ${colors.white('who')}                   - See who is online`,
-    `    ${colors.white('x')}                     - Meditate and leave the realm`,
-    `    ${colors.white('help')} (?)              - Show this help message`,
   ];
 
-  // Add note about additional help categories for staff/developers
+  for (const section of sections) {
+    lines.push(`  ${colors.white(('help ' + section.keyword).padEnd(22))} - ${section.title}`);
+  }
+
+  lines.push('');
+  lines.push(`  ${colors.white('help actions'.padEnd(22))} - List all social actions`);
+
   if (isStaff || isDeveloper) {
     lines.push('');
-    lines.push(colors.boldYellow('Additional Help:'));
     if (isStaff) {
-      lines.push(`  ${colors.white('help staff')}           - View staff commands`);
+      lines.push(`  ${colors.white('help staff'.padEnd(22))} - Staff commands`);
     }
     if (isDeveloper) {
-      lines.push(`  ${colors.white('help developer')}       - View developer commands`);
+      lines.push(`  ${colors.white('help developer'.padEnd(22))} - Developer commands`);
     }
     if (isStaff) {
-      lines.push(`  ${colors.white('@help')}                - Full admin command reference`);
+      lines.push(`  ${colors.white('@help'.padEnd(22))} - Full admin command reference`);
     }
   }
 
@@ -2644,6 +2738,90 @@ function handleWho(connectedPlayers: Map<number, AuthenticatedSocket>): CommandR
   };
 }
 
+function handleExperience(socket: AuthenticatedSocket): CommandResponse {
+  if (!socket.characterId) {
+    return { type: MessageType.ERROR, message: 'No character selected.' };
+  }
+
+  const levelCheck = checkLevelUp(socket.characterId);
+  if (!levelCheck) {
+    return { type: MessageType.ERROR, message: 'Unable to retrieve experience data.' };
+  }
+
+  // Use the character's ACTUAL level, not the calculated level from XP
+  const actualLevel = socket.characterLevel;
+  const currentXp = levelCheck.std_xp_current;
+
+  // Look up the requirement for the next level from the actual level
+  const nextLevelReq = getLevelRequirements(actualLevel + 1);
+
+  const xpStr = colors.boldWhite(currentXp.toLocaleString());
+  const levelStr = colors.boldWhite(actualLevel.toString());
+
+  if (!nextLevelReq) {
+    return {
+      type: MessageType.OUTPUT,
+      message: `Exp: ${xpStr}  Level: ${levelStr}  ${colors.yellow('Maximum level reached')}`,
+    };
+  }
+
+  const xpRequired = nextLevelReq.std_xp_required;
+  const xpNeeded = Math.max(0, xpRequired - currentXp);
+  const pct = Math.floor((currentXp / xpRequired) * 100);
+  const neededStr = colors.boldWhite(xpNeeded.toLocaleString());
+  const reqStr = xpRequired.toLocaleString();
+  const pctStr = pct >= 100 ? colors.green(`${pct}%`) : colors.yellow(`${pct}%`);
+
+  return {
+    type: MessageType.OUTPUT,
+    message: `Exp: ${xpStr}  Level: ${levelStr}  Exp needed for next level: ${neededStr} (${reqStr}) [${pctStr}]`,
+  };
+}
+
+function handleExpTable(socket: AuthenticatedSocket): CommandResponse {
+  if (!socket.characterId) {
+    return { type: MessageType.ERROR, message: 'No character selected.' };
+  }
+
+  const levelCheck = checkLevelUp(socket.characterId);
+  if (!levelCheck) {
+    return { type: MessageType.ERROR, message: 'Unable to retrieve experience data.' };
+  }
+
+  const currentLevel = socket.characterLevel;
+  const currentXp = levelCheck.std_xp_current;
+
+  const lines: string[] = [
+    colors.boldYellow('Experience Table:'),
+    '',
+    `  ${colors.boldWhite('Level'.padEnd(8))}${colors.boldWhite('Exp Required'.padStart(14))}${colors.boldWhite('Remaining'.padStart(14))}`,
+  ];
+
+  let hasEntries = false;
+  for (let lvl = currentLevel + 1; lvl <= currentLevel + 10; lvl++) {
+    const req = getLevelRequirements(lvl);
+    if (!req) break;
+
+    hasEntries = true;
+    const remaining = Math.max(0, req.std_xp_required - currentXp);
+    const marker = remaining === 0 ? colors.green(' *') : '  ';
+    const lvlStr = lvl.toString().padEnd(8);
+    const reqStr = req.std_xp_required.toLocaleString().padStart(14);
+    const remStr = remaining.toLocaleString().padStart(14);
+
+    lines.push(`${marker}${colors.white(lvlStr)}${reqStr}${remStr}`);
+  }
+
+  if (!hasEntries) {
+    lines.push(`  ${colors.yellow('Maximum level reached.')}`);
+  } else {
+    lines.push('');
+    lines.push(`  ${colors.gray('* = experience requirement met')}`);
+  }
+
+  return { type: MessageType.OUTPUT, message: lines.join('\r\n') };
+}
+
 async function handleStatus(socket: AuthenticatedSocket): Promise<CommandResponse> {
   if (!socket.characterId) {
     return { type: MessageType.ERROR, message: 'No character selected.' };
@@ -2773,9 +2951,11 @@ async function handleStatus(socket: AuthenticatedSocket): Promise<CommandRespons
   );
 
   // Row 2: Race | Exp | Perception
+  const levelCheck = checkLevelUp(socket.characterId);
+  const currentXp = levelCheck?.std_xp_current ?? 0;
   lines.push(
     cellLeft('Race:', raceName, COL1) +
-    cellRight('Exp:', character.experience.toString(), COL2) +
+    cellRight('Exp:', currentXp.toLocaleString(), COL2) +
     cellRight('Perception:', perception.toString(), COL3)
   );
 
