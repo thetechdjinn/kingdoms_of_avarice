@@ -15,7 +15,7 @@ import * as questRepo from '../db/repositories/questRepository.js';
 import * as characterRepo from '../db/repositories/characterRepository.js';
 import * as itemRepo from '../db/repositories/itemRepository.js';
 import * as factionRepo from '../db/repositories/factionRepository.js';
-import { awardEssence } from './progression.js';
+import { awardEssence, awardXp } from './progression.js';
 import { wordWrap, formatCopperAsDenominations, withArticle } from '../utils/textFormat.js';
 import { colors } from '../utils/colors.js';
 
@@ -463,12 +463,7 @@ export async function grantStepRewardsForCharacter(
   step: QuestStep
 ): Promise<void> {
   if (step.stepXpReward > 0) {
-    const character = await characterRepo.findCharacterById(characterId);
-    if (character) {
-      await characterRepo.updateCharacterStats(characterId, {
-        experience: character.experience + step.stepXpReward,
-      });
-    }
+    await awardXp(characterId, step.stepXpReward);
   }
   if (step.stepEssenceReward > 0) {
     await awardEssence(characterId, step.stepEssenceReward);
@@ -509,12 +504,7 @@ export async function grantQuestRewardsForCharacter(
   quest: Quest
 ): Promise<void> {
   if (quest.xpReward > 0) {
-    const character = await characterRepo.findCharacterById(characterId);
-    if (character) {
-      await characterRepo.updateCharacterStats(characterId, {
-        experience: character.experience + quest.xpReward,
-      });
-    }
+    await awardXp(characterId, quest.xpReward);
   }
   if (quest.essenceReward > 0) {
     await awardEssence(characterId, quest.essenceReward);

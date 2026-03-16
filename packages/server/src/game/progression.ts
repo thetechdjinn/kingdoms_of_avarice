@@ -284,6 +284,37 @@ export function processGameEvent(
  * Updates in-memory state and persists to DB.
  * Returns false if progression not loaded or amount <= 0.
  */
+/**
+ * Award standard XP to a character's progression (std_xp).
+ * This is the XP pool checked by the level-up system.
+ * Called from combat XP distribution after NPC kills.
+ *
+ * Updates in-memory state and persists to DB.
+ * Returns false if progression not loaded or amount <= 0.
+ */
+export async function awardXp(characterId: number, amount: number): Promise<boolean> {
+  if (typeof amount !== 'number' || !isFinite(amount) || amount <= 0) return false;
+
+  try {
+    const result = await progressionRepo.incrementStdXp(characterId, amount);
+    if (!result) {
+      console.error(`[Progression] No progression row found in DB for character ${characterId}`);
+      return false;
+    }
+
+    // Sync in-memory if the character is online
+    const progression = characterProgressions.get(characterId);
+    if (progression) {
+      progression.std_xp = result.std_xp;
+    }
+  } catch (error) {
+    console.error(`[Progression] Failed to persist XP award for character ${characterId}:`, error);
+    return false;
+  }
+
+  return true;
+}
+
 export async function awardEssence(characterId: number, amount: number): Promise<boolean> {
   if (typeof amount !== 'number' || !isFinite(amount) || amount <= 0) return false;
 

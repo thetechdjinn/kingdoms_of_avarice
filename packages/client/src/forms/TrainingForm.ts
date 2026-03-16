@@ -2,7 +2,7 @@
  * Training Form - ANSI form for character stat allocation
  */
 
-import { Terminal } from 'xterm';
+import { Terminal } from '@xterm/xterm';
 import { AnsiForm, FormConfig, FormSection } from './AnsiForm.js';
 import { FormField, FieldValue, FormFieldConfig } from './FormField.js';
 import {

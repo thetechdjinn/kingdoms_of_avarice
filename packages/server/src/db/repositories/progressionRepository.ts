@@ -832,6 +832,14 @@ export async function setLevelRequirement(req: LevelRequirement): Promise<LevelR
   return dbToLevelRequirement(result.rows[0]);
 }
 
+export async function deleteLevelRequirement(level: number): Promise<boolean> {
+  const result = await query(
+    'DELETE FROM progression_table WHERE level = $1',
+    [level]
+  );
+  return (result.rowCount ?? 0) > 0;
+}
+
 // ============================================================================
 // CLASS ABILITIES
 // ============================================================================
@@ -1038,4 +1046,35 @@ export async function incrementEssenceWallet(
     [amount, characterId]
   );
   return result.rows[0] ? dbToCharacterProgressionWithLevel(result.rows[0]) : null;
+}
+
+/**
+ * Atomically increment std_xp in the DB.
+ * Used by awardXp() in progression.ts for combat XP awards.
+ */
+export async function incrementStdXp(
+  characterId: number,
+  amount: number
+): Promise<CharacterProgression | null> {
+  const result = await query<DbCharacterProgression & { calculated_level: number }>(
+    `WITH updated AS (
+      UPDATE character_progression
+      SET std_xp = std_xp + $1,
+          updated_at = CURRENT_TIMESTAMP
+      WHERE character_id = $2
+      RETURNING *
+    )
+    SELECT updated.*,
+      COALESCE(
+        (SELECT MAX(level) FROM progression_table WHERE std_xp_required <= updated.std_xp),
+        1
+      ) as calculated_level
+    FROM updated`,
+    [amount, characterId]
+  );
+  const progression = result.rows[0] ? dbToCharacterProgressionWithLevel(result.rows[0]) : null;
+  if (progression) {
+    progressionCache.set(characterId, { data: progression, cachedAt: Date.now() });
+  }
+  return progression;
 }

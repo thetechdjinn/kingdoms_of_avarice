@@ -12,7 +12,7 @@ import type { NpcCombatInstance } from './npcManager.js';
 import { removeNpcInstance, queueRespawn, markAsCorpse } from './npcManager.js';
 import { sendCombatMessage, broadcastCombatToRoom } from './combatMessaging.js';
 import { colors } from '../utils/colors.js';
-import { awardEssence } from './progression.js';
+import { awardEssence, awardXp } from './progression.js';
 import { copperToDenominationCounts, formatCopperAsDenominations } from '../utils/textFormat.js';
 import * as dropTableRepo from '../db/repositories/dropTableRepository.js';
 import * as itemRepo from '../db/repositories/itemRepository.js';
@@ -130,14 +130,9 @@ async function distributeXp(
     const groupBonusMultiplier = 1.0 + Math.min(additionalMembers * 0.10, 0.40);
     const finalShare = Math.max(1, Math.floor(share * groupBonusMultiplier));
 
-    // Award XP via character repository
+    // Award XP to progression system (std_xp — the single source of truth for leveling)
     try {
-      // Get current experience first, then set new value
-      const character = await characterRepo.findCharacterById(player.characterId);
-      if (character) {
-        const newXp = character.experience + finalShare;
-        await characterRepo.updateCharacterStats(player.characterId, { experience: newXp });
-      }
+      await awardXp(player.characterId, finalShare);
 
       sendCombatMessage(player, MessageType.SYSTEM,
         colors.green(`You gain ${finalShare} experience.`)
