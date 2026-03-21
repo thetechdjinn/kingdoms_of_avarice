@@ -1,6 +1,6 @@
 // ============================================================================
 // PROGRESSION DATA LOADER
-// Loads class, event, and progression data from JSON files
+// Loads class and progression data from JSON files
 // Seeds the database if tables are empty
 // ============================================================================
 
@@ -10,15 +10,11 @@ import { fileURLToPath } from 'url';
 import {
   ClassDefinition,
   RaceDefinition,
-  AbilityDefinition,
   LevelRequirement,
-  GameEvent,
-  TalentDefinition,
 } from '@koa/shared';
 import {
   registerClass,
   setProgressionTable,
-  registerGameEvent,
 } from './progression.js';
 import * as progressionRepo from '../db/repositories/progressionRepository.js';
 
@@ -77,27 +73,6 @@ export async function loadProgressionTableFromDb(): Promise<LevelRequirement[]> 
   }
   // Fall back to JSON file if DB table is empty
   return loadProgressionTable();
-}
-
-/**
- * Load all game events
- */
-export function loadGameEvents(): GameEvent[] {
-  const events = loadJsonFile<GameEvent[]>('game_events.json');
-  for (const event of events) {
-    registerGameEvent(event);
-  }
-  console.log(`[Progression] Loaded ${events.length} game events`);
-  return events;
-}
-
-/**
- * Load all talent definitions (for future use)
- */
-export function loadTalents(): TalentDefinition[] {
-  const talents = loadJsonFile<TalentDefinition[]>('talents.json');
-  console.log(`[Progression] Loaded ${talents.length} talent definitions`);
-  return talents;
 }
 
 /**
@@ -213,39 +188,6 @@ async function seedDatabaseIfEmpty(): Promise<void> {
       console.log(`[Progression] Seeded ${races.length} races`);
     }
     
-    // Seed abilities if empty
-    const existingAbilities = await progressionRepo.getAllAbilities();
-    console.log(`[Progression] Found ${existingAbilities.length} existing abilities`);
-    if (existingAbilities.length === 0) {
-      const abilities = loadJsonFile<AbilityDefinition[]>('abilities.json');
-      for (const ability of abilities) {
-        await progressionRepo.createAbility(ability);
-      }
-      console.log(`[Progression] Seeded ${abilities.length} abilities`);
-    }
-    
-    // Seed talents if empty
-    const existingTalents = await progressionRepo.getAllTalents();
-    console.log(`[Progression] Found ${existingTalents.length} existing talents`);
-    if (existingTalents.length === 0) {
-      const talents = loadJsonFile<TalentDefinition[]>('talents.json');
-      for (const talent of talents) {
-        await progressionRepo.createTalent(talent);
-      }
-      console.log(`[Progression] Seeded ${talents.length} talents`);
-    }
-    
-    // Seed events if empty
-    const existingEvents = await progressionRepo.getAllGameEvents();
-    console.log(`[Progression] Found ${existingEvents.length} existing events`);
-    if (existingEvents.length === 0) {
-      const events = loadJsonFile<GameEvent[]>('game_events.json');
-      for (const event of events) {
-        await progressionRepo.createGameEvent(event);
-      }
-      console.log(`[Progression] Seeded ${events.length} game events`);
-    }
-    
     // Seed progression table if empty
     const existingLevels = await progressionRepo.getProgressionTable();
     console.log(`[Progression] Found ${existingLevels.length} existing levels`);
@@ -267,10 +209,8 @@ async function seedDatabaseIfEmpty(): Promise<void> {
 export async function initializeProgressionData(): Promise<void> {
   console.log('[Progression] Initializing progression system...');
   
-  // Load classes and game events from JSON (these are static)
+  // Load classes from JSON (these are static)
   loadClasses();
-  loadGameEvents();
-  // Note: Talents are DB-only for now, no in-memory registration needed
 
   // One-time migration: update class combat levels if they all have the old default value
   await migrateClassCombatLevels();

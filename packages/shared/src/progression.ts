@@ -61,36 +61,6 @@ export interface LevelRequirement {
 }
 
 // ============================================================================
-// GAME EVENT SCHEMA
-// Maps world actions to thematic tags for XP and essence generation
-// ============================================================================
-
-export interface GameEvent {
-  event_id: string;
-  display_name?: string;
-  emitted_tags: ThematicTag[];
-  base_essence_value: number;
-  base_xp_value?: number;
-}
-
-// ============================================================================
-// TALENT SCHEMA
-// Defines purchasable abilities/upgrades using essence
-// ============================================================================
-
-export interface TalentDefinition {
-  talent_id: string;
-  display_name: string;
-  description?: string;
-  class_restriction?: string;
-  essence_cost: number;
-  prerequisite_level?: number;
-  prerequisite_talents?: string[];
-  effect_modifiers?: Record<string, number>;
-  grants_ability?: string;
-}
-
-// ============================================================================
 // PLAYER PROGRESSION STATE
 // Runtime state for a character's progression
 // ============================================================================
@@ -103,57 +73,6 @@ export interface CharacterProgression {
   essence_earned_this_level: number;
   essence_wallet: number;
   total_essence_earned: number;
-  unlocked_talents: string[];
-  learned_abilities: string[];
-}
-
-// ============================================================================
-// ACTIVITY TRACKER
-// Tracks event completions for diminishing returns
-// ============================================================================
-
-export interface ActivityCount {
-  event_id: string;
-  count: number;
-}
-
-export interface CharacterActivityTracker {
-  character_id: number;
-  activity_counts: ActivityCount[];
-  last_reset_level: number;
-  last_reset_region?: string;
-}
-
-// ============================================================================
-// YIELD CURVE CONFIGURATION
-// Defines diminishing returns thresholds
-// ============================================================================
-
-export interface YieldTier {
-  min_count: number;
-  max_count: number;
-  yield_multiplier: number;
-}
-
-export const DEFAULT_YIELD_CURVE: YieldTier[] = [
-  { min_count: 1, max_count: 20, yield_multiplier: 1.0 },
-  { min_count: 21, max_count: 50, yield_multiplier: 0.5 },
-  { min_count: 51, max_count: Infinity, yield_multiplier: 0.1 },
-];
-
-// ============================================================================
-// ESSENCE AWARD RESULT
-// Result of processing an essence event
-// ============================================================================
-
-export interface EssenceAwardResult {
-  event_id: string;
-  matched_tags: ThematicTag[];
-  base_essence: number;
-  yield_multiplier: number;
-  final_essence: number;
-  xp_awarded: number;
-  activity_count: number;
 }
 
 // ============================================================================
@@ -195,58 +114,8 @@ export interface RaceDefinition {
 }
 
 // ============================================================================
-// ABILITY DEFINITION SCHEMA
-// ============================================================================
-
-export type AbilityType = 'skill' | 'spell' | 'technique' | 'passive';
-
-export interface AbilityDefinition {
-  ability_id: string;
-  display_name: string;
-  description?: string;
-  ability_type: AbilityType;
-  emitted_tags?: ThematicTag[];
-  resource_cost?: number;
-  resource_type?: string;
-  cooldown?: number;
-  effect_data?: Record<string, unknown>;
-  requirements?: {
-    level?: number;
-    stats?: Record<string, number>;
-    abilities?: string[];
-  };
-}
-
-// ============================================================================
-// CLASS ABILITY MAPPING
-// ============================================================================
-
-export interface ClassAbilityMapping {
-  class_id: string;
-  ability_id: string;
-  required_level: number;
-  auto_learn: boolean;
-  training_cost?: number;
-}
-
-// ============================================================================
 // HELPER FUNCTIONS
 // ============================================================================
-
-/**
- * Calculate the yield multiplier based on activity count
- */
-export function getYieldMultiplier(
-  activityCount: number,
-  yieldCurve: YieldTier[] = DEFAULT_YIELD_CURVE
-): number {
-  for (const tier of yieldCurve) {
-    if (activityCount >= tier.min_count && activityCount <= tier.max_count) {
-      return tier.yield_multiplier;
-    }
-  }
-  return yieldCurve[yieldCurve.length - 1]?.yield_multiplier ?? 0.1;
-}
 
 /**
  * Calculate essence required for a level based on class multiplier
@@ -256,14 +125,4 @@ export function getEssenceRequired(
   classMultiplier: number
 ): number {
   return Math.floor(baseEssence * classMultiplier);
-}
-
-/**
- * Check if tags match between an event and a class
- */
-export function getMatchingTags(
-  eventTags: ThematicTag[],
-  classTags: ThematicTag[]
-): ThematicTag[] {
-  return eventTags.filter((tag) => classTags.includes(tag));
 }

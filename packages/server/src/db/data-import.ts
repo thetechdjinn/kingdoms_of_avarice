@@ -234,87 +234,6 @@ async function importRaces(data: unknown[]): Promise<ImportResult> {
   return result;
 }
 
-async function importAbilities(data: unknown[]): Promise<ImportResult> {
-  const result: ImportResult = { file: 'abilities.json', created: 0, updated: 0, skipped: 0, errors: [] };
-
-  for (const raw of data) {
-    const item = raw as Record<string, unknown>;
-    try {
-      const abilityId = (item.ability_id ?? item.abilityId) as string;
-      if (!abilityId) { result.skipped++; continue; }
-
-      const existing = await progressionRepo.getAbilityById(abilityId);
-      if (existing) {
-        await progressionRepo.updateAbility(abilityId, item as unknown as Parameters<typeof progressionRepo.updateAbility>[1]);
-        result.updated++;
-      } else {
-        await progressionRepo.createAbility(item as unknown as Parameters<typeof progressionRepo.createAbility>[0]);
-        result.created++;
-      }
-    } catch (err) {
-      result.errors.push(`Ability "${item.ability_id ?? item.abilityId}": ${(err as Error).message}`);
-      result.skipped++;
-    }
-  }
-  return result;
-}
-
-async function importTalents(data: unknown[]): Promise<ImportResult> {
-  const result: ImportResult = { file: 'talents.json', created: 0, updated: 0, skipped: 0, errors: [] };
-
-  for (const raw of data) {
-    const item = raw as Record<string, unknown>;
-    try {
-      const talentId = (item.talent_id ?? item.talentId) as string;
-      if (!talentId) { result.skipped++; continue; }
-
-      // Ensure prerequisite_talents is an array (export may write {} for empty arrays, or a single string)
-      const prereqs = item.prerequisite_talents;
-      if (prereqs && !Array.isArray(prereqs)) {
-        item.prerequisite_talents = typeof prereqs === 'string' ? [prereqs] : [];
-      }
-
-      const existing = await progressionRepo.getTalentById(talentId);
-      if (existing) {
-        await progressionRepo.updateTalent(talentId, item as unknown as Parameters<typeof progressionRepo.updateTalent>[1]);
-        result.updated++;
-      } else {
-        await progressionRepo.createTalent(item as unknown as Parameters<typeof progressionRepo.createTalent>[0]);
-        result.created++;
-      }
-    } catch (err) {
-      result.errors.push(`Talent "${item.talent_id ?? item.talentId}": ${(err as Error).message}`);
-      result.skipped++;
-    }
-  }
-  return result;
-}
-
-async function importGameEvents(data: unknown[]): Promise<ImportResult> {
-  const result: ImportResult = { file: 'game_events.json', created: 0, updated: 0, skipped: 0, errors: [] };
-
-  for (const raw of data) {
-    const item = raw as Record<string, unknown>;
-    try {
-      const eventId = (item.event_id ?? item.eventId) as string;
-      if (!eventId) { result.skipped++; continue; }
-
-      const existing = await progressionRepo.getGameEventById(eventId);
-      if (existing) {
-        await progressionRepo.updateGameEvent(eventId, item as unknown as Parameters<typeof progressionRepo.updateGameEvent>[1]);
-        result.updated++;
-      } else {
-        await progressionRepo.createGameEvent(item as unknown as Parameters<typeof progressionRepo.createGameEvent>[0]);
-        result.created++;
-      }
-    } catch (err) {
-      result.errors.push(`GameEvent "${item.event_id ?? item.eventId}": ${(err as Error).message}`);
-      result.skipped++;
-    }
-  }
-  return result;
-}
-
 async function importProgressionTable(data: unknown[]): Promise<ImportResult> {
   const result: ImportResult = { file: 'progression_table.json', created: 0, updated: 0, skipped: 0, errors: [] };
 
@@ -334,34 +253,6 @@ async function importProgressionTable(data: unknown[]): Promise<ImportResult> {
       }
     } catch (err) {
       result.errors.push(`Level ${item.level}: ${(err as Error).message}`);
-      result.skipped++;
-    }
-  }
-  return result;
-}
-
-async function importClassAbilities(data: unknown[]): Promise<ImportResult> {
-  const result: ImportResult = { file: 'class_abilities.json', created: 0, updated: 0, skipped: 0, errors: [] };
-
-  for (const raw of data) {
-    const item = raw as Record<string, unknown>;
-    try {
-      const classId = item.class_id as string;
-      const abilityId = item.ability_id as string;
-      if (!classId || !abilityId) { result.skipped++; continue; }
-
-      // addClassAbility uses ON CONFLICT DO UPDATE (upsert)
-      const existingList = await progressionRepo.getClassAbilities(classId);
-      const existed = existingList.some(ca => ca.ability_id === abilityId);
-
-      await progressionRepo.addClassAbility(item as unknown as Parameters<typeof progressionRepo.addClassAbility>[0]);
-      if (existed) {
-        result.updated++;
-      } else {
-        result.created++;
-      }
-    } catch (err) {
-      result.errors.push(`ClassAbility "${item.class_id}/${item.ability_id}": ${(err as Error).message}`);
       result.skipped++;
     }
   }
@@ -1001,20 +892,8 @@ async function importFile(relativePath: string): Promise<void> {
     case 'races':
       importResult = await importRaces(file.data);
       break;
-    case 'abilities':
-      importResult = await importAbilities(file.data);
-      break;
-    case 'talents':
-      importResult = await importTalents(file.data);
-      break;
-    case 'game_events':
-      importResult = await importGameEvents(file.data);
-      break;
     case 'progression_table':
       importResult = await importProgressionTable(file.data);
-      break;
-    case 'class_abilities':
-      importResult = await importClassAbilities(file.data);
       break;
     case 'items':
       importResult = await importItems(file.data);
