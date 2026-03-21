@@ -1,4 +1,5 @@
-import { Express, Request, Response } from 'express';
+import { Express, Request as ExpressRequest, Response } from 'express';
+type Request = ExpressRequest<Record<string, string>>;
 import { FactionType } from '@koa/shared';
 import * as factionRepo from '../db/repositories/factionRepository.js';
 import { requireDeveloper } from '../middleware/auth.js';

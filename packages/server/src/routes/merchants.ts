@@ -1,4 +1,5 @@
-import { Express, Request, Response } from 'express';
+import { Express, Request as ExpressRequest, Response } from 'express';
+type Request = ExpressRequest<Record<string, string>>;
 import * as merchantRepo from '../db/repositories/merchantRepository.js';
 import * as merchantResponseRepo from '../db/repositories/merchantResponseRepository.js';
 import { calculateMerchantPrice } from '../game/merchantCommands.js';

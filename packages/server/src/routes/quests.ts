@@ -1,4 +1,5 @@
-import { Express, Request, Response } from 'express';
+import { Express, Request as ExpressRequest, Response } from 'express';
+type Request = ExpressRequest<Record<string, string>>;
 import type { QuestTriggerType } from '@koa/shared';
 import * as questRepo from '../db/repositories/questRepository.js';
 import { reloadQuests } from '../game/questManager.js';
