@@ -1,4 +1,5 @@
-import { Express, Request, Response } from 'express';
+import { Express, Request as ExpressRequest, Response } from 'express';
+type Request = ExpressRequest<Record<string, string>>;
 import * as doorRepo from '../db/repositories/doorRepository.js';
 import * as roomRepo from '../db/repositories/roomRepository.js';
 import * as doorStateManager from '../services/doorStateManager.js';

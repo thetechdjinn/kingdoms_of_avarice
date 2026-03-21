@@ -1,4 +1,5 @@
-import { Express, Request, Response } from 'express';
+import { Express, Request as ExpressRequest, Response } from 'express';
+type Request = ExpressRequest<Record<string, string>>;
 import net from 'net';
 import { requireAdmin } from '../middleware/auth.js';
 import { getClientIpFromRequest } from '../middleware/ipAccess.js';

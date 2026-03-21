@@ -1,4 +1,5 @@
-import { Express, Request, Response } from 'express';
+import { Express, Request as ExpressRequest, Response } from 'express';
+type Request = ExpressRequest<Record<string, string>>;
 import { verifyToken, COOKIE_NAME } from './auth.js';
 import * as playerRepo from '../db/repositories/playerRepository.js';
 import * as characterRepo from '../db/repositories/characterRepository.js';

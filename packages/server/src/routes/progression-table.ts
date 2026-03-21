@@ -1,4 +1,5 @@
-import { Express, Request, Response } from 'express';
+import { Express, Request as ExpressRequest, Response } from 'express';
+type Request = ExpressRequest<Record<string, string>>;
 import * as progressionRepo from '../db/repositories/progressionRepository.js';
 import { requireDeveloper } from '../middleware/auth.js';
 import { loadProgressionTableFromDb } from '../game/progressionLoader.js';

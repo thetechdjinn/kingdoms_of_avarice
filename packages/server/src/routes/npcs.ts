@@ -1,4 +1,5 @@
-import { Express, Request, Response } from 'express';
+import { Express, Request as ExpressRequest, Response } from 'express';
+type Request = ExpressRequest<Record<string, string>>;
 import { NPC_SPELL_CONDITIONS } from '@koa/shared';
 import * as npcRepo from '../db/repositories/npcRepository.js';
 import type { CreateNpcAttackInput, CreateNpcTemplateInput } from '../db/repositories/npcRepository.js';
