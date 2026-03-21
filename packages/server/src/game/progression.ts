@@ -5,18 +5,9 @@
 import {
   ClassDefinition,
   LevelRequirement,
-  GameEvent,
   CharacterProgression,
-  CharacterActivityTracker,
-  ActivityCount,
-  YieldTier,
-  DEFAULT_YIELD_CURVE,
-  EssenceAwardResult,
   LevelCheckResult,
-  ThematicTag,
-  getYieldMultiplier,
   getEssenceRequired,
-  getMatchingTags,
   getCpEarnedForLevel,
 } from '@koa/shared';
 import * as characterRepo from '../db/repositories/characterRepository.js';
@@ -28,9 +19,7 @@ import * as progressionRepo from '../db/repositories/progressionRepository.js';
 
 const classDefinitions: Map<string, ClassDefinition> = new Map();
 const progressionTable: LevelRequirement[] = [];
-const gameEvents: Map<string, GameEvent> = new Map();
 const characterProgressions: Map<number, CharacterProgression> = new Map();
-const activityTrackers: Map<number, CharacterActivityTracker> = new Map();
 
 // ============================================================================
 // DATA LOADING
@@ -72,27 +61,6 @@ export function getLevelRequirements(level: number): LevelRequirement | undefine
   return progressionTable.find((req) => req.level === level);
 }
 
-/**
- * Register a game event
- */
-export function registerGameEvent(event: GameEvent): void {
-  gameEvents.set(event.event_id, event);
-}
-
-/**
- * Get a game event by ID
- */
-export function getGameEvent(eventId: string): GameEvent | undefined {
-  return gameEvents.get(eventId);
-}
-
-/**
- * Get all registered game events
- */
-export function getAllGameEvents(): GameEvent[] {
-  return Array.from(gameEvents.values());
-}
-
 // ============================================================================
 // CHARACTER PROGRESSION MANAGEMENT
 // ============================================================================
@@ -113,18 +81,8 @@ export function initializeProgression(
     essence_earned_this_level: 0,
     essence_wallet: 0,
     total_essence_earned: 0,
-    unlocked_talents: [],
-    learned_abilities: [],
   };
   characterProgressions.set(characterId, progression);
-
-  // Initialize activity tracker
-  const tracker: CharacterActivityTracker = {
-    character_id: characterId,
-    activity_counts: [],
-    last_reset_level: startingLevel,
-  };
-  activityTrackers.set(characterId, tracker);
 
   return progression;
 }
@@ -148,14 +106,6 @@ export async function loadCharacterProgression(characterId: number, classId: str
     // Store in memory
     characterProgressions.set(characterId, dbProgression);
 
-    // Initialize activity tracker (not persisted, reset each session)
-    const tracker: CharacterActivityTracker = {
-      character_id: characterId,
-      activity_counts: [],
-      last_reset_level: dbProgression.level,
-    };
-    activityTrackers.set(characterId, tracker);
-
     return dbProgression;
   }
 
@@ -163,13 +113,6 @@ export async function loadCharacterProgression(characterId: number, classId: str
   const newProgression = await progressionRepo.createCharacterProgression(characterId, classId);
   if (newProgression) {
     characterProgressions.set(characterId, newProgression);
-
-    const tracker: CharacterActivityTracker = {
-      character_id: characterId,
-      activity_counts: [],
-      last_reset_level: newProgression.level,
-    };
-    activityTrackers.set(characterId, tracker);
   }
 
   return newProgression;
@@ -180,96 +123,6 @@ export async function loadCharacterProgression(characterId: number, classId: str
  */
 export function unloadCharacterProgression(characterId: number): void {
   characterProgressions.delete(characterId);
-  activityTrackers.delete(characterId);
-}
-
-/**
- * Get activity tracker for a character
- */
-export function getActivityTracker(characterId: number): CharacterActivityTracker | undefined {
-  return activityTrackers.get(characterId);
-}
-
-// ============================================================================
-// EVENT PROCESSING
-// ============================================================================
-
-/**
- * Process a game event for a character, awarding XP and essence
- * XP is always awarded; essence is awarded only if class tags match event tags
- */
-export function processGameEvent(
-  characterId: number,
-  eventId: string,
-  yieldCurve: YieldTier[] = DEFAULT_YIELD_CURVE
-): EssenceAwardResult | null {
-  const progression = characterProgressions.get(characterId);
-  if (!progression) {
-    return null;
-  }
-
-  const classDef = classDefinitions.get(progression.class_id);
-  if (!classDef) {
-    return null;
-  }
-
-  const event = gameEvents.get(eventId);
-  if (!event) {
-    return null;
-  }
-
-  // Check if class subscribes to any of the event's tags
-  const matchedTags = getMatchingTags(event.emitted_tags, classDef.subscribed_tags);
-  
-  // Get or create activity tracker
-  let tracker = activityTrackers.get(characterId);
-  if (!tracker) {
-    tracker = {
-      character_id: characterId,
-      activity_counts: [],
-      last_reset_level: progression.level,
-    };
-    activityTrackers.set(characterId, tracker);
-  }
-
-  // Find or create activity count for this event
-  let activityCount = tracker.activity_counts.find((ac) => ac.event_id === eventId);
-  if (!activityCount) {
-    activityCount = { event_id: eventId, count: 0 };
-    tracker.activity_counts.push(activityCount);
-  }
-
-  // Increment activity count
-  activityCount.count++;
-
-  // Calculate yield multiplier based on diminishing returns
-  const yieldMultiplier = getYieldMultiplier(activityCount.count, yieldCurve);
-
-  // Calculate essence award
-  // If no tags match, character still gets base XP but no essence
-  let essenceAwarded = 0;
-  if (matchedTags.length > 0) {
-    essenceAwarded = Math.floor(event.base_essence_value * yieldMultiplier);
-  }
-
-  // Calculate XP award (always awarded regardless of tag match)
-  const xpAwarded = event.base_xp_value ?? 0;
-
-  // Apply awards
-  progression.std_xp += xpAwarded;
-  progression.essence_earned_this_level += essenceAwarded;
-  progression.essence_wallet += essenceAwarded;
-  progression.total_essence_earned += essenceAwarded;
-
-  return {
-    event_id: eventId,
-    matched_tags: matchedTags,
-    base_essence: event.base_essence_value,
-    yield_multiplier: yieldMultiplier,
-    final_essence: essenceAwarded,
-    xp_awarded: xpAwarded,
-    activity_count: activityCount.count,
-  };
 }
 
 // ============================================================================
@@ -277,9 +130,8 @@ export function processGameEvent(
 // ============================================================================
 
 /**
- * Award a flat amount of essence to a character's wallet.
- * Unlike processGameEvent() which uses tag matching + diminishing returns,
- * this is a direct, unconditional award (e.g., from NPC kills).
+ * Award a flat amount of XP or essence to a character.
+ * This is a direct, unconditional award (e.g., from NPC kills).
  *
  * Updates in-memory state and persists to DB.
  * Returns false if progression not loaded or amount <= 0.
@@ -458,13 +310,6 @@ export async function performLevelUp(characterId: number): Promise<LevelUpResult
   progression.essence_earned_this_level = 0;
   progression.level = newLevel;
 
-  // Reset activity tracker for diminishing returns
-  const tracker = activityTrackers.get(characterId);
-  if (tracker) {
-    tracker.activity_counts = [];
-    tracker.last_reset_level = newLevel;
-  }
-
   return { success: true, newLevel, cpEarned };
 }
 
@@ -492,21 +337,6 @@ export function spendEssence(characterId: number, amount: number): boolean {
 
   progression.essence_wallet -= amount;
   return true;
-}
-
-// ============================================================================
-// REGION RESET
-// ============================================================================
-
-/**
- * Reset activity tracker when entering a new region
- */
-export function resetActivityForRegion(characterId: number, regionId: string): void {
-  const tracker = activityTrackers.get(characterId);
-  if (tracker) {
-    tracker.activity_counts = [];
-    tracker.last_reset_region = regionId;
-  }
 }
 
 // ============================================================================
@@ -538,13 +368,6 @@ export function switchClass(
   progression.essence_wallet = 0;
   // Note: std_xp and level are preserved
 
-  // Reset activity tracker (consistent with performLevelUp)
-  const tracker = activityTrackers.get(characterId);
-  if (tracker) {
-    tracker.activity_counts = [];
-    tracker.last_reset_level = progression.level;
-  }
-
   return progression;
 }
 
@@ -557,16 +380,14 @@ export function switchClass(
  */
 export function getProgressionDebugInfo(characterId: number): {
   progression: CharacterProgression | undefined;
-  tracker: CharacterActivityTracker | undefined;
   classDef: ClassDefinition | undefined;
   levelCheck: LevelCheckResult | null;
 } {
   const progression = characterProgressions.get(characterId);
-  const tracker = activityTrackers.get(characterId);
   const classDef = progression ? classDefinitions.get(progression.class_id) : undefined;
   const levelCheck = checkLevelUp(characterId);
 
-  return { progression, tracker, classDef, levelCheck };
+  return { progression, classDef, levelCheck };
 }
 
 /**
@@ -575,7 +396,5 @@ export function getProgressionDebugInfo(characterId: number): {
 export function clearAllProgressionData(): void {
   classDefinitions.clear();
   progressionTable.length = 0;
-  gameEvents.clear();
   characterProgressions.clear();
-  activityTrackers.clear();
 }

@@ -765,6 +765,33 @@ export async function runMigrations(): Promise<void> {
         console.log('Migrated characters.experience to character_progression.std_xp');
       }
 
+      // ================================================================
+      // Phase 1: Remove dead progression features (abilities, talents, events)
+      // ================================================================
+      const phase1Flag = await client.query(
+        `SELECT 1 FROM game_settings WHERE key = 'phase1_remove_abilities_talents_events'`
+      );
+      if (phase1Flag.rows.length === 0) {
+        // Drop tables in dependency order (children first)
+        await client.query(`DROP TABLE IF EXISTS character_activity_tracker CASCADE`);
+        await client.query(`DROP TABLE IF EXISTS class_abilities CASCADE`);
+        await client.query(`DROP TABLE IF EXISTS talent_definitions CASCADE`);
+        await client.query(`DROP TABLE IF EXISTS ability_definitions CASCADE`);
+        await client.query(`DROP TABLE IF EXISTS game_events CASCADE`);
+
+        // Drop columns from character_progression
+        await client.query(`
+          ALTER TABLE character_progression
+          DROP COLUMN IF EXISTS learned_abilities,
+          DROP COLUMN IF EXISTS unlocked_talents
+        `);
+
+        await client.query(
+          `INSERT INTO game_settings (key, value) VALUES ('phase1_remove_abilities_talents_events', 'true') ON CONFLICT (key) DO NOTHING`
+        );
+        console.log('Phase 1: Dropped abilities, talents, events tables and columns');
+      }
+
     });
 
     console.log('Database migrations completed successfully');

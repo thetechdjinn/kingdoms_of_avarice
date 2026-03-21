@@ -165,25 +165,10 @@ async function exportProgression(): Promise<void> {
   writeJson(join(progDir, 'races.json'), envelope('races', races.map(r => stripMeta(r as unknown as Record<string, unknown>))));
   console.log(`  progression/races: ${races.length} exported`);
 
-  const abilities = await progressionRepo.getAllAbilities();
-  writeJson(join(progDir, 'abilities.json'), envelope('abilities', abilities.map(a => stripMeta(a as unknown as Record<string, unknown>))));
-  console.log(`  progression/abilities: ${abilities.length} exported`);
-
-  const talents = await progressionRepo.getAllTalents();
-  writeJson(join(progDir, 'talents.json'), envelope('talents', talents.map(t => stripMeta(t as unknown as Record<string, unknown>))));
-  console.log(`  progression/talents: ${talents.length} exported`);
-
-  const events = await progressionRepo.getAllGameEvents();
-  writeJson(join(progDir, 'game_events.json'), envelope('game_events', events.map(e => stripMeta(e as unknown as Record<string, unknown>))));
-  console.log(`  progression/game_events: ${events.length} exported`);
-
   const levels = await progressionRepo.getProgressionTable();
   writeJson(join(progDir, 'progression_table.json'), envelope('progression_table', levels as unknown as unknown[]));
   console.log(`  progression/progression_table: ${levels.length} exported`);
 
-  const classAbilities = await progressionRepo.getAllClassAbilities();
-  writeJson(join(progDir, 'class_abilities.json'), envelope('class_abilities', classAbilities as unknown as unknown[]));
-  console.log(`  progression/class_abilities: ${classAbilities.length} exported`);
 }
 
 async function exportRooms(
@@ -561,11 +546,7 @@ async function main(): Promise<void> {
     'global/actions.json',
     'global/progression/classes.json',
     'global/progression/races.json',
-    'global/progression/abilities.json',
-    'global/progression/talents.json',
-    'global/progression/game_events.json',
     'global/progression/progression_table.json',
-    'global/progression/class_abilities.json',
     'global/items.json',
     'global/factions.json',
     'global/drop_tables.json',
