@@ -392,10 +392,48 @@ export function setupStatusEffectDefinitionRoutes(app: Express): void {
             continue;
           }
 
-          // Pass through validated definition
+          // Extract only allowed fields
           const sanitizedDef = {
-            ...def,
             id: normalizedId,
+            name: def.name,
+            description: def.description,
+            category: def.category,
+            stackingBehavior: def.stackingBehavior,
+            maxStacks: def.maxStacks,
+            accuracyModifier: def.accuracyModifier,
+            defenseModifier: def.defenseModifier,
+            energyModifier: def.energyModifier,
+            damageModifier: def.damageModifier,
+            speedModifier: def.speedModifier,
+            criticalChanceModifier: def.criticalChanceModifier,
+            dodgeModifier: def.dodgeModifier,
+            magicResistance: def.magicResistance,
+            healingReceived: def.healingReceived,
+            perceptionModifier: def.perceptionModifier,
+            stealthModifier: def.stealthModifier,
+            spellcastingModifier: def.spellcastingModifier,
+            lockpickingModifier: def.lockpickingModifier,
+            strengthModifier: def.strengthModifier,
+            dexterityModifier: def.dexterityModifier,
+            constitutionModifier: def.constitutionModifier,
+            intelligenceModifier: def.intelligenceModifier,
+            wisdomModifier: def.wisdomModifier,
+            charismaModifier: def.charismaModifier,
+            maxHpModifier: def.maxHpModifier,
+            maxManaModifier: def.maxManaModifier,
+            tickDamageMin: def.tickDamageMin,
+            tickDamageMax: def.tickDamageMax,
+            tickHealingMin: def.tickHealingMin,
+            tickHealingMax: def.tickHealingMax,
+            tickMessage: def.tickMessage,
+            silentTick: def.silentTick,
+            wearOffMessage: def.wearOffMessage,
+            blocksRegen: def.blocksRegen,
+            blocksMovement: def.blocksMovement,
+            isBlind: def.isBlind,
+            blocksCasting: def.blocksCasting,
+            blocksCombat: def.blocksCombat,
+            blocksStealth: def.blocksStealth,
           };
 
           const existing = await effectDefRepo.getDefinitionById(normalizedId!);
