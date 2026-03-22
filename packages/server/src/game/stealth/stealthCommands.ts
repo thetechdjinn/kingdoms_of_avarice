@@ -28,6 +28,7 @@ import { calculateBackstabAccuracy, calculateBackstabDefense, rollBackstabHit } 
 import { calculateBackstabDamage, calculateStrengthDamageBonus } from '../combat/backstabDamage.js';
 import { applyDamage, initializeDroppedState, initializeDeadState, formatDroppedMessage, formatDeathMessage } from '../damageHandler.js';
 import { getEquipmentCombatStats } from '../combatStats.js';
+import { getEffectModifiers } from '../statusEffects.js';
 
 // ============================================================================
 // STEALTH ROLL
@@ -85,7 +86,6 @@ export async function handleHide(socket: AuthenticatedSocket): Promise<CommandRe
   }
 
   // Check if a status effect blocks stealth
-  const { getEffectModifiers } = await import('../statusEffects.js');
   if (getEffectModifiers(socket).blocksStealth) {
     return { type: MessageType.ERROR, message: 'You cannot enter stealth right now!' };
   }
@@ -172,8 +172,7 @@ export async function handleSneak(socket: AuthenticatedSocket): Promise<CommandR
   }
 
   // Check if a status effect blocks stealth
-  const { getEffectModifiers: getModifiers } = await import('../statusEffects.js');
-  if (getModifiers(socket).blocksStealth) {
+  if (getEffectModifiers(socket).blocksStealth) {
     return { type: MessageType.ERROR, message: 'You cannot enter stealth right now!' };
   }
 

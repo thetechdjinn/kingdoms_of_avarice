@@ -225,6 +225,15 @@ export function setupStatusEffectDefinitionRoutes(app: Express): void {
       }
 
       // Validate boolean fields
+      // Validate string fields if provided
+      const stringFields = ['name', 'description', 'tickMessage', 'wearOffMessage'];
+      for (const field of stringFields) {
+        if (body[field] !== undefined && body[field] !== null && typeof body[field] !== 'string') {
+          res.status(400).json({ success: false, message: `${field} must be a string` });
+          return;
+        }
+      }
+
       const booleanFields = ['silentTick', 'blocksRegen', 'blocksMovement', 'isBlind', 'blocksCasting', 'blocksCombat', 'blocksStealth'];
       for (const field of booleanFields) {
         if (body[field] !== undefined && body[field] !== null && typeof body[field] !== 'boolean') {

@@ -900,7 +900,7 @@ export async function runMigrations(): Promise<void> {
           )
           FROM jsonb_array_elements(traits::jsonb) AS elem
         )
-        WHERE traits::text LIKE '%picklocks%'
+        WHERE traits @> '[{"id": "picklocks"}]'::jsonb
       `);
 
       // Normalize NPC trait IDs: see-invisible → see_hidden

@@ -334,8 +334,8 @@ function updatePreview(effect: StatusEffectDefinition): void {
   if (effect.energyModifier) modifiers.push(`Energy: ${effect.energyModifier > 0 ? '+' : ''}${effect.energyModifier}%`);
   if (effect.damageModifier) modifiers.push(`Damage: ${effect.damageModifier > 0 ? '+' : ''}${effect.damageModifier}%`);
   if (effect.speedModifier) modifiers.push(`Speed: ${effect.speedModifier > 0 ? '+' : ''}${effect.speedModifier}%`);
-  if (effect.criticalChanceModifier) modifiers.push(`Crit: ${effect.criticalChanceModifier > 0 ? '+' : ''}${effect.criticalChanceModifier}`);
-  if (effect.dodgeModifier) modifiers.push(`Dodge: ${effect.dodgeModifier > 0 ? '+' : ''}${effect.dodgeModifier}`);
+  if (effect.criticalChanceModifier) modifiers.push(`Crit: ${effect.criticalChanceModifier > 0 ? '+' : ''}${effect.criticalChanceModifier}%`);
+  if (effect.dodgeModifier) modifiers.push(`Dodge: ${effect.dodgeModifier > 0 ? '+' : ''}${effect.dodgeModifier}%`);
   if (effect.magicResistance) modifiers.push(`Magic Resist: ${effect.magicResistance > 0 ? '+' : ''}${effect.magicResistance}%`);
   if (effect.healingReceived) modifiers.push(`Healing: ${effect.healingReceived > 0 ? '+' : ''}${effect.healingReceived}%`);
   if (effect.perceptionModifier) modifiers.push(`Perception: ${effect.perceptionModifier > 0 ? '+' : ''}${effect.perceptionModifier}`);
