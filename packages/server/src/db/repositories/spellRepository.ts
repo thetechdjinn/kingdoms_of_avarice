@@ -71,7 +71,7 @@ function dbToSpell(row: DbSpell): Spell {
     levelRequired: row.level_required,
     classRestrictions: row.class_restrictions ?? [],
     isAttackSpell: row.is_attack_spell,
-    scalingPerLevel: row.scaling_per_level ? parseFloat(row.scaling_per_level) : null,
+    scalingPerLevel: row.scaling_per_level ? (isNaN(parseFloat(row.scaling_per_level)) ? null : parseFloat(row.scaling_per_level)) : null,
     damageScalingStat: row.damage_scaling_stat as SpellScalingStat | null,
     damageScalingFactor: row.damage_scaling_factor ? (isNaN(parseFloat(row.damage_scaling_factor)) ? null : parseFloat(row.damage_scaling_factor)) : null,
     healingScalingStat: row.healing_scaling_stat as SpellScalingStat | null,

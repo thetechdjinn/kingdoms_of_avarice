@@ -959,33 +959,36 @@ export async function runMigrations(): Promise<void> {
 
         // Migrate damage_dice → min_damage/max_damage
         // Parse "NdS+M" format: min = N + M, max = N*S + M
+        // Only update rows where regex matches (skip malformed data)
         await client.query(`
           UPDATE spells
           SET min_damage = GREATEST(1,
-            (regexp_match(damage_dice, '^(\d+)d(\d+)([+-]\d+)?$'))[1]::int
-            + COALESCE((regexp_match(damage_dice, '^(\d+)d(\d+)([+-]\d+)?$'))[3]::int, 0)
+            m[1]::int + COALESCE(m[3]::int, 0)
           ),
           max_damage = GREATEST(1,
-            (regexp_match(damage_dice, '^(\d+)d(\d+)([+-]\d+)?$'))[1]::int
-            * (regexp_match(damage_dice, '^(\d+)d(\d+)([+-]\d+)?$'))[2]::int
-            + COALESCE((regexp_match(damage_dice, '^(\d+)d(\d+)([+-]\d+)?$'))[3]::int, 0)
+            m[1]::int * m[2]::int + COALESCE(m[3]::int, 0)
           )
-          WHERE damage_dice IS NOT NULL
+          FROM (
+            SELECT id, regexp_match(damage_dice, '^(\\d+)d(\\d+)([+-]\\d+)?$') AS m
+            FROM spells WHERE damage_dice IS NOT NULL
+          ) AS parsed
+          WHERE spells.id = parsed.id AND parsed.m IS NOT NULL
         `);
 
         // Migrate healing_dice → min_healing/max_healing
         await client.query(`
           UPDATE spells
           SET min_healing = GREATEST(1,
-            (regexp_match(healing_dice, '^(\d+)d(\d+)([+-]\d+)?$'))[1]::int
-            + COALESCE((regexp_match(healing_dice, '^(\d+)d(\d+)([+-]\d+)?$'))[3]::int, 0)
+            m[1]::int + COALESCE(m[3]::int, 0)
           ),
           max_healing = GREATEST(1,
-            (regexp_match(healing_dice, '^(\d+)d(\d+)([+-]\d+)?$'))[1]::int
-            * (regexp_match(healing_dice, '^(\d+)d(\d+)([+-]\d+)?$'))[2]::int
-            + COALESCE((regexp_match(healing_dice, '^(\d+)d(\d+)([+-]\d+)?$'))[3]::int, 0)
+            m[1]::int * m[2]::int + COALESCE(m[3]::int, 0)
           )
-          WHERE healing_dice IS NOT NULL
+          FROM (
+            SELECT id, regexp_match(healing_dice, '^(\\d+)d(\\d+)([+-]\\d+)?$') AS m
+            FROM spells WHERE healing_dice IS NOT NULL
+          ) AS parsed
+          WHERE spells.id = parsed.id AND parsed.m IS NOT NULL
         `);
 
         // Convert scaling factors from flat-bonus format to per-10-stat percentage

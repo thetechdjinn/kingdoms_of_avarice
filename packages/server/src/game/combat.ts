@@ -350,6 +350,11 @@ async function processSpellCombat(
     }
   }
 
+  // Validate damage values
+  if (!spell.minDamage || !spell.maxDamage || spell.minDamage <= 0 || spell.maxDamage <= 0) {
+    return true; // no damage defined, skip but continue combat
+  }
+
   // Calculate scaled damage range
   const statValue = getStatValueForScaling(attacker.characterStats, spell.damageScalingStat);
   const scaled = calculateSpellScaling(
