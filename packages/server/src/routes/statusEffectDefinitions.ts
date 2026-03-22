@@ -25,7 +25,7 @@ function validateDefinitionInput(def: Record<string, unknown>): string | null {
   }
 
   // Optional numeric fields - validate type if provided
-  const numericFields = ['maxStacks', 'accuracyModifier', 'defenseModifier', 'energyModifier', 'damageModifier'];
+  const numericFields = ['maxStacks', 'accuracyModifier', 'defenseModifier', 'energyModifier', 'damageModifier', 'speedModifier'];
   for (const field of numericFields) {
     if (def[field] !== undefined && def[field] !== null && typeof def[field] !== 'number') {
       return `${field} must be a number`;
@@ -120,7 +120,7 @@ export function setupStatusEffectDefinitionRoutes(app: Express): void {
     try {
       const {
         id, name, description, category, stackingBehavior, maxStacks,
-        accuracyModifier, defenseModifier, energyModifier, damageModifier,
+        accuracyModifier, defenseModifier, energyModifier, damageModifier, speedModifier,
         tickDamageMin, tickDamageMax, tickHealingMin, tickHealingMax,
         tickMessage, silentTick, wearOffMessage,
         blocksRegen, blocksMovement, isBlind
@@ -154,6 +154,7 @@ export function setupStatusEffectDefinitionRoutes(app: Express): void {
         defenseModifier: defenseModifier ?? 0,
         energyModifier: energyModifier ?? 0,
         damageModifier: damageModifier ?? 0,
+        speedModifier: speedModifier ?? 0,
         tickDamageMin,
         tickDamageMax,
         tickHealingMin,
@@ -191,7 +192,7 @@ export function setupStatusEffectDefinitionRoutes(app: Express): void {
       // Extract and validate only allowed fields
       const {
         name, description, category, stackingBehavior, maxStacks,
-        accuracyModifier, defenseModifier, energyModifier, damageModifier,
+        accuracyModifier, defenseModifier, energyModifier, damageModifier, speedModifier,
         tickDamageMin, tickDamageMax, tickHealingMin, tickHealingMax,
         tickMessage, silentTick, wearOffMessage,
         blocksRegen, blocksMovement, isBlind
@@ -210,7 +211,7 @@ export function setupStatusEffectDefinitionRoutes(app: Express): void {
       }
 
       // Validate numeric fields if provided
-      const numericFields = { maxStacks, accuracyModifier, defenseModifier, energyModifier, damageModifier };
+      const numericFields = { maxStacks, accuracyModifier, defenseModifier, energyModifier, damageModifier, speedModifier };
       for (const [field, value] of Object.entries(numericFields)) {
         if (value !== undefined && value !== null && typeof value !== 'number') {
           res.status(400).json({ success: false, message: `${field} must be a number` });
@@ -278,6 +279,7 @@ export function setupStatusEffectDefinitionRoutes(app: Express): void {
       if (defenseModifier !== undefined) updateData.defenseModifier = defenseModifier;
       if (energyModifier !== undefined) updateData.energyModifier = energyModifier;
       if (damageModifier !== undefined) updateData.damageModifier = damageModifier;
+      if (speedModifier !== undefined) updateData.speedModifier = speedModifier;
       if (tickDamageMin !== undefined) updateData.tickDamageMin = tickDamageMin;
       if (tickDamageMax !== undefined) updateData.tickDamageMax = tickDamageMax;
       if (tickHealingMin !== undefined) updateData.tickHealingMin = tickHealingMin;
@@ -413,6 +415,7 @@ export function setupStatusEffectDefinitionRoutes(app: Express): void {
             defenseModifier: def.defenseModifier ?? 0,
             energyModifier: def.energyModifier ?? 0,
             damageModifier: def.damageModifier ?? 0,
+            speedModifier: def.speedModifier ?? 0,
             tickDamageMin: def.tickDamageMin,
             tickDamageMax: def.tickDamageMax,
             tickHealingMin: def.tickHealingMin,

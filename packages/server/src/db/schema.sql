@@ -289,8 +289,6 @@ CREATE TABLE IF NOT EXISTS npcs (
     respawn_time INTEGER,
     level INTEGER DEFAULT 1,
     experience_reward INTEGER DEFAULT 0,
-    gold_min INTEGER DEFAULT 0,
-    gold_max INTEGER DEFAULT 0,
     proper_name BOOLEAN DEFAULT FALSE
 );
 
@@ -315,7 +313,6 @@ CREATE TABLE IF NOT EXISTS npc_attacks (
     max_damage INTEGER NOT NULL DEFAULT 4 CHECK (max_damage >= min_damage),
     attacks_per_round INTEGER NOT NULL DEFAULT 1 CHECK (attacks_per_round >= 1),
     percentage INTEGER NOT NULL DEFAULT 100 CHECK (percentage >= 0 AND percentage <= 100),
-    mana_cost INTEGER DEFAULT 0 CHECK (mana_cost >= 0),
     hit_message TEXT,
     miss_message TEXT,
     hit_verb VARCHAR(50) DEFAULT 'hit',

@@ -9,7 +9,6 @@ interface NpcAttack {
   maxDamage: number;
   attacksPerRound: number;
   percentage: number;
-  manaCost: number;
   hitMessage: string | null;
   missMessage: string | null;
   hitVerb: string;
@@ -41,8 +40,6 @@ interface NpcTemplate {
   respawnTime: number | null;
   level: number;
   experienceReward: number;
-  goldMin: number;
-  goldMax: number;
   maxMana: number;
   baseAccuracy: number;
   baseDefense: number;
@@ -365,8 +362,6 @@ function selectTemplate(id: number): void {
   setInputValue('npc-experience-reward', String(template.experienceReward));
   setInputValue('npc-essence-reward', String(template.essenceReward));
   setInputValue('npc-essence-class', template.essenceClass || '');
-  setInputValue('npc-gold-min', String(template.goldMin));
-  setInputValue('npc-gold-max', String(template.goldMax));
   setSelectValue('npc-drop-table', template.dropTableId ? String(template.dropTableId) : '');
 
   // Appearance tab
@@ -472,10 +467,6 @@ function renderAttacks(): void {
           <label>Percentage %</label>
           <input type="number" data-field="percentage" data-index="${index}" min="0" max="100" value="${atk.percentage}" />
         </div>
-        <div class="form-group">
-          <label>Mana Cost</label>
-          <input type="number" data-field="manaCost" data-index="${index}" min="0" value="${atk.manaCost}" />
-        </div>
       </div>
       <div class="attack-verbs">
         <div class="attack-verbs-title">Verbs & Messages</div>
@@ -534,7 +525,7 @@ function handleAttackFieldChange(e: Event): void {
   if (index < 0 || index >= editingAttacks.length || !field) return;
 
   const atk = editingAttacks[index] as unknown as Record<string, unknown>;
-  const numericFields = ['minDamage', 'maxDamage', 'attacksPerRound', 'percentage', 'manaCost'];
+  const numericFields = ['minDamage', 'maxDamage', 'attacksPerRound', 'percentage'];
   if (numericFields.includes(field)) {
     atk[field] = parseNumberOrDefault(el.value, 0);
   } else if (field === 'hitMessage' || field === 'missMessage') {
@@ -561,7 +552,6 @@ function addAttack(): void {
     maxDamage: 5,
     attacksPerRound: 1,
     percentage: 100,
-    manaCost: 0,
     hitMessage: null,
     missMessage: null,
     hitVerb: 'hits',
@@ -781,8 +771,6 @@ function gatherFormData(): Record<string, unknown> {
     experienceReward: getNum('npc-experience-reward', 0),
     essenceReward: getNum('npc-essence-reward', 0),
     essenceClass: essenceClassVal || null,
-    goldMin: getNum('npc-gold-min', 0),
-    goldMax: getNum('npc-gold-max', 0),
     dropTableId: dropTableVal ? parseInt(dropTableVal) : null,
 
     augmentations,
@@ -1062,9 +1050,6 @@ function updatePreview(): void {
   const dr = getNum('npc-damage-reduction', 0);
   const spawnRoom = getVal('npc-spawn-room');
   const xp = getNum('npc-experience-reward', 0);
-  const goldMin = getNum('npc-gold-min', 0);
-  const goldMax = getNum('npc-gold-max', 0);
-
   // Balance calculations
   const effectiveHp = dr < 100 ? Math.round(maxHealth / (1 - dr / 100)) : Infinity;
 
@@ -1117,7 +1102,6 @@ function updatePreview(): void {
     <div class="preview-section">
       <div class="preview-section-title">Rewards</div>
       <div class="preview-stat"><span class="label">XP:</span> <span class="value">${xp}</span></div>
-      <div class="preview-stat"><span class="label">Gold:</span> <span class="value">${goldMin}-${goldMax} copper</span></div>
     </div>
   `;
 }

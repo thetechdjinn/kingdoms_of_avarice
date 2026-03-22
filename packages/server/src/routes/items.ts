@@ -5,6 +5,7 @@ import * as craftingRepo from '../db/repositories/craftingRepository.js';
 import { requireDeveloper } from '../middleware/auth.js';
 import { ItemType, ItemLocationType, ItemCondition, EquipmentSlot, ItemRarity } from '@koa/shared';
 import { withTransaction } from '../db/index.js';
+import { withArticle } from '../utils/textFormat.js';
 
 export function setupItemRoutes(app: Express): void {
   // ============================================================================
@@ -60,7 +61,7 @@ export function setupItemRoutes(app: Express): void {
   app.post('/api/items/templates', requireDeveloper, async (req: Request, res: Response) => {
     try {
       const {
-        name, short_desc, long_desc, room_desc, keywords,
+        name, short_desc, long_desc, keywords,
         weight, size, base_value, item_type, equipment_slot,
         flags, max_stack, container_capacity, container_weight_limit,
         weapon_data, armor_data, consumable_data, light_data,
@@ -68,8 +69,8 @@ export function setupItemRoutes(app: Express): void {
         rarity, max_in_world
       } = req.body;
 
-      if (!name || !short_desc || !item_type) {
-        res.status(400).json({ success: false, message: 'Name, short_desc, and item_type are required' });
+      if (!name || !item_type) {
+        res.status(400).json({ success: false, message: 'Name and item_type are required' });
         return;
       }
 
@@ -106,9 +107,8 @@ export function setupItemRoutes(app: Express): void {
 
       const template = await itemRepo.createTemplate({
         name,
-        short_desc,
+        short_desc: short_desc || withArticle(name.toLowerCase()),
         long_desc,
-        room_desc,
         keywords: keywords || [name.toLowerCase()],
         weight: weight ?? 0,
         size: size ?? 1,

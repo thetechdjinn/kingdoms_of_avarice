@@ -203,9 +203,12 @@ async function handleOffensiveSpell(
     }
 
     const npcDisplayName = withNpcName(npcTarget.entityName, npcTarget.isProperName);
+    const npcTelegraph = spell.telegraphMessage
+      ? spell.telegraphMessage.replace(/\{name\}/g, socket.username).replace(/\{target\}/g, npcDisplayName)
+      : `${socket.username} begins casting ${spell.name.toLowerCase()} at ${npcDisplayName}.`;
     broadcastToRoom(
       currentRoomId,
-      `${socket.username} begins casting ${spell.name.toLowerCase()} at ${npcDisplayName}.`,
+      npcTelegraph,
       socket.playerId
     );
 
@@ -269,9 +272,12 @@ async function handleOffensiveSpell(
   sendVitals(target!);
 
   // Broadcast to room (exclude both caster and target - they get personalized messages)
+  const pvpTelegraph = spell.telegraphMessage
+    ? spell.telegraphMessage.replace(/\{name\}/g, socket.username).replace(/\{target\}/g, target!.username)
+    : `${socket.username} begins casting ${spell.name.toLowerCase()} at ${target!.username}.`;
   broadcastToRoom(
     currentRoomId,
-    `${socket.username} begins casting ${spell.name.toLowerCase()} at ${target!.username}.`,
+    pvpTelegraph,
     [socket.playerId, target!.playerId]
   );
 

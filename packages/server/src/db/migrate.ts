@@ -792,6 +792,25 @@ export async function runMigrations(): Promise<void> {
         console.log('Phase 1: Dropped abilities, talents, events tables and columns');
       }
 
+      // Add speed_modifier column to status_effect_definitions
+      await client.query(`
+        ALTER TABLE status_effect_definitions
+        ADD COLUMN IF NOT EXISTS speed_modifier INTEGER DEFAULT 0
+      `);
+
+      // Remove legacy gold_min/gold_max columns from npcs (replaced by drop tables)
+      await client.query(`
+        ALTER TABLE npcs
+        DROP COLUMN IF EXISTS gold_min,
+        DROP COLUMN IF EXISTS gold_max
+      `);
+
+      // Remove mana_cost from npc_attacks (melee attacks don't cost mana; spells have their own mana_cost)
+      await client.query(`
+        ALTER TABLE npc_attacks
+        DROP COLUMN IF EXISTS mana_cost
+      `);
+
     });
 
     console.log('Database migrations completed successfully');

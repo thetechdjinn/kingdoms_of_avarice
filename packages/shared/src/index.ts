@@ -269,7 +269,6 @@ export interface NpcAttack {
   maxDamage: number;
   attacksPerRound: number;
   percentage: number;
-  manaCost: number;
   hitMessage: string | null;
   missMessage: string | null;
   hitVerb: string;
@@ -303,8 +302,6 @@ export interface NpcTemplate {
   respawnTime: number | null;
   level: number;
   experienceReward: number;
-  goldMin: number;
-  goldMax: number;
   maxMana: number;
   baseAccuracy: number;
   baseDefense: number;

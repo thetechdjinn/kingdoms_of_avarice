@@ -1,10 +1,10 @@
 /**
  * NPC Death Handler
  *
- * Processes NPC death: XP distribution, gold/loot drops, despawn, respawn queue.
+ * Processes NPC death: XP distribution, loot drops, despawn, respawn queue.
  */
 
-import { MessageType, ItemLocationType, CURRENCY_DENOMINATIONS } from '@koa/shared';
+import { MessageType, ItemLocationType } from '@koa/shared';
 import type { CurrencyDenomination } from '@koa/shared';
 import type { CombatEntity } from './combatEntity.js';
 import { isPlayerEntity } from './combatEntity.js';
@@ -13,7 +13,7 @@ import { removeNpcInstance, queueRespawn, markAsCorpse } from './npcManager.js';
 import { sendCombatMessage, broadcastCombatToRoom } from './combatMessaging.js';
 import { colors } from '../utils/colors.js';
 import { awardEssence, awardXp } from './progression.js';
-import { copperToDenominationCounts, formatCopperAsDenominations } from '../utils/textFormat.js';
+import { copperToDenominationCounts } from '../utils/textFormat.js';
 import * as dropTableRepo from '../db/repositories/dropTableRepository.js';
 import * as itemRepo from '../db/repositories/itemRepository.js';
 import * as characterRepo from '../db/repositories/characterRepository.js';
@@ -50,12 +50,7 @@ export async function processNpcDeath(
 
   // Merchants don't drop gold or loot — their inventory persists through death/respawn
   if (!template.merchantEnabled) {
-    // Drop gold (visible to room, before COMBAT OFF)
-    if (template.goldMin > 0 || template.goldMax > 0) {
-      await dropGold(npc, roomId);
-    }
-
-    // Process drop table (loot, before COMBAT OFF)
+    // Process drop table (currency + loot, before COMBAT OFF)
     if (template.dropTableId) {
       await processDropTable(template.dropTableId, roomId);
     }
@@ -260,29 +255,6 @@ async function dropCurrencyAsDenominations(
         quantity: count,
       });
     }
-  }
-}
-
-/**
- * Drop gold on the ground in the room where the NPC died.
- * goldMin/goldMax are interpreted as gold coin counts.
- * Multiplied by 100 to convert to copper, then run through denomination system.
- */
-async function dropGold(npc: NpcCombatInstance, roomId: number): Promise<void> {
-  const { goldMin, goldMax } = npc.template;
-  const goldAmount = goldMin + Math.floor(Math.random() * (goldMax - goldMin + 1));
-
-  if (goldAmount <= 0) return;
-
-  // Convert gold coin count to copper (1 gold = 100 copper)
-  const copperAmount = goldAmount * 100;
-
-  try {
-    await dropCurrencyAsDenominations(copperAmount, CURRENCY_DENOMINATIONS, roomId);
-    const denomStr = formatCopperAsDenominations(copperAmount);
-    broadcastCombatToRoom(roomId, colors.gold(`${denomStr} scatters across the ground.`), []);
-  } catch (error) {
-    console.error('[NPC Death] Failed to drop gold:', error);
   }
 }
 

@@ -3,9 +3,8 @@
 interface ItemTemplate {
   id: number;
   name: string;
-  short_desc: string;
+  short_desc?: string;
   long_desc?: string;
-  room_desc?: string;
   keywords: string[];
   weight: number;
   size: number;
@@ -251,9 +250,8 @@ function renderTemplateList(): void {
   }
   
   if (searchTerm) {
-    filteredTemplates = filteredTemplates.filter(t => 
+    filteredTemplates = filteredTemplates.filter(t =>
       t.name.toLowerCase().includes(searchTerm) ||
-      t.short_desc.toLowerCase().includes(searchTerm) ||
       t.keywords.some(k => k.toLowerCase().includes(searchTerm))
     );
   }
@@ -301,9 +299,7 @@ function selectTemplate(id: number): void {
   // Basic fields
   const nameInput = getElement<HTMLInputElement>('item-name');
   const typeSelect = getElement<HTMLSelectElement>('item-type');
-  const shortDescInput = getElement<HTMLInputElement>('item-short-desc');
   const longDescInput = getElement<HTMLTextAreaElement>('item-long-desc');
-  const roomDescInput = getElement<HTMLInputElement>('item-room-desc');
   const keywordsInput = getElement<HTMLInputElement>('item-keywords');
   const weightInput = getElement<HTMLInputElement>('item-weight');
   const sizeInput = getElement<HTMLInputElement>('item-size');
@@ -313,9 +309,7 @@ function selectTemplate(id: number): void {
 
   if (nameInput) nameInput.value = template.name;
   if (typeSelect) typeSelect.value = template.item_type;
-  if (shortDescInput) shortDescInput.value = template.short_desc;
   if (longDescInput) longDescInput.value = template.long_desc || '';
-  if (roomDescInput) roomDescInput.value = template.room_desc || '';
   if (keywordsInput) keywordsInput.value = template.keywords.join(', ');
   if (weightInput) weightInput.value = String(template.weight);
   if (sizeInput) sizeInput.value = String(template.size);
@@ -514,7 +508,7 @@ function updatePreview(template: ItemTemplate): void {
   const valueDisplay = formatCopperValue(template.base_value);
 
   let html = `
-    <div class="preview-name">${escapeHtml(template.short_desc)}</div>
+    <div class="preview-name">${escapeHtml(template.name)}</div>
     <div class="preview-desc">${escapeHtml(template.long_desc || 'No description.')}</div>
     <div class="preview-stats">
       <span>Weight: ${template.weight}</span>
@@ -651,7 +645,6 @@ async function createTemplate(): Promise<void> {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         name,
-        short_desc: `a ${name.toLowerCase()}`,
         item_type: 'misc',
         keywords: [name.toLowerCase()],
       }),
@@ -766,11 +759,13 @@ function gatherFormData(): Partial<ItemTemplate> {
   const keywordsStr = (document.getElementById('item-keywords') as HTMLInputElement).value;
   const keywords = keywordsStr.split(',').map(k => k.trim()).filter(k => k);
 
+  const itemName = (document.getElementById('item-name') as HTMLInputElement).value;
+  const lowerName = itemName.toLowerCase();
+  const article = 'aeiou'.includes(lowerName[0]) ? 'an' : 'a';
   const data: Partial<ItemTemplate> = {
-    name: (document.getElementById('item-name') as HTMLInputElement).value,
-    short_desc: (document.getElementById('item-short-desc') as HTMLInputElement).value,
+    name: itemName,
+    short_desc: `${article} ${lowerName}`,
     long_desc: (document.getElementById('item-long-desc') as HTMLTextAreaElement).value || undefined,
-    room_desc: (document.getElementById('item-room-desc') as HTMLInputElement).value || undefined,
     keywords,
     weight: parseInt((document.getElementById('item-weight') as HTMLInputElement).value) || 0,
     size: parseInt((document.getElementById('item-size') as HTMLInputElement).value) || 1,
