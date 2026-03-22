@@ -908,7 +908,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       lines.push('<strong>Damage</strong>');
       lines.push(`  Base: ${minDmg} - ${maxDmg}`);
       if (scalingPerLevel > 0) {
-        lines.push(`  Level ${level} scaling: x${levelMult.toFixed(2)}${maxScalingLevel > 0 ? ` (capped at lvl ${maxScalingLevel})` : ''}`);
+        lines.push(`  Level ${effectiveLevel} scaling: x${levelMult.toFixed(2)}${maxScalingLevel > 0 && level > maxScalingLevel ? ` (capped from lvl ${level})` : ''}`);
       }
       if (dmgStatFactor > 0 && dmgStatValue > 0) {
         lines.push(`  ${capitalize(dmgStat)} ${dmgStatValue} scaling: x${dmgStatMult.toFixed(2)}`);
@@ -940,7 +940,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       lines.push('<strong>Healing</strong>');
       lines.push(`  Base: ${minHeal} - ${maxHeal}`);
       if (scalingPerLevel > 0) {
-        lines.push(`  Level ${level} scaling: x${levelMult.toFixed(2)}${maxScalingLevel > 0 ? ` (capped at lvl ${maxScalingLevel})` : ''}`);
+        lines.push(`  Level ${effectiveLevel} scaling: x${levelMult.toFixed(2)}${maxScalingLevel > 0 && level > maxScalingLevel ? ` (capped from lvl ${level})` : ''}`);
       }
       if (healStatFactor > 0 && healStatValue > 0) {
         lines.push(`  ${capitalize(healStat)} ${healStatValue} scaling: x${healStatMult.toFixed(2)}`);
