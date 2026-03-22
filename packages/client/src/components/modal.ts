@@ -1,6 +1,6 @@
 /**
  * Shared modal/dialog component.
- * Replaces all prompt() and confirm() calls with styled, accessible dialogs.
+ * Styled, accessible dialog replacements for prompt() and confirm().
  *
  * CSS is already in editor.css (.modal, .modal-content, .modal-header, .modal-body, .close-btn)
  *
