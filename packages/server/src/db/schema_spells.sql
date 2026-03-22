@@ -22,9 +22,16 @@ CREATE TABLE IF NOT EXISTS spells (
     -- Cost
     mana_cost INTEGER NOT NULL DEFAULT 0,
 
-    -- Effects (dice notation for damage/healing, e.g., '2d6+4')
-    damage_dice VARCHAR(20),    -- For offensive spells
-    healing_dice VARCHAR(20),   -- For healing spells
+    -- Damage (offensive spells)
+    min_damage INTEGER,
+    max_damage INTEGER,
+
+    -- Healing (healing spells)
+    min_healing INTEGER,
+    max_healing INTEGER,
+
+    -- Multi-hit
+    hits_per_cast INTEGER NOT NULL DEFAULT 1,
 
     -- Status effect (for buffs/debuffs)
     status_effect VARCHAR(50),  -- Effect ID to apply
@@ -37,11 +44,28 @@ CREATE TABLE IF NOT EXISTS spells (
     -- Combat behavior
     is_attack_spell BOOLEAN NOT NULL DEFAULT FALSE,  -- If true, replaces melee combat action
 
-    -- Stat scaling (adds bonus damage/healing based on character stats)
+    -- Level scaling (% increase per caster level)
+    scaling_per_level DECIMAL(4,3),  -- e.g., 0.100 = 10% per level
+
+    -- Stat scaling (% increase per 10 stat points)
     damage_scaling_stat VARCHAR(20) CHECK (damage_scaling_stat IN ('none', 'strength', 'agility', 'constitution', 'intellect', 'wisdom', 'charisma')),
-    damage_scaling_factor DECIMAL(4,2),  -- Percentage of stat added (e.g., 0.50 = 50%)
+    damage_scaling_factor DECIMAL(4,3),  -- e.g., 0.020 = 2% per 10 points
     healing_scaling_stat VARCHAR(20) CHECK (healing_scaling_stat IN ('none', 'strength', 'agility', 'constitution', 'intellect', 'wisdom', 'charisma')),
-    healing_scaling_factor DECIMAL(4,2),  -- Percentage of stat added (e.g., 0.50 = 50%)
+    healing_scaling_factor DECIMAL(4,3),  -- e.g., 0.020 = 2% per 10 points
+
+    -- Fizzle mechanics
+    cast_difficulty INTEGER NOT NULL DEFAULT 0,  -- 0 = always succeeds
+    fizzle_message TEXT,
+
+    -- Custom spell messages (override defaults when set)
+    hit_message_self TEXT,     -- Message to caster on hit
+    hit_message_target TEXT,   -- Message to target on hit
+    hit_message_room TEXT,     -- Message to room on hit
+
+    -- NPC telegraph and save mechanics
+    telegraph_message TEXT,
+    save_stat VARCHAR(20) CHECK (save_stat IN ('none', 'strength', 'agility', 'constitution', 'intellect', 'wisdom', 'charisma')),
+    save_difficulty INTEGER DEFAULT 0,
 
     -- Metadata
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

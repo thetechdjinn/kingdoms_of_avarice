@@ -12,7 +12,7 @@ import { getPlayerLocation } from './adminCommands.js';
 import { colors } from '../utils/colors.js';
 import * as spellRepo from '../db/repositories/spellRepository.js';
 import * as characterRepo from '../db/repositories/characterRepository.js';
-import { parseDiceString } from './combatCalculations.js';
+import { getStatValueForScaling, calculateSpellScaling, getSpellcastingAbility, spellCastSucceeds } from './combat.js';
 import { applyEffect, getEffectDefinition, formatDuration, getEffectModifiers } from './statusEffects.js';
 import { isOnCooldown, startCooldown, getCooldownMessage } from './cooldownTracker.js';
 import { isPlayerDropped, isPlayerDead, clearDeathState } from './damageHandler.js';
@@ -29,6 +29,27 @@ import { breakCasterCombat } from './combatCommands.js';
  * Refreshed on server start and when spells are added/removed
  */
 let cachedMnemonics: Set<string> = new Set();
+
+/**
+ * Check fizzle for an instant (non-combat-loop) spell cast.
+ * Returns a CommandResponse if the spell fizzles, or null if it succeeds.
+ * Consumes mana and starts cooldown on fizzle.
+ */
+async function checkInstantSpellFizzle(
+  socket: AuthenticatedSocket,
+  spell: Spell,
+): Promise<CommandResponse | null> {
+  const { getClassById } = await import('../db/repositories/progressionRepository.js');
+  const classDef = await getClassById(socket.characterClass);
+  const spellcasting = getSpellcastingAbility(socket.characterStats, classDef?.magic_school);
+  if (!spellCastSucceeds(spell.castDifficulty, spellcasting)) {
+    socket.vitals.resource = (socket.vitals.resource ?? 0) - spell.manaCost;
+    sendVitals(socket);
+    startCooldown(socket, spell.mnemonic, 'use');
+    return { type: MessageType.OUTPUT, message: colors.red(spell.fizzleMessage || `Your ${spell.name} fizzles!`) };
+  }
+  return null;
+}
 
 /**
  * Initialize the spell mnemonic cache
@@ -169,9 +190,17 @@ async function handleOffensiveSpell(
       spellName: spell.name,
       mnemonic: spell.mnemonic,
       manaCost: spell.manaCost,
-      damageDice: spell.damageDice || '1d4',
+      minDamage: spell.minDamage ?? 1,
+      maxDamage: spell.maxDamage ?? 4,
+      hitsPerCast: spell.hitsPerCast ?? 1,
+      scalingPerLevel: spell.scalingPerLevel,
       damageScalingStat: spell.damageScalingStat,
       damageScalingFactor: spell.damageScalingFactor,
+      castDifficulty: spell.castDifficulty ?? 0,
+      fizzleMessage: spell.fizzleMessage,
+      hitMessageSelf: spell.hitMessageSelf,
+      hitMessageTarget: spell.hitMessageTarget,
+      hitMessageRoom: spell.hitMessageRoom,
       statusEffect: spell.statusEffect,
       effectDuration: spell.effectDuration,
     };
@@ -237,9 +266,17 @@ async function handleOffensiveSpell(
     spellName: spell.name,
     mnemonic: spell.mnemonic,
     manaCost: spell.manaCost,
-    damageDice: spell.damageDice || '1d4',
+    minDamage: spell.minDamage ?? 1,
+    maxDamage: spell.maxDamage ?? 4,
+    hitsPerCast: spell.hitsPerCast ?? 1,
+    scalingPerLevel: spell.scalingPerLevel,
     damageScalingStat: spell.damageScalingStat,
     damageScalingFactor: spell.damageScalingFactor,
+    castDifficulty: spell.castDifficulty ?? 0,
+    fizzleMessage: spell.fizzleMessage,
+    hitMessageSelf: spell.hitMessageSelf,
+    hitMessageTarget: spell.hitMessageTarget,
+    hitMessageRoom: spell.hitMessageRoom,
     statusEffect: spell.statusEffect,
     effectDuration: spell.effectDuration,
   };
@@ -352,9 +389,20 @@ async function handleHealingSpell(
     breakCasterCombat(socket);
   }
 
-  // Roll healing
-  const healingResult = parseDiceString(spell.healingDice || '1d8');
-  const healAmount = healingResult.roll;
+  // Fizzle check (3% auto-fizzle + difficulty check, mana consumed on fizzle)
+  const fizzleResult = await checkInstantSpellFizzle(socket, spell);
+  if (fizzleResult) return fizzleResult;
+
+  // Calculate scaled healing range
+  const statValue = getStatValueForScaling(socket.characterStats, spell.healingScalingStat);
+  const scaled = calculateSpellScaling(
+    spell.minHealing ?? 1, spell.maxHealing ?? 8,
+    socket.characterLevel,
+    spell.scalingPerLevel,
+    statValue,
+    spell.healingScalingFactor,
+  );
+  const healAmount = Math.floor(Math.random() * (scaled.max - scaled.min + 1)) + scaled.min;
 
   // Apply healing to target (cap at max HP)
   const oldHp = targetSocket.vitals.hp;
@@ -455,6 +503,19 @@ async function handleBuffSpell(
     };
   }
 
+  // Fizzle check
+  if (spell.castDifficulty > 0) {
+    const { getClassById } = await import('../db/repositories/progressionRepository.js');
+    const classDef = await getClassById(socket.characterClass);
+    const spellcasting = getSpellcastingAbility(socket.characterStats, classDef?.magic_school);
+    if (!spellCastSucceeds(spell.castDifficulty, spellcasting)) {
+      socket.vitals.resource = (socket.vitals.resource ?? 0) - spell.manaCost;
+      sendVitals(socket);
+      startCooldown(socket, spell.mnemonic, 'use');
+      return { type: MessageType.OUTPUT, message: colors.red(spell.fizzleMessage || `Your ${spell.name} fizzles!`) };
+    }
+  }
+
   // Calculate duration in milliseconds (effectDuration is in seconds)
   const durationMs = (spell.effectDuration ?? 60) * 1000;
 
@@ -524,6 +585,19 @@ async function handleDebuffSpell(
 
   if (!target && !npcTarget) {
     return { type: MessageType.ERROR, message: `You don't see ${targetName} here.` };
+  }
+
+  // Fizzle check
+  if (spell.castDifficulty > 0) {
+    const { getClassById } = await import('../db/repositories/progressionRepository.js');
+    const classDef = await getClassById(socket.characterClass);
+    const spellcasting = getSpellcastingAbility(socket.characterStats, classDef?.magic_school);
+    if (!spellCastSucceeds(spell.castDifficulty, spellcasting)) {
+      socket.vitals.resource = (socket.vitals.resource ?? 0) - spell.manaCost;
+      sendVitals(socket);
+      startCooldown(socket, spell.mnemonic, 'use');
+      return { type: MessageType.OUTPUT, message: colors.red(spell.fizzleMessage || `Your ${spell.name} fizzles!`) };
+    }
   }
 
   // NPC target — apply effect and engage combat

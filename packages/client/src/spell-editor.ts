@@ -227,20 +227,43 @@ function selectSpell(id: number): void {
   const telegraphMessageInput = getElement<HTMLInputElement>('spell-telegraph-message');
   if (telegraphMessageInput) telegraphMessageInput.value = spell.telegraphMessage || '';
 
+  // Damage/Healing
+  const minDamageInput = getElement<HTMLInputElement>('spell-min-damage');
+  const maxDamageInput = getElement<HTMLInputElement>('spell-max-damage');
+  const minHealingInput = getElement<HTMLInputElement>('spell-min-healing');
+  const maxHealingInput = getElement<HTMLInputElement>('spell-max-healing');
+  const hitsPerCastInput = getElement<HTMLInputElement>('spell-hits-per-cast');
+  if (minDamageInput) minDamageInput.value = String(spell.minDamage || 0);
+  if (maxDamageInput) maxDamageInput.value = String(spell.maxDamage || 0);
+  if (minHealingInput) minHealingInput.value = String(spell.minHealing || 0);
+  if (maxHealingInput) maxHealingInput.value = String(spell.maxHealing || 0);
+  if (hitsPerCastInput) hitsPerCastInput.value = String(spell.hitsPerCast || 1);
+
   // Effects
-  const damageDiceInput = getElement<HTMLInputElement>('spell-damage-dice');
-  const healingDiceInput = getElement<HTMLInputElement>('spell-healing-dice');
   const statusEffectInput = getElement<HTMLInputElement>('spell-status-effect');
   const effectDurationInput = getElement<HTMLInputElement>('spell-effect-duration');
   const saveStatSelect = getElement<HTMLSelectElement>('spell-save-stat');
   const saveDifficultyInput = getElement<HTMLInputElement>('spell-save-difficulty');
-
-  if (damageDiceInput) damageDiceInput.value = spell.damageDice || '';
-  if (healingDiceInput) healingDiceInput.value = spell.healingDice || '';
   if (statusEffectInput) statusEffectInput.value = spell.statusEffect || '';
   if (effectDurationInput) effectDurationInput.value = String(spell.effectDuration || 0);
   if (saveStatSelect) saveStatSelect.value = spell.saveStat || 'none';
   if (saveDifficultyInput) saveDifficultyInput.value = String(spell.saveDifficulty || 0);
+
+  // Scaling
+  const scalingPerLevelInput = getElement<HTMLInputElement>('spell-scaling-per-level');
+  const castDifficultyInput = getElement<HTMLInputElement>('spell-cast-difficulty');
+  const fizzleMessageInput = getElement<HTMLInputElement>('spell-fizzle-message');
+  if (scalingPerLevelInput) scalingPerLevelInput.value = String((spell.scalingPerLevel ?? 0) * 100);
+  if (castDifficultyInput) castDifficultyInput.value = String(spell.castDifficulty || 0);
+  if (fizzleMessageInput) fizzleMessageInput.value = spell.fizzleMessage || '';
+
+  // Custom messages
+  const hitMsgSelfInput = getElement<HTMLInputElement>('spell-hit-msg-self');
+  const hitMsgTargetInput = getElement<HTMLInputElement>('spell-hit-msg-target');
+  const hitMsgRoomInput = getElement<HTMLInputElement>('spell-hit-msg-room');
+  if (hitMsgSelfInput) hitMsgSelfInput.value = spell.hitMessageSelf || '';
+  if (hitMsgTargetInput) hitMsgTargetInput.value = spell.hitMessageTarget || '';
+  if (hitMsgRoomInput) hitMsgRoomInput.value = spell.hitMessageRoom || '';
 
   // Scaling fields
   const damageScalingStatSelect = getElement<HTMLSelectElement>('spell-damage-scaling-stat');
@@ -325,12 +348,16 @@ function updatePreview(spell: Spell): void {
     </div>
   `;
 
-  // Damage/Healing with scaling
-  if (spell.spellType === 'offensive' && spell.damageDice) {
-    let damageInfo = escapeHtml(spell.damageDice);
+  // Damage with scaling
+  if (spell.spellType === 'offensive' && spell.minDamage && spell.maxDamage) {
+    let damageInfo = `${spell.minDamage}-${spell.maxDamage}`;
+    if (spell.hitsPerCast > 1) damageInfo += ` x${spell.hitsPerCast} hits`;
+    if (spell.scalingPerLevel) {
+      damageInfo += ` <span style="color: #fbbf24">+${Math.round(spell.scalingPerLevel * 100)}%/lvl</span>`;
+    }
     if (spell.damageScalingStat && spell.damageScalingStat !== 'none' && spell.damageScalingFactor) {
-      const pct = Math.round(spell.damageScalingFactor * 100);
-      damageInfo += ` <span style="color: #60a5fa">+${pct}% ${escapeHtml(spell.damageScalingStat.toUpperCase())}</span>`;
+      const pct = Math.round(spell.damageScalingFactor * 1000);
+      damageInfo += ` <span style="color: #60a5fa">+${pct / 10}%/10 ${escapeHtml(spell.damageScalingStat.toUpperCase())}</span>`;
     }
     html += `
       <div class="preview-section">
@@ -340,11 +367,15 @@ function updatePreview(spell: Spell): void {
     `;
   }
 
-  if (spell.spellType === 'healing' && spell.healingDice) {
-    let healingInfo = escapeHtml(spell.healingDice);
+  // Healing with scaling
+  if (spell.spellType === 'healing' && spell.minHealing && spell.maxHealing) {
+    let healingInfo = `${spell.minHealing}-${spell.maxHealing}`;
+    if (spell.scalingPerLevel) {
+      healingInfo += ` <span style="color: #fbbf24">+${Math.round(spell.scalingPerLevel * 100)}%/lvl</span>`;
+    }
     if (spell.healingScalingStat && spell.healingScalingStat !== 'none' && spell.healingScalingFactor) {
-      const pct = Math.round(spell.healingScalingFactor * 100);
-      healingInfo += ` <span style="color: #4ade80">+${pct}% ${escapeHtml(spell.healingScalingStat.toUpperCase())}</span>`;
+      const pct = Math.round(spell.healingScalingFactor * 1000);
+      healingInfo += ` <span style="color: #4ade80">+${pct / 10}%/10 ${escapeHtml(spell.healingScalingStat.toUpperCase())}</span>`;
     }
     html += `
       <div class="preview-section">
@@ -563,11 +594,12 @@ function gatherFormData(): Partial<Spell> {
     .map(c => c.trim())
     .filter(c => c);
 
-  // Parse scaling values - convert percentage to decimal (round to handle floating point)
+  // Parse scaling values - convert percentage to decimal
   const damageScalingStat = getElement<HTMLSelectElement>('spell-damage-scaling-stat')?.value || null;
-  const damageScalingFactorPct = Math.round(parseFloat(getElement<HTMLInputElement>('spell-damage-scaling-factor')?.value || '0')) || 0;
+  const damageScalingFactorPct = parseFloat(getElement<HTMLInputElement>('spell-damage-scaling-factor')?.value || '0') || 0;
   const healingScalingStat = getElement<HTMLSelectElement>('spell-healing-scaling-stat')?.value || null;
-  const healingScalingFactorPct = Math.round(parseFloat(getElement<HTMLInputElement>('spell-healing-scaling-factor')?.value || '0')) || 0;
+  const healingScalingFactorPct = parseFloat(getElement<HTMLInputElement>('spell-healing-scaling-factor')?.value || '0') || 0;
+  const scalingPerLevelPct = parseFloat(getElement<HTMLInputElement>('spell-scaling-per-level')?.value || '0') || 0;
 
   return {
     name: (document.getElementById('spell-name') as HTMLInputElement).value,
@@ -577,19 +609,28 @@ function gatherFormData(): Partial<Spell> {
     targetType: (document.getElementById('spell-target-type') as HTMLSelectElement).value as SpellTargetType,
     manaCost: parseInt((document.getElementById('spell-mana-cost') as HTMLInputElement).value) || 0,
     isAttackSpell: (document.getElementById('spell-is-attack') as HTMLInputElement).checked,
-    damageDice: (document.getElementById('spell-damage-dice') as HTMLInputElement).value || null,
-    healingDice: (document.getElementById('spell-healing-dice') as HTMLInputElement).value || null,
+    minDamage: (document.getElementById('spell-min-damage') as HTMLInputElement).value ? parseInt((document.getElementById('spell-min-damage') as HTMLInputElement).value) : null,
+    maxDamage: (document.getElementById('spell-max-damage') as HTMLInputElement).value ? parseInt((document.getElementById('spell-max-damage') as HTMLInputElement).value) : null,
+    minHealing: (document.getElementById('spell-min-healing') as HTMLInputElement).value ? parseInt((document.getElementById('spell-min-healing') as HTMLInputElement).value) : null,
+    maxHealing: (document.getElementById('spell-max-healing') as HTMLInputElement).value ? parseInt((document.getElementById('spell-max-healing') as HTMLInputElement).value) : null,
+    hitsPerCast: parseInt((document.getElementById('spell-hits-per-cast') as HTMLInputElement).value) || 1,
     statusEffect: (document.getElementById('spell-status-effect') as HTMLInputElement).value || null,
     effectDuration: parseInt((document.getElementById('spell-effect-duration') as HTMLInputElement).value) || null,
+    scalingPerLevel: scalingPerLevelPct > 0 ? scalingPerLevelPct / 100 : null,
+    damageScalingStat: damageScalingStat as SpellScalingStat | null,
+    damageScalingFactor: damageScalingFactorPct > 0 ? damageScalingFactorPct / 100 : null,
+    healingScalingStat: healingScalingStat as SpellScalingStat | null,
+    healingScalingFactor: healingScalingFactorPct > 0 ? healingScalingFactorPct / 100 : null,
+    castDifficulty: parseInt((document.getElementById('spell-cast-difficulty') as HTMLInputElement).value) || 0,
+    fizzleMessage: (document.getElementById('spell-fizzle-message') as HTMLInputElement)?.value || null,
+    hitMessageSelf: (document.getElementById('spell-hit-msg-self') as HTMLInputElement)?.value || null,
+    hitMessageTarget: (document.getElementById('spell-hit-msg-target') as HTMLInputElement)?.value || null,
+    hitMessageRoom: (document.getElementById('spell-hit-msg-room') as HTMLInputElement)?.value || null,
     telegraphMessage: (document.getElementById('spell-telegraph-message') as HTMLInputElement).value || null,
     saveStat: (document.getElementById('spell-save-stat') as HTMLSelectElement).value as SpellScalingStat | null,
     saveDifficulty: parseInt((document.getElementById('spell-save-difficulty') as HTMLInputElement).value) || 0,
     levelRequired: parseInt((document.getElementById('spell-level-required') as HTMLInputElement).value) || 1,
     classRestrictions,
-    damageScalingStat: damageScalingStat as SpellScalingStat | null,
-    damageScalingFactor: damageScalingFactorPct > 0 ? damageScalingFactorPct / 100 : null,
-    healingScalingStat: healingScalingStat as SpellScalingStat | null,
-    healingScalingFactor: healingScalingFactorPct > 0 ? healingScalingFactorPct / 100 : null,
   };
 }
 
@@ -776,6 +817,40 @@ document.addEventListener('DOMContentLoaded', async () => {
   addListener('do-import-btn', 'click', doImport);
   addListener('import-modal', 'click', (e) => {
     if (e.target === e.currentTarget) hideImportModal();
+  });
+
+  // Scaling calculator
+  addListener('calc-btn', 'click', () => {
+    const level = parseInt((document.getElementById('calc-level') as HTMLInputElement).value) || 1;
+    const stat = parseInt((document.getElementById('calc-stat') as HTMLInputElement).value) || 50;
+    const resultDiv = document.getElementById('calc-result');
+    if (!resultDiv || !selectedSpellId) { if (resultDiv) resultDiv.textContent = 'Select a spell first.'; return; }
+
+    const spell = spells.find(s => s.id === selectedSpellId);
+    if (!spell) { resultDiv.textContent = 'Spell not found.'; return; }
+
+    const scalingPerLevel = spell.scalingPerLevel ?? 0;
+    const levelMult = 1 + level * scalingPerLevel;
+    const statTiers = Math.floor(stat / 10);
+
+    let lines: string[] = [];
+    if (spell.minDamage && spell.maxDamage) {
+      const statFactor = spell.damageScalingFactor ?? 0;
+      const statMult = 1 + statTiers * statFactor;
+      const min = Math.max(1, Math.floor(spell.minDamage * levelMult * statMult));
+      const max = Math.max(1, Math.floor(spell.maxDamage * levelMult * statMult));
+      const hits = spell.hitsPerCast || 1;
+      lines.push(`Damage: ${min}-${max}${hits > 1 ? ` x${hits} = ${min * hits}-${max * hits}` : ''}`);
+    }
+    if (spell.minHealing && spell.maxHealing) {
+      const statFactor = spell.healingScalingFactor ?? 0;
+      const statMult = 1 + statTiers * statFactor;
+      const min = Math.max(1, Math.floor(spell.minHealing * levelMult * statMult));
+      const max = Math.max(1, Math.floor(spell.maxHealing * levelMult * statMult));
+      lines.push(`Healing: ${min}-${max}`);
+    }
+    if (lines.length === 0) lines.push('No damage/healing on this spell.');
+    resultDiv.innerHTML = lines.join('<br>');
   });
 
   // Logout

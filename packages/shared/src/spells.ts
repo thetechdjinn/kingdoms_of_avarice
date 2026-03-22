@@ -46,18 +46,33 @@ export interface Spell {
   spellType: SpellType;
   targetType: SpellTargetType;
   manaCost: number;
-  damageDice: string | null;
-  healingDice: string | null;
+  // Damage (offensive spells)
+  minDamage: number | null;
+  maxDamage: number | null;
+  // Healing (healing spells)
+  minHealing: number | null;
+  maxHealing: number | null;
+  // Multi-hit
+  hitsPerCast: number;                          // Number of hits per cast (default 1)
   statusEffect: string | null;
   effectDuration: number | null;
   levelRequired: number;
   classRestrictions: string[];
   isAttackSpell: boolean;
-  // Stat scaling - adds bonus damage/healing based on character stats
-  damageScalingStat: SpellScalingStat | null;  // Which stat scales damage
-  damageScalingFactor: number | null;           // % of stat added to damage (e.g., 0.5 = 50%)
+  // Level scaling - % increase to damage/healing per caster level
+  scalingPerLevel: number | null;               // e.g., 0.10 = 10% per level
+  // Stat scaling - % increase per 10 stat points
+  damageScalingStat: SpellScalingStat | null;   // Which stat scales damage
+  damageScalingFactor: number | null;           // % increase per 10 points (e.g., 0.02 = 2%)
   healingScalingStat: SpellScalingStat | null;  // Which stat scales healing
-  healingScalingFactor: number | null;          // % of stat added to healing
+  healingScalingFactor: number | null;          // % increase per 10 points
+  // Fizzle mechanics
+  castDifficulty: number;                       // 0 = always succeeds, higher = harder
+  fizzleMessage: string | null;                 // Custom fizzle message
+  // Custom spell messages (override defaults when set)
+  hitMessageSelf: string | null;                // Message to caster on hit
+  hitMessageTarget: string | null;              // Message to target on hit
+  hitMessageRoom: string | null;                // Message to room on hit
   // NPC spell casting / saving throw fields
   telegraphMessage: string | null;              // Optional preparation message shown before cast
   saveStat: SpellScalingStat | null;            // Stat target rolls to resist (null = no save)
@@ -106,10 +121,20 @@ export interface SpellCastingState {
   spellName: string;
   mnemonic: string;
   manaCost: number;
-  damageDice: string;
+  minDamage: number;
+  maxDamage: number;
+  hitsPerCast: number;
   // Scaling info for combat calculations
+  scalingPerLevel: number | null;
   damageScalingStat: SpellScalingStat | null;
   damageScalingFactor: number | null;
+  // Fizzle
+  castDifficulty: number;
+  fizzleMessage: string | null;
+  // Custom messages
+  hitMessageSelf: string | null;
+  hitMessageTarget: string | null;
+  hitMessageRoom: string | null;
   // Status effect to apply on hit
   statusEffect: string | null;
   effectDuration: number | null;
