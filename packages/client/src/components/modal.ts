@@ -5,7 +5,7 @@
  * CSS is already in editor.css (.modal, .modal-content, .modal-header, .modal-body, .close-btn)
  *
  * Usage:
- *   import { showPrompt, showConfirm, showModal } from './components/modal.js';
+ *   import { showPrompt, showConfirm, showPromptFields } from './components/modal.js';
  *
  *   const name = await showPrompt('Enter room name:', { defaultValue: 'New Room' });
  *   if (name === null) return; // cancelled

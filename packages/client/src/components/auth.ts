@@ -73,7 +73,11 @@ export async function initAuth(requiredRole: RequiredRole = 'developer'): Promis
 
       // Logout handler
       document.getElementById('logout-btn')?.addEventListener('click', async () => {
-        await fetch('/api/logout', { method: 'POST', credentials: 'include' });
+        try {
+          await fetch('/api/logout', { method: 'POST', credentials: 'include' });
+        } catch {
+          // Redirect even if logout request fails
+        }
         window.location.href = '/';
       });
 
@@ -84,7 +88,11 @@ export async function initAuth(requiredRole: RequiredRole = 'developer'): Promis
         e.stopPropagation();
         userDropdown?.classList.toggle('show');
       });
-      document.addEventListener('click', () => userDropdown?.classList.remove('show'));
+      document.addEventListener('click', (e) => {
+        if (userDropdown && !userDropdown.contains(e.target as Node)) {
+          userDropdown.classList.remove('show');
+        }
+      });
     }
 
     return {

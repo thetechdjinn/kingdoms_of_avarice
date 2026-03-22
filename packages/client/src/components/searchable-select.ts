@@ -213,13 +213,14 @@ export class SearchableSelect {
 
   private updateHighlight(items: NodeListOf<Element>): void {
     items.forEach((el, i) => {
-      el.classList.toggle('ss-highlighted', i === this.highlightIndex);
-      if (i === this.highlightIndex) {
+      const isHighlighted = i === this.highlightIndex;
+      el.classList.toggle('ss-highlighted', isHighlighted);
+      if (isHighlighted) {
         (el as HTMLElement).setAttribute('aria-selected', 'true');
         el.scrollIntoView({ block: 'nearest' });
-        this.input.setAttribute('aria-activedescendant', (el as HTMLElement).id || '');
+        this.input.setAttribute('aria-activedescendant', (el as HTMLElement).id);
       } else {
-        (el as HTMLElement).removeAttribute('aria-selected');
+        (el as HTMLElement).setAttribute('aria-selected', 'false');
       }
     });
   }
@@ -283,16 +284,8 @@ export class SearchableSelect {
         }
       }
     } else {
-      const maxVisible = this.config.maxVisible ?? 8;
-      const toShow = this.filteredOptions.slice(0, maxVisible * 5); // render a generous amount
-      for (const opt of toShow) {
+      for (const opt of this.filteredOptions) {
         this.dropdown.appendChild(this.createOptionEl(opt));
-      }
-      if (this.filteredOptions.length > toShow.length) {
-        const more = document.createElement('div');
-        more.className = 'ss-empty';
-        more.textContent = `${this.filteredOptions.length - toShow.length} more, type to filter`;
-        this.dropdown.appendChild(more);
       }
     }
   }
@@ -307,9 +300,11 @@ export class SearchableSelect {
     el.dataset.value = option.value;
     el.setAttribute('role', 'option');
 
-    if (this.selectedValues.has(option.value)) {
+    const isSelected = this.selectedValues.has(option.value);
+    if (isSelected) {
       el.classList.add('ss-selected');
     }
+    el.setAttribute('aria-selected', String(isSelected));
 
     let html = `<span class="ss-option-label">${escapeHtml(option.label)}</span>`;
     if (option.detail) {

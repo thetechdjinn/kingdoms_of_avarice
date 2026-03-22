@@ -12,7 +12,7 @@
  *     onSelect: (item) => selectAction(item.id),
  *     getId: (item) => item.id,
  *     renderItem: (item) => `
- *       <span class="action-command">${escapeHtml(item.command)}</span>
+ *       <span class="action-command">${item.command}</span>
  *     `,
  *     filterFn: (item, search) =>
  *       item.command.toLowerCase().includes(search) ||
