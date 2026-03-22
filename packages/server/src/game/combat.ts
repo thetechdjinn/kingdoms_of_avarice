@@ -16,6 +16,7 @@ import { setSpellCooldown } from './npcSpellAI.js';
 import type { NpcSpellSelection } from './npcSpellAI.js';
 import { selectNpcAttack } from './combatStatProvider.js';
 import { processNpcDeath } from './npcDeathHandler.js';
+import * as progressionRepo from '../db/repositories/progressionRepository.js';
 import { colors } from '../utils/colors.js';
 import { withNpcName, withNpcNameCapitalized, withNpcNamePossessive } from '../utils/textFormat.js';
 import {
@@ -111,6 +112,38 @@ export function calculateSpellScaling(
   }
 
   return { min: Math.max(1, min), max: Math.max(1, max) };
+}
+
+/**
+ * Calculate spellcasting ability based on the caster's class magic school.
+ * mage → INT, priest → WIS, druid → avg(INT, WIS), bardic → CHA, kai → WIS
+ */
+export function getSpellcastingAbility(
+  stats: { intelligence: number; wisdom: number; charisma: number },
+  magicSchool: string | undefined
+): number {
+  switch (magicSchool) {
+    case 'mage': return stats.intelligence;
+    case 'priest': return stats.wisdom;
+    case 'druid': return Math.floor((stats.intelligence + stats.wisdom) / 2);
+    case 'bardic': return stats.charisma;
+    case 'kai': return stats.wisdom;
+    default: return stats.intelligence;
+  }
+}
+
+/**
+ * Check if a spell fizzles. Returns true if the spell succeeds.
+ * Formula: random(1, 100) >= (castDifficulty - spellcastingAbility)
+ * If castDifficulty is 0, the spell always succeeds.
+ */
+export function spellCastSucceeds(castDifficulty: number, spellcastingAbility: number): boolean {
+  if (castDifficulty <= 0) return true;
+  const threshold = castDifficulty - spellcastingAbility;
+  if (threshold <= 0) return true; // spellcasting exceeds difficulty
+  if (threshold >= 100) return false; // impossible to cast
+  const roll = Math.floor(Math.random() * 100) + 1;
+  return roll >= threshold;
 }
 
 const DEFAULT_COMBAT_ROUND_MS = 4000;
@@ -297,6 +330,19 @@ async function processSpellCombat(
   // Deduct mana
   attacker.vitals.resource = (attacker.vitals.resource ?? 0) - spell.manaCost;
   sendEntityVitals(attacker);
+
+  // Fizzle check — mana is consumed even on fizzle
+  if (spell.castDifficulty > 0 && isPlayerEntity(attacker)) {
+    const playerSocket = attacker as unknown as AuthenticatedSocket;
+    const classDef = await progressionRepo.getClassById(playerSocket.characterClass);
+    const spellcasting = getSpellcastingAbility(attacker.characterStats, classDef?.magic_school);
+    if (!spellCastSucceeds(spell.castDifficulty, spellcasting)) {
+      const fizzleMsg = spell.fizzleMessage || `Your ${spell.spellName} fizzles!`;
+      sendCombatMessage(attacker, MessageType.OUTPUT, colors.red(fizzleMsg));
+      broadcastCombatToRoom(attackerRoomId, `${withNpcNameCapitalized(attacker.entityName, attacker.isProperName)}'s spell fizzles!`, [attacker.entityId]);
+      return true; // combat continues, spell just failed this round
+    }
+  }
 
   // Calculate scaled damage range
   const statValue = getStatValueForScaling(attacker.characterStats, spell.damageScalingStat);
@@ -866,6 +912,13 @@ async function processNpcOffensiveSpell(
 ): Promise<void> {
   // No damage means this offensive spell has no direct damage component — skip
   if (!spell.minDamage || !spell.maxDamage) return;
+
+  // NPC fizzle check (spellPower as spellcasting ability)
+  if (spell.castDifficulty > 0 && !spellCastSucceeds(spell.castDifficulty, npc.template.spellPower)) {
+    broadcastCombatToRoom(npcRoomId,
+      `${withNpcNameCapitalized(npc.entityName, npc.isProperName)}'s spell fizzles!`, []);
+    return;
+  }
 
   // NPC scaling uses template.spellPower as the universal stat value
   const scaled = calculateSpellScaling(

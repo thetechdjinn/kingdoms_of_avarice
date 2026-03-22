@@ -12,7 +12,7 @@ import { getPlayerLocation } from './adminCommands.js';
 import { colors } from '../utils/colors.js';
 import * as spellRepo from '../db/repositories/spellRepository.js';
 import * as characterRepo from '../db/repositories/characterRepository.js';
-import { getStatValueForScaling, calculateSpellScaling } from './combat.js';
+import { getStatValueForScaling, calculateSpellScaling, getSpellcastingAbility, spellCastSucceeds } from './combat.js';
 import { applyEffect, getEffectDefinition, formatDuration, getEffectModifiers } from './statusEffects.js';
 import { isOnCooldown, startCooldown, getCooldownMessage } from './cooldownTracker.js';
 import { isPlayerDropped, isPlayerDead, clearDeathState } from './damageHandler.js';
@@ -368,6 +368,19 @@ async function handleHealingSpell(
     breakCasterCombat(socket);
   }
 
+  // Fizzle check (mana consumed even on fizzle)
+  if (spell.castDifficulty > 0) {
+    const { getClassById } = await import('../db/repositories/progressionRepository.js');
+    const classDef = await getClassById(socket.characterClass);
+    const spellcasting = getSpellcastingAbility(socket.characterStats, classDef?.magic_school);
+    if (!spellCastSucceeds(spell.castDifficulty, spellcasting)) {
+      const fizzleMsg = spell.fizzleMessage || `Your ${spell.name} fizzles!`;
+      sendVitals(socket);
+      startCooldown(socket, spell.mnemonic, 'use');
+      return { type: MessageType.OUTPUT, message: colors.red(fizzleMsg) };
+    }
+  }
+
   // Calculate scaled healing range
   const statValue = getStatValueForScaling(socket.characterStats, spell.healingScalingStat);
   const scaled = calculateSpellScaling(
@@ -478,6 +491,19 @@ async function handleBuffSpell(
     };
   }
 
+  // Fizzle check
+  if (spell.castDifficulty > 0) {
+    const { getClassById } = await import('../db/repositories/progressionRepository.js');
+    const classDef = await getClassById(socket.characterClass);
+    const spellcasting = getSpellcastingAbility(socket.characterStats, classDef?.magic_school);
+    if (!spellCastSucceeds(spell.castDifficulty, spellcasting)) {
+      socket.vitals.resource = (socket.vitals.resource ?? 0) - spell.manaCost;
+      sendVitals(socket);
+      startCooldown(socket, spell.mnemonic, 'use');
+      return { type: MessageType.OUTPUT, message: colors.red(spell.fizzleMessage || `Your ${spell.name} fizzles!`) };
+    }
+  }
+
   // Calculate duration in milliseconds (effectDuration is in seconds)
   const durationMs = (spell.effectDuration ?? 60) * 1000;
 
@@ -547,6 +573,19 @@ async function handleDebuffSpell(
 
   if (!target && !npcTarget) {
     return { type: MessageType.ERROR, message: `You don't see ${targetName} here.` };
+  }
+
+  // Fizzle check
+  if (spell.castDifficulty > 0) {
+    const { getClassById } = await import('../db/repositories/progressionRepository.js');
+    const classDef = await getClassById(socket.characterClass);
+    const spellcasting = getSpellcastingAbility(socket.characterStats, classDef?.magic_school);
+    if (!spellCastSucceeds(spell.castDifficulty, spellcasting)) {
+      socket.vitals.resource = (socket.vitals.resource ?? 0) - spell.manaCost;
+      sendVitals(socket);
+      startCooldown(socket, spell.mnemonic, 'use');
+      return { type: MessageType.OUTPUT, message: colors.red(spell.fizzleMessage || `Your ${spell.name} fizzles!`) };
+    }
   }
 
   // NPC target — apply effect and engage combat
