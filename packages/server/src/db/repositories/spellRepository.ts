@@ -27,6 +27,7 @@ interface DbSpell {
   class_restrictions: string[] | null;
   is_attack_spell: boolean;
   scaling_per_level: string | null;     // DECIMAL comes as string
+  max_scaling_level: number | null;
   damage_scaling_stat: string | null;
   damage_scaling_factor: string | null;
   healing_scaling_stat: string | null;
@@ -72,6 +73,7 @@ function dbToSpell(row: DbSpell): Spell {
     classRestrictions: row.class_restrictions ?? [],
     isAttackSpell: row.is_attack_spell,
     scalingPerLevel: row.scaling_per_level ? (isNaN(parseFloat(row.scaling_per_level)) ? null : parseFloat(row.scaling_per_level)) : null,
+    maxScalingLevel: row.max_scaling_level,
     damageScalingStat: row.damage_scaling_stat as SpellScalingStat | null,
     damageScalingFactor: row.damage_scaling_factor ? (isNaN(parseFloat(row.damage_scaling_factor)) ? null : parseFloat(row.damage_scaling_factor)) : null,
     healingScalingStat: row.healing_scaling_stat as SpellScalingStat | null,
@@ -325,6 +327,7 @@ export interface CreateSpellInput {
   classRestrictions?: string[];
   isAttackSpell: boolean;
   scalingPerLevel?: number;
+  maxScalingLevel?: number;
   damageScalingStat?: SpellScalingStat;
   damageScalingFactor?: number;
   healingScalingStat?: SpellScalingStat;
@@ -349,12 +352,12 @@ export async function createSpell(input: CreateSpellInput): Promise<Spell> {
       mana_cost, min_damage, max_damage, min_healing, max_healing, hits_per_cast,
       status_effect, effect_duration,
       level_required, class_restrictions, is_attack_spell,
-      scaling_per_level, damage_scaling_stat, damage_scaling_factor,
+      scaling_per_level, max_scaling_level, damage_scaling_stat, damage_scaling_factor,
       healing_scaling_stat, healing_scaling_factor,
       cast_difficulty, fizzle_message,
       hit_message_self, hit_message_target, hit_message_room,
       telegraph_message, save_stat, save_difficulty
-    ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29)
+    ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29,$30)
     RETURNING *`,
     [
       input.name, input.mnemonic.toLowerCase(), input.description || null,
@@ -364,7 +367,7 @@ export async function createSpell(input: CreateSpellInput): Promise<Spell> {
       input.hitsPerCast ?? 1,
       input.statusEffect || null, input.effectDuration || null,
       input.levelRequired, input.classRestrictions ?? [], input.isAttackSpell,
-      input.scalingPerLevel || null,
+      input.scalingPerLevel || null, input.maxScalingLevel ?? null,
       input.damageScalingStat || null, input.damageScalingFactor || null,
       input.healingScalingStat || null, input.healingScalingFactor || null,
       input.castDifficulty ?? 0, input.fizzleMessage || null,
@@ -400,6 +403,7 @@ export async function updateSpell(id: number, input: Partial<CreateSpellInput>):
     classRestrictions: input.classRestrictions !== undefined ? input.classRestrictions : existing.classRestrictions,
     isAttackSpell: input.isAttackSpell ?? existing.isAttackSpell,
     scalingPerLevel: input.scalingPerLevel !== undefined ? input.scalingPerLevel : existing.scalingPerLevel,
+    maxScalingLevel: input.maxScalingLevel !== undefined ? input.maxScalingLevel : existing.maxScalingLevel,
     damageScalingStat: input.damageScalingStat !== undefined ? input.damageScalingStat : existing.damageScalingStat,
     damageScalingFactor: input.damageScalingFactor !== undefined ? input.damageScalingFactor : existing.damageScalingFactor,
     healingScalingStat: input.healingScalingStat !== undefined ? input.healingScalingStat : existing.healingScalingStat,
@@ -420,13 +424,14 @@ export async function updateSpell(id: number, input: Partial<CreateSpellInput>):
       mana_cost=$6, min_damage=$7, max_damage=$8, min_healing=$9, max_healing=$10, hits_per_cast=$11,
       status_effect=$12, effect_duration=$13,
       level_required=$14, class_restrictions=$15, is_attack_spell=$16,
-      scaling_per_level=$17, damage_scaling_stat=$18, damage_scaling_factor=$19,
-      healing_scaling_stat=$20, healing_scaling_factor=$21,
-      cast_difficulty=$22, fizzle_message=$23,
-      hit_message_self=$24, hit_message_target=$25, hit_message_room=$26,
-      telegraph_message=$27, save_stat=$28, save_difficulty=$29,
+      scaling_per_level=$17, max_scaling_level=$18,
+      damage_scaling_stat=$19, damage_scaling_factor=$20,
+      healing_scaling_stat=$21, healing_scaling_factor=$22,
+      cast_difficulty=$23, fizzle_message=$24,
+      hit_message_self=$25, hit_message_target=$26, hit_message_room=$27,
+      telegraph_message=$28, save_stat=$29, save_difficulty=$30,
       updated_at=NOW()
-    WHERE id = $30
+    WHERE id = $31
     RETURNING *`,
     [
       u.name, u.mnemonic, u.description || null,
@@ -435,7 +440,7 @@ export async function updateSpell(id: number, input: Partial<CreateSpellInput>):
       u.hitsPerCast ?? 1,
       u.statusEffect || null, u.effectDuration || null,
       u.levelRequired, u.classRestrictions ?? [], u.isAttackSpell,
-      u.scalingPerLevel || null,
+      u.scalingPerLevel || null, u.maxScalingLevel ?? null,
       u.damageScalingStat || null, u.damageScalingFactor || null,
       u.healingScalingStat || null, u.healingScalingFactor || null,
       u.castDifficulty ?? 0, u.fizzleMessage || null,

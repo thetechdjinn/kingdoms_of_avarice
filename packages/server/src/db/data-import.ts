@@ -109,6 +109,7 @@ async function importSpells(data: unknown[]): Promise<ImportResult> {
         classRestrictions: item.classRestrictions as string[] | undefined,
         isAttackSpell: item.isAttackSpell as boolean,
         scalingPerLevel: item.scalingPerLevel as number | undefined,
+        maxScalingLevel: item.maxScalingLevel as number | undefined,
         damageScalingStat: item.damageScalingStat as string | undefined,
         damageScalingFactor: item.damageScalingFactor as number | undefined,
         healingScalingStat: item.healingScalingStat as string | undefined,

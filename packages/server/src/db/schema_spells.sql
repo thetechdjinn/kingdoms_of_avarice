@@ -46,6 +46,7 @@ CREATE TABLE IF NOT EXISTS spells (
 
     -- Level scaling (% increase per caster level)
     scaling_per_level DECIMAL(4,3),  -- e.g., 0.100 = 10% per level
+    max_scaling_level INTEGER,       -- Cap: scaling stops at this caster level (null = no cap)
 
     -- Stat scaling (% increase per 10 stat points)
     damage_scaling_stat VARCHAR(20) CHECK (damage_scaling_stat IN ('none', 'strength', 'agility', 'constitution', 'intellect', 'wisdom', 'charisma')),

@@ -30,6 +30,7 @@ interface DbNpcSpellRow {
   s_class_restrictions: string[] | null;
   s_is_attack_spell: boolean;
   s_scaling_per_level: string | null;
+  s_max_scaling_level: number | null;
   s_damage_scaling_stat: string | null;
   s_damage_scaling_factor: string | null;
   s_healing_scaling_stat: string | null;
@@ -56,7 +57,7 @@ const NPC_SPELL_JOIN_SQL = `
     s.status_effect AS s_status_effect, s.effect_duration AS s_effect_duration,
     s.level_required AS s_level_required, s.class_restrictions AS s_class_restrictions,
     s.is_attack_spell AS s_is_attack_spell,
-    s.scaling_per_level AS s_scaling_per_level,
+    s.scaling_per_level AS s_scaling_per_level, s.max_scaling_level AS s_max_scaling_level,
     s.damage_scaling_stat AS s_damage_scaling_stat, s.damage_scaling_factor AS s_damage_scaling_factor,
     s.healing_scaling_stat AS s_healing_scaling_stat, s.healing_scaling_factor AS s_healing_scaling_factor,
     s.cast_difficulty AS s_cast_difficulty, s.fizzle_message AS s_fizzle_message,
@@ -93,6 +94,7 @@ function dbToNpcSpell(row: DbNpcSpellRow): NpcSpell {
     classRestrictions: row.s_class_restrictions ?? [],
     isAttackSpell: row.s_is_attack_spell,
     scalingPerLevel: parseDecimal(row.s_scaling_per_level),
+    maxScalingLevel: row.s_max_scaling_level,
     damageScalingStat: row.s_damage_scaling_stat as SpellScalingStat | null,
     damageScalingFactor: parseDecimal(row.s_damage_scaling_factor),
     healingScalingStat: row.s_healing_scaling_stat as SpellScalingStat | null,

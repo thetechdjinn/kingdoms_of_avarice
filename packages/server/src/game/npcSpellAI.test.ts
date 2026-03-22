@@ -57,6 +57,7 @@ function createMockSpell(overrides: Partial<Spell> = {}): Spell {
     classRestrictions: [],
     isAttackSpell: true,
     scalingPerLevel: null,
+    maxScalingLevel: null,
     damageScalingStat: null,
     damageScalingFactor: null,
     healingScalingStat: null,

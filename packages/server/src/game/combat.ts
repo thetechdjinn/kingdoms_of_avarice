@@ -82,7 +82,8 @@ export function getStatValueForScaling(
 
 /**
  * Calculate scaled min/max values for a spell based on caster level and stats.
- * 1. Apply level scaling: value * (1 + level * scalingPerLevel)
+ * 1. Apply level scaling: value * (1 + effectiveLevel * scalingPerLevel)
+ *    - effectiveLevel is capped at maxScalingLevel if set
  * 2. Apply stat scaling: value * (1 + floor(statValue / 10) * scalingFactor)
  */
 export function calculateSpellScaling(
@@ -92,13 +93,15 @@ export function calculateSpellScaling(
   scalingPerLevel: number | null,
   statValue: number,
   scalingFactor: number | null,
+  maxScalingLevel?: number | null,
 ): { min: number; max: number } {
   let min = baseMin;
   let max = baseMax;
 
-  // Level scaling
+  // Level scaling (capped at maxScalingLevel if set)
   if (scalingPerLevel && scalingPerLevel > 0) {
-    const levelMultiplier = 1 + casterLevel * scalingPerLevel;
+    const effectiveLevel = (maxScalingLevel && maxScalingLevel > 0) ? Math.min(casterLevel, maxScalingLevel) : casterLevel;
+    const levelMultiplier = 1 + effectiveLevel * scalingPerLevel;
     min = Math.floor(min * levelMultiplier);
     max = Math.floor(max * levelMultiplier);
   }
@@ -363,6 +366,7 @@ async function processSpellCombat(
     spell.scalingPerLevel,
     statValue,
     spell.damageScalingFactor,
+    spell.maxScalingLevel,
   );
 
   const hitsPerCast = spell.hitsPerCast || 1;
@@ -938,6 +942,7 @@ async function processNpcOffensiveSpell(
     spell.scalingPerLevel,
     npc.template.spellPower,
     spell.damageScalingFactor,
+    spell.maxScalingLevel,
   );
   const isAoE = spell.targetType === SpellTargetType.ROOM;
   const hitsPerCast = spell.hitsPerCast || 1;
@@ -1032,6 +1037,7 @@ function processNpcHealingSpell(
     spell.scalingPerLevel,
     npc.template.spellPower,
     spell.healingScalingFactor,
+    spell.maxScalingLevel,
   );
 
   // Helper to heal a single NPC
