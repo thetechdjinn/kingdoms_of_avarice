@@ -80,7 +80,7 @@ function validateDefinitionInput(def: Record<string, unknown>): string | null {
   }
 
   // Optional boolean fields - validate type if provided
-  const booleanFields = ['silentTick', 'blocksRegen', 'blocksMovement', 'isBlind'];
+  const booleanFields = ['silentTick', 'blocksRegen', 'blocksMovement', 'isBlind', 'blocksCasting', 'blocksCombat', 'blocksStealth'];
   for (const field of booleanFields) {
     if (def[field] !== undefined && def[field] !== null && typeof def[field] !== 'boolean') {
       return `${field} must be a boolean`;

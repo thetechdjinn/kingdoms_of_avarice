@@ -512,16 +512,16 @@ async function handleRaceSubmit(e: Event): Promise<void> {
     return t;
   });
 
-  // Add special ability traits from checkboxes
-  const specialAbilityTraits: Array<{ id: string; value: number }> = [];
+  // Add special ability traits from checkboxes (boolean traits use true, not 1)
+  const specialAbilityTraits: Array<{ id: string; value: boolean | number }> = [];
   if ((document.getElementById('race-stealth') as HTMLInputElement).checked) {
-    specialAbilityTraits.push({ id: 'stealth', value: 1 });
+    specialAbilityTraits.push({ id: 'stealth', value: true });
   }
   if ((document.getElementById('race-lockpicking') as HTMLInputElement).checked) {
-    specialAbilityTraits.push({ id: 'lockpicking', value: 1 });
+    specialAbilityTraits.push({ id: 'lockpicking', value: true });
   }
   if ((document.getElementById('race-see-hidden') as HTMLInputElement).checked) {
-    specialAbilityTraits.push({ id: 'see_hidden', value: 1 });
+    specialAbilityTraits.push({ id: 'see_hidden', value: true });
   }
 
   const traits = [...otherTraits, ...specialAbilityTraits];
