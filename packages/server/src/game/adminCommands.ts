@@ -2548,7 +2548,7 @@ function handleTestSpell(
   for (let i = 0; i < spells.length; i++) {
     const npcSpell = spells[i];
     const spell = npcSpell.spell;
-    const isOffensiveDamage = spell.spellType === SpellType.OFFENSIVE && spell.damageDice;
+    const isOffensiveDamage = spell.spellType === SpellType.OFFENSIVE && spell.minDamage && spell.maxDamage;
     const timing = isOffensiveDamage ? 'in-round' : 'between-round';
     const conditionLabel = NPC_SPELL_CONDITIONS[npcSpell.conditionType as keyof typeof NPC_SPELL_CONDITIONS] || npcSpell.conditionType;
 

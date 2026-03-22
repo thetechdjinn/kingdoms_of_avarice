@@ -46,17 +46,26 @@ function createMockSpell(overrides: Partial<Spell> = {}): Spell {
     spellType: SpellType.OFFENSIVE,
     targetType: SpellTargetType.ENEMY,
     manaCost: 5,
-    damageDice: '1d6',
-    healingDice: null,
+    minDamage: 1,
+    maxDamage: 6,
+    minHealing: null,
+    maxHealing: null,
+    hitsPerCast: 1,
     statusEffect: null,
     effectDuration: null,
     levelRequired: 1,
     classRestrictions: [],
     isAttackSpell: true,
+    scalingPerLevel: null,
     damageScalingStat: null,
     damageScalingFactor: null,
     healingScalingStat: null,
     healingScalingFactor: null,
+    castDifficulty: 0,
+    fizzleMessage: null,
+    hitMessageSelf: null,
+    hitMessageTarget: null,
+    hitMessageRoom: null,
     telegraphMessage: null,
     saveStat: null,
     saveDifficulty: 0,
@@ -464,7 +473,7 @@ describe('selectNpcSpell', () => {
   it('selects a between-round spell (healing)', () => {
     vi.spyOn(Math, 'random').mockReturnValue(0);
     const healSpell = createMockNpcSpell({
-      spell: { spellType: SpellType.HEALING, damageDice: null, healingDice: '1d8' },
+      spell: { spellType: SpellType.HEALING, minDamage: null, maxDamage: null, minHealing: 1, maxHealing: 8 },
     });
     npc.template.spells = [healSpell];
     const result = selectNpcSpell(npc, target);
@@ -472,10 +481,10 @@ describe('selectNpcSpell', () => {
     expect(result!.selectionType).toBe('between_round');
   });
 
-  it('selects an in-round spell (offensive with damageDice)', () => {
+  it('selects an in-round spell (offensive with damage)', () => {
     vi.spyOn(Math, 'random').mockReturnValue(0);
     const offensiveSpell = createMockNpcSpell({
-      spell: { spellType: SpellType.OFFENSIVE, damageDice: '2d6' },
+      spell: { spellType: SpellType.OFFENSIVE, minDamage: 2, maxDamage: 12 },
     });
     npc.template.spells = [offensiveSpell];
     const result = selectNpcSpell(npc, target);
@@ -487,11 +496,11 @@ describe('selectNpcSpell', () => {
     vi.spyOn(Math, 'random').mockReturnValue(0);
     const healSpell = createMockNpcSpell({
       spellId: 10,
-      spell: { id: 10, spellType: SpellType.HEALING, damageDice: null, healingDice: '1d8' },
+      spell: { id: 10, spellType: SpellType.HEALING, minDamage: null, maxDamage: null, minHealing: 1, maxHealing: 8 },
     });
     const offensiveSpell = createMockNpcSpell({
       spellId: 20,
-      spell: { id: 20, spellType: SpellType.OFFENSIVE, damageDice: '2d6' },
+      spell: { id: 20, spellType: SpellType.OFFENSIVE, minDamage: 2, maxDamage: 12 },
     });
     npc.template.spells = [healSpell, offensiveSpell];
     const result = selectNpcSpell(npc, target);
@@ -503,7 +512,7 @@ describe('selectNpcSpell', () => {
   it('skips spell when mana is insufficient', () => {
     npc.currentMana = 3;
     const spell = createMockNpcSpell({
-      spell: { manaCost: 100, spellType: SpellType.OFFENSIVE, damageDice: '1d6' },
+      spell: { manaCost: 100, spellType: SpellType.OFFENSIVE, minDamage: 1, maxDamage: 6 },
     });
     npc.template.spells = [spell];
     expect(selectNpcSpell(npc, target)).toBeNull();
@@ -513,7 +522,7 @@ describe('selectNpcSpell', () => {
     vi.spyOn(Math, 'random').mockReturnValue(0);
     const spell = createMockNpcSpell({
       spellId: 5,
-      spell: { spellType: SpellType.OFFENSIVE, damageDice: '1d6' },
+      spell: { spellType: SpellType.OFFENSIVE, minDamage: 1, maxDamage: 6 },
     });
     npc.template.spells = [spell];
     npc.spellCooldowns.set(5, 2);
@@ -527,7 +536,7 @@ describe('selectNpcSpell', () => {
     const spell = createMockNpcSpell({
       conditionType: 'hp_below',
       conditionValue: 50,
-      spell: { spellType: SpellType.HEALING, damageDice: null, healingDice: '1d8' },
+      spell: { spellType: SpellType.HEALING, minDamage: null, maxDamage: null, minHealing: 1, maxHealing: 8 },
     });
     npc.template.spells = [spell];
     expect(selectNpcSpell(npc, target)).toBeNull();
@@ -537,11 +546,11 @@ describe('selectNpcSpell', () => {
     vi.spyOn(Math, 'random').mockReturnValue(0);
     const healSpell = createMockNpcSpell({
       spellId: 10,
-      spell: { id: 10, spellType: SpellType.HEALING, damageDice: null, healingDice: '1d8' },
+      spell: { id: 10, spellType: SpellType.HEALING, minDamage: null, maxDamage: null, minHealing: 1, maxHealing: 8 },
     });
     const offensiveSpell = createMockNpcSpell({
       spellId: 20,
-      spell: { id: 20, spellType: SpellType.OFFENSIVE, damageDice: '2d6' },
+      spell: { id: 20, spellType: SpellType.OFFENSIVE, minDamage: 2, maxDamage: 12 },
     });
     npc.template.spells = [healSpell, offensiveSpell];
     // Put the heal spell on cooldown so between-round pass fails
@@ -557,12 +566,12 @@ describe('selectNpcSpell', () => {
     const lowPriority = createMockNpcSpell({
       spellId: 1,
       priority: 90,
-      spell: { id: 1, spellType: SpellType.OFFENSIVE, damageDice: '1d4' },
+      spell: { id: 1, spellType: SpellType.OFFENSIVE, minDamage: 1, maxDamage: 4 },
     });
     const highPriority = createMockNpcSpell({
       spellId: 2,
       priority: 10,
-      spell: { id: 2, spellType: SpellType.OFFENSIVE, damageDice: '2d6' },
+      spell: { id: 2, spellType: SpellType.OFFENSIVE, minDamage: 2, maxDamage: 12 },
     });
     npc.template.spells = [lowPriority, highPriority];
     const result = selectNpcSpell(npc, target);
@@ -574,7 +583,7 @@ describe('selectNpcSpell', () => {
     // With castChance=0, the roll (1-100) will always exceed 0
     const spell = createMockNpcSpell({
       castChance: 0,
-      spell: { spellType: SpellType.OFFENSIVE, damageDice: '1d6' },
+      spell: { spellType: SpellType.OFFENSIVE, minDamage: 1, maxDamage: 6 },
     });
     npc.template.spells = [spell];
     // Run multiple times to ensure it's never selected
@@ -588,7 +597,7 @@ describe('selectNpcSpell', () => {
     vi.spyOn(Math, 'random').mockReturnValue(0.99);
     const spell = createMockNpcSpell({
       castChance: 100,
-      spell: { spellType: SpellType.OFFENSIVE, damageDice: '1d6' },
+      spell: { spellType: SpellType.OFFENSIVE, minDamage: 1, maxDamage: 6 },
     });
     npc.template.spells = [spell];
     expect(selectNpcSpell(npc, target)).not.toBeNull();
@@ -597,7 +606,7 @@ describe('selectNpcSpell', () => {
   it('buff spells are classified as between-round', () => {
     vi.spyOn(Math, 'random').mockReturnValue(0);
     const buffSpell = createMockNpcSpell({
-      spell: { spellType: SpellType.BUFF, damageDice: null, statusEffect: 'shield' },
+      spell: { spellType: SpellType.BUFF, minDamage: null, maxDamage: null, statusEffect: 'shield' },
     });
     npc.template.spells = [buffSpell];
     const result = selectNpcSpell(npc, target);
@@ -608,7 +617,7 @@ describe('selectNpcSpell', () => {
   it('debuff spells are classified as between-round', () => {
     vi.spyOn(Math, 'random').mockReturnValue(0);
     const debuffSpell = createMockNpcSpell({
-      spell: { spellType: SpellType.DEBUFF, damageDice: null, statusEffect: 'slow' },
+      spell: { spellType: SpellType.DEBUFF, minDamage: null, maxDamage: null, statusEffect: 'slow' },
     });
     npc.template.spells = [debuffSpell];
     const result = selectNpcSpell(npc, target);
@@ -616,10 +625,10 @@ describe('selectNpcSpell', () => {
     expect(result!.selectionType).toBe('between_round');
   });
 
-  it('offensive spell without damageDice is classified as between-round', () => {
+  it('offensive spell without damage is classified as between-round', () => {
     vi.spyOn(Math, 'random').mockReturnValue(0);
     const offensiveNoDmg = createMockNpcSpell({
-      spell: { spellType: SpellType.OFFENSIVE, damageDice: null, statusEffect: 'burn' },
+      spell: { spellType: SpellType.OFFENSIVE, minDamage: null, maxDamage: null, statusEffect: 'burn' },
     });
     npc.template.spells = [offensiveNoDmg];
     const result = selectNpcSpell(npc, target);

@@ -30,11 +30,11 @@ export interface NpcSpellSelection {
 
 /**
  * Classify a spell's timing based on its type and properties.
- * Offensive spells with damage dice fire during the attack round (in_round).
+ * Offensive spells with damage fire during the attack round (in_round).
  * Everything else (buffs, debuffs, heals, DoTs) fires between rounds.
  */
 function classifySpellTiming(npcSpell: NpcSpell): SpellTiming {
-  if (npcSpell.spell.spellType === SpellType.OFFENSIVE && npcSpell.spell.damageDice) {
+  if (npcSpell.spell.spellType === SpellType.OFFENSIVE && npcSpell.spell.minDamage && npcSpell.spell.maxDamage) {
     return 'in_round';
   }
   return 'between_round';

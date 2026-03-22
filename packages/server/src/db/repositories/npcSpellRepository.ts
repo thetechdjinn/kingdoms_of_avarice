@@ -19,17 +19,26 @@ interface DbNpcSpellRow {
   s_spell_type: string;
   s_target_type: string;
   s_mana_cost: number;
-  s_damage_dice: string | null;
-  s_healing_dice: string | null;
+  s_min_damage: number | null;
+  s_max_damage: number | null;
+  s_min_healing: number | null;
+  s_max_healing: number | null;
+  s_hits_per_cast: number;
   s_status_effect: string | null;
   s_effect_duration: number | null;
   s_level_required: number;
   s_class_restrictions: string[] | null;
   s_is_attack_spell: boolean;
+  s_scaling_per_level: string | null;
   s_damage_scaling_stat: string | null;
   s_damage_scaling_factor: string | null;
   s_healing_scaling_stat: string | null;
   s_healing_scaling_factor: string | null;
+  s_cast_difficulty: number;
+  s_fizzle_message: string | null;
+  s_hit_message_self: string | null;
+  s_hit_message_target: string | null;
+  s_hit_message_room: string | null;
   s_telegraph_message: string | null;
   s_save_stat: string | null;
   s_save_difficulty: number;
@@ -41,12 +50,18 @@ const NPC_SPELL_JOIN_SQL = `
     ns.priority, ns.cast_chance, ns.condition_type, ns.condition_value, ns.cooldown_rounds,
     s.name AS s_name, s.mnemonic AS s_mnemonic, s.description AS s_description,
     s.spell_type AS s_spell_type, s.target_type AS s_target_type, s.mana_cost AS s_mana_cost,
-    s.damage_dice AS s_damage_dice, s.healing_dice AS s_healing_dice,
+    s.min_damage AS s_min_damage, s.max_damage AS s_max_damage,
+    s.min_healing AS s_min_healing, s.max_healing AS s_max_healing,
+    s.hits_per_cast AS s_hits_per_cast,
     s.status_effect AS s_status_effect, s.effect_duration AS s_effect_duration,
     s.level_required AS s_level_required, s.class_restrictions AS s_class_restrictions,
     s.is_attack_spell AS s_is_attack_spell,
+    s.scaling_per_level AS s_scaling_per_level,
     s.damage_scaling_stat AS s_damage_scaling_stat, s.damage_scaling_factor AS s_damage_scaling_factor,
     s.healing_scaling_stat AS s_healing_scaling_stat, s.healing_scaling_factor AS s_healing_scaling_factor,
+    s.cast_difficulty AS s_cast_difficulty, s.fizzle_message AS s_fizzle_message,
+    s.hit_message_self AS s_hit_message_self, s.hit_message_target AS s_hit_message_target,
+    s.hit_message_room AS s_hit_message_room,
     s.telegraph_message AS s_telegraph_message, s.save_stat AS s_save_stat, s.save_difficulty AS s_save_difficulty
   FROM npc_spells ns
   JOIN spells s ON ns.spell_id = s.id
@@ -67,17 +82,26 @@ function dbToNpcSpell(row: DbNpcSpellRow): NpcSpell {
     spellType: row.s_spell_type as SpellType,
     targetType: row.s_target_type as SpellTargetType,
     manaCost: row.s_mana_cost,
-    damageDice: row.s_damage_dice,
-    healingDice: row.s_healing_dice,
+    minDamage: row.s_min_damage,
+    maxDamage: row.s_max_damage,
+    minHealing: row.s_min_healing,
+    maxHealing: row.s_max_healing,
+    hitsPerCast: row.s_hits_per_cast ?? 1,
     statusEffect: row.s_status_effect,
     effectDuration: row.s_effect_duration,
     levelRequired: row.s_level_required,
     classRestrictions: row.s_class_restrictions ?? [],
     isAttackSpell: row.s_is_attack_spell,
+    scalingPerLevel: parseDecimal(row.s_scaling_per_level),
     damageScalingStat: row.s_damage_scaling_stat as SpellScalingStat | null,
     damageScalingFactor: parseDecimal(row.s_damage_scaling_factor),
     healingScalingStat: row.s_healing_scaling_stat as SpellScalingStat | null,
     healingScalingFactor: parseDecimal(row.s_healing_scaling_factor),
+    castDifficulty: row.s_cast_difficulty ?? 0,
+    fizzleMessage: row.s_fizzle_message,
+    hitMessageSelf: row.s_hit_message_self,
+    hitMessageTarget: row.s_hit_message_target,
+    hitMessageRoom: row.s_hit_message_room,
     telegraphMessage: row.s_telegraph_message,
     saveStat: row.s_save_stat as SpellScalingStat | null,
     saveDifficulty: row.s_save_difficulty ?? 0,

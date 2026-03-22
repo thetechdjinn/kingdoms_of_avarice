@@ -28,7 +28,6 @@ import {
   executeCombatRound,
   resolveAttack,
   calculateDamage,
-  parseDiceString,
   RuntimeCombatConfig,
   toRuntimeConfig,
   DEFAULT_RUNTIME_CONFIG,
@@ -56,7 +55,7 @@ import {
  * Get character stat value based on spell scaling stat
  * Maps spell stat names to character stat property names
  */
-function getStatValueForScaling(
+export function getStatValueForScaling(
   stats: { strength: number; dexterity: number; intelligence: number; constitution: number; wisdom: number; charisma: number },
   scalingStat: SpellScalingStat | null
 ): number {
@@ -78,6 +77,40 @@ function getStatValueForScaling(
     default:
       return 0;
   }
+}
+
+/**
+ * Calculate scaled min/max values for a spell based on caster level and stats.
+ * 1. Apply level scaling: value * (1 + level * scalingPerLevel)
+ * 2. Apply stat scaling: value * (1 + floor(statValue / 10) * scalingFactor)
+ */
+export function calculateSpellScaling(
+  baseMin: number,
+  baseMax: number,
+  casterLevel: number,
+  scalingPerLevel: number | null,
+  statValue: number,
+  scalingFactor: number | null,
+): { min: number; max: number } {
+  let min = baseMin;
+  let max = baseMax;
+
+  // Level scaling
+  if (scalingPerLevel && scalingPerLevel > 0) {
+    const levelMultiplier = 1 + casterLevel * scalingPerLevel;
+    min = Math.floor(min * levelMultiplier);
+    max = Math.floor(max * levelMultiplier);
+  }
+
+  // Stat scaling (% increase per 10 stat points)
+  if (scalingFactor && scalingFactor > 0 && statValue > 0) {
+    const statTiers = Math.floor(statValue / 10);
+    const statMultiplier = 1 + statTiers * scalingFactor;
+    min = Math.floor(min * statMultiplier);
+    max = Math.floor(max * statMultiplier);
+  }
+
+  return { min: Math.max(1, min), max: Math.max(1, max) };
 }
 
 const DEFAULT_COMBAT_ROUND_MS = 4000;
@@ -265,15 +298,17 @@ async function processSpellCombat(
   attacker.vitals.resource = (attacker.vitals.resource ?? 0) - spell.manaCost;
   sendEntityVitals(attacker);
 
-  // Parse spell damage dice
-  const { min: minDamage, max: maxDamage } = parseDiceString(spell.damageDice);
+  // Calculate scaled damage range
+  const statValue = getStatValueForScaling(attacker.characterStats, spell.damageScalingStat);
+  const scaled = calculateSpellScaling(
+    spell.minDamage, spell.maxDamage,
+    attacker.characterLevel,
+    spell.scalingPerLevel,
+    statValue,
+    spell.damageScalingFactor,
+  );
 
-  // Calculate scaling bonus from caster's stats
-  let scalingBonus = 0;
-  if (spell.damageScalingStat && spell.damageScalingFactor) {
-    const statValue = getStatValueForScaling(attacker.characterStats, spell.damageScalingStat);
-    scalingBonus = Math.floor(statValue * spell.damageScalingFactor);
-  }
+  const hitsPerCast = spell.hitsPerCast || 1;
 
   // Process each target
   for (const targetId of targets) {
@@ -291,21 +326,34 @@ async function processSpellCombat(
       continue;
     }
 
-    // Roll spell damage (no miss chance for spells - they always hit) + scaling bonus
-    const baseDamage = Math.floor(Math.random() * (maxDamage - minDamage + 1)) + minDamage;
-    const damage = baseDamage + scalingBonus;
+    // Roll damage for each hit
+    let totalDamage = 0;
+    for (let hit = 0; hit < hitsPerCast; hit++) {
+      totalDamage += Math.floor(Math.random() * (scaled.max - scaled.min + 1)) + scaled.min;
+    }
 
-    // Send spell messages
-    const attackerMsg = `You cast ${colors.cyan(spell.spellName)} at ${colors.combatDefender(withNpcName(target.entityName, target.isProperName))} for ${colors.combatDamage(damage.toString())} damage!`;
-    const defenderMsg = `${colors.combatAttacker(withNpcNameCapitalized(attacker.entityName, attacker.isProperName))} casts ${colors.cyan(spell.spellName)} at you for ${colors.combatDamage(damage.toString())} damage!`;
-    const roomMsg = `${colors.combatAttacker(withNpcNameCapitalized(attacker.entityName, attacker.isProperName))} casts ${colors.cyan(spell.spellName)} at ${colors.combatDefender(withNpcName(target.entityName, target.isProperName))} for ${colors.combatDamage(damage.toString())} damage!`;
+    // Send spell messages (use custom messages if defined)
+    const defName = withNpcName(target.entityName, target.isProperName);
+    const atkName = withNpcNameCapitalized(attacker.entityName, attacker.isProperName);
+    const dmgStr = colors.combatDamage(totalDamage.toString());
+    const hitSuffix = hitsPerCast > 1 ? ` (${hitsPerCast} hits)` : '';
+
+    const attackerMsg = spell.hitMessageSelf
+      ? spell.hitMessageSelf.replace(/\{target\}/g, defName).replace(/\{damage\}/g, totalDamage.toString())
+      : `You cast ${colors.cyan(spell.spellName)} at ${colors.combatDefender(defName)} for ${dmgStr} damage!${hitSuffix}`;
+    const defenderMsg = spell.hitMessageTarget
+      ? spell.hitMessageTarget.replace(/\{name\}/g, atkName).replace(/\{damage\}/g, totalDamage.toString())
+      : `${colors.combatAttacker(atkName)} casts ${colors.cyan(spell.spellName)} at you for ${dmgStr} damage!${hitSuffix}`;
+    const roomMsg = spell.hitMessageRoom
+      ? spell.hitMessageRoom.replace(/\{name\}/g, atkName).replace(/\{target\}/g, defName).replace(/\{damage\}/g, totalDamage.toString())
+      : `${colors.combatAttacker(atkName)} casts ${colors.cyan(spell.spellName)} at ${colors.combatDefender(defName)} for ${dmgStr} damage!${hitSuffix}`;
 
     sendCombatMessage(attacker, MessageType.OUTPUT, attackerMsg);
     sendCombatMessage(target, MessageType.OUTPUT, defenderMsg);
     broadcastCombatToRoom(attackerRoomId, roomMsg, [attacker.entityId, targetId]);
 
     // Apply damage using centralized handler
-    const damageResult = await applyDamage(target, damage, 'spell');
+    const damageResult = await applyDamage(target, totalDamage, 'spell');
 
     // Handle state changes (dropped/death send vitals with updated status)
     if (damageResult.stateChange === 'dropped') {
@@ -816,17 +864,19 @@ async function processNpcOffensiveSpell(
   players: Map<number, AuthenticatedSocket>,
   deferredRewards: Array<() => Promise<void>>
 ): Promise<void> {
-  // No damage dice means this offensive spell has no direct damage component — skip
-  if (!spell.damageDice) return;
-
-  const { min: minDmg, max: maxDmg } = parseDiceString(spell.damageDice);
-  const isAoE = spell.targetType === SpellTargetType.ROOM;
+  // No damage means this offensive spell has no direct damage component — skip
+  if (!spell.minDamage || !spell.maxDamage) return;
 
   // NPC scaling uses template.spellPower as the universal stat value
-  let scalingBonus = 0;
-  if (spell.damageScalingFactor) {
-    scalingBonus = Math.floor(npc.template.spellPower * spell.damageScalingFactor);
-  }
+  const scaled = calculateSpellScaling(
+    spell.minDamage, spell.maxDamage,
+    npc.characterLevel,
+    spell.scalingPerLevel,
+    npc.template.spellPower,
+    spell.damageScalingFactor,
+  );
+  const isAoE = spell.targetType === SpellTargetType.ROOM;
+  const hitsPerCast = spell.hitsPerCast || 1;
 
   // Determine targets
   const targetIds: number[] = isAoE
@@ -854,19 +904,22 @@ async function processNpcOffensiveSpell(
       continue;
     }
 
-    // Roll damage
-    const baseDamage = Math.floor(Math.random() * (maxDmg - minDmg + 1)) + minDmg;
-    const damage = baseDamage + scalingBonus;
+    // Roll damage for each hit
+    let damage = 0;
+    for (let hit = 0; hit < hitsPerCast; hit++) {
+      damage += Math.floor(Math.random() * (scaled.max - scaled.min + 1)) + scaled.min;
+    }
 
     // Per-target message
+    const atkName = withNpcNameCapitalized(npc.entityName, npc.isProperName);
     sendCombatMessage(target, MessageType.OUTPUT,
-      `${colors.combatAttacker(withNpcNameCapitalized(npc.entityName, npc.isProperName))} casts ${colors.cyan(spell.name)} at you for ${colors.combatDamage(damage.toString())} damage!`
+      `${colors.combatAttacker(atkName)} casts ${colors.cyan(spell.name)} at you for ${colors.combatDamage(damage.toString())} damage!`
     );
 
     // Single-target: also broadcast to room observers
     if (!isAoE) {
       broadcastCombatToRoom(npcRoomId,
-        `${colors.combatAttacker(withNpcNameCapitalized(npc.entityName, npc.isProperName))} casts ${colors.cyan(spell.name)} at ${colors.combatDefender(withNpcName(target.entityName, target.isProperName))} for ${colors.combatDamage(damage.toString())} damage!`,
+        `${colors.combatAttacker(atkName)} casts ${colors.cyan(spell.name)} at ${colors.combatDefender(withNpcName(target.entityName, target.isProperName))} for ${colors.combatDamage(damage.toString())} damage!`,
         [targetId]
       );
     }
@@ -907,18 +960,19 @@ function processNpcHealingSpell(
   spell: NpcSpellSelection['npcSpell']['spell'],
   npcRoomId: number
 ): void {
-  const { min: minHeal, max: maxHeal } = parseDiceString(spell.healingDice || '1d8');
-
-  // NPC scaling uses template.spellPower
-  let scalingBonus = 0;
-  if (spell.healingScalingFactor) {
-    scalingBonus = Math.floor(npc.template.spellPower * spell.healingScalingFactor);
-  }
+  const baseMin = spell.minHealing ?? 1;
+  const baseMax = spell.maxHealing ?? 8;
+  const scaled = calculateSpellScaling(
+    baseMin, baseMax,
+    npc.characterLevel,
+    spell.scalingPerLevel,
+    npc.template.spellPower,
+    spell.healingScalingFactor,
+  );
 
   // Helper to heal a single NPC
   const healTarget = (target: NpcCombatInstance) => {
-    const baseHeal = Math.floor(Math.random() * (maxHeal - minHeal + 1)) + minHeal;
-    const healAmount = baseHeal + scalingBonus;
+    const healAmount = Math.floor(Math.random() * (scaled.max - scaled.min + 1)) + scaled.min;
     const oldHp = target.vitals.hp;
     target.vitals.hp = Math.min(target.vitals.hp + healAmount, target.vitals.maxHp);
     const actualHeal = target.vitals.hp - oldHp;

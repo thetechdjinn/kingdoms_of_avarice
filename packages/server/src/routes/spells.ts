@@ -101,9 +101,13 @@ export function setupSpellRoutes(app: Express): void {
     try {
       const {
         name, mnemonic, description, spellType, targetType,
-        manaCost, damageDice, healingDice, statusEffect, effectDuration,
+        manaCost, minDamage, maxDamage, minHealing, maxHealing, hitsPerCast,
+        statusEffect, effectDuration,
         levelRequired, classRestrictions, isAttackSpell,
-        damageScalingStat, damageScalingFactor, healingScalingStat, healingScalingFactor,
+        scalingPerLevel, damageScalingStat, damageScalingFactor,
+        healingScalingStat, healingScalingFactor,
+        castDifficulty, fizzleMessage,
+        hitMessageSelf, hitMessageTarget, hitMessageRoom,
         telegraphMessage, saveStat, saveDifficulty
       } = req.body;
 
@@ -147,20 +151,17 @@ export function setupSpellRoutes(app: Express): void {
         spellType,
         targetType,
         manaCost: manaCost ?? 0,
-        damageDice,
-        healingDice,
-        statusEffect,
-        effectDuration,
+        minDamage, maxDamage, minHealing, maxHealing,
+        hitsPerCast: hitsPerCast ?? 1,
+        statusEffect, effectDuration,
         levelRequired: levelRequired ?? 1,
         classRestrictions,
         isAttackSpell: isAttackSpell ?? false,
-        damageScalingStat,
-        damageScalingFactor,
-        healingScalingStat,
-        healingScalingFactor,
-        telegraphMessage,
-        saveStat,
-        saveDifficulty,
+        scalingPerLevel, damageScalingStat, damageScalingFactor,
+        healingScalingStat, healingScalingFactor,
+        castDifficulty: castDifficulty ?? 0, fizzleMessage,
+        hitMessageSelf, hitMessageTarget, hitMessageRoom,
+        telegraphMessage, saveStat, saveDifficulty,
       });
 
       // Refresh mnemonic cache

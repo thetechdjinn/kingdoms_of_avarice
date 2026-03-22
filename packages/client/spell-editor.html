@@ -164,9 +164,16 @@
                 <h3>Damage (Offensive Spells)</h3>
                 <div class="form-row">
                   <div class="form-group">
-                    <label for="spell-damage-dice">Damage Dice</label>
-                    <input type="text" id="spell-damage-dice" placeholder="1d6+2" />
-                    <span class="hint-inline">Format: XdY or XdY+Z (e.g., 2d6+3)</span>
+                    <label for="spell-min-damage">Min Damage</label>
+                    <input type="number" id="spell-min-damage" min="0" value="0" />
+                  </div>
+                  <div class="form-group">
+                    <label for="spell-max-damage">Max Damage</label>
+                    <input type="number" id="spell-max-damage" min="0" value="0" />
+                  </div>
+                  <div class="form-group">
+                    <label for="spell-hits-per-cast">Hits Per Cast</label>
+                    <input type="number" id="spell-hits-per-cast" min="1" value="1" />
                   </div>
                 </div>
                 <div class="form-row">
@@ -181,12 +188,12 @@
                       <option value="wisdom">Wisdom</option>
                       <option value="charisma">Charisma</option>
                     </select>
-                    <span class="hint-inline">Which stat adds bonus damage</span>
+                    <span class="hint-inline">% increase per 10 stat points</span>
                   </div>
                   <div class="form-group">
-                    <label for="spell-damage-scaling-factor">Scaling Factor (%)</label>
-                    <input type="number" id="spell-damage-scaling-factor" min="0" max="200" step="5" value="0" />
-                    <span class="hint-inline">% of stat added (e.g., 50 = +50% of INT)</span>
+                    <label for="spell-damage-scaling-factor">Stat Scaling (per mil)</label>
+                    <input type="number" id="spell-damage-scaling-factor" min="0" max="100" step="1" value="0" />
+                    <span class="hint-inline">e.g., 20 = 2% per 10 pts</span>
                   </div>
                 </div>
               </div>
@@ -195,9 +202,12 @@
                 <h3>Healing (Healing Spells)</h3>
                 <div class="form-row">
                   <div class="form-group">
-                    <label for="spell-healing-dice">Healing Dice</label>
-                    <input type="text" id="spell-healing-dice" placeholder="1d8+2" />
-                    <span class="hint-inline">Format: XdY or XdY+Z (e.g., 2d8+4)</span>
+                    <label for="spell-min-healing">Min Healing</label>
+                    <input type="number" id="spell-min-healing" min="0" value="0" />
+                  </div>
+                  <div class="form-group">
+                    <label for="spell-max-healing">Max Healing</label>
+                    <input type="number" id="spell-max-healing" min="0" value="0" />
                   </div>
                 </div>
                 <div class="form-row">
@@ -212,12 +222,57 @@
                       <option value="wisdom">Wisdom</option>
                       <option value="charisma">Charisma</option>
                     </select>
-                    <span class="hint-inline">Which stat adds bonus healing</span>
+                    <span class="hint-inline">% increase per 10 stat points</span>
                   </div>
                   <div class="form-group">
-                    <label for="spell-healing-scaling-factor">Scaling Factor (%)</label>
-                    <input type="number" id="spell-healing-scaling-factor" min="0" max="200" step="5" value="0" />
-                    <span class="hint-inline">% of stat added (e.g., 50 = +50% of WIS)</span>
+                    <label for="spell-healing-scaling-factor">Stat Scaling (per mil)</label>
+                    <input type="number" id="spell-healing-scaling-factor" min="0" max="100" step="1" value="0" />
+                    <span class="hint-inline">e.g., 20 = 2% per 10 pts</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="effect-section">
+                <h3>Scaling &amp; Fizzle</h3>
+                <div class="form-row">
+                  <div class="form-group">
+                    <label for="spell-scaling-per-level">Level Scaling (%)</label>
+                    <input type="number" id="spell-scaling-per-level" min="0" max="100" step="1" value="0" />
+                    <span class="hint-inline">% increase per caster level</span>
+                  </div>
+                  <div class="form-group">
+                    <label for="spell-cast-difficulty">Cast Difficulty</label>
+                    <input type="number" id="spell-cast-difficulty" min="0" value="0" />
+                    <span class="hint-inline">0 = always succeeds</span>
+                  </div>
+                </div>
+                <div class="form-row">
+                  <div class="form-group">
+                    <label for="spell-fizzle-message">Fizzle Message</label>
+                    <input type="text" id="spell-fizzle-message" placeholder="Your spell fizzles..." />
+                  </div>
+                </div>
+              </div>
+
+              <div class="effect-section">
+                <h3>Custom Messages</h3>
+                <span class="hint-inline">Placeholders: {target}, {name}, {damage}</span>
+                <div class="form-row">
+                  <div class="form-group">
+                    <label for="spell-hit-msg-self">Hit (Self)</label>
+                    <input type="text" id="spell-hit-msg-self" placeholder="Override caster message" />
+                  </div>
+                </div>
+                <div class="form-row">
+                  <div class="form-group">
+                    <label for="spell-hit-msg-target">Hit (Target)</label>
+                    <input type="text" id="spell-hit-msg-target" placeholder="Override target message" />
+                  </div>
+                </div>
+                <div class="form-row">
+                  <div class="form-group">
+                    <label for="spell-hit-msg-room">Hit (Room)</label>
+                    <input type="text" id="spell-hit-msg-room" placeholder="Override room message" />
                   </div>
                 </div>
               </div>
@@ -303,6 +358,22 @@
             <div id="preview-content">
               <p class="hint">Select a spell to see preview</p>
             </div>
+          </div>
+
+          <div class="panel-section">
+            <h3>Scaling Calculator</h3>
+            <div class="form-row" style="gap: 6px;">
+              <div class="form-group" style="flex: 1;">
+                <label for="calc-level">Level</label>
+                <input type="number" id="calc-level" min="1" max="50" value="1" style="width: 100%;" />
+              </div>
+              <div class="form-group" style="flex: 1;">
+                <label for="calc-stat">Stat Value</label>
+                <input type="number" id="calc-stat" min="0" max="200" value="50" style="width: 100%;" />
+              </div>
+            </div>
+            <button id="calc-btn" style="width: 100%; margin-top: 4px; padding: 4px;">Calculate</button>
+            <div id="calc-result" style="margin-top: 8px; font-size: 0.85em; color: #ccc;"></div>
           </div>
 
           <div class="panel-section">

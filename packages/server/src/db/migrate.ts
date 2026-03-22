@@ -933,6 +933,86 @@ export async function runMigrations(): Promise<void> {
         `);
       }
 
+      // ================================================================
+      // Spell system rework: dice notation → min/max ranges
+      // ================================================================
+      const hasMinDamage = await client.query(`
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'spells' AND column_name = 'min_damage'
+      `);
+      if (hasMinDamage.rows.length === 0) {
+        // Add new columns
+        await client.query(`
+          ALTER TABLE spells
+          ADD COLUMN min_damage INTEGER,
+          ADD COLUMN max_damage INTEGER,
+          ADD COLUMN min_healing INTEGER,
+          ADD COLUMN max_healing INTEGER,
+          ADD COLUMN hits_per_cast INTEGER NOT NULL DEFAULT 1,
+          ADD COLUMN scaling_per_level DECIMAL(4,3),
+          ADD COLUMN cast_difficulty INTEGER NOT NULL DEFAULT 0,
+          ADD COLUMN fizzle_message TEXT,
+          ADD COLUMN hit_message_self TEXT,
+          ADD COLUMN hit_message_target TEXT,
+          ADD COLUMN hit_message_room TEXT
+        `);
+
+        // Migrate damage_dice → min_damage/max_damage
+        // Parse "NdS+M" format: min = N + M, max = N*S + M
+        await client.query(`
+          UPDATE spells
+          SET min_damage = GREATEST(1,
+            (regexp_match(damage_dice, '^(\d+)d(\d+)([+-]\d+)?$'))[1]::int
+            + COALESCE((regexp_match(damage_dice, '^(\d+)d(\d+)([+-]\d+)?$'))[3]::int, 0)
+          ),
+          max_damage = GREATEST(1,
+            (regexp_match(damage_dice, '^(\d+)d(\d+)([+-]\d+)?$'))[1]::int
+            * (regexp_match(damage_dice, '^(\d+)d(\d+)([+-]\d+)?$'))[2]::int
+            + COALESCE((regexp_match(damage_dice, '^(\d+)d(\d+)([+-]\d+)?$'))[3]::int, 0)
+          )
+          WHERE damage_dice IS NOT NULL
+        `);
+
+        // Migrate healing_dice → min_healing/max_healing
+        await client.query(`
+          UPDATE spells
+          SET min_healing = GREATEST(1,
+            (regexp_match(healing_dice, '^(\d+)d(\d+)([+-]\d+)?$'))[1]::int
+            + COALESCE((regexp_match(healing_dice, '^(\d+)d(\d+)([+-]\d+)?$'))[3]::int, 0)
+          ),
+          max_healing = GREATEST(1,
+            (regexp_match(healing_dice, '^(\d+)d(\d+)([+-]\d+)?$'))[1]::int
+            * (regexp_match(healing_dice, '^(\d+)d(\d+)([+-]\d+)?$'))[2]::int
+            + COALESCE((regexp_match(healing_dice, '^(\d+)d(\d+)([+-]\d+)?$'))[3]::int, 0)
+          )
+          WHERE healing_dice IS NOT NULL
+        `);
+
+        // Convert scaling factors from flat-bonus format to per-10-stat percentage
+        // Old: 0.50 meant floor(stat * 0.50) flat bonus
+        // New: 0.02 means 2% increase per 10 stat points
+        // Approximate conversion: old_factor / 25 gives similar magnitude
+        await client.query(`
+          UPDATE spells
+          SET damage_scaling_factor = ROUND(damage_scaling_factor / 25, 3)
+          WHERE damage_scaling_factor IS NOT NULL AND damage_scaling_factor > 0
+        `);
+        await client.query(`
+          UPDATE spells
+          SET healing_scaling_factor = ROUND(healing_scaling_factor / 25, 3)
+          WHERE healing_scaling_factor IS NOT NULL AND healing_scaling_factor > 0
+        `);
+
+        // Drop old columns
+        await client.query(`
+          ALTER TABLE spells
+          DROP COLUMN IF EXISTS damage_dice,
+          DROP COLUMN IF EXISTS healing_dice
+        `);
+
+        console.log('Spell system migrated: dice notation → min/max ranges');
+      }
+
     });
 
     console.log('Database migrations completed successfully');
