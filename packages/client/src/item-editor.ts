@@ -21,6 +21,7 @@ interface ItemTemplate {
     attack_speed?: number;
     crit_modifier?: number;
     range?: string;
+    allows_backstab?: boolean;
     backstab_accuracy?: number;
     backstab_min_damage_bonus?: number;
     backstab_max_damage_bonus?: number;
@@ -34,7 +35,7 @@ interface ItemTemplate {
   armor_data?: {
     armor_class: number;
     damage_resistance?: number;
-    weight_class?: string;
+    armor_type?: string;
   };
   consumable_data?: {
     charges?: number;
@@ -382,6 +383,8 @@ function loadWeaponData(template: ItemTemplate): void {
   if (damageType) damageType.value = data?.damage_type || 'slashing';
   if (attackSpeed) attackSpeed.value = String(data?.attack_speed || 1500);
   if (critModifier) critModifier.value = String(data?.crit_modifier || 2);
+  const allowsBackstab = getElement<HTMLInputElement>('weapon-allows-backstab');
+  if (allowsBackstab) allowsBackstab.checked = data?.allows_backstab !== false;
   if (backstabAccuracy) backstabAccuracy.value = String(data?.backstab_accuracy || 0);
   if (backstabMinDmgBonus) backstabMinDmgBonus.value = String(data?.backstab_min_damage_bonus || 0);
   if (backstabMaxDmgBonus) backstabMaxDmgBonus.value = String(data?.backstab_max_damage_bonus || 0);
@@ -402,7 +405,7 @@ function loadArmorData(template: ItemTemplate): void {
   const data = template.armor_data;
   (document.getElementById('armor-class') as HTMLInputElement).value = String(data?.armor_class || 0);
   (document.getElementById('armor-damage-resistance') as HTMLInputElement).value = String(data?.damage_resistance || 0);
-  (document.getElementById('armor-weight-class') as HTMLSelectElement).value = data?.weight_class || 'light';
+  (document.getElementById('armor-type') as HTMLSelectElement).value = data?.armor_type || 'leather';
 }
 
 function loadContainerData(template: ItemTemplate): void {
@@ -535,7 +538,7 @@ function updatePreview(template: ItemTemplate): void {
       <div class="preview-section">
         <div class="preview-section-title">Armor</div>
         <div>AC: ${template.armor_data.armor_class}/${drDisplay}</div>
-        <div>Class: ${escapeHtml(template.armor_data.weight_class || 'light')}</div>
+        <div>Type: ${escapeHtml(template.armor_data.armor_type || 'leather')}</div>
       </div>
     `;
   }
@@ -802,6 +805,7 @@ function gatherFormData(): Partial<ItemTemplate> {
       attack_speed: parseNumberOrDefault((document.getElementById('weapon-attack-speed') as HTMLInputElement).value, 1500),
       crit_modifier: parseNumberOrDefault((document.getElementById('weapon-crit-modifier') as HTMLInputElement).value, 2),
       range: existingTemplate?.weapon_data?.range || 'melee',
+      allows_backstab: (document.getElementById('weapon-allows-backstab') as HTMLInputElement).checked ? undefined : false,
       backstab_accuracy: backstabAccuracyValue !== 0 ? backstabAccuracyValue : undefined,
       backstab_min_damage_bonus: backstabMinDmgBonus !== 0 ? backstabMinDmgBonus : undefined,
       backstab_max_damage_bonus: backstabMaxDmgBonus !== 0 ? backstabMaxDmgBonus : undefined,
@@ -829,7 +833,7 @@ function gatherFormData(): Partial<ItemTemplate> {
     data.armor_data = {
       armor_class: parseInt((document.getElementById('armor-class') as HTMLInputElement).value) || 0,
       damage_resistance: parseFloat((document.getElementById('armor-damage-resistance') as HTMLInputElement).value) || 0,
-      weight_class: (document.getElementById('armor-weight-class') as HTMLSelectElement).value,
+      armor_type: (document.getElementById('armor-type') as HTMLSelectElement).value,
     };
   }
 

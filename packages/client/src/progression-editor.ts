@@ -311,6 +311,12 @@ function selectClass(classId: string): void {
   (document.getElementById('class-pickpocket') as HTMLInputElement).checked = cls.special_abilities?.includes('pickpocket') ?? false;
   (document.getElementById('class-crit-bonus') as HTMLInputElement).value = String(cls.crit_bonus ?? 0);
   (document.getElementById('class-dodge-bonus') as HTMLInputElement).value = String(cls.dodge_bonus ?? 0);
+  const armorRestrictions = cls.armor_type_restrictions ?? [];
+  (document.getElementById('class-armor-robe') as HTMLInputElement).checked = armorRestrictions.includes('robe');
+  (document.getElementById('class-armor-leather') as HTMLInputElement).checked = armorRestrictions.includes('leather');
+  (document.getElementById('class-armor-chainmail') as HTMLInputElement).checked = armorRestrictions.includes('chainmail');
+  (document.getElementById('class-armor-scalemail') as HTMLInputElement).checked = armorRestrictions.includes('scalemail');
+  (document.getElementById('class-armor-platemail') as HTMLInputElement).checked = armorRestrictions.includes('platemail');
 
   renderClassList();
 }
@@ -431,6 +437,13 @@ async function handleClassSubmit(e: Event): Promise<void> {
     ].filter((a): a is string => a !== null),
     crit_bonus: parseStatValue((document.getElementById('class-crit-bonus') as HTMLInputElement).value) || 0,
     dodge_bonus: parseStatValue((document.getElementById('class-dodge-bonus') as HTMLInputElement).value) || 0,
+    armor_type_restrictions: [
+      (document.getElementById('class-armor-robe') as HTMLInputElement).checked ? 'robe' : null,
+      (document.getElementById('class-armor-leather') as HTMLInputElement).checked ? 'leather' : null,
+      (document.getElementById('class-armor-chainmail') as HTMLInputElement).checked ? 'chainmail' : null,
+      (document.getElementById('class-armor-scalemail') as HTMLInputElement).checked ? 'scalemail' : null,
+      (document.getElementById('class-armor-platemail') as HTMLInputElement).checked ? 'platemail' : null,
+    ].filter((a): a is string => a !== null),
   };
 
   try {

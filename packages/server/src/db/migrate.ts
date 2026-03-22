@@ -830,6 +830,34 @@ export async function runMigrations(): Promise<void> {
         UPDATE npc_attacks SET miss_verb_3p = 'misses' WHERE miss_verb_3p = 'swings at'
       `);
 
+      // Add enabled column to npcs table
+      await client.query(`
+        ALTER TABLE npcs
+        ADD COLUMN IF NOT EXISTS enabled BOOLEAN DEFAULT TRUE
+      `);
+
+      // Add armor_type_restrictions to class_definitions
+      await client.query(`
+        ALTER TABLE class_definitions
+        ADD COLUMN IF NOT EXISTS armor_type_restrictions TEXT[] DEFAULT '{}'
+      `);
+
+      // Migrate weight_class → armor_type in item_templates armor_data JSONB
+      // light → robe or leather, medium → chainmail, heavy → scalemail or platemail
+      // Default mapping: light→leather, medium→chainmail, heavy→platemail
+      await client.query(`
+        UPDATE item_templates
+        SET armor_data = armor_data - 'weight_class' || jsonb_build_object('armor_type',
+          CASE armor_data->>'weight_class'
+            WHEN 'light' THEN 'leather'
+            WHEN 'medium' THEN 'chainmail'
+            WHEN 'heavy' THEN 'platemail'
+            ELSE armor_data->>'weight_class'
+          END
+        )
+        WHERE armor_data IS NOT NULL AND armor_data ? 'weight_class'
+      `);
+
     });
 
     console.log('Database migrations completed successfully');

@@ -68,6 +68,7 @@ interface NpcTemplate {
   merchantEnabled: boolean;
   primaryFactionId: number | null;
   properName: boolean;
+  enabled: boolean;
   spellPower: number;
   attacks: NpcAttack[];
   spells: NpcSpell[];
@@ -336,6 +337,7 @@ function selectTemplate(id: number): void {
   setInputValue('npc-max-active', String(template.maxActive));
   setCheckbox('npc-hostile', template.hostile);
   setCheckbox('npc-proper-name', template.properName);
+  setCheckbox('npc-enabled', template.enabled !== false);
   setCheckbox('npc-interactable', template.interactable);
 
   // Combat tab
@@ -748,6 +750,7 @@ function gatherFormData(): Record<string, unknown> {
     maxActive: getNum('npc-max-active', 1),
     hostile: getChecked('npc-hostile'),
     properName: getChecked('npc-proper-name'),
+    enabled: getChecked('npc-enabled'),
     interactable: getChecked('npc-interactable'),
 
     maxHealth: getNum('npc-max-health', 100),

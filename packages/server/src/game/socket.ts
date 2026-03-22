@@ -52,6 +52,8 @@ interface AuthenticatedSocket extends WebSocket {
   // Combat-related properties
   combatState: CombatState;
   characterLevel: number;
+  characterClass: string;
+  characterRace: string;
   characterStats: CharacterStats;
   combatLevel: number;
   // Status effects
@@ -356,6 +358,8 @@ export function setupGameSocket(wss: WebSocketServer): void {
 
     // Cache character stats for combat (avoid DB lookups during combat rounds)
     authWs.characterLevel = character.level;
+    authWs.characterClass = character.class;
+    authWs.characterRace = character.race;
     authWs.characterStats = {
       strength: character.strength,
       dexterity: character.dexterity,

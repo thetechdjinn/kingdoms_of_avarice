@@ -749,6 +749,7 @@ async function importNpcs(data: unknown[]): Promise<ImportResult> {
         merchantEnabled: item.merchantEnabled,
         properName: item.properName,
         spellPower: item.spellPower,
+        enabled: item.enabled as boolean | undefined,
       };
 
       const existing = existingByName.get(name.toLowerCase());

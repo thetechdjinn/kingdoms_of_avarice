@@ -331,6 +331,7 @@ export interface NpcTemplate {
   merchantEnabled: boolean;
   properName: boolean;
   spellPower: number;
+  enabled: boolean;
   attacks: NpcAttack[];
   spells: NpcSpell[];
 }

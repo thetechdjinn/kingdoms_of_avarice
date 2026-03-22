@@ -289,7 +289,8 @@ CREATE TABLE IF NOT EXISTS npcs (
     respawn_time INTEGER,
     level INTEGER DEFAULT 1,
     experience_reward INTEGER DEFAULT 0,
-    proper_name BOOLEAN DEFAULT FALSE
+    proper_name BOOLEAN DEFAULT FALSE,
+    enabled BOOLEAN DEFAULT TRUE
 );
 
 -- NPC instances (spawned NPCs in the world)

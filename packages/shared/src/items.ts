@@ -130,16 +130,20 @@ export interface WeaponData {
   range?: 'melee' | 'ranged' | 'thrown';
   skill_type?: string;
   attack_verbs?: AttackVerbs;
+  allows_backstab?: boolean; // Whether this weapon can be used for backstab (default true for one-handed)
   backstab_accuracy?: number; // Bonus accuracy for backstab attacks
   backstab_min_damage_bonus?: number; // Bonus to backstab minimum damage
   backstab_max_damage_bonus?: number; // Bonus to backstab maximum damage
 }
 
+// Armor types (determines which classes can equip)
+export type ArmorType = 'robe' | 'leather' | 'chainmail' | 'scalemail' | 'platemail';
+
 // Armor data
 export interface ArmorData {
   armor_class: number;
   damage_resistance?: number; // Flat damage reduction (the "/3" in "50/3" AC display)
-  weight_class?: 'light' | 'medium' | 'heavy';
+  armor_type?: ArmorType;
   resistances?: Partial<Record<DamageType, number>>;
 }
 

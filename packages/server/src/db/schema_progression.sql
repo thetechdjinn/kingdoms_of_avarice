@@ -64,9 +64,12 @@ CREATE TABLE IF NOT EXISTS class_definitions (
     -- Critical hit bonus (flat % bonus, e.g., 10 for Ninja/Mystic)
     crit_bonus INTEGER DEFAULT 0,
 
+    -- Armor type restrictions (empty = all types allowed)
+    armor_type_restrictions TEXT[] DEFAULT '{}',
+
     -- Display
     playable BOOLEAN DEFAULT TRUE,
-    
+
     -- Metadata
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP

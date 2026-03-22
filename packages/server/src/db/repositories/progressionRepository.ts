@@ -50,6 +50,7 @@ interface DbClassDefinition {
   crit_bonus: number;
   dodge_bonus: number;
   special_abilities: string[] | null;
+  armor_type_restrictions: string[] | null;
   created_at: Date;
   updated_at: Date;
 }
@@ -110,6 +111,7 @@ function dbToClassDefinition(row: DbClassDefinition): ClassDefinition {
     crit_bonus: row.crit_bonus ?? 0,
     dodge_bonus: row.dodge_bonus ?? 0,
     special_abilities: row.special_abilities ?? [],
+    armor_type_restrictions: row.armor_type_restrictions ?? [],
   };
 }
 
@@ -271,6 +273,10 @@ export async function updateClass(classId: string, updates: Partial<ClassDefinit
   if (updates.special_abilities !== undefined) {
     setClauses.push(`special_abilities = $${paramIndex++}`);
     values.push(JSON.stringify(updates.special_abilities));
+  }
+  if (updates.armor_type_restrictions !== undefined) {
+    setClauses.push(`armor_type_restrictions = $${paramIndex++}`);
+    values.push(updates.armor_type_restrictions);
   }
 
   if (setClauses.length === 0) return getClassById(classId);

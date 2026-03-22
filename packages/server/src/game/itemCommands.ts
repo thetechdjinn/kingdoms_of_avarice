@@ -1,4 +1,4 @@
-import { MessageType, ItemLocationType, ItemInstance, getItemDisplayName, EquipmentSlot, ItemType, TWO_HANDED_BLOCKED_SLOTS, getAlternatePairedSlot, ItemCondition, CraftingRecipe, AppliedEnchantment, Currency } from '@koa/shared';
+import { MessageType, ItemLocationType, ItemInstance, getItemDisplayName, EquipmentSlot, ItemType, TWO_HANDED_BLOCKED_SLOTS, getAlternatePairedSlot, ItemCondition, CraftingRecipe, AppliedEnchantment, Currency, ItemTemplate } from '@koa/shared';
 import { CommandResponse } from './commands.js';
 import { AuthenticatedSocket, broadcastToRoom, sendMessage } from './socket.js';
 import { getPlayerLocation } from './adminCommands.js';
@@ -13,6 +13,7 @@ import { calculateEncumbranceRatio, getEquipmentCombatStats, invalidateEquipment
 import { isHidden, breakStealth } from './stealth/stealthState.js';
 import { rollStealthCheck } from './stealth/stealthCheck.js';
 import { calculateStealth, calculatePerception } from './stats/secondaryStats.js';
+import * as progressionRepo from '../db/repositories/progressionRepository.js';
 
 // Guard function to check if character is selected
 function requireCharacter(socket: AuthenticatedSocket): CommandResponse | null {
@@ -999,8 +1000,8 @@ function formatItemExamine(item: ItemInstance): CommandResponse {
   if (template.armor_data) {
     const ad = template.armor_data;
     lines.push(`Armor Class: ${colors.boldWhite(String(ad.armor_class))}`);
-    if (ad.weight_class) {
-      lines.push(`Weight Class: ${ad.weight_class}`);
+    if (ad.armor_type) {
+      lines.push(`Armor Type: ${ad.armor_type}`);
     }
   }
 
@@ -1092,6 +1093,39 @@ const SLOT_DISPLAY_NAMES: Record<EquipmentSlot, string> = {
   [EquipmentSlot.HELD]: 'Readied',
 };
 
+/**
+ * Check if a character meets item requirements.
+ * Returns an error message string if requirements are not met, or null if all requirements pass.
+ */
+function checkItemRequirements(socket: AuthenticatedSocket, template: ItemTemplate): string | null {
+  const reqs = template.requirements;
+  if (!reqs) return null;
+
+  if (reqs.level && socket.characterLevel < reqs.level) {
+    return `You must be level ${reqs.level} to use that.`;
+  }
+  if (reqs.strength && socket.characterStats.strength < reqs.strength) {
+    return `You need ${reqs.strength} strength to use that.`;
+  }
+  if (reqs.dexterity && socket.characterStats.dexterity < reqs.dexterity) {
+    return `You need ${reqs.dexterity} dexterity to use that.`;
+  }
+  if (reqs.intelligence && socket.characterStats.intelligence < reqs.intelligence) {
+    return `You need ${reqs.intelligence} intelligence to use that.`;
+  }
+  if (reqs.constitution && socket.characterStats.constitution < reqs.constitution) {
+    return `You need ${reqs.constitution} constitution to use that.`;
+  }
+  if (reqs.class && reqs.class.length > 0 && !reqs.class.includes(socket.characterClass)) {
+    return `Your class cannot use that.`;
+  }
+  if (reqs.race && reqs.race.length > 0 && !reqs.race.includes(socket.characterRace)) {
+    return `Your race cannot use that.`;
+  }
+
+  return null;
+}
+
 // Handle "wield <item>" command - for weapons
 export async function handleWield(
   socket: AuthenticatedSocket,
@@ -1122,6 +1156,12 @@ export async function handleWield(
   // Must be a weapon
   if (!template || template.item_type !== ItemType.WEAPON) {
     return { type: MessageType.ERROR, message: `You can't wield that.` };
+  }
+
+  // Check item requirements (level, stats, class, race)
+  const reqError = checkItemRequirements(socket, template);
+  if (reqError) {
+    return { type: MessageType.ERROR, message: reqError };
   }
 
   // Check if it's a two-handed weapon
@@ -1201,6 +1241,22 @@ export async function handleWear(
 
   if (template.item_type === ItemType.WEAPON) {
     return handleWield(socket, args, currentRoomId);
+  }
+
+  // Check item requirements (level, stats, class, race)
+  const reqError = checkItemRequirements(socket, template);
+  if (reqError) {
+    return { type: MessageType.ERROR, message: reqError };
+  }
+
+  // Check armor type restrictions for the character's class
+  if (template.armor_data?.armor_type) {
+    const classDef = await progressionRepo.getClassById(socket.characterClass);
+    if (classDef?.armor_type_restrictions && classDef.armor_type_restrictions.length > 0) {
+      if (!classDef.armor_type_restrictions.includes(template.armor_data.armor_type)) {
+        return { type: MessageType.ERROR, message: `Your class cannot wear ${template.armor_data.armor_type} armor.` };
+      }
+    }
   }
 
   let targetSlot = template.equipment_slot as EquipmentSlot;

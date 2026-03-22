@@ -47,6 +47,7 @@ export interface ClassDefinition {
   crit_bonus?: number; // Flat crit chance bonus (e.g., 10 for Ninja/Mystic)
   dodge_bonus?: number; // Flat dodge chance bonus (e.g., 25 for Ninja/Mystic)
   special_abilities?: string[]; // Class-specific abilities
+  armor_type_restrictions?: string[]; // Allowed armor types (empty = all)
 }
 
 // ============================================================================
