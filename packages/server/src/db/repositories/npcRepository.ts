@@ -15,8 +15,6 @@ interface DbNpcTemplate {
   respawn_time: number | null;
   level: number;
   experience_reward: number;
-  gold_min: number;
-  gold_max: number;
   max_mana: number;
   base_accuracy: number;
   base_defense: number;
@@ -57,7 +55,6 @@ interface DbNpcAttack {
   max_damage: number;
   attacks_per_round: number;
   percentage: number;
-  mana_cost: number;
   hit_message: string | null;
   miss_message: string | null;
   hit_verb: string;
@@ -98,7 +95,6 @@ function dbToAttack(row: DbNpcAttack): NpcAttack {
     maxDamage: row.max_damage,
     attacksPerRound: row.attacks_per_round,
     percentage: row.percentage,
-    manaCost: row.mana_cost,
     hitMessage: row.hit_message,
     missMessage: row.miss_message,
     hitVerb: row.hit_verb,
@@ -121,8 +117,6 @@ function dbToTemplate(row: DbNpcTemplate, attacks: NpcAttack[], spells: NpcSpell
     respawnTime: row.respawn_time,
     level: row.level,
     experienceReward: row.experience_reward,
-    goldMin: row.gold_min,
-    goldMax: row.gold_max,
     maxMana: row.max_mana,
     baseAccuracy: row.base_accuracy,
     baseDefense: row.base_defense,
@@ -303,8 +297,6 @@ export interface CreateNpcTemplateInput {
   respawnTime?: number | null;
   level?: number;
   experienceReward?: number;
-  goldMin?: number;
-  goldMax?: number;
   maxMana?: number;
   baseAccuracy?: number;
   baseDefense?: number;
@@ -343,7 +335,6 @@ export interface CreateNpcAttackInput {
   maxDamage?: number;
   attacksPerRound?: number;
   percentage?: number;
-  manaCost?: number;
   hitMessage?: string | null;
   missMessage?: string | null;
   hitVerb?: string;
@@ -361,7 +352,7 @@ export async function createTemplate(input: CreateNpcTemplateInput, client?: pg.
   const result = await query<{ id: number }>(
     `INSERT INTO npcs (
       name, description, spawn_room_id, health, max_health, hostile, respawn_time,
-      level, experience_reward, gold_min, gold_max, max_mana,
+      level, experience_reward, max_mana,
       base_accuracy, base_defense, base_crit_chance, base_dodge, damage_reduction,
       traits, flee_enabled, flee_hp_percent, call_for_help_chance,
       max_active, interactable, allowed_areas, roam_enabled, roam_interval, roam_chance,
@@ -371,14 +362,14 @@ export async function createTemplate(input: CreateNpcTemplateInput, client?: pg.
       primary_faction_id, merchant_enabled, proper_name, spell_power
     ) VALUES (
       $1, $2, $3, $4, $4, $5, $6,
-      $7, $8, $9, $10, $11,
-      $12, $13, $14, $15, $16,
-      $17, $18, $19, $20,
-      $21, $22, $23, $24, $25, $26,
-      $27, $28, $29,
-      $30, $31, $32,
-      $33, $34, $35,
-      $36, $37, $38, $39
+      $7, $8, $9,
+      $10, $11, $12, $13, $14,
+      $15, $16, $17, $18,
+      $19, $20, $21, $22, $23, $24,
+      $25, $26, $27,
+      $28, $29, $30,
+      $31, $32, $33,
+      $34, $35, $36, $37
     ) RETURNING id`,
     [
       input.name,
@@ -389,8 +380,6 @@ export async function createTemplate(input: CreateNpcTemplateInput, client?: pg.
       input.respawnTime ?? null,
       input.level ?? 1,
       input.experienceReward ?? 0,
-      input.goldMin ?? 0,
-      input.goldMax ?? 0,
       input.maxMana ?? 0,
       input.baseAccuracy ?? 50,
       input.baseDefense ?? 50,
@@ -450,8 +439,6 @@ export async function updateTemplate(id: number, input: Partial<CreateNpcTemplat
   if (input.respawnTime !== undefined) fieldMap.respawnTime = { column: 'respawn_time', value: input.respawnTime };
   if (input.level !== undefined) fieldMap.level = { column: 'level', value: input.level };
   if (input.experienceReward !== undefined) fieldMap.experienceReward = { column: 'experience_reward', value: input.experienceReward };
-  if (input.goldMin !== undefined) fieldMap.goldMin = { column: 'gold_min', value: input.goldMin };
-  if (input.goldMax !== undefined) fieldMap.goldMax = { column: 'gold_max', value: input.goldMax };
   if (input.maxMana !== undefined) fieldMap.maxMana = { column: 'max_mana', value: input.maxMana };
   if (input.baseAccuracy !== undefined) fieldMap.baseAccuracy = { column: 'base_accuracy', value: input.baseAccuracy };
   if (input.baseDefense !== undefined) fieldMap.baseDefense = { column: 'base_defense', value: input.baseDefense };
@@ -520,10 +507,10 @@ export async function replaceAttacks(npcId: number, attacks: CreateNpcAttackInpu
       const result = await client.query<DbNpcAttack>(
         `INSERT INTO npc_attacks (
           npc_id, name, attack_type, min_damage, max_damage,
-          attacks_per_round, percentage, mana_cost,
+          attacks_per_round, percentage,
           hit_message, miss_message,
           hit_verb, hit_verb_3p, miss_verb, miss_verb_3p
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14) RETURNING *`,
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13) RETURNING *`,
         [
           npcId,
           atk.name,
@@ -532,7 +519,6 @@ export async function replaceAttacks(npcId: number, attacks: CreateNpcAttackInpu
           atk.maxDamage ?? 5,
           atk.attacksPerRound ?? 1,
           atk.percentage ?? 100,
-          atk.manaCost ?? 0,
           atk.hitMessage ?? null,
           atk.missMessage ?? null,
           atk.hitVerb ?? 'hits',

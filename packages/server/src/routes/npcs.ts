@@ -68,17 +68,6 @@ function validateTemplate(item: Record<string, unknown>, label: string): string 
   if (item.level !== undefined && (typeof item.level !== 'number' || item.level < 1)) {
     return `${label}: level must be >= 1`;
   }
-  if (item.goldMin !== undefined && (typeof item.goldMin !== 'number' || item.goldMin < 0)) {
-    return `${label}: goldMin must be >= 0`;
-  }
-  if (item.goldMax !== undefined && (typeof item.goldMax !== 'number' || item.goldMax < 0)) {
-    return `${label}: goldMax must be >= 0`;
-  }
-  const goldMin = typeof item.goldMin === 'number' ? item.goldMin : 0;
-  const goldMax = typeof item.goldMax === 'number' ? item.goldMax : 0;
-  if (goldMax < goldMin) {
-    return `${label}: goldMax must be >= goldMin`;
-  }
   if (Array.isArray(item.attacks)) {
     for (let i = 0; i < item.attacks.length; i++) {
       const error = validateAttack(item.attacks[i], i);
@@ -195,10 +184,7 @@ export function setupNpcRoutes(app: Express): void {
         return;
       }
 
-      const effectiveGoldMin = (rest.goldMin !== undefined && typeof rest.goldMin === 'number') ? rest.goldMin : existing.goldMin;
-      const effectiveGoldMax = (rest.goldMax !== undefined && typeof rest.goldMax === 'number') ? rest.goldMax : existing.goldMax;
-
-      const validationError = validateTemplate({ ...rest, goldMin: effectiveGoldMin, goldMax: effectiveGoldMax, attacks, spells }, existing.name);
+      const validationError = validateTemplate({ ...rest, attacks, spells }, existing.name);
       if (validationError) {
         res.status(400).json({ success: false, message: validationError });
         return;

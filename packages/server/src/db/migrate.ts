@@ -792,6 +792,44 @@ export async function runMigrations(): Promise<void> {
         console.log('Phase 1: Dropped abilities, talents, events tables and columns');
       }
 
+      // Add speed_modifier column to status_effect_definitions
+      await client.query(`
+        ALTER TABLE status_effect_definitions
+        ADD COLUMN IF NOT EXISTS speed_modifier INTEGER DEFAULT 0
+      `);
+
+      // Remove legacy gold_min/gold_max columns from npcs (replaced by drop tables)
+      await client.query(`
+        ALTER TABLE npcs
+        DROP COLUMN IF EXISTS gold_min,
+        DROP COLUMN IF EXISTS gold_max
+      `);
+
+      // Remove mana_cost from npc_attacks (melee attacks don't cost mana; spells have their own mana_cost)
+      await client.query(`
+        ALTER TABLE npc_attacks
+        DROP COLUMN IF EXISTS mana_cost
+      `);
+
+      // Fix npc_attacks column defaults to match repository code
+      await client.query(`
+        ALTER TABLE npc_attacks
+          ALTER COLUMN hit_verb SET DEFAULT 'hits',
+          ALTER COLUMN hit_verb_3p SET DEFAULT 'hits',
+          ALTER COLUMN miss_verb SET DEFAULT 'misses',
+          ALTER COLUMN miss_verb_3p SET DEFAULT 'misses'
+      `);
+      // Fix any existing rows that have the old defaults
+      await client.query(`
+        UPDATE npc_attacks SET hit_verb = 'hits' WHERE hit_verb = 'hit'
+      `);
+      await client.query(`
+        UPDATE npc_attacks SET miss_verb = 'misses' WHERE miss_verb = 'swing at'
+      `);
+      await client.query(`
+        UPDATE npc_attacks SET miss_verb_3p = 'misses' WHERE miss_verb_3p = 'swings at'
+      `);
+
     });
 
     console.log('Database migrations completed successfully');

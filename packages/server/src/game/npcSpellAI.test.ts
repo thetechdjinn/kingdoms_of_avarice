@@ -117,8 +117,6 @@ function createMockNpc(overrides: Partial<NpcCombatInstance> = {}): NpcCombatIns
       respawnTime: 60,
       level: 1,
       experienceReward: 10,
-      goldMin: 0,
-      goldMax: 0,
       maxMana: 20,
       baseAccuracy: 50,
       baseDefense: 50,

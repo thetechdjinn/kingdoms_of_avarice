@@ -143,33 +143,22 @@ async function getPlayerCombatStats(entity: CombatEntity, includeDodge: boolean)
 }
 
 /**
- * Select an attack for an NPC based on weighted percentages.
- * Filters out attacks that require more mana than the NPC currently has,
- * then redistributes percentages among affordable attacks.
+ * Select an attack for an NPC based on weighted percentage selection.
  */
 export function selectNpcAttack(npc: NpcCombatInstance): NpcAttack | null {
   const attacks = npc.template.attacks;
   if (attacks.length === 0) return null;
 
-  // Filter to affordable attacks
-  const affordable = attacks.filter(a => a.manaCost <= npc.currentMana);
-  if (affordable.length === 0) {
-    // Fall back to any free attack
-    const freeAttacks = attacks.filter(a => a.manaCost === 0);
-    if (freeAttacks.length === 0) return attacks[0]; // last resort
-    return freeAttacks[Math.floor(Math.random() * freeAttacks.length)];
-  }
-
   // Weighted random selection based on percentage
-  const totalWeight = affordable.reduce((sum, a) => sum + a.percentage, 0);
+  const totalWeight = attacks.reduce((sum, a) => sum + a.percentage, 0);
   let roll = Math.random() * totalWeight;
 
-  for (const attack of affordable) {
+  for (const attack of attacks) {
     roll -= attack.percentage;
     if (roll <= 0) return attack;
   }
 
-  return affordable[affordable.length - 1];
+  return attacks[attacks.length - 1];
 }
 
 /**

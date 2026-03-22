@@ -16,6 +16,7 @@ CREATE TABLE IF NOT EXISTS status_effect_definitions (
     defense_modifier INTEGER DEFAULT 0,
     energy_modifier INTEGER DEFAULT 0,      -- Percentage
     damage_modifier INTEGER DEFAULT 0,      -- Percentage
+    speed_modifier INTEGER DEFAULT 0,       -- Percentage (negative = faster, positive = slower)
 
     -- Periodic effects (DoT/HoT) - damage/healing ranges
     tick_damage_min INTEGER,                -- Minimum damage per tick

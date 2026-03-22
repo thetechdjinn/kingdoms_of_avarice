@@ -236,6 +236,8 @@ function selectEffect(id: string): void {
   if (defenseInput) defenseInput.value = String(effect.defenseModifier ?? 0);
   if (energyInput) energyInput.value = String(effect.energyModifier ?? 0);
   if (damageInput) damageInput.value = String(effect.damageModifier ?? 0);
+  const speedInput = getElement<HTMLInputElement>('effect-speed');
+  if (speedInput) speedInput.value = String(effect.speedModifier ?? 0);
 
   // Periodic effects (damage/healing ranges)
   const tickDamageMinInput = getElement<HTMLInputElement>('effect-tick-damage-min');
@@ -307,6 +309,7 @@ function updatePreview(effect: StatusEffectDefinition): void {
   if (effect.defenseModifier) modifiers.push(`Defense: ${effect.defenseModifier > 0 ? '+' : ''}${effect.defenseModifier}`);
   if (effect.energyModifier) modifiers.push(`Energy: ${effect.energyModifier > 0 ? '+' : ''}${effect.energyModifier}%`);
   if (effect.damageModifier) modifiers.push(`Damage: ${effect.damageModifier > 0 ? '+' : ''}${effect.damageModifier}%`);
+  if (effect.speedModifier) modifiers.push(`Speed: ${effect.speedModifier > 0 ? '+' : ''}${effect.speedModifier}%`);
 
   if (modifiers.length > 0) {
     html += `
@@ -563,6 +566,7 @@ function gatherFormData(): Partial<StatusEffectDefinition> {
     defenseModifier: parseInt((document.getElementById('effect-defense') as HTMLInputElement).value, 10) || 0,
     energyModifier: parseInt((document.getElementById('effect-energy') as HTMLInputElement).value, 10) || 0,
     damageModifier: parseInt((document.getElementById('effect-damage') as HTMLInputElement).value, 10) || 0,
+    speedModifier: parseInt((document.getElementById('effect-speed') as HTMLInputElement).value, 10) || 0,
     tickDamageMin: isNaN(tickDamageMin) ? undefined : tickDamageMin,
     tickDamageMax: isNaN(tickDamageMax) ? undefined : tickDamageMax,
     tickHealingMin: isNaN(tickHealingMin) ? undefined : tickHealingMin,

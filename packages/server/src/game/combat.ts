@@ -1095,14 +1095,6 @@ async function processNpcAttackerCombat(
   const attack = selectNpcAttack(npc);
   if (!attack) return;
 
-  // Deduct mana for the attack
-  if (attack.manaCost > 0) {
-    npc.currentMana -= attack.manaCost;
-    if (npc.vitals.resource !== undefined) {
-      npc.vitals.resource = npc.currentMana;
-    }
-  }
-
   // Calculate NPC accuracy
   const accuracyFactors = {
     characterLevel: npc.characterLevel,
@@ -1333,7 +1325,8 @@ async function processCombatRound(): Promise<void> {
             await processNpcSpellCombat(npc, action.spell, connectedPlayersRef, combatConfig);
 
             if (previousTargets) {
-              // Combat break: clear offensive state, then auto-re-engage
+              // Between-round spell: cast utility then continue melee.
+              // Combat break clears offensive state, then auto-re-engage.
               breakCasterCombat(npc);
 
               // Auto-re-engage: restore targets that are still valid
@@ -1344,12 +1337,12 @@ async function processCombatRound(): Promise<void> {
                 }
               }
 
-              // Defer melee to end of round (swing last)
+              // Defer melee to end of round so other participants act first
               if (npc.vitals.hp > 0 && npc.combatState.targets.size > 0) {
                 deferredMelee.push(npc);
               }
             }
-            // In-round spells: no additional melee (spell replaces attack)
+            // In-round spells (offensive with damage): spell replaces melee
           } else if (action.type === 'attack') {
             await processNpcAttackerCombat(npc, combatConfig);
           }
@@ -1362,7 +1355,7 @@ async function processCombatRound(): Promise<void> {
       }
     }
 
-    // Process deferred melee (NPCs that cast between-round spells swing last)
+    // Between-round spell NPCs get their melee swing after all other participants
     for (const npc of deferredMelee) {
       try {
         if (npc.vitals.hp > 0 && npc.combatState.targets.size > 0) {
