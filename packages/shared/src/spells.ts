@@ -110,4 +110,7 @@ export interface SpellCastingState {
   // Scaling info for combat calculations
   damageScalingStat: SpellScalingStat | null;
   damageScalingFactor: number | null;
+  // Status effect to apply on hit
+  statusEffect: string | null;
+  effectDuration: number | null;
 }

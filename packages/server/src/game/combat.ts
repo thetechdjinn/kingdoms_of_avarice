@@ -321,6 +321,16 @@ async function processSpellCombat(
       // Only send vitals here if no state change — dropped/death handlers send their own
       sendEntityVitals(target);
     }
+
+    // Apply status effect if the spell has one (e.g., burning, poisoned)
+    if (spell.statusEffect && spell.effectDuration && target.vitals.hp > 0) {
+      const effectDurationMs = spell.effectDuration * 1000;
+      if (isPlayerEntity(target)) {
+        await applyEffect(target as unknown as AuthenticatedSocket, spell.statusEffect, effectDurationMs, spell.spellId);
+      } else {
+        applyEffectToEntity(target, spell.statusEffect, effectDurationMs, spell.spellId);
+      }
+    }
   }
 
   return true;
