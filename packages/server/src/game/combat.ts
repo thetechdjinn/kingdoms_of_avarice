@@ -43,7 +43,7 @@ import {
   formatDeathMessage,
 } from './damageHandler.js';
 import { getCombatStats, getCombatStatsWithDodge } from './combatStatProvider.js';
-import { applyEffect, applyEffectToEntity, getEffectDefinition, hasEffect } from './statusEffects.js';
+import { applyEffect, applyEffectToEntity, getEffectDefinition, hasEffect, getEffectModifiers } from './statusEffects.js';
 import {
   sendCombatMessage,
   sendEntityVitals,
@@ -134,15 +134,21 @@ export function getSpellcastingAbility(
 
 /**
  * Check if a spell fizzles. Returns true if the spell succeeds.
+ * All spells have a 3% chance of automatic failure (roll 98-100).
  * Formula: random(1, 100) >= (castDifficulty - spellcastingAbility)
- * If castDifficulty is 0, the spell always succeeds.
+ * If castDifficulty is 0, only the 3% auto-fizzle applies.
  */
 export function spellCastSucceeds(castDifficulty: number, spellcastingAbility: number): boolean {
+  const roll = Math.floor(Math.random() * 100) + 1;
+
+  // 3% automatic failure on any spell
+  if (roll >= 98) return false;
+
+  // If no difficulty set, spell succeeds (passed the auto-fizzle)
   if (castDifficulty <= 0) return true;
+
   const threshold = castDifficulty - spellcastingAbility;
   if (threshold <= 0) return true; // spellcasting exceeds difficulty
-  if (threshold >= 100) return false; // impossible to cast
-  const roll = Math.floor(Math.random() * 100) + 1;
   return roll >= threshold;
 }
 
@@ -331,8 +337,8 @@ async function processSpellCombat(
   attacker.vitals.resource = (attacker.vitals.resource ?? 0) - spell.manaCost;
   sendEntityVitals(attacker);
 
-  // Fizzle check — mana is consumed even on fizzle
-  if (spell.castDifficulty > 0 && isPlayerEntity(attacker)) {
+  // Fizzle check — mana is consumed even on fizzle (3% auto-fizzle + difficulty check)
+  if (isPlayerEntity(attacker)) {
     const playerSocket = attacker as unknown as AuthenticatedSocket;
     const classDef = await progressionRepo.getClassById(playerSocket.characterClass);
     const spellcasting = getSpellcastingAbility(attacker.characterStats, classDef?.magic_school);
@@ -913,8 +919,8 @@ async function processNpcOffensiveSpell(
   // No damage means this offensive spell has no direct damage component — skip
   if (!spell.minDamage || !spell.maxDamage) return;
 
-  // NPC fizzle check (spellPower as spellcasting ability)
-  if (spell.castDifficulty > 0 && !spellCastSucceeds(spell.castDifficulty, npc.template.spellPower)) {
+  // NPC fizzle check (spellPower as spellcasting ability, includes 3% auto-fizzle)
+  if (!spellCastSucceeds(spell.castDifficulty, npc.template.spellPower)) {
     broadcastCombatToRoom(npcRoomId,
       `${withNpcNameCapitalized(npc.entityName, npc.isProperName)}'s spell fizzles!`, []);
     return;
@@ -1416,6 +1422,11 @@ async function processCombatRound(): Promise<void> {
     // Process each participant in combat order
     for (const { entity, isNpc } of participants) {
       try {
+        // blocksCombat: stunned/paralyzed entities skip their turn
+        if (getEffectModifiers(entity).blocksCombat) {
+          continue;
+        }
+
         if (isNpc) {
           const npc = entity as NpcCombatInstance;
           combatNpcs.push(npc);

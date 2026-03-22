@@ -31,6 +31,27 @@ import { breakCasterCombat } from './combatCommands.js';
 let cachedMnemonics: Set<string> = new Set();
 
 /**
+ * Check fizzle for an instant (non-combat-loop) spell cast.
+ * Returns a CommandResponse if the spell fizzles, or null if it succeeds.
+ * Consumes mana and starts cooldown on fizzle.
+ */
+async function checkInstantSpellFizzle(
+  socket: AuthenticatedSocket,
+  spell: Spell,
+): Promise<CommandResponse | null> {
+  const { getClassById } = await import('../db/repositories/progressionRepository.js');
+  const classDef = await getClassById(socket.characterClass);
+  const spellcasting = getSpellcastingAbility(socket.characterStats, classDef?.magic_school);
+  if (!spellCastSucceeds(spell.castDifficulty, spellcasting)) {
+    socket.vitals.resource = (socket.vitals.resource ?? 0) - spell.manaCost;
+    sendVitals(socket);
+    startCooldown(socket, spell.mnemonic, 'use');
+    return { type: MessageType.OUTPUT, message: colors.red(spell.fizzleMessage || `Your ${spell.name} fizzles!`) };
+  }
+  return null;
+}
+
+/**
  * Initialize the spell mnemonic cache
  * Called on server startup
  */
@@ -368,18 +389,9 @@ async function handleHealingSpell(
     breakCasterCombat(socket);
   }
 
-  // Fizzle check (mana consumed even on fizzle)
-  if (spell.castDifficulty > 0) {
-    const { getClassById } = await import('../db/repositories/progressionRepository.js');
-    const classDef = await getClassById(socket.characterClass);
-    const spellcasting = getSpellcastingAbility(socket.characterStats, classDef?.magic_school);
-    if (!spellCastSucceeds(spell.castDifficulty, spellcasting)) {
-      const fizzleMsg = spell.fizzleMessage || `Your ${spell.name} fizzles!`;
-      sendVitals(socket);
-      startCooldown(socket, spell.mnemonic, 'use');
-      return { type: MessageType.OUTPUT, message: colors.red(fizzleMsg) };
-    }
-  }
+  // Fizzle check (3% auto-fizzle + difficulty check, mana consumed on fizzle)
+  const fizzleResult = await checkInstantSpellFizzle(socket, spell);
+  if (fizzleResult) return fizzleResult;
 
   // Calculate scaled healing range
   const statValue = getStatValueForScaling(socket.characterStats, spell.healingScalingStat);
