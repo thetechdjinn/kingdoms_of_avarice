@@ -187,8 +187,9 @@ export async function createClass(classDef: ClassDefinition & { resource_type?: 
     `INSERT INTO class_definitions (
       class_id, display_name, description, essence_multiplier,
       subscribed_tags, talent_tree_id, resource_type, playable,
-      combat_level, magic_level, magic_school, stealth, crit_bonus, dodge_bonus, special_abilities
-    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+      combat_level, magic_level, magic_school, stealth, crit_bonus, dodge_bonus, special_abilities,
+      armor_type_restrictions
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
     RETURNING *`,
     [
       classDef.class_id,
@@ -206,6 +207,7 @@ export async function createClass(classDef: ClassDefinition & { resource_type?: 
       classDef.crit_bonus ?? 0,
       classDef.dodge_bonus ?? 0,
       JSON.stringify(classDef.special_abilities ?? []),
+      classDef.armor_type_restrictions ?? [],
     ]
   );
   const created = dbToClassDefinition(result.rows[0]);
