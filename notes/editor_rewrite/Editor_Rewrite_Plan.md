@@ -523,7 +523,7 @@ preview + spawn panel (right, 300px). The most complex editor after Room Editor.
 
 **UX Problems:**
 
-- `[PROPOSED]` Traits field is comma-separated text ("stealth, see-invisible"). Should be
+- `[PROPOSED]` Traits field is comma-separated text ("stealth, see_hidden"). Should be
   checkbox or multi-select from known traits.
 - `[PROPOSED]` Allowed areas field is comma-separated text. Should be multi-select from
   known areas.

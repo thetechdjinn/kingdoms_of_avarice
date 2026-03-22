@@ -18,6 +18,26 @@ CREATE TABLE IF NOT EXISTS status_effect_definitions (
     damage_modifier INTEGER DEFAULT 0,      -- Percentage
     speed_modifier INTEGER DEFAULT 0,       -- Percentage (negative = faster, positive = slower)
 
+    -- Expanded modifiers
+    critical_chance_modifier INTEGER DEFAULT 0,
+    dodge_modifier INTEGER DEFAULT 0,
+    magic_resistance INTEGER DEFAULT 0,     -- % reduction to incoming spell damage
+    healing_received INTEGER DEFAULT 0,     -- % change to incoming healing
+    perception_modifier INTEGER DEFAULT 0,
+    stealth_modifier INTEGER DEFAULT 0,
+    spellcasting_modifier INTEGER DEFAULT 0,
+    lockpicking_modifier INTEGER DEFAULT 0,
+
+    -- Stat modifiers (flat +/-)
+    strength_modifier INTEGER DEFAULT 0,
+    dexterity_modifier INTEGER DEFAULT 0,
+    constitution_modifier INTEGER DEFAULT 0,
+    intelligence_modifier INTEGER DEFAULT 0,
+    wisdom_modifier INTEGER DEFAULT 0,
+    charisma_modifier INTEGER DEFAULT 0,
+    max_hp_modifier INTEGER DEFAULT 0,
+    max_mana_modifier INTEGER DEFAULT 0,
+
     -- Periodic effects (DoT/HoT) - damage/healing ranges
     tick_damage_min INTEGER,                -- Minimum damage per tick
     tick_damage_max INTEGER,                -- Maximum damage per tick
@@ -33,6 +53,9 @@ CREATE TABLE IF NOT EXISTS status_effect_definitions (
     blocks_regen BOOLEAN DEFAULT FALSE,
     blocks_movement BOOLEAN DEFAULT FALSE,
     is_blind BOOLEAN DEFAULT FALSE,
+    blocks_casting BOOLEAN DEFAULT FALSE,
+    blocks_combat BOOLEAN DEFAULT FALSE,
+    blocks_stealth BOOLEAN DEFAULT FALSE,
 
     -- Metadata
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

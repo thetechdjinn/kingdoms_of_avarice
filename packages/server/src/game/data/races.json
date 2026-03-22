@@ -92,7 +92,7 @@
     "traits": [
       { "id": "magic_resist", "value": 5 },
       { "id": "night_vision", "value": 65 },
-      { "id": "picklocks", "value": 1 }
+      { "id": "lockpicking", "value": 1 }
     ],
     "allowed_classes": []
   },

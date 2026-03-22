@@ -25,7 +25,14 @@ function validateDefinitionInput(def: Record<string, unknown>): string | null {
   }
 
   // Optional numeric fields - validate type if provided
-  const numericFields = ['maxStacks', 'accuracyModifier', 'defenseModifier', 'energyModifier', 'damageModifier', 'speedModifier'];
+  const numericFields = [
+    'maxStacks', 'accuracyModifier', 'defenseModifier', 'energyModifier', 'damageModifier', 'speedModifier',
+    'criticalChanceModifier', 'dodgeModifier', 'magicResistance', 'healingReceived',
+    'perceptionModifier', 'stealthModifier', 'spellcastingModifier', 'lockpickingModifier',
+    'strengthModifier', 'dexterityModifier', 'constitutionModifier',
+    'intelligenceModifier', 'wisdomModifier', 'charismaModifier',
+    'maxHpModifier', 'maxManaModifier',
+  ];
   for (const field of numericFields) {
     if (def[field] !== undefined && def[field] !== null && typeof def[field] !== 'number') {
       return `${field} must be a number`;
@@ -73,7 +80,7 @@ function validateDefinitionInput(def: Record<string, unknown>): string | null {
   }
 
   // Optional boolean fields - validate type if provided
-  const booleanFields = ['silentTick', 'blocksRegen', 'blocksMovement', 'isBlind'];
+  const booleanFields = ['silentTick', 'blocksRegen', 'blocksMovement', 'isBlind', 'blocksCasting', 'blocksCombat', 'blocksStealth'];
   for (const field of booleanFields) {
     if (def[field] !== undefined && def[field] !== null && typeof def[field] !== 'boolean') {
       return `${field} must be a boolean`;
@@ -118,23 +125,17 @@ export function setupStatusEffectDefinitionRoutes(app: Express): void {
   // Create definition
   app.post('/api/status-effects', requireDeveloper, async (req: Request, res: Response) => {
     try {
-      const {
-        id, name, description, category, stackingBehavior, maxStacks,
-        accuracyModifier, defenseModifier, energyModifier, damageModifier, speedModifier,
-        tickDamageMin, tickDamageMax, tickHealingMin, tickHealingMax,
-        tickMessage, silentTick, wearOffMessage,
-        blocksRegen, blocksMovement, isBlind
-      } = req.body;
+      const body = req.body;
 
       // Validate required fields
-      const validationError = validateDefinitionInput(req.body);
+      const validationError = validateDefinitionInput(body);
       if (validationError) {
         res.status(400).json({ success: false, message: validationError });
         return;
       }
 
       // Normalize ID to lowercase for consistency
-      const normalizedId = id.toLowerCase();
+      const normalizedId = body.id.toLowerCase();
 
       // Check for duplicate ID
       const existing = await effectDefRepo.getDefinitionById(normalizedId);
@@ -145,26 +146,45 @@ export function setupStatusEffectDefinitionRoutes(app: Express): void {
 
       const definition = await effectDefRepo.createDefinition({
         id: normalizedId,
-        name,
-        description,
-        category,
-        stackingBehavior,
-        maxStacks: maxStacks ?? 1,
-        accuracyModifier: accuracyModifier ?? 0,
-        defenseModifier: defenseModifier ?? 0,
-        energyModifier: energyModifier ?? 0,
-        damageModifier: damageModifier ?? 0,
-        speedModifier: speedModifier ?? 0,
-        tickDamageMin,
-        tickDamageMax,
-        tickHealingMin,
-        tickHealingMax,
-        tickMessage,
-        silentTick: silentTick ?? false,
-        wearOffMessage,
-        blocksRegen: blocksRegen ?? false,
-        blocksMovement: blocksMovement ?? false,
-        isBlind: isBlind ?? false,
+        name: body.name,
+        description: body.description,
+        category: body.category,
+        stackingBehavior: body.stackingBehavior,
+        maxStacks: body.maxStacks,
+        accuracyModifier: body.accuracyModifier,
+        defenseModifier: body.defenseModifier,
+        energyModifier: body.energyModifier,
+        damageModifier: body.damageModifier,
+        speedModifier: body.speedModifier,
+        criticalChanceModifier: body.criticalChanceModifier,
+        dodgeModifier: body.dodgeModifier,
+        magicResistance: body.magicResistance,
+        healingReceived: body.healingReceived,
+        perceptionModifier: body.perceptionModifier,
+        stealthModifier: body.stealthModifier,
+        spellcastingModifier: body.spellcastingModifier,
+        lockpickingModifier: body.lockpickingModifier,
+        strengthModifier: body.strengthModifier,
+        dexterityModifier: body.dexterityModifier,
+        constitutionModifier: body.constitutionModifier,
+        intelligenceModifier: body.intelligenceModifier,
+        wisdomModifier: body.wisdomModifier,
+        charismaModifier: body.charismaModifier,
+        maxHpModifier: body.maxHpModifier,
+        maxManaModifier: body.maxManaModifier,
+        tickDamageMin: body.tickDamageMin,
+        tickDamageMax: body.tickDamageMax,
+        tickHealingMin: body.tickHealingMin,
+        tickHealingMax: body.tickHealingMax,
+        tickMessage: body.tickMessage,
+        silentTick: body.silentTick,
+        wearOffMessage: body.wearOffMessage,
+        blocksRegen: body.blocksRegen,
+        blocksMovement: body.blocksMovement,
+        isBlind: body.isBlind,
+        blocksCasting: body.blocksCasting,
+        blocksCombat: body.blocksCombat,
+        blocksStealth: body.blocksStealth,
       });
 
       // Reload effect definitions cache
@@ -189,109 +209,78 @@ export function setupStatusEffectDefinitionRoutes(app: Express): void {
         return;
       }
 
-      // Extract and validate only allowed fields
-      const {
-        name, description, category, stackingBehavior, maxStacks,
-        accuracyModifier, defenseModifier, energyModifier, damageModifier, speedModifier,
-        tickDamageMin, tickDamageMax, tickHealingMin, tickHealingMax,
-        tickMessage, silentTick, wearOffMessage,
-        blocksRegen, blocksMovement, isBlind
-      } = req.body;
+      const body = req.body;
 
       // Validate category if provided
-      if (category !== undefined && !validCategories.includes(category)) {
+      if (body.category !== undefined && !validCategories.includes(body.category)) {
         res.status(400).json({ success: false, message: `Invalid category: must be one of ${validCategories.join(', ')}` });
         return;
       }
 
       // Validate stackingBehavior if provided
-      if (stackingBehavior !== undefined && !validStackingBehaviors.includes(stackingBehavior)) {
+      if (body.stackingBehavior !== undefined && !validStackingBehaviors.includes(body.stackingBehavior)) {
         res.status(400).json({ success: false, message: `Invalid stackingBehavior: must be one of ${validStackingBehaviors.join(', ')}` });
         return;
       }
 
-      // Validate numeric fields if provided
-      const numericFields = { maxStacks, accuracyModifier, defenseModifier, energyModifier, damageModifier, speedModifier };
-      for (const [field, value] of Object.entries(numericFields)) {
-        if (value !== undefined && value !== null && typeof value !== 'number') {
+      // Validate all numeric fields if provided
+      const allNumericFields = [
+        'maxStacks', 'accuracyModifier', 'defenseModifier', 'energyModifier', 'damageModifier', 'speedModifier',
+        'criticalChanceModifier', 'dodgeModifier', 'magicResistance', 'healingReceived',
+        'perceptionModifier', 'stealthModifier', 'spellcastingModifier', 'lockpickingModifier',
+        'strengthModifier', 'dexterityModifier', 'constitutionModifier',
+        'intelligenceModifier', 'wisdomModifier', 'charismaModifier',
+        'maxHpModifier', 'maxManaModifier',
+        'tickDamageMin', 'tickDamageMax', 'tickHealingMin', 'tickHealingMax',
+      ];
+      for (const field of allNumericFields) {
+        if (body[field] !== undefined && body[field] !== null && typeof body[field] !== 'number') {
           res.status(400).json({ success: false, message: `${field} must be a number` });
           return;
         }
       }
 
       // Validate maxStacks is positive if provided
-      if (maxStacks !== undefined && maxStacks !== null) {
-        if (typeof maxStacks === 'number' && (maxStacks < 1 || !Number.isInteger(maxStacks))) {
+      if (body.maxStacks !== undefined && body.maxStacks !== null) {
+        if (typeof body.maxStacks === 'number' && (body.maxStacks < 1 || !Number.isInteger(body.maxStacks))) {
           res.status(400).json({ success: false, message: 'maxStacks must be a positive integer' });
           return;
         }
       }
 
-      // Validate numeric range fields if provided
-      const rangeFields = { tickDamageMin, tickDamageMax, tickHealingMin, tickHealingMax };
-      for (const [field, value] of Object.entries(rangeFields)) {
-        if (value !== undefined && value !== null && typeof value !== 'number') {
-          res.status(400).json({ success: false, message: `${field} must be a number` });
-          return;
-        }
-      }
-
-      // Validate range ordering (min <= max) when both are provided
-      if (tickDamageMin !== undefined && tickDamageMax !== undefined &&
-          tickDamageMin !== null && tickDamageMax !== null &&
-          tickDamageMin > tickDamageMax) {
+      // Validate range ordering (merge with existing values for partial updates)
+      const effectiveTickDmgMin = body.tickDamageMin !== undefined ? body.tickDamageMin : existing.tickDamageMin;
+      const effectiveTickDmgMax = body.tickDamageMax !== undefined ? body.tickDamageMax : existing.tickDamageMax;
+      if (effectiveTickDmgMin != null && effectiveTickDmgMax != null && effectiveTickDmgMin > effectiveTickDmgMax) {
         res.status(400).json({ success: false, message: 'tickDamageMin must be less than or equal to tickDamageMax' });
         return;
       }
-      if (tickHealingMin !== undefined && tickHealingMax !== undefined &&
-          tickHealingMin !== null && tickHealingMax !== null &&
-          tickHealingMin > tickHealingMax) {
+      const effectiveTickHealMin = body.tickHealingMin !== undefined ? body.tickHealingMin : existing.tickHealingMin;
+      const effectiveTickHealMax = body.tickHealingMax !== undefined ? body.tickHealingMax : existing.tickHealingMax;
+      if (effectiveTickHealMin != null && effectiveTickHealMax != null && effectiveTickHealMin > effectiveTickHealMax) {
         res.status(400).json({ success: false, message: 'tickHealingMin must be less than or equal to tickHealingMax' });
         return;
       }
 
+      // Validate boolean fields
       // Validate string fields if provided
-      const stringFields = { name, description, tickMessage, wearOffMessage };
-      for (const [field, value] of Object.entries(stringFields)) {
-        if (value !== undefined && value !== null && typeof value !== 'string') {
+      const stringFields = ['name', 'description', 'tickMessage', 'wearOffMessage'];
+      for (const field of stringFields) {
+        if (body[field] !== undefined && body[field] !== null && typeof body[field] !== 'string') {
           res.status(400).json({ success: false, message: `${field} must be a string` });
           return;
         }
       }
 
-      // Validate boolean fields if provided
-      const booleanFields = { silentTick, blocksRegen, blocksMovement, isBlind };
-      for (const [field, value] of Object.entries(booleanFields)) {
-        if (value !== undefined && value !== null && typeof value !== 'boolean') {
+      const booleanFields = ['silentTick', 'blocksRegen', 'blocksMovement', 'isBlind', 'blocksCasting', 'blocksCombat', 'blocksStealth'];
+      for (const field of booleanFields) {
+        if (body[field] !== undefined && body[field] !== null && typeof body[field] !== 'boolean') {
           res.status(400).json({ success: false, message: `${field} must be a boolean` });
           return;
         }
       }
 
-      // Build update object with only allowed fields
-      const updateData: Record<string, unknown> = {};
-      if (name !== undefined) updateData.name = name;
-      if (description !== undefined) updateData.description = description;
-      if (category !== undefined) updateData.category = category;
-      if (stackingBehavior !== undefined) updateData.stackingBehavior = stackingBehavior;
-      if (maxStacks !== undefined) updateData.maxStacks = maxStacks;
-      if (accuracyModifier !== undefined) updateData.accuracyModifier = accuracyModifier;
-      if (defenseModifier !== undefined) updateData.defenseModifier = defenseModifier;
-      if (energyModifier !== undefined) updateData.energyModifier = energyModifier;
-      if (damageModifier !== undefined) updateData.damageModifier = damageModifier;
-      if (speedModifier !== undefined) updateData.speedModifier = speedModifier;
-      if (tickDamageMin !== undefined) updateData.tickDamageMin = tickDamageMin;
-      if (tickDamageMax !== undefined) updateData.tickDamageMax = tickDamageMax;
-      if (tickHealingMin !== undefined) updateData.tickHealingMin = tickHealingMin;
-      if (tickHealingMax !== undefined) updateData.tickHealingMax = tickHealingMax;
-      if (tickMessage !== undefined) updateData.tickMessage = tickMessage;
-      if (silentTick !== undefined) updateData.silentTick = silentTick;
-      if (wearOffMessage !== undefined) updateData.wearOffMessage = wearOffMessage;
-      if (blocksRegen !== undefined) updateData.blocksRegen = blocksRegen;
-      if (blocksMovement !== undefined) updateData.blocksMovement = blocksMovement;
-      if (isBlind !== undefined) updateData.isBlind = isBlind;
-
-      const definition = await effectDefRepo.updateDefinition(normalizedId, updateData);
+      const definition = await effectDefRepo.updateDefinition(normalizedId, body);
 
       // Reload effect definitions cache
       await reloadEffectDefinitions();
@@ -410,22 +399,41 @@ export function setupStatusEffectDefinitionRoutes(app: Express): void {
             description: def.description,
             category: def.category,
             stackingBehavior: def.stackingBehavior,
-            maxStacks: def.maxStacks ?? 1,
-            accuracyModifier: def.accuracyModifier ?? 0,
-            defenseModifier: def.defenseModifier ?? 0,
-            energyModifier: def.energyModifier ?? 0,
-            damageModifier: def.damageModifier ?? 0,
-            speedModifier: def.speedModifier ?? 0,
+            maxStacks: def.maxStacks,
+            accuracyModifier: def.accuracyModifier,
+            defenseModifier: def.defenseModifier,
+            energyModifier: def.energyModifier,
+            damageModifier: def.damageModifier,
+            speedModifier: def.speedModifier,
+            criticalChanceModifier: def.criticalChanceModifier,
+            dodgeModifier: def.dodgeModifier,
+            magicResistance: def.magicResistance,
+            healingReceived: def.healingReceived,
+            perceptionModifier: def.perceptionModifier,
+            stealthModifier: def.stealthModifier,
+            spellcastingModifier: def.spellcastingModifier,
+            lockpickingModifier: def.lockpickingModifier,
+            strengthModifier: def.strengthModifier,
+            dexterityModifier: def.dexterityModifier,
+            constitutionModifier: def.constitutionModifier,
+            intelligenceModifier: def.intelligenceModifier,
+            wisdomModifier: def.wisdomModifier,
+            charismaModifier: def.charismaModifier,
+            maxHpModifier: def.maxHpModifier,
+            maxManaModifier: def.maxManaModifier,
             tickDamageMin: def.tickDamageMin,
             tickDamageMax: def.tickDamageMax,
             tickHealingMin: def.tickHealingMin,
             tickHealingMax: def.tickHealingMax,
             tickMessage: def.tickMessage,
-            silentTick: def.silentTick ?? false,
+            silentTick: def.silentTick,
             wearOffMessage: def.wearOffMessage,
-            blocksRegen: def.blocksRegen ?? false,
-            blocksMovement: def.blocksMovement ?? false,
-            isBlind: def.isBlind ?? false,
+            blocksRegen: def.blocksRegen,
+            blocksMovement: def.blocksMovement,
+            isBlind: def.isBlind,
+            blocksCasting: def.blocksCasting,
+            blocksCombat: def.blocksCombat,
+            blocksStealth: def.blocksStealth,
           };
 
           const existing = await effectDefRepo.getDefinitionById(normalizedId!);

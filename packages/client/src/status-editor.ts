@@ -239,6 +239,30 @@ function selectEffect(id: string): void {
   const speedInput = getElement<HTMLInputElement>('effect-speed');
   if (speedInput) speedInput.value = String(effect.speedModifier ?? 0);
 
+  // Expanded modifiers
+  const expandedFields: Array<[string, string]> = [
+    ['effect-crit-chance', 'criticalChanceModifier'], ['effect-dodge', 'dodgeModifier'],
+    ['effect-magic-resist', 'magicResistance'], ['effect-healing-received', 'healingReceived'],
+    ['effect-perception', 'perceptionModifier'], ['effect-stealth', 'stealthModifier'],
+    ['effect-spellcasting', 'spellcastingModifier'], ['effect-lockpicking', 'lockpickingModifier'],
+    ['effect-str', 'strengthModifier'], ['effect-dex', 'dexterityModifier'],
+    ['effect-con', 'constitutionModifier'], ['effect-int', 'intelligenceModifier'],
+    ['effect-wis', 'wisdomModifier'], ['effect-cha', 'charismaModifier'],
+    ['effect-max-hp', 'maxHpModifier'], ['effect-max-mana', 'maxManaModifier'],
+  ];
+  for (const [elemId, field] of expandedFields) {
+    const el = getElement<HTMLInputElement>(elemId);
+    if (el) el.value = String((effect as unknown as Record<string, unknown>)[field] ?? 0);
+  }
+
+  // Expanded flags
+  const blocksCasting = getElement<HTMLInputElement>('effect-blocks-casting');
+  const blocksCombat = getElement<HTMLInputElement>('effect-blocks-combat');
+  const blocksStealth = getElement<HTMLInputElement>('effect-blocks-stealth');
+  if (blocksCasting) blocksCasting.checked = effect.blocksCasting ?? false;
+  if (blocksCombat) blocksCombat.checked = effect.blocksCombat ?? false;
+  if (blocksStealth) blocksStealth.checked = effect.blocksStealth ?? false;
+
   // Periodic effects (damage/healing ranges)
   const tickDamageMinInput = getElement<HTMLInputElement>('effect-tick-damage-min');
   const tickDamageMaxInput = getElement<HTMLInputElement>('effect-tick-damage-max');
@@ -310,6 +334,24 @@ function updatePreview(effect: StatusEffectDefinition): void {
   if (effect.energyModifier) modifiers.push(`Energy: ${effect.energyModifier > 0 ? '+' : ''}${effect.energyModifier}%`);
   if (effect.damageModifier) modifiers.push(`Damage: ${effect.damageModifier > 0 ? '+' : ''}${effect.damageModifier}%`);
   if (effect.speedModifier) modifiers.push(`Speed: ${effect.speedModifier > 0 ? '+' : ''}${effect.speedModifier}%`);
+  if (effect.criticalChanceModifier) modifiers.push(`Crit: ${effect.criticalChanceModifier > 0 ? '+' : ''}${effect.criticalChanceModifier}%`);
+  if (effect.dodgeModifier) modifiers.push(`Dodge: ${effect.dodgeModifier > 0 ? '+' : ''}${effect.dodgeModifier}%`);
+  if (effect.magicResistance) modifiers.push(`Magic Resist: ${effect.magicResistance > 0 ? '+' : ''}${effect.magicResistance}%`);
+  if (effect.healingReceived) modifiers.push(`Healing: ${effect.healingReceived > 0 ? '+' : ''}${effect.healingReceived}%`);
+  if (effect.perceptionModifier) modifiers.push(`Perception: ${effect.perceptionModifier > 0 ? '+' : ''}${effect.perceptionModifier}`);
+  if (effect.stealthModifier) modifiers.push(`Stealth: ${effect.stealthModifier > 0 ? '+' : ''}${effect.stealthModifier}`);
+  if (effect.spellcastingModifier) modifiers.push(`Spellcasting: ${effect.spellcastingModifier > 0 ? '+' : ''}${effect.spellcastingModifier}`);
+  if (effect.lockpickingModifier) modifiers.push(`Lockpicking: ${effect.lockpickingModifier > 0 ? '+' : ''}${effect.lockpickingModifier}`);
+  const statMods: string[] = [];
+  if (effect.strengthModifier) statMods.push(`STR ${effect.strengthModifier > 0 ? '+' : ''}${effect.strengthModifier}`);
+  if (effect.dexterityModifier) statMods.push(`DEX ${effect.dexterityModifier > 0 ? '+' : ''}${effect.dexterityModifier}`);
+  if (effect.constitutionModifier) statMods.push(`CON ${effect.constitutionModifier > 0 ? '+' : ''}${effect.constitutionModifier}`);
+  if (effect.intelligenceModifier) statMods.push(`INT ${effect.intelligenceModifier > 0 ? '+' : ''}${effect.intelligenceModifier}`);
+  if (effect.wisdomModifier) statMods.push(`WIS ${effect.wisdomModifier > 0 ? '+' : ''}${effect.wisdomModifier}`);
+  if (effect.charismaModifier) statMods.push(`CHA ${effect.charismaModifier > 0 ? '+' : ''}${effect.charismaModifier}`);
+  if (statMods.length > 0) modifiers.push(`Stats: ${statMods.join(', ')}`);
+  if (effect.maxHpModifier) modifiers.push(`Max HP: ${effect.maxHpModifier > 0 ? '+' : ''}${effect.maxHpModifier}`);
+  if (effect.maxManaModifier) modifiers.push(`Max Mana: ${effect.maxManaModifier > 0 ? '+' : ''}${effect.maxManaModifier}`);
 
   if (modifiers.length > 0) {
     html += `
@@ -567,6 +609,22 @@ function gatherFormData(): Partial<StatusEffectDefinition> {
     energyModifier: parseInt((document.getElementById('effect-energy') as HTMLInputElement).value, 10) || 0,
     damageModifier: parseInt((document.getElementById('effect-damage') as HTMLInputElement).value, 10) || 0,
     speedModifier: parseInt((document.getElementById('effect-speed') as HTMLInputElement).value, 10) || 0,
+    criticalChanceModifier: parseInt((document.getElementById('effect-crit-chance') as HTMLInputElement).value, 10) || 0,
+    dodgeModifier: parseInt((document.getElementById('effect-dodge') as HTMLInputElement).value, 10) || 0,
+    magicResistance: parseInt((document.getElementById('effect-magic-resist') as HTMLInputElement).value, 10) || 0,
+    healingReceived: parseInt((document.getElementById('effect-healing-received') as HTMLInputElement).value, 10) || 0,
+    perceptionModifier: parseInt((document.getElementById('effect-perception') as HTMLInputElement).value, 10) || 0,
+    stealthModifier: parseInt((document.getElementById('effect-stealth') as HTMLInputElement).value, 10) || 0,
+    spellcastingModifier: parseInt((document.getElementById('effect-spellcasting') as HTMLInputElement).value, 10) || 0,
+    lockpickingModifier: parseInt((document.getElementById('effect-lockpicking') as HTMLInputElement).value, 10) || 0,
+    strengthModifier: parseInt((document.getElementById('effect-str') as HTMLInputElement).value, 10) || 0,
+    dexterityModifier: parseInt((document.getElementById('effect-dex') as HTMLInputElement).value, 10) || 0,
+    constitutionModifier: parseInt((document.getElementById('effect-con') as HTMLInputElement).value, 10) || 0,
+    intelligenceModifier: parseInt((document.getElementById('effect-int') as HTMLInputElement).value, 10) || 0,
+    wisdomModifier: parseInt((document.getElementById('effect-wis') as HTMLInputElement).value, 10) || 0,
+    charismaModifier: parseInt((document.getElementById('effect-cha') as HTMLInputElement).value, 10) || 0,
+    maxHpModifier: parseInt((document.getElementById('effect-max-hp') as HTMLInputElement).value, 10) || 0,
+    maxManaModifier: parseInt((document.getElementById('effect-max-mana') as HTMLInputElement).value, 10) || 0,
     tickDamageMin: isNaN(tickDamageMin) ? undefined : tickDamageMin,
     tickDamageMax: isNaN(tickDamageMax) ? undefined : tickDamageMax,
     tickHealingMin: isNaN(tickHealingMin) ? undefined : tickHealingMin,
@@ -577,6 +635,9 @@ function gatherFormData(): Partial<StatusEffectDefinition> {
     blocksRegen: (document.getElementById('effect-blocks-regen') as HTMLInputElement).checked,
     blocksMovement: (document.getElementById('effect-blocks-movement') as HTMLInputElement).checked,
     isBlind: (document.getElementById('effect-is-blind') as HTMLInputElement).checked,
+    blocksCasting: (document.getElementById('effect-blocks-casting') as HTMLInputElement).checked,
+    blocksCombat: (document.getElementById('effect-blocks-combat') as HTMLInputElement).checked,
+    blocksStealth: (document.getElementById('effect-blocks-stealth') as HTMLInputElement).checked,
   };
 }
 

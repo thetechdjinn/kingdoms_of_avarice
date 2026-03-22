@@ -433,7 +433,7 @@ async function processAttackerCombat(
     equipmentCritBonus: 0, // TODO: Add equipment crit bonuses when implemented
     encumbranceRatio: attackerStats.encumbranceRatio,
   };
-  const baseCritChance = calculateCritChance(critFactors);
+  const baseCritChance = calculateCritChance(critFactors) + attackerStats.effectModifiers.criticalChanceModifier;
   const critMultiplier = DEFAULT_CRIT_MULTIPLIER;
 
   const attackerRoomId = getEntityRoomId(attacker);
@@ -492,7 +492,7 @@ async function processAttackerCombat(
         attackerAccuracy,
       };
 
-      defenderDodgeChance = calculateDodgeChance(dodgeFactors);
+      defenderDodgeChance = calculateDodgeChance(dodgeFactors) + defenderStats.effectModifiers.dodgeModifier;
     }
 
     // Execute combat round with actual equipment stats

@@ -36,7 +36,7 @@ Initiative determines the **order** of combatants within a combat round. It has 
 - Hostile mobs initiate combat immediately when in the same room as a player.
 - If the combat round starts before a player initiates combat, the player does not get an initiative roll — they are placed behind the mob in the combat queue.
 - If there are multiple hostile mobs in the same room as a player, they **all** initiate combat immediately and initiative is rolled for each. This is intentional — area difficulty is balanced by mob density and roaming behavior, making it more likely only 1-2 mobs occupy a room at any time.
-- Stealth prevents aggro: if a player enters a room while sneaking or hidden (and doesn't fail the check), the mob does not detect them. Mobs with **see-invisible** bypass this — see-invisible covers both sneaking and hidden states.
+- Stealth prevents aggro: if a player enters a room while sneaking or hidden (and doesn't fail the check), the mob does not detect them. Mobs with **see_hidden** bypass this — see_hidden covers both sneaking and hidden states.
 
 ## Mob / NPC Aggression
 

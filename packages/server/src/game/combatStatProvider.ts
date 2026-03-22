@@ -85,20 +85,20 @@ async function getPlayerCombatStats(entity: CombatEntity, includeDodge: boolean)
   // Get equipment stats (weapon, armor, stat modifiers, weight)
   const equipment = await getEquipmentCombatStats(entity.characterId!);
 
-  // Calculate effective stats with equipment modifiers
-  const effectiveDex = entity.characterStats.dexterity + (equipment.statModifiers.dexterity || 0);
-  const effectiveInt = entity.characterStats.intelligence + (equipment.statModifiers.intelligence || 0);
-  const effectiveStr = entity.characterStats.strength + (equipment.statModifiers.strength || 0);
-  const effectiveCha = entity.characterStats.charisma + (equipment.statModifiers.charisma || 0);
+  // Get status effect modifiers (needed before stat calculations)
+  const effectModifiers = getEffectModifiers(entity);
+
+  // Calculate effective stats with equipment + status effect modifiers
+  const effectiveDex = entity.characterStats.dexterity + (equipment.statModifiers.dexterity || 0) + effectModifiers.dexterityModifier;
+  const effectiveInt = entity.characterStats.intelligence + (equipment.statModifiers.intelligence || 0) + effectModifiers.intelligenceModifier;
+  const effectiveStr = entity.characterStats.strength + (equipment.statModifiers.strength || 0) + effectModifiers.strengthModifier;
+  const effectiveCha = entity.characterStats.charisma + (equipment.statModifiers.charisma || 0) + effectModifiers.charismaModifier;
 
   // Calculate encumbrance from actual inventory weight
   const encumbranceRatio = calculateEncumbranceRatio(equipment.totalWeight, effectiveStr);
 
   // Equipment accuracy bonus
   const equipmentAccuracyBonus = getEquipmentAccuracyBonus(equipment.statModifiers);
-
-  // Get status effect modifiers
-  const effectModifiers = getEffectModifiers(entity);
 
   // Get class crit bonus (always needed) and optionally dodge bonus
   let classCritBonus = 0;

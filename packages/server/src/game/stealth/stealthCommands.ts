@@ -28,6 +28,7 @@ import { calculateBackstabAccuracy, calculateBackstabDefense, rollBackstabHit } 
 import { calculateBackstabDamage, calculateStrengthDamageBonus } from '../combat/backstabDamage.js';
 import { applyDamage, initializeDroppedState, initializeDeadState, formatDroppedMessage, formatDeathMessage } from '../damageHandler.js';
 import { getEquipmentCombatStats } from '../combatStats.js';
+import { getEffectModifiers } from '../statusEffects.js';
 
 // ============================================================================
 // STEALTH ROLL
@@ -82,6 +83,11 @@ export async function handleHide(socket: AuthenticatedSocket): Promise<CommandRe
   const character = await characterRepo.findCharacterById(socket.characterId!);
   if (!character) {
     return { type: MessageType.ERROR, message: 'Character not found.' };
+  }
+
+  // Check if a status effect blocks stealth
+  if (getEffectModifiers(socket).blocksStealth) {
+    return { type: MessageType.ERROR, message: 'You cannot enter stealth right now!' };
   }
 
   // Validate stealth ability and state
@@ -163,6 +169,11 @@ export async function handleSneak(socket: AuthenticatedSocket): Promise<CommandR
   const character = await characterRepo.findCharacterById(socket.characterId!);
   if (!character) {
     return { type: MessageType.ERROR, message: 'Character not found.' };
+  }
+
+  // Check if a status effect blocks stealth
+  if (getEffectModifiers(socket).blocksStealth) {
+    return { type: MessageType.ERROR, message: 'You cannot enter stealth right now!' };
   }
 
   // Validate stealth ability and state

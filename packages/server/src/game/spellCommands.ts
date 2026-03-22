@@ -13,7 +13,7 @@ import { colors } from '../utils/colors.js';
 import * as spellRepo from '../db/repositories/spellRepository.js';
 import * as characterRepo from '../db/repositories/characterRepository.js';
 import { parseDiceString } from './combatCalculations.js';
-import { applyEffect, getEffectDefinition, formatDuration } from './statusEffects.js';
+import { applyEffect, getEffectDefinition, formatDuration, getEffectModifiers } from './statusEffects.js';
 import { isOnCooldown, startCooldown, getCooldownMessage } from './cooldownTracker.js';
 import { isPlayerDropped, isPlayerDead, clearDeathState } from './damageHandler.js';
 import { findPlayerInRoom } from './playerUtils.js';
@@ -74,6 +74,11 @@ export async function handleSpellCommand(
   // Check cooldown using spell mnemonic as ability identifier
   if (isOnCooldown(socket, mnemonic)) {
     return { type: MessageType.ERROR, message: getCooldownMessage(spell.name) };
+  }
+
+  // Check if a status effect blocks casting
+  if (getEffectModifiers(socket).blocksCasting) {
+    return { type: MessageType.ERROR, message: 'You cannot cast spells right now!' };
   }
 
   // Get character info for class/level checks

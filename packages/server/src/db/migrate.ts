@@ -857,6 +857,82 @@ export async function runMigrations(): Promise<void> {
         WHERE armor_data IS NOT NULL AND armor_data ? 'weight_class'
       `);
 
+      // Unify class trait system: rename special_abilities → traits, merge stealth boolean
+      const hasTraitsCol = await client.query(`
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'class_definitions' AND column_name = 'traits'
+      `);
+      if (hasTraitsCol.rows.length === 0) {
+        // Merge stealth=true into special_abilities before renaming
+        await client.query(`
+          UPDATE class_definitions
+          SET special_abilities = COALESCE(special_abilities, '[]'::jsonb) || '["stealth"]'::jsonb
+          WHERE stealth = TRUE AND NOT (COALESCE(special_abilities, '[]'::jsonb) @> '"stealth"')
+        `);
+
+        // Rename special_abilities → traits (JSONB → TEXT[])
+        // Convert JSONB array to TEXT array and create new column
+        await client.query(`
+          ALTER TABLE class_definitions ADD COLUMN traits TEXT[] DEFAULT '{}'
+        `);
+        await client.query(`
+          UPDATE class_definitions
+          SET traits = ARRAY(SELECT jsonb_array_elements_text(special_abilities))
+          WHERE special_abilities IS NOT NULL AND special_abilities != '[]'::jsonb
+        `);
+        await client.query(`
+          ALTER TABLE class_definitions DROP COLUMN IF EXISTS special_abilities
+        `);
+        await client.query(`
+          ALTER TABLE class_definitions DROP COLUMN IF EXISTS stealth
+        `);
+      }
+
+      // Normalize race trait IDs: picklocks → lockpicking
+      await client.query(`
+        UPDATE race_definitions
+        SET traits = (
+          SELECT jsonb_agg(
+            CASE
+              WHEN elem->>'id' = 'picklocks' THEN jsonb_set(elem, '{id}', '"lockpicking"')
+              ELSE elem
+            END
+          )
+          FROM jsonb_array_elements(traits::jsonb) AS elem
+        )
+        WHERE traits @> '[{"id": "picklocks"}]'::jsonb
+      `);
+
+      // Normalize NPC trait IDs: see-invisible → see_hidden
+      await client.query(`
+        UPDATE npcs
+        SET traits = array_replace(traits, 'see-invisible', 'see_hidden')
+        WHERE 'see-invisible' = ANY(traits)
+      `);
+
+      // Add expanded status effect modifier columns
+      const expandedModifierCols = [
+        'critical_chance_modifier', 'dodge_modifier', 'magic_resistance', 'healing_received',
+        'perception_modifier', 'stealth_modifier', 'spellcasting_modifier', 'lockpicking_modifier',
+        'strength_modifier', 'dexterity_modifier', 'constitution_modifier',
+        'intelligence_modifier', 'wisdom_modifier', 'charisma_modifier',
+        'max_hp_modifier', 'max_mana_modifier',
+      ];
+      for (const col of expandedModifierCols) {
+        await client.query(`
+          ALTER TABLE status_effect_definitions
+          ADD COLUMN IF NOT EXISTS ${col} INTEGER DEFAULT 0
+        `);
+      }
+      // Add expanded flag columns
+      const expandedFlagCols = ['blocks_casting', 'blocks_combat', 'blocks_stealth'];
+      for (const col of expandedFlagCols) {
+        await client.query(`
+          ALTER TABLE status_effect_definitions
+          ADD COLUMN IF NOT EXISTS ${col} BOOLEAN DEFAULT FALSE
+        `);
+      }
+
     });
 
     console.log('Database migrations completed successfully');

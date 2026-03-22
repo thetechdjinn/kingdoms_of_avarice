@@ -305,10 +305,11 @@ function selectClass(classId: string): void {
   (document.getElementById('class-combat-level') as HTMLInputElement).value = String(cls.combat_level ?? 3);
   (document.getElementById('class-magic-level') as HTMLInputElement).value = String(cls.magic_level ?? 0);
   (document.getElementById('class-magic-school') as HTMLSelectElement).value = cls.magic_school || '';
-  (document.getElementById('class-stealth') as HTMLInputElement).checked = cls.stealth === true;
-  (document.getElementById('class-lockpicking') as HTMLInputElement).checked = cls.special_abilities?.includes('lockpicking') ?? false;
-  (document.getElementById('class-traps') as HTMLInputElement).checked = cls.special_abilities?.includes('traps') ?? false;
-  (document.getElementById('class-pickpocket') as HTMLInputElement).checked = cls.special_abilities?.includes('pickpocket') ?? false;
+  const classTraits = cls.traits ?? [];
+  (document.getElementById('class-stealth') as HTMLInputElement).checked = classTraits.includes('stealth');
+  (document.getElementById('class-lockpicking') as HTMLInputElement).checked = classTraits.includes('lockpicking');
+  (document.getElementById('class-traps') as HTMLInputElement).checked = classTraits.includes('traps');
+  (document.getElementById('class-pickpocket') as HTMLInputElement).checked = classTraits.includes('pickpocket');
   (document.getElementById('class-crit-bonus') as HTMLInputElement).value = String(cls.crit_bonus ?? 0);
   (document.getElementById('class-dodge-bonus') as HTMLInputElement).value = String(cls.dodge_bonus ?? 0);
   const armorRestrictions = cls.armor_type_restrictions ?? [];
@@ -358,7 +359,7 @@ function selectRace(raceId: string): void {
   (document.getElementById('race-cha-max') as HTMLInputElement).value = String(bs?.charisma?.max ?? 100);
 
   // Check for special ability traits
-  const specialAbilityIds = ['stealth', 'picklocks', 'lockpicking', 'see_hidden'];
+  const specialAbilityIds = ['stealth', 'lockpicking', 'see_hidden'];
   const hasSpecialAbility = (id: string): boolean => {
     if (!race.traits) return false;
     return race.traits.some(t => {
@@ -368,7 +369,7 @@ function selectRace(raceId: string): void {
   };
 
   (document.getElementById('race-stealth') as HTMLInputElement).checked = hasSpecialAbility('stealth');
-  (document.getElementById('race-lockpicking') as HTMLInputElement).checked = hasSpecialAbility('picklocks') || hasSpecialAbility('lockpicking');
+  (document.getElementById('race-lockpicking') as HTMLInputElement).checked = hasSpecialAbility('lockpicking');
   (document.getElementById('race-see-hidden') as HTMLInputElement).checked = hasSpecialAbility('see_hidden');
 
   // Format other traits for display (excluding special abilities)
@@ -429,12 +430,20 @@ async function handleClassSubmit(e: Event): Promise<void> {
     combat_level: parseStatValue((document.getElementById('class-combat-level') as HTMLInputElement).value) || 3,
     magic_level: parseStatValue((document.getElementById('class-magic-level') as HTMLInputElement).value) || 0,
     magic_school: magicSchool || undefined,
-    stealth: (document.getElementById('class-stealth') as HTMLInputElement).checked,
-    special_abilities: [
-      (document.getElementById('class-lockpicking') as HTMLInputElement).checked ? 'lockpicking' : null,
-      (document.getElementById('class-traps') as HTMLInputElement).checked ? 'traps' : null,
-      (document.getElementById('class-pickpocket') as HTMLInputElement).checked ? 'pickpocket' : null,
-    ].filter((a): a is string => a !== null),
+    traits: (() => {
+      // Start with existing traits that don't have UI checkboxes (preserve them)
+      const knownCheckboxTraits = ['stealth', 'lockpicking', 'traps', 'pickpocket'];
+      const existingClass = classes.find(c => c.class_id === classId);
+      const preserved = (existingClass?.traits ?? []).filter(t => !knownCheckboxTraits.includes(t));
+      // Add checkbox-controlled traits
+      const checked = [
+        (document.getElementById('class-stealth') as HTMLInputElement).checked ? 'stealth' : null,
+        (document.getElementById('class-lockpicking') as HTMLInputElement).checked ? 'lockpicking' : null,
+        (document.getElementById('class-traps') as HTMLInputElement).checked ? 'traps' : null,
+        (document.getElementById('class-pickpocket') as HTMLInputElement).checked ? 'pickpocket' : null,
+      ].filter((a): a is string => a !== null);
+      return [...preserved, ...checked];
+    })(),
     crit_bonus: parseStatValue((document.getElementById('class-crit-bonus') as HTMLInputElement).value) || 0,
     dodge_bonus: parseStatValue((document.getElementById('class-dodge-bonus') as HTMLInputElement).value) || 0,
     armor_type_restrictions: [
@@ -503,16 +512,16 @@ async function handleRaceSubmit(e: Event): Promise<void> {
     return t;
   });
 
-  // Add special ability traits from checkboxes
-  const specialAbilityTraits: Array<{ id: string; value: number }> = [];
+  // Add special ability traits from checkboxes (boolean traits use true, not 1)
+  const specialAbilityTraits: Array<{ id: string; value: boolean | number }> = [];
   if ((document.getElementById('race-stealth') as HTMLInputElement).checked) {
-    specialAbilityTraits.push({ id: 'stealth', value: 1 });
+    specialAbilityTraits.push({ id: 'stealth', value: true });
   }
   if ((document.getElementById('race-lockpicking') as HTMLInputElement).checked) {
-    specialAbilityTraits.push({ id: 'picklocks', value: 1 });
+    specialAbilityTraits.push({ id: 'lockpicking', value: true });
   }
   if ((document.getElementById('race-see-hidden') as HTMLInputElement).checked) {
-    specialAbilityTraits.push({ id: 'see_hidden', value: 1 });
+    specialAbilityTraits.push({ id: 'see_hidden', value: true });
   }
 
   const traits = [...otherTraits, ...specialAbilityTraits];

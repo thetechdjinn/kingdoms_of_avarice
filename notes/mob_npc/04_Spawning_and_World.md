@@ -59,7 +59,7 @@ The maximum mobs for an area should be controlled by the respawn rooms.
 - Mobs and NPCs in combat can follow fleeing players.
 - Mob movements are announced to the room unless the mob is moving silently (stealth trait).
 - Mobs can be hidden from players (stealth trait).
-- Mobs can have **see-invisible** as a toggleable trait (covers both sneaking and hidden players).
+- Mobs can have **see_hidden** as a toggleable trait (covers both sneaking and hidden players).
 - Mobs can have **stealth** as a toggleable trait, enabling backstab if conditions are met.
 - Mobs cannot sneak or hide while in combat.
 

@@ -308,7 +308,7 @@ Status: Good. Number, 0-100%, default 10.
 
 Status: **Redesign. Remove freeform text, use chip/tag input.**
 
-Currently a comma-separated text field (e.g., "see-invisible, stealth").
+Currently a comma-separated text field (e.g., "see_hidden, stealth").
 
 > **Claude:** Same problem as Progression Editor traits. Replace with a chip/tag input:
 > - A SearchableSelect dropdown populated with known NPC traits
@@ -317,7 +317,7 @@ Currently a comma-separated text field (e.g., "see-invisible, stealth").
 > - No freeform text — only valid traits can be selected
 >
 > **Known NPC traits:**
-> - `see-invisible` — NPC can target hidden players
+> - `see_hidden` — NPC can target hidden players
 > - `stealth` — NPC can stealth (future)
 >
 > As more traits are added (magic resistance, ranged attack, etc.), they appear in the
