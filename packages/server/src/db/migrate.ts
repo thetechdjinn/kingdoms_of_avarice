@@ -843,8 +843,7 @@ export async function runMigrations(): Promise<void> {
       `);
 
       // Migrate weight_class → armor_type in item_templates armor_data JSONB
-      // light → robe or leather, medium → chainmail, heavy → scalemail or platemail
-      // Default mapping: light→leather, medium→chainmail, heavy→platemail
+      // light → leather, medium → chainmail, heavy → platemail
       await client.query(`
         UPDATE item_templates
         SET armor_data = armor_data - 'weight_class' || jsonb_build_object('armor_type',

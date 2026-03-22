@@ -88,6 +88,21 @@ export function setupProgressionRoutes(app: Express): void {
         return;
       }
 
+      // Validate armor_type_restrictions if provided
+      const validArmorTypes = ['robe', 'leather', 'chainmail', 'scalemail', 'platemail'];
+      if (armor_type_restrictions !== undefined) {
+        if (!Array.isArray(armor_type_restrictions) || armor_type_restrictions.length > MAX_ARRAY_LENGTH) {
+          res.status(400).json({ success: false, message: `armor_type_restrictions must be an array with at most ${MAX_ARRAY_LENGTH} items` });
+          return;
+        }
+        for (const t of armor_type_restrictions) {
+          if (!validArmorTypes.includes(t)) {
+            res.status(400).json({ success: false, message: `Invalid armor type: ${t}. Must be one of: ${validArmorTypes.join(', ')}` });
+            return;
+          }
+        }
+      }
+
       const classDef = await progressionRepo.createClass({
         class_id,
         display_name,
