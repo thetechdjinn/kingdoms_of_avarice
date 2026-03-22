@@ -50,6 +50,7 @@ interface DbClassDefinition {
   crit_bonus: number;
   dodge_bonus: number;
   special_abilities: string[] | null;
+  armor_type_restrictions: string[] | null;
   created_at: Date;
   updated_at: Date;
 }
@@ -110,6 +111,7 @@ function dbToClassDefinition(row: DbClassDefinition): ClassDefinition {
     crit_bonus: row.crit_bonus ?? 0,
     dodge_bonus: row.dodge_bonus ?? 0,
     special_abilities: row.special_abilities ?? [],
+    armor_type_restrictions: row.armor_type_restrictions ?? [],
   };
 }
 
@@ -185,8 +187,9 @@ export async function createClass(classDef: ClassDefinition & { resource_type?: 
     `INSERT INTO class_definitions (
       class_id, display_name, description, essence_multiplier,
       subscribed_tags, talent_tree_id, resource_type, playable,
-      combat_level, magic_level, magic_school, stealth, crit_bonus, dodge_bonus, special_abilities
-    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+      combat_level, magic_level, magic_school, stealth, crit_bonus, dodge_bonus, special_abilities,
+      armor_type_restrictions
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
     RETURNING *`,
     [
       classDef.class_id,
@@ -204,6 +207,7 @@ export async function createClass(classDef: ClassDefinition & { resource_type?: 
       classDef.crit_bonus ?? 0,
       classDef.dodge_bonus ?? 0,
       JSON.stringify(classDef.special_abilities ?? []),
+      classDef.armor_type_restrictions ?? [],
     ]
   );
   const created = dbToClassDefinition(result.rows[0]);
@@ -271,6 +275,10 @@ export async function updateClass(classId: string, updates: Partial<ClassDefinit
   if (updates.special_abilities !== undefined) {
     setClauses.push(`special_abilities = $${paramIndex++}`);
     values.push(JSON.stringify(updates.special_abilities));
+  }
+  if (updates.armor_type_restrictions !== undefined) {
+    setClauses.push(`armor_type_restrictions = $${paramIndex++}`);
+    values.push(updates.armor_type_restrictions);
   }
 
   if (setClauses.length === 0) return getClassById(classId);

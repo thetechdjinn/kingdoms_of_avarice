@@ -146,6 +146,7 @@ function createMockNpc(overrides: Partial<NpcCombatInstance> = {}): NpcCombatIns
       merchantEnabled: false,
       properName: false,
       spellPower: 10,
+      enabled: true,
       attacks: [],
       spells: [],
     },

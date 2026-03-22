@@ -50,7 +50,7 @@ export function setupProgressionRoutes(app: Express): void {
 
   app.post('/api/progression/classes', requireDeveloper, async (req: Request, res: Response) => {
     try {
-      const { class_id, display_name, description, essence_multiplier, subscribed_tags, talent_tree_id, resource_type, playable } = req.body;
+      const { class_id, display_name, description, essence_multiplier, subscribed_tags, talent_tree_id, resource_type, playable, armor_type_restrictions } = req.body;
 
       if (!class_id || !display_name) {
         res.status(400).json({ success: false, message: 'class_id and display_name are required' });
@@ -88,6 +88,21 @@ export function setupProgressionRoutes(app: Express): void {
         return;
       }
 
+      // Validate armor_type_restrictions if provided
+      const validArmorTypes = ['robe', 'leather', 'chainmail', 'scalemail', 'platemail'];
+      if (armor_type_restrictions !== undefined) {
+        if (!Array.isArray(armor_type_restrictions) || armor_type_restrictions.length > MAX_ARRAY_LENGTH) {
+          res.status(400).json({ success: false, message: `armor_type_restrictions must be an array with at most ${MAX_ARRAY_LENGTH} items` });
+          return;
+        }
+        for (const t of armor_type_restrictions) {
+          if (!validArmorTypes.includes(t)) {
+            res.status(400).json({ success: false, message: `Invalid armor type: ${t}. Must be one of: ${validArmorTypes.join(', ')}` });
+            return;
+          }
+        }
+      }
+
       const classDef = await progressionRepo.createClass({
         class_id,
         display_name,
@@ -97,6 +112,7 @@ export function setupProgressionRoutes(app: Express): void {
         talent_tree_id,
         resource_type,
         playable,
+        armor_type_restrictions,
       });
 
       res.json({ success: true, class: classDef });

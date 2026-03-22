@@ -335,7 +335,7 @@ export async function initializeNpcManager(): Promise<void> {
   );
   const templatesWithPendingRespawn = new Set(respawnQueue.map(e => e.templateId));
   for (const template of templates) {
-    if (template.spawnRoomId && !templatesWithInstances.has(template.id) && !templatesWithPendingRespawn.has(template.id)) {
+    if (template.enabled && template.spawnRoomId && !templatesWithInstances.has(template.id) && !templatesWithPendingRespawn.has(template.id)) {
       await spawnNpcFromTemplate(template, template.spawnRoomId);
     }
   }
@@ -426,7 +426,7 @@ async function processRespawnQueue(): Promise<void> {
   // Spawn each
   for (const entry of toSpawn) {
     const template = npcTemplates.get(entry.templateId);
-    if (!template) continue;
+    if (!template || !template.enabled) continue;
 
     try {
       const npc = await spawnNpcFromTemplate(template, entry.spawnRoomId);
@@ -869,7 +869,7 @@ export async function reloadNpcTemplates(): Promise<number> {
   );
   let spawned = 0;
   for (const template of templates) {
-    if (template.spawnRoomId && !templatesWithInstances.has(template.id)) {
+    if (template.enabled && template.spawnRoomId && !templatesWithInstances.has(template.id)) {
       try {
         await spawnNpcFromTemplate(template, template.spawnRoomId);
         spawned++;

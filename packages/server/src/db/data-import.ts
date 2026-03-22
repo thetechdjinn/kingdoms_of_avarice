@@ -34,6 +34,24 @@ import * as npcSpellRepo from './repositories/npcSpellRepository.js';
 
 const DATA_DIR = join(__dirname, '..', '..', '..', '..', 'data');
 
+const WEIGHT_CLASS_TO_ARMOR_TYPE: Record<string, string> = {
+  light: 'leather',
+  medium: 'chainmail',
+  heavy: 'platemail',
+};
+
+/** Migrate legacy weight_class to armor_type in armor_data during import */
+function migrateArmorData(data: Record<string, unknown> | undefined): Record<string, unknown> | undefined {
+  if (!data) return data;
+  if ('weight_class' in data && !('armor_type' in data)) {
+    const wc = data.weight_class as string;
+    const migrated: Record<string, unknown> = { ...data, armor_type: WEIGHT_CLASS_TO_ARMOR_TYPE[wc] ?? wc };
+    delete migrated.weight_class;
+    return migrated;
+  }
+  return data;
+}
+
 interface ImportResult {
   file: string;
   created: number;
@@ -288,7 +306,7 @@ async function importItems(data: unknown[]): Promise<ImportResult> {
         container_capacity: (item.container_capacity ?? item.containerCapacity) as number | undefined,
         container_weight_limit: (item.container_weight_limit ?? item.containerWeightLimit) as number | undefined,
         weapon_data: (item.weapon_data ?? item.weaponData) as Record<string, unknown> | undefined,
-        armor_data: (item.armor_data ?? item.armorData) as Record<string, unknown> | undefined,
+        armor_data: migrateArmorData((item.armor_data ?? item.armorData) as Record<string, unknown> | undefined),
         consumable_data: (item.consumable_data ?? item.consumableData) as Record<string, unknown> | undefined,
         light_data: (item.light_data ?? item.lightData) as Record<string, unknown> | undefined,
         tool_data: (item.tool_data ?? item.toolData) as Record<string, unknown> | undefined,
@@ -749,6 +767,7 @@ async function importNpcs(data: unknown[]): Promise<ImportResult> {
         merchantEnabled: item.merchantEnabled,
         properName: item.properName,
         spellPower: item.spellPower,
+        enabled: item.enabled as boolean | undefined,
       };
 
       const existing = existingByName.get(name.toLowerCase());

@@ -261,7 +261,7 @@
       "max_stack": 1,
       "armor_data": {
         "armor_class": 1,
-        "weight_class": "light"
+        "armor_type": "leather"
       },
       "stealth_modifier": 0,
       "effect_slots": 0,
@@ -289,7 +289,7 @@
       "max_stack": 1,
       "armor_data": {
         "armor_class": 3,
-        "weight_class": "heavy"
+        "armor_type": "platemail"
       },
       "stealth_modifier": 0,
       "effect_slots": 0,
@@ -316,7 +316,7 @@
       "max_stack": 1,
       "armor_data": {
         "armor_class": 2,
-        "weight_class": "light"
+        "armor_type": "leather"
       },
       "stealth_modifier": 0,
       "effect_slots": 0,
@@ -344,7 +344,7 @@
       "max_stack": 1,
       "armor_data": {
         "armor_class": 5,
-        "weight_class": "medium"
+        "armor_type": "chainmail"
       },
       "stealth_modifier": 0,
       "effect_slots": 0,
@@ -370,7 +370,7 @@
       "max_stack": 1,
       "armor_data": {
         "armor_class": 2,
-        "weight_class": "medium"
+        "armor_type": "chainmail"
       },
       "stealth_modifier": 0,
       "effect_slots": 0,
@@ -396,7 +396,7 @@
       "max_stack": 1,
       "armor_data": {
         "armor_class": 1,
-        "weight_class": "light"
+        "armor_type": "leather"
       },
       "stealth_modifier": 0,
       "effect_slots": 0,
@@ -423,7 +423,7 @@
       "max_stack": 1,
       "armor_data": {
         "armor_class": 1,
-        "weight_class": "light"
+        "armor_type": "leather"
       },
       "stealth_modifier": 0,
       "effect_slots": 0,
@@ -798,7 +798,7 @@
       "max_stack": 1,
       "armor_data": {
         "armor_class": 75,
-        "weight_class": "medium",
+        "armor_type": "chainmail",
         "damage_resistance": 8
       },
       "requirements": {},
@@ -911,7 +911,7 @@
       "max_stack": 1,
       "armor_data": {
         "armor_class": 10,
-        "weight_class": "light",
+        "armor_type": "leather",
         "damage_resistance": 0.1
       },
       "requirements": {},
@@ -947,7 +947,7 @@
       "max_stack": 1,
       "armor_data": {
         "armor_class": 10,
-        "weight_class": "light",
+        "armor_type": "leather",
         "damage_resistance": 0.1
       },
       "requirements": {},
@@ -983,7 +983,7 @@
       "max_stack": 1,
       "armor_data": {
         "armor_class": 10,
-        "weight_class": "light",
+        "armor_type": "leather",
         "damage_resistance": 0.1
       },
       "requirements": {},
@@ -1019,7 +1019,7 @@
       "max_stack": 1,
       "armor_data": {
         "armor_class": 10,
-        "weight_class": "light",
+        "armor_type": "leather",
         "damage_resistance": 0.1
       },
       "requirements": {},

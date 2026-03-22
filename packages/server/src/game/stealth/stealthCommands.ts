@@ -378,6 +378,11 @@ export async function handleBackstab(
     return { type: MessageType.ERROR, message: 'You cannot backstab with a two-handed weapon.' };
   }
 
+  // Check if weapon allows backstab (defaults to true for one-handed weapons)
+  if (mainHandWeapon.template.weapon_data.allows_backstab === false) {
+    return { type: MessageType.ERROR, message: 'You cannot backstab with that weapon.' };
+  }
+
   const weaponData = mainHandWeapon.template.weapon_data as WeaponData;
 
   // Get attack verbs for messages

@@ -87,7 +87,7 @@ VALUES
     1, 1, 8,
     'armor', 'head',
     '{"takeable": true}',
-    '{"armor_class": 1, "weight_class": "light"}',
+    '{"armor_class": 1, "armor_type": "leather"}',
     0
 ),
 (
@@ -99,7 +99,7 @@ VALUES
     4, 2, 35,
     'armor', 'head',
     '{"takeable": true}',
-    '{"armor_class": 3, "damage_resistance": 1, "weight_class": "heavy"}',
+    '{"armor_class": 3, "damage_resistance": 1, "armor_type": "platemail"}',
     -5
 ),
 (
@@ -111,7 +111,7 @@ VALUES
     5, 2, 25,
     'armor', 'body',
     '{"takeable": true}',
-    '{"armor_class": 2, "weight_class": "light"}',
+    '{"armor_class": 2, "armor_type": "leather"}',
     -2
 ),
 (
@@ -123,7 +123,7 @@ VALUES
     15, 3, 150,
     'armor', 'body',
     '{"takeable": true}',
-    '{"armor_class": 5, "damage_resistance": 2, "weight_class": "medium"}',
+    '{"armor_class": 5, "damage_resistance": 2, "armor_type": "chainmail"}',
     -10
 ),
 (
@@ -135,7 +135,7 @@ VALUES
     6, 2, 20,
     'armor', 'off_hand',
     '{"takeable": true}',
-    '{"armor_class": 2, "damage_resistance": 0.5, "weight_class": "medium"}',
+    '{"armor_class": 2, "damage_resistance": 0.5, "armor_type": "chainmail"}',
     -3
 ),
 (
@@ -147,7 +147,7 @@ VALUES
     1, 1, 5,
     'armor', 'hands',
     '{"takeable": true}',
-    '{"armor_class": 1, "weight_class": "light"}',
+    '{"armor_class": 1, "armor_type": "leather"}',
     0
 ),
 (
@@ -159,7 +159,7 @@ VALUES
     2, 1, 12,
     'armor', 'feet',
     '{"takeable": true}',
-    '{"armor_class": 1, "weight_class": "light"}',
+    '{"armor_class": 1, "armor_type": "leather"}',
     0
 ),
 (
@@ -171,7 +171,7 @@ VALUES
     1, 1, 200,
     'armor', 'back',
     '{"takeable": true}',
-    '{"armor_class": 0, "weight_class": "light"}',
+    '{"armor_class": 0, "armor_type": "leather"}',
     5
 ),
 (
@@ -183,7 +183,7 @@ VALUES
     1, 1, 150,
     'armor', 'feet',
     '{"takeable": true}',
-    '{"armor_class": 0, "weight_class": "light"}',
+    '{"armor_class": 0, "armor_type": "leather"}',
     3
 );
 
