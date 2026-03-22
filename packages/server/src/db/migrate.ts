@@ -866,8 +866,8 @@ export async function runMigrations(): Promise<void> {
         // Merge stealth=true into special_abilities before renaming
         await client.query(`
           UPDATE class_definitions
-          SET special_abilities = special_abilities || '["stealth"]'::jsonb
-          WHERE stealth = TRUE AND NOT (special_abilities @> '"stealth"')
+          SET special_abilities = COALESCE(special_abilities, '[]'::jsonb) || '["stealth"]'::jsonb
+          WHERE stealth = TRUE AND NOT (COALESCE(special_abilities, '[]'::jsonb) @> '"stealth"')
         `);
 
         // Rename special_abilities → traits (JSONB → TEXT[])
