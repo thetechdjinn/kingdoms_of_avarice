@@ -297,6 +297,9 @@ export class ChipTagInput {
   /** Replace the available options (constrained mode). */
   setOptions(options: string[]): void {
     this.options = options;
+    if (this.isOpen && this.dropdown) {
+      this.filterAndShow();
+    }
   }
 
   /** Destroy the component. */

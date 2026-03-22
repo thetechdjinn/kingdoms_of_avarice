@@ -73,7 +73,7 @@ export async function initAuth(requiredRole: RequiredRole = 'developer'): Promis
 
       // Logout handler
       document.getElementById('logout-btn')?.addEventListener('click', async () => {
-        await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
+        await fetch('/api/logout', { method: 'POST', credentials: 'include' });
         window.location.href = '/';
       });
 

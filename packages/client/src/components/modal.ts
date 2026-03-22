@@ -84,7 +84,7 @@ export function showPrompt(message: string, options: PromptOptions = {}): Promis
         }
       }
       cleanup(overlay);
-      resolve(value || null);
+      resolve(value);
     }
 
     okBtn.addEventListener('click', submit);

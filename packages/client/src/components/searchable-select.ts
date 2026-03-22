@@ -291,7 +291,7 @@ export class SearchableSelect {
       if (this.filteredOptions.length > toShow.length) {
         const more = document.createElement('div');
         more.className = 'ss-empty';
-        more.textContent = `${this.filteredOptions.length - toShow.length} more — type to filter`;
+        more.textContent = `${this.filteredOptions.length - toShow.length} more, type to filter`;
         this.dropdown.appendChild(more);
       }
     }
