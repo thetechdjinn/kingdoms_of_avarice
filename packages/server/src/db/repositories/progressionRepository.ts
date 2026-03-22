@@ -46,10 +46,9 @@ interface DbClassDefinition {
   combat_level: number;
   magic_level: number;
   magic_school: string | null;
-  stealth: boolean;
   crit_bonus: number;
   dodge_bonus: number;
-  special_abilities: string[] | null;
+  traits: string[] | null;
   armor_type_restrictions: string[] | null;
   created_at: Date;
   updated_at: Date;
@@ -107,10 +106,9 @@ function dbToClassDefinition(row: DbClassDefinition): ClassDefinition {
     combat_level: row.combat_level ?? 1,
     magic_level: row.magic_level ?? 0,
     magic_school: row.magic_school ?? undefined,
-    stealth: row.stealth ?? false,
     crit_bonus: row.crit_bonus ?? 0,
     dodge_bonus: row.dodge_bonus ?? 0,
-    special_abilities: row.special_abilities ?? [],
+    traits: row.traits ?? [],
     armor_type_restrictions: row.armor_type_restrictions ?? [],
   };
 }
@@ -187,9 +185,9 @@ export async function createClass(classDef: ClassDefinition & { resource_type?: 
     `INSERT INTO class_definitions (
       class_id, display_name, description, essence_multiplier,
       subscribed_tags, talent_tree_id, resource_type, playable,
-      combat_level, magic_level, magic_school, stealth, crit_bonus, dodge_bonus, special_abilities,
+      combat_level, magic_level, magic_school, crit_bonus, dodge_bonus, traits,
       armor_type_restrictions
-    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
     RETURNING *`,
     [
       classDef.class_id,
@@ -203,10 +201,9 @@ export async function createClass(classDef: ClassDefinition & { resource_type?: 
       classDef.combat_level ?? 1,
       classDef.magic_level ?? 0,
       classDef.magic_school ?? null,
-      classDef.stealth ?? false,
       classDef.crit_bonus ?? 0,
       classDef.dodge_bonus ?? 0,
-      JSON.stringify(classDef.special_abilities ?? []),
+      classDef.traits ?? [],
       classDef.armor_type_restrictions ?? [],
     ]
   );
@@ -260,10 +257,6 @@ export async function updateClass(classId: string, updates: Partial<ClassDefinit
     setClauses.push(`magic_school = $${paramIndex++}`);
     values.push(updates.magic_school);
   }
-  if (updates.stealth !== undefined) {
-    setClauses.push(`stealth = $${paramIndex++}`);
-    values.push(updates.stealth);
-  }
   if (updates.crit_bonus !== undefined) {
     setClauses.push(`crit_bonus = $${paramIndex++}`);
     values.push(updates.crit_bonus);
@@ -272,9 +265,9 @@ export async function updateClass(classId: string, updates: Partial<ClassDefinit
     setClauses.push(`dodge_bonus = $${paramIndex++}`);
     values.push(updates.dodge_bonus);
   }
-  if (updates.special_abilities !== undefined) {
-    setClauses.push(`special_abilities = $${paramIndex++}`);
-    values.push(JSON.stringify(updates.special_abilities));
+  if (updates.traits !== undefined) {
+    setClauses.push(`traits = $${paramIndex++}`);
+    values.push(updates.traits);
   }
   if (updates.armor_type_restrictions !== undefined) {
     setClauses.push(`armor_type_restrictions = $${paramIndex++}`);

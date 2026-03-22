@@ -112,7 +112,7 @@ async function handleClassInfo(args: string[]): Promise<CommandResponse> {
       `  ${colors.boldCyan('Tags:')} ${cls.subscribed_tags.join(', ') || 'none'}`,
       `  ${colors.boldCyan('Combat Level:')} ${cls.combat_level ?? 1}`,
       `  ${colors.boldCyan('Magic Level:')} ${cls.magic_level ?? 0}${cls.magic_school ? ` (${cls.magic_school})` : ''}`,
-      `  ${colors.boldCyan('Stealth:')} ${cls.stealth ? 'Yes' : 'No'}`,
+      `  ${colors.boldCyan('Traits:')} ${cls.traits?.join(', ') || 'none'}`,
       `  ${colors.boldCyan('Talent Tree:')} ${cls.talent_tree_id || 'none'}`,
     ];
 

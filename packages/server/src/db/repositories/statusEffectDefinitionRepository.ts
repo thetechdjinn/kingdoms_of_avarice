@@ -19,6 +19,22 @@ interface DbStatusEffectDefinition {
   energy_modifier: number;
   damage_modifier: number;
   speed_modifier: number;
+  critical_chance_modifier: number;
+  dodge_modifier: number;
+  magic_resistance: number;
+  healing_received: number;
+  perception_modifier: number;
+  stealth_modifier: number;
+  spellcasting_modifier: number;
+  lockpicking_modifier: number;
+  strength_modifier: number;
+  dexterity_modifier: number;
+  constitution_modifier: number;
+  intelligence_modifier: number;
+  wisdom_modifier: number;
+  charisma_modifier: number;
+  max_hp_modifier: number;
+  max_mana_modifier: number;
   tick_damage_min: number | null;
   tick_damage_max: number | null;
   tick_healing_min: number | null;
@@ -29,6 +45,9 @@ interface DbStatusEffectDefinition {
   blocks_regen: boolean;
   blocks_movement: boolean;
   is_blind: boolean;
+  blocks_casting: boolean;
+  blocks_combat: boolean;
+  blocks_stealth: boolean;
   created_at: Date;
   updated_at: Date;
 }
@@ -47,6 +66,22 @@ function dbToDefinition(row: DbStatusEffectDefinition): StatusEffectDefinition {
     energyModifier: row.energy_modifier,
     damageModifier: row.damage_modifier,
     speedModifier: row.speed_modifier,
+    criticalChanceModifier: row.critical_chance_modifier,
+    dodgeModifier: row.dodge_modifier,
+    magicResistance: row.magic_resistance,
+    healingReceived: row.healing_received,
+    perceptionModifier: row.perception_modifier,
+    stealthModifier: row.stealth_modifier,
+    spellcastingModifier: row.spellcasting_modifier,
+    lockpickingModifier: row.lockpicking_modifier,
+    strengthModifier: row.strength_modifier,
+    dexterityModifier: row.dexterity_modifier,
+    constitutionModifier: row.constitution_modifier,
+    intelligenceModifier: row.intelligence_modifier,
+    wisdomModifier: row.wisdom_modifier,
+    charismaModifier: row.charisma_modifier,
+    maxHpModifier: row.max_hp_modifier,
+    maxManaModifier: row.max_mana_modifier,
     tickDamageMin: row.tick_damage_min ?? undefined,
     tickDamageMax: row.tick_damage_max ?? undefined,
     tickHealingMin: row.tick_healing_min ?? undefined,
@@ -57,6 +92,9 @@ function dbToDefinition(row: DbStatusEffectDefinition): StatusEffectDefinition {
     blocksRegen: row.blocks_regen,
     blocksMovement: row.blocks_movement,
     isBlind: row.is_blind,
+    blocksCasting: row.blocks_casting,
+    blocksCombat: row.blocks_combat,
+    blocksStealth: row.blocks_stealth,
   };
 }
 
@@ -123,6 +161,22 @@ export interface CreateDefinitionInput {
   energyModifier?: number;
   damageModifier?: number;
   speedModifier?: number;
+  criticalChanceModifier?: number;
+  dodgeModifier?: number;
+  magicResistance?: number;
+  healingReceived?: number;
+  perceptionModifier?: number;
+  stealthModifier?: number;
+  spellcastingModifier?: number;
+  lockpickingModifier?: number;
+  strengthModifier?: number;
+  dexterityModifier?: number;
+  constitutionModifier?: number;
+  intelligenceModifier?: number;
+  wisdomModifier?: number;
+  charismaModifier?: number;
+  maxHpModifier?: number;
+  maxManaModifier?: number;
   tickDamageMin?: number;
   tickDamageMax?: number;
   tickHealingMin?: number;
@@ -133,6 +187,9 @@ export interface CreateDefinitionInput {
   blocksRegen?: boolean;
   blocksMovement?: boolean;
   isBlind?: boolean;
+  blocksCasting?: boolean;
+  blocksCombat?: boolean;
+  blocksStealth?: boolean;
 }
 
 /**
@@ -143,33 +200,33 @@ export async function createDefinition(input: CreateDefinitionInput): Promise<St
     `INSERT INTO status_effect_definitions (
       id, name, description, category, stacking_behavior, max_stacks,
       accuracy_modifier, defense_modifier, energy_modifier, damage_modifier, speed_modifier,
+      critical_chance_modifier, dodge_modifier, magic_resistance, healing_received,
+      perception_modifier, stealth_modifier, spellcasting_modifier, lockpicking_modifier,
+      strength_modifier, dexterity_modifier, constitution_modifier,
+      intelligence_modifier, wisdom_modifier, charisma_modifier,
+      max_hp_modifier, max_mana_modifier,
       tick_damage_min, tick_damage_max, tick_healing_min, tick_healing_max,
       tick_message, silent_tick, wear_off_message,
-      blocks_regen, blocks_movement, is_blind
-    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)
+      blocks_regen, blocks_movement, is_blind, blocks_casting, blocks_combat, blocks_stealth
+    ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29,$30,$31,$32,$33,$34,$35,$36,$37,$38,$39,$40)
     RETURNING *`,
     [
-      input.id.toLowerCase(),
-      input.name,
-      input.description || null,
-      input.category,
-      input.stackingBehavior,
-      input.maxStacks ?? 1,
-      input.accuracyModifier ?? 0,
-      input.defenseModifier ?? 0,
-      input.energyModifier ?? 0,
-      input.damageModifier ?? 0,
-      input.speedModifier ?? 0,
-      input.tickDamageMin ?? null,
-      input.tickDamageMax ?? null,
-      input.tickHealingMin ?? null,
-      input.tickHealingMax ?? null,
-      input.tickMessage || null,
-      input.silentTick ?? false,
-      input.wearOffMessage || null,
-      input.blocksRegen ?? false,
-      input.blocksMovement ?? false,
-      input.isBlind ?? false,
+      input.id.toLowerCase(), input.name, input.description || null,
+      input.category, input.stackingBehavior, input.maxStacks ?? 1,
+      input.accuracyModifier ?? 0, input.defenseModifier ?? 0,
+      input.energyModifier ?? 0, input.damageModifier ?? 0, input.speedModifier ?? 0,
+      input.criticalChanceModifier ?? 0, input.dodgeModifier ?? 0,
+      input.magicResistance ?? 0, input.healingReceived ?? 0,
+      input.perceptionModifier ?? 0, input.stealthModifier ?? 0,
+      input.spellcastingModifier ?? 0, input.lockpickingModifier ?? 0,
+      input.strengthModifier ?? 0, input.dexterityModifier ?? 0, input.constitutionModifier ?? 0,
+      input.intelligenceModifier ?? 0, input.wisdomModifier ?? 0, input.charismaModifier ?? 0,
+      input.maxHpModifier ?? 0, input.maxManaModifier ?? 0,
+      input.tickDamageMin ?? null, input.tickDamageMax ?? null,
+      input.tickHealingMin ?? null, input.tickHealingMax ?? null,
+      input.tickMessage || null, input.silentTick ?? false, input.wearOffMessage || null,
+      input.blocksRegen ?? false, input.blocksMovement ?? false, input.isBlind ?? false,
+      input.blocksCasting ?? false, input.blocksCombat ?? false, input.blocksStealth ?? false,
     ]
   );
   return dbToDefinition(result.rows[0]);
@@ -182,7 +239,8 @@ export async function updateDefinition(id: string, input: Partial<CreateDefiniti
   const existing = await getDefinitionById(id);
   if (!existing) return null;
 
-  const updated = {
+  // Merge input with existing values — use ?? for numbers (0 is valid), !== undefined for nullable
+  const u = {
     name: input.name ?? existing.name,
     description: input.description ?? existing.description,
     category: input.category ?? existing.category,
@@ -193,6 +251,22 @@ export async function updateDefinition(id: string, input: Partial<CreateDefiniti
     energyModifier: input.energyModifier ?? existing.energyModifier,
     damageModifier: input.damageModifier ?? existing.damageModifier,
     speedModifier: input.speedModifier ?? existing.speedModifier,
+    criticalChanceModifier: input.criticalChanceModifier ?? existing.criticalChanceModifier,
+    dodgeModifier: input.dodgeModifier ?? existing.dodgeModifier,
+    magicResistance: input.magicResistance ?? existing.magicResistance,
+    healingReceived: input.healingReceived ?? existing.healingReceived,
+    perceptionModifier: input.perceptionModifier ?? existing.perceptionModifier,
+    stealthModifier: input.stealthModifier ?? existing.stealthModifier,
+    spellcastingModifier: input.spellcastingModifier ?? existing.spellcastingModifier,
+    lockpickingModifier: input.lockpickingModifier ?? existing.lockpickingModifier,
+    strengthModifier: input.strengthModifier ?? existing.strengthModifier,
+    dexterityModifier: input.dexterityModifier ?? existing.dexterityModifier,
+    constitutionModifier: input.constitutionModifier ?? existing.constitutionModifier,
+    intelligenceModifier: input.intelligenceModifier ?? existing.intelligenceModifier,
+    wisdomModifier: input.wisdomModifier ?? existing.wisdomModifier,
+    charismaModifier: input.charismaModifier ?? existing.charismaModifier,
+    maxHpModifier: input.maxHpModifier ?? existing.maxHpModifier,
+    maxManaModifier: input.maxManaModifier ?? existing.maxManaModifier,
     tickDamageMin: input.tickDamageMin !== undefined ? input.tickDamageMin : existing.tickDamageMin,
     tickDamageMax: input.tickDamageMax !== undefined ? input.tickDamageMax : existing.tickDamageMax,
     tickHealingMin: input.tickHealingMin !== undefined ? input.tickHealingMin : existing.tickHealingMin,
@@ -203,39 +277,38 @@ export async function updateDefinition(id: string, input: Partial<CreateDefiniti
     blocksRegen: input.blocksRegen !== undefined ? input.blocksRegen : existing.blocksRegen,
     blocksMovement: input.blocksMovement !== undefined ? input.blocksMovement : existing.blocksMovement,
     isBlind: input.isBlind !== undefined ? input.isBlind : existing.isBlind,
+    blocksCasting: input.blocksCasting !== undefined ? input.blocksCasting : existing.blocksCasting,
+    blocksCombat: input.blocksCombat !== undefined ? input.blocksCombat : existing.blocksCombat,
+    blocksStealth: input.blocksStealth !== undefined ? input.blocksStealth : existing.blocksStealth,
   };
 
   const result = await query<DbStatusEffectDefinition>(
     `UPDATE status_effect_definitions SET
-      name = $1, description = $2, category = $3, stacking_behavior = $4, max_stacks = $5,
-      accuracy_modifier = $6, defense_modifier = $7, energy_modifier = $8, damage_modifier = $9,
-      speed_modifier = $10,
-      tick_damage_min = $11, tick_damage_max = $12, tick_healing_min = $13, tick_healing_max = $14,
-      tick_message = $15, silent_tick = $16, wear_off_message = $17,
-      blocks_regen = $18, blocks_movement = $19, is_blind = $20, updated_at = NOW()
-    WHERE id = $21
+      name=$1, description=$2, category=$3, stacking_behavior=$4, max_stacks=$5,
+      accuracy_modifier=$6, defense_modifier=$7, energy_modifier=$8, damage_modifier=$9, speed_modifier=$10,
+      critical_chance_modifier=$11, dodge_modifier=$12, magic_resistance=$13, healing_received=$14,
+      perception_modifier=$15, stealth_modifier=$16, spellcasting_modifier=$17, lockpicking_modifier=$18,
+      strength_modifier=$19, dexterity_modifier=$20, constitution_modifier=$21,
+      intelligence_modifier=$22, wisdom_modifier=$23, charisma_modifier=$24,
+      max_hp_modifier=$25, max_mana_modifier=$26,
+      tick_damage_min=$27, tick_damage_max=$28, tick_healing_min=$29, tick_healing_max=$30,
+      tick_message=$31, silent_tick=$32, wear_off_message=$33,
+      blocks_regen=$34, blocks_movement=$35, is_blind=$36,
+      blocks_casting=$37, blocks_combat=$38, blocks_stealth=$39, updated_at=NOW()
+    WHERE id = $40
     RETURNING *`,
     [
-      updated.name,
-      updated.description || null,
-      updated.category,
-      updated.stackingBehavior,
-      updated.maxStacks,
-      updated.accuracyModifier,
-      updated.defenseModifier,
-      updated.energyModifier,
-      updated.damageModifier,
-      updated.speedModifier,
-      updated.tickDamageMin ?? null,
-      updated.tickDamageMax ?? null,
-      updated.tickHealingMin ?? null,
-      updated.tickHealingMax ?? null,
-      updated.tickMessage || null,
-      updated.silentTick,
-      updated.wearOffMessage || null,
-      updated.blocksRegen,
-      updated.blocksMovement,
-      updated.isBlind,
+      u.name, u.description || null, u.category, u.stackingBehavior, u.maxStacks,
+      u.accuracyModifier, u.defenseModifier, u.energyModifier, u.damageModifier, u.speedModifier,
+      u.criticalChanceModifier, u.dodgeModifier, u.magicResistance, u.healingReceived,
+      u.perceptionModifier, u.stealthModifier, u.spellcastingModifier, u.lockpickingModifier,
+      u.strengthModifier, u.dexterityModifier, u.constitutionModifier,
+      u.intelligenceModifier, u.wisdomModifier, u.charismaModifier,
+      u.maxHpModifier, u.maxManaModifier,
+      u.tickDamageMin ?? null, u.tickDamageMax ?? null, u.tickHealingMin ?? null, u.tickHealingMax ?? null,
+      u.tickMessage || null, u.silentTick, u.wearOffMessage || null,
+      u.blocksRegen, u.blocksMovement, u.isBlind,
+      u.blocksCasting, u.blocksCombat, u.blocksStealth,
       id.toLowerCase(),
     ]
   );

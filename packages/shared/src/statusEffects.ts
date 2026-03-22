@@ -43,6 +43,26 @@ export interface StatusEffectDefinition {
   speedModifier?: number;      // % change to action delays (-20 = 20% faster, +50 = 50% slower)
   affectsActions?: string[];   // Actions this speed modifier affects (empty/undefined = all actions)
 
+  // Expanded modifiers
+  criticalChanceModifier?: number;  // +/- to crit chance %
+  dodgeModifier?: number;           // +/- to dodge chance %
+  magicResistance?: number;         // % reduction to incoming spell damage
+  healingReceived?: number;         // % change to incoming healing
+  perceptionModifier?: number;      // +/- to perception checks
+  stealthModifier?: number;         // +/- to stealth checks
+  spellcastingModifier?: number;    // +/- to spellcasting ability
+  lockpickingModifier?: number;     // +/- to lockpicking skill
+
+  // Stat modifiers (flat +/-)
+  strengthModifier?: number;
+  dexterityModifier?: number;
+  constitutionModifier?: number;
+  intelligenceModifier?: number;
+  wisdomModifier?: number;
+  charismaModifier?: number;
+  maxHpModifier?: number;           // Flat +/- to max HP
+  maxManaModifier?: number;         // Flat +/- to max mana
+
   // Periodic effects (DoT/HoT) - damage/healing ranges per tick
   tickDamageMin?: number;      // Minimum damage per tick (e.g., 1 for range 1-4)
   tickDamageMax?: number;      // Maximum damage per tick (e.g., 4 for range 1-4)
@@ -58,6 +78,9 @@ export interface StatusEffectDefinition {
   blocksRegen?: boolean;       // Prevents natural regeneration
   blocksMovement?: boolean;    // Prevents movement commands
   isBlind?: boolean;           // Triggers blind penalty in combat calculations
+  blocksCasting?: boolean;     // Prevents spell casting
+  blocksCombat?: boolean;      // Prevents melee combat
+  blocksStealth?: boolean;     // Prevents stealth actions
 }
 
 /**
@@ -82,9 +105,28 @@ export interface EffectModifiers {
   energyModifier: number;      // Percentage (e.g., 25 means +25%)
   damageModifier: number;      // Percentage (e.g., -10 means -10%)
   speedModifier: number;       // Percentage (e.g., -20 means 20% faster, +50 means 50% slower)
+  criticalChanceModifier: number;
+  dodgeModifier: number;
+  magicResistance: number;     // % reduction to incoming spell damage
+  healingReceived: number;     // % change to incoming healing
+  perceptionModifier: number;
+  stealthModifier: number;
+  spellcastingModifier: number;
+  lockpickingModifier: number;
+  strengthModifier: number;
+  dexterityModifier: number;
+  constitutionModifier: number;
+  intelligenceModifier: number;
+  wisdomModifier: number;
+  charismaModifier: number;
+  maxHpModifier: number;
+  maxManaModifier: number;
   blocksRegen: boolean;
   blocksMovement: boolean;
   isBlind: boolean;
+  blocksCasting: boolean;
+  blocksCombat: boolean;
+  blocksStealth: boolean;
 }
 
 /**

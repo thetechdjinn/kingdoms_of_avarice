@@ -76,6 +76,12 @@ export async function handleSpellCommand(
     return { type: MessageType.ERROR, message: getCooldownMessage(spell.name) };
   }
 
+  // Check if a status effect blocks casting
+  const { getEffectModifiers } = await import('./statusEffects.js');
+  if (getEffectModifiers(socket).blocksCasting) {
+    return { type: MessageType.ERROR, message: 'You cannot cast spells right now!' };
+  }
+
   // Get character info for class/level checks
   const character = await characterRepo.findCharacterById(socket.characterId!);
   if (!character) {

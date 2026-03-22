@@ -183,6 +183,60 @@
                   <span class="hint-inline">Negative = faster, positive = slower</span>
                 </div>
               </div>
+
+              <h4 style="margin-top: 12px;">Combat Modifiers</h4>
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="effect-crit-chance">Crit Chance</label>
+                  <input type="number" id="effect-crit-chance" value="0" />
+                </div>
+                <div class="form-group">
+                  <label for="effect-dodge">Dodge</label>
+                  <input type="number" id="effect-dodge" value="0" />
+                </div>
+                <div class="form-group">
+                  <label for="effect-magic-resist">Magic Resist (%)</label>
+                  <input type="number" id="effect-magic-resist" value="0" />
+                </div>
+                <div class="form-group">
+                  <label for="effect-healing-received">Healing Received (%)</label>
+                  <input type="number" id="effect-healing-received" value="0" />
+                </div>
+              </div>
+              <h4 style="margin-top: 12px;">Skill Modifiers</h4>
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="effect-perception">Perception</label>
+                  <input type="number" id="effect-perception" value="0" />
+                </div>
+                <div class="form-group">
+                  <label for="effect-stealth">Stealth</label>
+                  <input type="number" id="effect-stealth" value="0" />
+                </div>
+                <div class="form-group">
+                  <label for="effect-spellcasting">Spellcasting</label>
+                  <input type="number" id="effect-spellcasting" value="0" />
+                </div>
+                <div class="form-group">
+                  <label for="effect-lockpicking">Lockpicking</label>
+                  <input type="number" id="effect-lockpicking" value="0" />
+                </div>
+              </div>
+              <h4 style="margin-top: 12px;">Stat Modifiers</h4>
+              <div class="form-row">
+                <div class="form-group"><label for="effect-str">STR</label><input type="number" id="effect-str" value="0" /></div>
+                <div class="form-group"><label for="effect-dex">DEX</label><input type="number" id="effect-dex" value="0" /></div>
+                <div class="form-group"><label for="effect-con">CON</label><input type="number" id="effect-con" value="0" /></div>
+              </div>
+              <div class="form-row">
+                <div class="form-group"><label for="effect-int">INT</label><input type="number" id="effect-int" value="0" /></div>
+                <div class="form-group"><label for="effect-wis">WIS</label><input type="number" id="effect-wis" value="0" /></div>
+                <div class="form-group"><label for="effect-cha">CHA</label><input type="number" id="effect-cha" value="0" /></div>
+              </div>
+              <div class="form-row">
+                <div class="form-group"><label for="effect-max-hp">Max HP</label><input type="number" id="effect-max-hp" value="0" /></div>
+                <div class="form-group"><label for="effect-max-mana">Max Mana</label><input type="number" id="effect-max-mana" value="0" /></div>
+              </div>
             </div>
 
             <!-- Periodic Tab Content -->
@@ -260,6 +314,24 @@
                     Is Blind
                   </label>
                   <span class="hint-inline">Applies blind penalty in combat</span>
+                </div>
+                <div class="form-group checkbox-group">
+                  <label class="checkbox-label">
+                    <input type="checkbox" id="effect-blocks-casting" />
+                    Blocks Casting
+                  </label>
+                </div>
+                <div class="form-group checkbox-group">
+                  <label class="checkbox-label">
+                    <input type="checkbox" id="effect-blocks-combat" />
+                    Blocks Combat
+                  </label>
+                </div>
+                <div class="form-group checkbox-group">
+                  <label class="checkbox-label">
+                    <input type="checkbox" id="effect-blocks-stealth" />
+                    Blocks Stealth
+                  </label>
                 </div>
               </div>
             </div>

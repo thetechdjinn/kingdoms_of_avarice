@@ -64,6 +64,9 @@ CREATE TABLE IF NOT EXISTS class_definitions (
     -- Critical hit bonus (flat % bonus, e.g., 10 for Ninja/Mystic)
     crit_bonus INTEGER DEFAULT 0,
 
+    -- Class traits (stealth, lockpicking, traps, pickpocket, etc.)
+    traits TEXT[] DEFAULT '{}',
+
     -- Armor type restrictions (empty = all types allowed)
     armor_type_restrictions TEXT[] DEFAULT '{}',
 

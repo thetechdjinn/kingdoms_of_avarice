@@ -799,9 +799,28 @@ export function getEffectModifiers(socket: CombatEntity): EffectModifiers {
     energyModifier: 0,
     damageModifier: 0,
     speedModifier: 0,
+    criticalChanceModifier: 0,
+    dodgeModifier: 0,
+    magicResistance: 0,
+    healingReceived: 0,
+    perceptionModifier: 0,
+    stealthModifier: 0,
+    spellcastingModifier: 0,
+    lockpickingModifier: 0,
+    strengthModifier: 0,
+    dexterityModifier: 0,
+    constitutionModifier: 0,
+    intelligenceModifier: 0,
+    wisdomModifier: 0,
+    charismaModifier: 0,
+    maxHpModifier: 0,
+    maxManaModifier: 0,
     blocksRegen: false,
     blocksMovement: false,
     isBlind: false,
+    blocksCasting: false,
+    blocksCombat: false,
+    blocksStealth: false,
   };
 
   if (!socket.activeEffects) {
@@ -831,11 +850,30 @@ export function getEffectModifiers(socket: CombatEntity): EffectModifiers {
     modifiers.energyModifier += (definition.energyModifier ?? 0) * stackMultiplier;
     modifiers.damageModifier += (definition.damageModifier ?? 0) * stackMultiplier;
     modifiers.speedModifier += (definition.speedModifier ?? 0) * stackMultiplier;
+    modifiers.criticalChanceModifier += (definition.criticalChanceModifier ?? 0) * stackMultiplier;
+    modifiers.dodgeModifier += (definition.dodgeModifier ?? 0) * stackMultiplier;
+    modifiers.magicResistance += (definition.magicResistance ?? 0) * stackMultiplier;
+    modifiers.healingReceived += (definition.healingReceived ?? 0) * stackMultiplier;
+    modifiers.perceptionModifier += (definition.perceptionModifier ?? 0) * stackMultiplier;
+    modifiers.stealthModifier += (definition.stealthModifier ?? 0) * stackMultiplier;
+    modifiers.spellcastingModifier += (definition.spellcastingModifier ?? 0) * stackMultiplier;
+    modifiers.lockpickingModifier += (definition.lockpickingModifier ?? 0) * stackMultiplier;
+    modifiers.strengthModifier += (definition.strengthModifier ?? 0) * stackMultiplier;
+    modifiers.dexterityModifier += (definition.dexterityModifier ?? 0) * stackMultiplier;
+    modifiers.constitutionModifier += (definition.constitutionModifier ?? 0) * stackMultiplier;
+    modifiers.intelligenceModifier += (definition.intelligenceModifier ?? 0) * stackMultiplier;
+    modifiers.wisdomModifier += (definition.wisdomModifier ?? 0) * stackMultiplier;
+    modifiers.charismaModifier += (definition.charismaModifier ?? 0) * stackMultiplier;
+    modifiers.maxHpModifier += (definition.maxHpModifier ?? 0) * stackMultiplier;
+    modifiers.maxManaModifier += (definition.maxManaModifier ?? 0) * stackMultiplier;
 
     // Boolean flags don't stack - any one effect sets them
     if (definition.blocksRegen) modifiers.blocksRegen = true;
     if (definition.blocksMovement) modifiers.blocksMovement = true;
     if (definition.isBlind) modifiers.isBlind = true;
+    if (definition.blocksCasting) modifiers.blocksCasting = true;
+    if (definition.blocksCombat) modifiers.blocksCombat = true;
+    if (definition.blocksStealth) modifiers.blocksStealth = true;
   }
 
   // Clean up expired effects to prevent memory bloat

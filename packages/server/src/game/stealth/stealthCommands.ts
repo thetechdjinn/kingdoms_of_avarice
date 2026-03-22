@@ -84,6 +84,12 @@ export async function handleHide(socket: AuthenticatedSocket): Promise<CommandRe
     return { type: MessageType.ERROR, message: 'Character not found.' };
   }
 
+  // Check if a status effect blocks stealth
+  const { getEffectModifiers } = await import('../statusEffects.js');
+  if (getEffectModifiers(socket).blocksStealth) {
+    return { type: MessageType.ERROR, message: 'You cannot enter stealth right now!' };
+  }
+
   // Validate stealth ability and state
   const validation = await canEnterStealth(socket, character.race, character.class);
   if (!validation.allowed) {
@@ -163,6 +169,12 @@ export async function handleSneak(socket: AuthenticatedSocket): Promise<CommandR
   const character = await characterRepo.findCharacterById(socket.characterId!);
   if (!character) {
     return { type: MessageType.ERROR, message: 'Character not found.' };
+  }
+
+  // Check if a status effect blocks stealth
+  const { getEffectModifiers: getModifiers } = await import('../statusEffects.js');
+  if (getModifiers(socket).blocksStealth) {
+    return { type: MessageType.ERROR, message: 'You cannot enter stealth right now!' };
   }
 
   // Validate stealth ability and state

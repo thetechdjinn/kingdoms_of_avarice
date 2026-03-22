@@ -238,7 +238,7 @@ function createNpcCombatEntity(
     deathState: createAliveDeathState(),
     regenState: createNpcRegenState(),
     stealthMode: 'none' as StealthMode,
-    canSeeHidden: template.traits.includes('see-invisible'),
+    canSeeHidden: template.traits.includes('see_hidden'),
 
     // NPC-specific fields
     templateId: template.id,

@@ -90,7 +90,7 @@ function raceHasStealth(race: RaceDefinition): boolean {
  * Check if a class has stealth capability
  */
 function classHasStealth(classDef: ClassDefinition): boolean {
-  return classDef.stealth === true;
+  return classDef.traits?.includes('stealth') ?? false;
 }
 
 /**
@@ -290,27 +290,27 @@ export async function raceCanSeeHidden(race: string): Promise<boolean> {
 // ============================================================================
 
 /**
- * Check if a race has the lockpicking trait (e.g., Gnome with 'picklocks')
+ * Check if a race has the lockpicking trait
  */
 function raceHasLockpicking(race: RaceDefinition): boolean {
   if (!race.traits) return false;
 
   for (const trait of race.traits) {
     if (typeof trait === 'string') {
-      if (trait === 'picklocks' || trait === 'lockpicking') return true;
+      if (trait === 'lockpicking') return true;
     } else {
       const t = trait as RacialTrait;
-      if ((t.id === 'picklocks' || t.id === 'lockpicking') && t.value) return true;
+      if (t.id === 'lockpicking' && t.value) return true;
     }
   }
   return false;
 }
 
 /**
- * Check if a class has lockpicking capability via 'lockpicking' in special_abilities
+ * Check if a class has lockpicking capability via 'lockpicking' in traits
  */
 function classHasLockpicking(classDef: ClassDefinition): boolean {
-  return classDef.special_abilities?.includes('lockpicking') ?? false;
+  return classDef.traits?.includes('lockpicking') ?? false;
 }
 
 /**

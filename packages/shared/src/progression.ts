@@ -43,10 +43,9 @@ export interface ClassDefinition {
   combat_level?: number; // 1-5, defaults to 1. Higher = better melee combat
   magic_level?: number; // 0-3, magic power level
   magic_school?: string; // mage, priest, druid, bardic, kai
-  stealth?: boolean; // Can use stealth abilities
   crit_bonus?: number; // Flat crit chance bonus (e.g., 10 for Ninja/Mystic)
   dodge_bonus?: number; // Flat dodge chance bonus (e.g., 25 for Ninja/Mystic)
-  special_abilities?: string[]; // Class-specific abilities
+  traits?: string[]; // Class traits (stealth, lockpicking, traps, pickpocket, etc.)
   armor_type_restrictions?: string[]; // Allowed armor types (empty = all)
 }
 

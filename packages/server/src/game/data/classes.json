@@ -9,7 +9,7 @@
     "resource_type": "none",
     "combat_level": 4,
     "magic_level": 0,
-    "stealth": false,
+    "traits": [],
     "playable": true
   },
   {
@@ -22,8 +22,7 @@
     "resource_type": "none",
     "combat_level": 2,
     "magic_level": 0,
-    "stealth": true,
-    "special_abilities": ["lockpicking", "traps", "pickpocket"],
+    "traits": ["stealth", "lockpicking", "traps", "pickpocket"],
     "playable": true
   },
   {
@@ -37,7 +36,7 @@
     "combat_level": 1,
     "magic_level": 3,
     "magic_school": "mage",
-    "stealth": false,
+    "traits": [],
     "playable": true
   },
   {
@@ -51,7 +50,7 @@
     "combat_level": 1,
     "magic_level": 3,
     "magic_school": "priest",
-    "stealth": false,
+    "traits": [],
     "playable": true
   },
   {
@@ -65,7 +64,7 @@
     "combat_level": 3,
     "magic_level": 2,
     "magic_school": "priest",
-    "stealth": false,
+    "traits": [],
     "playable": true
   },
   {
@@ -79,7 +78,7 @@
     "combat_level": 4,
     "magic_level": 1,
     "magic_school": "priest",
-    "stealth": false,
+    "traits": [],
     "playable": true
   },
   {
@@ -93,7 +92,7 @@
     "combat_level": 4,
     "magic_level": 1,
     "magic_school": "druid",
-    "stealth": true,
+    "traits": ["stealth"],
     "playable": true
   },
   {
@@ -107,7 +106,7 @@
     "combat_level": 2,
     "magic_level": 3,
     "magic_school": "druid",
-    "stealth": false,
+    "traits": [],
     "playable": true
   },
   {
@@ -120,10 +119,9 @@
     "resource_type": "none",
     "combat_level": 3,
     "magic_level": 0,
-    "stealth": true,
     "crit_bonus": 10,
     "dodge_bonus": 25,
-    "special_abilities": ["dodge", "enhanced_crits", "traps", "lockpicking", "tracking"],
+    "traits": ["stealth", "dodge", "enhanced_crits", "traps", "lockpicking", "tracking"],
     "playable": true
   },
   {
@@ -137,8 +135,7 @@
     "combat_level": 3,
     "magic_level": 2,
     "magic_school": "bardic",
-    "stealth": true,
-    "special_abilities": ["lockpicking", "traps"],
+    "traits": ["stealth", "lockpicking", "traps"],
     "playable": true
   },
   {
@@ -152,7 +149,7 @@
     "combat_level": 3,
     "magic_level": 2,
     "magic_school": "mage",
-    "stealth": false,
+    "traits": [],
     "playable": true
   },
   {
@@ -166,8 +163,7 @@
     "combat_level": 2,
     "magic_level": 2,
     "magic_school": "mage",
-    "stealth": true,
-    "special_abilities": ["lockpicking", "traps"],
+    "traits": ["stealth", "lockpicking", "traps"],
     "playable": true
   },
   {
@@ -180,8 +176,7 @@
     "resource_type": "none",
     "combat_level": 5,
     "magic_level": 0,
-    "stealth": false,
-    "special_abilities": ["magic_resist", "no_magic_items", "anti_magic"],
+    "traits": ["magic_resist", "no_magic_items", "anti_magic"],
     "playable": true
   },
   {
@@ -195,10 +190,9 @@
     "combat_level": 3,
     "magic_level": 2,
     "magic_school": "kai",
-    "stealth": true,
     "crit_bonus": 10,
     "dodge_bonus": 25,
-    "special_abilities": ["martial_arts", "dodge", "enhanced_crits"],
+    "traits": ["stealth", "martial_arts", "dodge", "enhanced_crits"],
     "playable": true
   },
   {
@@ -212,8 +206,7 @@
     "combat_level": 2,
     "magic_level": 2,
     "magic_school": "priest",
-    "stealth": true,
-    "special_abilities": ["lockpicking", "traps", "pickpocket"],
+    "traits": ["stealth", "lockpicking", "traps", "pickpocket"],
     "playable": true
   }
 ]
