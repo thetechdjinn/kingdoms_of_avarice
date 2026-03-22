@@ -719,7 +719,7 @@ SPAWN ──> IDLE ──> COMBAT ──> FLEEING ──> RETURNING
 
 - Hostile NPCs aggro when a player enters their room
 - Hostile NPCs aggro when they roam or spawn into a room with players
-- Hidden players (stealth) are skipped unless the NPC has the `see-invisible` trait
+- Hidden players (stealth) are skipped unless the NPC has the `see_hidden` trait
 - Non-hostile NPCs never initiate combat
 - NPCs that are fleeing or returning do not aggro
 

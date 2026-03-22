@@ -210,16 +210,16 @@ export function setupStatusEffectDefinitionRoutes(app: Express): void {
         }
       }
 
-      // Validate range ordering
-      if (body.tickDamageMin !== undefined && body.tickDamageMax !== undefined &&
-          body.tickDamageMin !== null && body.tickDamageMax !== null &&
-          body.tickDamageMin > body.tickDamageMax) {
+      // Validate range ordering (merge with existing values for partial updates)
+      const effectiveTickDmgMin = body.tickDamageMin ?? existing.tickDamageMin;
+      const effectiveTickDmgMax = body.tickDamageMax ?? existing.tickDamageMax;
+      if (effectiveTickDmgMin != null && effectiveTickDmgMax != null && effectiveTickDmgMin > effectiveTickDmgMax) {
         res.status(400).json({ success: false, message: 'tickDamageMin must be less than or equal to tickDamageMax' });
         return;
       }
-      if (body.tickHealingMin !== undefined && body.tickHealingMax !== undefined &&
-          body.tickHealingMin !== null && body.tickHealingMax !== null &&
-          body.tickHealingMin > body.tickHealingMax) {
+      const effectiveTickHealMin = body.tickHealingMin ?? existing.tickHealingMin;
+      const effectiveTickHealMax = body.tickHealingMax ?? existing.tickHealingMax;
+      if (effectiveTickHealMin != null && effectiveTickHealMax != null && effectiveTickHealMin > effectiveTickHealMax) {
         res.status(400).json({ success: false, message: 'tickHealingMin must be less than or equal to tickHealingMax' });
         return;
       }

@@ -67,7 +67,7 @@ interface NpcTemplate {
   attacks: NpcAttack[];          // Percentages must total 100
 
   // ── Traits & Abilities ──
-  traits: string[];              // see-invisible, stealth, pinned, etc.
+  traits: string[];              // see_hidden, stealth, pinned, etc.
   fleeEnabled: boolean;
   fleeHpPercent: number;         // Default 20 (flee below 20% HP)
   callForHelpChance: number;     // 0-100, default 50
@@ -274,7 +274,7 @@ Hostile: yes  Flee: yes (20%)  Call for help: 50%
 
 ## Traits and Abilities
 
-- Mobs and NPCs will have a list of traits that are applied to them (see-invisible, stealth, pinned, etc.).
+- Mobs and NPCs will have a list of traits that are applied to them (see_hidden, stealth, pinned, etc.).
 - Mobs and NPCs will have a list of abilities that are applied to them (call for help, backstab, etc.).
 - Mobs / NPCs will emit events like experience, essence, and other configurable events.
 
