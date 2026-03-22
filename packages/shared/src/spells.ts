@@ -61,6 +61,7 @@ export interface Spell {
   isAttackSpell: boolean;
   // Level scaling - % increase to damage/healing per caster level
   scalingPerLevel: number | null;               // e.g., 0.10 = 10% per level
+  maxScalingLevel: number | null;               // Cap: scaling stops at this caster level (null = no cap)
   // Stat scaling - % increase per 10 stat points
   damageScalingStat: SpellScalingStat | null;   // Which stat scales damage
   damageScalingFactor: number | null;           // % increase per 10 points (e.g., 0.02 = 2%)
@@ -126,6 +127,7 @@ export interface SpellCastingState {
   hitsPerCast: number;
   // Scaling info for combat calculations
   scalingPerLevel: number | null;
+  maxScalingLevel: number | null;
   damageScalingStat: SpellScalingStat | null;
   damageScalingFactor: number | null;
   // Fizzle

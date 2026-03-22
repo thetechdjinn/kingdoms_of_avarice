@@ -1016,6 +1016,9 @@ export async function runMigrations(): Promise<void> {
         console.log('Spell system migrated: dice notation → min/max ranges');
       }
 
+      // Add max_scaling_level column to spells (caps level scaling at a specific caster level)
+      await client.query(`ALTER TABLE spells ADD COLUMN IF NOT EXISTS max_scaling_level INTEGER`);
+
     });
 
     console.log('Database migrations completed successfully');

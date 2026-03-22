@@ -867,6 +867,91 @@ body {
   overflow-y: auto;
 }
 
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  border-top: 1px solid #333;
+}
+
+.modal-input {
+  width: 100%;
+  padding: 0.5rem;
+  background: #0f0f23;
+  border: 1px solid #333;
+  border-radius: 4px;
+  color: #eee;
+  font-size: 0.9rem;
+}
+
+.modal-input:focus {
+  outline: none;
+  border-color: #00ff00;
+}
+
+.modal-label {
+  display: block;
+  margin-bottom: 0.25rem;
+  color: #aaa;
+  font-size: 0.85rem;
+}
+
+.modal-field-group {
+  margin-bottom: 0.75rem;
+}
+
+.modal-message {
+  color: #eee;
+  line-height: 1.5;
+}
+
+.modal-error {
+  color: #ff6b6b;
+  font-size: 0.85rem;
+  margin-top: 0.5rem;
+}
+
+.btn {
+  padding: 0.4rem 1rem;
+  border: 1px solid #333;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: all 0.2s;
+}
+
+.btn-primary {
+  background: #0e4429;
+  border-color: #00aa00;
+  color: #00ff00;
+}
+
+.btn-primary:hover {
+  background: #126b3a;
+}
+
+.btn-secondary {
+  background: #1a1a2e;
+  border-color: #555;
+  color: #aaa;
+}
+
+.btn-secondary:hover {
+  background: #252540;
+  color: #eee;
+}
+
+.btn-danger {
+  background: #4a1515;
+  border-color: #aa3333;
+  color: #ff6b6b;
+}
+
+.btn-danger:hover {
+  background: #5e1e1e;
+}
+
 #area-list {
   list-style: none;
 }
@@ -1054,6 +1139,269 @@ body {
     opacity: 0;
     transform: translateX(100%);
   }
+}
+
+/* ============================================================================
+   SearchableSelect Component
+   ============================================================================ */
+
+.ss-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+.ss-wrapper.ss-disabled {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.ss-input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.ss-input {
+  width: 100%;
+  padding: 0.4rem 1.8rem 0.4rem 0.5rem;
+  background: #0f0f23;
+  border: 1px solid #333;
+  border-radius: 4px;
+  color: #eee;
+  font-size: 0.85rem;
+}
+
+.ss-input:focus {
+  outline: none;
+  border-color: #00ff00;
+}
+
+.ss-clear {
+  position: absolute;
+  right: 4px;
+  background: none;
+  border: none;
+  color: #888;
+  cursor: pointer;
+  font-size: 1rem;
+  padding: 0 4px;
+  line-height: 1;
+}
+
+.ss-clear:hover {
+  color: #ff6b6b;
+}
+
+.ss-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: #16213e;
+  border: 1px solid #00ff00;
+  border-top: none;
+  border-radius: 0 0 4px 4px;
+  max-height: 240px;
+  overflow-y: auto;
+  z-index: 999;
+}
+
+.ss-option {
+  padding: 0.35rem 0.5rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+}
+
+.ss-option:not(.ss-group-header):hover,
+.ss-option.ss-highlighted {
+  background: #1f2b47;
+}
+
+.ss-option.ss-selected {
+  background: #0e4429;
+  color: #00ff00;
+}
+
+.ss-option-label {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ss-option-detail {
+  color: #666;
+  font-size: 0.8rem;
+  flex-shrink: 0;
+}
+
+.ss-group-header {
+  color: #888;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  padding: 0.4rem 0.5rem 0.2rem;
+  cursor: default;
+  border-top: 1px solid #333;
+}
+
+.ss-group-header:first-child {
+  border-top: none;
+}
+
+.ss-empty {
+  padding: 0.5rem;
+  color: #666;
+  font-size: 0.85rem;
+  text-align: center;
+  font-style: italic;
+}
+
+/* Multi-select chips */
+.ss-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-bottom: 4px;
+}
+
+.ss-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px;
+  background: #0e4429;
+  border: 1px solid #00aa00;
+  border-radius: 3px;
+  color: #00ff00;
+  font-size: 0.8rem;
+}
+
+.ss-chip-remove {
+  background: none;
+  border: none;
+  color: #00ff00;
+  cursor: pointer;
+  font-size: 0.9rem;
+  padding: 0 2px;
+  line-height: 1;
+}
+
+.ss-chip-remove:hover {
+  color: #ff6b6b;
+}
+
+/* ============================================================================
+   ChipTagInput Component
+   ============================================================================ */
+
+.ct-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+.ct-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 4px;
+  background: #0f0f23;
+  border: 1px solid #333;
+  border-radius: 4px;
+  min-height: 32px;
+  cursor: text;
+}
+
+.ct-chips:focus-within {
+  border-color: #00ff00;
+}
+
+.ct-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px;
+  background: #0e4429;
+  border: 1px solid #00aa00;
+  border-radius: 3px;
+  color: #00ff00;
+  font-size: 0.8rem;
+}
+
+.ct-chip-remove {
+  background: none;
+  border: none;
+  color: #00ff00;
+  cursor: pointer;
+  font-size: 0.9rem;
+  padding: 0 2px;
+  line-height: 1;
+}
+
+.ct-chip-remove:hover {
+  color: #ff6b6b;
+}
+
+.ct-input {
+  flex: 1;
+  min-width: 80px;
+  border: none;
+  background: transparent;
+  color: #eee;
+  font-size: 0.85rem;
+  padding: 2px 4px;
+  outline: none;
+}
+
+.ct-input::placeholder {
+  color: #555;
+}
+
+.ct-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: #16213e;
+  border: 1px solid #00ff00;
+  border-top: none;
+  border-radius: 0 0 4px 4px;
+  max-height: 200px;
+  overflow-y: auto;
+  z-index: 999;
+}
+
+.ct-option {
+  padding: 0.35rem 0.5rem;
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+
+.ct-option:hover,
+.ct-option.ct-highlighted {
+  background: #1f2b47;
+}
+
+.ct-option.ct-disabled {
+  color: #555;
+  cursor: default;
+}
+
+.ct-empty {
+  padding: 0.5rem;
+  color: #666;
+  font-size: 0.85rem;
+  text-align: center;
+  font-style: italic;
+}
+
+.ct-hint {
+  padding: 0.3rem 0.5rem;
+  color: #555;
+  font-size: 0.75rem;
+  border-top: 1px solid #333;
 }
 
 /* ============================================================================
