@@ -13,7 +13,6 @@ interface ItemTemplate {
   item_type: string;
   equipment_slot?: string;
   flags: Record<string, boolean | number | string | undefined>;
-  max_stack: number;
   container_capacity?: number;
   container_weight_limit?: number;
   weapon_data?: {
@@ -68,6 +67,8 @@ interface ItemTemplate {
     dexterity?: number;
     constitution?: number;
     intelligence?: number;
+    wisdom?: number;
+    charisma?: number;
     max_health?: number;
     max_mana?: number;
   };
@@ -308,7 +309,6 @@ function selectTemplate(id: number): void {
   const sizeInput = getElement<HTMLInputElement>('item-size');
   const valueInput = getElement<HTMLInputElement>('item-value');
   const equipSlotSelect = getElement<HTMLSelectElement>('item-equipment-slot');
-  const maxStackInput = getElement<HTMLInputElement>('item-max-stack');
   const effectSlotsInput = getElement<HTMLInputElement>('item-effect-slots');
 
   if (nameInput) nameInput.value = template.name;
@@ -321,7 +321,6 @@ function selectTemplate(id: number): void {
   if (sizeInput) sizeInput.value = String(template.size);
   if (valueInput) valueInput.value = String(template.base_value);
   if (equipSlotSelect) equipSlotSelect.value = template.equipment_slot || '';
-  if (maxStackInput) maxStackInput.value = String(template.max_stack);
   if (effectSlotsInput) effectSlotsInput.value = String(template.effect_slots);
 
   // Rarity and max_in_world
@@ -380,7 +379,6 @@ function loadWeaponData(template: ItemTemplate): void {
   const damageType = getElement<HTMLSelectElement>('weapon-damage-type');
   const attackSpeed = getElement<HTMLInputElement>('weapon-attack-speed');
   const critModifier = getElement<HTMLInputElement>('weapon-crit-modifier');
-  const range = getElement<HTMLSelectElement>('weapon-range');
   const backstabAccuracy = getElement<HTMLInputElement>('weapon-backstab-accuracy');
   const backstabMinDmgBonus = getElement<HTMLInputElement>('weapon-backstab-min-damage');
   const backstabMaxDmgBonus = getElement<HTMLInputElement>('weapon-backstab-max-damage');
@@ -390,7 +388,6 @@ function loadWeaponData(template: ItemTemplate): void {
   if (damageType) damageType.value = data?.damage_type || 'slashing';
   if (attackSpeed) attackSpeed.value = String(data?.attack_speed || 1500);
   if (critModifier) critModifier.value = String(data?.crit_modifier || 2);
-  if (range) range.value = data?.range || 'melee';
   if (backstabAccuracy) backstabAccuracy.value = String(data?.backstab_accuracy || 0);
   if (backstabMinDmgBonus) backstabMinDmgBonus.value = String(data?.backstab_min_damage_bonus || 0);
   if (backstabMaxDmgBonus) backstabMaxDmgBonus.value = String(data?.backstab_max_damage_bonus || 0);
@@ -465,6 +462,8 @@ function loadModifiers(template: ItemTemplate): void {
   (document.getElementById('mod-dexterity') as HTMLInputElement).value = String(mod.dexterity || 0);
   (document.getElementById('mod-constitution') as HTMLInputElement).value = String(mod.constitution || 0);
   (document.getElementById('mod-intelligence') as HTMLInputElement).value = String(mod.intelligence || 0);
+  (document.getElementById('mod-wisdom') as HTMLInputElement).value = String(mod.wisdom || 0);
+  (document.getElementById('mod-charisma') as HTMLInputElement).value = String(mod.charisma || 0);
   (document.getElementById('mod-max-health') as HTMLInputElement).value = String(mod.max_health || 0);
   (document.getElementById('mod-max-mana') as HTMLInputElement).value = String(mod.max_mana || 0);
 
@@ -604,6 +603,8 @@ function updatePreview(template: ItemTemplate): void {
     if (mods.dexterity) modList.push(`DEX ${mods.dexterity > 0 ? '+' : ''}${mods.dexterity}`);
     if (mods.constitution) modList.push(`CON ${mods.constitution > 0 ? '+' : ''}${mods.constitution}`);
     if (mods.intelligence) modList.push(`INT ${mods.intelligence > 0 ? '+' : ''}${mods.intelligence}`);
+    if (mods.wisdom) modList.push(`WIS ${mods.wisdom > 0 ? '+' : ''}${mods.wisdom}`);
+    if (mods.charisma) modList.push(`CHA ${mods.charisma > 0 ? '+' : ''}${mods.charisma}`);
     if (mods.max_health) modList.push(`HP ${mods.max_health > 0 ? '+' : ''}${mods.max_health}`);
     if (mods.max_mana) modList.push(`MP ${mods.max_mana > 0 ? '+' : ''}${mods.max_mana}`);
     
@@ -776,7 +777,6 @@ function gatherFormData(): Partial<ItemTemplate> {
     base_value: parseInt((document.getElementById('item-value') as HTMLInputElement).value) || 0,
     item_type: itemType,
     equipment_slot: (document.getElementById('item-equipment-slot') as HTMLSelectElement).value || undefined,
-    max_stack: parseInt((document.getElementById('item-max-stack') as HTMLInputElement).value) || 1,
     effect_slots: parseInt((document.getElementById('item-effect-slots') as HTMLInputElement).value) || 0,
     rarity: (document.getElementById('item-rarity') as HTMLSelectElement).value || 'common',
     max_in_world: (document.getElementById('item-max-in-world') as HTMLInputElement).value
@@ -798,13 +798,15 @@ function gatherFormData(): Partial<ItemTemplate> {
     const backstabAccuracyValue = parseNumberOrDefault((document.getElementById('weapon-backstab-accuracy') as HTMLInputElement)?.value, 0);
     const backstabMinDmgBonus = parseNumberOrDefault((document.getElementById('weapon-backstab-min-damage') as HTMLInputElement)?.value, 0);
     const backstabMaxDmgBonus = parseNumberOrDefault((document.getElementById('weapon-backstab-max-damage') as HTMLInputElement)?.value, 0);
+    // Preserve existing range value (field removed from UI, no ranged combat)
+    const existingTemplate = selectedTemplateId ? templates.find(t => t.id === selectedTemplateId) : null;
     const weaponData: NonNullable<ItemTemplate['weapon_data']> = {
       min_damage: parseNumberOrDefault((document.getElementById('weapon-min-damage') as HTMLInputElement).value, 1),
       max_damage: parseNumberOrDefault((document.getElementById('weapon-max-damage') as HTMLInputElement).value, 6),
       damage_type: (document.getElementById('weapon-damage-type') as HTMLSelectElement).value,
       attack_speed: parseNumberOrDefault((document.getElementById('weapon-attack-speed') as HTMLInputElement).value, 1500),
       crit_modifier: parseNumberOrDefault((document.getElementById('weapon-crit-modifier') as HTMLInputElement).value, 2),
-      range: (document.getElementById('weapon-range') as HTMLSelectElement).value,
+      range: existingTemplate?.weapon_data?.range || 'melee',
       backstab_accuracy: backstabAccuracyValue !== 0 ? backstabAccuracyValue : undefined,
       backstab_min_damage_bonus: backstabMinDmgBonus !== 0 ? backstabMinDmgBonus : undefined,
       backstab_max_damage_bonus: backstabMaxDmgBonus !== 0 ? backstabMaxDmgBonus : undefined,
@@ -909,6 +911,8 @@ function gatherFormData(): Partial<ItemTemplate> {
     dexterity: parseInt((document.getElementById('mod-dexterity') as HTMLInputElement).value) || undefined,
     constitution: parseInt((document.getElementById('mod-constitution') as HTMLInputElement).value) || undefined,
     intelligence: parseInt((document.getElementById('mod-intelligence') as HTMLInputElement).value) || undefined,
+    wisdom: parseInt((document.getElementById('mod-wisdom') as HTMLInputElement).value) || undefined,
+    charisma: parseInt((document.getElementById('mod-charisma') as HTMLInputElement).value) || undefined,
     max_health: parseInt((document.getElementById('mod-max-health') as HTMLInputElement).value) || undefined,
     max_mana: parseInt((document.getElementById('mod-max-mana') as HTMLInputElement).value) || undefined,
   };

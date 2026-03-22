@@ -1200,7 +1200,7 @@ export async function handleWear(
   }
 
   if (template.item_type === ItemType.WEAPON) {
-    return { type: MessageType.ERROR, message: `Use 'wield' for weapons.` };
+    return handleWield(socket, args, currentRoomId);
   }
 
   let targetSlot = template.equipment_slot as EquipmentSlot;

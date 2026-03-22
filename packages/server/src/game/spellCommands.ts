@@ -167,6 +167,8 @@ async function handleOffensiveSpell(
       damageDice: spell.damageDice || '1d4',
       damageScalingStat: spell.damageScalingStat,
       damageScalingFactor: spell.damageScalingFactor,
+      statusEffect: spell.statusEffect,
+      effectDuration: spell.effectDuration,
     };
 
     // Add NPC to targets and vice versa
@@ -230,6 +232,8 @@ async function handleOffensiveSpell(
     damageDice: spell.damageDice || '1d4',
     damageScalingStat: spell.damageScalingStat,
     damageScalingFactor: spell.damageScalingFactor,
+    statusEffect: spell.statusEffect,
+    effectDuration: spell.effectDuration,
   };
 
   // Add target if not already in combat with them
