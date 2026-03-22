@@ -10,6 +10,8 @@
 
 export type RequiredRole = 'developer' | 'admin';
 
+let authInitialized = false;
+
 export interface AuthResult {
   username: string;
   roles: string[];
@@ -24,7 +26,7 @@ export interface AuthResult {
  */
 export async function initAuth(requiredRole: RequiredRole = 'developer'): Promise<AuthResult | null> {
   try {
-    const res = await fetch('/api/auth/me');
+    const res = await fetch('/api/auth/me', { credentials: 'include' });
     if (!res.ok) {
       window.location.href = '/';
       return null;
@@ -65,20 +67,25 @@ export async function initAuth(requiredRole: RequiredRole = 'developer'): Promis
       devDropdown.style.display = isDeveloper ? 'flex' : 'none';
     }
 
-    // Logout handler
-    document.getElementById('logout-btn')?.addEventListener('click', async () => {
-      await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
-      window.location.href = '/';
-    });
+    // Attach UI listeners only once
+    if (!authInitialized) {
+      authInitialized = true;
 
-    // User dropdown toggle
-    const userBtn = document.getElementById('nav-username');
-    const userDropdown = document.getElementById('user-dropdown');
-    userBtn?.addEventListener('click', (e) => {
-      e.stopPropagation();
-      userDropdown?.classList.toggle('show');
-    });
-    document.addEventListener('click', () => userDropdown?.classList.remove('show'));
+      // Logout handler
+      document.getElementById('logout-btn')?.addEventListener('click', async () => {
+        await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
+        window.location.href = '/';
+      });
+
+      // User dropdown toggle
+      const userBtn = document.getElementById('nav-username');
+      const userDropdown = document.getElementById('user-dropdown');
+      userBtn?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        userDropdown?.classList.toggle('show');
+      });
+      document.addEventListener('click', () => userDropdown?.classList.remove('show'));
+    }
 
     return {
       username: data.username,

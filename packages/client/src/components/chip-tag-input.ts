@@ -263,7 +263,7 @@ export class ChipTagInput {
       chip.className = 'ct-chip';
       chip.innerHTML = `
         ${escapeHtml(value)}
-        <button type="button" class="ct-chip-remove" data-value="${escapeHtml(value)}">&times;</button>
+        <button type="button" class="ct-chip-remove">&times;</button>
       `;
       chip.querySelector('.ct-chip-remove')?.addEventListener('click', (e) => {
         e.stopPropagation();

@@ -55,6 +55,10 @@ function validateSpellScalingFields(spell: Record<string, unknown>): string | nu
       (typeof spell.saveDifficulty !== 'number' || spell.saveDifficulty < 0)) {
     return 'saveDifficulty must be a number >= 0';
   }
+  if (spell.maxScalingLevel !== undefined && spell.maxScalingLevel !== null &&
+      (typeof spell.maxScalingLevel !== 'number' || !Number.isInteger(spell.maxScalingLevel) || spell.maxScalingLevel < 0)) {
+    return 'maxScalingLevel must be a non-negative integer';
+  }
   return null;
 }
 

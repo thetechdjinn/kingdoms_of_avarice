@@ -164,30 +164,38 @@ export class SearchableSelect {
   }
 
   private handleKeydown(e: KeyboardEvent): void {
-    const visibleItems = this.dropdown.querySelectorAll('.ss-option:not(.ss-group-header)');
-
     switch (e.key) {
-      case 'ArrowDown':
+      case 'ArrowDown': {
         e.preventDefault();
-        if (!this.isOpen) { this.open(); return; }
-        this.highlightIndex = Math.min(this.highlightIndex + 1, visibleItems.length - 1);
-        this.updateHighlight(visibleItems);
+        if (!this.isOpen) this.open();
+        const items = this.dropdown.querySelectorAll('.ss-option:not(.ss-group-header)');
+        if (items.length > 0) {
+          this.highlightIndex = Math.min(this.highlightIndex + 1, items.length - 1);
+          this.updateHighlight(items);
+        }
         break;
+      }
 
-      case 'ArrowUp':
+      case 'ArrowUp': {
         e.preventDefault();
-        if (!this.isOpen) { this.open(); return; }
-        this.highlightIndex = Math.max(this.highlightIndex - 1, 0);
-        this.updateHighlight(visibleItems);
+        if (!this.isOpen) this.open();
+        const items = this.dropdown.querySelectorAll('.ss-option:not(.ss-group-header)');
+        if (items.length > 0) {
+          this.highlightIndex = Math.max(this.highlightIndex - 1, 0);
+          this.updateHighlight(items);
+        }
         break;
+      }
 
-      case 'Enter':
+      case 'Enter': {
         e.preventDefault();
-        if (this.isOpen && this.highlightIndex >= 0 && this.highlightIndex < visibleItems.length) {
-          const value = (visibleItems[this.highlightIndex] as HTMLElement).dataset.value;
+        const items = this.dropdown.querySelectorAll('.ss-option:not(.ss-group-header)');
+        if (this.isOpen && this.highlightIndex >= 0 && this.highlightIndex < items.length) {
+          const value = (items[this.highlightIndex] as HTMLElement).dataset.value;
           if (value !== undefined) this.selectValue(value);
         }
         break;
+      }
 
       case 'Escape':
         e.preventDefault();
@@ -196,7 +204,6 @@ export class SearchableSelect {
 
       case 'Backspace':
         if (this.multi && this.input.value === '' && this.selectedValues.size > 0) {
-          // Remove last chip
           const lastVal = [...this.selectedValues].pop();
           if (lastVal) this.deselectValue(lastVal);
         }
@@ -233,6 +240,7 @@ export class SearchableSelect {
   private renderDropdown(): void {
     this.dropdown.innerHTML = '';
     this.highlightIndex = -1;
+    this.optionCounter = 0;
 
     if (this.filteredOptions.length === 0) {
       const empty = document.createElement('div');
@@ -289,9 +297,13 @@ export class SearchableSelect {
     }
   }
 
+  private optionCounter = 0;
+
   private createOptionEl(option: SelectOption): HTMLDivElement {
+    this.optionCounter++;
     const el = document.createElement('div');
     el.className = 'ss-option';
+    el.id = `${this.instanceId}-opt-${this.optionCounter}`;
     el.dataset.value = option.value;
     el.setAttribute('role', 'option');
 
@@ -358,7 +370,7 @@ export class SearchableSelect {
       chip.className = 'ss-chip';
       chip.innerHTML = `
         ${escapeHtml(opt?.label ?? value)}
-        <button type="button" class="ss-chip-remove" data-value="${escapeHtml(value)}">&times;</button>
+        <button type="button" class="ss-chip-remove">&times;</button>
       `;
       chip.querySelector('.ss-chip-remove')?.addEventListener('click', (e) => {
         e.stopPropagation();
@@ -481,8 +493,8 @@ export class SearchableSelect {
 
 function defaultFilter(option: SelectOption, query: string): boolean {
   return (
-    option.label.toLowerCase().includes(query) ||
-    option.value.toLowerCase().includes(query) ||
+    (option.label?.toLowerCase().includes(query) ?? false) ||
+    (option.value?.toLowerCase().includes(query) ?? false) ||
     (option.detail?.toLowerCase().includes(query) ?? false)
   );
 }

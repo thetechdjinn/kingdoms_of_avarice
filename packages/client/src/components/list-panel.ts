@@ -54,18 +54,22 @@ export class ListPanel<T> {
   private selectedId: number | string | null = null;
   private options: ListPanelOptions<T>;
   private debounceTimer: ReturnType<typeof setTimeout> | null = null;
+  private boundSearch: (() => void) | null = null;
+  private boundFilter: (() => void) | null = null;
 
   constructor(options: ListPanelOptions<T>) {
     this.options = options;
 
     // Wire up search input
     if (options.searchInput) {
-      options.searchInput.addEventListener('input', () => this.debouncedRender());
+      this.boundSearch = () => this.debouncedRender();
+      options.searchInput.addEventListener('input', this.boundSearch);
     }
 
     // Wire up filter dropdown
     if (options.filterSelect) {
-      options.filterSelect.addEventListener('change', () => this.render());
+      this.boundFilter = () => this.render();
+      options.filterSelect.addEventListener('change', this.boundFilter);
     }
   }
 
@@ -151,5 +155,17 @@ export class ListPanel<T> {
   /** Get the total item count (unfiltered). */
   get totalCount(): number {
     return this.items.length;
+  }
+
+  /** Destroy the component and clean up event listeners. */
+  destroy(): void {
+    if (this.debounceTimer) clearTimeout(this.debounceTimer);
+    if (this.boundSearch && this.options.searchInput) {
+      this.options.searchInput.removeEventListener('input', this.boundSearch);
+    }
+    if (this.boundFilter && this.options.filterSelect) {
+      this.options.filterSelect.removeEventListener('change', this.boundFilter);
+    }
+    this.options.listElement.innerHTML = '';
   }
 }

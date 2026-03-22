@@ -100,7 +100,7 @@ export function calculateSpellScaling(
 
   // Level scaling (capped at maxScalingLevel if set)
   if (scalingPerLevel && scalingPerLevel > 0) {
-    const effectiveLevel = (maxScalingLevel && maxScalingLevel > 0) ? Math.min(casterLevel, maxScalingLevel) : casterLevel;
+    const effectiveLevel = (maxScalingLevel != null && maxScalingLevel > 0) ? Math.min(casterLevel, maxScalingLevel) : casterLevel;
     const levelMultiplier = 1 + effectiveLevel * scalingPerLevel;
     min = Math.floor(min * levelMultiplier);
     max = Math.floor(max * levelMultiplier);

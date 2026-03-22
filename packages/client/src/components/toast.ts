@@ -17,6 +17,7 @@ export function showToast(message: string, type: ToastType = 'info', duration: n
 
   const toast = document.createElement('div');
   toast.className = `toast ${type}`;
+  toast.setAttribute('role', 'alert');
   toast.textContent = message;
   container.appendChild(toast);
 

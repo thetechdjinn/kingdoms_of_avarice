@@ -48,7 +48,7 @@ export function setupTabs(options: TabOptions = {}): void {
 
       // Activate selected
       btn.classList.add('active');
-      const tabContent = document.getElementById(`tab-${tabName}`);
+      const tabContent = root.querySelector(`#tab-${tabName}`);
       if (tabContent) tabContent.classList.add('active');
 
       onTabChange?.(tabName);
@@ -79,6 +79,6 @@ export function activateTab(tabName: string, options: Pick<TabOptions, 'containe
   });
 
   panels.forEach(c => c.classList.remove('active'));
-  const tabContent = document.getElementById(`tab-${tabName}`);
+  const tabContent = root.querySelector(`#tab-${tabName}`);
   if (tabContent) tabContent.classList.add('active');
 }

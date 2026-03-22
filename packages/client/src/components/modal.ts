@@ -46,8 +46,15 @@ export function showPrompt(message: string, options: PromptOptions = {}): Promis
     const modal = createModalShell(message);
     const { overlay, body, footer } = modal;
 
+    const promptLabel = document.createElement('label');
+    promptLabel.className = 'modal-label';
+    promptLabel.setAttribute('for', 'modal-prompt-input');
+    promptLabel.textContent = message;
+    body.appendChild(promptLabel);
+
     const input = document.createElement('input');
     input.type = 'text';
+    input.id = 'modal-prompt-input';
     input.className = 'modal-input';
     input.value = options.defaultValue ?? '';
     if (options.placeholder) input.placeholder = options.placeholder;
@@ -56,6 +63,7 @@ export function showPrompt(message: string, options: PromptOptions = {}): Promis
 
     const errorEl = document.createElement('div');
     errorEl.className = 'modal-error';
+    errorEl.setAttribute('role', 'alert');
     errorEl.style.display = 'none';
     body.appendChild(errorEl);
 
@@ -111,17 +119,21 @@ export function showPromptFields(
       const group = document.createElement('div');
       group.className = 'modal-field-group';
 
+      const inputId = `modal-field-${field.key}`;
       const label = document.createElement('label');
       label.className = 'modal-label';
+      label.setAttribute('for', inputId);
       label.textContent = field.label + (field.required ? ' *' : '');
       group.appendChild(label);
 
       const input = document.createElement('input');
       input.type = field.type ?? 'text';
+      input.id = inputId;
       input.className = 'modal-input';
       input.value = field.defaultValue ?? '';
       if (field.placeholder) input.placeholder = field.placeholder;
       if (field.maxLength) input.maxLength = field.maxLength;
+      if (field.required) input.setAttribute('aria-required', 'true');
       group.appendChild(input);
 
       body.appendChild(group);
@@ -130,6 +142,7 @@ export function showPromptFields(
 
     const errorEl = document.createElement('div');
     errorEl.className = 'modal-error';
+    errorEl.setAttribute('role', 'alert');
     errorEl.style.display = 'none';
     body.appendChild(errorEl);
 
@@ -228,10 +241,18 @@ interface ModalShell {
   onClose: (() => void) | null;
 }
 
+let modalIdCounter = 0;
+
 function createModalShell(title: string): ModalShell {
+  modalIdCounter++;
+  const modalId = `modal-${modalIdCounter}`;
+
   const overlay = document.createElement('div');
   overlay.className = 'modal';
   overlay.style.display = 'flex';
+  overlay.setAttribute('role', 'dialog');
+  overlay.setAttribute('aria-modal', 'true');
+  overlay.setAttribute('aria-labelledby', `${modalId}-title`);
 
   const content = document.createElement('div');
   content.className = 'modal-content';
@@ -240,12 +261,14 @@ function createModalShell(title: string): ModalShell {
   header.className = 'modal-header';
 
   const h3 = document.createElement('h3');
+  h3.id = `${modalId}-title`;
   h3.textContent = title;
   header.appendChild(h3);
 
   const closeBtn = document.createElement('button');
   closeBtn.className = 'close-btn';
   closeBtn.innerHTML = '&times;';
+  closeBtn.setAttribute('aria-label', 'Close');
   header.appendChild(closeBtn);
 
   const body = document.createElement('div');
