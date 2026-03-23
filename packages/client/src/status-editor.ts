@@ -583,7 +583,7 @@ interface SpellRef {
       a.download = 'status_effects_export.json';
       a.click();
       URL.revokeObjectURL(url);
-      showToast(`Exported ${effects.length} effects`, 'success');
+      showToast('Effects exported successfully', 'success');
     } catch (error) {
       console.error('Export failed:', error);
       showToast('Failed to export effects', 'error');

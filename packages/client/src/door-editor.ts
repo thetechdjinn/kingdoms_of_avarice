@@ -609,7 +609,7 @@ const ALL_TABS = ['basic', 'rooms', 'state', 'locks', 'triggers', 'portal', 'per
       disappearMessage: disappearMsgInput.value.trim() || null,
       requiredLevel: parseInt(requiredLevelInput.value) || null,
       maxLevel: parseInt(maxLevelInput.value) || null,
-      requiredClasses: [...new Set(Array.from(selectedClasses).filter(c => c && c.trim()))],
+      requiredClasses: (() => { const cls = [...new Set(Array.from(selectedClasses).filter(c => c && c.trim()))]; return cls.length > 0 ? cls : null; })(),
       requiredQuestFlag: questFlagInput.value.trim() || null,
       requiredItemTag: itemTagInput.value.trim() || null,
       denialMessage: denialMsgInput.value.trim() || null,
@@ -905,5 +905,7 @@ const ALL_TABS = ['basic', 'rooms', 'state', 'locks', 'triggers', 'portal', 'per
         }
       }
     }
+    // Clean URL parameters after handling
+    window.history.replaceState({}, '', window.location.pathname);
   }
 })();
