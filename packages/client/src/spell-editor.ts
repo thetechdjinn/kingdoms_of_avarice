@@ -424,7 +424,7 @@ interface StatusEffectDef {
     }
 
     // Damage
-    if (spell.minDamage && spell.maxDamage) {
+    if (spell.minDamage != null && spell.maxDamage != null) {
       html += `<div class="preview-section"><div class="preview-section-title">Damage</div>`;
       html += `<div class="preview-stat">${spell.minDamage}-${spell.maxDamage}`;
       if (spell.hitsPerCast > 1) html += ` x${spell.hitsPerCast} hits`;
@@ -436,7 +436,7 @@ interface StatusEffectDef {
     }
 
     // Healing
-    if (spell.minHealing && spell.maxHealing) {
+    if (spell.minHealing != null && spell.maxHealing != null) {
       html += `<div class="preview-section"><div class="preview-section-title">Healing</div>`;
       html += `<div class="preview-stat">${spell.minHealing}-${spell.maxHealing}</div>`;
       if (spell.healingScalingStat && spell.healingScalingStat !== 'none') {

@@ -469,7 +469,7 @@ const ALL_DENOMINATIONS = ['copper', 'silver', 'gold', 'platinum', 'runic'];
       if (data.success) {
         showToast('Drop table created', 'success');
         await fetchDropTables();
-        selectTable(data.dropTable.id);
+        await selectTable(data.dropTable.id);
       } else {
         showToast(data.message || 'Failed to create table', 'error');
       }

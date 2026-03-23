@@ -346,9 +346,9 @@ function formatCopper(copper: number): string {
     (document.getElementById('weapon-backstab-max-damage') as HTMLInputElement).value = String(w.backstab_max_damage_bonus || 0);
     const verbs = (w.attack_verbs || {}) as Record<string, string>;
     (document.getElementById('weapon-verb-hit') as HTMLInputElement).value = verbs.hit || '';
-    (document.getElementById('weapon-verb-hit-3p') as HTMLInputElement).value = verbs.hit3p || '';
+    (document.getElementById('weapon-verb-hit-3p') as HTMLInputElement).value = verbs.hit_3p || '';
     (document.getElementById('weapon-verb-miss') as HTMLInputElement).value = verbs.miss || '';
-    (document.getElementById('weapon-verb-miss-3p') as HTMLInputElement).value = verbs.miss3p || '';
+    (document.getElementById('weapon-verb-miss-3p') as HTMLInputElement).value = verbs.miss_3p || '';
   }
 
   function loadArmorData(t: ItemTemplate): void {
@@ -506,9 +506,9 @@ function formatCopper(copper: number): string {
         backstab_max_damage_bonus: parseInt((document.getElementById('weapon-backstab-max-damage') as HTMLInputElement).value) || 0,
         attack_verbs: {
           hit: (document.getElementById('weapon-verb-hit') as HTMLInputElement).value.trim() || undefined,
-          hit3p: (document.getElementById('weapon-verb-hit-3p') as HTMLInputElement).value.trim() || undefined,
+          hit_3p: (document.getElementById('weapon-verb-hit-3p') as HTMLInputElement).value.trim() || undefined,
           miss: (document.getElementById('weapon-verb-miss') as HTMLInputElement).value.trim() || undefined,
-          miss3p: (document.getElementById('weapon-verb-miss-3p') as HTMLInputElement).value.trim() || undefined,
+          miss_3p: (document.getElementById('weapon-verb-miss-3p') as HTMLInputElement).value.trim() || undefined,
         },
       };
     } else if (itemType === 'armor') {
@@ -780,6 +780,7 @@ function formatCopper(copper: number): string {
           credentials: 'include',
           body: JSON.stringify({ templates: items, merge: true }),
         });
+        if (!res.ok) { showToast(`Import failed: ${res.status}`, 'error'); return; }
         const result = await res.json();
         if (result.success) {
           showToast(`Imported: ${result.results?.created || 0} created, ${result.results?.updated || 0} updated`, 'success');

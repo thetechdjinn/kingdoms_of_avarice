@@ -295,10 +295,14 @@ interface NpcTemplate {
       counter++;
     }
 
+    const currentDescription = descriptionInput.value;
+    const currentType = typeSelect.value;
     selectedFactionId = null;
     formTitle.textContent = 'New Faction';
     idDisplay.textContent = '';
     nameInput.value = newName;
+    descriptionInput.value = currentDescription;
+    typeSelect.value = currentType;
     listPanel.setSelected(null);
     nameInput.focus();
     linkedNpcsEl.innerHTML = '<p class="no-linked-npcs">Save the faction first to see linked NPCs</p>';

@@ -659,7 +659,7 @@ const ALL_TABS = ['basic', 'rooms', 'state', 'locks', 'triggers', 'portal', 'per
     const saved = await saveDoor(doorData, true);
     if (saved) {
       await fetchDoors();
-      selectDoor(saved.id);
+      await selectDoor(saved.id);
     }
   }
 
@@ -698,7 +698,7 @@ const ALL_TABS = ['basic', 'rooms', 'state', 'locks', 'triggers', 'portal', 'per
     const saved = await saveDoor(doorData, true);
     if (saved) {
       await fetchDoors();
-      selectDoor(saved.id);
+      await selectDoor(saved.id);
     }
   });
 
@@ -724,7 +724,7 @@ const ALL_TABS = ['basic', 'rooms', 'state', 'locks', 'triggers', 'portal', 'per
     }
 
     const saved = await saveDoor(data, false);
-    if (saved) selectDoor(saved.id);
+    if (saved) await selectDoor(saved.id);
   });
 
   // Delete
@@ -763,7 +763,7 @@ const ALL_TABS = ['basic', 'rooms', 'state', 'locks', 'triggers', 'portal', 'per
     const data = { ...gatherFormData(), name: result.name };
     const saved = await saveDoor(data, true);
     if (saved) {
-      selectDoor(saved.id);
+      await selectDoor(saved.id);
     }
   });
 
