@@ -429,8 +429,8 @@ interface StatusEffectDef {
       html += `<div class="preview-stat">${spell.minDamage}-${spell.maxDamage}`;
       if (spell.hitsPerCast > 1) html += ` x${spell.hitsPerCast} hits`;
       html += `</div>`;
-      if (spell.damageScalingStat && spell.damageScalingStat !== 'none') {
-        html += `<div class="preview-stat"><span class="label">Scales:</span> ${((spell.damageScalingFactor ?? 0) * 100).toFixed(1)}% of ${spell.damageScalingStat}</div>`;
+      if (spell.damageScalingStat && spell.damageScalingStat !== 'none' && spell.damageScalingFactor) {
+        html += `<div class="preview-stat"><span class="label">Scales:</span> ${((spell.damageScalingFactor) * 100).toFixed(1)}% of ${spell.damageScalingStat}</div>`;
       }
       html += `</div>`;
     }
@@ -439,8 +439,8 @@ interface StatusEffectDef {
     if (spell.minHealing != null && spell.maxHealing != null) {
       html += `<div class="preview-section"><div class="preview-section-title">Healing</div>`;
       html += `<div class="preview-stat">${spell.minHealing}-${spell.maxHealing}</div>`;
-      if (spell.healingScalingStat && spell.healingScalingStat !== 'none') {
-        html += `<div class="preview-stat"><span class="label">Scales:</span> ${((spell.healingScalingFactor ?? 0) * 100).toFixed(1)}% of ${spell.healingScalingStat}</div>`;
+      if (spell.healingScalingStat && spell.healingScalingStat !== 'none' && spell.healingScalingFactor) {
+        html += `<div class="preview-stat"><span class="label">Scales:</span> ${((spell.healingScalingFactor) * 100).toFixed(1)}% of ${spell.healingScalingStat}</div>`;
       }
       html += `</div>`;
     }
@@ -459,7 +459,11 @@ interface StatusEffectDef {
       html += `<div class="preview-section"><div class="preview-section-title">Status Effect</div>`;
       html += `<div class="preview-stat">${escapeHtml(eff?.name || spell.statusEffect)}`;
       if (spell.effectDuration) html += ` (${spell.effectDuration}s)`;
-      html += `</div></div>`;
+      html += `</div>`;
+      if (spell.saveStat && spell.saveStat !== 'none') {
+        html += `<div class="preview-stat"><span class="label">Save:</span> ${spell.saveStat} DC ${spell.saveDifficulty || 0}</div>`;
+      }
+      html += `</div>`;
     }
 
     // Telegraph
@@ -468,14 +472,19 @@ interface StatusEffectDef {
       html += `<div class="preview-message">"${escapeHtml(spell.telegraphMessage)}"</div></div>`;
     }
 
-    // Class restrictions
+    // Requirements
+    const reqParts: string[] = [];
+    if (spell.levelRequired > 1) reqParts.push(`Level ${spell.levelRequired}`);
     if (spell.classRestrictions && spell.classRestrictions.length > 0) {
       const names = spell.classRestrictions.map(id => {
         const cls = classDefs.find(c => c.id === id);
         return cls?.displayName || id;
       });
-      html += `<div class="preview-section"><div class="preview-section-title">Classes</div>`;
-      html += `<div class="preview-stat">${names.map(n => escapeHtml(n)).join(', ')}</div></div>`;
+      reqParts.push(names.map(n => escapeHtml(n)).join(', '));
+    }
+    if (reqParts.length > 0) {
+      html += `<div class="preview-section"><div class="preview-section-title">Requirements</div>`;
+      html += `<div class="preview-stat">${reqParts.join(' · ')}</div></div>`;
     }
 
     previewContent.innerHTML = html;

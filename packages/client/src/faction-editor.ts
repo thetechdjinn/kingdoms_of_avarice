@@ -314,7 +314,7 @@ interface NpcTemplate {
       const res = await fetch('/api/factions', { credentials: 'include' });
       const data = await res.json();
       if (!data.success) {
-        showToast('Export failed', 'error');
+        showToast(data.message || 'Export failed', 'error');
         return;
       }
 

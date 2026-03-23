@@ -784,6 +784,9 @@ function formatCopper(copper: number): string {
         const result = await res.json();
         if (result.success) {
           showToast(`Imported: ${result.results?.created || 0} created, ${result.results?.updated || 0} updated`, 'success');
+          if (result.results?.errors?.length > 0) {
+            showToast(`${result.results.errors.length} error${result.results.errors.length === 1 ? '' : 's'} during import`, 'warning');
+          }
           await fetchTemplates();
         } else showToast(result.message || 'Import failed', 'error');
       } catch { showToast('Failed to parse import file', 'error'); }

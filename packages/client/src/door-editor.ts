@@ -237,6 +237,7 @@ const ALL_TABS = ['basic', 'rooms', 'state', 'locks', 'triggers', 'portal', 'per
       }
     } catch (error) {
       console.error('Failed to fetch classes:', error);
+      showToast('Failed to fetch class data', 'error');
     }
   }
 
@@ -319,7 +320,7 @@ const ALL_TABS = ['basic', 'rooms', 'state', 'locks', 'triggers', 'portal', 'per
     for (const room of rooms) {
       if (area && room.area !== area) continue;
       if (roomId && room.id !== roomId) continue;
-      if (search && !room.name.toLowerCase().includes(search)) continue;
+      if (search && !room.name.toLowerCase().includes(search) && !room.area?.toLowerCase().includes(search)) continue;
 
       const roomExits = room.exits || {};
       for (const [direction, targetRoomId] of Object.entries(roomExits)) {
