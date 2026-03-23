@@ -15,6 +15,7 @@ export function setupRoomRoutes(app: Express): void {
         description: room.description,
         area: room.area,
         terrain: room.terrain || 'indoor',
+        darkness_level: room.darkness_level ?? 0,
         features: room.features || {},
         tag: room.tag || null,
         exits: Object.fromEntries(room.exits),
@@ -49,6 +50,7 @@ export function setupRoomRoutes(app: Express): void {
           description: room.description,
           area: room.area,
           terrain: room.terrain || 'indoor',
+          darkness_level: room.darkness_level ?? 0,
           features: room.features || {},
           tag: room.tag || null,
           exits: Object.fromEntries(room.exits),
@@ -63,14 +65,19 @@ export function setupRoomRoutes(app: Express): void {
   // Create room (requires Developer role)
   app.post('/api/rooms', requireDeveloper, async (req: Request, res: Response) => {
     try {
-      const { name, description, area, terrain, features, tag } = req.body;
+      const { name, description, area, terrain, darkness_level, features, tag } = req.body;
 
       if (!name) {
         res.status(400).json({ success: false, message: 'Name is required' });
         return;
       }
 
-      const room = await roomRepo.createRoom({ name, description, area, terrain, features, tag });
+      if (darkness_level !== undefined && (typeof darkness_level !== 'number' || !Number.isInteger(darkness_level) || darkness_level < 0 || darkness_level > 10)) {
+        res.status(400).json({ success: false, message: 'darkness_level must be an integer between 0 and 10' });
+        return;
+      }
+
+      const room = await roomRepo.createRoom({ name, description, area, terrain, darkness_level, features, tag });
 
       // Auto-generate tag if none provided: area_name, area_name_2, area_name_3, ...
       if (!room.tag) {
@@ -97,6 +104,7 @@ export function setupRoomRoutes(app: Express): void {
           description: room.description,
           area: room.area,
           terrain: room.terrain || 'indoor',
+          darkness_level: room.darkness_level ?? 0,
           features: room.features || {},
           tag: room.tag,
           exits: {},
@@ -117,8 +125,14 @@ export function setupRoomRoutes(app: Express): void {
         return;
       }
 
-      const { name, description, area, terrain, features, tag } = req.body;
-      const room = await roomRepo.updateRoom(id, { name, description, area, terrain, features, tag });
+      const { name, description, area, terrain, darkness_level, features, tag } = req.body;
+
+      if (darkness_level !== undefined && (typeof darkness_level !== 'number' || !Number.isInteger(darkness_level) || darkness_level < 0 || darkness_level > 10)) {
+        res.status(400).json({ success: false, message: 'darkness_level must be an integer between 0 and 10' });
+        return;
+      }
+
+      const room = await roomRepo.updateRoom(id, { name, description, area, terrain, darkness_level, features, tag });
 
       if (!room) {
         res.status(404).json({ success: false, message: 'Room not found' });
@@ -137,6 +151,7 @@ export function setupRoomRoutes(app: Express): void {
           description: roomWithExits!.description,
           area: roomWithExits!.area,
           terrain: roomWithExits!.terrain || 'indoor',
+          darkness_level: roomWithExits!.darkness_level ?? 0,
           features: roomWithExits!.features || {},
           tag: roomWithExits!.tag || null,
           exits: Object.fromEntries(roomWithExits!.exits),
@@ -221,6 +236,7 @@ export function setupRoomRoutes(app: Express): void {
           description: updatedRoom!.description,
           area: updatedRoom!.area,
           terrain: updatedRoom!.terrain || 'indoor',
+          darkness_level: updatedRoom!.darkness_level ?? 0,
           features: updatedRoom!.features || {},
           tag: updatedRoom!.tag || null,
           exits: Object.fromEntries(updatedRoom!.exits),
@@ -268,6 +284,7 @@ export function setupRoomRoutes(app: Express): void {
           description: updatedRoom.description,
           area: updatedRoom.area,
           terrain: updatedRoom.terrain || 'indoor',
+          darkness_level: updatedRoom.darkness_level ?? 0,
           features: updatedRoom.features || {},
           tag: updatedRoom.tag || null,
           exits: Object.fromEntries(updatedRoom.exits),

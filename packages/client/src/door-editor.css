@@ -1,167 +1,193 @@
-/* Door Editor Specific Styles */
+/* Door Editor — three-panel with type-driven tabs */
+
+/* ============================================================================
+   List Panel
+   ============================================================================ */
 
 #door-list-panel {
-  width: 280px;
-  min-width: 250px;
   display: flex;
   flex-direction: column;
-  background: #1a1a2e;
+  width: 300px;
+  min-width: 280px;
+  background: #16213e;
   border-right: 1px solid #333;
 }
 
-#door-filters {
-  padding: 0.5rem 1rem;
-  border-bottom: 1px solid #333;
-}
-
-#door-filters .filter-row {
-  margin-bottom: 0.5rem;
-}
-
-#door-filters .filter-row:last-child {
-  margin-bottom: 0;
-}
-
-#door-filters label {
-  display: block;
-  font-size: 0.8rem;
-  color: #888;
-  margin-bottom: 0.2rem;
-}
-
-#door-filters select,
-#door-filters input {
-  width: 100%;
-}
-
-#view-toggle {
+.view-toggle {
   display: flex;
+  padding: 0.5rem 0.75rem;
+  gap: 0;
   border-bottom: 1px solid #333;
 }
 
-#view-toggle .view-btn {
+.view-toggle .toggle-btn {
   flex: 1;
-  padding: 0.5rem;
-  background: transparent;
-  border: none;
-  color: #888;
-  cursor: pointer;
-  font-size: 0.85rem;
-  transition: all 0.2s;
-}
-
-#view-toggle .view-btn:hover {
-  background: #16213e;
-  color: #ccc;
-}
-
-#view-toggle .view-btn.active {
-  background: #0f3460;
-  color: #00ff00;
-}
-
-#door-count {
-  padding: 0.4rem 1rem;
-  font-size: 0.8rem;
-  color: #888;
-  border-bottom: 1px solid #333;
-  background: #16213e;
-}
-
-/* Room exit list items */
-#door-list .exit-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-#door-list .exit-info {
-  flex: 1;
-}
-
-#door-list .exit-direction {
-  font-weight: bold;
-  color: #00ff00;
-  text-transform: capitalize;
-}
-
-#door-list .exit-rooms {
-  font-size: 0.8rem;
-  color: #888;
-  margin-top: 0.25rem;
-}
-
-#door-list .exit-has-door {
-  font-size: 0.75rem;
-  color: #e94560;
-  margin-top: 0.25rem;
-}
-
-#door-list .btn-small {
-  padding: 0.25rem 0.5rem;
-  font-size: 0.75rem;
-  background: #0f3460;
+  padding: 0.35rem;
+  background: #0f0f23;
   border: 1px solid #333;
-  color: #ccc;
-  border-radius: 3px;
+  color: #888;
   cursor: pointer;
+  font-size: 0.8rem;
+  font-family: inherit;
+  transition: all 0.15s;
 }
 
-#door-list .btn-small:hover {
-  background: #16213e;
+.view-toggle .toggle-btn:first-child {
+  border-radius: 4px 0 0 4px;
+}
+
+.view-toggle .toggle-btn:last-child {
+  border-radius: 0 4px 4px 0;
+  border-left: none;
+}
+
+.view-toggle .toggle-btn.active {
+  background: #0e4429;
+  border-color: #00aa00;
   color: #00ff00;
+}
+
+.list-filters {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid #333;
+}
+
+.list-filters select,
+.list-filters input {
+  width: 100%;
+  padding: 0.35rem 0.5rem;
+  background: #0f0f23;
+  border: 1px solid #333;
+  border-radius: 4px;
+  color: #eee;
+  font-size: 0.8rem;
+}
+
+.list-filters select:focus,
+.list-filters input:focus {
+  outline: none;
+  border-color: #00ff00;
+}
+
+.list-filters input::placeholder {
+  color: #555;
 }
 
 #door-list {
   flex: 1;
   overflow-y: auto;
   list-style: none;
-  padding: 0;
-  margin: 0;
 }
 
 #door-list li {
-  padding: 0.75rem 1rem;
-  border-bottom: 1px solid #333;
+  padding: 0.5rem 0.75rem;
   cursor: pointer;
-  transition: background 0.2s;
+  border-bottom: 1px solid #222;
+  border-left: 3px solid transparent;
+  transition: background-color 0.15s, border-color 0.15s;
 }
 
 #door-list li:hover {
-  background: #16213e;
+  background: var(--hover-bg);
 }
 
 #door-list li.selected {
-  background: #0f3460;
-  border-left: 3px solid #00ff00;
+  background: var(--selected-bg);
+  border-left-color: var(--primary-color);
 }
 
-#door-list .door-id {
-  font-size: 0.8125rem;
-  color: #666;
-  margin-right: 0.5rem;
+#door-list li .door-name {
+  font-weight: 600;
+  color: var(--text-primary);
+  font-size: 0.85rem;
 }
 
-#door-list .door-name {
-  font-weight: bold;
-  color: #e94560;
+#door-list li .door-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-top: 2px;
+  flex-wrap: wrap;
 }
 
-#door-list .door-type {
-  font-size: 0.8125rem;
-  color: #888;
-  margin-top: 0.25rem;
+#door-list li .door-rooms {
+  font-size: 0.7rem;
+  color: #555;
 }
 
-#door-list .door-rooms {
-  font-size: 0.8125rem;
-  color: #666;
-  margin-top: 0.25rem;
+/* Door type badges */
+.dtype-badge {
+  font-size: 0.6rem;
+  padding: 1px 4px;
+  border-radius: 3px;
+  text-transform: uppercase;
+  font-weight: 600;
+  letter-spacing: 0.02em;
 }
+
+.dtype-badge.open_passageway { background: #1a3a1a; color: #4ade80; }
+.dtype-badge.physical { background: #2a2a1a; color: #d4a574; }
+.dtype-badge.special { background: #2a1a3a; color: #c084fc; }
+.dtype-badge.triggered_passageway { background: #1a2a3a; color: #60d4d4; }
+.dtype-badge.temporary_portal { background: #3a1a2a; color: #f472b6; }
+
+/* Exit list items */
+.exit-item {
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid #222;
+  font-size: 0.8rem;
+}
+
+.exit-item .exit-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.exit-item .exit-dir {
+  color: var(--primary-color);
+  font-weight: 600;
+  min-width: 50px;
+}
+
+.exit-item .exit-room {
+  flex: 1;
+  color: #ccc;
+  margin: 0 0.5rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.exit-item .exit-status {
+  font-size: 0.7rem;
+  color: #555;
+}
+
+.exit-item .exit-add-btn {
+  background: none;
+  border: 1px solid #00aa00;
+  color: #00ff00;
+  padding: 0.1rem 0.4rem;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 0.7rem;
+}
+
+.exit-item .exit-add-btn:hover {
+  background: #0e4429;
+}
+
+/* ============================================================================
+   Editor Panel
+   ============================================================================ */
 
 #door-editor-panel {
   flex: 1;
-  padding: 1.5rem;
+  padding: 1.5rem 2rem;
   overflow-y: auto;
 }
 
@@ -170,193 +196,148 @@
   align-items: center;
   justify-content: center;
   height: 100%;
-  color: #888;
 }
 
-#door-form {
-  max-width: 800px;
+.tab-btn.tab-hidden {
+  display: none;
 }
+
+/* ============================================================================
+   Lock Presets
+   ============================================================================ */
+
+.lock-presets {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0.5rem 0 0.75rem;
+  flex-wrap: wrap;
+}
+
+.lock-presets .hint-inline {
+  margin: 0;
+}
+
+/* ============================================================================
+   Preview Panel
+   ============================================================================ */
 
 #preview-panel {
   width: 300px;
-  min-width: 280px;
-  background: #1a1a2e;
+  min-width: 250px;
+  background: #16213e;
   border-left: 1px solid #333;
   display: flex;
   flex-direction: column;
+  overflow-y: auto;
 }
 
 #door-preview {
   flex: 1;
-  padding: 1rem;
+  padding: 0.75rem 1rem;
   overflow-y: auto;
 }
 
 #preview-content {
-  font-size: 0.9rem;
-}
-
-#preview-content .preview-name {
-  font-size: 1.1rem;
-  font-weight: bold;
-  color: #e94560;
-  margin-bottom: 0.5rem;
-}
-
-#preview-content .preview-type {
-  color: #888;
   font-size: 0.85rem;
-  margin-bottom: 1rem;
+  line-height: 1.6;
 }
 
-#preview-content .preview-section {
-  margin-top: 1rem;
+.preview-name {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--primary-color);
+  margin-bottom: 0.25rem;
+}
+
+.preview-badges {
+  display: flex;
+  gap: 0.4rem;
+  margin-bottom: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.preview-stat {
+  font-size: 0.8rem;
+  color: #ccc;
+  padding: 2px 0;
+}
+
+.preview-stat .label {
+  color: #888;
+}
+
+.preview-section {
+  margin-top: 0.75rem;
   padding-top: 0.75rem;
-  border-top: 1px solid #333;
+  border-top: 1px solid #2a2a2e;
 }
 
-#preview-content .preview-section-title {
-  font-weight: bold;
-  color: #00ff00;
-  margin-bottom: 0.5rem;
-  font-size: 0.9rem;
+.preview-section-title {
+  color: #ffaa00;
+  font-weight: 600;
+  font-size: 0.8rem;
+  margin-bottom: 0.3rem;
 }
 
-#preview-content .preview-desc {
+.preview-message {
   color: #aaa;
   font-style: italic;
-  margin-bottom: 0.5rem;
-}
-
-#preview-content .preview-property {
-  margin: 0.25rem 0;
-  color: #ccc;
-}
-
-#preview-content .preview-property .label {
-  color: #888;
+  font-size: 0.8rem;
 }
 
 /* Connection diagram */
-#connection-preview {
-  padding: 1rem;
-  border-top: 1px solid #333;
-}
-
-#connection-diagram {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem;
-  margin-top: 0.5rem;
-}
-
-.connection-room {
-  flex: 1;
-  background: #16213e;
+.connection-diagram {
+  margin-top: 0.75rem;
+  padding: 0.75rem;
+  background: #0f0f23;
+  border-radius: 6px;
   border: 1px solid #333;
-  border-radius: 4px;
-  padding: 0.5rem;
   text-align: center;
+  font-size: 0.8rem;
 }
 
-.connection-room .room-label {
-  display: block;
-  font-size: 0.75rem;
-  color: #666;
-  text-transform: uppercase;
+.connection-diagram .room-box {
+  color: #eee;
+  font-weight: 500;
 }
 
-.connection-room .room-name {
-  display: block;
-  font-size: 0.875rem;
-  color: #00ff00;
-  margin-top: 0.25rem;
-  overflow-wrap: break-word;
+.connection-diagram .direction-arrow {
+  color: var(--primary-color);
+  margin: 0.3rem 0;
 }
 
-.connection-arrow {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  color: #888;
-  min-width: 60px;
-}
+/* ============================================================================
+   Form Actions
+   ============================================================================ */
 
-.connection-arrow .direction-label {
-  font-size: 0.75rem;
-  color: #666;
-}
-
-.connection-arrow .arrow-icon {
-  font-size: 1.2rem;
-  color: #e94560;
-  margin: 0.25rem 0;
-}
-
-/* Lock options visibility */
-#lock-options {
-  margin-top: 1rem;
-  padding-top: 1rem;
+#door-form .form-actions {
+  position: sticky;
+  bottom: 0;
+  background: #1a1a2e;
+  padding: 1rem 0;
+  margin-top: 1.5rem;
   border-top: 1px solid #333;
+  z-index: 1;
 }
 
-/* Form row for consistent spacing */
-.form-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1rem;
+#door-form .form-actions .spacer {
+  flex: 1;
 }
 
-@media (max-width: 600px) {
-  .form-row {
-    grid-template-columns: 1fr;
+/* ============================================================================
+   Responsive
+   ============================================================================ */
+
+@media (max-width: 1200px) {
+  #preview-panel {
+    width: 250px;
+    min-width: 200px;
   }
 }
 
-/* Type badge colors */
-.door-type-badge {
-  display: inline-block;
-  padding: 0.15rem 0.4rem;
-  border-radius: 3px;
-  font-size: 0.75rem;
-  text-transform: uppercase;
-}
-
-.door-type-badge.open_passageway {
-  background: #2d5a27;
-  color: #8fbc8f;
-}
-
-.door-type-badge.physical {
-  background: #5a4027;
-  color: #deb887;
-}
-
-.door-type-badge.special {
-  background: #4a2783;
-  color: #da70d6;
-}
-
-.door-type-badge.triggered_passageway {
-  background: #275a5a;
-  color: #5f9ea0;
-}
-
-.door-type-badge.temporary_portal {
-  background: #832727;
-  color: #fa8072;
-}
-
-/* Focus styles for accessibility */
-#door-list li:focus,
-#door-list li:focus-visible {
-  outline: 2px solid #00ff00;
-  outline-offset: -2px;
-}
-
-.door-type-badge:focus,
-.door-type-badge:focus-visible {
-  outline: 2px solid #00ff00;
-  outline-offset: 2px;
+@media (max-width: 900px) {
+  #preview-panel {
+    display: none;
+  }
 }

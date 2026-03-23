@@ -1,979 +1,772 @@
+/**
+ * Spell Editor — three-panel with type-specific effects, SearchableSelect for
+ * status effects, dynamic class buttons, NPC reverse lookup.
+ */
+
 import { Spell, SpellType, SpellTargetType, SpellScalingStat } from '@koa/shared';
+import { initAuth, ListPanel, SearchableSelect, setupTabs, showToast, showConfirm, showPromptFields, escapeHtml } from './components/index.js';
+import type { SelectOption } from './components/index.js';
 
-(function() {
-
-interface AuthInfo {
-  authenticated: boolean;
-  playerId?: number;
-  username?: string;
-  roles?: string[];
+interface ClassDef {
+  id: string;
+  displayName: string;
 }
 
-let spells: Spell[] = [];
-let selectedSpellId: number | null = null;
-let currentUser: AuthInfo | null = null;
-
-// Toast notification system
-type ToastType = 'success' | 'error' | 'warning' | 'info';
-
-function showToast(message: string, type: ToastType = 'info', duration: number = 3000): void {
-  let container = document.getElementById('toast-container');
-  if (!container) {
-    container = document.createElement('div');
-    container.id = 'toast-container';
-    document.body.appendChild(container);
-  }
-
-  const toast = document.createElement('div');
-  toast.className = `toast ${type}`;
-  toast.textContent = message;
-  container.appendChild(toast);
-
-  setTimeout(() => {
-    toast.classList.add('toast-out');
-    setTimeout(() => toast.remove(), 300);
-  }, duration);
+interface NpcTemplate {
+  id: number;
+  name: string;
+  level: number;
+  spells?: Array<{ spellId: number }>;
 }
 
-// Helper to show error messages
-function showError(message: string): void {
-  const list = document.getElementById('spell-list');
-  if (list) {
-    list.innerHTML = `<div class="error-message" style="color: #ff6b6b; padding: 1rem;">${escapeHtml(message)}</div>`;
-  } else {
-    showToast(message, 'error');
-  }
+interface StatusEffectDef {
+  id: string;
+  name: string;
+  category: string;
 }
 
-// Helper to safely get DOM element by ID
-function getElement<T extends HTMLElement>(id: string): T | null {
-  return document.getElementById(id) as T | null;
-}
+(async function () {
+  const auth = await initAuth('developer');
+  if (!auth) return;
 
-// ============================================================================
-// Authentication
-// ============================================================================
+  // ============================================================================
+  // State
+  // ============================================================================
 
-async function checkAuth(): Promise<boolean> {
-  try {
-    const response = await fetch('/api/auth/me');
-    if (!response.ok) {
-      window.location.href = '/';
-      return false;
-    }
-    const data: AuthInfo = await response.json();
-    currentUser = data;
+  let spells: Spell[] = [];
+  let classDefs: ClassDef[] = [];
+  let npcTemplates: NpcTemplate[] = [];
+  let statusEffects: StatusEffectDef[] = [];
+  let selectedSpellId: number | null = null;
+  let selectedClasses: Set<string> = new Set();
 
-    if (!data.authenticated) {
-      window.location.href = '/';
-      return false;
-    }
+  // ============================================================================
+  // DOM
+  // ============================================================================
 
-    const roles = data.roles || [];
-    const hasDeveloperAccess = roles.includes('developer') || roles.includes('admin');
+  const spellForm = document.getElementById('spell-form') as HTMLFormElement;
+  const noSpellSelected = document.getElementById('no-spell-selected') as HTMLDivElement;
+  const formTitle = document.getElementById('spell-form-title') as HTMLHeadingElement;
+  const idDisplay = document.getElementById('spell-id-display') as HTMLSpanElement;
+  const spellCount = document.getElementById('spell-count') as HTMLSpanElement;
+  const previewContent = document.getElementById('preview-content') as HTMLDivElement;
+  const npcRefContent = document.getElementById('npc-ref-content') as HTMLDivElement;
+  const classButtonsContainer = document.getElementById('class-buttons') as HTMLDivElement;
 
-    if (!hasDeveloperAccess) {
-      window.location.href = '/';
-      return false;
-    }
+  // Basic
+  const nameInput = document.getElementById('spell-name') as HTMLInputElement;
+  const mnemonicInput = document.getElementById('spell-mnemonic') as HTMLInputElement;
+  const descriptionInput = document.getElementById('spell-description') as HTMLTextAreaElement;
+  const spellTypeSelect = document.getElementById('spell-type') as HTMLSelectElement;
+  const targetTypeSelect = document.getElementById('spell-target-type') as HTMLSelectElement;
+  const manaCostInput = document.getElementById('spell-mana-cost') as HTMLInputElement;
+  const castDifficultyInput = document.getElementById('spell-cast-difficulty') as HTMLInputElement;
+  const fizzleMessageInput = document.getElementById('spell-fizzle-message') as HTMLInputElement;
+  const telegraphInput = document.getElementById('spell-telegraph-message') as HTMLInputElement;
 
-    const usernameEl = document.getElementById('nav-username');
-    if (usernameEl && data.username) {
-      usernameEl.textContent = data.username;
-    }
+  // Effects - offensive
+  const minDamageInput = document.getElementById('spell-min-damage') as HTMLInputElement;
+  const maxDamageInput = document.getElementById('spell-max-damage') as HTMLInputElement;
+  const hitsPerCastInput = document.getElementById('spell-hits-per-cast') as HTMLInputElement;
+  const dmgScalingStatSelect = document.getElementById('spell-damage-scaling-stat') as HTMLSelectElement;
+  const dmgScalingFactorInput = document.getElementById('spell-damage-scaling-factor') as HTMLInputElement;
 
-    // Show Admin dropdown if user is admin
-    const isAdmin = roles.includes('admin');
-    const adminDropdown = document.getElementById('nav-admin-dropdown');
-    if (adminDropdown) {
-      adminDropdown.style.display = isAdmin ? 'flex' : 'none';
-    }
+  // Effects - healing
+  const minHealingInput = document.getElementById('spell-min-healing') as HTMLInputElement;
+  const maxHealingInput = document.getElementById('spell-max-healing') as HTMLInputElement;
+  const healScalingStatSelect = document.getElementById('spell-healing-scaling-stat') as HTMLSelectElement;
+  const healScalingFactorInput = document.getElementById('spell-healing-scaling-factor') as HTMLInputElement;
 
-    return true;
-  } catch (error) {
-    console.error('Failed to check auth:', error);
-    window.location.href = '/';
-    return false;
-  }
-}
+  // Effects - status
+  const effectDurationInput = document.getElementById('spell-effect-duration') as HTMLInputElement;
+  const saveStatSelect = document.getElementById('spell-save-stat') as HTMLSelectElement;
+  const saveDifficultyInput = document.getElementById('spell-save-difficulty') as HTMLInputElement;
+  const saveDifficultyRow = document.getElementById('save-difficulty-row') as HTMLDivElement;
 
-async function handleLogout(): Promise<void> {
-  try {
-    await fetch('/api/logout', { method: 'POST', credentials: 'include' });
-  } catch {
-    // Ignore errors
-  }
-  window.location.href = '/';
-}
+  // Effects - scaling
+  const scalingPerLevelInput = document.getElementById('spell-scaling-per-level') as HTMLInputElement;
+  const maxScalingLevelInput = document.getElementById('spell-max-scaling-level') as HTMLInputElement;
 
-// ============================================================================
-// Data Fetching
-// ============================================================================
-
-async function fetchSpells(): Promise<void> {
-  try {
-    const response = await fetch('/api/spells');
-    if (!response.ok) {
-      console.error('Failed to fetch spells: HTTP', response.status);
-      showError('Failed to load spells. Please refresh the page.');
-      return;
-    }
-    const data = await response.json();
-    if (data.success) {
-      if (Array.isArray(data.spells)) {
-        spells = data.spells;
-        renderSpellList();
-      } else {
-        showError('Invalid spell data received from server.');
-      }
-    } else {
-      showError('Failed to load spells: ' + (data.message || 'Unknown error'));
-    }
-  } catch (error) {
-    console.error('Failed to fetch spells:', error);
-    showError('Failed to connect to server. Please check your connection.');
-  }
-}
-
-// ============================================================================
-// Rendering
-// ============================================================================
-
-function renderSpellList(): void {
-  const list = getElement<HTMLElement>('spell-list');
-  if (!list) return;
-  const filterTypeEl = getElement<HTMLSelectElement>('type-select');
-  const searchInputEl = getElement<HTMLInputElement>('search-input');
-  const filterType = filterTypeEl?.value ?? '';
-  const searchTerm = (searchInputEl?.value ?? '').toLowerCase();
-
-  let filteredSpells = spells;
-
-  if (filterType) {
-    filteredSpells = filteredSpells.filter(s => s.spellType === filterType);
-  }
-
-  if (searchTerm) {
-    filteredSpells = filteredSpells.filter(s =>
-      s.name.toLowerCase().includes(searchTerm) ||
-      s.mnemonic.toLowerCase().includes(searchTerm) ||
-      s.description.toLowerCase().includes(searchTerm)
-    );
-  }
-
-  list.innerHTML = filteredSpells
-    .sort((a, b) => a.levelRequired - b.levelRequired || a.name.localeCompare(b.name))
-    .map(spell => `
-      <li data-id="${spell.id}" class="${spell.id === selectedSpellId ? 'selected' : ''}">
-        <span class="spell-mnemonic">${escapeHtml(spell.mnemonic)}</span>
-        <div class="spell-name">${escapeHtml(spell.name)}</div>
-        <div class="spell-meta">
-          <span class="spell-type spell-type-${spell.spellType}">${escapeHtml(spell.spellType)}</span>
-          <span class="spell-level">Lv${spell.levelRequired}</span>
-        </div>
-      </li>
-    `)
-    .join('');
-
-  list.querySelectorAll('li').forEach(li => {
-    li.addEventListener('click', () => {
-      const id = parseInt(li.dataset.id!);
-      selectSpell(id);
-    });
-  });
-}
-
-function capitalize(s: string): string {
-  return s.charAt(0).toUpperCase() + s.slice(1);
-}
-
-function updateCalcStatInputs(): void {
-  const container = document.getElementById('calc-stat-inputs');
-  if (!container) return;
-
-  const dmgStat = getElement<HTMLSelectElement>('spell-damage-scaling-stat')?.value || 'none';
-  const healStat = getElement<HTMLSelectElement>('spell-healing-scaling-stat')?.value || 'none';
-
-  const stats = new Map<string, string>(); // stat key → label
-  if (dmgStat && dmgStat !== 'none') stats.set(dmgStat, capitalize(dmgStat));
-  if (healStat && healStat !== 'none') stats.set(healStat, capitalize(healStat));
-
-  container.innerHTML = '';
-  if (stats.size === 0) {
-    container.innerHTML = '<div class="hint-inline" style="margin-top: 4px;">No stat scaling configured</div>';
-    return;
-  }
-
-  for (const [key, label] of stats) {
-    const group = document.createElement('div');
-    group.className = 'form-group';
-    group.style.marginTop = '4px';
-    group.innerHTML = `
-      <label for="calc-stat-${key}">${label}</label>
-      <input type="number" id="calc-stat-${key}" min="0" max="200" value="50" style="width: 100%;" />
-    `;
-    container.appendChild(group);
-  }
-}
-
-function selectSpell(id: number): void {
-  const spell = spells.find(s => s.id === id);
-
-  const noSpellSelected = getElement<HTMLElement>('no-spell-selected');
-  const spellForm = getElement<HTMLElement>('spell-form');
-
-  if (!spell) {
-    selectedSpellId = null;
-    if (noSpellSelected) noSpellSelected.style.display = 'flex';
-    if (spellForm) spellForm.style.display = 'none';
-    return;
-  }
-
-  selectedSpellId = id;
-
-  if (noSpellSelected) noSpellSelected.style.display = 'none';
-  if (spellForm) spellForm.style.display = 'block';
-
-  const formTitle = getElement<HTMLElement>('spell-form-title');
-  const idDisplay = getElement<HTMLElement>('spell-id-display');
-  if (formTitle) formTitle.textContent = 'Edit Spell';
-  if (idDisplay) idDisplay.textContent = `ID: ${spell.id}`;
-
-  // Basic fields
-  const nameInput = getElement<HTMLInputElement>('spell-name');
-  const mnemonicInput = getElement<HTMLInputElement>('spell-mnemonic');
-  const descriptionInput = getElement<HTMLTextAreaElement>('spell-description');
-  const typeSelect = getElement<HTMLSelectElement>('spell-type');
-  const targetTypeSelect = getElement<HTMLSelectElement>('spell-target-type');
-  const manaCostInput = getElement<HTMLInputElement>('spell-mana-cost');
-  const isAttackCheckbox = getElement<HTMLInputElement>('spell-is-attack');
-
-  if (nameInput) nameInput.value = spell.name;
-  if (mnemonicInput) mnemonicInput.value = spell.mnemonic;
-  if (descriptionInput) descriptionInput.value = spell.description || '';
-  if (typeSelect) typeSelect.value = spell.spellType;
-  if (targetTypeSelect) targetTypeSelect.value = spell.targetType;
-  if (manaCostInput) manaCostInput.value = String(spell.manaCost);
-  if (isAttackCheckbox) isAttackCheckbox.checked = spell.isAttackSpell;
-
-  // Telegraph
-  const telegraphMessageInput = getElement<HTMLInputElement>('spell-telegraph-message');
-  if (telegraphMessageInput) telegraphMessageInput.value = spell.telegraphMessage || '';
-
-  // Damage/Healing
-  const minDamageInput = getElement<HTMLInputElement>('spell-min-damage');
-  const maxDamageInput = getElement<HTMLInputElement>('spell-max-damage');
-  const minHealingInput = getElement<HTMLInputElement>('spell-min-healing');
-  const maxHealingInput = getElement<HTMLInputElement>('spell-max-healing');
-  const hitsPerCastInput = getElement<HTMLInputElement>('spell-hits-per-cast');
-  if (minDamageInput) minDamageInput.value = String(spell.minDamage || 0);
-  if (maxDamageInput) maxDamageInput.value = String(spell.maxDamage || 0);
-  if (minHealingInput) minHealingInput.value = String(spell.minHealing || 0);
-  if (maxHealingInput) maxHealingInput.value = String(spell.maxHealing || 0);
-  if (hitsPerCastInput) hitsPerCastInput.value = String(spell.hitsPerCast || 1);
-
-  // Effects
-  const statusEffectInput = getElement<HTMLInputElement>('spell-status-effect');
-  const effectDurationInput = getElement<HTMLInputElement>('spell-effect-duration');
-  const saveStatSelect = getElement<HTMLSelectElement>('spell-save-stat');
-  const saveDifficultyInput = getElement<HTMLInputElement>('spell-save-difficulty');
-  if (statusEffectInput) statusEffectInput.value = spell.statusEffect || '';
-  if (effectDurationInput) effectDurationInput.value = String(spell.effectDuration || 0);
-  if (saveStatSelect) saveStatSelect.value = spell.saveStat || 'none';
-  if (saveDifficultyInput) saveDifficultyInput.value = String(spell.saveDifficulty || 0);
-
-  // Scaling
-  const scalingPerLevelInput = getElement<HTMLInputElement>('spell-scaling-per-level');
-  const maxScalingLevelInput = getElement<HTMLInputElement>('spell-max-scaling-level');
-  const castDifficultyInput = getElement<HTMLInputElement>('spell-cast-difficulty');
-  const fizzleMessageInput = getElement<HTMLInputElement>('spell-fizzle-message');
-  if (scalingPerLevelInput) scalingPerLevelInput.value = String((spell.scalingPerLevel ?? 0) * 100);
-  if (maxScalingLevelInput) maxScalingLevelInput.value = String(spell.maxScalingLevel || 0);
-  if (castDifficultyInput) castDifficultyInput.value = String(spell.castDifficulty || 0);
-  if (fizzleMessageInput) fizzleMessageInput.value = spell.fizzleMessage || '';
-
-  // Custom messages
-  const hitMsgSelfInput = getElement<HTMLInputElement>('spell-hit-msg-self');
-  const hitMsgTargetInput = getElement<HTMLInputElement>('spell-hit-msg-target');
-  const hitMsgRoomInput = getElement<HTMLInputElement>('spell-hit-msg-room');
-  if (hitMsgSelfInput) hitMsgSelfInput.value = spell.hitMessageSelf || '';
-  if (hitMsgTargetInput) hitMsgTargetInput.value = spell.hitMessageTarget || '';
-  if (hitMsgRoomInput) hitMsgRoomInput.value = spell.hitMessageRoom || '';
-
-  // Scaling fields
-  const damageScalingStatSelect = getElement<HTMLSelectElement>('spell-damage-scaling-stat');
-  const damageScalingFactorInput = getElement<HTMLInputElement>('spell-damage-scaling-factor');
-  const healingScalingStatSelect = getElement<HTMLSelectElement>('spell-healing-scaling-stat');
-  const healingScalingFactorInput = getElement<HTMLInputElement>('spell-healing-scaling-factor');
-
-  if (damageScalingStatSelect) damageScalingStatSelect.value = spell.damageScalingStat || '';
-  if (damageScalingFactorInput) damageScalingFactorInput.value = spell.damageScalingFactor ? String(Math.round(spell.damageScalingFactor * 100)) : '0';
-  if (healingScalingStatSelect) healingScalingStatSelect.value = spell.healingScalingStat || '';
-  if (healingScalingFactorInput) healingScalingFactorInput.value = spell.healingScalingFactor ? String(Math.round(spell.healingScalingFactor * 100)) : '0';
+  // Effects - messages
+  const hitMsgSelfInput = document.getElementById('spell-hit-msg-self') as HTMLInputElement;
+  const hitMsgTargetInput = document.getElementById('spell-hit-msg-target') as HTMLInputElement;
+  const hitMsgRoomInput = document.getElementById('spell-hit-msg-room') as HTMLInputElement;
 
   // Requirements
-  const levelRequiredInput = getElement<HTMLInputElement>('spell-level-required');
-  const classRestrictionsInput = getElement<HTMLInputElement>('spell-class-restrictions');
+  const levelRequiredInput = document.getElementById('spell-level-required') as HTMLInputElement;
 
-  if (levelRequiredInput) levelRequiredInput.value = String(spell.levelRequired);
-  if (classRestrictionsInput) classRestrictionsInput.value = spell.classRestrictions.join(', ');
+  // Effect type sections
+  const sectionOffensive = document.getElementById('section-offensive') as HTMLDivElement;
+  const sectionHealing = document.getElementById('section-healing') as HTMLDivElement;
+  const sectionStatus = document.getElementById('section-status') as HTMLDivElement;
+  const sectionUtility = document.getElementById('section-utility') as HTMLDivElement;
+  const sectionScaling = document.getElementById('section-scaling') as HTMLDivElement;
 
-  // Update effect sections visibility
-  updateEffectSections(spell.spellType);
+  // ============================================================================
+  // List Panel
+  // ============================================================================
 
-  // Update class quick select buttons
-  updateClassButtons(spell.classRestrictions);
-
-  // Update calculator stat inputs for this spell's scaling config
-  updateCalcStatInputs();
-
-  // Clear previous calculator result
-  const calcResult = document.getElementById('calc-result');
-  if (calcResult) calcResult.innerHTML = '';
-
-  // Update preview
-  updatePreview(spell);
-
-  renderSpellList();
-}
-
-function updateEffectSections(spellType: string): void {
-  const damageSection = getElement<HTMLElement>('damage-section');
-  const healingSection = getElement<HTMLElement>('healing-section');
-  const statusSection = getElement<HTMLElement>('status-section');
-
-  // Show/hide sections based on spell type
-  if (damageSection) {
-    damageSection.style.display = spellType === 'offensive' ? 'block' : 'none';
-  }
-  if (healingSection) {
-    healingSection.style.display = spellType === 'healing' ? 'block' : 'none';
-  }
-  if (statusSection) {
-    statusSection.style.display = ['buff', 'debuff'].includes(spellType) ? 'block' : 'none';
-  }
-}
-
-function updateClassButtons(classRestrictions: string[]): void {
-  document.querySelectorAll('.class-btn').forEach(btn => {
-    const className = (btn as HTMLElement).dataset.class;
-    if (className && classRestrictions.includes(className)) {
-      btn.classList.add('active');
-    } else {
-      btn.classList.remove('active');
-    }
+  const listPanel = new ListPanel<Spell>({
+    listElement: document.getElementById('spell-list')!,
+    searchInput: document.getElementById('search-input') as HTMLInputElement,
+    filterSelect: document.getElementById('type-filter') as HTMLSelectElement,
+    onSelect: (item) => selectSpell(item.id),
+    getId: (item) => item.id,
+    renderItem: (item) => `
+      <div class="spell-name">${escapeHtml(item.name)}</div>
+      <div class="spell-meta">
+        <span class="spell-mnemonic">${escapeHtml(item.mnemonic)}</span>
+        <span class="type-badge ${item.spellType}">${escapeHtml(item.spellType)}</span>
+        <span class="spell-level">Lv ${item.levelRequired}</span>
+      </div>
+    `,
+    filterFn: (item, search) =>
+      item.name.toLowerCase().includes(search) ||
+      item.mnemonic.toLowerCase().includes(search) ||
+      item.description.toLowerCase().includes(search),
+    dropdownFilterFn: (item, value) => item.spellType === value,
+    sortFn: (a, b) => a.levelRequired - b.levelRequired || a.name.localeCompare(b.name),
+    onRender: updateCount,
   });
-}
 
-function updatePreview(spell: Spell): void {
-  const content = document.getElementById('preview-content')!;
+  setupTabs({ container: spellForm });
 
-  const typeColors: Record<string, string> = {
-    offensive: '#ff6b6b',
-    healing: '#4ade80',
-    buff: '#60a5fa',
-    debuff: '#c084fc',
-    utility: '#fbbf24',
-  };
+  // ============================================================================
+  // SearchableSelect for Status Effect
+  // ============================================================================
 
-  let html = `
-    <div class="preview-name">${escapeHtml(spell.name)}</div>
-    <div class="preview-mnemonic">Mnemonic: <code>${escapeHtml(spell.mnemonic)}</code></div>
-    <div class="preview-desc">${escapeHtml(spell.description || 'No description.')}</div>
-    <div class="preview-stats">
-      <span style="color: ${typeColors[spell.spellType] || '#fff'}">${escapeHtml(spell.spellType.toUpperCase())}</span>
-      <span>Target: ${escapeHtml(spell.targetType)}</span>
-    </div>
-    <div class="preview-stats">
-      <span style="color: #60a5fa">${spell.manaCost} Mana</span>
-      <span>Level ${spell.levelRequired}+</span>
-    </div>
-  `;
+  let statusEffectSelect: SearchableSelect;
 
-  // Damage with scaling
-  if (spell.spellType === 'offensive' && spell.minDamage && spell.maxDamage) {
-    let damageInfo = `${spell.minDamage}-${spell.maxDamage}`;
-    if (spell.hitsPerCast > 1) damageInfo += ` x${spell.hitsPerCast} hits`;
-    if (spell.scalingPerLevel) {
-      damageInfo += ` <span style="color: #fbbf24">+${Math.round(spell.scalingPerLevel * 100)}%/lvl</span>`;
-      if (spell.maxScalingLevel) {
-        damageInfo += ` <span style="color: #f97316">(cap lvl ${spell.maxScalingLevel})</span>`;
-      }
+  function getEffectOptions(categoryFilter?: string): SelectOption[] {
+    let filtered = statusEffects;
+    if (categoryFilter) {
+      filtered = filtered.filter(e => e.category === categoryFilter);
     }
-    if (spell.damageScalingStat && spell.damageScalingStat !== 'none' && spell.damageScalingFactor) {
-      const pct = Math.round(spell.damageScalingFactor * 1000);
-      damageInfo += ` <span style="color: #60a5fa">+${pct / 10}%/10 ${escapeHtml(spell.damageScalingStat.toUpperCase())}</span>`;
-    }
-    html += `
-      <div class="preview-section">
-        <div class="preview-section-title">Damage</div>
-        <div>${damageInfo}</div>
-      </div>
-    `;
+    return [
+      { value: '', label: '(None)', detail: 'No status effect' },
+      ...filtered.map(e => ({
+        value: e.id,
+        label: e.name,
+        group: e.category,
+        detail: e.id,
+      })),
+    ];
   }
 
-  // Healing with scaling
-  if (spell.spellType === 'healing' && spell.minHealing && spell.maxHealing) {
-    let healingInfo = `${spell.minHealing}-${spell.maxHealing}`;
-    if (spell.scalingPerLevel) {
-      healingInfo += ` <span style="color: #fbbf24">+${Math.round(spell.scalingPerLevel * 100)}%/lvl</span>`;
-      if (spell.maxScalingLevel) {
-        healingInfo += ` <span style="color: #f97316">(cap lvl ${spell.maxScalingLevel})</span>`;
-      }
-    }
-    if (spell.healingScalingStat && spell.healingScalingStat !== 'none' && spell.healingScalingFactor) {
-      const pct = Math.round(spell.healingScalingFactor * 1000);
-      healingInfo += ` <span style="color: #4ade80">+${pct / 10}%/10 ${escapeHtml(spell.healingScalingStat.toUpperCase())}</span>`;
-    }
-    html += `
-      <div class="preview-section">
-        <div class="preview-section-title">Healing</div>
-        <div>${healingInfo}</div>
-      </div>
-    `;
-  }
-
-  // Status effect
-  if (spell.statusEffect) {
-    html += `
-      <div class="preview-section">
-        <div class="preview-section-title">Status Effect</div>
-        <div>${escapeHtml(spell.statusEffect)}${spell.effectDuration ? ` (${spell.effectDuration}s)` : ''}</div>
-      </div>
-    `;
-
-    if (spell.saveStat && spell.saveStat !== 'none') {
-      html += `
-        <div class="preview-section">
-          <div class="preview-section-title">Saving Throw</div>
-          <div>${escapeHtml(spell.saveStat.toUpperCase())} DC ${spell.saveDifficulty}</div>
-        </div>
-      `;
-    }
-  }
-
-  // Telegraph
-  if (spell.telegraphMessage) {
-    html += `
-      <div class="preview-section">
-        <div class="preview-section-title">Telegraph</div>
-        <div style="font-style: italic; font-size: 0.9em; opacity: 0.8;">${escapeHtml(spell.telegraphMessage).replace('{name}', 'Caster')}</div>
-      </div>
-    `;
-  }
-
-  // Flags
-  const flags = [];
-  if (spell.isAttackSpell) flags.push('Attack Spell');
-  if (flags.length > 0) {
-    html += `
-      <div class="preview-section">
-        <div class="preview-section-title">Flags</div>
-        <div>${flags.join(', ')}</div>
-      </div>
-    `;
-  }
-
-  // Class restrictions
-  if (spell.classRestrictions.length > 0) {
-    html += `
-      <div class="preview-section">
-        <div class="preview-section-title">Classes</div>
-        <div>${spell.classRestrictions.join(', ')}</div>
-      </div>
-    `;
-  } else {
-    html += `
-      <div class="preview-section">
-        <div class="preview-section-title">Classes</div>
-        <div>All Classes</div>
-      </div>
-    `;
-  }
-
-  content.innerHTML = html;
-}
-
-// ============================================================================
-// CRUD Operations
-// ============================================================================
-
-async function createSpell(): Promise<void> {
-  const name = prompt('Enter spell name:');
-  if (!name) return;
-
-  const mnemonic = prompt('Enter mnemonic (short command, 2-10 chars):');
-  if (!mnemonic || mnemonic.length < 2 || mnemonic.length > 10) {
-    showToast('Mnemonic must be 2-10 characters', 'warning');
-    return;
-  }
-
-  try {
-    const response = await fetch('/api/spells', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        name,
-        mnemonic: mnemonic.toLowerCase(),
-        spellType: 'offensive',
-        targetType: 'enemy',
-        manaCost: 5,
-        levelRequired: 1,
-        isAttackSpell: false,
-      }),
+  function initStatusEffectSelect(): void {
+    statusEffectSelect = new SearchableSelect({
+      container: document.getElementById('status-effect-select-container')!,
+      placeholder: 'Search effects...',
+      options: getEffectOptions(),
+      onChange: () => {},
     });
 
-    if (!response.ok) {
-      const data = await response.json();
-      showToast(`Failed to create spell: ${data.message || 'HTTP ' + response.status}`, 'error');
+    document.getElementById('effect-category-filter')?.addEventListener('change', (e) => {
+      const filter = (e.target as HTMLSelectElement).value;
+      const currentValue = statusEffectSelect.getValue();
+      statusEffectSelect.setOptions(getEffectOptions(filter || undefined));
+      if (currentValue) statusEffectSelect.setValue(currentValue);
+    });
+  }
+
+  // ============================================================================
+  // API
+  // ============================================================================
+
+  async function fetchSpells(): Promise<void> {
+    try {
+      const res = await fetch('/api/spells', { credentials: 'include' });
+      if (!res.ok) {
+        showToast('Failed to load spells', 'error');
+        return;
+      }
+      const data = await res.json();
+      if (data.success) {
+        spells = data.spells || [];
+        listPanel.setItems(spells);
+        listPanel.setSelected(selectedSpellId);
+      } else {
+        showToast('Failed to load spells', 'error');
+      }
+    } catch (error) {
+      console.error('Failed to fetch spells:', error);
+      showToast('Failed to load spells', 'error');
+    }
+  }
+
+  async function fetchClasses(): Promise<void> {
+    try {
+      const res = await fetch('/api/progression/classes', { credentials: 'include' });
+      const data = await res.json();
+      if (data.success) {
+        classDefs = (data.classes || []).map((c: Record<string, unknown>) => ({
+          id: (c.class_id || c.id) as string,
+          displayName: (c.display_name || c.displayName || c.class_id || c.id) as string,
+        }));
+      }
+    } catch (error) {
+      console.error('Failed to fetch classes:', error);
+      showToast('Failed to load classes', 'error');
+    }
+  }
+
+  async function fetchNpcTemplates(): Promise<void> {
+    try {
+      const res = await fetch('/api/npcs', { credentials: 'include' });
+      const data = await res.json();
+      if (data.success) {
+        npcTemplates = data.templates || [];
+      }
+    } catch (error) {
+      console.error('Failed to fetch NPCs:', error);
+      showToast('Failed to load NPCs', 'error');
+    }
+  }
+
+  async function fetchStatusEffects(): Promise<void> {
+    try {
+      const res = await fetch('/api/status-effects', { credentials: 'include' });
+      const data = await res.json();
+      if (data.success) {
+        statusEffects = (data.definitions || []).map((e: Record<string, unknown>) => ({
+          id: e.id as string,
+          name: e.name as string,
+          category: e.category as string,
+        }));
+      }
+    } catch (error) {
+      console.error('Failed to fetch status effects:', error);
+      showToast('Failed to load status effects', 'error');
+    }
+  }
+
+  // ============================================================================
+  // Selection
+  // ============================================================================
+
+  function selectSpell(id: number): void {
+    const spell = spells.find(s => s.id === id);
+    if (!spell) return;
+
+    selectedSpellId = id;
+    noSpellSelected.style.display = 'none';
+    spellForm.style.display = 'block';
+    formTitle.textContent = 'Edit Spell';
+    idDisplay.textContent = `ID: ${spell.id}`;
+
+    // Basic
+    nameInput.value = spell.name;
+    mnemonicInput.value = spell.mnemonic;
+    descriptionInput.value = spell.description || '';
+    spellTypeSelect.value = spell.spellType;
+    targetTypeSelect.value = spell.targetType;
+    manaCostInput.value = String(spell.manaCost);
+    castDifficultyInput.value = String(spell.castDifficulty || 0);
+    fizzleMessageInput.value = spell.fizzleMessage || '';
+    telegraphInput.value = spell.telegraphMessage || '';
+
+    // Offensive
+    minDamageInput.value = String(spell.minDamage ?? 0);
+    maxDamageInput.value = String(spell.maxDamage ?? 0);
+    hitsPerCastInput.value = String(spell.hitsPerCast ?? 1);
+    dmgScalingStatSelect.value = spell.damageScalingStat || 'none';
+    dmgScalingFactorInput.value = String((spell.damageScalingFactor ?? 0) * 100);
+
+    // Healing
+    minHealingInput.value = String(spell.minHealing ?? 0);
+    maxHealingInput.value = String(spell.maxHealing ?? 0);
+    healScalingStatSelect.value = spell.healingScalingStat || 'none';
+    healScalingFactorInput.value = String((spell.healingScalingFactor ?? 0) * 100);
+
+    // Status effect
+    const categoryFilter = document.getElementById('effect-category-filter') as HTMLSelectElement;
+    if (categoryFilter) {
+      categoryFilter.value = '';
+      statusEffectSelect.setOptions(getEffectOptions());
+    }
+    statusEffectSelect.setValue(spell.statusEffect || '');
+    effectDurationInput.value = String(spell.effectDuration ?? 0);
+    saveStatSelect.value = spell.saveStat || 'none';
+    saveDifficultyInput.value = String(spell.saveDifficulty || 0);
+
+    // Scaling
+    scalingPerLevelInput.value = String((spell.scalingPerLevel ?? 0) * 100);
+    maxScalingLevelInput.value = String(spell.maxScalingLevel ?? 0);
+
+    // Messages
+    hitMsgSelfInput.value = spell.hitMessageSelf || '';
+    hitMsgTargetInput.value = spell.hitMessageTarget || '';
+    hitMsgRoomInput.value = spell.hitMessageRoom || '';
+
+    // Requirements
+    levelRequiredInput.value = String(spell.levelRequired);
+    selectedClasses = new Set(
+      (spell.classRestrictions || [])
+        .filter(c => c && c.trim())
+        .map(c => {
+          // Normalize: if a class_id matches (case-insensitive), use the canonical class_id
+          const match = classDefs.find(cd => cd.id.toLowerCase() === c.toLowerCase());
+          return match ? match.id : c;
+        })
+    );
+    renderClassButtons();
+
+    // Update UI
+    updateEffectSections(spell.spellType);
+    listPanel.setSelected(id);
+    updatePreview(spell);
+    updateNpcReferences(id);
+  }
+
+  function clearForm(): void {
+    selectedSpellId = null;
+    noSpellSelected.style.display = 'flex';
+    spellForm.style.display = 'none';
+    idDisplay.textContent = '';
+    previewContent.innerHTML = '<p class="hint">Select a spell to see preview</p>';
+    npcRefContent.innerHTML = '<p class="hint">Select a spell to see NPC references</p>';
+    listPanel.setSelected(null);
+  }
+
+  // ============================================================================
+  // Effect Section Visibility
+  // ============================================================================
+
+  function updateEffectSections(spellType: string): void {
+    sectionOffensive.style.display = spellType === 'offensive' ? 'block' : 'none';
+    sectionHealing.style.display = spellType === 'healing' ? 'block' : 'none';
+    sectionUtility.style.display = spellType === 'utility' ? 'block' : 'none';
+
+    // Status effect shown for buff, debuff, and offensive (secondary effect)
+    const showStatus = ['buff', 'debuff', 'offensive'].includes(spellType);
+    sectionStatus.style.display = showStatus ? 'block' : 'none';
+
+    // Save difficulty only for debuffs
+    saveDifficultyRow.style.display = spellType === 'debuff' ? 'flex' : 'none';
+
+    // Scaling shown for offensive and healing
+    const showScaling = ['offensive', 'healing'].includes(spellType);
+    sectionScaling.style.display = showScaling ? 'block' : 'none';
+  }
+
+  // ============================================================================
+  // Class Buttons
+  // ============================================================================
+
+  function renderClassButtons(): void {
+    classButtonsContainer.innerHTML = '';
+    for (const cls of classDefs) {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = `class-btn${selectedClasses.has(cls.id) ? ' selected' : ''}`;
+      btn.textContent = cls.displayName;
+      btn.addEventListener('click', () => {
+        if (selectedClasses.has(cls.id)) {
+          selectedClasses.delete(cls.id);
+          btn.classList.remove('selected');
+        } else {
+          selectedClasses.add(cls.id);
+          btn.classList.add('selected');
+        }
+      });
+      classButtonsContainer.appendChild(btn);
+    }
+  }
+
+  // ============================================================================
+  // Gather Form Data
+  // ============================================================================
+
+  function gatherFormData(): Partial<Spell> {
+    const scalingPerLevel = parseFloat(scalingPerLevelInput.value) || 0;
+    const dmgFactor = parseFloat(dmgScalingFactorInput.value) || 0;
+    const healFactor = parseFloat(healScalingFactorInput.value) || 0;
+    const statusEffect = statusEffectSelect.getValue();
+
+    return {
+      name: nameInput.value.trim(),
+      mnemonic: mnemonicInput.value.trim().toLowerCase(),
+      description: descriptionInput.value.trim(),
+      spellType: spellTypeSelect.value as SpellType,
+      targetType: targetTypeSelect.value as SpellTargetType,
+      manaCost: parseInt(manaCostInput.value) || 0,
+      castDifficulty: parseInt(castDifficultyInput.value) || 0,
+      fizzleMessage: fizzleMessageInput.value.trim() || null,
+      telegraphMessage: telegraphInput.value.trim() || null,
+      minDamage: Number.isFinite(parseInt(minDamageInput.value)) ? parseInt(minDamageInput.value) : null,
+      maxDamage: Number.isFinite(parseInt(maxDamageInput.value)) ? parseInt(maxDamageInput.value) : null,
+      hitsPerCast: parseInt(hitsPerCastInput.value) || 1,
+      damageScalingStat: (dmgScalingStatSelect.value === 'none' ? null : dmgScalingStatSelect.value) as SpellScalingStat | null,
+      damageScalingFactor: dmgFactor ? parseFloat((dmgFactor / 100).toFixed(4)) : null,
+      minHealing: Number.isFinite(parseInt(minHealingInput.value)) ? parseInt(minHealingInput.value) : null,
+      maxHealing: Number.isFinite(parseInt(maxHealingInput.value)) ? parseInt(maxHealingInput.value) : null,
+      healingScalingStat: (healScalingStatSelect.value === 'none' ? null : healScalingStatSelect.value) as SpellScalingStat | null,
+      healingScalingFactor: healFactor ? parseFloat((healFactor / 100).toFixed(4)) : null,
+      statusEffect: statusEffect || null,
+      effectDuration: parseInt(effectDurationInput.value) || null,
+      saveStat: (saveStatSelect.value === 'none' ? null : saveStatSelect.value) as SpellScalingStat | null,
+      saveDifficulty: parseInt(saveDifficultyInput.value) || 0,
+      scalingPerLevel: scalingPerLevel ? parseFloat((scalingPerLevel / 100).toFixed(4)) : null,
+      maxScalingLevel: parseInt(maxScalingLevelInput.value) || null,
+      hitMessageSelf: hitMsgSelfInput.value.trim() || null,
+      hitMessageTarget: hitMsgTargetInput.value.trim() || null,
+      hitMessageRoom: hitMsgRoomInput.value.trim() || null,
+      levelRequired: parseInt(levelRequiredInput.value) || 1,
+      classRestrictions: [...new Set(Array.from(selectedClasses).filter(c => c && c.trim()))],
+      isAttackSpell: spellTypeSelect.value === 'offensive',
+    };
+  }
+
+  // ============================================================================
+  // Preview
+  // ============================================================================
+
+  function updatePreview(spell: Spell): void {
+    let html = `
+      <div class="preview-name">${escapeHtml(spell.name)}</div>
+      <div class="preview-mnemonic">${escapeHtml(spell.mnemonic)}</div>
+      ${spell.description ? `<div class="preview-desc">${escapeHtml(spell.description)}</div>` : ''}
+      <div class="preview-badges">
+        <span class="type-badge ${spell.spellType}">${escapeHtml(spell.spellType)}</span>
+        <span class="type-badge" style="background:#1a1a2e;color:#888;">${escapeHtml(spell.targetType)}</span>
+      </div>
+    `;
+
+    // Core stats
+    html += `<div class="preview-stat"><span class="label">Mana:</span> ${spell.manaCost}</div>`;
+    html += `<div class="preview-stat"><span class="label">Level:</span> ${spell.levelRequired}</div>`;
+    if (spell.castDifficulty) {
+      html += `<div class="preview-stat"><span class="label">Cast Difficulty:</span> ${spell.castDifficulty}</div>`;
+    }
+
+    // Damage
+    if (spell.minDamage != null && spell.maxDamage != null) {
+      html += `<div class="preview-section"><div class="preview-section-title">Damage</div>`;
+      html += `<div class="preview-stat">${spell.minDamage}-${spell.maxDamage}`;
+      if (spell.hitsPerCast > 1) html += ` x${spell.hitsPerCast} hits`;
+      html += `</div>`;
+      if (spell.damageScalingStat && spell.damageScalingStat !== 'none' && spell.damageScalingFactor) {
+        html += `<div class="preview-stat"><span class="label">Scales:</span> ${((spell.damageScalingFactor) * 100).toFixed(1)}% of ${spell.damageScalingStat}</div>`;
+      }
+      html += `</div>`;
+    }
+
+    // Healing
+    if (spell.minHealing != null && spell.maxHealing != null) {
+      html += `<div class="preview-section"><div class="preview-section-title">Healing</div>`;
+      html += `<div class="preview-stat">${spell.minHealing}-${spell.maxHealing}</div>`;
+      if (spell.healingScalingStat && spell.healingScalingStat !== 'none' && spell.healingScalingFactor) {
+        html += `<div class="preview-stat"><span class="label">Scales:</span> ${((spell.healingScalingFactor) * 100).toFixed(1)}% of ${spell.healingScalingStat}</div>`;
+      }
+      html += `</div>`;
+    }
+
+    // Level scaling
+    if (spell.scalingPerLevel) {
+      html += `<div class="preview-section"><div class="preview-section-title">Level Scaling</div>`;
+      html += `<div class="preview-stat">+${(spell.scalingPerLevel * 100).toFixed(1)}% per level`;
+      if (spell.maxScalingLevel) html += ` (cap: Lv ${spell.maxScalingLevel})`;
+      html += `</div></div>`;
+    }
+
+    // Status effect
+    if (spell.statusEffect) {
+      const eff = statusEffects.find(e => e.id === spell.statusEffect);
+      html += `<div class="preview-section"><div class="preview-section-title">Status Effect</div>`;
+      html += `<div class="preview-stat">${escapeHtml(eff?.name || spell.statusEffect)}`;
+      if (spell.effectDuration) html += ` (${spell.effectDuration}s)`;
+      html += `</div>`;
+      if (spell.saveStat && spell.saveStat !== 'none') {
+        html += `<div class="preview-stat"><span class="label">Save:</span> ${spell.saveStat} DC ${spell.saveDifficulty || 0}</div>`;
+      }
+      html += `</div>`;
+    }
+
+    // Telegraph
+    if (spell.telegraphMessage) {
+      html += `<div class="preview-section"><div class="preview-section-title">Telegraph</div>`;
+      html += `<div class="preview-message">"${escapeHtml(spell.telegraphMessage)}"</div></div>`;
+    }
+
+    // Requirements
+    const reqParts: string[] = [];
+    if (spell.levelRequired > 1) reqParts.push(`Level ${spell.levelRequired}`);
+    if (spell.classRestrictions && spell.classRestrictions.length > 0) {
+      const names = spell.classRestrictions.map(id => {
+        const cls = classDefs.find(c => c.id === id);
+        return cls?.displayName || id;
+      });
+      reqParts.push(names.map(n => escapeHtml(n)).join(', '));
+    }
+    if (reqParts.length > 0) {
+      html += `<div class="preview-section"><div class="preview-section-title">Requirements</div>`;
+      html += `<div class="preview-stat">${reqParts.join(' · ')}</div></div>`;
+    }
+
+    previewContent.innerHTML = html;
+  }
+
+  function updateNpcReferences(spellId: number): void {
+    const refs = npcTemplates
+      .filter(n => n.spells?.some(s => s.spellId === spellId))
+      .sort((a, b) => a.name.localeCompare(b.name));
+
+    if (refs.length === 0) {
+      npcRefContent.innerHTML = '<p class="no-refs">No NPCs cast this spell</p>';
       return;
     }
-    const data = await response.json();
-    if (data.success) {
-      spells.push(data.spell);
-      selectSpell(data.spell.id);
-    } else {
-      showToast('Failed to create spell: ' + data.message, 'error');
-    }
-  } catch (error) {
-    console.error('Failed to create spell:', error);
-    showToast('Failed to create spell', 'error');
-  }
-}
 
-async function saveSpell(): Promise<void> {
-  if (!selectedSpellId) return;
-
-  const spellData = gatherFormData();
-
-  try {
-    const response = await fetch(`/api/spells/${selectedSpellId}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(spellData),
-    });
-
-    const data = await response.json();
-    if (data.success) {
-      const index = spells.findIndex(s => s.id === selectedSpellId);
-      if (index !== -1) {
-        spells[index] = data.spell;
-      }
-      selectSpell(selectedSpellId);
-      showToast('Spell saved successfully!', 'success');
-    } else {
-      showToast('Failed to save spell: ' + data.message, 'error');
-    }
-  } catch (error) {
-    console.error('Failed to save spell:', error);
-    showToast('Failed to save spell', 'error');
-  }
-}
-
-async function deleteSpell(): Promise<void> {
-  if (!selectedSpellId) return;
-
-  const spell = spells.find(s => s.id === selectedSpellId);
-  if (!confirm(`Are you sure you want to delete "${spell?.name}"?`)) return;
-
-  try {
-    const response = await fetch(`/api/spells/${selectedSpellId}`, {
-      method: 'DELETE',
-    });
-
-    const data = await response.json();
-    if (data.success) {
-      spells = spells.filter(s => s.id !== selectedSpellId);
-      selectedSpellId = null;
-      document.getElementById('no-spell-selected')!.style.display = 'flex';
-      document.getElementById('spell-form')!.style.display = 'none';
-      document.getElementById('preview-content')!.innerHTML = '<p class="hint">Select a spell to see preview</p>';
-      renderSpellList();
-    } else {
-      showToast('Failed to delete spell: ' + data.message, 'error');
-    }
-  } catch (error) {
-    console.error('Failed to delete spell:', error);
-    showToast('Failed to delete spell', 'error');
-  }
-}
-
-async function duplicateSpell(): Promise<void> {
-  if (!selectedSpellId) return;
-
-  const spell = spells.find(s => s.id === selectedSpellId);
-  if (!spell) return;
-
-  const newName = prompt('Enter name for duplicate:', spell.name + ' (copy)');
-  if (!newName) return;
-
-  const newMnemonic = prompt('Enter mnemonic for duplicate:', spell.mnemonic + '2');
-  if (!newMnemonic || newMnemonic.length < 2 || newMnemonic.length > 10) {
-    showToast('Mnemonic must be 2-10 characters', 'warning');
-    return;
+    npcRefContent.innerHTML = `<ul class="npc-ref-list">${refs.map(n => `
+      <li>
+        <span class="npc-ref-name">${escapeHtml(n.name)}</span>
+        <span class="npc-ref-level">Lv ${n.level}</span>
+      </li>
+    `).join('')}</ul>`;
   }
 
-  const duplicateData = { ...gatherFormData(), name: newName, mnemonic: newMnemonic.toLowerCase() };
+  // ============================================================================
+  // CRUD
+  // ============================================================================
 
-  try {
-    const response = await fetch('/api/spells', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(duplicateData),
-    });
+  async function saveSpell(spellData: Partial<Spell>, forceNew = false): Promise<Spell | null> {
+    try {
+      const isNew = forceNew || !selectedSpellId;
+      const url = isNew ? '/api/spells' : `/api/spells/${selectedSpellId}`;
+      const method = isNew ? 'POST' : 'PUT';
 
-    const data = await response.json();
-    if (data.success) {
-      spells.push(data.spell);
-      selectSpell(data.spell.id);
-    } else {
-      showToast('Failed to duplicate spell: ' + data.message, 'error');
-    }
-  } catch (error) {
-    console.error('Failed to duplicate spell:', error);
-    showToast('Failed to duplicate spell', 'error');
-  }
-}
-
-function gatherFormData(): Partial<Spell> {
-  const classRestrictionsStr = (document.getElementById('spell-class-restrictions') as HTMLInputElement).value;
-  const classRestrictions = classRestrictionsStr
-    .split(',')
-    .map(c => c.trim())
-    .filter(c => c);
-
-  // Parse scaling values - convert percentage to decimal
-  const damageScalingStat = getElement<HTMLSelectElement>('spell-damage-scaling-stat')?.value || null;
-  const damageScalingFactorPct = parseFloat(getElement<HTMLInputElement>('spell-damage-scaling-factor')?.value || '0') || 0;
-  const healingScalingStat = getElement<HTMLSelectElement>('spell-healing-scaling-stat')?.value || null;
-  const healingScalingFactorPct = parseFloat(getElement<HTMLInputElement>('spell-healing-scaling-factor')?.value || '0') || 0;
-  const scalingPerLevelPct = parseFloat(getElement<HTMLInputElement>('spell-scaling-per-level')?.value || '0') || 0;
-
-  return {
-    name: (document.getElementById('spell-name') as HTMLInputElement).value,
-    mnemonic: (document.getElementById('spell-mnemonic') as HTMLInputElement).value.toLowerCase(),
-    description: (document.getElementById('spell-description') as HTMLTextAreaElement).value || '',
-    spellType: (document.getElementById('spell-type') as HTMLSelectElement).value as SpellType,
-    targetType: (document.getElementById('spell-target-type') as HTMLSelectElement).value as SpellTargetType,
-    manaCost: parseInt((document.getElementById('spell-mana-cost') as HTMLInputElement).value) || 0,
-    isAttackSpell: (document.getElementById('spell-is-attack') as HTMLInputElement).checked,
-    minDamage: (document.getElementById('spell-min-damage') as HTMLInputElement).value ? parseInt((document.getElementById('spell-min-damage') as HTMLInputElement).value) : null,
-    maxDamage: (document.getElementById('spell-max-damage') as HTMLInputElement).value ? parseInt((document.getElementById('spell-max-damage') as HTMLInputElement).value) : null,
-    minHealing: (document.getElementById('spell-min-healing') as HTMLInputElement).value ? parseInt((document.getElementById('spell-min-healing') as HTMLInputElement).value) : null,
-    maxHealing: (document.getElementById('spell-max-healing') as HTMLInputElement).value ? parseInt((document.getElementById('spell-max-healing') as HTMLInputElement).value) : null,
-    hitsPerCast: parseInt((document.getElementById('spell-hits-per-cast') as HTMLInputElement).value) || 1,
-    statusEffect: (document.getElementById('spell-status-effect') as HTMLInputElement).value || null,
-    effectDuration: parseInt((document.getElementById('spell-effect-duration') as HTMLInputElement).value) || null,
-    scalingPerLevel: scalingPerLevelPct > 0 ? scalingPerLevelPct / 100 : null,
-    maxScalingLevel: parseInt(getElement<HTMLInputElement>('spell-max-scaling-level')?.value || '0') || null,
-    damageScalingStat: damageScalingStat as SpellScalingStat | null,
-    damageScalingFactor: damageScalingFactorPct > 0 ? damageScalingFactorPct / 100 : null,
-    healingScalingStat: healingScalingStat as SpellScalingStat | null,
-    healingScalingFactor: healingScalingFactorPct > 0 ? healingScalingFactorPct / 100 : null,
-    castDifficulty: parseInt((document.getElementById('spell-cast-difficulty') as HTMLInputElement).value) || 0,
-    fizzleMessage: (document.getElementById('spell-fizzle-message') as HTMLInputElement)?.value || null,
-    hitMessageSelf: (document.getElementById('spell-hit-msg-self') as HTMLInputElement)?.value || null,
-    hitMessageTarget: (document.getElementById('spell-hit-msg-target') as HTMLInputElement)?.value || null,
-    hitMessageRoom: (document.getElementById('spell-hit-msg-room') as HTMLInputElement)?.value || null,
-    telegraphMessage: (document.getElementById('spell-telegraph-message') as HTMLInputElement).value || null,
-    saveStat: (document.getElementById('spell-save-stat') as HTMLSelectElement).value as SpellScalingStat | null,
-    saveDifficulty: parseInt((document.getElementById('spell-save-difficulty') as HTMLInputElement).value) || 0,
-    levelRequired: parseInt((document.getElementById('spell-level-required') as HTMLInputElement).value) || 1,
-    classRestrictions,
-  };
-}
-
-// ============================================================================
-// Import/Export
-// ============================================================================
-
-async function exportSpells(): Promise<void> {
-  try {
-    const response = await fetch('/api/spells/export/all');
-    if (!response.ok) throw new Error('Failed to fetch spells');
-    const blob = await response.blob();
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'spells_export.json';
-    a.click();
-    URL.revokeObjectURL(url);
-  } catch (error) {
-    console.error('Failed to export spells:', error);
-    showToast('Failed to export spells', 'error');
-  }
-}
-
-function showImportModal(): void {
-  document.getElementById('import-modal')!.style.display = 'flex';
-}
-
-function hideImportModal(): void {
-  document.getElementById('import-modal')!.style.display = 'none';
-}
-
-async function doImport(): Promise<void> {
-  const fileInput = document.getElementById('import-file') as HTMLInputElement;
-  const merge = (document.getElementById('import-merge') as HTMLInputElement).checked;
-
-  if (!fileInput.files || fileInput.files.length === 0) {
-    showToast('Please select a file', 'warning');
-    return;
-  }
-
-  try {
-    const file = fileInput.files[0];
-    const text = await file.text();
-    const data = JSON.parse(text);
-
-    const response = await fetch('/api/spells/import', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ spells: data.spells, merge }),
-    });
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-
-    const result = await response.json();
-    if (result.success) {
-      showToast(`Import complete! Created: ${result.results.created}, Updated: ${result.results.updated}, Errors: ${result.results.errors.length}`, 'success', 4000);
-      hideImportModal();
-      await fetchSpells();
-    } else {
-      showToast('Import failed: ' + result.message, 'error');
-    }
-  } catch (error) {
-    console.error('Failed to import:', error);
-    const errorMessage = error instanceof SyntaxError
-      ? 'Failed to import: Invalid JSON file format'
-      : 'Failed to import: ' + (error instanceof Error ? error.message : 'Unknown error');
-    showToast(errorMessage, 'error');
-  }
-}
-
-// ============================================================================
-// Utility
-// ============================================================================
-
-function escapeHtml(text: string): string {
-  const div = document.createElement('div');
-  div.textContent = text;
-  return div.innerHTML;
-}
-
-// ============================================================================
-// Tab Handling
-// ============================================================================
-
-function setupTabs(): void {
-  document.querySelectorAll('.tab-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const tabName = (btn as HTMLElement).dataset.tab;
-      if (!tabName) return;
-
-      // Update button states
-      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-
-      // Update content visibility
-      document.querySelectorAll('.tab-content').forEach(content => {
-        content.classList.remove('active');
-      });
-      const tabContent = document.getElementById(`tab-${tabName}`);
-      if (tabContent) tabContent.classList.add('active');
-    });
-  });
-}
-
-// ============================================================================
-// Class Quick Select
-// ============================================================================
-
-function setupClassButtons(): void {
-  document.querySelectorAll('.class-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const className = (btn as HTMLElement).dataset.class;
-      if (!className) return;
-
-      btn.classList.toggle('active');
-
-      // Update the input field
-      const activeClasses: string[] = [];
-      document.querySelectorAll('.class-btn.active').forEach(activeBtn => {
-        const cls = (activeBtn as HTMLElement).dataset.class;
-        if (cls) activeClasses.push(cls);
+      const res = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(spellData),
       });
 
-      const input = document.getElementById('spell-class-restrictions') as HTMLInputElement;
-      if (input) {
-        input.value = activeClasses.join(', ');
-      }
-    });
-  });
-
-  // Sync input to buttons when typing
-  const input = document.getElementById('spell-class-restrictions') as HTMLInputElement;
-  if (input) {
-    input.addEventListener('input', () => {
-      const classes = input.value.split(',').map(c => c.trim()).filter(c => c);
-      updateClassButtons(classes);
-    });
-  }
-}
-
-// ============================================================================
-// Initialize
-// ============================================================================
-
-document.addEventListener('DOMContentLoaded', async () => {
-  const hasAccess = await checkAuth();
-  if (!hasAccess) return;
-
-  await fetchSpells();
-  setupTabs();
-  setupClassButtons();
-
-  // Helper to safely add event listeners
-  const addListener = (id: string, event: string, handler: EventListener) => {
-    const el = document.getElementById(id);
-    if (el) el.addEventListener(event, handler);
-    else console.warn(`Element #${id} not found for event listener`);
-  };
-
-  // Event listeners
-  addListener('new-spell-btn', 'click', createSpell);
-  addListener('spell-form', 'submit', (e) => {
-    e.preventDefault();
-    saveSpell();
-  });
-  addListener('delete-spell-btn', 'click', deleteSpell);
-  addListener('duplicate-spell-btn', 'click', duplicateSpell);
-
-  // Filters
-  addListener('type-select', 'change', renderSpellList);
-  addListener('search-input', 'input', renderSpellList);
-
-  // Type change handler - update effect sections
-  addListener('spell-type', 'change', (e) => {
-    updateEffectSections((e.target as HTMLSelectElement).value);
-  });
-
-  // Import/Export
-  addListener('import-btn', 'click', showImportModal);
-  addListener('export-btn', 'click', exportSpells);
-  addListener('close-import-modal', 'click', hideImportModal);
-  addListener('do-import-btn', 'click', doImport);
-  addListener('import-modal', 'click', (e) => {
-    if (e.target === e.currentTarget) hideImportModal();
-  });
-
-  // Update calculator inputs when scaling stat dropdowns change
-  document.getElementById('spell-damage-scaling-stat')?.addEventListener('change', updateCalcStatInputs);
-  document.getElementById('spell-healing-scaling-stat')?.addEventListener('change', updateCalcStatInputs);
-
-  // Scaling calculator
-  addListener('calc-btn', 'click', () => {
-    const resultDiv = document.getElementById('calc-result');
-    if (!resultDiv) return;
-    if (!selectedSpellId) { resultDiv.textContent = 'Select a spell first.'; return; }
-
-    // Read current form values, not saved data
-    const spell = gatherFormData();
-    const level = parseInt((document.getElementById('calc-level') as HTMLInputElement).value) || 1;
-
-    const scalingPerLevel = spell.scalingPerLevel ?? 0;
-    const maxScalingLevel = spell.maxScalingLevel ?? 0;
-    const effectiveLevel = (maxScalingLevel > 0) ? Math.min(level, maxScalingLevel) : level;
-    const levelMult = 1 + effectiveLevel * scalingPerLevel;
-
-    const lines: string[] = [];
-
-    // Damage calculation
-    const minDmg = spell.minDamage ?? 0;
-    const maxDmg = spell.maxDamage ?? 0;
-    if (minDmg > 0 || maxDmg > 0) {
-      const dmgStat = spell.damageScalingStat || 'none';
-      const dmgStatValue = dmgStat !== 'none'
-        ? parseInt((document.getElementById(`calc-stat-${dmgStat}`) as HTMLInputElement)?.value || '0') || 0
-        : 0;
-      const dmgStatFactor = spell.damageScalingFactor ?? 0;
-      const dmgStatTiers = Math.floor(dmgStatValue / 10);
-      const dmgStatMult = (dmgStatFactor > 0 && dmgStatValue > 0) ? 1 + dmgStatTiers * dmgStatFactor : 1;
-
-      const scaledMin = Math.max(1, Math.floor(minDmg * levelMult * dmgStatMult));
-      const scaledMax = Math.max(1, Math.floor(maxDmg * levelMult * dmgStatMult));
-      const hits = spell.hitsPerCast || 1;
-
-      lines.push('<strong>Damage</strong>');
-      lines.push(`  Base: ${minDmg} - ${maxDmg}`);
-      if (scalingPerLevel > 0) {
-        lines.push(`  Level ${effectiveLevel} scaling: x${levelMult.toFixed(2)}${maxScalingLevel > 0 && level > maxScalingLevel ? ` (capped from lvl ${level})` : ''}`);
-      }
-      if (dmgStatFactor > 0 && dmgStatValue > 0) {
-        lines.push(`  ${capitalize(dmgStat)} ${dmgStatValue} scaling: x${dmgStatMult.toFixed(2)}`);
-      }
-      if (hits > 1) {
-        lines.push(`  Per hit: ${scaledMin} - ${scaledMax}`);
-        lines.push(`  Total (x${hits}): ${scaledMin * hits} - ${scaledMax * hits}`);
+      const data = await res.json();
+      if (data.success) {
+        showToast(isNew ? 'Spell created' : 'Spell saved', 'success');
+        await fetchSpells();
+        return data.spell;
       } else {
-        lines.push(`  <strong>Final: ${scaledMin} - ${scaledMax}</strong>`);
+        showToast(data.message || 'Failed to save spell', 'error');
+        return null;
       }
+    } catch (error) {
+      console.error('Failed to save spell:', error);
+      showToast('Failed to save spell', 'error');
+      return null;
+    }
+  }
+
+  async function deleteSpell(id: number): Promise<boolean> {
+    try {
+      const res = await fetch(`/api/spells/${id}`, { method: 'DELETE', credentials: 'include' });
+      const data = await res.json();
+      if (data.success) {
+        showToast('Spell deleted', 'success');
+        await fetchSpells();
+        return true;
+      } else {
+        showToast(data.message || 'Failed to delete spell', 'error');
+        return false;
+      }
+    } catch (error) {
+      console.error('Failed to delete spell:', error);
+      showToast('Failed to delete spell', 'error');
+      return false;
+    }
+  }
+
+  // ============================================================================
+  // Helpers
+  // ============================================================================
+
+  function updateCount(filtered: number, total: number): void {
+    spellCount.textContent = filtered === total ? `${total}` : `${filtered}/${total}`;
+  }
+
+  // ============================================================================
+  // Event Handlers
+  // ============================================================================
+
+  // New spell
+  document.getElementById('new-spell-btn')?.addEventListener('click', async () => {
+    const result = await showPromptFields('New Spell', [
+      { key: 'name', label: 'Spell Name', required: true, placeholder: 'Magic Missile' },
+      { key: 'mnemonic', label: 'Mnemonic', required: true, placeholder: 'mmis', maxLength: 10 },
+    ]);
+    if (!result) return;
+
+    const mnemonic = result.mnemonic.trim().toLowerCase();
+    if (mnemonic.length < 2) {
+      showToast('Mnemonic must be at least 2 characters', 'warning');
+      return;
+    }
+    if (spells.some(s => s.mnemonic === mnemonic)) {
+      showToast(`Mnemonic "${mnemonic}" already exists`, 'warning');
+      return;
     }
 
-    // Healing calculation
-    const minHeal = spell.minHealing ?? 0;
-    const maxHeal = spell.maxHealing ?? 0;
-    if (minHeal > 0 || maxHeal > 0) {
-      const healStat = spell.healingScalingStat || 'none';
-      const healStatValue = healStat !== 'none'
-        ? parseInt((document.getElementById(`calc-stat-${healStat}`) as HTMLInputElement)?.value || '0') || 0
-        : 0;
-      const healStatFactor = spell.healingScalingFactor ?? 0;
-      const healStatTiers = Math.floor(healStatValue / 10);
-      const healStatMult = (healStatFactor > 0 && healStatValue > 0) ? 1 + healStatTiers * healStatFactor : 1;
+    const saved = await saveSpell({
+      name: result.name,
+      mnemonic,
+      description: '',
+      spellType: 'offensive' as SpellType,
+      targetType: 'enemy' as SpellTargetType,
+      manaCost: 5,
+      levelRequired: 1,
+      classRestrictions: [],
+      isAttackSpell: true,
+    });
+    if (saved) selectSpell(saved.id);
+  });
 
-      const scaledMin = Math.max(1, Math.floor(minHeal * levelMult * healStatMult));
-      const scaledMax = Math.max(1, Math.floor(maxHeal * levelMult * healStatMult));
+  // Save
+  spellForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (!selectedSpellId) return;
 
-      if (lines.length > 0) lines.push('');
-      lines.push('<strong>Healing</strong>');
-      lines.push(`  Base: ${minHeal} - ${maxHeal}`);
-      if (scalingPerLevel > 0) {
-        lines.push(`  Level ${effectiveLevel} scaling: x${levelMult.toFixed(2)}${maxScalingLevel > 0 && level > maxScalingLevel ? ` (capped from lvl ${level})` : ''}`);
-      }
-      if (healStatFactor > 0 && healStatValue > 0) {
-        lines.push(`  ${capitalize(healStat)} ${healStatValue} scaling: x${healStatMult.toFixed(2)}`);
-      }
-      lines.push(`  <strong>Final: ${scaledMin} - ${scaledMax}</strong>`);
+    const data = gatherFormData();
+    if (!data.name?.trim()) {
+      showToast('Name is required', 'warning');
+      return;
+    }
+    if (!data.mnemonic || data.mnemonic.length < 2) {
+      showToast('Mnemonic must be at least 2 characters', 'warning');
+      return;
     }
 
-    if (lines.length === 0) {
-      resultDiv.textContent = 'No damage or healing values set.';
-    } else {
-      resultDiv.innerHTML = lines.join('<br>');
+    const saved = await saveSpell(data);
+    if (saved) selectSpell(saved.id);
+  });
+
+  // Delete
+  document.getElementById('delete-spell-btn')?.addEventListener('click', async () => {
+    if (!selectedSpellId) return;
+    const spell = spells.find(s => s.id === selectedSpellId);
+    const name = spell?.name || 'this spell';
+    const npcRefs = npcTemplates.filter(n => n.spells?.some(s => s.spellId === selectedSpellId));
+
+    let message = `Delete spell "${name}"?`;
+    if (npcRefs.length > 0) {
+      message += ` ${npcRefs.length} NPC${npcRefs.length === 1 ? '' : 's'} have this spell assigned.`;
+    }
+
+    const confirmed = await showConfirm(message, { confirmText: 'Delete', dangerous: true });
+    if (!confirmed) return;
+
+    const success = await deleteSpell(selectedSpellId);
+    if (success) clearForm();
+  });
+
+  // Duplicate
+  document.getElementById('duplicate-spell-btn')?.addEventListener('click', async () => {
+    if (!selectedSpellId) return;
+
+    const result = await showPromptFields('Duplicate Spell', [
+      { key: 'name', label: 'Spell Name', required: true, defaultValue: nameInput.value + ' (copy)' },
+      { key: 'mnemonic', label: 'Mnemonic', required: true, defaultValue: mnemonicInput.value + '2', maxLength: 10 },
+    ]);
+    if (!result) return;
+
+    const mnemonic = result.mnemonic.trim().toLowerCase();
+    if (mnemonic.length < 2) {
+      showToast('Mnemonic must be at least 2 characters', 'warning');
+      return;
+    }
+    if (spells.some(s => s.mnemonic === mnemonic)) {
+      showToast(`Mnemonic "${mnemonic}" already exists`, 'warning');
+      return;
+    }
+
+    const data = { ...gatherFormData(), name: result.name, mnemonic };
+    const saved = await saveSpell(data, true);
+    if (saved) selectSpell(saved.id);
+  });
+
+  // Spell type changes effect visibility
+  spellTypeSelect.addEventListener('change', () => {
+    updateEffectSections(spellTypeSelect.value);
+  });
+
+  // Import
+  document.getElementById('import-btn')?.addEventListener('click', () => {
+    const fileInput = document.createElement('input');
+    fileInput.type = 'file';
+    fileInput.accept = '.json';
+
+    fileInput.addEventListener('change', async () => {
+      const file = fileInput.files?.[0];
+      if (!file) return;
+
+      try {
+        const text = await file.text();
+        const data = JSON.parse(text);
+        const spellsToImport = data.spells || data;
+
+        if (!Array.isArray(spellsToImport) || spellsToImport.length === 0) {
+          showToast('No spells found in file', 'warning');
+          return;
+        }
+
+        const confirmed = await showConfirm(
+          `Import ${spellsToImport.length} spell(s)? Existing spells with matching mnemonics will be updated.`,
+        );
+        if (!confirmed) return;
+
+        const res = await fetch('/api/spells/import', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ spells: spellsToImport, merge: true }),
+        });
+
+        if (!res.ok) {
+          showToast(`Import failed: ${res.status}`, 'error');
+          return;
+        }
+
+        const result = await res.json();
+        if (result.success) {
+          const { created, updated, errors } = result.results;
+          showToast(`Imported: ${created} created, ${updated} updated`, 'success');
+          if (errors?.length > 0) showToast(`${errors.length} error(s)`, 'warning');
+          await fetchSpells();
+        } else {
+          showToast(result.message || 'Import failed', 'error');
+        }
+      } catch (error) {
+        console.error('Import failed:', error);
+        showToast('Failed to parse import file', 'error');
+      }
+    });
+
+    fileInput.click();
+  });
+
+  // Export
+  document.getElementById('export-btn')?.addEventListener('click', async () => {
+    try {
+      const res = await fetch('/api/spells/export/all', { credentials: 'include' });
+      if (!res.ok) { showToast('Export failed', 'error'); return; }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'spells_export.json';
+      a.click();
+      URL.revokeObjectURL(url);
+      showToast(`Exported ${spells.length} spells`, 'success');
+    } catch (error) {
+      console.error('Export failed:', error);
+      showToast('Failed to export spells', 'error');
     }
   });
 
-  // Logout
-  addListener('logout-btn', 'click', handleLogout);
+  // ============================================================================
+  // Initialize
+  // ============================================================================
 
-  // User menu dropdown toggle
-  const userMenuBtn = document.getElementById('nav-username');
-  const userMenu = userMenuBtn?.closest('.nav-user-menu');
-  if (userMenuBtn && userMenu) {
-    userMenuBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      userMenu.classList.toggle('open');
-    });
-    // Prevent clicks inside the dropdown from closing it
-    userMenu.addEventListener('click', (e) => {
-      e.stopPropagation();
-    });
-    document.addEventListener('click', () => {
-      userMenu.classList.remove('open');
-    });
-  }
-});
-
+  await Promise.all([fetchSpells(), fetchClasses(), fetchNpcTemplates(), fetchStatusEffects()]);
+  initStatusEffectSelect();
+  renderClassButtons();
 })();

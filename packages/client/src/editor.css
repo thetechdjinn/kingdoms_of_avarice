@@ -601,29 +601,29 @@ body {
   text-transform: uppercase;
 }
 
-.door-item .door-type-badge.physical {
+.door-item .door-type-badge.open_passageway {
   background: #1a3a1a;
   color: #4ade80;
 }
 
-.door-item .door-type-badge.triggered_passageway {
-  background: #3a2a1a;
-  color: #fbbf24;
+.door-item .door-type-badge.physical {
+  background: #2a2a1a;
+  color: #d4a574;
 }
 
 .door-item .door-type-badge.special {
+  background: #2a1a3a;
+  color: #c084fc;
+}
+
+.door-item .door-type-badge.triggered_passageway {
   background: #1a2a3a;
-  color: #60a5fa;
+  color: #60d4d4;
 }
 
 .door-item .door-type-badge.temporary_portal {
   background: #3a1a2a;
   color: #f472b6;
-}
-
-.door-item .door-type-badge.open_passageway {
-  background: #2a2a2a;
-  color: #a3a3a3;
 }
 
 .door-item .edit-door-btn {
@@ -677,46 +677,6 @@ body {
   margin-top: 2rem;
   padding-top: 1.5rem;
   border-top: 1px solid #333;
-}
-
-/* Buttons */
-.btn-primary,
-.btn-secondary,
-.btn-danger {
-  padding: 0.75rem 1.5rem;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 0.9rem;
-  font-weight: 500;
-  transition: all 0.2s;
-}
-
-.btn-primary {
-  background-color: #00ff00;
-  color: #1a1a2e;
-}
-
-.btn-primary:hover {
-  background-color: #00cc00;
-}
-
-.btn-secondary {
-  background-color: #333;
-  color: #eee;
-}
-
-.btn-secondary:hover {
-  background-color: #444;
-}
-
-.btn-danger {
-  background-color: #661111;
-  color: #eee;
-}
-
-.btn-danger:hover {
-  background-color: #881111;
 }
 
 /* Map Panel */
@@ -1489,4 +1449,354 @@ body {
   background: #0f0f23;
   border-radius: 4px;
   border: 1px solid #333;
+}
+
+/* ============================================================================
+   Toggle Switch
+   ============================================================================ */
+
+.toggle-label,
+.form-group .toggle-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  user-select: none;
+  color: #ccc;
+  font-size: 0.9rem;
+  margin-bottom: 0;
+}
+
+.toggle-label input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.toggle-track {
+  position: relative;
+  width: 36px;
+  height: 20px;
+  background: #333;
+  border-radius: 10px;
+  border: 1px solid #444;
+  transition: background 0.2s, border-color 0.2s;
+  flex-shrink: 0;
+}
+
+.toggle-track::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 14px;
+  height: 14px;
+  background: #888;
+  border-radius: 50%;
+  transition: transform 0.2s, background 0.2s;
+}
+
+.toggle-label input:checked + .toggle-track {
+  background: #0e4429;
+  border-color: #00aa00;
+}
+
+.toggle-label input:checked + .toggle-track::after {
+  transform: translateX(16px);
+  background: #00ff00;
+}
+
+.toggle-label input:focus-visible + .toggle-track {
+  outline: 2px solid #00ff00;
+  outline-offset: 2px;
+}
+
+/* Screen-reader-only (visually hidden but accessible) */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ============================================================================
+   Shared Editor Accessibility: Focus Indicators
+   ============================================================================ */
+
+/* List items in editor panels */
+.entity-list li:focus-visible,
+.editor-list li:focus-visible,
+ul[id$="-list"] li:focus-visible {
+  outline: 2px solid #00ff00;
+  outline-offset: -2px;
+}
+
+/* Tab buttons */
+.tab-btn:focus-visible {
+  outline: 2px solid #00ff00;
+  outline-offset: 2px;
+}
+
+/* Form tab buttons (sub-tabs within editors) */
+.form-tabs .tab-btn:focus-visible {
+  outline: 2px solid #00ff00;
+  outline-offset: 2px;
+}
+
+/* Entity tab buttons */
+.entity-tabs button:focus-visible {
+  outline: 2px solid #00ff00;
+  outline-offset: 2px;
+}
+
+/* Generic buttons */
+.btn:focus-visible,
+.btn-primary:focus-visible,
+.btn-secondary:focus-visible,
+.btn-danger:focus-visible,
+.btn-small:focus-visible {
+  outline: 2px solid #00ff00;
+  outline-offset: 2px;
+}
+
+/* ============================================================================
+   Shared Editor Components
+   ============================================================================ */
+
+/* Search input in list panels */
+.list-search {
+  padding: 0.5rem;
+  border-bottom: 1px solid #333;
+}
+
+.list-search input {
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  background: #0f0f23;
+  border: 1px solid #333;
+  border-radius: 4px;
+  color: #eee;
+  font-size: 0.85rem;
+}
+
+.list-search input:focus {
+  outline: none;
+  border-color: #00ff00;
+}
+
+.list-search input::placeholder {
+  color: #555;
+}
+
+/* Panel footer with count and buttons */
+.panel-footer {
+  padding: 0.5rem 0.75rem;
+  border-top: 1px solid #333;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.8rem;
+  color: #666;
+  flex-shrink: 0;
+}
+
+.list-count {
+  color: #888;
+}
+
+.footer-buttons {
+  display: flex;
+  gap: 0.25rem;
+}
+
+/* Empty state placeholder */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: #666;
+  text-align: center;
+  padding: 2rem;
+}
+
+.empty-icon {
+  font-size: 2rem;
+  margin-bottom: 0.5rem;
+}
+
+.empty-state p {
+  font-size: 0.9rem;
+}
+
+/* Required field indicator */
+.required {
+  color: #ff6b6b;
+  margin-left: 2px;
+}
+
+/* Section hint text */
+.section-hint {
+  color: #666;
+  font-size: 0.8rem;
+  margin-bottom: 0.75rem;
+}
+
+/* Form tabs (sub-navigation within editors) */
+.form-tabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 1px solid #333;
+  margin-bottom: 1rem;
+}
+
+.form-tabs .tab-btn,
+.tab-btn {
+  padding: 0.5rem 1rem;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: #888;
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: color 0.2s, border-color 0.2s;
+}
+
+.form-tabs .tab-btn:hover,
+.tab-btn:hover {
+  color: #ccc;
+}
+
+.form-tabs .tab-btn.active,
+.tab-btn.active {
+  color: #00ff00;
+  border-bottom-color: #00ff00;
+}
+
+.tab-content {
+  display: none;
+}
+
+.tab-content.active {
+  display: block;
+}
+
+/* Class/race button grid */
+.class-button-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+
+.class-btn {
+  padding: 0.25rem 0.5rem;
+  background: #1a1a2e;
+  border: 1px solid #333;
+  border-radius: 4px;
+  color: #888;
+  cursor: pointer;
+  font-size: 0.8rem;
+  transition: all 0.15s;
+}
+
+.class-btn:hover {
+  border-color: #555;
+  color: #ccc;
+}
+
+.class-btn.selected {
+  background: #0e4429;
+  border-color: #00aa00;
+  color: #00ff00;
+}
+
+/* Tiny button (used in list footers) */
+.btn-tiny {
+  padding: 0.2rem 0.4rem;
+  background: #1a1a2e;
+  border: 1px solid #333;
+  border-radius: 3px;
+  color: #888;
+  cursor: pointer;
+  font-size: 0.75rem;
+  transition: all 0.15s;
+}
+
+.btn-tiny:hover {
+  background: #252540;
+  color: #ccc;
+  border-color: #555;
+}
+
+/* Modifier grid for stat modifiers */
+.modifier-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 0.5rem;
+}
+
+.modifier-group-header {
+  grid-column: 1 / -1;
+  color: #888;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-top: 0.5rem;
+  padding-bottom: 0.25rem;
+  border-bottom: 1px solid #222;
+}
+
+/* Flag grid for boolean toggles */
+.flag-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 0.5rem;
+}
+
+.flag-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* Future/NYI feature marker */
+.future-feature {
+  position: relative;
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.future-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  font-size: 0.6rem;
+  background: #333;
+  color: #888;
+  padding: 1px 4px;
+  border-radius: 3px;
+  z-index: 1;
+}
+
+/* Responsive breakpoints */
+@media (max-width: 900px) {
+  .modifier-grid {
+    grid-template-columns: 1fr;
+  }
+  .flag-grid {
+    grid-template-columns: 1fr;
+  }
+  .class-btn-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .form-tabs {
+    flex-wrap: wrap;
+  }
 }

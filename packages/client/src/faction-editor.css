@@ -1,91 +1,175 @@
-/* Faction Editor Specific Styles */
+/* Faction Editor — two-panel layout with linked NPC display */
 
-#faction-editor-panel {
-  flex: 1;
-  overflow-y: auto;
-  max-height: calc(100vh - 60px);
-}
+/* ============================================================================
+   List Panel
+   ============================================================================ */
 
 #faction-list-panel {
+  display: flex;
+  flex-direction: column;
   width: 280px;
-  min-width: 200px;
+  min-width: 280px;
+  background: #16213e;
+  border-right: 1px solid #333;
 }
 
 #faction-list {
+  flex: 1;
+  overflow-y: auto;
+  list-style: none;
+}
+
+#faction-list li {
+  padding: 0.6rem 0.75rem;
+  cursor: pointer;
+  border-bottom: 1px solid #222;
+  border-left: 3px solid transparent;
+  transition: background-color 0.15s, border-color 0.15s;
+}
+
+#faction-list li:hover {
+  background: var(--hover-bg);
+}
+
+#faction-list li.selected {
+  background: var(--selected-bg);
+  border-left-color: var(--primary-color);
+}
+
+#faction-list li .faction-name {
+  display: block;
+  font-weight: 600;
+  color: var(--text-primary);
+  font-size: 0.9rem;
+}
+
+#faction-list li .faction-type {
+  display: inline-block;
+  font-size: 0.7rem;
+  color: #888;
+  margin-top: 2px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+/* ============================================================================
+   Editor Panel
+   ============================================================================ */
+
+#faction-editor-panel {
+  flex: 1;
+  padding: 1.5rem 2rem;
+  overflow-y: auto;
+}
+
+#no-faction-selected {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+}
+
+#faction-form {
+  max-width: 1100px;
+}
+
+/* ============================================================================
+   Top Row: Details (left) + Linked NPCs (right)
+   ============================================================================ */
+
+.top-row {
+  display: flex;
+  gap: 1.5rem;
+  align-items: flex-start;
+}
+
+.top-row .top-left {
+  flex: 2;
+}
+
+.top-row .top-right {
+  flex: 3;
+}
+
+@media (max-width: 900px) {
+  .top-row {
+    flex-direction: column;
+  }
+  .top-row .top-left,
+  .top-row .top-right {
+    flex: none;
+    width: 100%;
+  }
+}
+
+/* ============================================================================
+   Linked NPCs
+   ============================================================================ */
+
+#linked-npcs {
+  min-height: 60px;
+}
+
+.npc-link-list {
   list-style: none;
   padding: 0;
   margin: 0;
 }
 
-#faction-list li {
-  padding: 8px 12px;
-  cursor: pointer;
-  border-bottom: 1px solid #1a1a2e;
-  transition: background 0.2s;
-}
-
-#faction-list li:hover {
-  background: #1a1a2e;
-}
-
-#faction-list li.active {
-  background: #0e4429;
-  border-left: 3px solid #00ff00;
-}
-
-#faction-list li .faction-name {
-  font-weight: 600;
-  color: #e0e0e0;
-}
-
-#faction-list li .faction-type {
-  font-size: 0.8rem;
-  color: #888;
-  margin-top: 2px;
-}
-
-#faction-search {
-  padding: 8px;
-}
-
-#faction-search input {
-  width: 100%;
-  padding: 6px 8px;
-  background: #0d1117;
-  border: 1px solid #333;
-  color: #e0e0e0;
+.npc-link-list li {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0.6rem;
+  background: #0f0f23;
   border-radius: 4px;
-  font-size: 0.85rem;
-  box-sizing: border-box;
-}
-
-#faction-form textarea {
-  width: 100%;
-  resize: vertical;
-  box-sizing: border-box;
-}
-
-/* Preview */
-.preview-name {
-  font-size: 1.2rem;
-  font-weight: 700;
-  color: #00ff00;
-  margin-bottom: 12px;
-}
-
-.preview-section {
-  margin-bottom: 12px;
-}
-
-.preview-stat {
-  padding: 2px 0;
+  margin-bottom: 0.4rem;
   font-size: 0.85rem;
 }
 
-.preview-stat .label {
-  color: #888;
+.npc-link-list li .npc-link-name {
+  color: var(--text-primary);
+  font-weight: 500;
 }
 
-.preview-stat .value {
-  color: #e0e0e0;
+.npc-link-list li .npc-link-level {
+  color: #555;
+  font-size: 0.75rem;
+}
+
+.npc-link-list li .npc-link-edit {
+  margin-left: auto;
+  color: #555;
+  text-decoration: none;
+  font-size: 0.8rem;
+  transition: color 0.15s;
+}
+
+.npc-link-list li .npc-link-edit:hover {
+  color: var(--primary-color);
+}
+
+.no-linked-npcs {
+  color: #555;
+  font-size: 0.85rem;
+  font-style: italic;
+  padding: 0.5rem 0;
+}
+
+/* ============================================================================
+   Form Actions (sticky bottom)
+   ============================================================================ */
+
+#faction-form .form-actions {
+  position: sticky;
+  bottom: 0;
+  background: #1a1a2e;
+  padding: 1rem 0;
+  margin-top: 1.5rem;
+  border-top: 1px solid #333;
+  z-index: 1;
+}
+
+#faction-form .form-actions .spacer {
+  flex: 1;
 }

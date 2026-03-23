@@ -1,65 +1,65 @@
-/* Action Editor specific styles */
+/* Action Editor — two-panel layout with inline previews */
 
-/* Action list panel */
+/* ============================================================================
+   List Panel
+   ============================================================================ */
+
 #action-list-panel {
   display: flex;
   flex-direction: column;
-  min-width: 250px;
-  max-width: 300px;
-  background: #1a1a2e;
+  width: 280px;
+  min-width: 280px;
+  background: #16213e;
   border-right: 1px solid #333;
-}
-
-#action-search {
-  padding: 0.5rem 1rem;
-  border-bottom: 1px solid #333;
-}
-
-#action-search input {
-  width: 100%;
 }
 
 #action-list {
   flex: 1;
   overflow-y: auto;
   list-style: none;
-  padding: 0;
-  margin: 0;
 }
 
-.action-list-item {
-  padding: 0.75rem 1rem;
+#action-list li {
+  padding: 0.6rem 0.75rem;
   cursor: pointer;
-  border-bottom: 1px solid #333;
-  transition: background-color 0.2s;
+  border-bottom: 1px solid #222;
+  border-left: 3px solid transparent;
+  transition: background-color 0.15s, border-color 0.15s;
 }
 
-.action-list-item:hover {
+#action-list li:hover {
   background: var(--hover-bg);
 }
 
-.action-list-item.selected {
+#action-list li.selected {
   background: var(--selected-bg);
-  border-left: 3px solid var(--primary-color);
+  border-left-color: var(--primary-color);
 }
 
-.action-list-item .action-command {
+#action-list li .action-command {
   display: block;
-  font-weight: bold;
+  font-weight: 600;
   color: var(--text-primary);
-}
-
-.action-list-item .action-desc {
-  display: block;
   font-size: 0.9rem;
-  color: var(--text-secondary);
-  margin-top: 0.25rem;
 }
 
-/* Editor panel */
+#action-list li .action-desc {
+  display: block;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  margin-top: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ============================================================================
+   Editor Panel
+   ============================================================================ */
+
 #action-editor-panel {
   flex: 1;
-  padding: 1.5rem;
+  padding: 1.5rem 2rem;
   overflow-y: auto;
 }
 
@@ -68,93 +68,153 @@
   align-items: center;
   justify-content: center;
   height: 100%;
-  color: var(--text-secondary);
 }
 
-/* Form sections */
-.form-section {
-  margin-bottom: 1.5rem;
-  padding-bottom: 1.5rem;
-  border-bottom: 1px solid #333;
+#action-form {
+  max-width: 1100px;
 }
 
-.form-section:last-of-type {
-  border-bottom: none;
+/* ============================================================================
+   Top Row: Basic Info (left) + No Target Messages (right)
+   ============================================================================ */
+
+.top-row {
+  display: flex;
+  gap: 1.5rem;
+  align-items: flex-start;
 }
 
-.form-section h3 {
-  margin-bottom: 0.5rem;
-  color: var(--primary-color);
+.top-row .top-left {
+  flex: 2;
 }
 
-.section-hint {
-  margin-bottom: 1rem;
-  color: var(--text-secondary);
-  font-size: 0.9rem;
+.top-row .top-right {
+  flex: 3;
 }
 
-/* Preview panel */
-#preview-panel {
-  min-width: 280px;
-  max-width: 350px;
-  background: #1a1a2e;
-  border-left: 1px solid #333;
+/* On narrower screens, stack them */
+@media (max-width: 900px) {
+  .top-row {
+    flex-direction: column;
+  }
+  .top-row .top-left,
+  .top-row .top-right {
+    flex: none;
+    width: 100%;
+  }
+}
+
+/* ============================================================================
+   Target Fields: three columns
+   ============================================================================ */
+
+.target-fields-row {
   display: flex;
   flex-direction: column;
 }
 
-#action-preview {
-  flex: 1;
-  padding: 1rem;
-  overflow-y: auto;
+/* Section headers */
+#action-form .form-section h3 {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
-#preview-content h4 {
-  margin-bottom: 1rem;
-  color: var(--primary-color);
+.optional-badge {
+  font-size: 0.7rem;
+  font-weight: normal;
+  color: #555;
+  background: #1a1a2e;
+  border: 1px solid #333;
+  border-radius: 3px;
+  padding: 0.1rem 0.4rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
 }
 
-.preview-section {
-  margin-bottom: 1rem;
-  padding: 0.75rem;
-  background: var(--input-bg);
-  border-radius: 4px;
-}
-
-.preview-section.muted {
-  opacity: 0.6;
-}
-
-.preview-section h5 {
-  margin-bottom: 0.5rem;
-  color: var(--text-secondary);
-  font-size: 0.875rem;
-}
-
-.preview-line {
-  margin-bottom: 0.25rem;
-  font-size: 0.9rem;
-}
-
-.preview-line .label {
-  color: var(--text-secondary);
-  font-weight: bold;
-}
-
-.placeholder-list {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-}
-
-.placeholder-list li {
-  margin-bottom: 0.5rem;
-  font-size: 0.9rem;
-}
-
-.placeholder-list code {
-  background: var(--input-bg);
-  padding: 0.15rem 0.3rem;
+.section-hint code {
+  background: #0f0f23;
+  padding: 0.1rem 0.35rem;
   border-radius: 3px;
   color: var(--primary-color);
+  font-size: 0.8rem;
+}
+
+/* ============================================================================
+   Inline Preview
+   ============================================================================ */
+
+.inline-preview {
+  margin-top: 4px;
+  padding: 0.3rem 0 0.3rem 0.75rem;
+  border-left: 2px solid #333;
+  font-size: 0.8rem;
+  color: #666;
+  min-height: 1.4em;
+  transition: border-color 0.2s, color 0.2s;
+  font-family: 'Courier New', Courier, monospace;
+  letter-spacing: -0.01em;
+}
+
+.inline-preview.active {
+  border-left-color: rgba(0, 255, 0, 0.3);
+  color: #999;
+}
+
+.inline-preview.disabled {
+  border-left-color: #2a2a2e;
+  color: #444;
+  font-style: italic;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.inline-preview .preview-label {
+  color: #555;
+  margin-right: 0.25rem;
+}
+
+.inline-preview .preview-highlight {
+  color: var(--primary-color);
+  opacity: 0.7;
+}
+
+/* ============================================================================
+   Targeting Status
+   ============================================================================ */
+
+.targeting-status {
+  margin-bottom: 0.75rem;
+  padding: 0.4rem 0.6rem;
+  border-radius: 4px;
+  font-size: 0.8rem;
+}
+
+.targeting-status.enabled {
+  background: rgba(0, 255, 0, 0.06);
+  border: 1px solid rgba(0, 255, 0, 0.15);
+  color: #4a9;
+}
+
+.targeting-status.disabled {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid #2a2a2e;
+  color: #555;
+}
+
+/* ============================================================================
+   Form Actions (sticky bottom)
+   ============================================================================ */
+
+#action-form .form-actions {
+  position: sticky;
+  bottom: 0;
+  background: #1a1a2e;
+  padding: 1rem 0;
+  margin-top: 1.5rem;
+  border-top: 1px solid #333;
+  z-index: 1;
+}
+
+#action-form .form-actions .spacer {
+  flex: 1;
 }

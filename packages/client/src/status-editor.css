@@ -1,500 +1,320 @@
-/* Status Effect Editor Specific Styles */
+/* Status Effect Editor — three-panel layout with tabs */
 
-/* Main editor panel needs to scroll */
-#effect-editor-panel {
-  flex: 1;
-  padding: 1.5rem;
-  overflow-y: auto;
-}
-
-#effect-form {
-  max-width: 800px;
-}
-
-/* Form actions - ensure visible */
-#effect-form .form-actions {
-  display: flex;
-  gap: 1rem;
-  margin-top: 1.5rem;
-  padding: 1rem 0;
-  border-top: 1px solid #333;
-  background: #1a1a2e;
-  position: sticky;
-  bottom: 0;
-}
+/* ============================================================================
+   List Panel
+   ============================================================================ */
 
 #effect-list-panel {
   display: flex;
   flex-direction: column;
+  width: 280px;
+  min-width: 280px;
+  background: #16213e;
+  border-right: 1px solid #333;
+}
+
+.list-filter {
+  padding: 0.5rem 0.75rem 0;
+}
+
+.list-filter select {
+  width: 100%;
+  padding: 0.4rem 0.5rem;
+  background: #0f0f23;
+  border: 1px solid #333;
+  border-radius: 4px;
+  color: #eee;
+  font-size: 0.8rem;
+}
+
+.list-filter select:focus {
+  outline: none;
+  border-color: #00ff00;
 }
 
 #effect-list {
   flex: 1;
   overflow-y: auto;
+  list-style: none;
 }
 
 #effect-list li {
-  display: flex;
-  flex-direction: column;
-  padding: 8px 12px;
-  border-bottom: 1px solid #333;
+  padding: 0.5rem 0.75rem;
   cursor: pointer;
-  transition: background 0.2s;
+  border-bottom: 1px solid #222;
+  border-left: 3px solid transparent;
+  transition: background-color 0.15s, border-color 0.15s;
 }
 
 #effect-list li:hover {
-  background: #1a1a2e;
+  background: var(--hover-bg);
 }
 
 #effect-list li.selected {
-  background: #0e4429;
-  border-left: 3px solid #00ff00;
+  background: var(--selected-bg);
+  border-left-color: var(--primary-color);
 }
 
 #effect-list li .effect-name {
-  font-weight: bold;
-  color: #00ff00;
+  font-weight: 600;
+  color: var(--text-primary);
+  font-size: 0.9rem;
 }
 
 #effect-list li .effect-id {
-  font-size: 0.75rem;
+  font-family: 'Courier New', monospace;
+  font-size: 0.7rem;
   color: #60a5fa;
-  font-family: monospace;
-  background: #1a1a2e;
-  padding: 2px 6px;
-  border-radius: 3px;
-  align-self: flex-start;
-  margin-bottom: 4px;
+  background: #0f0f23;
+  padding: 1px 4px;
+  border-radius: 2px;
+  margin-right: 0.4rem;
 }
 
 #effect-list li .effect-meta {
   display: flex;
-  gap: 8px;
   align-items: center;
+  gap: 0.4rem;
+  margin-top: 2px;
 }
 
-#effect-list li .effect-category {
-  font-size: 0.75rem;
-  text-transform: capitalize;
-  padding: 2px 6px;
+/* Category badges */
+.cat-badge {
+  font-size: 0.65rem;
+  padding: 1px 5px;
   border-radius: 3px;
+  text-transform: uppercase;
+  font-weight: 600;
+  letter-spacing: 0.03em;
 }
 
-#effect-list li .effect-category-buff {
-  background: rgba(74, 222, 128, 0.2);
-  color: #4ade80;
-}
+.cat-badge.buff { background: #0e3a1e; color: #4ade80; }
+.cat-badge.debuff { background: #2a1a3a; color: #c084fc; }
+.cat-badge.dot { background: #3a1a1a; color: #ff6b6b; }
+.cat-badge.hot { background: #1a2a3a; color: #60a5fa; }
+.cat-badge.control { background: #3a2a1a; color: #fbbf24; }
 
-#effect-list li .effect-category-debuff {
-  background: rgba(192, 132, 252, 0.2);
-  color: #c084fc;
-}
+/* ============================================================================
+   Editor Panel
+   ============================================================================ */
 
-#effect-list li .effect-category-dot {
-  background: rgba(255, 107, 107, 0.2);
-  color: #ff6b6b;
-}
-
-#effect-list li .effect-category-hot {
-  background: rgba(96, 165, 250, 0.2);
-  color: #60a5fa;
-}
-
-#effect-list li .effect-category-control {
-  background: rgba(251, 191, 36, 0.2);
-  color: #fbbf24;
-}
-
-#effect-filter,
-#effect-search {
-  padding: 8px 12px;
-  border-bottom: 1px solid #333;
-}
-
-#effect-search input {
-  width: 100%;
-}
-
-.panel-footer {
-  padding: 12px;
-  border-top: 1px solid #333;
-  display: flex;
-  gap: 8px;
-}
-
-.panel-footer button {
+#effect-editor-panel {
   flex: 1;
-}
-
-/* Tabs */
-.form-tabs {
-  display: flex;
-  gap: 4px;
-  margin-bottom: 16px;
-  border-bottom: 2px solid #333;
-  padding-bottom: 8px;
-}
-
-.tab-btn {
-  padding: 8px 16px;
-  background: transparent;
-  border: none;
-  color: #888;
-  cursor: pointer;
-  border-radius: 4px 4px 0 0;
-  transition: all 0.2s;
-}
-
-.tab-btn:hover,
-.tab-btn:focus {
-  color: #00ff00;
-  outline: none;
-}
-
-.tab-btn:focus-visible {
-  outline: 2px solid #00ff00;
-  outline-offset: 2px;
-  background: #1a1a2e;
-}
-
-.tab-btn.active {
-  color: #00ff00;
-  background: #0e4429;
-}
-
-.tab-content {
-  display: none;
-}
-
-.tab-content.active {
-  display: block;
-}
-
-/* Form Rows */
-.form-row {
-  display: flex;
-  gap: 16px;
-  margin-bottom: 12px;
-}
-
-.form-row .form-group {
-  flex: 1;
-  margin-bottom: 0;
-}
-
-/* Checkbox group styling */
-.checkbox-group {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-}
-
-.checkbox-group .checkbox-label {
-  margin-bottom: 4px;
-}
-
-/* Flag grid */
-.flag-grid {
-  display: grid;
-  gap: 16px;
-}
-
-.flag-grid .checkbox-group {
-  padding: 12px;
-  background: #1a1a2e;
-  border-radius: 4px;
-}
-
-/* Preview Panel */
-#preview-panel {
-  width: 300px;
-  background: #0f0f23;
-  border-left: 1px solid #333;
-  display: flex;
-  flex-direction: column;
-}
-
-#effect-preview {
-  flex: 1;
-  padding: 16px;
+  padding: 1.5rem 2rem;
   overflow-y: auto;
 }
 
-#preview-content {
-  font-family: 'Courier New', monospace;
-  font-size: 0.9rem;
-  line-height: 1.5;
-}
-
-#preview-content .preview-name {
-  color: #00ff00;
-  font-weight: bold;
-  font-size: 1.1rem;
-}
-
-#preview-content .preview-id {
-  color: #60a5fa;
-  font-size: 0.9rem;
-  margin: 4px 0;
-}
-
-#preview-content .preview-id code {
-  background: #1a1a2e;
-  padding: 2px 6px;
-  border-radius: 3px;
-}
-
-#preview-content .preview-desc {
-  color: #aaa;
-  margin: 8px 0;
-}
-
-#preview-content .preview-stats {
-  color: #888;
-  font-size: 0.85rem;
-  margin: 4px 0;
-}
-
-#preview-content .preview-stats span {
-  display: inline-block;
-  margin-right: 12px;
-}
-
-#preview-content .preview-section {
-  margin-top: 12px;
-  padding-top: 12px;
-  border-top: 1px solid #333;
-}
-
-#preview-content .preview-section-title {
-  color: #ffaa00;
-  font-weight: bold;
-  margin-bottom: 4px;
-}
-
-#preview-content .preview-message {
-  color: #888;
-  font-style: italic;
-  margin-top: 4px;
-}
-
-.panel-section {
-  padding: 16px;
-  border-top: 1px solid #333;
-}
-
-.panel-section h3 {
-  margin-top: 0;
-  margin-bottom: 12px;
-  font-size: 0.9rem;
-  color: #888;
-}
-
-.panel-section code {
-  background: #1a1a2e;
-  padding: 2px 6px;
-  border-radius: 3px;
-  color: #60a5fa;
-}
-
-/* Modal Styles */
-.modal {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.8);
+#no-effect-selected {
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1000;
+  height: 100%;
 }
 
-.modal-content {
-  background: #1a1a2e;
-  border-radius: 8px;
-  width: 90%;
-  max-width: 500px;
-  max-height: 80vh;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-}
+/* ============================================================================
+   Range Inputs (Periodic tab)
+   ============================================================================ */
 
-.modal-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 16px;
-  border-bottom: 1px solid #333;
-}
-
-.modal-header h3 {
-  margin: 0;
-  color: #00ff00;
-}
-
-.modal-body {
-  padding: 16px;
-  overflow-y: auto;
-}
-
-.modal-footer {
-  padding: 16px;
-  border-top: 1px solid #333;
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-}
-
-.close-btn {
-  background: none;
-  border: none;
-  color: #888;
-  font-size: 1.5rem;
-  cursor: pointer;
-  padding: 0;
-  line-height: 1;
-}
-
-.close-btn:hover {
-  color: #ff4444;
-}
-
-/* Range inputs for damage/healing */
 .range-inputs {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 0.4rem;
 }
 
 .range-inputs input {
-  width: 80px;
+  flex: 1;
   text-align: center;
 }
 
 .range-separator {
-  color: #888;
-  font-weight: bold;
-}
-
-/* Hint text */
-.hint {
-  color: #666;
-  font-size: 0.9rem;
-}
-
-.hint-inline {
-  color: #666;
+  color: #555;
   font-size: 0.8rem;
-  font-weight: normal;
+  flex-shrink: 0;
+}
+
+/* Status-specific flag hint */
+.flag-item .hint-inline {
   display: block;
-  margin-top: 4px;
+  margin-top: 0.3rem;
+  padding-left: 2.75rem;
 }
 
-/* Button variants */
-.btn-small {
-  padding: 6px 12px;
+/* ============================================================================
+   Preview Panel
+   ============================================================================ */
+
+#preview-panel {
+  width: 300px;
+  min-width: 250px;
+  background: #16213e;
+  border-left: 1px solid #333;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+}
+
+#effect-preview {
+  flex: 1;
+  padding: 0.75rem 1rem;
+  overflow-y: auto;
+}
+
+#preview-content {
   font-size: 0.85rem;
+  line-height: 1.6;
 }
 
-.btn-secondary {
-  background: #333;
-  color: #fff;
-  border: 1px solid #555;
+.preview-name {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--primary-color);
+  margin-bottom: 0.25rem;
 }
 
-.btn-secondary:hover {
-  background: #444;
+.preview-id {
+  font-size: 0.8rem;
+  color: #60a5fa;
+  margin-bottom: 0.5rem;
 }
 
-.btn-secondary:disabled {
-  background: #222;
-  color: #666;
-  cursor: not-allowed;
+.preview-id code {
+  background: #0f0f23;
+  padding: 1px 4px;
+  border-radius: 2px;
 }
 
-/* Responsive adjustments */
+.preview-desc {
+  color: #aaa;
+  font-size: 0.85rem;
+  margin-bottom: 0.75rem;
+}
+
+.preview-badges {
+  display: flex;
+  gap: 0.4rem;
+  margin-bottom: 0.75rem;
+}
+
+.preview-section {
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid #2a2a2e;
+}
+
+.preview-section-title {
+  color: #ffaa00;
+  font-weight: 600;
+  font-size: 0.8rem;
+  margin-bottom: 0.3rem;
+}
+
+.preview-modifier {
+  font-size: 0.8rem;
+  color: #ccc;
+  padding: 1px 0;
+}
+
+.preview-modifier .mod-value {
+  font-weight: 600;
+}
+
+.preview-modifier .mod-value.positive { color: #4ade80; }
+.preview-modifier .mod-value.negative { color: #ff6b6b; }
+
+.preview-message {
+  color: #aaa;
+  font-style: italic;
+  font-size: 0.8rem;
+  margin-top: 0.25rem;
+}
+
+.preview-flags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+
+.preview-flag {
+  font-size: 0.7rem;
+  padding: 2px 6px;
+  border-radius: 3px;
+  background: #3a1a1a;
+  color: #ff6b6b;
+  font-weight: 500;
+}
+
+/* Spell references section */
+.panel-section {
+  padding: 0.75rem 1rem;
+  border-top: 1px solid #333;
+}
+
+.panel-section h3 {
+  color: var(--primary-color);
+  font-size: 0.85rem;
+  margin-bottom: 0.5rem;
+}
+
+.spell-ref-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.spell-ref-list li {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.3rem 0;
+  font-size: 0.8rem;
+}
+
+.spell-ref-list li .spell-ref-name {
+  color: var(--text-primary);
+}
+
+.spell-ref-list li .spell-ref-level {
+  color: #555;
+  font-size: 0.7rem;
+}
+
+.no-refs {
+  color: #555;
+  font-size: 0.8rem;
+  font-style: italic;
+}
+
+/* ============================================================================
+   Form Actions (sticky)
+   ============================================================================ */
+
+#effect-form .form-actions {
+  position: sticky;
+  bottom: 0;
+  background: #1a1a2e;
+  padding: 1rem 0;
+  margin-top: 1.5rem;
+  border-top: 1px solid #333;
+  z-index: 1;
+}
+
+#effect-form .form-actions .spacer {
+  flex: 1;
+}
+
+/* ============================================================================
+   Responsive
+   ============================================================================ */
+
 @media (max-width: 1200px) {
   #preview-panel {
     width: 250px;
+    min-width: 200px;
   }
 }
 
 @media (max-width: 900px) {
   #preview-panel {
     display: none;
-  }
-
-  #effect-editor-panel {
-    padding: 1rem;
-  }
-
-  #effect-form {
-    max-width: 100%;
-  }
-}
-
-@media (max-width: 768px) {
-  /* Stack effect list and editor vertically */
-  #editor-layout {
-    flex-direction: column;
-  }
-
-  #effect-list-panel {
-    width: 100%;
-    max-height: 40vh;
-    border-right: none;
-    border-bottom: 1px solid #333;
-  }
-
-  #effect-editor-panel {
-    flex: 1;
-    min-height: 0;
-  }
-
-  /* Stack form rows vertically */
-  .form-row {
-    flex-direction: column;
-    gap: 12px;
-  }
-
-  /* Adjust tabs for mobile */
-  .form-tabs {
-    flex-wrap: wrap;
-  }
-
-  .tab-btn {
-    padding: 6px 12px;
-    font-size: 0.9rem;
-  }
-
-  /* Modal adjustments */
-  .modal-content {
-    width: 95%;
-    max-height: 90vh;
-  }
-}
-
-@media (max-width: 480px) {
-  #effect-list-panel {
-    max-height: 35vh;
-  }
-
-  .panel-footer {
-    flex-direction: column;
-  }
-
-  .panel-footer button {
-    width: 100%;
-  }
-
-  #effect-form .form-actions {
-    flex-direction: column;
-  }
-
-  #effect-form .form-actions button {
-    width: 100%;
   }
 }

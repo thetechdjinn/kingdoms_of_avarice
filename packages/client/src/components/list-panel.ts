@@ -35,7 +35,10 @@ export interface ListPanelOptions<T> {
   onSelect: (item: T) => void;
   /** Extract a unique ID from an item. */
   getId: (item: T) => number | string;
-  /** Return inner HTML for a list item. */
+  /**
+   * Render function that returns innerHTML for a list item.
+   * IMPORTANT: All user-derived strings must be wrapped in escapeHtml() to prevent XSS.
+   */
   renderItem: (item: T, isSelected: boolean) => string;
   /** Return CSS class(es) for a list item (beyond 'selected'). Optional. */
   getItemClass?: (item: T) => string;
@@ -47,6 +50,8 @@ export interface ListPanelOptions<T> {
   sortFn?: (a: T, b: T) => number;
   /** Debounce delay in ms for search input. Default: 100. */
   debounceMs?: number;
+  /** Callback fired after each render with filtered and total counts. */
+  onRender?: (filteredCount: number, totalCount: number) => void;
 }
 
 export class ListPanel<T> {
@@ -56,6 +61,7 @@ export class ListPanel<T> {
   private debounceTimer: ReturnType<typeof setTimeout> | null = null;
   private boundSearch: (() => void) | null = null;
   private boundFilter: (() => void) | null = null;
+  private _lastFilteredCount = 0;
 
   constructor(options: ListPanelOptions<T>) {
     this.options = options;
@@ -121,7 +127,8 @@ export class ListPanel<T> {
   /** Re-render the list. */
   render(): void {
     const filtered = this.getFilteredItems();
-    const { listElement, getId, renderItem, getItemClass, onSelect } = this.options;
+    this._lastFilteredCount = filtered.length;
+    const { listElement, getId, renderItem, getItemClass, onSelect, onRender } = this.options;
 
     listElement.innerHTML = '';
     for (const item of filtered) {
@@ -140,6 +147,10 @@ export class ListPanel<T> {
       li.addEventListener('click', () => onSelect(item));
       listElement.appendChild(li);
     }
+
+    if (onRender) {
+      onRender(filtered.length, this.items.length);
+    }
   }
 
   private debouncedRender(): void {
@@ -147,9 +158,9 @@ export class ListPanel<T> {
     this.debounceTimer = setTimeout(() => this.render(), this.options.debounceMs ?? 100);
   }
 
-  /** Get the count of currently displayed items. */
+  /** Get the count of currently displayed items (cached from last render). */
   get filteredCount(): number {
-    return this.getFilteredItems().length;
+    return this._lastFilteredCount;
   }
 
   /** Get the total item count (unfiltered). */

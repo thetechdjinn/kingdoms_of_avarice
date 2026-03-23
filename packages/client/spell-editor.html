@@ -20,7 +20,7 @@
               <a href="/item-editor.html" class="nav-dropdown-item">Item Editor</a>
               <a href="/spell-editor.html" class="nav-dropdown-item active">Spell Editor</a>
               <a href="/status-editor.html" class="nav-dropdown-item">Status Effects Editor</a>
-              <a href="/progression-editor.html" class="nav-dropdown-item">Progression Editor</a>
+              <a href="/progression-editor.html" class="nav-dropdown-item">Class / Race Editor</a>
               <a href="/door-editor.html" class="nav-dropdown-item">Door Editor</a>
               <a href="/action-editor.html" class="nav-dropdown-item">Action Editor</a>
               <a href="/npc-editor.html" class="nav-dropdown-item">NPC Editor</a>
@@ -41,7 +41,7 @@
           </div>
         </div>
         <div class="nav-spacer"></div>
-        <a href="/docs.html?file=Spell_and_Effects_Guide.md" target="_blank" rel="noopener noreferrer" class="help-link nav-help" title="View Documentation">?</a>
+        <a href="/docs.html?file=Spell_and_Effects_Guide.md" class="help-link nav-help" title="View Documentation" target="_blank" rel="noopener noreferrer">?</a>
         <div class="nav-user-menu">
           <button class="nav-user-btn" id="nav-username">User</button>
           <div class="dropdown-menu" id="user-dropdown">
@@ -54,11 +54,11 @@
         <aside id="spell-list-panel">
           <div class="panel-header">
             <h2>Spells</h2>
-            <button id="new-spell-btn" class="btn-primary">+ New Spell</button>
+            <button id="new-spell-btn" class="btn-primary">+ New</button>
           </div>
-          <div id="spell-filter">
-            <label for="type-select">Filter by Type:</label>
-            <select id="type-select">
+          <div class="list-filter">
+            <label for="type-filter" class="sr-only">Filter by spell type</label>
+            <select id="type-filter">
               <option value="">All Types</option>
               <option value="offensive">Offensive</option>
               <option value="healing">Healing</option>
@@ -67,20 +67,25 @@
               <option value="utility">Utility</option>
             </select>
           </div>
-          <div id="spell-search">
+          <div class="list-search">
             <input type="text" id="search-input" placeholder="Search spells..." />
           </div>
           <ul id="spell-list"></ul>
-
           <div class="panel-footer">
-            <button id="import-btn" class="btn-small">Import</button>
-            <button id="export-btn" class="btn-small">Export</button>
+            <span id="spell-count" class="list-count"></span>
+            <div class="footer-buttons">
+              <button id="import-btn" class="btn-small">Import</button>
+              <button id="export-btn" class="btn-small">Export</button>
+            </div>
           </div>
         </aside>
 
         <main id="spell-editor-panel">
           <div id="no-spell-selected">
-            <p>Select a spell from the list or create a new one.</p>
+            <div class="empty-state">
+              <div class="empty-icon">&gt;_</div>
+              <p>Select a spell from the list or create a new one.</p>
+            </div>
           </div>
 
           <form id="spell-form" style="display: none;">
@@ -89,42 +94,35 @@
               <span id="spell-id-display"></span>
             </div>
 
-            <!-- Tabs -->
             <div class="form-tabs">
               <button type="button" class="tab-btn active" data-tab="basic">Basic</button>
               <button type="button" class="tab-btn" data-tab="effects">Effects</button>
               <button type="button" class="tab-btn" data-tab="requirements">Requirements</button>
             </div>
 
-            <!-- Basic Tab Content -->
+            <!-- Basic Tab -->
             <div class="tab-content active" id="tab-basic">
               <div class="form-row">
                 <div class="form-group">
-                  <label for="spell-name">Name</label>
+                  <label for="spell-name">Name <span class="required">*</span></label>
                   <input type="text" id="spell-name" required placeholder="Magic Missile" />
                 </div>
                 <div class="form-group">
-                  <label for="spell-mnemonic">Mnemonic</label>
+                  <label for="spell-mnemonic">Mnemonic <span class="required">*</span></label>
                   <input type="text" id="spell-mnemonic" required placeholder="mmis" maxlength="10" />
-                  <span class="hint-inline">Short command (e.g., mmis, heal, fire)</span>
+                  <span class="hint-inline">2-10 chars, used to cast (e.g., "cast mmis")</span>
                 </div>
               </div>
 
               <div class="form-group">
                 <label for="spell-description">Description</label>
-                <textarea id="spell-description" rows="2" placeholder="A bolt of magical energy strikes the target..."></textarea>
-              </div>
-
-              <div class="form-group">
-                <label for="spell-telegraph-message">Telegraph Message</label>
-                <input type="text" id="spell-telegraph-message" placeholder="{name} begins chanting an incantation..." />
-                <span class="hint-inline">Optional message shown before spell resolves. Use {name} for caster.</span>
+                <textarea id="spell-description" rows="2" placeholder="A bolt of magical energy strikes the target."></textarea>
               </div>
 
               <div class="form-row">
                 <div class="form-group">
                   <label for="spell-type">Spell Type</label>
-                  <select id="spell-type" required>
+                  <select id="spell-type">
                     <option value="offensive">Offensive</option>
                     <option value="healing">Healing</option>
                     <option value="buff">Buff</option>
@@ -138,30 +136,40 @@
                     <option value="enemy">Enemy</option>
                     <option value="self">Self</option>
                     <option value="ally">Ally</option>
-                    <option value="room">Room (AoE)</option>
+                    <option value="room">Room/AoE</option>
                   </select>
+                </div>
+                <div class="form-group">
+                  <label for="spell-mana-cost">Mana Cost</label>
+                  <input type="number" id="spell-mana-cost" value="5" min="0" />
                 </div>
               </div>
 
               <div class="form-row">
                 <div class="form-group">
-                  <label for="spell-mana-cost">Mana Cost</label>
-                  <input type="number" id="spell-mana-cost" min="0" value="5" />
+                  <label for="spell-cast-difficulty">Cast Difficulty</label>
+                  <input type="number" id="spell-cast-difficulty" value="0" min="0" />
+                  <span class="hint-inline">0 = always succeeds. Higher = harder to cast.</span>
                 </div>
-                <div class="form-group checkbox-group">
-                  <label class="checkbox-label">
-                    <input type="checkbox" id="spell-is-attack" />
-                    Attack Spell
-                  </label>
-                  <span class="hint-inline">Replaces melee combat when active</span>
+                <div class="form-group">
+                  <label for="spell-fizzle-message">Fizzle Message</label>
+                  <input type="text" id="spell-fizzle-message" placeholder="Your spell fizzles..." />
+                  <span class="hint-inline">Custom message on failed cast</span>
                 </div>
+              </div>
+
+              <div class="form-group">
+                <label for="spell-telegraph-message">Telegraph Message</label>
+                <input type="text" id="spell-telegraph-message" placeholder="{name} begins channeling dark energy..." />
+                <span class="hint-inline">Warning broadcast before spell resolves. Use {name} for caster.</span>
               </div>
             </div>
 
-            <!-- Effects Tab Content -->
+            <!-- Effects Tab -->
             <div class="tab-content" id="tab-effects">
-              <div id="damage-section" class="effect-section">
-                <h3>Damage (Offensive Spells)</h3>
+              <!-- Offensive section -->
+              <div id="section-offensive" class="effect-type-section">
+                <h4 class="effect-type-header">Offensive</h4>
                 <div class="form-row">
                   <div class="form-group">
                     <label for="spell-min-damage">Min Damage</label>
@@ -178,7 +186,7 @@
                 </div>
                 <div class="form-row">
                   <div class="form-group">
-                    <label for="spell-damage-scaling-stat">Damage Scaling Stat</label>
+                    <label for="spell-damage-scaling-stat">Scaling Stat</label>
                     <select id="spell-damage-scaling-stat">
                       <option value="none">None</option>
                       <option value="strength">Strength</option>
@@ -188,18 +196,18 @@
                       <option value="wisdom">Wisdom</option>
                       <option value="charisma">Charisma</option>
                     </select>
-                    <span class="hint-inline">% increase per 10 stat points</span>
                   </div>
                   <div class="form-group">
-                    <label for="spell-damage-scaling-factor">Stat Scaling (%)</label>
-                    <input type="number" id="spell-damage-scaling-factor" min="0" max="100" step="1" value="0" />
-                    <span class="hint-inline">% increase per 10 stat points</span>
+                    <label for="spell-damage-scaling-factor">Scaling Factor %</label>
+                    <input type="number" id="spell-damage-scaling-factor" min="0" max="100" step="0.1" value="0" />
+                    <span class="hint-inline">% bonus per 10 stat points</span>
                   </div>
                 </div>
               </div>
 
-              <div id="healing-section" class="effect-section">
-                <h3>Healing (Healing Spells)</h3>
+              <!-- Healing section -->
+              <div id="section-healing" class="effect-type-section" style="display: none;">
+                <h4 class="effect-type-header">Healing</h4>
                 <div class="form-row">
                   <div class="form-group">
                     <label for="spell-min-healing">Min Healing</label>
@@ -212,7 +220,7 @@
                 </div>
                 <div class="form-row">
                   <div class="form-group">
-                    <label for="spell-healing-scaling-stat">Healing Scaling Stat</label>
+                    <label for="spell-healing-scaling-stat">Scaling Stat</label>
                     <select id="spell-healing-scaling-stat">
                       <option value="none">None</option>
                       <option value="strength">Strength</option>
@@ -222,85 +230,44 @@
                       <option value="wisdom">Wisdom</option>
                       <option value="charisma">Charisma</option>
                     </select>
-                    <span class="hint-inline">% increase per 10 stat points</span>
                   </div>
                   <div class="form-group">
-                    <label for="spell-healing-scaling-factor">Stat Scaling (%)</label>
-                    <input type="number" id="spell-healing-scaling-factor" min="0" max="100" step="1" value="0" />
-                    <span class="hint-inline">% increase per 10 stat points</span>
-                  </div>
-                </div>
-              </div>
-
-              <div class="effect-section">
-                <h3>Scaling &amp; Fizzle</h3>
-                <div class="form-row">
-                  <div class="form-group">
-                    <label for="spell-scaling-per-level">Level Scaling (%)</label>
-                    <input type="number" id="spell-scaling-per-level" min="0" max="100" step="1" value="0" />
-                    <span class="hint-inline">% increase per caster level</span>
-                  </div>
-                  <div class="form-group">
-                    <label for="spell-max-scaling-level">Max Scaling Level</label>
-                    <input type="number" id="spell-max-scaling-level" min="0" value="0" />
-                    <span class="hint-inline">0 = no cap, scaling stops at this level</span>
-                  </div>
-                  <div class="form-group">
-                    <label for="spell-cast-difficulty">Cast Difficulty</label>
-                    <input type="number" id="spell-cast-difficulty" min="0" value="0" />
-                    <span class="hint-inline">0 = always succeeds</span>
-                  </div>
-                </div>
-                <div class="form-row">
-                  <div class="form-group">
-                    <label for="spell-fizzle-message">Fizzle Message</label>
-                    <input type="text" id="spell-fizzle-message" placeholder="Your spell fizzles..." />
+                    <label for="spell-healing-scaling-factor">Scaling Factor %</label>
+                    <input type="number" id="spell-healing-scaling-factor" min="0" max="100" step="0.1" value="0" />
+                    <span class="hint-inline">% bonus per 10 stat points</span>
                   </div>
                 </div>
               </div>
 
-              <div class="effect-section">
-                <h3>Custom Messages</h3>
-                <span class="hint-inline">Placeholders: {target}, {name}, {damage}</span>
+              <!-- Status Effect section (buff/debuff + offensive secondary) -->
+              <div id="section-status" class="effect-type-section" style="display: none;">
+                <h4 class="effect-type-header">Status Effect</h4>
                 <div class="form-row">
-                  <div class="form-group">
-                    <label for="spell-hit-msg-self">Hit (Self)</label>
-                    <input type="text" id="spell-hit-msg-self" placeholder="Override caster message" />
+                  <div class="form-group" style="flex: 0 0 120px;">
+                    <label for="effect-category-filter">Category</label>
+                    <select id="effect-category-filter">
+                      <option value="">All</option>
+                      <option value="buff">Buff</option>
+                      <option value="debuff">Debuff</option>
+                      <option value="dot">DoT</option>
+                      <option value="hot">HoT</option>
+                      <option value="control">Control</option>
+                    </select>
                   </div>
-                </div>
-                <div class="form-row">
-                  <div class="form-group">
-                    <label for="spell-hit-msg-target">Hit (Target)</label>
-                    <input type="text" id="spell-hit-msg-target" placeholder="Override target message" />
+                  <div class="form-group" style="flex: 2;">
+                    <label>Effect</label>
+                    <div id="status-effect-select-container"></div>
                   </div>
-                </div>
-                <div class="form-row">
-                  <div class="form-group">
-                    <label for="spell-hit-msg-room">Hit (Room)</label>
-                    <input type="text" id="spell-hit-msg-room" placeholder="Override room message" />
-                  </div>
-                </div>
-              </div>
-
-              <div id="status-section" class="effect-section">
-                <h3>Status Effects (Buffs/Debuffs)</h3>
-                <div class="form-row">
-                  <div class="form-group">
-                    <label for="spell-status-effect">Status Effect</label>
-                    <input type="text" id="spell-status-effect" placeholder="blessed, poisoned, hasted..." />
-                  </div>
-                  <div class="form-group">
-                    <label for="spell-effect-duration">Duration (seconds)</label>
+                  <div class="form-group" style="flex: 0 0 130px;">
+                    <label for="spell-effect-duration">Duration (sec)</label>
                     <input type="number" id="spell-effect-duration" min="0" value="0" />
-                    <span class="hint-inline">0 = instant/permanent</span>
                   </div>
                 </div>
-
-                <div class="form-row">
+                <div class="form-row" id="save-difficulty-row" style="display: none;">
                   <div class="form-group">
-                    <label for="spell-save-stat">Saving Throw Stat</label>
+                    <label for="spell-save-stat">Save Stat</label>
                     <select id="spell-save-stat">
-                      <option value="none">None (Always lands)</option>
+                      <option value="none">None</option>
                       <option value="strength">Strength</option>
                       <option value="agility">Agility</option>
                       <option value="constitution">Constitution</option>
@@ -308,49 +275,78 @@
                       <option value="wisdom">Wisdom</option>
                       <option value="charisma">Charisma</option>
                     </select>
-                    <span class="hint-inline">Stat target rolls to resist</span>
                   </div>
                   <div class="form-group">
                     <label for="spell-save-difficulty">Save Difficulty</label>
                     <input type="number" id="spell-save-difficulty" min="0" value="0" />
-                    <span class="hint-inline">Base difficulty to beat</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Utility placeholder -->
+              <div id="section-utility" class="effect-type-section" style="display: none;">
+                <div class="utility-placeholder">
+                  <p class="hint">Utility spells are not yet implemented in the game engine.</p>
+                </div>
+              </div>
+
+              <!-- Level Scaling (shared across types) -->
+              <div class="form-section" id="section-scaling">
+                <h4>Level Scaling</h4>
+                <div class="form-row">
+                  <div class="form-group">
+                    <label for="spell-scaling-per-level">Scaling % Per Level</label>
+                    <input type="number" id="spell-scaling-per-level" min="0" max="100" step="0.1" value="0" />
+                    <span class="hint-inline">% damage/healing increase per caster level</span>
+                  </div>
+                  <div class="form-group">
+                    <label for="spell-max-scaling-level">Max Scaling Level</label>
+                    <input type="number" id="spell-max-scaling-level" min="0" value="0" />
+                    <span class="hint-inline">0 = no cap</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Custom Messages -->
+              <div class="form-section">
+                <h4>Custom Messages</h4>
+                <p class="section-hint">Override default combat messages. Use {target}, {name}, {damage}, {healing}.</p>
+                <div class="form-row">
+                  <div class="form-group">
+                    <label for="spell-hit-msg-self">Hit (Self)</label>
+                    <input type="text" id="spell-hit-msg-self" placeholder="Your spell hits {target}..." />
+                  </div>
+                  <div class="form-group">
+                    <label for="spell-hit-msg-target">Hit (Target)</label>
+                    <input type="text" id="spell-hit-msg-target" placeholder="{name}'s spell hits you..." />
+                  </div>
+                  <div class="form-group">
+                    <label for="spell-hit-msg-room">Hit (Room)</label>
+                    <input type="text" id="spell-hit-msg-room" placeholder="{name}'s spell hits {target}..." />
                   </div>
                 </div>
               </div>
             </div>
 
-            <!-- Requirements Tab Content -->
+            <!-- Requirements Tab -->
             <div class="tab-content" id="tab-requirements">
-              <div class="form-row">
-                <div class="form-group">
-                  <label for="spell-level-required">Level Required</label>
-                  <input type="number" id="spell-level-required" min="1" value="1" />
-                </div>
-              </div>
-
               <div class="form-group">
-                <label for="spell-class-restrictions">Class Restrictions</label>
-                <input type="text" id="spell-class-restrictions" placeholder="Mage, Cleric, Paladin" />
-                <span class="hint-inline">Comma-separated. Leave empty for all classes.</span>
+                <label for="spell-level-required">Level Required</label>
+                <input type="number" id="spell-level-required" min="1" value="1" />
               </div>
 
-              <div class="class-quick-select">
-                <label>Quick Select:</label>
-                <div class="class-buttons">
-                  <button type="button" class="class-btn" data-class="Warrior">Warrior</button>
-                  <button type="button" class="class-btn" data-class="Paladin">Paladin</button>
-                  <button type="button" class="class-btn" data-class="Cleric">Cleric</button>
-                  <button type="button" class="class-btn" data-class="Ranger">Ranger</button>
-                  <button type="button" class="class-btn" data-class="Rogue">Rogue</button>
-                  <button type="button" class="class-btn" data-class="Mage">Mage</button>
-                </div>
+              <div class="form-section">
+                <h4>Class Restrictions</h4>
+                <p class="section-hint">Select which classes can use this spell. Empty = all classes.</p>
+                <div id="class-buttons" class="class-button-grid"></div>
               </div>
             </div>
 
             <div class="form-actions">
               <button type="submit" class="btn-primary">Save Spell</button>
               <button type="button" id="duplicate-spell-btn" class="btn-secondary">Duplicate</button>
-              <button type="button" id="delete-spell-btn" class="btn-danger">Delete Spell</button>
+              <div class="spacer"></div>
+              <button type="button" id="delete-spell-btn" class="btn-danger">Delete</button>
             </div>
           </form>
         </main>
@@ -364,47 +360,13 @@
               <p class="hint">Select a spell to see preview</p>
             </div>
           </div>
-
-          <div class="panel-section">
-            <h3>Scaling Calculator</h3>
-            <span class="hint-inline">Uses current form values (no save needed)</span>
-            <div class="form-group" style="margin-top: 6px;">
-              <label for="calc-level">Caster Level</label>
-              <input type="number" id="calc-level" min="1" max="50" value="1" style="width: 100%;" />
+          <div id="npc-references" class="panel-section">
+            <h3>Cast By NPCs</h3>
+            <div id="npc-ref-content">
+              <p class="hint">Select a spell to see NPC references</p>
             </div>
-            <div id="calc-stat-inputs"></div>
-            <button id="calc-btn" style="width: 100%; margin-top: 4px; padding: 4px;">Calculate</button>
-            <div id="calc-result" style="margin-top: 8px; font-size: 0.85em; color: #ccc;"></div>
-          </div>
-
-          <div class="panel-section">
-            <h3>Test Spell</h3>
-            <p class="hint">Use <code>@learn &lt;mnemonic&gt;</code> in-game to learn this spell for testing.</p>
           </div>
         </aside>
-      </div>
-    </div>
-
-    <!-- Import Modal -->
-    <div id="import-modal" class="modal" style="display: none;">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h3>Import Spells</h3>
-          <button id="close-import-modal" class="close-btn">&times;</button>
-        </div>
-        <div class="modal-body">
-          <div class="form-group">
-            <label for="import-file">Select JSON file:</label>
-            <input type="file" id="import-file" accept=".json" />
-          </div>
-          <label class="checkbox-label">
-            <input type="checkbox" id="import-merge" checked />
-            Merge with existing (update if mnemonic matches)
-          </label>
-        </div>
-        <div class="modal-footer">
-          <button id="do-import-btn" class="btn-primary">Import</button>
-        </div>
       </div>
     </div>
 

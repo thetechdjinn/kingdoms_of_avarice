@@ -8,6 +8,7 @@ export interface DbRoom {
   description: string | null;
   area: string | null;
   terrain: string | null;
+  darkness_level: number;
   features: RoomFeatures;
   tag: string | null;
 }
@@ -28,6 +29,7 @@ export interface CreateRoomInput {
   description?: string;
   area?: string;
   terrain?: string;
+  darkness_level?: number;
   features?: RoomFeatures;
   tag?: string | null;
 }
@@ -117,10 +119,10 @@ export async function getAllRoomsWithExits(): Promise<RoomWithExits[]> {
 
 export async function createRoom(input: CreateRoomInput, client?: pg.PoolClient): Promise<DbRoom> {
   const result = await query<DbRoom>(
-    `INSERT INTO rooms (name, description, area, terrain, features, tag)
-     VALUES ($1, $2, $3, $4, $5, $6)
+    `INSERT INTO rooms (name, description, area, terrain, darkness_level, features, tag)
+     VALUES ($1, $2, $3, $4, $5, $6, $7)
      RETURNING *`,
-    [input.name, input.description || null, input.area || null, input.terrain || 'indoor', JSON.stringify(input.features || {}), input.tag || null],
+    [input.name, input.description || null, input.area || null, input.terrain || 'indoor', input.darkness_level ?? 0, JSON.stringify(input.features || {}), input.tag || null],
     client
   );
   return result.rows[0];
@@ -149,6 +151,10 @@ export async function updateRoom(
   if (updates.terrain !== undefined) {
     setClauses.push(`terrain = $${paramIndex++}`);
     values.push(updates.terrain);
+  }
+  if (updates.darkness_level !== undefined) {
+    setClauses.push(`darkness_level = $${paramIndex++}`);
+    values.push(updates.darkness_level);
   }
   if (updates.features !== undefined) {
     setClauses.push(`features = $${paramIndex++}`);

@@ -18,3 +18,5 @@ export type { SearchableSelectOptions, SelectOption } from './searchable-select.
 
 export { ChipTagInput } from './chip-tag-input.js';
 export type { ChipTagInputOptions } from './chip-tag-input.js';
+
+export { escapeHtml } from './escape-html.js';

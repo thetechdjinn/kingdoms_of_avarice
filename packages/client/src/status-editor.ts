@@ -1,819 +1,598 @@
+/**
+ * Status Effect Editor — three-panel with tabs, spell reverse lookup.
+ * Uses shared components: initAuth, ListPanel, setupTabs, showToast, showConfirm, showPromptFields.
+ */
+
 import { StatusEffectDefinition, StatusEffectCategory, StackingBehavior } from '@koa/shared';
+import { initAuth, ListPanel, setupTabs, showToast, showConfirm, showPromptFields, escapeHtml } from './components/index.js';
 
-(function() {
-
-interface AuthInfo {
-  authenticated: boolean;
-  playerId?: number;
-  username?: string;
-  roles?: string[];
+interface SpellRef {
+  id: number;
+  name: string;
+  levelRequired: number;
+  statusEffect: string | null;
 }
 
-let effects: StatusEffectDefinition[] = [];
-let selectedEffectId: string | null = null;
-let currentUser: AuthInfo | null = null;
+(async function () {
+  const auth = await initAuth('developer');
+  if (!auth) return;
 
-// ============================================================================
-// Toast Notifications
-// ============================================================================
+  // ============================================================================
+  // State
+  // ============================================================================
 
-type ToastType = 'success' | 'error' | 'warning' | 'info';
+  let effects: StatusEffectDefinition[] = [];
+  let spells: SpellRef[] = [];
+  let selectedEffectId: string | null = null;
 
-function showToast(message: string, type: ToastType = 'info', duration: number = 3000): void {
-  let container = document.getElementById('toast-container');
-  if (!container) {
-    container = document.createElement('div');
-    container.id = 'toast-container';
-    document.body.appendChild(container);
-  }
+  // ============================================================================
+  // DOM References
+  // ============================================================================
 
-  const toast = document.createElement('div');
-  toast.className = `toast ${type}`;
-  toast.textContent = message;
-  container.appendChild(toast);
+  const effectForm = document.getElementById('effect-form') as HTMLFormElement;
+  const noEffectSelected = document.getElementById('no-effect-selected') as HTMLDivElement;
+  const formTitle = document.getElementById('effect-form-title') as HTMLHeadingElement;
+  const idDisplay = document.getElementById('effect-id-display') as HTMLSpanElement;
+  const effectCount = document.getElementById('effect-count') as HTMLSpanElement;
+  const previewContent = document.getElementById('preview-content') as HTMLDivElement;
+  const spellRefContent = document.getElementById('spell-ref-content') as HTMLDivElement;
 
-  setTimeout(() => {
-    toast.classList.add('toast-out');
-    setTimeout(() => toast.remove(), 300);
-  }, duration);
-}
+  // Basic tab
+  const idInput = document.getElementById('effect-id') as HTMLInputElement;
+  const nameInput = document.getElementById('effect-name') as HTMLInputElement;
+  const descriptionInput = document.getElementById('effect-description') as HTMLTextAreaElement;
+  const categorySelect = document.getElementById('effect-category') as HTMLSelectElement;
+  const stackingSelect = document.getElementById('effect-stacking') as HTMLSelectElement;
+  const maxStacksInput = document.getElementById('effect-max-stacks') as HTMLInputElement;
+  const maxStacksGroup = document.getElementById('max-stacks-group') as HTMLDivElement;
 
-// Helper to show error messages
-function showError(message: string): void {
-  const list = document.getElementById('effect-list');
-  if (list) {
-    list.innerHTML = `<div class="error-message" style="color: #ff6b6b; padding: 1rem;">${escapeHtml(message)}</div>`;
-  } else {
-    showToast(message, 'error');
-  }
-}
-
-// Helper to safely get DOM element by ID
-function getElement<T extends HTMLElement>(id: string): T | null {
-  return document.getElementById(id) as T | null;
-}
-
-// ============================================================================
-// Authentication
-// ============================================================================
-
-async function checkAuth(): Promise<boolean> {
-  try {
-    const response = await fetch('/api/auth/me', { credentials: 'include' });
-    if (!response.ok) {
-      window.location.href = '/';
-      return false;
-    }
-    const data: AuthInfo = await response.json();
-    currentUser = data;
-
-    if (!data.authenticated) {
-      window.location.href = '/';
-      return false;
-    }
-
-    const roles = data.roles || [];
-    const hasDeveloperAccess = roles.includes('developer') || roles.includes('admin');
-
-    if (!hasDeveloperAccess) {
-      window.location.href = '/';
-      return false;
-    }
-
-    const usernameEl = document.getElementById('nav-username');
-    if (usernameEl && data.username) {
-      usernameEl.textContent = data.username;
-    }
-
-    // Show Admin dropdown if user is admin
-    const isAdmin = roles.includes('admin');
-    const adminDropdown = document.getElementById('nav-admin-dropdown');
-    if (adminDropdown) {
-      adminDropdown.style.display = isAdmin ? 'flex' : 'none';
-    }
-
-    return true;
-  } catch (error) {
-    console.error('Failed to check auth:', error);
-    window.location.href = '/';
-    return false;
-  }
-}
-
-async function handleLogout(): Promise<void> {
-  try {
-    await fetch('/api/logout', { method: 'POST', credentials: 'include' });
-  } catch {
-    // Ignore errors
-  }
-  window.location.href = '/';
-}
-
-// ============================================================================
-// Data Fetching
-// ============================================================================
-
-async function fetchEffects(): Promise<void> {
-  try {
-    const response = await fetch('/api/status-effects', { credentials: 'include' });
-    if (!response.ok) {
-      console.error('Failed to fetch effects: HTTP', response.status);
-      showError('Failed to load status effects. Please refresh the page.');
-      return;
-    }
-    const data = await response.json();
-    if (data.success) {
-      if (Array.isArray(data.definitions)) {
-        effects = data.definitions;
-        renderEffectList();
-      } else {
-        showError('Invalid status effect data received from server.');
-      }
-    } else {
-      showError('Failed to load status effects: ' + (data.message || 'Unknown error'));
-    }
-  } catch (error) {
-    console.error('Failed to fetch effects:', error);
-    showError('Failed to connect to server. Please check your connection.');
-  }
-}
-
-// ============================================================================
-// Rendering
-// ============================================================================
-
-function renderEffectList(): void {
-  const list = getElement<HTMLElement>('effect-list');
-  if (!list) return;
-  const filterCategoryEl = getElement<HTMLSelectElement>('category-select');
-  const searchInputEl = getElement<HTMLInputElement>('search-input');
-  const filterCategory = filterCategoryEl?.value ?? '';
-  const searchTerm = (searchInputEl?.value ?? '').toLowerCase();
-
-  let filteredEffects = effects;
-
-  if (filterCategory) {
-    filteredEffects = filteredEffects.filter(e => e.category === filterCategory);
-  }
-
-  if (searchTerm) {
-    filteredEffects = filteredEffects.filter(e =>
-      e.name.toLowerCase().includes(searchTerm) ||
-      e.id.toLowerCase().includes(searchTerm) ||
-      e.description.toLowerCase().includes(searchTerm)
-    );
-  }
-
-  list.innerHTML = filteredEffects
-    .sort((a, b) => a.category.localeCompare(b.category) || a.name.localeCompare(b.name))
-    .map(effect => `
-      <li data-id="${effect.id}" class="${effect.id === selectedEffectId ? 'selected' : ''}">
-        <span class="effect-id">${escapeHtml(effect.id)}</span>
-        <div class="effect-name">${escapeHtml(effect.name)}</div>
-        <div class="effect-meta">
-          <span class="effect-category effect-category-${effect.category}">${escapeHtml(effect.category)}</span>
-        </div>
-      </li>
-    `)
-    .join('');
-
-  list.querySelectorAll('li').forEach(li => {
-    li.addEventListener('click', () => {
-      const id = li.dataset.id!;
-      selectEffect(id);
-    });
-  });
-}
-
-function selectEffect(id: string): void {
-  const effect = effects.find(e => e.id === id);
-
-  const noEffectSelected = getElement<HTMLElement>('no-effect-selected');
-  const effectForm = getElement<HTMLElement>('effect-form');
-
-  if (!effect) {
-    selectedEffectId = null;
-    if (noEffectSelected) noEffectSelected.style.display = 'flex';
-    if (effectForm) effectForm.style.display = 'none';
-    return;
-  }
-
-  selectedEffectId = id;
-
-  if (noEffectSelected) noEffectSelected.style.display = 'none';
-  if (effectForm) effectForm.style.display = 'block';
-
-  const formTitle = getElement<HTMLElement>('effect-form-title');
-  const idDisplay = getElement<HTMLElement>('effect-id-display');
-  if (formTitle) formTitle.textContent = 'Edit Status Effect';
-  if (idDisplay) idDisplay.textContent = `ID: ${effect.id}`;
-
-  // Basic fields
-  const idInput = getElement<HTMLInputElement>('effect-id');
-  const nameInput = getElement<HTMLInputElement>('effect-name');
-  const descriptionInput = getElement<HTMLTextAreaElement>('effect-description');
-  const categorySelect = getElement<HTMLSelectElement>('effect-category');
-  const stackingSelect = getElement<HTMLSelectElement>('effect-stacking');
-  const maxStacksInput = getElement<HTMLInputElement>('effect-max-stacks');
-
-  if (idInput) {
-    idInput.value = effect.id;
-    idInput.disabled = true; // Can't change ID after creation
-  }
-  if (nameInput) nameInput.value = effect.name;
-  if (descriptionInput) descriptionInput.value = effect.description || '';
-  if (categorySelect) categorySelect.value = effect.category;
-  if (stackingSelect) stackingSelect.value = effect.stackingBehavior;
-  if (maxStacksInput) maxStacksInput.value = String(effect.maxStacks);
-
-  // Modifiers
-  const accuracyInput = getElement<HTMLInputElement>('effect-accuracy');
-  const defenseInput = getElement<HTMLInputElement>('effect-defense');
-  const energyInput = getElement<HTMLInputElement>('effect-energy');
-  const damageInput = getElement<HTMLInputElement>('effect-damage');
-
-  if (accuracyInput) accuracyInput.value = String(effect.accuracyModifier ?? 0);
-  if (defenseInput) defenseInput.value = String(effect.defenseModifier ?? 0);
-  if (energyInput) energyInput.value = String(effect.energyModifier ?? 0);
-  if (damageInput) damageInput.value = String(effect.damageModifier ?? 0);
-  const speedInput = getElement<HTMLInputElement>('effect-speed');
-  if (speedInput) speedInput.value = String(effect.speedModifier ?? 0);
-
-  // Expanded modifiers
-  const expandedFields: Array<[string, string]> = [
-    ['effect-crit-chance', 'criticalChanceModifier'], ['effect-dodge', 'dodgeModifier'],
-    ['effect-magic-resist', 'magicResistance'], ['effect-healing-received', 'healingReceived'],
-    ['effect-perception', 'perceptionModifier'], ['effect-stealth', 'stealthModifier'],
-    ['effect-spellcasting', 'spellcastingModifier'], ['effect-lockpicking', 'lockpickingModifier'],
+  // Modifier field mapping: [elementId, fieldName]
+  const modifierFields: Array<[string, string]> = [
+    ['effect-accuracy', 'accuracyModifier'], ['effect-defense', 'defenseModifier'],
+    ['effect-energy', 'energyModifier'], ['effect-damage', 'damageModifier'],
+    ['effect-speed', 'speedModifier'], ['effect-crit-chance', 'criticalChanceModifier'],
+    ['effect-dodge', 'dodgeModifier'], ['effect-magic-resist', 'magicResistance'],
+    ['effect-spellcasting', 'spellcastingModifier'], ['effect-healing-received', 'healingReceived'],
+    ['effect-stealth', 'stealthModifier'], ['effect-perception', 'perceptionModifier'],
+    ['effect-lockpicking', 'lockpickingModifier'],
     ['effect-str', 'strengthModifier'], ['effect-dex', 'dexterityModifier'],
     ['effect-con', 'constitutionModifier'], ['effect-int', 'intelligenceModifier'],
     ['effect-wis', 'wisdomModifier'], ['effect-cha', 'charismaModifier'],
     ['effect-max-hp', 'maxHpModifier'], ['effect-max-mana', 'maxManaModifier'],
   ];
-  for (const [elemId, field] of expandedFields) {
-    const el = getElement<HTMLInputElement>(elemId);
-    if (el) el.value = String((effect as unknown as Record<string, unknown>)[field] ?? 0);
-  }
 
-  // Expanded flags
-  const blocksCasting = getElement<HTMLInputElement>('effect-blocks-casting');
-  const blocksCombat = getElement<HTMLInputElement>('effect-blocks-combat');
-  const blocksStealth = getElement<HTMLInputElement>('effect-blocks-stealth');
-  if (blocksCasting) blocksCasting.checked = effect.blocksCasting ?? false;
-  if (blocksCombat) blocksCombat.checked = effect.blocksCombat ?? false;
-  if (blocksStealth) blocksStealth.checked = effect.blocksStealth ?? false;
+  // Flag field mapping: [elementId, fieldName]
+  const flagFields: Array<[string, string]> = [
+    ['effect-blocks-regen', 'blocksRegen'], ['effect-blocks-movement', 'blocksMovement'],
+    ['effect-is-blind', 'isBlind'], ['effect-blocks-casting', 'blocksCasting'],
+    ['effect-blocks-combat', 'blocksCombat'], ['effect-blocks-stealth', 'blocksStealth'],
+  ];
 
-  // Periodic effects (damage/healing ranges)
-  const tickDamageMinInput = getElement<HTMLInputElement>('effect-tick-damage-min');
-  const tickDamageMaxInput = getElement<HTMLInputElement>('effect-tick-damage-max');
-  const tickHealingMinInput = getElement<HTMLInputElement>('effect-tick-healing-min');
-  const tickHealingMaxInput = getElement<HTMLInputElement>('effect-tick-healing-max');
-  const tickMessageInput = getElement<HTMLInputElement>('effect-tick-message');
-  const silentTickCheckbox = getElement<HTMLInputElement>('effect-silent-tick');
-  const wearOffInput = getElement<HTMLInputElement>('effect-wear-off');
+  // ============================================================================
+  // List Panel
+  // ============================================================================
 
-  if (tickDamageMinInput) tickDamageMinInput.value = effect.tickDamageMin?.toString() || '';
-  if (tickDamageMaxInput) tickDamageMaxInput.value = effect.tickDamageMax?.toString() || '';
-  if (tickHealingMinInput) tickHealingMinInput.value = effect.tickHealingMin?.toString() || '';
-  if (tickHealingMaxInput) tickHealingMaxInput.value = effect.tickHealingMax?.toString() || '';
-  if (tickMessageInput) tickMessageInput.value = effect.tickMessage || '';
-  if (silentTickCheckbox) silentTickCheckbox.checked = effect.silentTick || false;
-  if (wearOffInput) wearOffInput.value = effect.wearOffMessage || '';
-
-  // Flags
-  const blocksRegenCheckbox = getElement<HTMLInputElement>('effect-blocks-regen');
-  const blocksMovementCheckbox = getElement<HTMLInputElement>('effect-blocks-movement');
-  const isBlindCheckbox = getElement<HTMLInputElement>('effect-is-blind');
-
-  if (blocksRegenCheckbox) blocksRegenCheckbox.checked = effect.blocksRegen || false;
-  if (blocksMovementCheckbox) blocksMovementCheckbox.checked = effect.blocksMovement || false;
-  if (isBlindCheckbox) isBlindCheckbox.checked = effect.isBlind || false;
-
-  // Update max stacks visibility
-  updateMaxStacksVisibility(effect.stackingBehavior);
-
-  // Update preview
-  updatePreview(effect);
-
-  renderEffectList();
-}
-
-function updateMaxStacksVisibility(stackingBehavior: string): void {
-  const maxStacksGroup = getElement<HTMLElement>('max-stacks-group');
-  if (maxStacksGroup) {
-    maxStacksGroup.style.display = stackingBehavior === 'stack' ? 'block' : 'none';
-  }
-}
-
-function updatePreview(effect: StatusEffectDefinition): void {
-  const content = document.getElementById('preview-content');
-  if (!content) return;
-
-  const categoryColors: Record<string, string> = {
-    buff: '#4ade80',
-    debuff: '#c084fc',
-    dot: '#ff6b6b',
-    hot: '#60a5fa',
-    control: '#fbbf24',
-  };
-
-  let html = `
-    <div class="preview-name">${escapeHtml(effect.name)}</div>
-    <div class="preview-id">ID: <code>${escapeHtml(effect.id)}</code></div>
-    <div class="preview-desc">${escapeHtml(effect.description || 'No description.')}</div>
-    <div class="preview-stats">
-      <span style="color: ${categoryColors[effect.category] || '#fff'}">${escapeHtml(effect.category.toUpperCase())}</span>
-      <span>${escapeHtml(effect.stackingBehavior)}</span>
-    </div>
-  `;
-
-  // Modifiers
-  const modifiers = [];
-  if (effect.accuracyModifier) modifiers.push(`Accuracy: ${effect.accuracyModifier > 0 ? '+' : ''}${effect.accuracyModifier}`);
-  if (effect.defenseModifier) modifiers.push(`Defense: ${effect.defenseModifier > 0 ? '+' : ''}${effect.defenseModifier}`);
-  if (effect.energyModifier) modifiers.push(`Energy: ${effect.energyModifier > 0 ? '+' : ''}${effect.energyModifier}%`);
-  if (effect.damageModifier) modifiers.push(`Damage: ${effect.damageModifier > 0 ? '+' : ''}${effect.damageModifier}%`);
-  if (effect.speedModifier) modifiers.push(`Speed: ${effect.speedModifier > 0 ? '+' : ''}${effect.speedModifier}%`);
-  if (effect.criticalChanceModifier) modifiers.push(`Crit: ${effect.criticalChanceModifier > 0 ? '+' : ''}${effect.criticalChanceModifier}%`);
-  if (effect.dodgeModifier) modifiers.push(`Dodge: ${effect.dodgeModifier > 0 ? '+' : ''}${effect.dodgeModifier}%`);
-  if (effect.magicResistance) modifiers.push(`Magic Resist: ${effect.magicResistance > 0 ? '+' : ''}${effect.magicResistance}%`);
-  if (effect.healingReceived) modifiers.push(`Healing: ${effect.healingReceived > 0 ? '+' : ''}${effect.healingReceived}%`);
-  if (effect.perceptionModifier) modifiers.push(`Perception: ${effect.perceptionModifier > 0 ? '+' : ''}${effect.perceptionModifier}`);
-  if (effect.stealthModifier) modifiers.push(`Stealth: ${effect.stealthModifier > 0 ? '+' : ''}${effect.stealthModifier}`);
-  if (effect.spellcastingModifier) modifiers.push(`Spellcasting: ${effect.spellcastingModifier > 0 ? '+' : ''}${effect.spellcastingModifier}`);
-  if (effect.lockpickingModifier) modifiers.push(`Lockpicking: ${effect.lockpickingModifier > 0 ? '+' : ''}${effect.lockpickingModifier}`);
-  const statMods: string[] = [];
-  if (effect.strengthModifier) statMods.push(`STR ${effect.strengthModifier > 0 ? '+' : ''}${effect.strengthModifier}`);
-  if (effect.dexterityModifier) statMods.push(`DEX ${effect.dexterityModifier > 0 ? '+' : ''}${effect.dexterityModifier}`);
-  if (effect.constitutionModifier) statMods.push(`CON ${effect.constitutionModifier > 0 ? '+' : ''}${effect.constitutionModifier}`);
-  if (effect.intelligenceModifier) statMods.push(`INT ${effect.intelligenceModifier > 0 ? '+' : ''}${effect.intelligenceModifier}`);
-  if (effect.wisdomModifier) statMods.push(`WIS ${effect.wisdomModifier > 0 ? '+' : ''}${effect.wisdomModifier}`);
-  if (effect.charismaModifier) statMods.push(`CHA ${effect.charismaModifier > 0 ? '+' : ''}${effect.charismaModifier}`);
-  if (statMods.length > 0) modifiers.push(`Stats: ${statMods.join(', ')}`);
-  if (effect.maxHpModifier) modifiers.push(`Max HP: ${effect.maxHpModifier > 0 ? '+' : ''}${effect.maxHpModifier}`);
-  if (effect.maxManaModifier) modifiers.push(`Max Mana: ${effect.maxManaModifier > 0 ? '+' : ''}${effect.maxManaModifier}`);
-
-  if (modifiers.length > 0) {
-    html += `
-      <div class="preview-section">
-        <div class="preview-section-title">Combat Modifiers</div>
-        <div>${modifiers.join('<br>')}</div>
+  const listPanel = new ListPanel<StatusEffectDefinition>({
+    listElement: document.getElementById('effect-list')!,
+    searchInput: document.getElementById('search-input') as HTMLInputElement,
+    filterSelect: document.getElementById('category-select') as HTMLSelectElement,
+    onSelect: (item) => selectEffect(item.id),
+    getId: (item) => item.id,
+    renderItem: (item) => `
+      <div class="effect-name">${escapeHtml(item.name)}</div>
+      <div class="effect-meta">
+        <span class="effect-id">${escapeHtml(item.id)}</span>
+        <span class="cat-badge ${item.category}">${escapeHtml(item.category)}</span>
       </div>
-    `;
-  }
+    `,
+    filterFn: (item, search) =>
+      item.name.toLowerCase().includes(search) ||
+      item.id.toLowerCase().includes(search) ||
+      item.description.toLowerCase().includes(search),
+    dropdownFilterFn: (item, value) => item.category === value,
+    sortFn: (a, b) => a.category.localeCompare(b.category) || a.name.localeCompare(b.name),
+    onRender: updateCount,
+  });
 
-  // Periodic effects (damage/healing ranges)
-  const hasDamageRange = effect.tickDamageMin !== undefined && effect.tickDamageMax !== undefined;
-  const hasHealingRange = effect.tickHealingMin !== undefined && effect.tickHealingMax !== undefined;
-  if (hasDamageRange || hasHealingRange) {
-    html += `<div class="preview-section"><div class="preview-section-title">Periodic Effects</div>`;
-    if (hasDamageRange) {
-      html += `<div>Damage: ${effect.tickDamageMin}-${effect.tickDamageMax}/tick</div>`;
-    }
-    if (hasHealingRange) {
-      html += `<div>Healing: ${effect.tickHealingMin}-${effect.tickHealingMax}/tick</div>`;
-    }
-    if (effect.tickMessage) {
-      html += `<div class="preview-message">"${escapeHtml(effect.tickMessage)}"</div>`;
-    }
-    html += `</div>`;
-  }
+  // ============================================================================
+  // Tabs
+  // ============================================================================
 
-  // Messages
-  if (effect.wearOffMessage) {
-    html += `
-      <div class="preview-section">
-        <div class="preview-section-title">Wear Off Message</div>
-        <div class="preview-message">"${escapeHtml(effect.wearOffMessage)}"</div>
-      </div>
-    `;
-  }
+  setupTabs({ container: effectForm });
 
-  // Flags
-  const flags = [];
-  if (effect.blocksRegen) flags.push('Blocks Regen');
-  if (effect.blocksMovement) flags.push('Blocks Movement');
-  if (effect.isBlind) flags.push('Blind');
-  if (effect.silentTick) flags.push('Silent Tick');
+  // ============================================================================
+  // API
+  // ============================================================================
 
-  if (flags.length > 0) {
-    html += `
-      <div class="preview-section">
-        <div class="preview-section-title">Flags</div>
-        <div>${flags.join(', ')}</div>
-      </div>
-    `;
-  }
-
-  // Max stacks
-  if (effect.stackingBehavior === 'stack') {
-    html += `
-      <div class="preview-section">
-        <div class="preview-section-title">Max Stacks</div>
-        <div>${effect.maxStacks}</div>
-      </div>
-    `;
-  }
-
-  content.innerHTML = html;
-}
-
-// ============================================================================
-// CRUD Operations
-// ============================================================================
-
-async function createEffect(): Promise<void> {
-  let id = prompt('Enter effect ID (lowercase, no spaces):');
-  if (!id) return;
-  id = id.toLowerCase();
-  if (!/^[a-z][a-z0-9_]*$/.test(id)) {
-    showToast('ID must start with a letter and contain only lowercase letters, numbers, and underscores', 'error');
-    return;
-  }
-
-  const name = prompt('Enter display name:');
-  if (!name) return;
-
-  try {
-    const response = await fetch('/api/status-effects', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify({
-        id: id.toLowerCase(),
-        name,
-        description: '',
-        category: 'buff',
-        stackingBehavior: 'refresh',
-        maxStacks: 1,
-      }),
-    });
-
-    if (!response.ok) {
-      const data = await response.json();
-      showToast(`Failed to create effect: ${data.message || 'HTTP ' + response.status}`, 'error');
-      return;
-    }
-    const data = await response.json();
-    if (data.success) {
-      effects.push(data.definition);
-      selectEffect(data.definition.id);
-      showToast('Effect created successfully!', 'success');
-    } else {
-      showToast('Failed to create effect: ' + data.message, 'error');
-    }
-  } catch (error) {
-    console.error('Failed to create effect:', error);
-    showToast('Failed to create effect', 'error');
-  }
-}
-
-async function saveEffect(): Promise<void> {
-  if (!selectedEffectId) return;
-
-  const effectData = gatherFormData();
-
-  try {
-    const response = await fetch(`/api/status-effects/${selectedEffectId}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify(effectData),
-    });
-
-    let data;
+  async function fetchEffects(): Promise<void> {
     try {
-      data = await response.json();
-    } catch {
-      showToast('Failed to save effect: Invalid server response', 'error');
-      return;
-    }
-    if (data.success) {
-      const index = effects.findIndex(e => e.id === selectedEffectId);
-      if (index !== -1) {
-        effects[index] = data.definition;
+      const res = await fetch('/api/status-effects', { credentials: 'include' });
+      const data = await res.json();
+      if (data.success && Array.isArray(data.definitions)) {
+        effects = data.definitions;
+        listPanel.setItems(effects);
+        listPanel.setSelected(selectedEffectId);
       } else {
-        // Effect not found in local array - this shouldn't happen, log warning and add it
-        console.warn(`Effect ${selectedEffectId} not found in local effects array, adding from server response`);
-        effects.push(data.definition);
+        showToast('Failed to load status effects', 'error');
       }
-      selectEffect(selectedEffectId);
-      showToast('Effect saved successfully!', 'success');
-    } else {
-      showToast('Failed to save effect: ' + data.message, 'error');
+    } catch (error) {
+      console.error('Failed to fetch effects:', error);
+      showToast('Failed to connect to server', 'error');
     }
-  } catch (error) {
-    console.error('Failed to save effect:', error);
-    showToast('Failed to save effect', 'error');
   }
-}
 
-async function deleteEffect(): Promise<void> {
-  if (!selectedEffectId) return;
-
-  const effect = effects.find(e => e.id === selectedEffectId);
-  if (!effect) return;
-  if (!confirm(`Are you sure you want to delete "${effect.name}"?`)) return;
-
-  try {
-    const response = await fetch(`/api/status-effects/${selectedEffectId}`, {
-      method: 'DELETE',
-      credentials: 'include',
-    });
-
-    let data;
+  async function fetchSpells(): Promise<void> {
     try {
-      data = await response.json();
-    } catch {
-      showToast('Failed to delete effect: Invalid server response', 'error');
-      return;
+      const res = await fetch('/api/spells', { credentials: 'include' });
+      const data = await res.json();
+      if (data.success) {
+        spells = data.spells || [];
+      }
+    } catch (error) {
+      console.error('Failed to fetch spells:', error);
     }
-    if (data.success) {
-      effects = effects.filter(e => e.id !== selectedEffectId);
-      selectedEffectId = null;
-      document.getElementById('no-effect-selected')!.style.display = 'flex';
-      document.getElementById('effect-form')!.style.display = 'none';
-      document.getElementById('preview-content')!.innerHTML = '<p class="hint">Select an effect to see preview</p>';
-      renderEffectList();
-      showToast('Effect deleted successfully!', 'success');
-    } else {
-      showToast('Failed to delete effect: ' + data.message, 'error');
-    }
-  } catch (error) {
-    console.error('Failed to delete effect:', error);
-    showToast('Failed to delete effect', 'error');
-  }
-}
-
-async function duplicateEffect(): Promise<void> {
-  if (!selectedEffectId) return;
-
-  const effect = effects.find(e => e.id === selectedEffectId);
-  if (!effect) return;
-
-  let newId = prompt('Enter ID for duplicate:', effect.id + '_copy');
-  if (!newId) return;
-  newId = newId.toLowerCase();
-  if (!/^[a-z][a-z0-9_]*$/.test(newId)) {
-    showToast('ID must start with a letter and contain only lowercase letters, numbers, and underscores', 'error');
-    return;
   }
 
-  const newName = prompt('Enter name for duplicate:', effect.name + ' (copy)');
-  if (!newName) return;
-
-  const duplicateData = { ...gatherFormData(), id: newId, name: newName };
-
-  try {
-    const response = await fetch('/api/status-effects', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify(duplicateData),
-    });
-
-    let data;
+  async function saveEffect(effectData: Partial<StatusEffectDefinition>, forceNew = false): Promise<StatusEffectDefinition | null> {
     try {
-      data = await response.json();
-    } catch {
-      showToast('Failed to duplicate effect: Invalid server response', 'error');
-      return;
-    }
-    if (data.success) {
-      effects.push(data.definition);
-      selectEffect(data.definition.id);
-      showToast('Effect duplicated successfully!', 'success');
-    } else {
-      showToast('Failed to duplicate effect: ' + data.message, 'error');
-    }
-  } catch (error) {
-    console.error('Failed to duplicate effect:', error);
-    showToast('Failed to duplicate effect', 'error');
-  }
-}
+      const isNew = forceNew || !selectedEffectId;
+      const url = isNew ? '/api/status-effects' : `/api/status-effects/${selectedEffectId}`;
+      const method = isNew ? 'POST' : 'PUT';
 
-function gatherFormData(): Partial<StatusEffectDefinition> {
-  const maxStacksValue = parseInt((document.getElementById('effect-max-stacks') as HTMLInputElement).value, 10);
-  const tickDamageMin = parseInt((document.getElementById('effect-tick-damage-min') as HTMLInputElement).value, 10);
-  const tickDamageMax = parseInt((document.getElementById('effect-tick-damage-max') as HTMLInputElement).value, 10);
-  const tickHealingMin = parseInt((document.getElementById('effect-tick-healing-min') as HTMLInputElement).value, 10);
-  const tickHealingMax = parseInt((document.getElementById('effect-tick-healing-max') as HTMLInputElement).value, 10);
-  return {
-    name: (document.getElementById('effect-name') as HTMLInputElement).value,
-    description: (document.getElementById('effect-description') as HTMLTextAreaElement).value || '',
-    category: (document.getElementById('effect-category') as HTMLSelectElement).value as StatusEffectCategory,
-    stackingBehavior: (document.getElementById('effect-stacking') as HTMLSelectElement).value as StackingBehavior,
-    maxStacks: isNaN(maxStacksValue) || maxStacksValue < 1 ? 1 : maxStacksValue,
-    accuracyModifier: parseInt((document.getElementById('effect-accuracy') as HTMLInputElement).value, 10) || 0,
-    defenseModifier: parseInt((document.getElementById('effect-defense') as HTMLInputElement).value, 10) || 0,
-    energyModifier: parseInt((document.getElementById('effect-energy') as HTMLInputElement).value, 10) || 0,
-    damageModifier: parseInt((document.getElementById('effect-damage') as HTMLInputElement).value, 10) || 0,
-    speedModifier: parseInt((document.getElementById('effect-speed') as HTMLInputElement).value, 10) || 0,
-    criticalChanceModifier: parseInt((document.getElementById('effect-crit-chance') as HTMLInputElement).value, 10) || 0,
-    dodgeModifier: parseInt((document.getElementById('effect-dodge') as HTMLInputElement).value, 10) || 0,
-    magicResistance: parseInt((document.getElementById('effect-magic-resist') as HTMLInputElement).value, 10) || 0,
-    healingReceived: parseInt((document.getElementById('effect-healing-received') as HTMLInputElement).value, 10) || 0,
-    perceptionModifier: parseInt((document.getElementById('effect-perception') as HTMLInputElement).value, 10) || 0,
-    stealthModifier: parseInt((document.getElementById('effect-stealth') as HTMLInputElement).value, 10) || 0,
-    spellcastingModifier: parseInt((document.getElementById('effect-spellcasting') as HTMLInputElement).value, 10) || 0,
-    lockpickingModifier: parseInt((document.getElementById('effect-lockpicking') as HTMLInputElement).value, 10) || 0,
-    strengthModifier: parseInt((document.getElementById('effect-str') as HTMLInputElement).value, 10) || 0,
-    dexterityModifier: parseInt((document.getElementById('effect-dex') as HTMLInputElement).value, 10) || 0,
-    constitutionModifier: parseInt((document.getElementById('effect-con') as HTMLInputElement).value, 10) || 0,
-    intelligenceModifier: parseInt((document.getElementById('effect-int') as HTMLInputElement).value, 10) || 0,
-    wisdomModifier: parseInt((document.getElementById('effect-wis') as HTMLInputElement).value, 10) || 0,
-    charismaModifier: parseInt((document.getElementById('effect-cha') as HTMLInputElement).value, 10) || 0,
-    maxHpModifier: parseInt((document.getElementById('effect-max-hp') as HTMLInputElement).value, 10) || 0,
-    maxManaModifier: parseInt((document.getElementById('effect-max-mana') as HTMLInputElement).value, 10) || 0,
-    tickDamageMin: isNaN(tickDamageMin) ? undefined : tickDamageMin,
-    tickDamageMax: isNaN(tickDamageMax) ? undefined : tickDamageMax,
-    tickHealingMin: isNaN(tickHealingMin) ? undefined : tickHealingMin,
-    tickHealingMax: isNaN(tickHealingMax) ? undefined : tickHealingMax,
-    tickMessage: (document.getElementById('effect-tick-message') as HTMLInputElement).value || undefined,
-    silentTick: (document.getElementById('effect-silent-tick') as HTMLInputElement).checked,
-    wearOffMessage: (document.getElementById('effect-wear-off') as HTMLInputElement).value || undefined,
-    blocksRegen: (document.getElementById('effect-blocks-regen') as HTMLInputElement).checked,
-    blocksMovement: (document.getElementById('effect-blocks-movement') as HTMLInputElement).checked,
-    isBlind: (document.getElementById('effect-is-blind') as HTMLInputElement).checked,
-    blocksCasting: (document.getElementById('effect-blocks-casting') as HTMLInputElement).checked,
-    blocksCombat: (document.getElementById('effect-blocks-combat') as HTMLInputElement).checked,
-    blocksStealth: (document.getElementById('effect-blocks-stealth') as HTMLInputElement).checked,
-  };
-}
-
-// ============================================================================
-// Import/Export
-// ============================================================================
-
-async function exportEffects(): Promise<void> {
-  try {
-    const response = await fetch('/api/status-effects/export/all', { credentials: 'include' });
-    if (!response.ok) throw new Error('Failed to fetch effects');
-    const blob = await response.blob();
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'status_effects_export.json';
-    a.click();
-    URL.revokeObjectURL(url);
-    showToast('Effects exported successfully!', 'success');
-  } catch (error) {
-    console.error('Failed to export effects:', error);
-    showToast('Failed to export effects', 'error');
-  }
-}
-
-function showImportModal(): void {
-  document.getElementById('import-modal')!.style.display = 'flex';
-}
-
-function hideImportModal(): void {
-  document.getElementById('import-modal')!.style.display = 'none';
-}
-
-async function doImport(): Promise<void> {
-  const fileInput = document.getElementById('import-file') as HTMLInputElement;
-  const merge = (document.getElementById('import-merge') as HTMLInputElement).checked;
-
-  if (!fileInput.files || fileInput.files.length === 0) {
-    showToast('Please select a file', 'warning');
-    return;
-  }
-
-  try {
-    const file = fileInput.files[0];
-    const text = await file.text();
-    const data = JSON.parse(text);
-
-    if (!data || !Array.isArray(data.definitions)) {
-      throw new Error('Invalid JSON structure: definitions must be an array');
-    }
-
-    const response = await fetch('/api/status-effects/import', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify({ definitions: data.definitions, merge }),
-    });
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-
-    const result = await response.json();
-    if (result.success) {
-      showToast(`Import complete! Created: ${result.results.created}, Updated: ${result.results.updated}, Errors: ${result.results.errors.length}`, 'success', 4000);
-      hideImportModal();
-      await fetchEffects();
-    } else {
-      showToast('Import failed: ' + result.message, 'error');
-    }
-  } catch (error) {
-    console.error('Failed to import:', error);
-    const errorMessage = error instanceof SyntaxError
-      ? 'Failed to import: Invalid JSON file format'
-      : 'Failed to import: ' + (error instanceof Error ? error.message : 'Unknown error');
-    showToast(errorMessage, 'error');
-  }
-}
-
-// ============================================================================
-// Utility
-// ============================================================================
-
-function escapeHtml(text: string): string {
-  const div = document.createElement('div');
-  div.textContent = text;
-  return div.innerHTML;
-}
-
-// ============================================================================
-// Tab Handling
-// ============================================================================
-
-function setupTabs(): void {
-  document.querySelectorAll('.tab-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const tabName = (btn as HTMLElement).dataset.tab;
-      if (!tabName) return;
-
-      // Update button states
-      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-
-      // Update content visibility
-      document.querySelectorAll('.tab-content').forEach(content => {
-        content.classList.remove('active');
+      const res = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(effectData),
       });
-      const tabContent = document.getElementById(`tab-${tabName}`);
-      if (tabContent) tabContent.classList.add('active');
-    });
-  });
-}
 
-// ============================================================================
-// Initialize
-// ============================================================================
-
-document.addEventListener('DOMContentLoaded', async () => {
-  const hasAccess = await checkAuth();
-  if (!hasAccess) return;
-
-  await fetchEffects();
-  setupTabs();
-
-  // Helper to safely add event listeners
-  const addListener = (id: string, event: string, handler: EventListener) => {
-    const el = document.getElementById(id);
-    if (el) el.addEventListener(event, handler);
-    else console.warn(`Element #${id} not found for event listener`);
-  };
-
-  // Event listeners
-  addListener('new-effect-btn', 'click', createEffect);
-  addListener('effect-form', 'submit', (e) => {
-    e.preventDefault();
-    saveEffect();
-  });
-  addListener('delete-effect-btn', 'click', deleteEffect);
-  addListener('duplicate-effect-btn', 'click', duplicateEffect);
-
-  // Filters
-  addListener('category-select', 'change', renderEffectList);
-  addListener('search-input', 'input', renderEffectList);
-
-  // Stacking behavior change handler - update max stacks visibility
-  addListener('effect-stacking', 'change', (e) => {
-    updateMaxStacksVisibility((e.target as HTMLSelectElement).value);
-  });
-
-  // Import/Export
-  addListener('import-btn', 'click', showImportModal);
-  addListener('export-btn', 'click', exportEffects);
-  addListener('close-import-modal', 'click', hideImportModal);
-  addListener('do-import-btn', 'click', doImport);
-  addListener('import-modal', 'click', (e) => {
-    if (e.target === e.currentTarget) hideImportModal();
-  });
-
-  // Logout
-  addListener('logout-btn', 'click', handleLogout);
-
-  // User menu dropdown toggle
-  const userMenuBtn = document.getElementById('nav-username');
-  const userMenu = userMenuBtn?.closest('.nav-user-menu');
-  if (userMenuBtn && userMenu) {
-    userMenuBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      userMenu.classList.toggle('open');
-    });
-    // Prevent clicks inside the dropdown from closing it
-    userMenu.addEventListener('click', (e) => {
-      e.stopPropagation();
-    });
-    document.addEventListener('click', () => {
-      userMenu.classList.remove('open');
-    });
+      const data = await res.json();
+      if (data.success) {
+        showToast(isNew ? 'Effect created' : 'Effect saved', 'success');
+        await fetchEffects();
+        return data.definition;
+      } else {
+        showToast(data.message || 'Failed to save effect', 'error');
+        return null;
+      }
+    } catch (error) {
+      console.error('Failed to save effect:', error);
+      showToast('Failed to save effect', 'error');
+      return null;
+    }
   }
-});
 
+  async function deleteEffect(id: string): Promise<boolean> {
+    try {
+      const res = await fetch(`/api/status-effects/${id}`, {
+        method: 'DELETE',
+        credentials: 'include',
+      });
+      const data = await res.json();
+      if (data.success) {
+        showToast('Effect deleted', 'success');
+        await fetchEffects();
+        return true;
+      } else {
+        showToast(data.message || 'Failed to delete effect', 'error');
+        return false;
+      }
+    } catch (error) {
+      console.error('Failed to delete effect:', error);
+      showToast('Failed to delete effect', 'error');
+      return false;
+    }
+  }
+
+  // ============================================================================
+  // Selection & Form
+  // ============================================================================
+
+  function selectEffect(id: string): void {
+    const effect = effects.find(e => e.id === id);
+    if (!effect) { clearForm(); return; }
+
+    selectedEffectId = id;
+    noEffectSelected.style.display = 'none';
+    effectForm.style.display = 'block';
+    formTitle.textContent = 'Edit Status Effect';
+    idDisplay.textContent = `ID: ${effect.id}`;
+
+    // Basic
+    idInput.value = effect.id;
+    idInput.disabled = true;
+    nameInput.value = effect.name;
+    descriptionInput.value = effect.description || '';
+    categorySelect.value = effect.category;
+    stackingSelect.value = effect.stackingBehavior;
+    maxStacksInput.value = String(effect.maxStacks);
+    updateMaxStacksVisibility();
+
+    // Modifiers
+    for (const [elemId, field] of modifierFields) {
+      const el = document.getElementById(elemId) as HTMLInputElement;
+      if (el) el.value = String((effect as unknown as Record<string, unknown>)[field] ?? 0);
+    }
+
+    // Periodic
+    const tickDmgMin = document.getElementById('effect-tick-damage-min') as HTMLInputElement | null;
+    const tickDmgMax = document.getElementById('effect-tick-damage-max') as HTMLInputElement | null;
+    const tickHealMin = document.getElementById('effect-tick-healing-min') as HTMLInputElement | null;
+    const tickHealMax = document.getElementById('effect-tick-healing-max') as HTMLInputElement | null;
+    const tickMsg = document.getElementById('effect-tick-message') as HTMLInputElement | null;
+    const wearOff = document.getElementById('effect-wear-off') as HTMLInputElement | null;
+    const showTickCb = document.getElementById('effect-show-tick-message') as HTMLInputElement | null;
+    if (tickDmgMin) tickDmgMin.value = effect.tickDamageMin?.toString() || '';
+    if (tickDmgMax) tickDmgMax.value = effect.tickDamageMax?.toString() || '';
+    if (tickHealMin) tickHealMin.value = effect.tickHealingMin?.toString() || '';
+    if (tickHealMax) tickHealMax.value = effect.tickHealingMax?.toString() || '';
+    if (tickMsg) tickMsg.value = effect.tickMessage || '';
+    if (wearOff) wearOff.value = effect.wearOffMessage || '';
+    if (showTickCb) showTickCb.checked = !effect.silentTick;
+    updateTickMessageVisibility();
+
+    // Flags
+    for (const [elemId, field] of flagFields) {
+      const el = document.getElementById(elemId) as HTMLInputElement;
+      if (el) el.checked = !!(effect as unknown as Record<string, unknown>)[field];
+    }
+
+    listPanel.setSelected(id);
+    updatePreview(effect);
+    updateSpellReferences(id);
+  }
+
+  function clearForm(): void {
+    selectedEffectId = null;
+    noEffectSelected.style.display = 'flex';
+    effectForm.style.display = 'none';
+    idDisplay.textContent = '';
+    previewContent.innerHTML = '<p class="hint">Select an effect to see preview</p>';
+    spellRefContent.innerHTML = '<p class="hint">Select an effect to see spell references</p>';
+    listPanel.setSelected(null);
+  }
+
+  function updateMaxStacksVisibility(): void {
+    maxStacksGroup.style.display = stackingSelect.value === 'stack' ? 'block' : 'none';
+  }
+
+  function updateTickMessageVisibility(): void {
+    const cb = document.getElementById('effect-show-tick-message') as HTMLInputElement | null;
+    const group = document.getElementById('tick-message-group');
+    if (cb && group) group.style.display = cb.checked ? 'block' : 'none';
+  }
+
+  // ============================================================================
+  // Gather Form Data
+  // ============================================================================
+
+  function gatherFormData(): Partial<StatusEffectDefinition> {
+    const maxStacks = parseInt(maxStacksInput.value, 10);
+    const tickDamageMin = parseInt((document.getElementById('effect-tick-damage-min') as HTMLInputElement).value, 10);
+    const tickDamageMax = parseInt((document.getElementById('effect-tick-damage-max') as HTMLInputElement).value, 10);
+    const tickHealingMin = parseInt((document.getElementById('effect-tick-healing-min') as HTMLInputElement).value, 10);
+    const tickHealingMax = parseInt((document.getElementById('effect-tick-healing-max') as HTMLInputElement).value, 10);
+
+    // If only one of min/max is set, use it for both (fixed damage value)
+    let resolvedTickDmgMin = isNaN(tickDamageMin) ? undefined : tickDamageMin;
+    let resolvedTickDmgMax = isNaN(tickDamageMax) ? undefined : tickDamageMax;
+    if (resolvedTickDmgMin !== undefined && resolvedTickDmgMax === undefined) resolvedTickDmgMax = resolvedTickDmgMin;
+    if (resolvedTickDmgMax !== undefined && resolvedTickDmgMin === undefined) resolvedTickDmgMin = resolvedTickDmgMax;
+
+    let resolvedTickHealMin = isNaN(tickHealingMin) ? undefined : tickHealingMin;
+    let resolvedTickHealMax = isNaN(tickHealingMax) ? undefined : tickHealingMax;
+    if (resolvedTickHealMin !== undefined && resolvedTickHealMax === undefined) resolvedTickHealMax = resolvedTickHealMin;
+    if (resolvedTickHealMax !== undefined && resolvedTickHealMin === undefined) resolvedTickHealMin = resolvedTickHealMax;
+
+    const data: Partial<StatusEffectDefinition> = {
+      name: nameInput.value.trim(),
+      description: descriptionInput.value.trim() || '',
+      category: categorySelect.value as StatusEffectCategory,
+      stackingBehavior: stackingSelect.value as StackingBehavior,
+      maxStacks: isNaN(maxStacks) || maxStacks < 1 ? 1 : maxStacks,
+      tickDamageMin: resolvedTickDmgMin,
+      tickDamageMax: resolvedTickDmgMax,
+      tickHealingMin: resolvedTickHealMin,
+      tickHealingMax: resolvedTickHealMax,
+      tickMessage: (document.getElementById('effect-tick-message') as HTMLInputElement | null)?.value ?? undefined,
+      wearOffMessage: (document.getElementById('effect-wear-off') as HTMLInputElement | null)?.value ?? undefined,
+      silentTick: !(document.getElementById('effect-show-tick-message') as HTMLInputElement | null)?.checked,
+    };
+
+    // Modifiers
+    for (const [elemId, field] of modifierFields) {
+      const el = document.getElementById(elemId) as HTMLInputElement | null;
+      if (el) (data as Record<string, unknown>)[field] = parseInt(el.value, 10) || 0;
+    }
+
+    // Flags
+    for (const [elemId, field] of flagFields) {
+      const el = document.getElementById(elemId) as HTMLInputElement | null;
+      if (el) (data as Record<string, unknown>)[field] = el.checked;
+    }
+
+    return data;
+  }
+
+  // ============================================================================
+  // Preview
+  // ============================================================================
+
+  function formatModifier(label: string, value: number, suffix: string = ''): string {
+    if (value === 0) return '';
+    const cls = value > 0 ? 'positive' : 'negative';
+    const sign = value > 0 ? '+' : '';
+    return `<div class="preview-modifier">${escapeHtml(label)}: <span class="mod-value ${cls}">${sign}${value}${suffix}</span></div>`;
+  }
+
+  function updatePreview(effect: StatusEffectDefinition): void {
+    let html = `
+      <div class="preview-name">${escapeHtml(effect.name)}</div>
+      <div class="preview-id">ID: <code>${escapeHtml(effect.id)}</code></div>
+      <div class="preview-desc">${escapeHtml(effect.description || 'No description.')}</div>
+      <div class="preview-badges">
+        <span class="cat-badge ${effect.category}">${escapeHtml(effect.category)}</span>
+        <span class="cat-badge" style="background:#1a1a2e;color:#888;">${escapeHtml(effect.stackingBehavior)}</span>
+        ${effect.stackingBehavior === 'stack' ? `<span class="cat-badge" style="background:#1a1a2e;color:#888;">max ${effect.maxStacks}</span>` : ''}
+      </div>
+    `;
+
+    // Modifiers
+    const modLines = [
+      formatModifier('Accuracy', effect.accuracyModifier ?? 0),
+      formatModifier('Defense', effect.defenseModifier ?? 0),
+      formatModifier('Energy', effect.energyModifier ?? 0, '%'),
+      formatModifier('Damage', effect.damageModifier ?? 0, '%'),
+      formatModifier('Speed', effect.speedModifier ?? 0, '%'),
+      formatModifier('Crit', effect.criticalChanceModifier ?? 0, '%'),
+      formatModifier('Dodge', effect.dodgeModifier ?? 0, '%'),
+      formatModifier('Magic Resist', effect.magicResistance ?? 0, '%'),
+      formatModifier('Spellcasting', effect.spellcastingModifier ?? 0),
+      formatModifier('Healing Recv', effect.healingReceived ?? 0, '%'),
+      formatModifier('Stealth', effect.stealthModifier ?? 0),
+      formatModifier('Perception', effect.perceptionModifier ?? 0),
+      formatModifier('Lockpicking', effect.lockpickingModifier ?? 0),
+      formatModifier('STR', effect.strengthModifier ?? 0),
+      formatModifier('DEX', effect.dexterityModifier ?? 0),
+      formatModifier('CON', effect.constitutionModifier ?? 0),
+      formatModifier('INT', effect.intelligenceModifier ?? 0),
+      formatModifier('WIS', effect.wisdomModifier ?? 0),
+      formatModifier('CHA', effect.charismaModifier ?? 0),
+      formatModifier('Max HP', effect.maxHpModifier ?? 0),
+      formatModifier('Max Mana', effect.maxManaModifier ?? 0),
+    ].filter(Boolean);
+
+    if (modLines.length > 0) {
+      html += `<div class="preview-section"><div class="preview-section-title">Modifiers</div>${modLines.join('')}</div>`;
+    }
+
+    // Periodic
+    const hasDmg = effect.tickDamageMin != null && effect.tickDamageMax != null;
+    const hasHeal = effect.tickHealingMin != null && effect.tickHealingMax != null;
+    if (hasDmg || hasHeal) {
+      html += `<div class="preview-section"><div class="preview-section-title">Periodic (every 5s)</div>`;
+      if (hasDmg) html += `<div class="preview-modifier">Damage: <span class="mod-value negative">${effect.tickDamageMin}-${effect.tickDamageMax}</span>/tick</div>`;
+      if (hasHeal) html += `<div class="preview-modifier">Healing: <span class="mod-value positive">${effect.tickHealingMin}-${effect.tickHealingMax}</span>/tick</div>`;
+      if (effect.tickMessage && !effect.silentTick) html += `<div class="preview-message">"${escapeHtml(effect.tickMessage)}"</div>`;
+      if (effect.silentTick) html += `<div class="preview-modifier" style="color:#888;">Silent ticks</div>`;
+      html += `</div>`;
+    }
+
+    if (effect.wearOffMessage) {
+      html += `<div class="preview-section"><div class="preview-section-title">Wear Off</div><div class="preview-message">"${escapeHtml(effect.wearOffMessage)}"</div></div>`;
+    }
+
+    // Flags
+    const activeFlags: string[] = [];
+    if (effect.blocksRegen) activeFlags.push('Blocks Regen');
+    if (effect.blocksMovement) activeFlags.push('Blocks Movement');
+    if (effect.isBlind) activeFlags.push('Blind');
+    if (effect.blocksCasting) activeFlags.push('Blocks Casting');
+    if (effect.blocksCombat) activeFlags.push('Blocks Combat');
+    if (effect.blocksStealth) activeFlags.push('Blocks Stealth');
+
+    if (activeFlags.length > 0) {
+      html += `<div class="preview-section"><div class="preview-section-title">Flags</div><div class="preview-flags">${activeFlags.map(f => `<span class="preview-flag">${escapeHtml(f)}</span>`).join('')}</div></div>`;
+    }
+
+    previewContent.innerHTML = html;
+  }
+
+  function updateSpellReferences(effectId: string): void {
+    const refs = spells.filter(s => s.statusEffect === effectId).sort((a, b) => a.levelRequired - b.levelRequired);
+
+    if (refs.length === 0) {
+      spellRefContent.innerHTML = '<p class="no-refs">No spells reference this effect</p>';
+      return;
+    }
+
+    spellRefContent.innerHTML = `<ul class="spell-ref-list">${refs.map(s => `
+      <li>
+        <span class="spell-ref-name">${escapeHtml(s.name)}</span>
+        <span class="spell-ref-level">Lv ${s.levelRequired}</span>
+      </li>
+    `).join('')}</ul>`;
+  }
+
+  // ============================================================================
+  // Helpers
+  // ============================================================================
+
+  function updateCount(filtered: number, total: number): void {
+    effectCount.textContent = filtered === total ? `${total}` : `${filtered}/${total}`;
+  }
+
+  // ============================================================================
+  // Event Handlers
+  // ============================================================================
+
+  // New effect
+  document.getElementById('new-effect-btn')?.addEventListener('click', async () => {
+    const result = await showPromptFields('New Status Effect', [
+      { key: 'id', label: 'Effect ID', required: true, placeholder: 'poisoned' },
+      { key: 'name', label: 'Display Name', required: true, placeholder: 'Poisoned' },
+    ]);
+    if (!result) return;
+
+    const id = result.id.toLowerCase();
+    if (!/^[a-z][a-z0-9_]*$/.test(id)) {
+      showToast('ID must start with a letter and contain only lowercase letters, numbers, underscores', 'warning');
+      return;
+    }
+    if (effects.some(e => e.id === id)) {
+      showToast(`Effect ID "${id}" already exists`, 'warning');
+      return;
+    }
+
+    const saved = await saveEffect({
+      id,
+      name: result.name,
+      description: '',
+      category: 'buff' as StatusEffectCategory,
+      stackingBehavior: 'refresh' as StackingBehavior,
+      maxStacks: 1,
+    });
+    if (saved) selectEffect(saved.id);
+  });
+
+  // Save
+  effectForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (!selectedEffectId) return;
+
+    const data = gatherFormData();
+    if (!data.name?.trim()) {
+      showToast('Display name is required', 'warning');
+      nameInput.focus();
+      return;
+    }
+
+    const saved = await saveEffect(data);
+    if (saved) selectEffect(saved.id);
+  });
+
+  // Delete
+  document.getElementById('delete-effect-btn')?.addEventListener('click', async () => {
+    if (!selectedEffectId) return;
+    const effect = effects.find(e => e.id === selectedEffectId);
+    const name = effect?.name || selectedEffectId;
+    const refs = spells.filter(s => s.statusEffect === selectedEffectId);
+
+    let message = `Delete effect "${name}"?`;
+    if (refs.length > 0) {
+      message += ` ${refs.length} spell(s) reference this effect and will stop applying it.`;
+    }
+
+    const confirmed = await showConfirm(message, { confirmText: 'Delete', dangerous: true });
+    if (!confirmed) return;
+
+    const success = await deleteEffect(selectedEffectId);
+    if (success) clearForm();
+  });
+
+  // Duplicate
+  document.getElementById('duplicate-effect-btn')?.addEventListener('click', async () => {
+    if (!selectedEffectId) return;
+
+    const result = await showPromptFields('Duplicate Status Effect', [
+      { key: 'id', label: 'New Effect ID', required: true, defaultValue: selectedEffectId + '_copy' },
+      { key: 'name', label: 'Display Name', required: true, defaultValue: nameInput.value + ' (copy)' },
+    ]);
+    if (!result) return;
+
+    const newId = result.id.toLowerCase();
+    if (!/^[a-z][a-z0-9_]*$/.test(newId)) {
+      showToast('ID must start with a letter and contain only lowercase letters, numbers, underscores', 'warning');
+      return;
+    }
+    if (effects.some(e => e.id === newId)) {
+      showToast(`Effect ID "${newId}" already exists`, 'warning');
+      return;
+    }
+
+    const data = { ...gatherFormData(), id: newId, name: result.name };
+    const saved = await saveEffect(data, true);
+    if (saved) selectEffect(saved.id);
+  });
+
+  // Stacking behavior toggle
+  stackingSelect.addEventListener('change', updateMaxStacksVisibility);
+
+  // Show tick message toggle
+  document.getElementById('effect-show-tick-message')?.addEventListener('change', updateTickMessageVisibility);
+
+  // Import
+  document.getElementById('import-btn')?.addEventListener('click', () => {
+    const fileInput = document.createElement('input');
+    fileInput.type = 'file';
+    fileInput.accept = '.json';
+
+    fileInput.addEventListener('change', async () => {
+      const file = fileInput.files?.[0];
+      if (!file) return;
+
+      try {
+        const text = await file.text();
+        const data = JSON.parse(text);
+        const definitions = data.definitions || data;
+
+        if (!Array.isArray(definitions) || definitions.length === 0) {
+          showToast('No effect definitions found in file', 'warning');
+          return;
+        }
+
+        const confirmed = await showConfirm(
+          `Import ${definitions.length} effect(s)? Existing effects with matching IDs will be updated.`,
+        );
+        if (!confirmed) return;
+
+        const res = await fetch('/api/status-effects/import', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ definitions, merge: true }),
+        });
+
+        const result = await res.json();
+        if (result.success) {
+          const { created, updated, errors } = result.results;
+          showToast(`Imported: ${created} created, ${updated} updated`, 'success');
+          if (errors.length > 0) showToast(`${errors.length} error(s) during import`, 'warning');
+          await fetchEffects();
+        } else {
+          showToast(result.message || 'Import failed', 'error');
+        }
+      } catch (error) {
+        console.error('Import failed:', error);
+        showToast('Failed to parse import file', 'error');
+      }
+    });
+
+    fileInput.click();
+  });
+
+  // Export
+  document.getElementById('export-btn')?.addEventListener('click', async () => {
+    try {
+      const res = await fetch('/api/status-effects/export/all', { credentials: 'include' });
+      if (!res.ok) { showToast(`Export failed: ${res.status}`, 'error'); return; }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'status_effects_export.json';
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      showToast('Effects exported successfully', 'success');
+    } catch (error) {
+      console.error('Export failed:', error);
+      showToast('Failed to export effects', 'error');
+    }
+  });
+
+  // ============================================================================
+  // Initialize
+  // ============================================================================
+
+  await Promise.all([fetchEffects(), fetchSpells()]);
 })();

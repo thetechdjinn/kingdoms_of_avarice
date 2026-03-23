@@ -20,7 +20,7 @@
               <a href="/item-editor.html" class="nav-dropdown-item active">Item Editor</a>
               <a href="/spell-editor.html" class="nav-dropdown-item">Spell Editor</a>
               <a href="/status-editor.html" class="nav-dropdown-item">Status Effects Editor</a>
-              <a href="/progression-editor.html" class="nav-dropdown-item">Progression Editor</a>
+              <a href="/progression-editor.html" class="nav-dropdown-item">Class / Race Editor</a>
               <a href="/door-editor.html" class="nav-dropdown-item">Door Editor</a>
               <a href="/action-editor.html" class="nav-dropdown-item">Action Editor</a>
               <a href="/npc-editor.html" class="nav-dropdown-item">NPC Editor</a>
@@ -41,7 +41,7 @@
           </div>
         </div>
         <div class="nav-spacer"></div>
-        <a href="/docs.html?file=Item_Editor_Guide.md" target="_blank" rel="noopener noreferrer" class="help-link nav-help" title="View Documentation">?</a>
+        <a href="/docs.html?file=Item_Editor_Guide.md" class="help-link nav-help" title="View Documentation" target="_blank" rel="noopener noreferrer">?</a>
         <div class="nav-user-menu">
           <button class="nav-user-btn" id="nav-username">User</button>
           <div class="dropdown-menu" id="user-dropdown">
@@ -53,86 +53,92 @@
       <div id="editor-layout">
         <aside id="item-list-panel">
           <div class="panel-header">
-            <h2>Item Templates</h2>
-            <button id="new-item-btn" class="btn-primary">+ New Item</button>
+            <h2>Items</h2>
+            <button id="new-item-btn" class="btn-primary">+ New</button>
           </div>
-          <div id="item-filter">
-            <label for="type-select">Filter by Type:</label>
-            <select id="type-select">
+          <div class="list-filter">
+            <select id="type-filter">
               <option value="">All Types</option>
-              <option value="weapon">Weapons</option>
+              <option value="weapon">Weapon</option>
               <option value="armor">Armor</option>
-              <option value="container">Containers</option>
-              <option value="consumable">Consumables</option>
-              <option value="light">Light Sources</option>
-              <option value="tool">Tools</option>
-              <option value="key">Keys</option>
-              <option value="misc">Miscellaneous</option>
+              <option value="container">Container</option>
+              <option value="consumable">Consumable</option>
+              <option value="light">Light</option>
+              <option value="tool">Tool</option>
+              <option value="key">Key</option>
+              <option value="misc">Misc</option>
             </select>
           </div>
-          <div id="item-search">
+          <div class="list-search">
             <input type="text" id="search-input" placeholder="Search items..." />
           </div>
           <ul id="item-list"></ul>
-          
           <div class="panel-footer">
-            <button id="import-btn" class="btn-small">Import</button>
-            <button id="export-btn" class="btn-small">Export</button>
+            <span id="item-count" class="list-count"></span>
+            <div class="footer-buttons">
+              <button id="import-btn" class="btn-small">Import</button>
+              <button id="export-btn" class="btn-small">Export</button>
+            </div>
           </div>
         </aside>
-        
+
         <main id="item-editor-panel">
           <div id="no-item-selected">
-            <p>Select an item template from the list or create a new one.</p>
+            <div class="empty-state">
+              <div class="empty-icon">&gt;_</div>
+              <p>Select an item from the list or create a new one.</p>
+            </div>
           </div>
-          
+
           <form id="item-form" style="display: none;">
             <div class="form-header">
               <h2 id="item-form-title">Edit Item</h2>
               <span id="item-id-display"></span>
             </div>
-            
-            <!-- Basic Info Tab -->
+
             <div class="form-tabs">
               <button type="button" class="tab-btn active" data-tab="basic">Basic</button>
-              <button type="button" class="tab-btn" data-tab="type-specific">Type Data</button>
+              <button type="button" class="tab-btn" data-tab="type-data">Type Data</button>
               <button type="button" class="tab-btn" data-tab="requirements">Requirements</button>
               <button type="button" class="tab-btn" data-tab="modifiers">Modifiers</button>
               <button type="button" class="tab-btn" data-tab="flags">Flags</button>
             </div>
-            
-            <!-- Basic Tab Content -->
+
+            <!-- Basic Tab -->
             <div class="tab-content active" id="tab-basic">
               <div class="form-row">
                 <div class="form-group">
-                  <label for="item-name">Name</label>
-                  <input type="text" id="item-name" required />
+                  <label for="item-name">Name <span class="required">*</span></label>
+                  <input type="text" id="item-name" required placeholder="iron sword" />
+                  <span class="hint-inline">Lowercase, no articles (e.g., "iron sword" not "an Iron Sword")</span>
                 </div>
-                <div class="form-group">
+                <div class="form-group" style="flex: 0 0 160px;">
                   <label for="item-type">Type</label>
-                  <select id="item-type" required>
+                  <select id="item-type">
                     <option value="weapon">Weapon</option>
                     <option value="armor">Armor</option>
                     <option value="container">Container</option>
                     <option value="consumable">Consumable</option>
-                    <option value="light">Light Source</option>
+                    <option value="light">Light</option>
                     <option value="tool">Tool</option>
                     <option value="key">Key</option>
-                    <option value="misc">Miscellaneous</option>
+                    <option value="misc">Misc</option>
                   </select>
                 </div>
               </div>
-              
+
               <div class="form-group">
-                <label for="item-long-desc">Long Description</label>
-                <textarea id="item-long-desc" rows="3" placeholder="Detailed description shown when examining..."></textarea>
+                <label for="item-long-desc">Examine Description</label>
+                <textarea id="item-long-desc" rows="3" placeholder="A well-crafted sword with a keen edge."></textarea>
+                <span class="hint-inline">Shown when a player examines this item</span>
               </div>
-              
+
               <div class="form-group">
-                <label for="item-keywords">Keywords <span class="hint-inline">(comma-separated)</span></label>
-                <input type="text" id="item-keywords" placeholder="sword, rusty, weapon" />
+                <label for="item-keywords">Keywords</label>
+                <input type="text" id="item-keywords" placeholder="sword, iron, weapon" />
+                <span class="hint-inline">Comma-separated. Used for targeting (e.g., "get sword")</span>
               </div>
-              
+
               <div class="form-row">
                 <div class="form-group">
                   <label for="item-weight">Weight</label>
@@ -140,14 +146,20 @@
                 </div>
                 <div class="form-group">
                   <label for="item-size">Size</label>
-                  <input type="number" id="item-size" min="1" value="1" />
+                  <input type="number" id="item-size" min="0" value="0" />
                 </div>
                 <div class="form-group">
-                  <label for="item-value">Base Value <span class="hint-inline">(copper)</span></label>
+                  <label for="item-value">Base Value (copper)</label>
                   <input type="number" id="item-value" min="0" value="0" />
+                  <span class="hint-inline">Merchant prices calculated from this</span>
+                </div>
+                <div class="form-group">
+                  <label for="item-max-stack">Max Stack</label>
+                  <input type="number" id="item-max-stack" min="1" value="1" />
+                  <span class="hint-inline">Max items per stack (requires Stackable flag)</span>
                 </div>
               </div>
-              
+
               <div class="form-row">
                 <div class="form-group">
                   <label for="item-equipment-slot">Equipment Slot</label>
@@ -157,24 +169,25 @@
                     <option value="face">Face</option>
                     <option value="neck">Neck</option>
                     <option value="back">Back</option>
-                    <option value="body">Body</option>
+                    <option value="body">Torso</option>
                     <option value="arms">Arms</option>
                     <option value="hands">Hands</option>
-                    <option value="wrist_left">Left Wrist</option>
-                    <option value="wrist_right">Right Wrist</option>
-                    <option value="finger_left">Left Finger</option>
-                    <option value="finger_right">Right Finger</option>
+                    <option value="wrist_left">Wrist (Left)</option>
+                    <option value="wrist_right">Wrist (Right)</option>
+                    <option value="finger_left">Finger (Left)</option>
+                    <option value="finger_right">Finger (Right)</option>
                     <option value="waist">Waist</option>
                     <option value="legs">Legs</option>
                     <option value="feet">Feet</option>
                     <option value="main_hand">Main Hand</option>
                     <option value="off_hand">Off Hand</option>
-                    <option value="held">Readied (Light Source)</option>
+                    <option value="held">Held</option>
                   </select>
                 </div>
                 <div class="form-group">
-                  <label for="item-effect-slots">Effect Slots</label>
+                  <label for="item-effect-slots">Enchantment Slots</label>
                   <input type="number" id="item-effect-slots" min="0" value="0" />
+                  <span class="hint-inline">Max enchantments allowed</span>
                 </div>
               </div>
 
@@ -191,26 +204,22 @@
                   </select>
                 </div>
                 <div class="form-group">
-                  <label for="item-max-in-world">Max in World <span class="hint-inline">(empty = unlimited)</span></label>
-                  <input type="number" id="item-max-in-world" min="1" placeholder="unlimited" />
+                  <label for="item-max-in-world">Max In World</label>
+                  <input type="number" id="item-max-in-world" min="0" value="0" />
+                  <span class="hint-inline">0 = unlimited</span>
                 </div>
               </div>
             </div>
-            
-            <!-- Type-Specific Tab Content -->
-            <div class="tab-content" id="tab-type-specific">
-              <!-- Weapon Data -->
-              <div id="weapon-data-section" class="type-section" style="display: none;">
-                <h3>Weapon Data</h3>
+
+            <!-- Type Data Tab -->
+            <div class="tab-content" id="tab-type-data">
+              <div id="type-data-header" class="type-data-header"></div>
+
+              <!-- Weapon -->
+              <div id="weapon-section" class="type-section" style="display:none;">
                 <div class="form-row">
-                  <div class="form-group">
-                    <label for="weapon-min-damage">Min Damage</label>
-                    <input type="number" id="weapon-min-damage" min="1" value="1" />
-                  </div>
-                  <div class="form-group">
-                    <label for="weapon-max-damage">Max Damage</label>
-                    <input type="number" id="weapon-max-damage" min="1" value="6" />
-                  </div>
+                  <div class="form-group"><label for="weapon-min-damage">Min Damage</label><input type="number" id="weapon-min-damage" min="1" value="1" /></div>
+                  <div class="form-group"><label for="weapon-max-damage">Max Damage</label><input type="number" id="weapon-max-damage" min="1" value="6" /></div>
                   <div class="form-group">
                     <label for="weapon-damage-type">Damage Type</label>
                     <select id="weapon-damage-type">
@@ -227,71 +236,37 @@
                   </div>
                 </div>
                 <div class="form-row">
+                  <div class="form-group"><label for="weapon-attack-speed">Attack Speed (ms)</label><input type="number" id="weapon-attack-speed" min="0" value="2000" /></div>
+                  <div class="form-group"><label for="weapon-crit-modifier">Crit Modifier</label><input type="number" id="weapon-crit-modifier" step="any" value="0" /></div>
+                </div>
+                <div class="form-section">
+                  <h4>Backstab</h4>
                   <div class="form-group">
-                    <label for="weapon-attack-speed">Attack Speed</label>
-                    <input type="number" id="weapon-attack-speed" min="1" value="10" />
+                    <label class="toggle-label"><input type="checkbox" id="weapon-allows-backstab" /><span class="toggle-track"></span> Allows Backstab</label>
                   </div>
-                  <div class="form-group">
-                    <label for="weapon-crit-modifier">Crit Modifier</label>
-                    <input type="number" id="weapon-crit-modifier" step="0.1" value="2" />
+                  <div class="form-row">
+                    <div class="form-group"><label for="weapon-backstab-accuracy">Accuracy Bonus</label><input type="number" id="weapon-backstab-accuracy" value="0" /></div>
+                    <div class="form-group"><label for="weapon-backstab-min-damage">Min Dmg Bonus</label><input type="number" id="weapon-backstab-min-damage" value="0" /></div>
+                    <div class="form-group"><label for="weapon-backstab-max-damage">Max Dmg Bonus</label><input type="number" id="weapon-backstab-max-damage" value="0" /></div>
                   </div>
                 </div>
-                <h4>Backstab Modifiers <span class="hint-inline">(for stealth attacks)</span></h4>
-                <div class="form-row">
-                  <div class="form-group">
-                    <label><input type="checkbox" id="weapon-allows-backstab" checked /> Allows Backstab</label>
-                  </div>
-                </div>
-                <div class="form-row">
-                  <div class="form-group">
-                    <label for="weapon-backstab-accuracy">Accuracy Bonus</label>
-                    <input type="number" id="weapon-backstab-accuracy" value="0" />
-                  </div>
-                  <div class="form-group">
-                    <label for="weapon-backstab-min-damage">Min Damage Bonus</label>
-                    <input type="number" id="weapon-backstab-min-damage" value="0" />
-                  </div>
-                  <div class="form-group">
-                    <label for="weapon-backstab-max-damage">Max Damage Bonus</label>
-                    <input type="number" id="weapon-backstab-max-damage" value="0" />
-                  </div>
-                </div>
-
-                <h4>Attack Verbs <span class="hint-inline">(optional - uses damage type defaults if empty)</span></h4>
-                <div class="form-row">
-                  <div class="form-group">
-                    <label for="weapon-verb-hit">Hit (1st person)</label>
-                    <input type="text" id="weapon-verb-hit" placeholder="e.g., chop, slash, stab" />
-                  </div>
-                  <div class="form-group">
-                    <label for="weapon-verb-hit-3p">Hit (3rd person)</label>
-                    <input type="text" id="weapon-verb-hit-3p" placeholder="e.g., chops, slashes, stabs" />
-                  </div>
-                </div>
-                <div class="form-row">
-                  <div class="form-group">
-                    <label for="weapon-verb-miss">Miss (1st person)</label>
-                    <input type="text" id="weapon-verb-miss" placeholder="e.g., swing at, thrust at" />
-                  </div>
-                  <div class="form-group">
-                    <label for="weapon-verb-miss-3p">Miss (3rd person)</label>
-                    <input type="text" id="weapon-verb-miss-3p" placeholder="e.g., swings at, thrusts at" />
+                <div class="form-section">
+                  <h4>Attack Verbs</h4>
+                  <p class="section-hint">Customize combat messages. e.g., "slash" / "slashes" / "miss" / "misses"</p>
+                  <div class="form-row">
+                    <div class="form-group"><label for="weapon-verb-hit">Hit (1st)</label><input type="text" id="weapon-verb-hit" placeholder="slash" /></div>
+                    <div class="form-group"><label for="weapon-verb-hit-3p">Hit (3rd)</label><input type="text" id="weapon-verb-hit-3p" placeholder="slashes" /></div>
+                    <div class="form-group"><label for="weapon-verb-miss">Miss (1st)</label><input type="text" id="weapon-verb-miss" placeholder="miss" /></div>
+                    <div class="form-group"><label for="weapon-verb-miss-3p">Miss (3rd)</label><input type="text" id="weapon-verb-miss-3p" placeholder="misses" /></div>
                   </div>
                 </div>
               </div>
-              
-              <!-- Armor Data -->
-              <div id="armor-data-section" class="type-section" style="display: none;">
-                <h3>Armor Data</h3>
+
+              <!-- Armor -->
+              <div id="armor-section" class="type-section" style="display:none;">
                 <div class="form-row">
-                  <div class="form-group">
-                    <label for="armor-class">Armor Class</label>
-                    <input type="number" id="armor-class" min="0" value="0" />
-                  </div>
-                  <div class="form-group">
-                    <label for="armor-damage-resistance">Damage Resistance</label>
-                    <input type="number" id="armor-damage-resistance" min="0" step="0.1" value="0" />
-                  </div>
+                  <div class="form-group"><label for="armor-class">Armor Class</label><input type="number" id="armor-class" min="0" value="0" /></div>
+                  <div class="form-group"><label for="armor-damage-resistance">Damage Resistance</label><input type="number" id="armor-damage-resistance" min="0" step="0.1" value="0" /></div>
                   <div class="form-group">
                     <label for="armor-type">Armor Type</label>
                     <select id="armor-type">
@@ -304,257 +279,151 @@
                   </div>
                 </div>
               </div>
-              
-              <!-- Container Data -->
-              <div id="container-data-section" class="type-section" style="display: none;">
-                <h3>Container Data</h3>
+
+              <!-- Container -->
+              <div id="container-section" class="type-section" style="display:none;">
                 <div class="form-row">
-                  <div class="form-group">
-                    <label for="container-capacity">Capacity (items)</label>
-                    <input type="number" id="container-capacity" min="1" value="10" />
-                  </div>
-                  <div class="form-group">
-                    <label for="container-weight-limit">Weight Limit</label>
-                    <input type="number" id="container-weight-limit" min="0" value="100" />
-                  </div>
+                  <div class="form-group"><label for="container-capacity">Capacity (items)</label><input type="number" id="container-capacity" min="0" value="0" /></div>
+                  <div class="form-group"><label for="container-weight-limit">Weight Limit</label><input type="number" id="container-weight-limit" min="0" value="0" /></div>
                 </div>
               </div>
-              
-              <!-- Consumable Data -->
-              <div id="consumable-data-section" class="type-section" style="display: none;">
-                <h3>Consumable Data</h3>
+
+              <!-- Consumable -->
+              <div id="consumable-section" class="type-section" style="display:none;">
                 <div class="form-row">
                   <div class="form-group">
                     <label for="consumable-effect-type">Effect Type</label>
                     <select id="consumable-effect-type">
                       <option value="heal">Heal</option>
-                      <option value="mana">Restore Mana</option>
+                      <option value="mana">Mana</option>
                       <option value="damage">Damage</option>
                       <option value="food">Food</option>
                       <option value="drink">Drink</option>
                     </select>
                   </div>
-                  <div class="form-group">
-                    <label for="consumable-effect-value">Effect Value</label>
-                    <input type="number" id="consumable-effect-value" min="0" value="10" />
-                  </div>
+                  <div class="form-group"><label for="consumable-effect-value">Effect Value</label><input type="number" id="consumable-effect-value" min="0" value="0" /></div>
+                  <div class="form-group"><label for="consumable-charges">Charges</label><input type="number" id="consumable-charges" min="0" value="0" /><span class="hint-inline">0 = single use</span></div>
                 </div>
-                <div class="form-row">
-                  <div class="form-group">
-                    <label for="consumable-charges">Charges <span class="hint-inline">(0 = single use)</span></label>
-                    <input type="number" id="consumable-charges" min="0" value="0" />
-                  </div>
-                  <div class="form-group">
-                    <label for="consumable-duration">Duration (seconds)</label>
-                    <input type="number" id="consumable-duration" min="0" value="0" />
-                  </div>
-                </div>
-              </div>
-              
-              <!-- Light Data -->
-              <div id="light-data-section" class="type-section" style="display: none;">
-                <h3>Light Source Data</h3>
-                <div class="form-row">
-                  <div class="form-group">
-                    <label for="light-radius">Light Radius</label>
-                    <input type="number" id="light-radius" min="1" value="2" />
-                  </div>
-                  <div class="form-group">
-                    <label for="light-fuel-max">Max Fuel <span class="hint-inline">(0 = permanent)</span></label>
-                    <input type="number" id="light-fuel-max" min="0" value="60" />
-                  </div>
-                  <div class="form-group">
-                    <label for="light-fuel-rate">Fuel Rate (per min)</label>
-                    <input type="number" id="light-fuel-rate" min="0" value="1" />
-                  </div>
+                <div class="form-row future-feature">
+                  <div class="form-group"><label for="consumable-duration">Duration (sec) <span class="future-badge">Not Yet Implemented</span></label><input type="number" id="consumable-duration" min="0" value="0" disabled /></div>
                 </div>
               </div>
 
-              <!-- Tool Data -->
-              <div id="tool-data-section" class="type-section" style="display: none;">
-                <h3>Tool Data</h3>
+              <!-- Light -->
+              <div id="light-section" class="type-section" style="display:none;">
+                <div class="form-row">
+                  <div class="form-group"><label for="light-radius">Light Radius <span class="future-badge">NYI</span></label><input type="number" id="light-radius" min="0" value="0" disabled /></div>
+                  <div class="form-group"><label for="light-fuel-max">Max Fuel</label><input type="number" id="light-fuel-max" min="0" value="0" /><span class="hint-inline">0 = permanent</span></div>
+                  <div class="form-group"><label for="light-fuel-rate">Fuel Rate/min <span class="future-badge">NYI</span></label><input type="number" id="light-fuel-rate" min="0" value="0" disabled /></div>
+                </div>
+              </div>
+
+              <!-- Tool -->
+              <div id="tool-section" class="type-section" style="display:none;">
                 <div class="form-row">
                   <div class="form-group">
                     <label for="tool-type">Tool Type</label>
-                    <select id="tool-type">
-                      <option value="lockpick">Lockpick</option>
-                    </select>
+                    <select id="tool-type"><option value="lockpick">Lockpick</option></select>
                   </div>
-                  <div class="form-group">
-                    <label for="tool-quality">Quality <span class="hint-inline">(1-5, adds to skill)</span></label>
-                    <input type="number" id="tool-quality" min="1" max="5" value="1" />
-                  </div>
-                  <div class="form-group">
-                    <label for="tool-durability">Durability <span class="hint-inline">(1-101, 101 = unbreakable)</span></label>
-                    <input type="number" id="tool-durability" min="1" max="101" value="50" />
-                  </div>
+                  <div class="form-group"><label for="tool-quality">Quality</label><input type="number" id="tool-quality" min="1" max="5" value="1" /><span class="hint-inline">1 (poor) to 5 (masterwork)</span></div>
+                  <div class="form-group"><label for="tool-durability">Durability</label><input type="number" id="tool-durability" min="1" value="50" /><span class="hint-inline">101+ = unbreakable</span></div>
                 </div>
               </div>
 
-              <!-- Key Data -->
-              <div id="key-data-section" class="type-section" style="display: none;">
-                <h3>Key Data</h3>
-                <div class="form-row">
-                  <div class="form-group">
-                    <label for="key-tag">Key Tag <span class="hint-inline">(must match door's key_item_tag)</span></label>
-                    <input type="text" id="key-tag" placeholder="e.g., dungeon_master_key" />
-                  </div>
+              <!-- Key -->
+              <div id="key-section" class="type-section" style="display:none;">
+                <div class="form-group">
+                  <label for="key-tag">Key Tag</label>
+                  <input type="text" id="key-tag" placeholder="gate_key" />
+                  <span class="hint-inline">Must match a door's Key Item Tag exactly</span>
                 </div>
                 <div class="form-row">
                   <div class="form-group">
-                    <label class="checkbox-label">
-                      <input type="checkbox" id="key-consume-on-use" />
-                      Consume On Use <span class="hint-inline">(key crumbles to dust after use)</span>
-                    </label>
+                    <label class="toggle-label"><input type="checkbox" id="key-consume-on-use" /><span class="toggle-track"></span> Always Consumed</label>
                   </div>
+                  <div class="form-group"><label for="key-consume-chance">Break Chance %</label><input type="number" id="key-consume-chance" min="0" max="100" value="0" /><span class="hint-inline">If not always consumed</span></div>
                 </div>
-                <div class="form-row">
-                  <div class="form-group">
-                    <label for="key-consume-chance">Break Chance % <span class="hint-inline">(0 = never, 100 = always)</span></label>
-                    <input type="number" id="key-consume-chance" min="0" max="100" value="0" />
-                  </div>
-                </div>
-                <p class="hint">If "Consume On Use" is checked, the key always crumbles after use. Otherwise, it has a % chance to break based on Break Chance.</p>
               </div>
 
-              <div id="no-type-data" class="type-section">
-                <p class="hint">This item type has no additional data fields.</p>
+              <!-- Misc -->
+              <div id="misc-section" class="type-section" style="display:none;">
+                <p class="hint">No type-specific data for miscellaneous items.</p>
               </div>
             </div>
-            
-            <!-- Requirements Tab Content -->
+
+            <!-- Requirements Tab -->
             <div class="tab-content" id="tab-requirements">
-              <h3>Requirements to Use/Equip</h3>
+              <p class="section-hint">Requirements are checked when equipping. Empty class/race = all allowed.</p>
               <div class="form-row">
-                <div class="form-group">
-                  <label for="req-level">Level</label>
-                  <input type="number" id="req-level" min="0" value="0" />
-                </div>
-                <div class="form-group">
-                  <label for="req-strength">Strength</label>
-                  <input type="number" id="req-strength" min="0" value="0" />
-                </div>
-                <div class="form-group">
-                  <label for="req-dexterity">Dexterity</label>
-                  <input type="number" id="req-dexterity" min="0" value="0" />
-                </div>
+                <div class="form-group"><label for="req-level">Level</label><input type="number" id="req-level" min="0" value="0" /></div>
+                <div class="form-group"><label for="req-strength">Strength</label><input type="number" id="req-strength" min="0" value="0" /></div>
+                <div class="form-group"><label for="req-dexterity">Dexterity</label><input type="number" id="req-dexterity" min="0" value="0" /></div>
               </div>
               <div class="form-row">
-                <div class="form-group">
-                  <label for="req-intelligence">Intelligence</label>
-                  <input type="number" id="req-intelligence" min="0" value="0" />
-                </div>
-                <div class="form-group">
-                  <label for="req-constitution">Constitution</label>
-                  <input type="number" id="req-constitution" min="0" value="0" />
-                </div>
-              </div>
-              <div class="form-row">
-                <div class="form-group">
-                  <label for="req-class">Classes <span class="hint-inline">(comma-separated, empty = all)</span></label>
-                  <input type="text" id="req-class" placeholder="warrior, paladin" />
-                </div>
-                <div class="form-group">
-                  <label for="req-race">Races <span class="hint-inline">(comma-separated, empty = all)</span></label>
-                  <input type="text" id="req-race" placeholder="human, elf" />
-                </div>
-              </div>
-            </div>
-            
-            <!-- Modifiers Tab Content -->
-            <div class="tab-content" id="tab-modifiers">
-              <h3>Stat Modifiers (when equipped)</h3>
-              <div class="form-row">
-                <div class="form-group">
-                  <label for="mod-strength">Strength</label>
-                  <input type="number" id="mod-strength" value="0" />
-                </div>
-                <div class="form-group">
-                  <label for="mod-dexterity">Dexterity</label>
-                  <input type="number" id="mod-dexterity" value="0" />
-                </div>
-                <div class="form-group">
-                  <label for="mod-constitution">Constitution</label>
-                  <input type="number" id="mod-constitution" value="0" />
-                </div>
-              </div>
-              <div class="form-row">
-                <div class="form-group">
-                  <label for="mod-intelligence">Intelligence</label>
-                  <input type="number" id="mod-intelligence" value="0" />
-                </div>
-                <div class="form-group">
-                  <label for="mod-wisdom">Wisdom</label>
-                  <input type="number" id="mod-wisdom" value="0" />
-                </div>
-                <div class="form-group">
-                  <label for="mod-charisma">Charisma</label>
-                  <input type="number" id="mod-charisma" value="0" />
-                </div>
-              </div>
-              <div class="form-row">
-                <div class="form-group">
-                  <label for="mod-max-health">Max Health</label>
-                  <input type="number" id="mod-max-health" value="0" />
-                </div>
-                <div class="form-group">
-                  <label for="mod-max-mana">Max Mana</label>
-                  <input type="number" id="mod-max-mana" value="0" />
-                </div>
+                <div class="form-group"><label for="req-constitution">Constitution</label><input type="number" id="req-constitution" min="0" value="0" /></div>
+                <div class="form-group"><label for="req-intelligence">Intelligence</label><input type="number" id="req-intelligence" min="0" value="0" /></div>
+                <div class="form-group"><label for="req-wisdom">Wisdom <span class="future-badge">NYI</span></label><input type="number" id="req-wisdom" min="0" value="0" disabled /></div>
+                <div class="form-group"><label for="req-charisma">Charisma <span class="future-badge">NYI</span></label><input type="number" id="req-charisma" min="0" value="0" disabled /></div>
               </div>
 
-              <h3>Combat Modifiers</h3>
-              <div class="form-row">
-                <div class="form-group">
-                  <label for="mod-stealth">Stealth <span class="hint-inline">(negative for heavy armor)</span></label>
-                  <input type="number" id="mod-stealth" value="0" />
-                </div>
+              <div class="form-section">
+                <h4>Class Restrictions</h4>
+                <div id="class-buttons" class="class-button-grid"></div>
+              </div>
+              <div class="form-section">
+                <h4>Race Restrictions</h4>
+                <div id="race-buttons" class="class-button-grid"></div>
               </div>
             </div>
-            
-            <!-- Flags Tab Content -->
+
+            <!-- Modifiers Tab -->
+            <div class="tab-content" id="tab-modifiers">
+              <p class="section-hint">Bonuses/penalties applied when this item is equipped.</p>
+              <h4 class="modifier-group-header">Stats</h4>
+              <div class="modifier-grid">
+                <div class="form-group"><label for="mod-strength">STR</label><input type="number" id="mod-strength" value="0" /></div>
+                <div class="form-group"><label for="mod-dexterity">DEX</label><input type="number" id="mod-dexterity" value="0" /></div>
+                <div class="form-group"><label for="mod-constitution">CON</label><input type="number" id="mod-constitution" value="0" /></div>
+                <div class="form-group"><label for="mod-intelligence">INT</label><input type="number" id="mod-intelligence" value="0" /></div>
+                <div class="form-group"><label for="mod-wisdom">WIS</label><input type="number" id="mod-wisdom" value="0" /></div>
+                <div class="form-group"><label for="mod-charisma">CHA</label><input type="number" id="mod-charisma" value="0" /></div>
+                <div class="form-group"><label for="mod-max-health">Max HP</label><input type="number" id="mod-max-health" value="0" /></div>
+                <div class="form-group"><label for="mod-max-mana">Max Mana</label><input type="number" id="mod-max-mana" value="0" /></div>
+              </div>
+              <h4 class="modifier-group-header">Combat / Skills</h4>
+              <div class="modifier-grid">
+                <div class="form-group"><label for="mod-stealth">Stealth</label><input type="number" id="mod-stealth" value="0" /></div>
+                <div class="form-group"><label for="mod-spellcasting">Spellcasting <span class="future-badge">NYI</span></label><input type="number" id="mod-spellcasting" value="0" /></div>
+                <div class="form-group"><label for="mod-lockpicking">Lockpicking <span class="future-badge">NYI</span></label><input type="number" id="mod-lockpicking" value="0" /></div>
+                <div class="form-group"><label for="mod-perception">Perception <span class="future-badge">NYI</span></label><input type="number" id="mod-perception" value="0" /></div>
+                <div class="form-group"><label for="mod-critical">Critical <span class="future-badge">NYI</span></label><input type="number" id="mod-critical" value="0" /></div>
+                <div class="form-group"><label for="mod-magic-resist">Magic Resist <span class="future-badge">NYI</span></label><input type="number" id="mod-magic-resist" value="0" /></div>
+                <div class="form-group"><label for="mod-trap">Traps <span class="future-badge">NYI</span></label><input type="number" id="mod-trap" value="0" /></div>
+              </div>
+            </div>
+
+            <!-- Flags Tab -->
             <div class="tab-content" id="tab-flags">
-              <h3>Item Flags</h3>
-              <div class="flags-grid">
-                <label class="checkbox-label">
-                  <input type="checkbox" id="flag-takeable" checked />
-                  Takeable
-                </label>
-                <label class="checkbox-label">
-                  <input type="checkbox" id="flag-hidden" />
-                  Hidden (requires search)
-                </label>
-                <label class="checkbox-label">
-                  <input type="checkbox" id="flag-no-drop" />
-                  No Drop (quest item)
-                </label>
-                <label class="checkbox-label">
-                  <input type="checkbox" id="flag-stackable" />
-                  Stackable
-                </label>
-                <label class="checkbox-label">
-                  <input type="checkbox" id="flag-cursed" />
-                  Cursed (can't remove)
-                </label>
-                <label class="checkbox-label">
-                  <input type="checkbox" id="flag-two-handed" />
-                  Two-Handed
-                </label>
-                <label class="checkbox-label">
-                  <input type="checkbox" id="flag-throwable" />
-                  Throwable
-                </label>
+              <div class="flag-grid">
+                <div class="flag-item"><label class="toggle-label"><input type="checkbox" id="flag-takeable" checked /><span class="toggle-track"></span> Takeable</label><span class="hint-inline">Can be picked up</span></div>
+                <div class="flag-item"><label class="toggle-label"><input type="checkbox" id="flag-hidden" /><span class="toggle-track"></span> Hidden</label><span class="hint-inline">Requires search to find</span></div>
+                <div class="flag-item"><label class="toggle-label"><input type="checkbox" id="flag-no-drop" /><span class="toggle-track"></span> No Drop</label><span class="hint-inline">Cannot be dropped or sold</span></div>
+                <div class="flag-item"><label class="toggle-label"><input type="checkbox" id="flag-stackable" /><span class="toggle-track"></span> Stackable</label><span class="hint-inline">Merges into stacks</span></div>
+                <div class="flag-item"><label class="toggle-label"><input type="checkbox" id="flag-cursed" /><span class="toggle-track"></span> Cursed</label><span class="hint-inline">Cannot be unequipped</span></div>
+                <div class="flag-item"><label class="toggle-label"><input type="checkbox" id="flag-two-handed" /><span class="toggle-track"></span> Two-Handed</label><span class="hint-inline">Blocks off-hand slot</span></div>
+                <div class="flag-item future-feature"><label class="toggle-label"><input type="checkbox" id="flag-throwable" disabled /><span class="toggle-track"></span> Throwable <span class="future-badge">Not Yet Implemented</span></label></div>
               </div>
             </div>
-            
+
             <div class="form-actions">
               <button type="submit" class="btn-primary">Save Item</button>
               <button type="button" id="duplicate-item-btn" class="btn-secondary">Duplicate</button>
-              <button type="button" id="delete-item-btn" class="btn-danger">Delete Item</button>
+              <div class="spacer"></div>
+              <button type="button" id="delete-item-btn" class="btn-danger">Delete</button>
             </div>
           </form>
         </main>
-        
+
         <aside id="preview-panel">
           <div class="panel-header">
             <h2>Preview</h2>
@@ -564,48 +433,30 @@
               <p class="hint">Select an item to see preview</p>
             </div>
           </div>
-          
           <div class="panel-section">
-            <h3>Spawn Item</h3>
-            <div class="form-row">
+            <h3>Spawn</h3>
+            <div class="spawn-controls">
               <div class="form-group">
-                <label for="spawn-room">Room ID</label>
-                <input type="number" id="spawn-room" min="1" value="1" />
+                <label>Room</label>
+                <div id="spawn-room-select-container"></div>
               </div>
-              <div class="form-group">
-                <label for="spawn-quantity">Quantity</label>
+              <div class="form-group" style="flex: 0 0 70px;">
+                <label for="spawn-quantity">Qty</label>
                 <input type="number" id="spawn-quantity" min="1" value="1" />
               </div>
+              <button type="button" id="spawn-btn" class="btn-primary" disabled style="align-self: flex-end;">Spawn</button>
             </div>
-            <button id="spawn-btn" class="btn-secondary" disabled>Spawn in Room</button>
+          </div>
+          <div id="references-section" class="panel-section">
+            <h3>Referenced By</h3>
+            <div id="ref-content">
+              <p class="hint">Select an item to see references</p>
+            </div>
           </div>
         </aside>
       </div>
     </div>
-    
-    <!-- Import Modal -->
-    <div id="import-modal" class="modal" style="display: none;">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h3>Import Items</h3>
-          <button id="close-import-modal" class="close-btn">&times;</button>
-        </div>
-        <div class="modal-body">
-          <div class="form-group">
-            <label for="import-file">Select JSON file:</label>
-            <input type="file" id="import-file" accept=".json" />
-          </div>
-          <label class="checkbox-label">
-            <input type="checkbox" id="import-merge" checked />
-            Merge with existing (update if name matches)
-          </label>
-        </div>
-        <div class="modal-footer">
-          <button id="do-import-btn" class="btn-primary">Import</button>
-        </div>
-      </div>
-    </div>
-    
+
     <script type="module" src="/src/item-editor.ts"></script>
   </body>
 </html>

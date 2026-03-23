@@ -67,6 +67,7 @@ export function setupDoorRoutes(app: Express): void {
         triggerText,
         passageMessageSelf,
         passageMessageRoom,
+        passageMessageArrival,
         itemDisplayName,
         isTemporary,
         spawnTriggerText,
@@ -208,6 +209,7 @@ export function setupDoorRoutes(app: Express): void {
         triggerText: triggerText || null,
         passageMessageSelf: passageMessageSelf || null,
         passageMessageRoom: passageMessageRoom || null,
+        passageMessageArrival: passageMessageArrival || null,
         itemDisplayName: itemDisplayName || null,
         isTemporary: isTemporary || false,
         spawnTriggerText: spawnTriggerText || null,
@@ -272,6 +274,7 @@ export function setupDoorRoutes(app: Express): void {
         triggerText,
         passageMessageSelf,
         passageMessageRoom,
+        passageMessageArrival,
         itemDisplayName,
         isTemporary,
         spawnTriggerText,
@@ -417,6 +420,7 @@ export function setupDoorRoutes(app: Express): void {
       if (triggerText !== undefined) updates.triggerText = triggerText || null;
       if (passageMessageSelf !== undefined) updates.passageMessageSelf = passageMessageSelf || null;
       if (passageMessageRoom !== undefined) updates.passageMessageRoom = passageMessageRoom || null;
+      if (passageMessageArrival !== undefined) updates.passageMessageArrival = passageMessageArrival || null;
       if (itemDisplayName !== undefined) updates.itemDisplayName = itemDisplayName || null;
       if (isTemporary !== undefined) updates.isTemporary = isTemporary;
       if (spawnTriggerText !== undefined) updates.spawnTriggerText = spawnTriggerText || null;

@@ -1,4 +1,10 @@
-(function() {
+/**
+ * Door Editor — three-panel with type-driven tabs, SearchableSelect for rooms,
+ * lock presets, dynamic class buttons, connection diagram preview.
+ */
+
+import { initAuth, SearchableSelect, setupTabs, activateTab, showToast, showConfirm, showPromptFields, escapeHtml } from './components/index.js';
+import type { SelectOption } from './components/index.js';
 
 interface Door {
   id: number;
@@ -21,6 +27,7 @@ interface Door {
   triggerText: string | null;
   passageMessageSelf: string | null;
   passageMessageRoom: string | null;
+  passageMessageArrival: string | null;
   itemDisplayName: string | null;
   isTemporary: boolean;
   spawnTriggerText: string | null;
@@ -39,18 +46,16 @@ interface Room {
   id: number;
   name: string;
   area: string | null;
-  exits: { [direction: string]: number };
+  exits?: Record<string, number>; // { direction: targetRoomId }
 }
 
-interface AuthInfo {
-  authenticated: boolean;
-  playerId?: number;
-  username?: string;
-  roles?: string[];
+interface ClassDef {
+  id: string;
+  displayName: string;
 }
 
-// Door type to visible sections mapping
-const DOOR_TYPE_SECTIONS: Record<string, string[]> = {
+// Tab visibility per door type
+const TYPE_TABS: Record<string, string[]> = {
   open_passageway: ['basic', 'rooms'],
   physical: ['basic', 'rooms', 'state', 'locks', 'permissions'],
   special: ['basic', 'rooms', 'triggers', 'permissions'],
@@ -58,1047 +63,808 @@ const DOOR_TYPE_SECTIONS: Record<string, string[]> = {
   temporary_portal: ['basic', 'rooms', 'triggers', 'portal', 'permissions'],
 };
 
-let doors: Door[] = [];
-let rooms: Room[] = [];
-let selectedDoorId: number | null = null;
-let viewMode: 'doors' | 'exits' = 'doors';
+const ALL_TABS = ['basic', 'rooms', 'state', 'locks', 'triggers', 'portal', 'permissions'];
 
-// Toast notification system
-type ToastType = 'success' | 'error' | 'warning' | 'info';
+(async function () {
+  const auth = await initAuth('developer');
+  if (!auth) return;
 
-function showToast(message: string, type: ToastType = 'info', duration: number = 3000): void {
-  let container = document.getElementById('toast-container');
-  if (!container) {
-    container = document.createElement('div');
-    container.id = 'toast-container';
-    document.body.appendChild(container);
+  // ============================================================================
+  // State
+  // ============================================================================
+
+  let doors: Door[] = [];
+  let rooms: Room[] = [];
+  let classDefs: ClassDef[] = [];
+  let selectedDoorId: number | null = null;
+  let selectedClasses: Set<string> = new Set();
+  let viewMode: 'doors' | 'exits' = 'doors';
+
+  // ============================================================================
+  // DOM
+  // ============================================================================
+
+  const doorForm = document.getElementById('door-form') as HTMLFormElement;
+  const noDoorSelected = document.getElementById('no-door-selected') as HTMLDivElement;
+  const formTitle = document.getElementById('door-form-title') as HTMLHeadingElement;
+  const idDisplay = document.getElementById('door-id-display') as HTMLSpanElement;
+  const doorCount = document.getElementById('door-count') as HTMLSpanElement;
+  const previewContent = document.getElementById('preview-content') as HTMLDivElement;
+  const doorList = document.getElementById('door-list') as HTMLUListElement;
+  const classButtonsContainer = document.getElementById('class-buttons') as HTMLDivElement;
+
+  // Filters
+  const areaFilter = document.getElementById('area-filter') as HTMLSelectElement;
+  const roomFilter = document.getElementById('room-filter') as HTMLSelectElement;
+  const typeFilter = document.getElementById('type-filter') as HTMLSelectElement;
+  const searchInput = document.getElementById('search-input') as HTMLInputElement;
+
+  // Basic
+  const nameInput = document.getElementById('door-name') as HTMLInputElement;
+  const doorTypeSelect = document.getElementById('door-type') as HTMLSelectElement;
+  const displayNameInput = document.getElementById('door-display-name') as HTMLInputElement;
+  const hiddenCheckbox = document.getElementById('door-hidden') as HTMLInputElement;
+  const descriptionInput = document.getElementById('door-description') as HTMLTextAreaElement;
+
+  // Room direction selects
+  const entryDirectionSelect = document.getElementById('entry-direction') as HTMLSelectElement;
+  const exitDirectionSelect = document.getElementById('exit-direction') as HTMLSelectElement;
+
+  // State
+  const defaultStateSelect = document.getElementById('default-state') as HTMLSelectElement;
+  const autoResetInput = document.getElementById('auto-reset-seconds') as HTMLInputElement;
+
+  // Locks
+  const hasLockCheckbox = document.getElementById('has-lock') as HTMLInputElement;
+  const lockOptions = document.getElementById('lock-options') as HTMLDivElement;
+  const keyItemTagInput = document.getElementById('key-item-tag') as HTMLInputElement;
+  const pickMinInput = document.getElementById('pick-difficulty-min') as HTMLInputElement;
+  const pickMaxInput = document.getElementById('pick-difficulty-max') as HTMLInputElement;
+  const bashInput = document.getElementById('bash-difficulty') as HTMLInputElement;
+
+  // Triggers
+  const triggerTextInput = document.getElementById('trigger-text') as HTMLInputElement;
+  const passageSelfInput = document.getElementById('passage-message-self') as HTMLInputElement;
+  const passageRoomInput = document.getElementById('passage-message-room') as HTMLInputElement;
+  const passageArrivalInput = document.getElementById('passage-message-arrival') as HTMLInputElement;
+  const itemDisplayNameInput = document.getElementById('item-display-name') as HTMLInputElement;
+
+  // Portal
+  const spawnTriggerInput = document.getElementById('spawn-trigger-text') as HTMLInputElement;
+  const durationInput = document.getElementById('duration-seconds') as HTMLInputElement;
+  const appearMsgInput = document.getElementById('appear-message') as HTMLInputElement;
+  const disappearMsgInput = document.getElementById('disappear-message') as HTMLInputElement;
+
+  // Permissions
+  const requiredLevelInput = document.getElementById('required-level') as HTMLInputElement;
+  const maxLevelInput = document.getElementById('max-level') as HTMLInputElement;
+  const questFlagInput = document.getElementById('required-quest-flag') as HTMLInputElement;
+  const itemTagInput = document.getElementById('required-item-tag') as HTMLInputElement;
+  const denialMsgInput = document.getElementById('denial-message') as HTMLTextAreaElement;
+
+  // ============================================================================
+  // Room SearchableSelect
+  // ============================================================================
+
+  let entryRoomSelect: SearchableSelect;
+  let exitRoomSelect: SearchableSelect;
+
+  function getRoomOptions(): SelectOption[] {
+    return [...rooms]
+      .sort((a, b) => (a.area || '').localeCompare(b.area || '') || a.name.localeCompare(b.name))
+      .map(r => ({
+        value: String(r.id),
+        label: r.name,
+        group: r.area || 'No Area',
+        detail: `#${r.id}`,
+      }));
   }
 
-  const toast = document.createElement('div');
-  toast.className = `toast ${type}`;
-  toast.textContent = message;
-  container.appendChild(toast);
+  function initRoomSelects(): void {
+    const options = getRoomOptions();
 
-  setTimeout(() => {
-    toast.classList.add('toast-out');
-    setTimeout(() => toast.remove(), 300);
-  }, duration);
-}
-
-function showError(message: string): void {
-  const list = document.getElementById('door-list');
-  if (list) {
-    list.innerHTML = `<div class="error-message" style="color: #ff6b6b; padding: 1rem;">${escapeHtml(message)}</div>`;
-  } else {
-    showToast(message, 'error');
-  }
-}
-
-function getElement<T extends HTMLElement>(id: string): T | null {
-  return document.getElementById(id) as T | null;
-}
-
-// ============================================================================
-// Authentication
-// ============================================================================
-
-async function checkAuth(): Promise<boolean> {
-  try {
-    const response = await fetch('/api/auth/me');
-    if (!response.ok) {
-      window.location.href = '/';
-      return false;
-    }
-    const data: AuthInfo = await response.json();
-
-    if (!data.authenticated) {
-      window.location.href = '/';
-      return false;
-    }
-
-    const roles = data.roles || [];
-    const hasDeveloperAccess = roles.includes('developer') || roles.includes('admin');
-
-    if (!hasDeveloperAccess) {
-      window.location.href = '/';
-      return false;
-    }
-
-    const usernameEl = document.getElementById('nav-username');
-    if (usernameEl && data.username) {
-      usernameEl.textContent = data.username;
-    }
-
-    // Show Admin dropdown if user is admin
-    const isAdmin = roles.includes('admin');
-    const adminDropdown = document.getElementById('nav-admin-dropdown');
-    if (adminDropdown) {
-      adminDropdown.style.display = isAdmin ? 'flex' : 'none';
-    }
-
-    return true;
-  } catch (error) {
-    console.error('Failed to check auth:', error);
-    window.location.href = '/';
-    return false;
-  }
-}
-
-async function handleLogout(): Promise<void> {
-  try {
-    await fetch('/api/logout', { method: 'POST', credentials: 'include' });
-  } catch {
-    // Ignore errors
-  }
-  window.location.href = '/';
-}
-
-// ============================================================================
-// Data Fetching
-// ============================================================================
-
-async function fetchDoors(): Promise<void> {
-  try {
-    const response = await fetch('/api/doors');
-    if (!response.ok) {
-      console.error('Failed to fetch doors: HTTP', response.status);
-      showError('Failed to load doors. Please refresh the page.');
-      return;
-    }
-    const data = await response.json();
-    if (data.success) {
-      if (Array.isArray(data.doors)) {
-        doors = data.doors;
-        renderList();
-      } else {
-        showError('Invalid door data received from server.');
-      }
-    } else {
-      showError('Failed to load doors: ' + (data.message || 'Unknown error'));
-    }
-  } catch (error) {
-    console.error('Failed to fetch doors:', error);
-    showError('Failed to connect to server. Please check your connection.');
-  }
-}
-
-async function fetchRooms(): Promise<void> {
-  try {
-    const response = await fetch('/api/rooms');
-    if (!response.ok) {
-      console.error('Failed to fetch rooms: HTTP', response.status);
-      showError('Failed to load rooms: HTTP ' + response.status);
-      return;
-    }
-    const data = await response.json();
-    if (data.success && Array.isArray(data.rooms)) {
-      rooms = data.rooms;
-      populateRoomDropdowns();
-    } else {
-      console.error('Failed to fetch rooms: Invalid response');
-      showError('Failed to load rooms: ' + (data.message || 'Invalid response'));
-    }
-  } catch (error) {
-    console.error('Failed to fetch rooms:', error);
-    showError('Failed to connect to server. Please check your connection.');
-  }
-}
-
-function populateRoomDropdowns(): void {
-  const entryRoomSelect = getElement<HTMLSelectElement>('entry-room-id');
-  const exitRoomSelect = getElement<HTMLSelectElement>('exit-room-id');
-
-  if (!entryRoomSelect || !exitRoomSelect) return;
-
-  // Sort rooms by area, then name
-  const sortedRooms = [...rooms].sort((a, b) => {
-    const areaA = a.area || '';
-    const areaB = b.area || '';
-    if (areaA !== areaB) return areaA.localeCompare(areaB);
-    return a.name.localeCompare(b.name);
-  });
-
-  // Build options
-  const options = sortedRooms.map(room => {
-    const areaLabel = room.area ? `[${room.area}] ` : '';
-    return `<option value="${room.id}">${areaLabel}${escapeHtml(room.name)} (#${room.id})</option>`;
-  }).join('');
-
-  entryRoomSelect.innerHTML = `<option value="">Select room...</option>${options}`;
-  exitRoomSelect.innerHTML = `<option value="">None (one-way)</option>${options}`;
-
-  // Populate filter dropdowns
-  populateFilterDropdowns();
-}
-
-function populateFilterDropdowns(): void {
-  const areaSelect = getElement<HTMLSelectElement>('area-select');
-  const roomSelect = getElement<HTMLSelectElement>('room-select');
-
-  if (!areaSelect || !roomSelect) return;
-
-  // Get unique areas sorted alphabetically
-  const areas = [...new Set(rooms.map(r => r.area).filter(Boolean))].sort() as string[];
-
-  areaSelect.innerHTML = `<option value="">All Areas</option>` +
-    areas.map(area => `<option value="${escapeHtml(area)}">${escapeHtml(area)}</option>`).join('');
-
-  // Populate rooms (will be filtered when area changes)
-  updateRoomFilterDropdown();
-}
-
-function updateRoomFilterDropdown(): void {
-  const areaSelect = getElement<HTMLSelectElement>('area-select');
-  const roomSelect = getElement<HTMLSelectElement>('room-select');
-
-  if (!roomSelect) return;
-
-  const selectedArea = areaSelect?.value || '';
-
-  // Filter rooms by selected area
-  let filteredRooms = rooms;
-  if (selectedArea) {
-    filteredRooms = rooms.filter(r => r.area === selectedArea);
-  }
-
-  // Sort by name
-  filteredRooms = [...filteredRooms].sort((a, b) => a.name.localeCompare(b.name));
-
-  roomSelect.innerHTML = `<option value="">All Rooms</option>` +
-    filteredRooms.map(room => {
-      const areaLabel = !selectedArea && room.area ? `[${room.area}] ` : '';
-      return `<option value="${room.id}">${areaLabel}${escapeHtml(room.name)} (#${room.id})</option>`;
-    }).join('');
-}
-
-// ============================================================================
-// Rendering
-// ============================================================================
-
-function renderList(): void {
-  if (viewMode === 'doors') {
-    renderDoorList();
-  } else {
-    renderExitList();
-  }
-}
-
-function renderDoorList(): void {
-  const list = getElement<HTMLElement>('door-list');
-  if (!list) return;
-
-  const areaSelectEl = getElement<HTMLSelectElement>('area-select');
-  const roomSelectEl = getElement<HTMLSelectElement>('room-select');
-  const filterTypeEl = getElement<HTMLSelectElement>('type-select');
-  const searchInputEl = getElement<HTMLInputElement>('search-input');
-
-  const filterArea = areaSelectEl?.value ?? '';
-  const filterRoom = roomSelectEl?.value ?? '';
-  const filterType = filterTypeEl?.value ?? '';
-  const searchTerm = (searchInputEl?.value ?? '').toLowerCase();
-
-  let filteredDoors = doors;
-
-  // Filter by area (check if entry or exit room is in the area)
-  if (filterArea) {
-    const roomsInArea = new Set(rooms.filter(r => r.area === filterArea).map(r => r.id));
-    filteredDoors = filteredDoors.filter(d =>
-      roomsInArea.has(d.entryRoomId) || (d.exitRoomId && roomsInArea.has(d.exitRoomId))
-    );
-  }
-
-  // Filter by room (check if entry or exit room matches)
-  if (filterRoom) {
-    const roomId = parseInt(filterRoom);
-    filteredDoors = filteredDoors.filter(d =>
-      d.entryRoomId === roomId || d.exitRoomId === roomId
-    );
-  }
-
-  if (filterType) {
-    filteredDoors = filteredDoors.filter(d => d.doorType === filterType);
-  }
-
-  if (searchTerm) {
-    filteredDoors = filteredDoors.filter(d =>
-      d.name.toLowerCase().includes(searchTerm) ||
-      (d.description && d.description.toLowerCase().includes(searchTerm))
-    );
-  }
-
-  // Update count display
-  const countEl = getElement<HTMLElement>('door-count');
-  if (countEl) {
-    const totalDoors = doors.length;
-    const shownDoors = filteredDoors.length;
-    if (totalDoors === shownDoors) {
-      countEl.textContent = `${totalDoors} door${totalDoors !== 1 ? 's' : ''}`;
-    } else {
-      countEl.textContent = `Showing ${shownDoors} of ${totalDoors} doors`;
-    }
-  }
-
-  list.innerHTML = filteredDoors
-    .sort((a, b) => a.name.localeCompare(b.name))
-    .map(door => {
-      const entryRoom = rooms.find(r => r.id === door.entryRoomId);
-      const exitRoom = door.exitRoomId ? rooms.find(r => r.id === door.exitRoomId) : null;
-      const roomsInfo = exitRoom
-        ? `${entryRoom?.name || '?'} ↔ ${exitRoom.name}`
-        : `${entryRoom?.name || '?'} →`;
-
-      return `
-        <li data-id="${door.id}" class="${door.id === selectedDoorId ? 'selected' : ''}">
-          <span class="door-id">#${door.id}</span>
-          <div class="door-name">${escapeHtml(door.name)}</div>
-          <div class="door-type"><span class="door-type-badge ${door.doorType}">${formatDoorType(door.doorType)}</span></div>
-          <div class="door-rooms">${escapeHtml(roomsInfo)}</div>
-        </li>
-      `;
-    })
-    .join('');
-
-  list.querySelectorAll('li').forEach(li => {
-    li.addEventListener('click', () => {
-      const id = parseInt(li.dataset.id!);
-      selectDoor(id);
+    entryRoomSelect = new SearchableSelect({
+      container: document.getElementById('entry-room-select-container')!,
+      placeholder: 'Search rooms...',
+      options,
+      onChange: () => {},
     });
-  });
-}
 
-function renderExitList(): void {
-  const list = getElement<HTMLElement>('door-list');
-  if (!list) return;
-
-  const areaSelectEl = getElement<HTMLSelectElement>('area-select');
-  const roomSelectEl = getElement<HTMLSelectElement>('room-select');
-  const searchInputEl = getElement<HTMLInputElement>('search-input');
-
-  const filterArea = areaSelectEl?.value ?? '';
-  const filterRoom = roomSelectEl?.value ?? '';
-  const searchTerm = (searchInputEl?.value ?? '').toLowerCase();
-
-  // Build list of all room exits
-  interface ExitInfo {
-    fromRoom: Room;
-    toRoom: Room | undefined;
-    direction: string;
-    hasDoor: boolean;
+    exitRoomSelect = new SearchableSelect({
+      container: document.getElementById('exit-room-select-container')!,
+      placeholder: 'Search rooms... (empty = one-way)',
+      options: [{ value: '', label: '(None — one-way door)' }, ...options],
+      clearable: true,
+      onChange: () => {},
+    });
   }
 
-  let exits: ExitInfo[] = [];
-  for (const room of rooms) {
-    if (!room.exits) continue;
-    for (const [direction, toRoomId] of Object.entries(room.exits)) {
-      const toRoom = rooms.find(r => r.id === toRoomId);
-      // Check if a door already exists for this exit
-      const hasDoor = doors.some(d =>
-        (d.entryRoomId === room.id && d.entryDirection === direction) ||
-        (d.exitRoomId === room.id && d.exitDirection === direction)
-      );
-      exits.push({ fromRoom: room, toRoom, direction, hasDoor });
+  // ============================================================================
+  // Tabs
+  // ============================================================================
+
+  setupTabs({ container: doorForm });
+
+  function updateVisibleTabs(doorType: string): void {
+    const visibleTabs = TYPE_TABS[doorType] || ['basic', 'rooms'];
+    for (const tab of ALL_TABS) {
+      const btn = doorForm.querySelector(`.tab-btn[data-tab="${tab}"]`) as HTMLElement | null;
+      if (btn) {
+        btn.classList.toggle('tab-hidden', !visibleTabs.includes(tab));
+      }
+    }
+    // If active tab is now hidden, switch to basic
+    const activeBtn = doorForm.querySelector('.tab-btn.active') as HTMLElement | null;
+    if (activeBtn?.classList.contains('tab-hidden')) {
+      activateTab('basic', { container: doorForm });
     }
   }
 
-  // Filter by area
-  if (filterArea) {
-    exits = exits.filter(e => e.fromRoom.area === filterArea);
+  // ============================================================================
+  // API
+  // ============================================================================
+
+  async function fetchDoors(): Promise<void> {
+    try {
+      const res = await fetch('/api/doors', { credentials: 'include' });
+      const data = await res.json();
+      doors = data.success ? (data.doors || []) : [];
+    } catch (error) {
+      console.error('Failed to fetch doors:', error);
+      showToast('Failed to load doors', 'error');
+    }
   }
 
-  // Filter by room
-  if (filterRoom) {
-    const roomId = parseInt(filterRoom);
-    exits = exits.filter(e => e.fromRoom.id === roomId || e.toRoom?.id === roomId);
+  async function fetchRooms(): Promise<void> {
+    try {
+      const res = await fetch('/api/rooms', { credentials: 'include' });
+      const data = await res.json();
+      if (data.success === false) {
+        console.error('Failed to fetch rooms:', data.message);
+        rooms = [];
+        return;
+      }
+      rooms = data.rooms || [];
+    } catch (error) {
+      console.error('Failed to fetch rooms:', error);
+      showToast('Failed to load rooms', 'error');
+    }
   }
 
-  // Filter by search
-  if (searchTerm) {
-    exits = exits.filter(e =>
-      e.fromRoom.name.toLowerCase().includes(searchTerm) ||
-      (e.toRoom && e.toRoom.name.toLowerCase().includes(searchTerm)) ||
-      e.direction.toLowerCase().includes(searchTerm)
-    );
+  async function fetchClasses(): Promise<void> {
+    try {
+      const res = await fetch('/api/progression/classes', { credentials: 'include' });
+      const data = await res.json();
+      if (data.success) {
+        classDefs = (data.classes || []).map((c: Record<string, unknown>) => ({
+          id: (c.class_id || c.id) as string,
+          displayName: (c.display_name || c.displayName || c.class_id || c.id) as string,
+        }));
+      }
+    } catch (error) {
+      console.error('Failed to fetch classes:', error);
+      showToast('Failed to fetch class data', 'error');
+    }
   }
 
-  // Sort by area, then room name, then direction
-  exits.sort((a, b) => {
-    const areaA = a.fromRoom.area || '';
-    const areaB = b.fromRoom.area || '';
-    if (areaA !== areaB) return areaA.localeCompare(areaB);
-    if (a.fromRoom.name !== b.fromRoom.name) return a.fromRoom.name.localeCompare(b.fromRoom.name);
-    return a.direction.localeCompare(b.direction);
-  });
+  // ============================================================================
+  // List Rendering
+  // ============================================================================
 
-  // Update count display
-  const countEl = getElement<HTMLElement>('door-count');
-  if (countEl) {
-    const totalExits = rooms.reduce((sum, r) => sum + Object.keys(r.exits || {}).length, 0);
-    const shownExits = exits.length;
-    const withDoors = exits.filter(e => e.hasDoor).length;
-    if (totalExits === shownExits) {
-      countEl.textContent = `${totalExits} exits (${withDoors} with doors)`;
+  function getRoomName(roomId: number | null): string {
+    if (!roomId) return '(none)';
+    const room = rooms.find(r => r.id === roomId);
+    return room ? room.name : `#${roomId}`;
+  }
+
+  function populateAreaFilter(): void {
+    const areas = [...new Set(rooms.map(r => r.area).filter(Boolean))].sort() as string[];
+    areaFilter.innerHTML = '<option value="">All Areas</option>' +
+      areas.map(a => `<option value="${escapeHtml(a)}">${escapeHtml(a)}</option>`).join('');
+  }
+
+  function updateRoomFilter(): void {
+    const area = areaFilter.value;
+    const filtered = area ? rooms.filter(r => r.area === area) : rooms;
+    roomFilter.innerHTML = '<option value="">All Rooms</option>' +
+      filtered.sort((a, b) => a.name.localeCompare(b.name))
+        .map(r => `<option value="${r.id}">${escapeHtml(r.name)} (#${r.id})</option>`).join('');
+  }
+
+  function renderList(): void {
+    if (viewMode === 'doors') {
+      renderDoorList();
     } else {
-      countEl.textContent = `Showing ${shownExits} of ${totalExits} exits`;
+      renderExitList();
     }
   }
 
-  list.innerHTML = exits.map(exit => {
-    const areaLabel = exit.fromRoom.area ? `[${exit.fromRoom.area}] ` : '';
-    return `
-      <li class="exit-item" data-from-room="${exit.fromRoom.id}" data-direction="${exit.direction}" data-to-room="${exit.toRoom?.id || ''}">
+  function renderDoorList(): void {
+    const area = areaFilter.value;
+    const roomId = roomFilter.value ? parseInt(roomFilter.value) : null;
+    const type = typeFilter.value;
+    const search = searchInput.value.toLowerCase();
+
+    const filtered = doors.filter(d => {
+      if (area) {
+        const entryRoom = rooms.find(r => r.id === d.entryRoomId);
+        const exitRoom = rooms.find(r => r.id === d.exitRoomId);
+        if ((!entryRoom || entryRoom.area !== area) && (!exitRoom || exitRoom.area !== area)) return false;
+      }
+      if (roomId && d.entryRoomId !== roomId && d.exitRoomId !== roomId) return false;
+      if (type && d.doorType !== type) return false;
+      if (search && !d.name.toLowerCase().includes(search) && !(d.description || '').toLowerCase().includes(search)) return false;
+      return true;
+    }).sort((a, b) => a.name.localeCompare(b.name));
+
+    doorList.innerHTML = '';
+    for (const door of filtered) {
+      const li = document.createElement('li');
+      if (door.id === selectedDoorId) li.className = 'selected';
+      li.innerHTML = `
+        <div class="door-name">${escapeHtml(door.name)}</div>
+        <div class="door-meta">
+          <span class="dtype-badge ${door.doorType}">${formatDoorType(door.doorType)}</span>
+          <span class="door-rooms">${escapeHtml(getRoomName(door.entryRoomId))} → ${escapeHtml(getRoomName(door.exitRoomId))}</span>
+        </div>
+      `;
+      li.addEventListener('click', () => selectDoor(door.id));
+      doorList.appendChild(li);
+    }
+
+    doorCount.textContent = `${filtered.length}/${doors.length}`;
+  }
+
+  function renderExitList(): void {
+    const area = areaFilter.value;
+    const roomId = roomFilter.value ? parseInt(roomFilter.value) : null;
+    const search = searchInput.value.toLowerCase();
+
+    // Build exit list from room data
+    const exits: Array<{ fromRoom: Room; direction: string; toRoomId: number; hasDoor: boolean; doorId?: number }> = [];
+
+    for (const room of rooms) {
+      if (area && room.area !== area) continue;
+      if (roomId && room.id !== roomId) continue;
+
+      const roomExits = room.exits || {};
+      for (const [direction, targetRoomId] of Object.entries(roomExits)) {
+        if (search) {
+          const targetRoom = rooms.find(r => r.id === targetRoomId);
+          const targetName = targetRoom?.name?.toLowerCase() || '';
+          if (!room.name.toLowerCase().includes(search) &&
+              !targetName.includes(search) &&
+              !direction.toLowerCase().includes(search) &&
+              !(room.area?.toLowerCase().includes(search) ?? false)) continue;
+        }
+        // Check both entry and exit sides — a door from the other side also covers this exit
+        const door = doors.find(d =>
+          (d.entryRoomId === room.id && d.entryDirection === direction) ||
+          (d.exitRoomId === room.id && d.exitDirection === direction)
+        );
+        exits.push({
+          fromRoom: room,
+          direction,
+          toRoomId: targetRoomId,
+          hasDoor: !!door,
+          doorId: door?.id,
+        });
+      }
+    }
+
+    exits.sort((a, b) => (a.fromRoom.area || '').localeCompare(b.fromRoom.area || '') || a.fromRoom.name.localeCompare(b.fromRoom.name) || a.direction.localeCompare(b.direction));
+
+    doorList.innerHTML = '';
+    for (const exit of exits) {
+      const li = document.createElement('li');
+      li.className = 'exit-item';
+      const targetName = getRoomName(exit.toRoomId);
+      li.innerHTML = `
         <div class="exit-info">
-          <div class="exit-direction">${exit.direction}</div>
-          <div class="exit-rooms">${areaLabel}${escapeHtml(exit.fromRoom.name)} → ${exit.toRoom ? escapeHtml(exit.toRoom.name) : '?'}</div>
-          ${exit.hasDoor ? '<div class="exit-has-door">Has door</div>' : ''}
-        </div>
-        ${!exit.hasDoor ? `<button class="btn-small create-door-btn">+ Door</button>` : ''}
-      </li>
-    `;
-  }).join('');
-
-  // Add click handlers for create door buttons
-  list.querySelectorAll('.create-door-btn').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      const li = (e.target as HTMLElement).closest('li');
-      if (!li) return;
-      const fromRoomId = parseInt(li.dataset.fromRoom!);
-      const direction = li.dataset.direction!;
-      const toRoomId = li.dataset.toRoom ? parseInt(li.dataset.toRoom) : null;
-      createDoorFromExit(fromRoomId, direction, toRoomId);
-    });
-  });
-}
-
-async function createDoorFromExit(fromRoomId: number, direction: string, toRoomId: number | null): Promise<void> {
-  const fromRoom = rooms.find(r => r.id === fromRoomId);
-  const toRoom = toRoomId ? rooms.find(r => r.id === toRoomId) : null;
-
-  const defaultName = `${fromRoom?.name || 'Room'} ${direction} door`;
-  const name = prompt('Enter door name:', defaultName);
-  if (!name) return;
-
-  // Find the reverse direction for the exit side
-  const reverseDirections: Record<string, string> = {
-    north: 'south', south: 'north',
-    east: 'west', west: 'east',
-    up: 'down', down: 'up',
-    northeast: 'southwest', southwest: 'northeast',
-    northwest: 'southeast', southeast: 'northwest',
-  };
-
-  try {
-    const response = await fetch('/api/doors', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        name,
-        doorType: 'physical',
-        entryRoomId: fromRoomId,
-        entryDirection: direction,
-        exitRoomId: toRoomId,
-        exitDirection: toRoomId ? reverseDirections[direction] || direction : null,
-      }),
-    });
-
-    const data = await response.json();
-    if (data.success) {
-      doors.push(data.door);
-      // Switch to doors view and select the new door
-      viewMode = 'doors';
-      updateViewToggle();
-      selectDoor(data.door.id);
-      showToast('Door created successfully!', 'success');
-    } else {
-      showToast('Failed to create door: ' + data.message, 'error');
-    }
-  } catch (error) {
-    console.error('Failed to create door:', error);
-    showToast('Failed to create door', 'error');
-  }
-}
-
-function updateViewToggle(): void {
-  document.querySelectorAll('#view-toggle .view-btn').forEach(btn => {
-    btn.classList.toggle('active', (btn as HTMLElement).dataset.view === viewMode);
-  });
-
-  const title = getElement<HTMLElement>('list-panel-title');
-  if (title) {
-    title.textContent = viewMode === 'doors' ? 'Doors' : 'Room Exits';
-  }
-
-  // Show/hide type filter (only relevant for doors)
-  const typeFilter = getElement<HTMLElement>('type-select')?.closest('.filter-row');
-  if (typeFilter) {
-    (typeFilter as HTMLElement).style.display = viewMode === 'doors' ? '' : 'none';
-  }
-
-  renderList();
-}
-
-function formatDoorType(type: string): string {
-  return type.replace(/_/g, ' ');
-}
-
-function selectDoor(id: number): void {
-  selectedDoorId = id;
-  const door = doors.find(d => d.id === id);
-
-  const noDoorSelected = getElement<HTMLElement>('no-door-selected');
-  const doorForm = getElement<HTMLElement>('door-form');
-
-  if (!door) {
-    if (noDoorSelected) noDoorSelected.style.display = 'flex';
-    if (doorForm) doorForm.style.display = 'none';
-    return;
-  }
-
-  if (noDoorSelected) noDoorSelected.style.display = 'none';
-  if (doorForm) doorForm.style.display = 'block';
-
-  const formTitle = getElement<HTMLElement>('door-form-title');
-  const idDisplay = getElement<HTMLElement>('door-id-display');
-  if (formTitle) formTitle.textContent = 'Edit Door';
-  if (idDisplay) idDisplay.textContent = `ID: ${door.id}`;
-
-  // Basic fields
-  const nameInput = getElement<HTMLInputElement>('door-name');
-  const displayNameInput = getElement<HTMLInputElement>('door-display-name');
-  const typeSelect = getElement<HTMLSelectElement>('door-type');
-  const descInput = getElement<HTMLTextAreaElement>('door-description');
-  const hiddenCheck = getElement<HTMLInputElement>('door-hidden');
-
-  if (nameInput) nameInput.value = door.name;
-  if (displayNameInput) displayNameInput.value = door.displayName || '';
-  if (typeSelect) typeSelect.value = door.doorType;
-  if (descInput) descInput.value = door.description || '';
-  if (hiddenCheck) hiddenCheck.checked = door.isHidden;
-
-  // Room fields
-  const entryRoomSelect = getElement<HTMLSelectElement>('entry-room-id');
-  const entryDirSelect = getElement<HTMLSelectElement>('entry-direction');
-  const exitRoomSelect = getElement<HTMLSelectElement>('exit-room-id');
-  const exitDirSelect = getElement<HTMLSelectElement>('exit-direction');
-
-  if (entryRoomSelect) entryRoomSelect.value = String(door.entryRoomId);
-  if (entryDirSelect) entryDirSelect.value = door.entryDirection;
-  if (exitRoomSelect) exitRoomSelect.value = door.exitRoomId ? String(door.exitRoomId) : '';
-  if (exitDirSelect) exitDirSelect.value = door.exitDirection || '';
-
-  // State fields
-  const defaultStateSelect = getElement<HTMLSelectElement>('default-state');
-  const autoResetInput = getElement<HTMLInputElement>('auto-reset-seconds');
-
-  if (defaultStateSelect) defaultStateSelect.value = door.defaultState;
-  if (autoResetInput) autoResetInput.value = String(door.autoResetSeconds || 0);
-
-  // Lock fields
-  const hasLockCheck = getElement<HTMLInputElement>('has-lock');
-  const keyItemTagInput = getElement<HTMLInputElement>('key-item-tag');
-  const pickDiffMinInput = getElement<HTMLInputElement>('pick-difficulty-min');
-  const pickDiffMaxInput = getElement<HTMLInputElement>('pick-difficulty-max');
-  const bashDiffInput = getElement<HTMLInputElement>('bash-difficulty');
-
-  if (hasLockCheck) hasLockCheck.checked = door.hasLock;
-  if (keyItemTagInput) keyItemTagInput.value = door.keyItemTag || '';
-  if (pickDiffMinInput) pickDiffMinInput.value = String(door.pickDifficultyMin);
-  if (pickDiffMaxInput) pickDiffMaxInput.value = String(door.pickDifficultyMax);
-  if (bashDiffInput) bashDiffInput.value = String(door.bashDifficulty);
-
-  updateLockOptionsVisibility();
-
-  // Trigger fields
-  const triggerTextInput = getElement<HTMLInputElement>('trigger-text');
-  const passageSelfInput = getElement<HTMLInputElement>('passage-message-self');
-  const passageRoomInput = getElement<HTMLInputElement>('passage-message-room');
-  const itemDisplayInput = getElement<HTMLInputElement>('item-display-name');
-
-  if (triggerTextInput) triggerTextInput.value = door.triggerText || '';
-  if (passageSelfInput) passageSelfInput.value = door.passageMessageSelf || '';
-  if (passageRoomInput) passageRoomInput.value = door.passageMessageRoom || '';
-  if (itemDisplayInput) itemDisplayInput.value = door.itemDisplayName || '';
-
-  // Portal fields
-  const spawnTriggerInput = getElement<HTMLInputElement>('spawn-trigger-text');
-  const durationInput = getElement<HTMLInputElement>('duration-seconds');
-  const appearMsgInput = getElement<HTMLInputElement>('appear-message');
-  const disappearMsgInput = getElement<HTMLInputElement>('disappear-message');
-
-  if (spawnTriggerInput) spawnTriggerInput.value = door.spawnTriggerText || '';
-  if (durationInput) durationInput.value = door.durationSeconds !== null ? String(door.durationSeconds) : '';
-  if (appearMsgInput) appearMsgInput.value = door.appearMessage || '';
-  if (disappearMsgInput) disappearMsgInput.value = door.disappearMessage || '';
-
-  // Permission fields
-  const reqLevelInput = getElement<HTMLInputElement>('required-level');
-  const maxLevelInput = getElement<HTMLInputElement>('max-level');
-  const reqClassesInput = getElement<HTMLInputElement>('required-classes');
-  const reqQuestInput = getElement<HTMLInputElement>('required-quest-flag');
-  const reqItemInput = getElement<HTMLInputElement>('required-item-tag');
-  const denialMsgInput = getElement<HTMLTextAreaElement>('denial-message');
-
-  if (reqLevelInput) reqLevelInput.value = String(door.requiredLevel || 0);
-  if (maxLevelInput) maxLevelInput.value = String(door.maxLevel || 0);
-  if (reqClassesInput) reqClassesInput.value = (door.requiredClasses || []).join(', ');
-  if (reqQuestInput) reqQuestInput.value = door.requiredQuestFlag || '';
-  if (reqItemInput) reqItemInput.value = door.requiredItemTag || '';
-  if (denialMsgInput) denialMsgInput.value = door.denialMessage || '';
-
-  // Update visible sections based on door type
-  updateVisibleSections(door.doorType);
-
-  // Update preview
-  updatePreview(door);
-
-  renderDoorList();
-}
-
-function updateVisibleSections(doorType: string): void {
-  const visibleSections = DOOR_TYPE_SECTIONS[doorType] || ['basic', 'rooms'];
-
-  // Update tab button visibility (basic and rooms are always visible)
-  const conditionalTabs = ['state', 'locks', 'triggers', 'portal', 'permissions'];
-  for (const tab of conditionalTabs) {
-    const tabBtn = getElement<HTMLButtonElement>(`tab-btn-${tab}`);
-    if (tabBtn) {
-      tabBtn.style.display = visibleSections.includes(tab) ? '' : 'none';
-    }
-  }
-
-  // If current tab is hidden, switch to basic (basic and rooms are always visible)
-  const activeTab = document.querySelector('.tab-btn.active');
-  if (activeTab) {
-    const tabName = (activeTab as HTMLElement).dataset.tab;
-    if (tabName && tabName !== 'basic' && tabName !== 'rooms' && !visibleSections.includes(tabName)) {
-      switchToTab('basic');
-    }
-  }
-
-  // Show/hide item display name field based on door type
-  const itemDisplayGroup = getElement<HTMLElement>('item-display-group');
-  if (itemDisplayGroup) {
-    itemDisplayGroup.style.display =
-      (doorType === 'special' || doorType === 'temporary_portal') ? '' : 'none';
-  }
-}
-
-function updateLockOptionsVisibility(): void {
-  const hasLockCheck = getElement<HTMLInputElement>('has-lock');
-  const lockOptions = getElement<HTMLElement>('lock-options');
-  if (hasLockCheck && lockOptions) {
-    lockOptions.style.display = hasLockCheck.checked ? '' : 'none';
-  }
-}
-
-function updatePreview(door: Door): void {
-  const content = getElement<HTMLElement>('preview-content');
-  if (!content) return;
-
-  const entryRoom = rooms.find(r => r.id === door.entryRoomId);
-  const exitRoom = door.exitRoomId ? rooms.find(r => r.id === door.exitRoomId) : null;
-
-  let html = `
-    <div class="preview-name">${escapeHtml(door.name)}</div>
-    <div class="preview-type"><span class="door-type-badge ${door.doorType}">${formatDoorType(door.doorType)}</span></div>
-  `;
-
-  if (door.description) {
-    html += `<div class="preview-desc">${escapeHtml(door.description)}</div>`;
-  }
-
-  // Properties
-  const props: string[] = [];
-  if (door.isHidden) props.push('Hidden');
-  if (door.hasLock) props.push('Locked');
-  if (door.requiredLevel && door.requiredLevel > 0 && door.maxLevel && door.maxLevel > 0 && door.requiredLevel <= door.maxLevel) {
-    props.push(`Level ${door.requiredLevel}-${door.maxLevel}`);
-  } else if (door.requiredLevel && door.requiredLevel > 0) {
-    props.push(`Level ${door.requiredLevel}+`);
-  } else if (door.maxLevel && door.maxLevel > 0) {
-    props.push(`Level ${door.maxLevel} max`);
-  }
-
-  if (props.length > 0) {
-    html += `
-      <div class="preview-section">
-        <div class="preview-section-title">Properties</div>
-        <div>${props.join(', ')}</div>
-      </div>
-    `;
-  }
-
-  // Physical door info
-  if (door.doorType === 'physical') {
-    html += `
-      <div class="preview-section">
-        <div class="preview-section-title">State</div>
-        <div class="preview-property">Default: ${door.defaultState}</div>
-        ${door.autoResetSeconds ? `<div class="preview-property">Auto-reset: ${door.autoResetSeconds}s</div>` : ''}
-      </div>
-    `;
-
-    if (door.hasLock) {
-      const pickLabel = door.pickDifficultyMax >= 500 ? 'unpickable' :
-        (door.pickDifficultyMin === door.pickDifficultyMax ?
-          String(door.pickDifficultyMin) :
-          `${door.pickDifficultyMin}-${door.pickDifficultyMax}`);
-      html += `
-        <div class="preview-section">
-          <div class="preview-section-title">Lock</div>
-          ${door.keyItemTag ? `<div class="preview-property">Key: ${escapeHtml(door.keyItemTag)}</div>` : ''}
-          <div class="preview-property">Pick: ${pickLabel}</div>
-          <div class="preview-property">Bash: ${door.bashDifficulty}${door.bashDifficulty >= 500 ? ' (unbashable)' : ''}</div>
+          <span class="exit-dir">${escapeHtml(exit.direction)}</span>
+          <span class="exit-room">${escapeHtml(exit.fromRoom.name)} → ${escapeHtml(targetName)}</span>
+          ${exit.hasDoor
+            ? `<span class="exit-status" style="color: #4ade80;">Has door</span>`
+            : `<button type="button" class="exit-add-btn" data-from="${exit.fromRoom.id}" data-dir="${exit.direction}" data-to="${exit.toRoomId}">+ Door</button>`
+          }
         </div>
       `;
-    }
-  }
 
-  // Trigger info
-  if (door.triggerText) {
-    html += `
-      <div class="preview-section">
-        <div class="preview-section-title">Trigger</div>
-        <div class="preview-property">"${escapeHtml(door.triggerText)}"</div>
-      </div>
-    `;
-  }
-
-  // Portal info
-  if (door.doorType === 'temporary_portal') {
-    html += `
-      <div class="preview-section">
-        <div class="preview-section-title">Portal</div>
-        ${door.spawnTriggerText ? `<div class="preview-property">Spawn: "${escapeHtml(door.spawnTriggerText)}"</div>` : ''}
-        ${door.durationSeconds ? `<div class="preview-property">Duration: ${door.durationSeconds}s</div>` : ''}
-      </div>
-    `;
-  }
-
-  content.innerHTML = html;
-
-  // Update connection diagram
-  const entryRoomPreview = document.querySelector('#entry-room-preview .room-name');
-  const exitRoomPreview = document.querySelector('#exit-room-preview .room-name');
-  const entryDirLabel = getElement<HTMLElement>('entry-dir-label');
-  const exitDirLabel = getElement<HTMLElement>('exit-dir-label');
-
-  if (entryRoomPreview) {
-    entryRoomPreview.textContent = entryRoom?.name || `Room #${door.entryRoomId}`;
-  }
-  if (exitRoomPreview) {
-    exitRoomPreview.textContent = exitRoom?.name || (door.exitRoomId ? `Room #${door.exitRoomId}` : 'None');
-  }
-  if (entryDirLabel) {
-    entryDirLabel.textContent = door.entryDirection;
-  }
-  if (exitDirLabel) {
-    exitDirLabel.textContent = door.exitDirection || '-';
-  }
-}
-
-// ============================================================================
-// CRUD Operations
-// ============================================================================
-
-async function createDoor(): Promise<void> {
-  const name = prompt('Enter door name:');
-  if (!name) return;
-
-  // Use the first available room, or show error if no rooms exist
-  if (rooms.length === 0) {
-    showToast('No rooms available. Create a room first.', 'error');
-    return;
-  }
-
-  try {
-    const response = await fetch('/api/doors', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        name,
-        doorType: 'physical',
-        entryRoomId: rooms[0].id,
-        entryDirection: 'north',
-      }),
-    });
-
-    if (!response.ok) {
-      showToast(`Failed to create door: HTTP ${response.status}`, 'error');
-      return;
-    }
-    const data = await response.json();
-    if (data.success) {
-      doors.push(data.door);
-      selectDoor(data.door.id);
-      showToast('Door created successfully!', 'success');
-    } else {
-      showToast('Failed to create door: ' + data.message, 'error');
-    }
-  } catch (error) {
-    console.error('Failed to create door:', error);
-    showToast('Failed to create door', 'error');
-  }
-}
-
-async function createDoorForRoom(roomId: number, roomName: string): Promise<void> {
-  const name = prompt(`Enter door name for ${roomName}:`);
-  if (!name) return;
-
-  try {
-    const response = await fetch('/api/doors', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        name,
-        doorType: 'physical',
-        entryRoomId: roomId,
-        entryDirection: 'north',
-      }),
-    });
-
-    if (!response.ok) {
-      showToast(`Failed to create door: HTTP ${response.status}`, 'error');
-      return;
-    }
-    const data = await response.json();
-    if (data.success) {
-      doors.push(data.door);
-      selectDoor(data.door.id);
-      showToast('Door created! Configure the settings below.', 'success');
-    } else {
-      showToast('Failed to create door: ' + data.message, 'error');
-    }
-  } catch (error) {
-    console.error('Failed to create door:', error);
-    showToast('Failed to create door', 'error');
-  }
-}
-
-async function saveDoor(): Promise<void> {
-  if (!selectedDoorId) return;
-
-  const doorData = gatherFormData();
-
-  // Validate level range: max must be >= min when both are set
-  if (doorData.requiredLevel && doorData.maxLevel && doorData.maxLevel < doorData.requiredLevel) {
-    alert(`Max level (${doorData.maxLevel}) cannot be less than min level (${doorData.requiredLevel})`);
-    return;
-  }
-
-  try {
-    const response = await fetch(`/api/doors/${selectedDoorId}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(doorData),
-    });
-
-    const data = await response.json();
-    if (data.success) {
-      const index = doors.findIndex(d => d.id === selectedDoorId);
-      if (index !== -1) {
-        doors[index] = data.door;
+      if (exit.hasDoor && exit.doorId) {
+        li.style.cursor = 'pointer';
+        li.addEventListener('click', () => selectDoor(exit.doorId!));
       }
-      selectDoor(selectedDoorId);
-      showToast('Door saved successfully!', 'success');
-    } else {
-      showToast('Failed to save door: ' + data.message, 'error');
+
+      doorList.appendChild(li);
     }
-  } catch (error) {
-    console.error('Failed to save door:', error);
-    showToast('Failed to save door', 'error');
-  }
-}
 
-async function deleteDoor(): Promise<void> {
-  if (!selectedDoorId) return;
-
-  const door = doors.find(d => d.id === selectedDoorId);
-  if (!confirm(`Are you sure you want to delete "${door?.name}"?`)) return;
-
-  try {
-    const response = await fetch(`/api/doors/${selectedDoorId}`, {
-      method: 'DELETE',
+    // Wire up "+ Door" buttons
+    doorList.querySelectorAll('.exit-add-btn').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const el = e.target as HTMLElement;
+        const fromId = parseInt(el.dataset.from!);
+        const dir = el.dataset.dir!;
+        const toId = parseInt(el.dataset.to!);
+        await createDoorFromExit(fromId, dir, toId);
+      });
     });
 
-    const data = await response.json();
-    if (data.success) {
-      doors = doors.filter(d => d.id !== selectedDoorId);
-      selectedDoorId = null;
-      const noDoorSelected = getElement<HTMLElement>('no-door-selected');
-      const doorForm = getElement<HTMLElement>('door-form');
-      if (noDoorSelected) noDoorSelected.style.display = 'flex';
-      if (doorForm) doorForm.style.display = 'none';
+    doorCount.textContent = `${exits.length} exits`;
+  }
+
+  // ============================================================================
+  // Selection
+  // ============================================================================
+
+  async function selectDoor(id: number): Promise<void> {
+    // Fetch fresh data
+    try {
+      const res = await fetch(`/api/doors/${id}`, { credentials: 'include' });
+      const data = await res.json();
+      if (!data.success) { showToast('Failed to load door', 'error'); return; }
+
+      const door: Door = data.door;
+      selectedDoorId = id;
+
+      noDoorSelected.style.display = 'none';
+      doorForm.style.display = 'block';
+      formTitle.textContent = 'Edit Door';
+      idDisplay.textContent = `ID: ${door.id}`;
+
+      // Basic
+      nameInput.value = door.name;
+      doorTypeSelect.value = door.doorType;
+      displayNameInput.value = door.displayName || '';
+      hiddenCheckbox.checked = door.isHidden;
+      descriptionInput.value = door.description || '';
+
+      // Rooms
+      entryRoomSelect.setValue(String(door.entryRoomId));
+      entryDirectionSelect.value = door.entryDirection;
+      exitRoomSelect.setValue(door.exitRoomId ? String(door.exitRoomId) : '');
+      exitDirectionSelect.value = door.exitDirection || '';
+
+      // State
+      defaultStateSelect.value = door.defaultState || 'closed';
+      autoResetInput.value = String(door.autoResetSeconds || 0);
+
+      // Locks
+      hasLockCheckbox.checked = door.hasLock;
+      lockOptions.style.display = door.hasLock ? 'block' : 'none';
+      keyItemTagInput.value = door.keyItemTag || '';
+      pickMinInput.value = String(door.pickDifficultyMin || 0);
+      pickMaxInput.value = String(door.pickDifficultyMax || 0);
+      bashInput.value = String(door.bashDifficulty || 0);
+
+      // Triggers
+      triggerTextInput.value = door.triggerText || '';
+      passageSelfInput.value = door.passageMessageSelf || '';
+      passageRoomInput.value = door.passageMessageRoom || '';
+      passageArrivalInput.value = door.passageMessageArrival || '';
+      itemDisplayNameInput.value = door.itemDisplayName || '';
+
+      // Portal
+      spawnTriggerInput.value = door.spawnTriggerText || '';
+      durationInput.value = String(door.durationSeconds ?? 60);
+      appearMsgInput.value = door.appearMessage || '';
+      disappearMsgInput.value = door.disappearMessage || '';
+
+      // Permissions
+      requiredLevelInput.value = String(door.requiredLevel || 0);
+      maxLevelInput.value = String(door.maxLevel || 0);
+      selectedClasses = new Set(
+        (door.requiredClasses || [])
+          .filter(c => c && c.trim())
+          .map(c => { const m = classDefs.find(cd => cd.id.toLowerCase() === c.toLowerCase()); return m ? m.id : c; })
+      );
+      renderClassButtons();
+      questFlagInput.value = door.requiredQuestFlag || '';
+      itemTagInput.value = door.requiredItemTag || '';
+      denialMsgInput.value = door.denialMessage || '';
+
+      // Update visibility and preview
+      updateVisibleTabs(door.doorType);
+      activateTab('basic', { container: doorForm });
+      updatePreview(door);
       renderList();
-      showToast('Door deleted successfully!', 'success');
-    } else {
-      showToast('Failed to delete door: ' + data.message, 'error');
+    } catch (error) {
+      console.error('Failed to load door:', error);
+      showToast('Failed to load door', 'error');
     }
-  } catch (error) {
-    console.error('Failed to delete door:', error);
-    showToast('Failed to delete door', 'error');
   }
-}
 
-async function duplicateDoor(): Promise<void> {
-  if (!selectedDoorId) return;
+  function clearForm(): void {
+    selectedDoorId = null;
+    noDoorSelected.style.display = 'flex';
+    doorForm.style.display = 'none';
+    idDisplay.textContent = '';
+    previewContent.innerHTML = '<p class="hint">Select a door to see preview</p>';
+    renderList();
+  }
 
-  const door = doors.find(d => d.id === selectedDoorId);
-  if (!door) return;
+  // ============================================================================
+  // Class Buttons
+  // ============================================================================
 
-  const newName = prompt('Enter name for duplicate:', door.name + ' (copy)');
-  if (!newName) return;
-
-  const duplicateData = { ...gatherFormData(), name: newName };
-
-  try {
-    const response = await fetch('/api/doors', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(duplicateData),
-    });
-
-    const data = await response.json();
-    if (data.success) {
-      doors.push(data.door);
-      selectDoor(data.door.id);
-      showToast('Door duplicated successfully!', 'success');
-    } else {
-      showToast('Failed to duplicate door: ' + data.message, 'error');
+  function renderClassButtons(): void {
+    classButtonsContainer.innerHTML = '';
+    for (const cls of classDefs) {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = `class-btn${selectedClasses.has(cls.id) ? ' selected' : ''}`;
+      btn.textContent = cls.displayName;
+      btn.addEventListener('click', () => {
+        if (selectedClasses.has(cls.id)) {
+          selectedClasses.delete(cls.id);
+          btn.classList.remove('selected');
+        } else {
+          selectedClasses.add(cls.id);
+          btn.classList.add('selected');
+        }
+      });
+      classButtonsContainer.appendChild(btn);
     }
-  } catch (error) {
-    console.error('Failed to duplicate door:', error);
-    showToast('Failed to duplicate door', 'error');
-  }
-}
-
-function gatherFormData(): Partial<Door> {
-  const doorType = (getElement<HTMLSelectElement>('door-type')?.value) || 'physical';
-
-  const data: Record<string, unknown> = {
-    name: getElement<HTMLInputElement>('door-name')?.value || '',
-    displayName: getElement<HTMLInputElement>('door-display-name')?.value || null,
-    doorType,
-    description: getElement<HTMLTextAreaElement>('door-description')?.value || null,
-    isHidden: getElement<HTMLInputElement>('door-hidden')?.checked || false,
-
-    // Room data
-    entryRoomId: parseInt(getElement<HTMLSelectElement>('entry-room-id')?.value || '0'),
-    entryDirection: getElement<HTMLSelectElement>('entry-direction')?.value || 'north',
-    exitRoomId: parseInt(getElement<HTMLSelectElement>('exit-room-id')?.value || '0') || null,
-    exitDirection: getElement<HTMLSelectElement>('exit-direction')?.value || null,
-  };
-
-  // State data (for physical doors)
-  if (doorType === 'physical') {
-    data.defaultState = getElement<HTMLSelectElement>('default-state')?.value || 'closed';
-    const autoReset = parseInt(getElement<HTMLInputElement>('auto-reset-seconds')?.value || '0');
-    data.autoResetSeconds = autoReset > 0 ? autoReset : null;
-
-    // Lock data
-    data.hasLock = getElement<HTMLInputElement>('has-lock')?.checked || false;
-    data.keyItemTag = getElement<HTMLInputElement>('key-item-tag')?.value || null;
-    const pickMin = parseInt(getElement<HTMLInputElement>('pick-difficulty-min')?.value || '0') || 0;
-    const pickMax = parseInt(getElement<HTMLInputElement>('pick-difficulty-max')?.value || '0') || 0;
-    // Ensure min <= max (swap if user entered them backwards)
-    data.pickDifficultyMin = Math.min(pickMin, pickMax);
-    data.pickDifficultyMax = Math.max(pickMin, pickMax);
-    data.bashDifficulty = parseInt(getElement<HTMLInputElement>('bash-difficulty')?.value || '0') || 0;
   }
 
-  // Trigger data
-  if (['special', 'triggered_passageway', 'temporary_portal'].includes(doorType)) {
-    data.triggerText = getElement<HTMLInputElement>('trigger-text')?.value || null;
-    data.passageMessageSelf = getElement<HTMLInputElement>('passage-message-self')?.value || null;
-    data.passageMessageRoom = getElement<HTMLInputElement>('passage-message-room')?.value || null;
-  }
+  // ============================================================================
+  // Preview
+  // ============================================================================
 
-  // Item display (for special and temporary_portal)
-  if (['special', 'temporary_portal'].includes(doorType)) {
-    data.itemDisplayName = getElement<HTMLInputElement>('item-display-name')?.value || null;
-  }
+  function updatePreview(door: Door): void {
+    const entryName = getRoomName(door.entryRoomId);
+    const exitName = getRoomName(door.exitRoomId);
 
-  // Portal data
-  if (doorType === 'temporary_portal') {
-    data.isTemporary = true;
-    data.spawnTriggerText = getElement<HTMLInputElement>('spawn-trigger-text')?.value || null;
-    const duration = parseInt(getElement<HTMLInputElement>('duration-seconds')?.value || '60');
-    data.durationSeconds = duration > 0 ? duration : 60;
-    data.appearMessage = getElement<HTMLInputElement>('appear-message')?.value || null;
-    data.disappearMessage = getElement<HTMLInputElement>('disappear-message')?.value || null;
-  } else {
-    data.isTemporary = false;
-  }
+    let html = `
+      <div class="preview-name">${escapeHtml(door.displayName || door.name)}</div>
+      <div class="preview-badges">
+        <span class="dtype-badge ${door.doorType}">${formatDoorType(door.doorType)}</span>
+        ${door.isHidden ? '<span class="dtype-badge" style="background:#3a3a1a;color:#fbbf24;">hidden</span>' : ''}
+      </div>
+      ${door.description ? `<div style="color:#aaa;font-size:0.85rem;margin-bottom:0.75rem;">${escapeHtml(door.description)}</div>` : ''}
+    `;
 
-  // Permission data (for all except open_passageway)
-  if (doorType !== 'open_passageway') {
-    const reqLevel = parseInt(getElement<HTMLInputElement>('required-level')?.value || '0');
-    data.requiredLevel = reqLevel > 0 ? reqLevel : null;
+    // Connection diagram
+    html += `<div class="connection-diagram">
+      <div class="room-box">${escapeHtml(entryName)}</div>
+      <div class="direction-arrow">↓ ${escapeHtml(door.entryDirection)} ↓</div>
+      <div class="room-box">${escapeHtml(door.name)}</div>
+      ${door.exitRoomId ? `<div class="direction-arrow">↓ ${escapeHtml(door.exitDirection || '?')} ↓</div><div class="room-box">${escapeHtml(exitName)}</div>` : '<div style="color:#555;font-size:0.75rem;margin-top:0.3rem;">(one-way)</div>'}
+    </div>`;
 
-    const maxLvl = parseInt(getElement<HTMLInputElement>('max-level')?.value || '0');
-    data.maxLevel = maxLvl > 0 ? maxLvl : null;
-
-    const reqClassesStr = getElement<HTMLInputElement>('required-classes')?.value || '';
-    const reqClasses = reqClassesStr.split(',').map(c => c.trim()).filter(c => c);
-    data.requiredClasses = reqClasses.length > 0 ? reqClasses : null;
-
-    data.requiredQuestFlag = getElement<HTMLInputElement>('required-quest-flag')?.value || null;
-    data.requiredItemTag = getElement<HTMLInputElement>('required-item-tag')?.value || null;
-    data.denialMessage = getElement<HTMLTextAreaElement>('denial-message')?.value || null;
-  }
-
-  return data as Partial<Door>;
-}
-
-// ============================================================================
-// Tab Handling
-// ============================================================================
-
-function setupTabs(): void {
-  document.querySelectorAll('.tab-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const tabName = (btn as HTMLElement).dataset.tab;
-      if (tabName) {
-        switchToTab(tabName);
+    // Type-specific info
+    if (door.doorType === 'physical') {
+      html += `<div class="preview-section"><div class="preview-section-title">State</div>`;
+      html += `<div class="preview-stat"><span class="label">Default:</span> ${door.defaultState}</div>`;
+      if (door.autoResetSeconds) html += `<div class="preview-stat"><span class="label">Auto-reset:</span> ${door.autoResetSeconds}s</div>`;
+      if (door.hasLock) {
+        const pickAvg = Math.round((door.pickDifficultyMin + door.pickDifficultyMax) / 2);
+        const pickLabel = (door.pickDifficultyMin >= 500 && door.pickDifficultyMax >= 500) ? 'Unpickable' : pickAvg <= 30 ? 'Easy' : pickAvg <= 60 ? 'Moderate' : pickAvg <= 90 ? 'Hard' : 'Very Hard';
+        html += `<div class="preview-stat"><span class="label">Pick:</span> ${door.pickDifficultyMin}-${door.pickDifficultyMax} (${pickLabel})</div>`;
+        html += `<div class="preview-stat"><span class="label">Bash:</span> ${door.bashDifficulty}${door.bashDifficulty >= 500 ? ' (Unbashable)' : ''}</div>`;
+        if (door.keyItemTag) html += `<div class="preview-stat"><span class="label">Key:</span> ${escapeHtml(door.keyItemTag)}</div>`;
       }
+      html += `</div>`;
+    }
+
+    if (door.triggerText) {
+      html += `<div class="preview-section"><div class="preview-section-title">Trigger</div>`;
+      html += `<div class="preview-stat">"${escapeHtml(door.triggerText)}"</div>`;
+      html += `</div>`;
+    }
+
+    if (door.requiredLevel || door.maxLevel || door.requiredQuestFlag || door.requiredItemTag || (door.requiredClasses && door.requiredClasses.length > 0)) {
+      html += `<div class="preview-section"><div class="preview-section-title">Permissions</div>`;
+      if (door.requiredLevel && door.maxLevel) {
+        html += `<div class="preview-stat"><span class="label">Level:</span> ${door.requiredLevel}-${door.maxLevel}</div>`;
+      } else if (door.requiredLevel) {
+        html += `<div class="preview-stat"><span class="label">Level:</span> ${door.requiredLevel}+</div>`;
+      } else if (door.maxLevel) {
+        html += `<div class="preview-stat"><span class="label">Max Level:</span> ${door.maxLevel}</div>`;
+      }
+      if (door.requiredClasses && door.requiredClasses.length > 0) {
+        const names = door.requiredClasses.map(id => escapeHtml(classDefs.find(c => c.id === id)?.displayName || id));
+        html += `<div class="preview-stat"><span class="label">Classes:</span> ${names.join(', ')}</div>`;
+      }
+      if (door.requiredQuestFlag) html += `<div class="preview-stat"><span class="label">Quest:</span> ${escapeHtml(door.requiredQuestFlag)}</div>`;
+      if (door.requiredItemTag) html += `<div class="preview-stat"><span class="label">Item:</span> ${escapeHtml(door.requiredItemTag)}</div>`;
+      if (door.denialMessage) html += `<div class="preview-stat"><span class="label">Denial:</span> "${escapeHtml(door.denialMessage)}"</div>`;
+      html += `</div>`;
+    }
+
+    previewContent.innerHTML = html;
+  }
+
+  // ============================================================================
+  // Gather Form Data
+  // ============================================================================
+
+  function gatherFormData(): Partial<Door> {
+    return {
+      name: nameInput.value.trim(),
+      doorType: doorTypeSelect.value,
+      displayName: displayNameInput.value.trim() || null,
+      description: descriptionInput.value.trim() || null,
+      isHidden: hiddenCheckbox.checked,
+      entryRoomId: parseInt(entryRoomSelect.getValue() || '0'),
+      entryDirection: entryDirectionSelect.value,
+      exitRoomId: exitRoomSelect.getValue() ? parseInt(exitRoomSelect.getValue()!) : null,
+      exitDirection: exitDirectionSelect.value || null,
+      defaultState: defaultStateSelect.value,
+      autoResetSeconds: Number.isFinite(parseInt(autoResetInput.value)) ? parseInt(autoResetInput.value) : null,
+      hasLock: hasLockCheckbox.checked,
+      keyItemTag: keyItemTagInput.value.trim() || null,
+      pickDifficultyMin: parseInt(pickMinInput.value) || 0,
+      pickDifficultyMax: parseInt(pickMaxInput.value) || 0,
+      bashDifficulty: parseInt(bashInput.value) || 0,
+      triggerText: triggerTextInput.value.trim() || null,
+      passageMessageSelf: passageSelfInput.value.trim() || null,
+      passageMessageRoom: passageRoomInput.value.trim() || null,
+      passageMessageArrival: passageArrivalInput.value.trim() || null,
+      itemDisplayName: itemDisplayNameInput.value.trim() || null,
+      isTemporary: doorTypeSelect.value === 'temporary_portal',
+      spawnTriggerText: spawnTriggerInput.value.trim() || null,
+      durationSeconds: Number.isFinite(parseInt(durationInput.value)) ? parseInt(durationInput.value) : null,
+      appearMessage: appearMsgInput.value.trim() || null,
+      disappearMessage: disappearMsgInput.value.trim() || null,
+      requiredLevel: parseInt(requiredLevelInput.value) || null,
+      maxLevel: parseInt(maxLevelInput.value) || null,
+      requiredClasses: (() => { const cls = [...new Set(Array.from(selectedClasses).filter(c => c && c.trim()))]; return cls.length > 0 ? cls : null; })(),
+      requiredQuestFlag: questFlagInput.value.trim() || null,
+      requiredItemTag: itemTagInput.value.trim() || null,
+      denialMessage: denialMsgInput.value.trim() || null,
+    };
+  }
+
+  // ============================================================================
+  // CRUD
+  // ============================================================================
+
+  async function saveDoor(doorData: Partial<Door>, isNew: boolean): Promise<Door | null> {
+    try {
+      const url = isNew ? '/api/doors' : `/api/doors/${selectedDoorId}`;
+      const method = isNew ? 'POST' : 'PUT';
+
+      const res = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(doorData),
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        showToast(isNew ? 'Door created' : 'Door saved', 'success');
+        await fetchDoors();
+        return data.door;
+      } else {
+        showToast(data.message || 'Failed to save door', 'error');
+        return null;
+      }
+    } catch (error) {
+      console.error('Failed to save door:', error);
+      showToast('Failed to save door', 'error');
+      return null;
+    }
+  }
+
+  async function createDoorFromExit(fromRoomId: number, direction: string, toRoomId: number): Promise<void> {
+    const fromRoom = rooms.find(r => r.id === fromRoomId);
+    const toRoom = rooms.find(r => r.id === toRoomId);
+    const defaultName = `${fromRoom?.name || 'Room'} ${direction} door`;
+
+    const result = await showPromptFields('New Door from Exit', [
+      { key: 'name', label: 'Door Name', required: true, defaultValue: defaultName },
+    ]);
+    if (!result) return;
+
+    // Compute reverse direction
+    const reverseDir: Record<string, string> = {
+      north: 'south', south: 'north', east: 'west', west: 'east',
+      up: 'down', down: 'up', northeast: 'southwest', northwest: 'southeast',
+      southeast: 'northwest', southwest: 'northeast',
+    };
+
+    const doorData: Partial<Door> = {
+      name: result.name,
+      doorType: 'physical',
+      entryRoomId: fromRoomId,
+      entryDirection: direction,
+      exitRoomId: toRoomId,
+      exitDirection: reverseDir[direction] || null,
+      defaultState: 'closed',
+      hasLock: false,
+      isHidden: false,
+      pickDifficultyMin: 0,
+      pickDifficultyMax: 0,
+      bashDifficulty: 0,
+    };
+
+    const saved = await saveDoor(doorData, true);
+    if (saved) {
+      await fetchDoors();
+      await selectDoor(saved.id);
+    }
+  }
+
+  // ============================================================================
+  // Helpers
+  // ============================================================================
+
+  function formatDoorType(type: string): string {
+    return type.replace(/_/g, ' ');
+  }
+
+  // ============================================================================
+  // Event Handlers
+  // ============================================================================
+
+  // New door
+  document.getElementById('new-door-btn')?.addEventListener('click', async () => {
+    const defaultEntryRoomId = rooms[0]?.id;
+    if (defaultEntryRoomId === undefined) {
+      showToast('No rooms available. Please create rooms first.', 'error');
+      return;
+    }
+
+    const result = await showPromptFields('New Door', [
+      { key: 'name', label: 'Door Name', required: true, placeholder: 'Main Gate' },
+    ]);
+    if (!result) return;
+
+    const doorData: Partial<Door> = {
+      name: result.name,
+      doorType: 'physical',
+      entryRoomId: defaultEntryRoomId,
+      entryDirection: 'north',
+      defaultState: 'closed',
+      hasLock: false,
+      isHidden: false,
+      pickDifficultyMin: 0,
+      pickDifficultyMax: 0,
+      bashDifficulty: 0,
+    };
+
+    const saved = await saveDoor(doorData, true);
+    if (saved) {
+      await fetchDoors();
+      await selectDoor(saved.id);
+    }
+  });
+
+  // Save
+  doorForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (!selectedDoorId) return;
+
+    const data = gatherFormData();
+    if (!data.name?.trim()) {
+      showToast('Name is required', 'warning');
+      return;
+    }
+    if (!data.entryRoomId) {
+      showToast('Entry room is required', 'warning');
+      return;
+    }
+
+    // Validate level range
+    if (data.requiredLevel && data.maxLevel && data.maxLevel < data.requiredLevel) {
+      showToast('Max level must be >= min level', 'warning');
+      return;
+    }
+
+    const saved = await saveDoor(data, false);
+    if (saved) await selectDoor(saved.id);
+  });
+
+  // Delete
+  document.getElementById('delete-door-btn')?.addEventListener('click', async () => {
+    if (!selectedDoorId) return;
+    const door = doors.find(d => d.id === selectedDoorId);
+    const confirmed = await showConfirm(
+      `Delete door "${door?.name || 'this door'}"?`,
+      { confirmText: 'Delete', dangerous: true },
+    );
+    if (!confirmed) return;
+
+    try {
+      const res = await fetch(`/api/doors/${selectedDoorId}`, { method: 'DELETE', credentials: 'include' });
+      const data = await res.json();
+      if (data.success) {
+        showToast('Door deleted', 'success');
+        await fetchDoors();
+        clearForm();
+      } else {
+        showToast(data.message || 'Failed to delete', 'error');
+      }
+    } catch (error) {
+      showToast('Failed to delete door', 'error');
+    }
+  });
+
+  // Duplicate
+  document.getElementById('duplicate-door-btn')?.addEventListener('click', async () => {
+    if (!selectedDoorId) return;
+    const result = await showPromptFields('Duplicate Door', [
+      { key: 'name', label: 'Door Name', required: true, defaultValue: nameInput.value + ' (copy)' },
+    ]);
+    if (!result) return;
+
+    const data = { ...gatherFormData(), name: result.name };
+    const saved = await saveDoor(data, true);
+    if (saved) {
+      await selectDoor(saved.id);
+    }
+  });
+
+  // Door type change -> update visible tabs
+  doorTypeSelect.addEventListener('change', () => {
+    updateVisibleTabs(doorTypeSelect.value);
+  });
+
+  // Has lock toggle
+  hasLockCheckbox.addEventListener('change', () => {
+    lockOptions.style.display = hasLockCheckbox.checked ? 'block' : 'none';
+  });
+
+  // Lock presets
+  document.querySelectorAll('.preset-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const el = btn as HTMLElement;
+      pickMinInput.value = el.dataset.pickMin || '0';
+      pickMaxInput.value = el.dataset.pickMax || '0';
+      bashInput.value = el.dataset.bash || '0';
     });
   });
-}
 
-function switchToTab(tabName: string): void {
-  // Update button states
-  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-  const activeBtn = document.querySelector(`.tab-btn[data-tab="${tabName}"]`);
-  if (activeBtn) activeBtn.classList.add('active');
-
-  // Update content visibility
-  document.querySelectorAll('.tab-content').forEach(content => {
-    content.classList.remove('active');
+  // View toggle
+  document.getElementById('view-doors-btn')?.addEventListener('click', () => {
+    viewMode = 'doors';
+    document.getElementById('view-doors-btn')!.classList.add('active');
+    document.getElementById('view-exits-btn')!.classList.remove('active');
+    renderList();
   });
-  const tabContent = document.getElementById(`tab-${tabName}`);
-  if (tabContent) tabContent.classList.add('active');
-}
 
-// ============================================================================
-// Utility
-// ============================================================================
+  document.getElementById('view-exits-btn')?.addEventListener('click', () => {
+    viewMode = 'exits';
+    document.getElementById('view-exits-btn')!.classList.add('active');
+    document.getElementById('view-doors-btn')!.classList.remove('active');
+    renderList();
+  });
 
-function escapeHtml(text: string): string {
-  const div = document.createElement('div');
-  div.textContent = text;
-  return div.innerHTML;
-}
+  // Filters
+  areaFilter.addEventListener('change', () => { updateRoomFilter(); renderList(); });
+  roomFilter.addEventListener('change', renderList);
+  typeFilter.addEventListener('change', renderList);
+  searchInput.addEventListener('input', renderList);
 
-// ============================================================================
-// Initialize
-// ============================================================================
+  // Export
+  document.getElementById('export-btn')?.addEventListener('click', () => {
+    if (doors.length === 0) {
+      showToast('No doors to export', 'warning');
+      return;
+    }
 
-document.addEventListener('DOMContentLoaded', async () => {
-  const hasAccess = await checkAuth();
-  if (!hasAccess) return;
+    const blob = new Blob([JSON.stringify({ doors }, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'doors_export.json';
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast(`Exported ${doors.length} doors`, 'success');
+  });
 
-  await Promise.all([fetchDoors(), fetchRooms()]);
-  setupTabs();
+  // ============================================================================
+  // Initialize
+  // ============================================================================
+
+  await Promise.all([fetchDoors(), fetchRooms(), fetchClasses()]);
+  populateAreaFilter();
+  updateRoomFilter();
+  initRoomSelects();
+  renderClassButtons();
+  renderList();
 
   // Handle URL parameters
   const urlParams = new URLSearchParams(window.location.search);
@@ -1106,84 +872,41 @@ document.addEventListener('DOMContentLoaded', async () => {
   const newDoorForRoomParam = urlParams.get('newDoorForRoom');
 
   if (doorIdParam) {
-    // Select a specific door
     const doorId = parseInt(doorIdParam);
-    if (!isNaN(doorId) && doors.some(d => d.id === doorId)) {
-      selectDoor(doorId);
+    if (!Number.isNaN(doorId) && doors.find(d => d.id === doorId)) {
+      await selectDoor(doorId);
     }
   } else if (newDoorForRoomParam) {
-    // Create a new door with room pre-filled
     const roomId = parseInt(newDoorForRoomParam);
-    const room = rooms.find(r => r.id === roomId);
-    if (room) {
-      await createDoorForRoom(roomId, room.name);
+    if (Number.isNaN(roomId)) {
+      showToast('Invalid room ID in URL', 'error');
+    } else if (!rooms.find(r => r.id === roomId)) {
+      showToast(`Room #${roomId} not found`, 'error');
+    } else {
+      const result = await showPromptFields('New Door', [
+        { key: 'name', label: 'Door Name', required: true, placeholder: 'Main Gate' },
+      ]);
+      if (result) {
+        const doorData: Partial<Door> = {
+          name: result.name,
+          doorType: 'physical',
+          entryRoomId: roomId,
+          entryDirection: 'north',
+          defaultState: 'closed',
+          hasLock: false,
+          isHidden: false,
+          pickDifficultyMin: 0,
+          pickDifficultyMax: 0,
+          bashDifficulty: 0,
+        };
+        const saved = await saveDoor(doorData, true);
+        if (saved) {
+          await fetchDoors();
+          await selectDoor(saved.id);
+        }
+      }
     }
-  }
-
-  // Clear URL parameters after handling (keeps URL clean)
-  if (doorIdParam || newDoorForRoomParam) {
+    // Clean URL parameters after handling
     window.history.replaceState({}, '', window.location.pathname);
   }
-
-  // Helper to safely add event listeners
-  const addListener = (id: string, event: string, handler: EventListener) => {
-    const el = document.getElementById(id);
-    if (el) el.addEventListener(event, handler);
-    else console.warn(`Element #${id} not found for event listener`);
-  };
-
-  // Event listeners
-  addListener('new-door-btn', 'click', createDoor);
-  addListener('door-form', 'submit', (e) => {
-    e.preventDefault();
-    saveDoor();
-  });
-  addListener('delete-door-btn', 'click', deleteDoor);
-  addListener('duplicate-door-btn', 'click', duplicateDoor);
-
-  // View toggle
-  document.querySelectorAll('#view-toggle .view-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      viewMode = (btn as HTMLElement).dataset.view as 'doors' | 'exits';
-      updateViewToggle();
-    });
-  });
-
-  // Filters
-  addListener('area-select', 'change', () => {
-    updateRoomFilterDropdown();
-    renderList();
-  });
-  addListener('room-select', 'change', renderList);
-  addListener('type-select', 'change', renderList);
-  addListener('search-input', 'input', renderList);
-
-  // Type change handler
-  addListener('door-type', 'change', (e) => {
-    updateVisibleSections((e.target as HTMLSelectElement).value);
-  });
-
-  // Lock checkbox handler
-  addListener('has-lock', 'change', updateLockOptionsVisibility);
-
-  // Logout
-  addListener('logout-btn', 'click', handleLogout);
-
-  // User menu dropdown toggle
-  const userMenuBtn = document.getElementById('nav-username');
-  const userMenu = userMenuBtn?.closest('.nav-user-menu');
-  if (userMenuBtn && userMenu) {
-    userMenuBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      userMenu.classList.toggle('open');
-    });
-    userMenu.addEventListener('click', (e) => {
-      e.stopPropagation();
-    });
-    document.addEventListener('click', () => {
-      userMenu.classList.remove('open');
-    });
-  }
-});
-
 })();

@@ -1,647 +1,739 @@
-// ============================================================================
-// PROGRESSION EDITOR
-// Editor UI for classes and races
-// ============================================================================
-
-import {
-  ClassDefinition,
-  RaceDefinition,
-} from '@koa/shared';
-
-(function() {
-
-interface AuthInfo {
-  authenticated: boolean;
-  playerId?: number;
-  username?: string;
-  roles?: string[];
-}
-
-// State
-let currentUser: AuthInfo | null = null;
-let currentTab = 'classes';
-let classes: ClassDefinition[] = [];
-let races: RaceDefinition[] = [];
-let selectedId: string | null = null;
-let selectedType: string | null = null;
-
-// ============================================================================
-// Toast Notifications
-// ============================================================================
-
-type ToastType = 'success' | 'error' | 'warning' | 'info';
-
-function showToast(message: string, type: ToastType = 'info', duration: number = 3000): void {
-  let container = document.getElementById('toast-container');
-  if (!container) {
-    container = document.createElement('div');
-    container.id = 'toast-container';
-    document.body.appendChild(container);
-  }
-
-  const toast = document.createElement('div');
-  toast.className = `toast ${type}`;
-  toast.textContent = message;
-  container.appendChild(toast);
-
-  setTimeout(() => {
-    toast.classList.add('toast-out');
-    setTimeout(() => toast.remove(), 300);
-  }, duration);
-}
-
-// ============================================================================
-// HELPER FUNCTIONS
-// ============================================================================
-
 /**
- * Parse a stat value from form input, defaulting to 0 for empty or invalid values
+ * Class / Race Editor — two-panel with entity type tabs, trait system,
+ * armor restrictions, dynamic allowed class buttons.
  */
-function parseStatValue(value: string): number {
-  const parsed = Number(value);
-  return Number.isNaN(parsed) ? 0 : parsed;
+
+import { initAuth, showToast, showConfirm, showPromptFields, escapeHtml, ChipTagInput } from './components/index.js';
+
+// ============================================================================
+// Trait Definitions (hardcoded until trait_definitions table exists)
+// ============================================================================
+
+interface TraitPreset {
+  label: string;
+  value: number;
 }
 
-// ============================================================================
-// INITIALIZATION
-// ============================================================================
-
-document.addEventListener('DOMContentLoaded', async () => {
-  const authenticated = await checkAuth();
-  if (!authenticated) return;
-
-  setupEventListeners();
-  await loadAllData();
-  showTab('classes');
-});
-
-async function checkAuth(): Promise<boolean> {
-  try {
-    const response = await fetch('/api/auth/me');
-    const data: AuthInfo = await response.json();
-    currentUser = data;
-
-    if (!data.authenticated) {
-      // Redirect to login
-      window.location.href = '/';
-      return false;
-    }
-
-    const roles = data.roles || [];
-    if (!roles.includes('developer') && !roles.includes('admin')) {
-      // Redirect to game - no access
-      window.location.href = '/';
-      return false;
-    }
-
-    const navUsername = document.getElementById('nav-username');
-    if (navUsername) {
-      navUsername.textContent = data.username || 'User';
-    }
-
-    // Show Admin dropdown if user is admin
-    const isAdmin = roles.includes('admin');
-    const adminDropdown = document.getElementById('nav-admin-dropdown');
-    if (adminDropdown) {
-      adminDropdown.style.display = isAdmin ? 'flex' : 'none';
-    }
-
-    return true;
-  } catch (error) {
-    console.error('Auth check failed:', error);
-    // Redirect to login on auth error
-    window.location.href = '/';
-    return false;
-  }
+interface TraitDef {
+  id: string;
+  label: string;
+  numeric: boolean; // true = has a value input, false = boolean toggle
+  forClass: boolean;
+  forRace: boolean;
+  presets?: TraitPreset[]; // optional quick-fill presets for numeric traits
 }
 
-async function handleLogout(): Promise<void> {
-  try {
-    await fetch('/api/logout', { method: 'POST' });
-    window.location.href = '/';
-  } catch (error) {
-    console.error('Logout failed:', error);
-  }
+const TRAIT_DEFS: TraitDef[] = [
+  { id: 'stealth', label: 'Stealth', numeric: false, forClass: true, forRace: true },
+  { id: 'lockpicking', label: 'Lockpicking', numeric: false, forClass: true, forRace: true },
+  { id: 'see_hidden', label: 'See Hidden', numeric: false, forClass: false, forRace: true },
+  { id: 'traps', label: 'Traps', numeric: false, forClass: true, forRace: false },
+  { id: 'pickpocket', label: 'Pickpocket', numeric: false, forClass: true, forRace: false },
+  { id: 'tracking', label: 'Tracking', numeric: false, forClass: true, forRace: false },
+  { id: 'martial_arts', label: 'Martial Arts (NYI)', numeric: false, forClass: true, forRace: false },
+  { id: 'natural_magic_resistance', label: 'Natural Magic Resistance', numeric: false, forClass: true, forRace: false },
+  { id: 'no_magic_items', label: 'No Magic Items (NYI)', numeric: false, forClass: true, forRace: false },
+  { id: 'dodge', label: 'Dodge Bonus', numeric: true, forClass: true, forRace: false },
+  { id: 'enhanced_crits', label: 'Enhanced Crits', numeric: true, forClass: true, forRace: false },
+  { id: 'magic_resist', label: 'Magic Resistance', numeric: true, forClass: true, forRace: true },
+  { id: 'poison_resistance', label: 'Poison Resistance', numeric: true, forClass: false, forRace: true },
+];
+
+// ============================================================================
+// Types
+// ============================================================================
+
+interface ClassDef {
+  class_id: string;
+  display_name: string;
+  description?: string;
+  essence_multiplier: number;
+  resource_type?: string;
+  playable?: boolean;
+  combat_level?: number;
+  magic_level?: number;
+  magic_school?: string;
+  crit_bonus?: number;
+  dodge_bonus?: number;
+  traits?: string[];
+  armor_type_restrictions?: string[];
+  subscribed_tags?: string[];
 }
 
-// ============================================================================
-// EVENT LISTENERS
-// ============================================================================
+interface RaceDef {
+  race_id: string;
+  display_name: string;
+  description?: string;
+  playable?: boolean;
+  dodge_bonus?: number;
+  base_stats?: Record<string, { min: number; max: number }>;
+  traits?: Array<{ id: string; value: number | boolean }> | string[];
+  allowed_classes?: string[];
+}
 
-function setupEventListeners(): void {
-  // Logout
-  document.getElementById('logout-btn')?.addEventListener('click', handleLogout);
+(async function () {
+  const auth = await initAuth('developer');
+  if (!auth) return;
 
-  // User dropdown
-  const navUserBtn = document.getElementById('nav-username');
-  const userMenu = navUserBtn?.closest('.nav-user-menu');
-  navUserBtn?.addEventListener('click', (e) => {
-    e.stopPropagation();
-    userMenu?.classList.toggle('open');
-  });
-  document.addEventListener('click', () => {
-    userMenu?.classList.remove('open');
-  });
+  // ============================================================================
+  // State
+  // ============================================================================
 
-  // Main tab navigation
-  document.querySelectorAll('.main-tab').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const tab = btn.getAttribute('data-tab');
-      if (tab) showTab(tab);
+  let classes: ClassDef[] = [];
+  let races: RaceDef[] = [];
+  let currentTab: 'classes' | 'races' = 'classes';
+  let selectedClassId: string | null = null;
+  let selectedRaceId: string | null = null;
+  let raceAllowedClasses: Set<string> = new Set();
+
+  // Trait state: Map<traitId, { enabled: boolean, value: number }>
+  let classTraitState: Map<string, { enabled: boolean; value: number }> = new Map();
+  let raceTraitState: Map<string, { enabled: boolean; value: number }> = new Map();
+
+  // Dirty-state tracking (CR-53)
+  let formDirty = false;
+
+  // Subscribed tags chip input (CR-26)
+  let classTagsInput: ChipTagInput | null = null;
+
+  // ============================================================================
+  // DOM
+  // ============================================================================
+
+  const noEntitySelected = document.getElementById('no-entity-selected') as HTMLDivElement;
+  const classForm = document.getElementById('class-form') as HTMLFormElement;
+  const raceForm = document.getElementById('race-form') as HTMLFormElement;
+  const entityList = document.getElementById('entity-list') as HTMLUListElement;
+  const entityCount = document.getElementById('entity-count') as HTMLSpanElement;
+  const listTitle = document.getElementById('list-title') as HTMLHeadingElement;
+  const searchInput = document.getElementById('search-input') as HTMLInputElement;
+
+  // Initialize ChipTagInput for subscribed tags (CR-26)
+  const classTagsContainer = document.getElementById('class-tags-container');
+  if (classTagsContainer) {
+    classTagsInput = new ChipTagInput({
+      container: classTagsContainer,
+      placeholder: 'Add tags... (e.g., combat, magic, stealth)',
+      freeform: true,
+      onChange: () => { formDirty = true; },
     });
-  });
-
-  // New entity buttons
-  document.getElementById('new-class-btn')?.addEventListener('click', () => showNewForm('class'));
-  document.getElementById('new-race-btn')?.addEventListener('click', () => showNewForm('race'));
-
-  // Form submissions
-  document.getElementById('class-form')?.addEventListener('submit', handleClassSubmit);
-  document.getElementById('race-form')?.addEventListener('submit', handleRaceSubmit);
-
-  // Delete buttons
-  document.getElementById('delete-class-btn')?.addEventListener('click', () => handleDelete('class'));
-  document.getElementById('delete-race-btn')?.addEventListener('click', () => handleDelete('race'));
-}
-
-// ============================================================================
-// DATA LOADING
-// ============================================================================
-
-async function loadAllData(): Promise<void> {
-  await Promise.all([
-    loadClasses(),
-    loadRaces(),
-  ]);
-}
-
-async function loadClasses(): Promise<void> {
-  try {
-    const response = await fetch('/api/progression/classes');
-    const data = await response.json();
-    if (data.success && Array.isArray(data.classes)) {
-      classes = data.classes;
-      renderClassList();
-    }
-  } catch (error) {
-    console.error('Failed to load classes:', error);
-  }
-}
-
-async function loadRaces(): Promise<void> {
-  try {
-    const response = await fetch('/api/progression/races');
-    const data = await response.json();
-    if (data.success && Array.isArray(data.races)) {
-      races = data.races;
-      renderRaceList();
-    }
-  } catch (error) {
-    console.error('Failed to load races:', error);
-  }
-}
-
-// ============================================================================
-// TAB MANAGEMENT
-// ============================================================================
-
-function showTab(tab: string): void {
-  currentTab = tab;
-  selectedId = null;
-  selectedType = null;
-
-  // Update main tab buttons
-  document.querySelectorAll('.main-tab').forEach(btn => {
-    btn.classList.toggle('active', btn.getAttribute('data-tab') === tab);
-  });
-
-  // Update tab pages
-  document.querySelectorAll('.tab-page').forEach(page => {
-    page.classList.toggle('active', page.id === `page-${tab}`);
-  });
-
-  // Hide all forms in the active tab, show no-selection
-  hideAllForms();
-  const noSelection = document.getElementById(`${tab}-no-selection`);
-  if (noSelection) noSelection.style.display = 'flex';
-}
-
-function hideAllForms(): void {
-  document.querySelectorAll('.entity-form').forEach(form => {
-    (form as HTMLElement).style.display = 'none';
-  });
-}
-
-// ============================================================================
-// LIST RENDERING
-// ============================================================================
-
-function renderClassList(): void {
-  const list = document.getElementById('class-list');
-  if (!list) return;
-
-  list.innerHTML = classes.map(cls => `
-    <li class="entity-item ${selectedId === cls.class_id && selectedType === 'class' ? 'selected' : ''}"
-        data-id="${escapeHtml(cls.class_id)}" data-type="class">
-      <span class="entity-name">${escapeHtml(cls.display_name)}</span>
-      <span class="entity-meta">${cls.essence_multiplier}x</span>
-    </li>
-  `).join('');
-
-  list.querySelectorAll('.entity-item').forEach(item => {
-    item.addEventListener('click', () => {
-      const id = item.getAttribute('data-id');
-      if (id) selectClass(id);
-    });
-  });
-}
-
-function renderRaceList(): void {
-  const list = document.getElementById('race-list');
-  if (!list) return;
-
-  list.innerHTML = races.map(race => `
-    <li class="entity-item ${selectedId === race.race_id && selectedType === 'race' ? 'selected' : ''}"
-        data-id="${escapeHtml(race.race_id)}" data-type="race">
-      <span class="entity-name">${escapeHtml(race.display_name)}</span>
-      <span class="entity-meta">${race.playable ? '' : 'NPC'}</span>
-    </li>
-  `).join('');
-
-  list.querySelectorAll('.entity-item').forEach(item => {
-    item.addEventListener('click', () => {
-      const id = item.getAttribute('data-id');
-      if (id) selectRace(id);
-    });
-  });
-}
-
-// ============================================================================
-// SELECTION HANDLERS
-// ============================================================================
-
-function selectClass(classId: string): void {
-  const cls = classes.find(c => c.class_id === classId);
-  if (!cls) return;
-
-  selectedId = classId;
-  selectedType = 'class';
-  hideAllForms();
-  const noSelection = document.getElementById('class-no-selection');
-  if (noSelection) noSelection.style.display = 'none';
-
-  const form = document.getElementById('class-form') as HTMLFormElement;
-  form.style.display = 'block';
-
-  (document.getElementById('class-form-title') as HTMLElement).textContent = 'Edit Class';
-  (document.getElementById('class-id') as HTMLInputElement).value = cls.class_id;
-  (document.getElementById('class-id') as HTMLInputElement).readOnly = true;
-  (document.getElementById('class-name') as HTMLInputElement).value = cls.display_name;
-  (document.getElementById('class-description') as HTMLTextAreaElement).value = cls.description || '';
-  (document.getElementById('class-multiplier') as HTMLInputElement).value = String(cls.essence_multiplier);
-  (document.getElementById('class-resource') as HTMLSelectElement).value = cls.resource_type || '';
-  (document.getElementById('class-playable') as HTMLInputElement).checked = cls.playable !== false;
-  (document.getElementById('class-tags') as HTMLInputElement).value = cls.subscribed_tags.join(', ');
-  (document.getElementById('class-combat-level') as HTMLInputElement).value = String(cls.combat_level ?? 3);
-  (document.getElementById('class-magic-level') as HTMLInputElement).value = String(cls.magic_level ?? 0);
-  (document.getElementById('class-magic-school') as HTMLSelectElement).value = cls.magic_school || '';
-  const classTraits = cls.traits ?? [];
-  (document.getElementById('class-stealth') as HTMLInputElement).checked = classTraits.includes('stealth');
-  (document.getElementById('class-lockpicking') as HTMLInputElement).checked = classTraits.includes('lockpicking');
-  (document.getElementById('class-traps') as HTMLInputElement).checked = classTraits.includes('traps');
-  (document.getElementById('class-pickpocket') as HTMLInputElement).checked = classTraits.includes('pickpocket');
-  (document.getElementById('class-crit-bonus') as HTMLInputElement).value = String(cls.crit_bonus ?? 0);
-  (document.getElementById('class-dodge-bonus') as HTMLInputElement).value = String(cls.dodge_bonus ?? 0);
-  const armorRestrictions = cls.armor_type_restrictions ?? [];
-  (document.getElementById('class-armor-robe') as HTMLInputElement).checked = armorRestrictions.includes('robe');
-  (document.getElementById('class-armor-leather') as HTMLInputElement).checked = armorRestrictions.includes('leather');
-  (document.getElementById('class-armor-chainmail') as HTMLInputElement).checked = armorRestrictions.includes('chainmail');
-  (document.getElementById('class-armor-scalemail') as HTMLInputElement).checked = armorRestrictions.includes('scalemail');
-  (document.getElementById('class-armor-platemail') as HTMLInputElement).checked = armorRestrictions.includes('platemail');
-
-  renderClassList();
-}
-
-function selectRace(raceId: string): void {
-  const race = races.find(r => r.race_id === raceId);
-  if (!race) return;
-
-  selectedId = raceId;
-  selectedType = 'race';
-  hideAllForms();
-  const noSelection = document.getElementById('race-no-selection');
-  if (noSelection) noSelection.style.display = 'none';
-
-  const form = document.getElementById('race-form') as HTMLFormElement;
-  form.style.display = 'block';
-
-  (document.getElementById('race-form-title') as HTMLElement).textContent = 'Edit Race';
-  (document.getElementById('race-id') as HTMLInputElement).value = race.race_id;
-  (document.getElementById('race-id') as HTMLInputElement).readOnly = true;
-  (document.getElementById('race-name') as HTMLInputElement).value = race.display_name;
-  (document.getElementById('race-description') as HTMLTextAreaElement).value = race.description || '';
-  (document.getElementById('race-playable') as HTMLInputElement).checked = race.playable !== false;
-  (document.getElementById('race-dodge-bonus') as HTMLInputElement).value = String(race.dodge_bonus ?? 0);
-
-  // Load base_stats with min/max ranges
-  const bs = race.base_stats as Record<string, { min: number; max: number }> | undefined;
-  (document.getElementById('race-str-min') as HTMLInputElement).value = String(bs?.strength?.min ?? 40);
-  (document.getElementById('race-str-max') as HTMLInputElement).value = String(bs?.strength?.max ?? 100);
-  (document.getElementById('race-agi-min') as HTMLInputElement).value = String(bs?.agility?.min ?? 40);
-  (document.getElementById('race-agi-max') as HTMLInputElement).value = String(bs?.agility?.max ?? 100);
-  (document.getElementById('race-con-min') as HTMLInputElement).value = String(bs?.constitution?.min ?? 40);
-  (document.getElementById('race-con-max') as HTMLInputElement).value = String(bs?.constitution?.max ?? 100);
-  (document.getElementById('race-int-min') as HTMLInputElement).value = String(bs?.intellect?.min ?? 40);
-  (document.getElementById('race-int-max') as HTMLInputElement).value = String(bs?.intellect?.max ?? 100);
-  (document.getElementById('race-wis-min') as HTMLInputElement).value = String(bs?.wisdom?.min ?? 40);
-  (document.getElementById('race-wis-max') as HTMLInputElement).value = String(bs?.wisdom?.max ?? 100);
-  (document.getElementById('race-cha-min') as HTMLInputElement).value = String(bs?.charisma?.min ?? 40);
-  (document.getElementById('race-cha-max') as HTMLInputElement).value = String(bs?.charisma?.max ?? 100);
-
-  // Check for special ability traits
-  const specialAbilityIds = ['stealth', 'lockpicking', 'see_hidden'];
-  const hasSpecialAbility = (id: string): boolean => {
-    if (!race.traits) return false;
-    return race.traits.some(t => {
-      if (typeof t === 'string') return t === id;
-      return t.id === id && t.value;
-    });
-  };
-
-  (document.getElementById('race-stealth') as HTMLInputElement).checked = hasSpecialAbility('stealth');
-  (document.getElementById('race-lockpicking') as HTMLInputElement).checked = hasSpecialAbility('lockpicking');
-  (document.getElementById('race-see-hidden') as HTMLInputElement).checked = hasSpecialAbility('see_hidden');
-
-  // Format other traits for display (excluding special abilities)
-  const otherTraits = race.traits?.filter(t => {
-    const id = typeof t === 'string' ? t : t.id;
-    return !specialAbilityIds.includes(id);
-  }) || [];
-  const traitsValue = otherTraits.map(t => typeof t === 'string' ? t : `${t.id}=${t.value}`).join(', ');
-  (document.getElementById('race-traits') as HTMLInputElement).value = traitsValue;
-  (document.getElementById('race-allowed-classes') as HTMLInputElement).value = race.allowed_classes?.join(', ') || '';
-
-  renderRaceList();
-}
-
-// ============================================================================
-// NEW FORM HANDLERS
-// ============================================================================
-
-function showNewForm(type: string): void {
-  selectedId = null;
-  selectedType = type;
-  hideAllForms();
-
-  // Hide no-selection for this type
-  const noSelection = document.getElementById(`${type}-no-selection`);
-  if (noSelection) noSelection.style.display = 'none';
-
-  const form = document.getElementById(`${type}-form`) as HTMLFormElement;
-  if (!form) return;
-
-  form.style.display = 'block';
-  form.reset();
-
-  const titleEl = document.getElementById(`${type}-form-title`);
-  if (titleEl) titleEl.textContent = `New ${type.charAt(0).toUpperCase() + type.slice(1)}`;
-
-  const idInput = document.getElementById(`${type}-id`) as HTMLInputElement;
-  if (idInput) idInput.readOnly = false;
-}
-
-// ============================================================================
-// FORM SUBMISSION HANDLERS
-// ============================================================================
-
-async function handleClassSubmit(e: Event): Promise<void> {
-  e.preventDefault();
-
-  const classId = (document.getElementById('class-id') as HTMLInputElement).value;
-  const magicSchool = (document.getElementById('class-magic-school') as HTMLSelectElement).value;
-  const data: Partial<ClassDefinition> = {
-    class_id: classId,
-    display_name: (document.getElementById('class-name') as HTMLInputElement).value,
-    description: (document.getElementById('class-description') as HTMLTextAreaElement).value || undefined,
-    essence_multiplier: parseFloat((document.getElementById('class-multiplier') as HTMLInputElement).value) || 1.0,
-    resource_type: (document.getElementById('class-resource') as HTMLSelectElement).value || 'none',
-    playable: (document.getElementById('class-playable') as HTMLInputElement).checked,
-    subscribed_tags: (document.getElementById('class-tags') as HTMLInputElement).value.split(',').map(t => t.trim()).filter(Boolean),
-    combat_level: parseStatValue((document.getElementById('class-combat-level') as HTMLInputElement).value) || 3,
-    magic_level: parseStatValue((document.getElementById('class-magic-level') as HTMLInputElement).value) || 0,
-    magic_school: magicSchool || undefined,
-    traits: (() => {
-      // Start with existing traits that don't have UI checkboxes (preserve them)
-      const knownCheckboxTraits = ['stealth', 'lockpicking', 'traps', 'pickpocket'];
-      const existingClass = classes.find(c => c.class_id === classId);
-      const preserved = (existingClass?.traits ?? []).filter(t => !knownCheckboxTraits.includes(t));
-      // Add checkbox-controlled traits
-      const checked = [
-        (document.getElementById('class-stealth') as HTMLInputElement).checked ? 'stealth' : null,
-        (document.getElementById('class-lockpicking') as HTMLInputElement).checked ? 'lockpicking' : null,
-        (document.getElementById('class-traps') as HTMLInputElement).checked ? 'traps' : null,
-        (document.getElementById('class-pickpocket') as HTMLInputElement).checked ? 'pickpocket' : null,
-      ].filter((a): a is string => a !== null);
-      return [...preserved, ...checked];
-    })(),
-    crit_bonus: parseStatValue((document.getElementById('class-crit-bonus') as HTMLInputElement).value) || 0,
-    dodge_bonus: parseStatValue((document.getElementById('class-dodge-bonus') as HTMLInputElement).value) || 0,
-    armor_type_restrictions: [
-      (document.getElementById('class-armor-robe') as HTMLInputElement).checked ? 'robe' : null,
-      (document.getElementById('class-armor-leather') as HTMLInputElement).checked ? 'leather' : null,
-      (document.getElementById('class-armor-chainmail') as HTMLInputElement).checked ? 'chainmail' : null,
-      (document.getElementById('class-armor-scalemail') as HTMLInputElement).checked ? 'scalemail' : null,
-      (document.getElementById('class-armor-platemail') as HTMLInputElement).checked ? 'platemail' : null,
-    ].filter((a): a is string => a !== null),
-  };
-
-  try {
-    const isNew = !selectedId;
-    const url = isNew ? '/api/progression/classes' : `/api/progression/classes/${classId}`;
-    const method = isNew ? 'POST' : 'PUT';
-
-    const response = await fetch(url, {
-      method,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
-    });
-
-    const result = await response.json();
-    if (result.success) {
-      await loadClasses();
-      selectClass(classId);
-      showToast('Class saved successfully!', 'success');
-    } else {
-      showToast('Failed to save class: ' + (result.message || 'Unknown error'), 'error');
-    }
-  } catch (error) {
-    console.error('Failed to save class:', error);
-    showToast('Failed to save class', 'error');
-  }
-}
-
-async function handleRaceSubmit(e: Event): Promise<void> {
-  e.preventDefault();
-
-  const raceIdEl = document.getElementById('race-id') as HTMLInputElement | null;
-  const raceNameEl = document.getElementById('race-name') as HTMLInputElement | null;
-  const raceDescEl = document.getElementById('race-description') as HTMLTextAreaElement | null;
-  const racePlayableEl = document.getElementById('race-playable') as HTMLInputElement | null;
-  const raceTraitsEl = document.getElementById('race-traits') as HTMLInputElement | null;
-  const raceAllowedEl = document.getElementById('race-allowed-classes') as HTMLInputElement | null;
-
-  if (!raceIdEl || !raceNameEl) {
-    showToast('Required form elements are missing', 'error');
-    return;
   }
 
-  const raceId = raceIdEl.value.trim();
-  if (!raceId) {
-    showToast('Race ID is required', 'warning');
-    return;
+  // Dirty-state tracking: listen for input changes on both forms (CR-53)
+  classForm.addEventListener('input', () => { formDirty = true; });
+  classForm.addEventListener('change', () => { formDirty = true; });
+  raceForm.addEventListener('input', () => { formDirty = true; });
+  raceForm.addEventListener('change', () => { formDirty = true; });
+
+  // ============================================================================
+  // API
+  // ============================================================================
+
+  async function fetchClasses(): Promise<void> {
+    try {
+      const res = await fetch('/api/progression/classes', { credentials: 'include' });
+      const data = await res.json();
+      if (data.success) classes = data.classes || [];
+    } catch (error) { console.error('Failed to fetch classes:', error); showToast('Failed to load classes', 'error'); }
   }
 
-  // Parse other traits - support both simple strings and id=value format
-  const traitsRaw = raceTraitsEl?.value.split(',').map(t => t.trim()).filter(Boolean) ?? [];
-  const otherTraits = traitsRaw.map(t => {
-    if (t.includes('=')) {
-      const [id, val] = t.split('=');
-      const numVal = Number(val);
-      return { id: id.trim(), value: isNaN(numVal) ? val.trim() === 'true' : numVal };
-    }
-    return t;
-  });
-
-  // Add special ability traits from checkboxes (boolean traits use true, not 1)
-  const specialAbilityTraits: Array<{ id: string; value: boolean | number }> = [];
-  if ((document.getElementById('race-stealth') as HTMLInputElement).checked) {
-    specialAbilityTraits.push({ id: 'stealth', value: true });
-  }
-  if ((document.getElementById('race-lockpicking') as HTMLInputElement).checked) {
-    specialAbilityTraits.push({ id: 'lockpicking', value: true });
-  }
-  if ((document.getElementById('race-see-hidden') as HTMLInputElement).checked) {
-    specialAbilityTraits.push({ id: 'see_hidden', value: true });
+  async function fetchRaces(): Promise<void> {
+    try {
+      const res = await fetch('/api/progression/races', { credentials: 'include' });
+      const data = await res.json();
+      if (data.success) races = data.races || [];
+    } catch (error) { console.error('Failed to fetch races:', error); showToast('Failed to load races', 'error'); }
   }
 
-  const traits = [...otherTraits, ...specialAbilityTraits];
+  // ============================================================================
+  // List Rendering
+  // ============================================================================
 
-  const data: Partial<RaceDefinition> = {
-    race_id: raceId,
-    display_name: raceNameEl.value,
-    description: raceDescEl?.value || undefined,
-    playable: racePlayableEl?.checked ?? false,
-    base_stats: {
-      strength: {
-        min: Number((document.getElementById('race-str-min') as HTMLInputElement | null)?.value) || 40,
-        max: Number((document.getElementById('race-str-max') as HTMLInputElement | null)?.value) || 100,
-      },
-      agility: {
-        min: Number((document.getElementById('race-agi-min') as HTMLInputElement | null)?.value) || 40,
-        max: Number((document.getElementById('race-agi-max') as HTMLInputElement | null)?.value) || 100,
-      },
-      constitution: {
-        min: Number((document.getElementById('race-con-min') as HTMLInputElement | null)?.value) || 40,
-        max: Number((document.getElementById('race-con-max') as HTMLInputElement | null)?.value) || 100,
-      },
-      intellect: {
-        min: Number((document.getElementById('race-int-min') as HTMLInputElement | null)?.value) || 40,
-        max: Number((document.getElementById('race-int-max') as HTMLInputElement | null)?.value) || 100,
-      },
-      wisdom: {
-        min: Number((document.getElementById('race-wis-min') as HTMLInputElement | null)?.value) || 40,
-        max: Number((document.getElementById('race-wis-max') as HTMLInputElement | null)?.value) || 100,
-      },
-      charisma: {
-        min: Number((document.getElementById('race-cha-min') as HTMLInputElement | null)?.value) || 40,
-        max: Number((document.getElementById('race-cha-max') as HTMLInputElement | null)?.value) || 100,
-      },
-    },
-    traits: traits as RaceDefinition['traits'],
-    allowed_classes: raceAllowedEl?.value.split(',').map(t => t.trim()).filter(Boolean) ?? [],
-    dodge_bonus: Number((document.getElementById('race-dodge-bonus') as HTMLInputElement | null)?.value) || 0,
-  };
+  function renderList(): void {
+    const search = searchInput.value.toLowerCase();
 
-  if (data.allowed_classes?.length === 0) delete data.allowed_classes;
+    if (currentTab === 'classes') {
+      listTitle.textContent = 'Classes';
+      const filtered = classes.filter(c =>
+        !search || c.display_name.toLowerCase().includes(search) || c.class_id.toLowerCase().includes(search)
+      ).sort((a, b) => a.display_name.localeCompare(b.display_name));
 
-  try {
-    const isNew = !selectedId;
-    const url = isNew ? '/api/progression/races' : `/api/progression/races/${raceId}`;
-    const method = isNew ? 'POST' : 'PUT';
-
-    const response = await fetch(url, {
-      method,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
-    });
-
-    const result = await response.json();
-    if (result.success) {
-      await loadRaces();
-      selectRace(raceId);
-      showToast('Race saved successfully!', 'success');
-    } else {
-      showToast('Failed to save race: ' + (result.message || 'Unknown error'), 'error');
-    }
-  } catch (error) {
-    console.error('Failed to save race:', error);
-    showToast('Failed to save race', 'error');
-  }
-}
-
-// ============================================================================
-// DELETE HANDLERS
-// ============================================================================
-
-async function handleDelete(type: string): Promise<void> {
-  if (!selectedId) return;
-
-  const confirmed = confirm(`Are you sure you want to delete this ${type}?`);
-  if (!confirmed) return;
-
-  // Map singular type to correct API plural endpoint
-  const pluralMap: Record<string, string> = {
-    'class': 'classes',
-    'race': 'races',
-  };
-  const endpoint = pluralMap[type] || `${type}s`;
-
-  try {
-    const response = await fetch(`/api/progression/${endpoint}/${selectedId}`, {
-      method: 'DELETE',
-    });
-
-    const result = await response.json();
-    if (result.success) {
-      selectedId = null;
-      selectedType = null;
-      hideAllForms();
-      const noSelection = document.getElementById(`${type}-no-selection`);
-      if (noSelection) noSelection.style.display = 'flex';
-
-      switch (type) {
-        case 'class': await loadClasses(); break;
-        case 'race': await loadRaces(); break;
+      entityList.innerHTML = '';
+      for (const cls of filtered) {
+        const li = document.createElement('li');
+        if (cls.class_id === selectedClassId) li.className = 'selected';
+        li.innerHTML = `
+          <div class="entity-name">${escapeHtml(cls.display_name)}</div>
+          <div class="entity-meta">${escapeHtml(cls.class_id)} · ${cls.essence_multiplier}x${cls.playable === false ? ' · <span class="npc-badge">NPC</span>' : ''}</div>
+        `;
+        li.addEventListener('click', () => selectClass(cls.class_id));
+        entityList.appendChild(li);
       }
-      showToast('Deleted successfully!', 'success');
+      entityCount.textContent = `${filtered.length}/${classes.length}`;
     } else {
-      showToast('Failed to delete: ' + (result.message || 'Unknown error'), 'error');
+      listTitle.textContent = 'Races';
+      const filtered = races.filter(r =>
+        !search || r.display_name.toLowerCase().includes(search) || r.race_id.toLowerCase().includes(search)
+      ).sort((a, b) => a.display_name.localeCompare(b.display_name));
+
+      entityList.innerHTML = '';
+      for (const race of filtered) {
+        const li = document.createElement('li');
+        if (race.race_id === selectedRaceId) li.className = 'selected';
+        li.innerHTML = `
+          <div class="entity-name">${escapeHtml(race.display_name)}</div>
+          <div class="entity-meta">${escapeHtml(race.race_id)}${race.playable === false ? ' · <span class="npc-badge">NPC</span>' : ''}</div>
+        `;
+        li.addEventListener('click', () => selectRace(race.race_id));
+        entityList.appendChild(li);
+      }
+      entityCount.textContent = `${filtered.length}/${races.length}`;
     }
-  } catch (error) {
-    console.error('Failed to delete:', error);
-    showToast('Failed to delete', 'error');
   }
-}
 
-// ============================================================================
-// UTILITIES
-// ============================================================================
+  // ============================================================================
+  // Trait Rendering
+  // ============================================================================
 
-function escapeHtml(text: string | null | undefined): string {
-  if (text == null) return '';
-  const div = document.createElement('div');
-  div.textContent = text;
-  return div.innerHTML;
-}
+  function renderTraits(container: HTMLElement, entityType: 'class' | 'race', state: Map<string, { enabled: boolean; value: number }>): void {
+    const defs = TRAIT_DEFS.filter(t => entityType === 'class' ? t.forClass : t.forRace);
+    container.innerHTML = '';
 
+    for (const def of defs) {
+      const traitState = state.get(def.id) || { enabled: false, value: 0 };
+      const item = document.createElement('div');
+      item.className = 'trait-item';
+
+      const label = document.createElement('label');
+      label.className = 'toggle-label';
+      const cb = document.createElement('input');
+      cb.type = 'checkbox';
+      cb.checked = traitState.enabled;
+      const track = document.createElement('span');
+      track.className = 'toggle-track';
+      const text = document.createTextNode(` ${def.label}`);
+      label.appendChild(cb);
+      label.appendChild(track);
+      label.appendChild(text);
+      item.appendChild(label);
+
+      if (def.numeric && entityType === 'race') {
+        // Only races store numeric trait values; classes store traits as string[] (CR-27)
+        if (def.presets && def.presets.length > 0) {
+          // Dropdown select for preset-based traits
+          const selectEl = document.createElement('select');
+          selectEl.className = 'trait-select-input';
+          selectEl.disabled = !traitState.enabled;
+          for (const preset of def.presets) {
+            const opt = document.createElement('option');
+            opt.value = String(preset.value);
+            opt.textContent = `${preset.label} (${preset.value})`;
+            selectEl.appendChild(opt);
+          }
+          selectEl.value = String(traitState.value ?? def.presets[0].value);
+          selectEl.addEventListener('change', () => {
+            const s = state.get(def.id);
+            if (s) s.value = parseInt(selectEl.value, 10) || 0;
+          });
+          cb.addEventListener('change', () => {
+            const s = state.get(def.id) || { enabled: false, value: 0 };
+            s.enabled = cb.checked;
+            if (cb.checked && s.value === 0) s.value = def.presets![0].value;
+            state.set(def.id, s);
+            selectEl.disabled = !cb.checked;
+          });
+          item.appendChild(selectEl);
+        } else {
+          // Plain number input for other numeric traits
+          const valInput = document.createElement('input');
+          valInput.type = 'number';
+          valInput.className = 'trait-value-input';
+          valInput.value = String(traitState.value ?? 0);
+          valInput.disabled = !traitState.enabled;
+          valInput.addEventListener('change', () => {
+            const s = state.get(def.id);
+            if (s) s.value = parseInt(valInput.value, 10) || 0;
+          });
+          cb.addEventListener('change', () => {
+            const s = state.get(def.id) || { enabled: false, value: 0 };
+            s.enabled = cb.checked;
+            state.set(def.id, s);
+            valInput.disabled = !cb.checked;
+          });
+          item.appendChild(valInput);
+        }
+      } else {
+        cb.addEventListener('change', () => {
+          const s = state.get(def.id) || { enabled: false, value: 0 };
+          s.enabled = cb.checked;
+          state.set(def.id, s);
+        });
+      }
+
+      state.set(def.id, traitState);
+      container.appendChild(item);
+    }
+  }
+
+  function traitsToArray(state: Map<string, { enabled: boolean; value: number }>, entityType: 'class' | 'race'): string[] | Array<{ id: string; value: number | boolean }> {
+    if (entityType === 'class') {
+      // Classes store traits as string[] like ["stealth", "lockpicking", "dodge"]
+      const result: string[] = [];
+      for (const [id, s] of state) {
+        if (s.enabled) result.push(id);
+      }
+      return result;
+    } else {
+      // Races store traits as [{id, value}] objects
+      const result: Array<{ id: string; value: number | boolean }> = [];
+      for (const [id, s] of state) {
+        if (s.enabled) {
+          const def = TRAIT_DEFS.find(d => d.id === id);
+          result.push({ id, value: def?.numeric ? s.value : true });
+        }
+      }
+      return result;
+    }
+  }
+
+  function loadClassTraits(traits: string[]): void {
+    classTraitState = new Map();
+    for (const def of TRAIT_DEFS.filter(t => t.forClass)) {
+      classTraitState.set(def.id, { enabled: traits.includes(def.id), value: 0 });
+    }
+  }
+
+  function loadRaceTraits(traits: Array<{ id: string; value: number | boolean }> | string[]): void {
+    raceTraitState = new Map();
+    for (const def of TRAIT_DEFS.filter(t => t.forRace)) {
+      raceTraitState.set(def.id, { enabled: false, value: 0 });
+    }
+    if (!traits) return;
+    for (const t of traits) {
+      // base_vision is handled as a separate form field, not a trait toggle
+      if (typeof t === 'object' && t !== null && t.id === 'base_vision') continue;
+      if (typeof t === 'string') {
+        const existing = raceTraitState.get(t);
+        if (existing) { existing.enabled = true; }
+      } else if (t && typeof t === 'object') {
+        const existing = raceTraitState.get(t.id);
+        if (existing) {
+          existing.enabled = true;
+          existing.value = typeof t.value === 'number' ? t.value : 0;
+        }
+      }
+    }
+  }
+
+  // ============================================================================
+  // Class Selection & Form
+  // ============================================================================
+
+  function selectClass(classId: string): void {
+    const cls = classes.find(c => c.class_id === classId);
+    if (!cls) return;
+
+    selectedClassId = classId;
+    noEntitySelected.style.display = 'none';
+    raceForm.style.display = 'none';
+    classForm.style.display = 'block';
+
+    (document.getElementById('class-form-title') as HTMLHeadingElement).textContent = 'Edit Class';
+    (document.getElementById('class-id-display') as HTMLSpanElement).textContent = `ID: ${cls.class_id}`;
+    const idInput = document.getElementById('class-id') as HTMLInputElement;
+    idInput.value = cls.class_id;
+    idInput.readOnly = true;
+
+    (document.getElementById('class-name') as HTMLInputElement).value = cls.display_name;
+    (document.getElementById('class-description') as HTMLTextAreaElement).value = cls.description || '';
+    (document.getElementById('class-multiplier') as HTMLInputElement).value = String(cls.essence_multiplier);
+    (document.getElementById('class-resource') as HTMLSelectElement).value = cls.resource_type || '';
+    (document.getElementById('class-playable') as HTMLInputElement).checked = cls.playable !== false;
+    (document.getElementById('class-combat-level') as HTMLInputElement).value = String(cls.combat_level ?? 3);
+    (document.getElementById('class-magic-level') as HTMLInputElement).value = String(cls.magic_level ?? 0);
+    (document.getElementById('class-magic-school') as HTMLSelectElement).value = cls.magic_school || '';
+    (document.getElementById('class-crit-bonus') as HTMLInputElement).value = String(cls.crit_bonus ?? 0);
+    (document.getElementById('class-dodge-bonus') as HTMLInputElement).value = String(cls.dodge_bonus ?? 0);
+
+    // Armor restrictions
+    const armorTypes = cls.armor_type_restrictions || [];
+    (document.getElementById('class-armor-robe') as HTMLInputElement).checked = armorTypes.includes('robe');
+    (document.getElementById('class-armor-leather') as HTMLInputElement).checked = armorTypes.includes('leather');
+    (document.getElementById('class-armor-chainmail') as HTMLInputElement).checked = armorTypes.includes('chainmail');
+    (document.getElementById('class-armor-scalemail') as HTMLInputElement).checked = armorTypes.includes('scalemail');
+    (document.getElementById('class-armor-platemail') as HTMLInputElement).checked = armorTypes.includes('platemail');
+
+    // Subscribed tags (CR-26)
+    classTagsInput?.setValues(cls.subscribed_tags || []);
+
+    // Traits
+    loadClassTraits(cls.traits || []);
+    renderTraits(document.getElementById('class-traits-container')!, 'class', classTraitState);
+
+    formDirty = false;
+    renderList();
+  }
+
+  function selectRace(raceId: string): void {
+    const race = races.find(r => r.race_id === raceId);
+    if (!race) return;
+
+    selectedRaceId = raceId;
+    noEntitySelected.style.display = 'none';
+    classForm.style.display = 'none';
+    raceForm.style.display = 'block';
+
+    (document.getElementById('race-form-title') as HTMLHeadingElement).textContent = 'Edit Race';
+    (document.getElementById('race-id-display') as HTMLSpanElement).textContent = `ID: ${race.race_id}`;
+    const idInput = document.getElementById('race-id') as HTMLInputElement;
+    idInput.value = race.race_id;
+    idInput.readOnly = true;
+
+    (document.getElementById('race-name') as HTMLInputElement).value = race.display_name;
+    (document.getElementById('race-description') as HTMLTextAreaElement).value = race.description || '';
+    (document.getElementById('race-playable') as HTMLInputElement).checked = race.playable !== false;
+    (document.getElementById('race-dodge-bonus') as HTMLInputElement).value = String(race.dodge_bonus ?? 0);
+
+    // Base vision — stored as a trait {id: 'base_vision', value: number}
+    const visionTrait = Array.isArray(race.traits) ? race.traits.find(
+      (t): t is { id: string; value: number } => typeof t === 'object' && t !== null && t.id === 'base_vision'
+    ) : null;
+    (document.getElementById('race-base-vision') as HTMLSelectElement).value = String(visionTrait?.value ?? 100);
+
+    // Stats
+    const stats = race.base_stats || {};
+    const statMap: Record<string, string> = {
+      strength: 'str', agility: 'agi', constitution: 'con',
+      intellect: 'int', wisdom: 'wis', charisma: 'cha',
+    };
+    for (const [key, abbr] of Object.entries(statMap)) {
+      const range = (stats as Record<string, { min: number; max: number }>)[key] || { min: 40, max: 100 };
+      (document.getElementById(`race-${abbr}-min`) as HTMLInputElement).value = String(range.min);
+      (document.getElementById(`race-${abbr}-max`) as HTMLInputElement).value = String(range.max);
+    }
+
+    // Traits
+    loadRaceTraits(race.traits || []);
+    renderTraits(document.getElementById('race-traits-container')!, 'race', raceTraitState);
+
+    // Allowed classes
+    raceAllowedClasses = new Set(
+      (race.allowed_classes || []).filter(c => c && c.trim()).map(c => {
+        const m = classes.find(cd => cd.class_id.toLowerCase() === c.toLowerCase());
+        return m ? m.class_id : c;
+      })
+    );
+    renderAllowedClasses();
+
+    formDirty = false;
+    renderList();
+  }
+
+  function clearSelection(): void {
+    selectedClassId = null;
+    selectedRaceId = null;
+    noEntitySelected.style.display = 'flex';
+    classForm.style.display = 'none';
+    raceForm.style.display = 'none';
+    renderList();
+  }
+
+  // ============================================================================
+  // Allowed Classes (Race)
+  // ============================================================================
+
+  function renderAllowedClasses(): void {
+    const container = document.getElementById('race-allowed-classes')!;
+    container.innerHTML = '';
+    for (const cls of [...classes].sort((a, b) => a.display_name.localeCompare(b.display_name))) {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = `class-btn${raceAllowedClasses.has(cls.class_id) ? ' selected' : ''}`;
+      btn.textContent = cls.display_name;
+      btn.addEventListener('click', () => {
+        if (raceAllowedClasses.has(cls.class_id)) {
+          raceAllowedClasses.delete(cls.class_id);
+          btn.classList.remove('selected');
+        } else {
+          raceAllowedClasses.add(cls.class_id);
+          btn.classList.add('selected');
+        }
+      });
+      container.appendChild(btn);
+    }
+  }
+
+  // ============================================================================
+  // Gather Form Data
+  // ============================================================================
+
+  function gatherClassData(): Record<string, unknown> {
+    const armorTypes: string[] = [];
+    if ((document.getElementById('class-armor-robe') as HTMLInputElement).checked) armorTypes.push('robe');
+    if ((document.getElementById('class-armor-leather') as HTMLInputElement).checked) armorTypes.push('leather');
+    if ((document.getElementById('class-armor-chainmail') as HTMLInputElement).checked) armorTypes.push('chainmail');
+    if ((document.getElementById('class-armor-scalemail') as HTMLInputElement).checked) armorTypes.push('scalemail');
+    if ((document.getElementById('class-armor-platemail') as HTMLInputElement).checked) armorTypes.push('platemail');
+
+    return {
+      class_id: (document.getElementById('class-id') as HTMLInputElement).value.trim(),
+      display_name: (document.getElementById('class-name') as HTMLInputElement).value.trim(),
+      description: (document.getElementById('class-description') as HTMLTextAreaElement).value.trim() || null,
+      essence_multiplier: Number.isFinite(parseFloat((document.getElementById('class-multiplier') as HTMLInputElement).value)) ? parseFloat((document.getElementById('class-multiplier') as HTMLInputElement).value) : 1.0,
+      resource_type: (document.getElementById('class-resource') as HTMLSelectElement).value || null,
+      playable: (document.getElementById('class-playable') as HTMLInputElement).checked,
+      combat_level: Number.isFinite(parseInt((document.getElementById('class-combat-level') as HTMLInputElement).value, 10)) ? parseInt((document.getElementById('class-combat-level') as HTMLInputElement).value, 10) : 3,
+      magic_level: Number.isFinite(parseInt((document.getElementById('class-magic-level') as HTMLInputElement).value, 10)) ? parseInt((document.getElementById('class-magic-level') as HTMLInputElement).value, 10) : 0,
+      magic_school: (document.getElementById('class-magic-school') as HTMLSelectElement).value || null,
+      crit_bonus: Number.isFinite(parseInt((document.getElementById('class-crit-bonus') as HTMLInputElement).value, 10)) ? parseInt((document.getElementById('class-crit-bonus') as HTMLInputElement).value, 10) : 0,
+      dodge_bonus: Number.isFinite(parseInt((document.getElementById('class-dodge-bonus') as HTMLInputElement).value, 10)) ? parseInt((document.getElementById('class-dodge-bonus') as HTMLInputElement).value, 10) : 0,
+      traits: traitsToArray(classTraitState, 'class'),
+      armor_type_restrictions: armorTypes.length > 0 ? armorTypes : null,
+      subscribed_tags: classTagsInput?.getValues() || [],
+    };
+  }
+
+  function gatherRaceData(): Record<string, unknown> {
+    const statMap: Record<string, string> = {
+      strength: 'str', agility: 'agi', constitution: 'con',
+      intellect: 'int', wisdom: 'wis', charisma: 'cha',
+    };
+    const base_stats: Record<string, { min: number; max: number }> = {};
+    for (const [key, abbr] of Object.entries(statMap)) {
+      base_stats[key] = {
+        min: parseInt((document.getElementById(`race-${abbr}-min`) as HTMLInputElement).value, 10) || 40,
+        max: parseInt((document.getElementById(`race-${abbr}-max`) as HTMLInputElement).value, 10) || 100,
+      };
+    }
+
+    return {
+      race_id: (document.getElementById('race-id') as HTMLInputElement).value.trim(),
+      display_name: (document.getElementById('race-name') as HTMLInputElement).value.trim(),
+      description: (document.getElementById('race-description') as HTMLTextAreaElement).value.trim() || null,
+      playable: (document.getElementById('race-playable') as HTMLInputElement).checked,
+      dodge_bonus: parseInt((document.getElementById('race-dodge-bonus') as HTMLInputElement).value, 10) || 0,
+      base_stats,
+      traits: [
+        ...traitsToArray(raceTraitState, 'race') as Array<{ id: string; value: number | boolean }>,
+        { id: 'base_vision', value: Number.isFinite(parseInt((document.getElementById('race-base-vision') as HTMLSelectElement).value, 10)) ? parseInt((document.getElementById('race-base-vision') as HTMLSelectElement).value, 10) : 100 },
+      ],
+      allowed_classes: [...new Set(Array.from(raceAllowedClasses).filter(c => c && c.trim()))],
+    };
+  }
+
+  // ============================================================================
+  // CRUD
+  // ============================================================================
+
+  // Class CRUD
+  classForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (!selectedClassId) return;
+    const data = gatherClassData();
+    try {
+      const res = await fetch(`/api/progression/classes/${selectedClassId}`, {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        credentials: 'include', body: JSON.stringify(data),
+      });
+      const result = await res.json();
+      if (result.success) { showToast('Class saved', 'success'); await fetchClasses(); selectClass(selectedClassId); }
+      else showToast(result.message || 'Failed to save', 'error');
+    } catch { showToast('Failed to save class', 'error'); }
+  });
+
+  raceForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (!selectedRaceId) return;
+    const data = gatherRaceData();
+    try {
+      const res = await fetch(`/api/progression/races/${selectedRaceId}`, {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        credentials: 'include', body: JSON.stringify(data),
+      });
+      const result = await res.json();
+      if (result.success) { showToast('Race saved', 'success'); await fetchRaces(); selectRace(selectedRaceId); }
+      else showToast(result.message || 'Failed to save', 'error');
+    } catch { showToast('Failed to save race', 'error'); }
+  });
+
+  // New entity
+  document.getElementById('new-entity-btn')?.addEventListener('click', async () => {
+    if (currentTab === 'classes') {
+      const result = await showPromptFields('New Class', [
+        { key: 'id', label: 'Class ID', required: true, placeholder: 'warrior' },
+        { key: 'name', label: 'Display Name', required: true, placeholder: 'Warrior' },
+      ]);
+      if (!result) return;
+      const id = result.id.toLowerCase();
+      if (!/^[a-z][a-z0-9_]*$/.test(id)) { showToast('ID must be lowercase letters/numbers/underscores', 'warning'); return; }
+      if (classes.some(c => c.class_id === id)) { showToast('Class ID already exists', 'warning'); return; }
+
+      try {
+        const res = await fetch('/api/progression/classes', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ class_id: id, display_name: result.name, essence_multiplier: 1.0, playable: true }),
+        });
+        const data = await res.json();
+        if (data.success) { showToast('Class created', 'success'); await fetchClasses(); selectClass(id); }
+        else showToast(data.message || 'Failed to create', 'error');
+      } catch { showToast('Failed to create class', 'error'); }
+    } else {
+      const result = await showPromptFields('New Race', [
+        { key: 'id', label: 'Race ID', required: true, placeholder: 'human' },
+        { key: 'name', label: 'Display Name', required: true, placeholder: 'Human' },
+      ]);
+      if (!result) return;
+      const id = result.id.toLowerCase();
+      if (!/^[a-z][a-z0-9_]*$/.test(id)) { showToast('ID must be lowercase letters/numbers/underscores', 'warning'); return; }
+      if (races.some(r => r.race_id === id)) { showToast('Race ID already exists', 'warning'); return; }
+
+      try {
+        const res = await fetch('/api/progression/races', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ race_id: id, display_name: result.name, playable: true }),
+        });
+        const data = await res.json();
+        if (data.success) { showToast('Race created', 'success'); await fetchRaces(); selectRace(id); }
+        else showToast(data.message || 'Failed to create', 'error');
+      } catch { showToast('Failed to create race', 'error'); }
+    }
+  });
+
+  // Delete class
+  document.getElementById('delete-class-btn')?.addEventListener('click', async () => {
+    if (!selectedClassId) return;
+    const cls = classes.find(c => c.class_id === selectedClassId);
+    const confirmed = await showConfirm(`Delete class "${cls?.display_name}"?`, { confirmText: 'Delete', dangerous: true });
+    if (!confirmed) return;
+    try {
+      const res = await fetch(`/api/progression/classes/${selectedClassId}`, { method: 'DELETE', credentials: 'include' });
+      const data = await res.json();
+      if (data.success) { showToast('Class deleted', 'success'); await fetchClasses(); clearSelection(); }
+      else showToast(data.message || 'Failed to delete', 'error');
+    } catch { showToast('Failed to delete class', 'error'); }
+  });
+
+  // Delete race
+  document.getElementById('delete-race-btn')?.addEventListener('click', async () => {
+    if (!selectedRaceId) return;
+    const race = races.find(r => r.race_id === selectedRaceId);
+    const confirmed = await showConfirm(`Delete race "${race?.display_name}"?`, { confirmText: 'Delete', dangerous: true });
+    if (!confirmed) return;
+    try {
+      const res = await fetch(`/api/progression/races/${selectedRaceId}`, { method: 'DELETE', credentials: 'include' });
+      const data = await res.json();
+      if (data.success) { showToast('Race deleted', 'success'); await fetchRaces(); clearSelection(); }
+      else showToast(data.message || 'Failed to delete', 'error');
+    } catch { showToast('Failed to delete race', 'error'); }
+  });
+
+  // Duplicate class
+  document.getElementById('duplicate-class-btn')?.addEventListener('click', async () => {
+    if (!selectedClassId) return;
+    const result = await showPromptFields('Duplicate Class', [
+      { key: 'id', label: 'New Class ID', required: true, defaultValue: selectedClassId + '_copy' },
+      { key: 'name', label: 'Display Name', required: true, defaultValue: (document.getElementById('class-name') as HTMLInputElement).value + ' (copy)' },
+    ]);
+    if (!result) return;
+    const id = result.id.toLowerCase();
+    if (!/^[a-z][a-z0-9_]*$/.test(id)) { showToast('Invalid ID format', 'warning'); return; }
+    if (classes.some(c => c.class_id === id)) { showToast('Class ID already exists', 'warning'); return; }
+
+    const sourceClass = classes.find(c => c.class_id === selectedClassId);
+    const data = { ...gatherClassData(), class_id: id, display_name: result.name, subscribed_tags: sourceClass?.subscribed_tags ?? [] };
+    try {
+      const res = await fetch('/api/progression/classes', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        credentials: 'include', body: JSON.stringify(data),
+      });
+      const resp = await res.json();
+      if (resp.success) { showToast('Class duplicated', 'success'); await fetchClasses(); selectClass(id); }
+      else showToast(resp.message || 'Failed to duplicate', 'error');
+    } catch { showToast('Failed to duplicate class', 'error'); }
+  });
+
+  // Duplicate race
+  document.getElementById('duplicate-race-btn')?.addEventListener('click', async () => {
+    if (!selectedRaceId) return;
+    const result = await showPromptFields('Duplicate Race', [
+      { key: 'id', label: 'New Race ID', required: true, defaultValue: selectedRaceId + '_copy' },
+      { key: 'name', label: 'Display Name', required: true, defaultValue: (document.getElementById('race-name') as HTMLInputElement).value + ' (copy)' },
+    ]);
+    if (!result) return;
+    const id = result.id.toLowerCase();
+    if (!/^[a-z][a-z0-9_]*$/.test(id)) { showToast('Invalid ID format', 'warning'); return; }
+    if (races.some(r => r.race_id === id)) { showToast('Race ID already exists', 'warning'); return; }
+
+    const data = { ...gatherRaceData(), race_id: id, display_name: result.name };
+    try {
+      const res = await fetch('/api/progression/races', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        credentials: 'include', body: JSON.stringify(data),
+      });
+      const resp = await res.json();
+      if (resp.success) { showToast('Race duplicated', 'success'); await fetchRaces(); selectRace(id); }
+      else showToast(resp.message || 'Failed to duplicate', 'error');
+    } catch { showToast('Failed to duplicate race', 'error'); }
+  });
+
+  // ============================================================================
+  // Tab Switching
+  // ============================================================================
+
+  document.getElementById('tab-classes-btn')?.addEventListener('click', async () => {
+    if (formDirty) {
+      const confirmed = await showConfirm('You have unsaved changes. Switch tab anyway?');
+      if (!confirmed) return;
+    }
+    currentTab = 'classes';
+    document.getElementById('tab-classes-btn')!.classList.add('active');
+    document.getElementById('tab-races-btn')!.classList.remove('active');
+    searchInput.value = '';
+    formDirty = false;
+    clearSelection();
+  });
+
+  document.getElementById('tab-races-btn')?.addEventListener('click', async () => {
+    if (formDirty) {
+      const confirmed = await showConfirm('You have unsaved changes. Switch tab anyway?');
+      if (!confirmed) return;
+    }
+    currentTab = 'races';
+    document.getElementById('tab-races-btn')!.classList.add('active');
+    document.getElementById('tab-classes-btn')!.classList.remove('active');
+    searchInput.value = '';
+    formDirty = false;
+    clearSelection();
+  });
+
+  // Search
+  searchInput.addEventListener('input', renderList);
+
+  // Export
+  document.getElementById('export-btn')?.addEventListener('click', async () => {
+    try {
+      const data = { classes, races };
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'progression-data.json';
+      a.click();
+      URL.revokeObjectURL(url);
+      showToast('Exported progression data', 'success');
+    } catch { showToast('Export failed', 'error'); }
+  });
+
+  // ============================================================================
+  // Helpers
+  // ============================================================================
+
+  // ============================================================================
+  // Initialize
+  // ============================================================================
+
+  await Promise.all([fetchClasses(), fetchRaces()]);
+  renderList();
 })();

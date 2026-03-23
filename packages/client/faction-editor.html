@@ -20,7 +20,7 @@
               <a href="/item-editor.html" class="nav-dropdown-item">Item Editor</a>
               <a href="/spell-editor.html" class="nav-dropdown-item">Spell Editor</a>
               <a href="/status-editor.html" class="nav-dropdown-item">Status Effects Editor</a>
-              <a href="/progression-editor.html" class="nav-dropdown-item">Progression Editor</a>
+              <a href="/progression-editor.html" class="nav-dropdown-item">Class / Race Editor</a>
               <a href="/door-editor.html" class="nav-dropdown-item">Door Editor</a>
               <a href="/action-editor.html" class="nav-dropdown-item">Action Editor</a>
               <a href="/npc-editor.html" class="nav-dropdown-item">NPC Editor</a>
@@ -41,7 +41,6 @@
           </div>
         </div>
         <div class="nav-spacer"></div>
-        <a href="/docs.html?file=NPC_Creation_Guide.md" target="_blank" rel="noopener noreferrer" class="help-link nav-help" title="View Documentation">?</a>
         <div class="nav-user-menu">
           <button class="nav-user-btn" id="nav-username">User</button>
           <div class="dropdown-menu" id="user-dropdown">
@@ -54,65 +53,76 @@
         <aside id="faction-list-panel">
           <div class="panel-header">
             <h2>Factions</h2>
-            <button id="new-faction-btn" class="btn-primary">+ New Faction</button>
+            <button id="new-faction-btn" class="btn-primary">+ New</button>
           </div>
-          <div id="faction-search">
+          <div class="list-search">
             <input type="text" id="search-input" placeholder="Search factions..." />
           </div>
           <ul id="faction-list"></ul>
+          <div class="panel-footer">
+            <span id="faction-count" class="list-count"></span>
+            <div class="footer-buttons">
+              <button id="export-btn" class="btn-small">Export</button>
+            </div>
+          </div>
         </aside>
 
         <main id="faction-editor-panel">
           <div id="no-faction-selected">
-            <p>Select a faction from the list or create a new one.</p>
+            <div class="empty-state">
+              <div class="empty-icon">&gt;_</div>
+              <p>Select a faction from the list or create a new one.</p>
+            </div>
           </div>
+
           <form id="faction-form" style="display: none;">
             <div class="form-header">
               <h2 id="faction-form-title">Edit Faction</h2>
               <span id="faction-id-display"></span>
             </div>
 
-            <div class="form-group">
-              <label for="faction-name">Name</label>
-              <input type="text" id="faction-name" required />
-            </div>
+            <div class="top-row">
+              <div class="form-section top-left">
+                <h3>Details</h3>
+                <div class="form-group">
+                  <label for="faction-name">Name <span class="required">*</span></label>
+                  <input type="text" id="faction-name" required placeholder="Arindale Merchants Guild" />
+                </div>
+                <div class="form-group">
+                  <label for="faction-type">Type</label>
+                  <select id="faction-type">
+                    <option value="city">City</option>
+                    <option value="tribal">Tribal</option>
+                    <option value="merchant">Merchant</option>
+                    <option value="guild">Guild</option>
+                  </select>
+                  <span class="hint-inline">Organizational label, no gameplay effect</span>
+                </div>
+                <div class="form-group">
+                  <label for="faction-description">Description</label>
+                  <textarea id="faction-description" rows="4" placeholder="A brief description of this faction..."></textarea>
+                </div>
+              </div>
 
-            <div class="form-group">
-              <label for="faction-type">Type</label>
-              <select id="faction-type">
-                <option value="city">City</option>
-                <option value="tribal">Tribal</option>
-                <option value="merchant">Merchant</option>
-                <option value="guild">Guild</option>
-              </select>
-            </div>
-
-            <div class="form-group">
-              <label for="faction-description">Description</label>
-              <textarea id="faction-description" rows="4"></textarea>
+              <div class="form-section top-right">
+                <h3>Linked NPCs</h3>
+                <p class="section-hint">NPCs assigned to this faction via the NPC Editor's Merchant tab.</p>
+                <div id="linked-npcs">
+                  <p class="hint">Select a faction to see linked NPCs</p>
+                </div>
+              </div>
             </div>
 
             <div class="form-actions">
               <button type="submit" class="btn-primary">Save Faction</button>
-              <button type="button" id="delete-faction-btn" class="btn-danger">Delete Faction</button>
+              <button type="button" id="duplicate-faction-btn" class="btn-secondary">Duplicate</button>
+              <div class="spacer"></div>
+              <button type="button" id="delete-faction-btn" class="btn-danger">Delete</button>
             </div>
           </form>
         </main>
-
-        <aside id="preview-panel">
-          <div class="panel-header">
-            <h2>Preview</h2>
-          </div>
-          <div id="faction-preview">
-            <div id="preview-content">
-              <p class="hint">Select a faction to see preview</p>
-            </div>
-          </div>
-        </aside>
       </div>
     </div>
-
-    <div id="toast-container"></div>
 
     <script type="module" src="/src/faction-editor.ts"></script>
   </body>

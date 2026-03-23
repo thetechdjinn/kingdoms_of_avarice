@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Progression Editor - Kingdoms of Avarice</title>
+    <title>Class / Race Editor - Kingdoms of Avarice</title>
     <link rel="stylesheet" href="/src/editor.css" />
     <link rel="stylesheet" href="/src/progression-editor.css" />
   </head>
@@ -20,7 +20,7 @@
               <a href="/item-editor.html" class="nav-dropdown-item">Item Editor</a>
               <a href="/spell-editor.html" class="nav-dropdown-item">Spell Editor</a>
               <a href="/status-editor.html" class="nav-dropdown-item">Status Effects Editor</a>
-              <a href="/progression-editor.html" class="nav-dropdown-item active">Progression Editor</a>
+              <a href="/progression-editor.html" class="nav-dropdown-item active">Class / Race Editor</a>
               <a href="/door-editor.html" class="nav-dropdown-item">Door Editor</a>
               <a href="/action-editor.html" class="nav-dropdown-item">Action Editor</a>
               <a href="/npc-editor.html" class="nav-dropdown-item">NPC Editor</a>
@@ -40,15 +40,8 @@
             </div>
           </div>
         </div>
-
-        <!-- Main Tab Navigation -->
-        <div class="main-tabs">
-          <button class="main-tab active" data-tab="classes">Classes</button>
-          <button class="main-tab" data-tab="races">Races</button>
-        </div>
-
         <div class="nav-spacer"></div>
-        <a href="/docs.html?file=Progression_System_Guide.md" target="_blank" rel="noopener noreferrer" class="help-link nav-help" title="View Documentation">?</a>
+        <a href="/docs.html?file=Progression_System_Guide.md" class="help-link nav-help" title="View Documentation" target="_blank" rel="noopener noreferrer">?</a>
         <div class="nav-user-menu">
           <button class="nav-user-btn" id="nav-username">User</button>
           <div class="dropdown-menu" id="user-dropdown">
@@ -56,273 +49,246 @@
           </div>
         </div>
       </nav>
-      
-      <!-- ================================================================ -->
-      <!-- CLASSES TAB -->
-      <!-- ================================================================ -->
-      <div class="tab-page active" id="page-classes">
-        <div class="editor-layout">
-          <aside class="list-panel">
-            <div class="panel-header">
-              <h2>Classes</h2>
-              <button id="new-class-btn" class="btn-primary">+ New</button>
+
+      <!-- Top-level entity type tabs -->
+      <div class="entity-tabs">
+        <button type="button" class="entity-tab active" id="tab-classes-btn">Classes</button>
+        <button type="button" class="entity-tab" id="tab-races-btn">Races</button>
+      </div>
+
+      <div id="editor-layout">
+        <!-- Left Panel: Entity List -->
+        <aside id="entity-list-panel">
+          <div class="panel-header">
+            <h2 id="list-title">Classes</h2>
+            <button id="new-entity-btn" class="btn-primary">+ New</button>
+          </div>
+          <div class="list-search">
+            <input type="text" id="search-input" placeholder="Search..." />
+          </div>
+          <ul id="entity-list"></ul>
+          <div class="panel-footer">
+            <span id="entity-count" class="list-count"></span>
+            <div class="footer-buttons">
+              <button id="export-btn" class="btn-small">Export</button>
             </div>
-            <ul id="class-list" class="entity-list"></ul>
-          </aside>
-          
-          <main class="editor-panel">
-            <div class="no-selection" id="class-no-selection">
-              <p>Select a class from the list or create a new one.</p>
+          </div>
+        </aside>
+
+        <!-- Right Panel: Form -->
+        <main id="entity-editor-panel">
+          <div id="no-entity-selected">
+            <div class="empty-state">
+              <div class="empty-icon">&gt;_</div>
+              <p>Select a class or race from the list, or create a new one.</p>
             </div>
-            
-            <form id="class-form" class="entity-form" style="display: none;">
-              <div class="form-header">
-                <h2 id="class-form-title">Edit Class</h2>
-              </div>
-              
-              <div class="form-row">
-                <div class="form-group">
-                  <label for="class-id">Class ID</label>
-                  <input type="text" id="class-id" required placeholder="e.g., warrior" pattern="^[a-z][a-z0-9_]*$" title="Must be lowercase alphanumeric starting with a letter (underscores allowed)" />
-                </div>
-                <div class="form-group">
-                  <label for="class-name">Display Name</label>
-                  <input type="text" id="class-name" required placeholder="e.g., Warrior" />
-                </div>
-              </div>
-              
+          </div>
+
+          <!-- ============================================================ -->
+          <!-- CLASS FORM -->
+          <!-- ============================================================ -->
+          <form id="class-form" style="display: none;">
+            <div class="form-header">
+              <h2 id="class-form-title">Edit Class</h2>
+              <span id="class-id-display"></span>
+            </div>
+
+            <div class="form-row">
               <div class="form-group">
-                <label for="class-description">Description</label>
-                <textarea id="class-description" rows="3" placeholder="Class description..."></textarea>
+                <label for="class-id">Class ID <span class="required">*</span></label>
+                <input type="text" id="class-id" required pattern="[a-z][a-z0-9_]*" placeholder="warrior" />
+                <span class="hint-inline">Immutable after creation. Lowercase letters, digits, or underscores.</span>
               </div>
-              
+              <div class="form-group">
+                <label for="class-name">Display Name <span class="required">*</span></label>
+                <input type="text" id="class-name" required placeholder="Warrior" />
+              </div>
+              <div class="form-group" style="flex: 0 0 auto; align-self: center; padding-top: 0.5rem;">
+                <label class="toggle-label">
+                  <input type="checkbox" id="class-playable" checked />
+                  <span class="toggle-track"></span>
+                  Playable
+                </label>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="class-description">Description</label>
+              <textarea id="class-description" rows="3" placeholder="A powerful melee fighter..."></textarea>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="class-multiplier">Essence Multiplier</label>
+                <input type="number" id="class-multiplier" step="0.1" min="0.1" value="1.0" />
+                <span class="hint-inline">1.0 = normal, 1.5 = 50% more essence</span>
+              </div>
+              <div class="form-group">
+                <label for="class-resource">Resource Type</label>
+                <select id="class-resource">
+                  <option value="">None</option>
+                  <option value="mana">Mana</option>
+                  <option value="kai">Kai</option>
+                  <option value="rage">Rage</option>
+                  <option value="focus">Focus</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-section">
+              <h3>Combat & Magic</h3>
               <div class="form-row">
                 <div class="form-group">
-                  <label for="class-multiplier">Essence Multiplier</label>
-                  <input type="number" id="class-multiplier" step="0.1" min="0.1" value="1.0" />
+                  <label for="class-combat-level">Combat Level</label>
+                  <input type="number" id="class-combat-level" min="1" max="5" value="3" />
+                  <span class="hint-inline">1 = weakest, 5 = strongest</span>
                 </div>
                 <div class="form-group">
-                  <label for="class-resource">Resource Type</label>
-                  <select id="class-resource">
+                  <label for="class-magic-level">Magic Level</label>
+                  <input type="number" id="class-magic-level" min="0" max="3" value="0" />
+                  <span class="hint-inline">0 = no magic, 3 = full caster</span>
+                </div>
+                <div class="form-group">
+                  <label for="class-magic-school">Magic School</label>
+                  <select id="class-magic-school">
                     <option value="">None</option>
-                    <option value="mana">Mana</option>
+                    <option value="mage">Mage</option>
+                    <option value="priest">Priest</option>
+                    <option value="druid">Druid</option>
+                    <option value="bardic">Bardic</option>
                     <option value="kai">Kai</option>
-                    <option value="rage">Rage</option>
-                    <option value="focus">Focus</option>
                   </select>
                 </div>
-                <div class="form-group checkbox-group">
-                  <label><input type="checkbox" id="class-playable" checked /> Playable</label>
-                </div>
               </div>
-              
-              <div class="form-group">
-                <label for="class-tags">Subscribed Tags (comma-separated)</label>
-                <input type="text" id="class-tags" placeholder="melee, protection, holy" />
-              </div>
-              
-              <div class="form-section">
-                <h3>Combat &amp; Magic</h3>
-                <div class="form-row">
-                  <div class="form-group">
-                    <label for="class-combat-level">Combat Level (1-5)</label>
-                    <input type="number" id="class-combat-level" value="3" min="1" max="5" />
-                  </div>
-                  <div class="form-group">
-                    <label for="class-magic-level">Magic Level (0-3)</label>
-                    <input type="number" id="class-magic-level" value="0" min="0" max="3" />
-                  </div>
-                  <div class="form-group">
-                    <label for="class-magic-school">Magic School</label>
-                    <select id="class-magic-school">
-                      <option value="">None</option>
-                      <option value="mage">Mage</option>
-                      <option value="priest">Priest</option>
-                      <option value="druid">Druid</option>
-                      <option value="bardic">Bardic</option>
-                      <option value="kai">Kai</option>
-                    </select>
-                  </div>
-                </div>
-                <div class="form-section">
-                  <h4>Special Abilities</h4>
-                  <div class="form-row checkbox-row">
-                    <label><input type="checkbox" id="class-stealth" /> Stealth</label>
-                    <label><input type="checkbox" id="class-lockpicking" /> Lockpicking</label>
-                    <label><input type="checkbox" id="class-traps" /> Traps</label>
-                    <label><input type="checkbox" id="class-pickpocket" /> Pickpocket</label>
-                  </div>
-                </div>
-                <div class="form-section">
-                  <h4>Armor Type Restrictions</h4>
-                  <span class="hint">Leave all unchecked to allow all armor types</span>
-                  <div class="form-row checkbox-row">
-                    <label><input type="checkbox" id="class-armor-robe" /> Robe</label>
-                    <label><input type="checkbox" id="class-armor-leather" /> Leather</label>
-                    <label><input type="checkbox" id="class-armor-chainmail" /> Chainmail</label>
-                    <label><input type="checkbox" id="class-armor-scalemail" /> Scalemail</label>
-                    <label><input type="checkbox" id="class-armor-platemail" /> Platemail</label>
-                  </div>
-                </div>
-                <div class="form-row">
-                  <div class="form-group">
-                    <label for="class-crit-bonus">Crit Bonus %</label>
-                    <input type="number" id="class-crit-bonus" value="0" min="0" max="50" />
-                    <span class="hint">Flat crit bonus (e.g., 10 for Ninja/Mystic)</span>
-                  </div>
-                  <div class="form-group">
-                    <label for="class-dodge-bonus">Dodge Bonus %</label>
-                    <input type="number" id="class-dodge-bonus" value="0" min="0" max="50" />
-                    <span class="hint">Base dodge chance (e.g., 25 for Ninja/Mystic)</span>
-                  </div>
-                </div>
-              </div>
-
-              <div class="form-actions">
-                <button type="submit" class="btn-primary">Save Class</button>
-                <button type="button" id="delete-class-btn" class="btn-danger">Delete</button>
-              </div>
-            </form>
-          </main>
-        </div>
-      </div>
-      
-      <!-- ================================================================ -->
-      <!-- RACES TAB -->
-      <!-- ================================================================ -->
-      <div class="tab-page" id="page-races">
-        <div class="editor-layout">
-          <aside class="list-panel">
-            <div class="panel-header">
-              <h2>Races</h2>
-              <button id="new-race-btn" class="btn-primary">+ New</button>
-            </div>
-            <ul id="race-list" class="entity-list"></ul>
-          </aside>
-          
-          <main class="editor-panel">
-            <div class="no-selection" id="race-no-selection">
-              <p>Select a race from the list or create a new one.</p>
-            </div>
-            
-            <form id="race-form" class="entity-form" style="display: none;">
-              <div class="form-header">
-                <h2 id="race-form-title">Edit Race</h2>
-              </div>
-              
               <div class="form-row">
                 <div class="form-group">
-                  <label for="race-id">Race ID</label>
-                  <input type="text" id="race-id" required placeholder="e.g., human_01" pattern="^[a-z][a-z0-9_]*$" title="Must be lowercase alphanumeric starting with a letter (underscores allowed)" />
+                  <label for="class-crit-bonus">Crit Bonus %</label>
+                  <input type="number" id="class-crit-bonus" min="0" max="50" value="0" />
                 </div>
                 <div class="form-group">
-                  <label for="race-name">Display Name</label>
-                  <input type="text" id="race-name" required placeholder="e.g., Human" />
+                  <label for="class-dodge-bonus">Dodge Bonus %</label>
+                  <input type="number" id="class-dodge-bonus" min="0" max="50" value="0" />
                 </div>
               </div>
-              
-              <div class="form-group">
-                <label for="race-description">Description</label>
-                <textarea id="race-description" rows="3" placeholder="Race description..."></textarea>
-              </div>
-              
-              <div class="form-group checkbox-group">
-                <label><input type="checkbox" id="race-playable" checked /> Playable</label>
-              </div>
+            </div>
 
-              <div class="form-row">
-                <div class="form-group">
-                  <label for="race-dodge-bonus">Dodge Bonus %</label>
-                  <input type="number" id="race-dodge-bonus" value="0" min="0" max="25" />
-                  <span class="hint">Racial dodge bonus (e.g., 10 for Halfling)</span>
-                </div>
+            <div class="form-section">
+              <h3>Armor Restrictions</h3>
+              <p class="section-hint">Which armor types this class can equip. Empty = all types allowed.</p>
+              <div class="armor-grid">
+                <label class="toggle-label"><input type="checkbox" id="class-armor-robe" /><span class="toggle-track"></span> Robe</label>
+                <label class="toggle-label"><input type="checkbox" id="class-armor-leather" /><span class="toggle-track"></span> Leather</label>
+                <label class="toggle-label"><input type="checkbox" id="class-armor-chainmail" /><span class="toggle-track"></span> Chainmail</label>
+                <label class="toggle-label"><input type="checkbox" id="class-armor-scalemail" /><span class="toggle-track"></span> Scalemail</label>
+                <label class="toggle-label"><input type="checkbox" id="class-armor-platemail" /><span class="toggle-track"></span> Platemail</label>
               </div>
+            </div>
 
-              <div class="form-section">
-                <h3>Base Stats (Min = starting value, Max = cap with CP)</h3>
-                <div class="form-row stats-row">
-                  <div class="form-group">
-                    <label>STR</label>
-                    <div class="stat-range">
-                      <input type="number" id="race-str-min" value="40" min="1" max="200" placeholder="Min" />
-                      <span>-</span>
-                      <input type="number" id="race-str-max" value="100" min="1" max="200" placeholder="Max" />
-                    </div>
-                  </div>
-                  <div class="form-group">
-                    <label>AGI</label>
-                    <div class="stat-range">
-                      <input type="number" id="race-agi-min" value="40" min="1" max="200" placeholder="Min" />
-                      <span>-</span>
-                      <input type="number" id="race-agi-max" value="100" min="1" max="200" placeholder="Max" />
-                    </div>
-                  </div>
-                  <div class="form-group">
-                    <label>CON</label>
-                    <div class="stat-range">
-                      <input type="number" id="race-con-min" value="40" min="1" max="200" placeholder="Min" />
-                      <span>-</span>
-                      <input type="number" id="race-con-max" value="100" min="1" max="200" placeholder="Max" />
-                    </div>
-                  </div>
-                </div>
-                <div class="form-row stats-row">
-                  <div class="form-group">
-                    <label>INT</label>
-                    <div class="stat-range">
-                      <input type="number" id="race-int-min" value="40" min="1" max="200" placeholder="Min" />
-                      <span>-</span>
-                      <input type="number" id="race-int-max" value="100" min="1" max="200" placeholder="Max" />
-                    </div>
-                  </div>
-                  <div class="form-group">
-                    <label>WIS</label>
-                    <div class="stat-range">
-                      <input type="number" id="race-wis-min" value="40" min="1" max="200" placeholder="Min" />
-                      <span>-</span>
-                      <input type="number" id="race-wis-max" value="100" min="1" max="200" placeholder="Max" />
-                    </div>
-                  </div>
-                  <div class="form-group">
-                    <label>CHA</label>
-                    <div class="stat-range">
-                      <input type="number" id="race-cha-min" value="40" min="1" max="200" placeholder="Min" />
-                      <span>-</span>
-                      <input type="number" id="race-cha-max" value="100" min="1" max="200" placeholder="Max" />
-                    </div>
-                  </div>
-                </div>
-              </div>
-              
-              <div class="form-section">
-                <h4>Special Abilities</h4>
-                <div class="form-row checkbox-row">
-                  <label><input type="checkbox" id="race-stealth" /> Stealth</label>
-                  <label><input type="checkbox" id="race-lockpicking" /> Lockpicking</label>
-                  <label><input type="checkbox" id="race-see-hidden" /> See Hidden</label>
-                </div>
-              </div>
+            <div class="form-section">
+              <h3>Subscribed Tags</h3>
+              <p class="section-hint">Event tags that earn essence for this class (e.g., combat, magic, stealth).</p>
+              <div id="class-tags-container"></div>
+            </div>
 
+            <div class="form-section">
+              <h3>Traits</h3>
+              <p class="section-hint">Class abilities and bonuses. Numeric traits accept a value.</p>
+              <div id="class-traits-container" class="traits-container"></div>
+            </div>
+
+            <div class="form-actions">
+              <button type="submit" class="btn-primary">Save Class</button>
+              <button type="button" id="duplicate-class-btn" class="btn-secondary">Duplicate</button>
+              <div class="spacer"></div>
+              <button type="button" id="delete-class-btn" class="btn-danger">Delete</button>
+            </div>
+          </form>
+
+          <!-- ============================================================ -->
+          <!-- RACE FORM -->
+          <!-- ============================================================ -->
+          <form id="race-form" style="display: none;">
+            <div class="form-header">
+              <h2 id="race-form-title">Edit Race</h2>
+              <span id="race-id-display"></span>
+            </div>
+
+            <div class="form-row">
               <div class="form-group">
-                <label for="race-traits">Other Traits (comma-separated)</label>
-                <input type="text" id="race-traits" placeholder="darkvision, poison_resist" />
+                <label for="race-id">Race ID <span class="required">*</span></label>
+                <input type="text" id="race-id" required pattern="[a-z][a-z0-9_]*" placeholder="human" />
+                <span class="hint-inline">Immutable after creation. Lowercase letters, digits, or underscores.</span>
               </div>
-              
               <div class="form-group">
-                <label for="race-allowed-classes">Allowed Classes (comma-separated, empty = all)</label>
-                <input type="text" id="race-allowed-classes" placeholder="warrior, mage, thief" />
+                <label for="race-name">Display Name <span class="required">*</span></label>
+                <input type="text" id="race-name" required placeholder="Human" />
               </div>
-              
-              <div class="form-actions">
-                <button type="submit" class="btn-primary">Save Race</button>
-                <button type="button" id="delete-race-btn" class="btn-danger">Delete</button>
+              <div class="form-group" style="flex: 0 0 auto; align-self: center; padding-top: 0.5rem;">
+                <label class="toggle-label">
+                  <input type="checkbox" id="race-playable" checked />
+                  <span class="toggle-track"></span>
+                  Playable
+                </label>
               </div>
-            </form>
-          </main>
-        </div>
+            </div>
+
+            <div class="form-group">
+              <label for="race-description">Description</label>
+              <textarea id="race-description" rows="3" placeholder="Versatile and adaptable..."></textarea>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="race-dodge-bonus">Dodge Bonus %</label>
+                <input type="number" id="race-dodge-bonus" min="0" max="25" value="0" />
+              </div>
+              <div class="form-group">
+                <label for="race-base-vision">Base Vision</label>
+                <select id="race-base-vision">
+                  <option value="100">Normal (100)</option>
+                  <option value="150">Low-Light (150)</option>
+                  <option value="200">Darkvision (200)</option>
+                  <option value="300">Blindsight (300)</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-section">
+              <h3>Base Stats</h3>
+              <p class="section-hint">Min = starting value at character creation. Max = cap with CP investment.</p>
+              <div class="stat-grid">
+                <div class="stat-row"><span class="stat-label">STR</span><input type="number" id="race-str-min" value="40" min="1" max="200" class="stat-input" aria-label="STR minimum" /><span class="stat-sep">-</span><input type="number" id="race-str-max" value="100" min="1" max="200" class="stat-input" aria-label="STR maximum" /></div>
+                <div class="stat-row"><span class="stat-label">AGI</span><input type="number" id="race-agi-min" value="40" min="1" max="200" class="stat-input" aria-label="AGI minimum" /><span class="stat-sep">-</span><input type="number" id="race-agi-max" value="100" min="1" max="200" class="stat-input" aria-label="AGI maximum" /></div>
+                <div class="stat-row"><span class="stat-label">CON</span><input type="number" id="race-con-min" value="40" min="1" max="200" class="stat-input" aria-label="CON minimum" /><span class="stat-sep">-</span><input type="number" id="race-con-max" value="100" min="1" max="200" class="stat-input" aria-label="CON maximum" /></div>
+                <div class="stat-row"><span class="stat-label">INT</span><input type="number" id="race-int-min" value="40" min="1" max="200" class="stat-input" aria-label="INT minimum" /><span class="stat-sep">-</span><input type="number" id="race-int-max" value="100" min="1" max="200" class="stat-input" aria-label="INT maximum" /></div>
+                <div class="stat-row"><span class="stat-label">WIS</span><input type="number" id="race-wis-min" value="40" min="1" max="200" class="stat-input" aria-label="WIS minimum" /><span class="stat-sep">-</span><input type="number" id="race-wis-max" value="100" min="1" max="200" class="stat-input" aria-label="WIS maximum" /></div>
+                <div class="stat-row"><span class="stat-label">CHA</span><input type="number" id="race-cha-min" value="40" min="1" max="200" class="stat-input" aria-label="CHA minimum" /><span class="stat-sep">-</span><input type="number" id="race-cha-max" value="100" min="1" max="200" class="stat-input" aria-label="CHA maximum" /></div>
+              </div>
+            </div>
+
+            <div class="form-section">
+              <h3>Traits</h3>
+              <p class="section-hint">Racial abilities and bonuses.</p>
+              <div id="race-traits-container" class="traits-container"></div>
+            </div>
+
+            <div class="form-section">
+              <h3>Allowed Classes</h3>
+              <p class="section-hint">Which classes this race can play. Empty = all classes allowed.</p>
+              <div id="race-allowed-classes" class="class-button-grid"></div>
+            </div>
+
+            <div class="form-actions">
+              <button type="submit" class="btn-primary">Save Race</button>
+              <button type="button" id="duplicate-race-btn" class="btn-secondary">Duplicate</button>
+              <div class="spacer"></div>
+              <button type="button" id="delete-race-btn" class="btn-danger">Delete</button>
+            </div>
+          </form>
+        </main>
       </div>
-      
     </div>
+
     <script type="module" src="/src/progression-editor.ts"></script>
   </body>
 </html>

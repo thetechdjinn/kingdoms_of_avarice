@@ -79,7 +79,7 @@ A traditional door that can be opened, closed, and locked.
   - Key item requirement
   - Pick difficulty (0-500+, where 500+ is unpickable)
   - Bash difficulty (0-500+, where 500+ is unbashable)
-  - Auto-lock timer
+  - Auto-reset timer
 
 **Use for:** Building entrances, dungeon doors, locked gates, prison cells.
 
@@ -261,7 +261,7 @@ These parameters are used automatically when clicking doors or buttons in the Ro
 |-------|-------------|
 | Has Lock | Enable lock mechanics |
 | Key Item Tag | Item tag that can unlock this door |
-| Auto-Lock | Seconds until door automatically locks after unlock (0 = never) |
+| Auto-Reset | Seconds until door automatically resets to its default state (0 = never) |
 | Pick Difficulty | Lockpicking difficulty (0-500+, 500+ = unpickable) |
 | Bash Difficulty | Bashing difficulty (0-500+, 500+ = unbashable) |
 

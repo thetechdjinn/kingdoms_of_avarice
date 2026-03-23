@@ -247,6 +247,7 @@ async function exportRooms(
         triggerText: door.triggerText,
         passageMessageSelf: door.passageMessageSelf,
         passageMessageRoom: door.passageMessageRoom,
+        passageMessageArrival: door.passageMessageArrival,
         itemDisplayName: door.itemDisplayName,
         isTemporary: door.isTemporary,
         spawnTriggerText: door.spawnTriggerText,
@@ -268,6 +269,7 @@ async function exportRooms(
       description: room.description,
       area: room.area,
       terrain: room.terrain,
+      darkness_level: room.darkness_level ?? 0,
       features: room.features,
       exits,
     };
