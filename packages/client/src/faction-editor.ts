@@ -1,6 +1,6 @@
 /**
  * Faction Editor — two-panel layout with linked NPC reverse lookup.
- * Uses shared components: initAuth, ListPanel, showToast, showConfirm.
+ * Uses shared components: initAuth, ListPanel, showToast, showConfirm, escapeHtml.
  */
 
 import { initAuth, ListPanel, showToast, showConfirm, escapeHtml } from './components/index.js';

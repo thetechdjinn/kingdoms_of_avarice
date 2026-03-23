@@ -57,6 +57,7 @@ interface ClassDef {
   dodge_bonus?: number;
   traits?: string[];
   armor_type_restrictions?: string[];
+  subscribed_tags?: string[];
 }
 
 interface RaceDef {
@@ -610,7 +611,8 @@ interface RaceDef {
     if (!/^[a-z][a-z0-9_]*$/.test(id)) { showToast('Invalid ID format', 'warning'); return; }
     if (classes.some(c => c.class_id === id)) { showToast('Class ID already exists', 'warning'); return; }
 
-    const data = { ...gatherClassData(), class_id: id, display_name: result.name };
+    const sourceClass = classes.find(c => c.class_id === selectedClassId);
+    const data = { ...gatherClassData(), class_id: id, display_name: result.name, subscribed_tags: sourceClass?.subscribed_tags ?? [] };
     try {
       const res = await fetch('/api/progression/classes', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },

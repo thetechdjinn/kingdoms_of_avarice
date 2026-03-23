@@ -188,7 +188,7 @@ function formatCopper(copper: number): string {
       const res = await fetch('/api/rooms', { credentials: 'include' });
       const data = await res.json();
       rooms = data.rooms || [];
-    } catch (error) { console.error('Failed to fetch rooms:', error); }
+    } catch (error) { console.error('Failed to fetch rooms:', error); showToast('Failed to load rooms', 'error'); }
   }
 
   async function fetchClasses(): Promise<void> {
@@ -201,7 +201,7 @@ function formatCopper(copper: number): string {
           displayName: (c.display_name || c.displayName || c.class_id) as string,
         }));
       }
-    } catch (error) { console.error('Failed to fetch classes:', error); }
+    } catch (error) { console.error('Failed to fetch classes:', error); showToast('Failed to load classes', 'error'); }
   }
 
   async function fetchRaces(): Promise<void> {
@@ -214,7 +214,7 @@ function formatCopper(copper: number): string {
           displayName: (r.display_name || r.displayName || r.race_id) as string,
         }));
       }
-    } catch (error) { console.error('Failed to fetch races:', error); }
+    } catch (error) { console.error('Failed to fetch races:', error); showToast('Failed to load races', 'error'); }
   }
 
   async function fetchDropTables(): Promise<void> {
@@ -224,7 +224,7 @@ function formatCopper(copper: number): string {
       dropTables = (data.dropTables || []).map((t: Record<string, unknown>) => ({
         id: t.id as number, name: t.name as string, entries: t.entries,
       }));
-    } catch (error) { console.error('Failed to fetch drop tables:', error); }
+    } catch (error) { console.error('Failed to fetch drop tables:', error); showToast('Failed to load drop tables', 'error'); }
   }
 
   async function fetchNpcTemplates(): Promise<void> {
@@ -234,7 +234,7 @@ function formatCopper(copper: number): string {
       npcTemplates = (data.templates || []).map((n: Record<string, unknown>) => ({
         id: n.id as number, name: n.name as string,
       }));
-    } catch (error) { console.error('Failed to fetch NPCs:', error); }
+    } catch (error) { console.error('Failed to fetch NPCs:', error); showToast('Failed to load NPCs', 'error'); }
   }
 
   // ============================================================================

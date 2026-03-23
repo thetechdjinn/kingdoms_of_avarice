@@ -207,7 +207,9 @@ interface StatusEffectDef {
     try {
       const res = await fetch('/api/npcs', { credentials: 'include' });
       const data = await res.json();
-      npcTemplates = data.templates || [];
+      if (data.success) {
+        npcTemplates = data.templates || [];
+      }
     } catch (error) {
       console.error('Failed to fetch NPCs:', error);
     }
