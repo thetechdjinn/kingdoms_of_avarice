@@ -575,7 +575,7 @@ interface SpellRef {
   document.getElementById('export-btn')?.addEventListener('click', async () => {
     try {
       const res = await fetch('/api/status-effects/export/all', { credentials: 'include' });
-      if (!res.ok) { showToast('Export failed', 'error'); return; }
+      if (!res.ok) { showToast(`Export failed: ${res.status}`, 'error'); return; }
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');

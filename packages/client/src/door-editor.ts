@@ -873,13 +873,14 @@ const ALL_TABS = ['basic', 'rooms', 'state', 'locks', 'triggers', 'portal', 'per
 
   if (doorIdParam) {
     const doorId = parseInt(doorIdParam);
-    if (!isNaN(doorId) && doors.find(d => d.id === doorId)) {
+    if (!Number.isNaN(doorId) && doors.find(d => d.id === doorId)) {
       await selectDoor(doorId);
     }
   } else if (newDoorForRoomParam) {
     const roomId = parseInt(newDoorForRoomParam);
-    const room = rooms.find(r => r.id === roomId);
-    if (!room) {
+    if (Number.isNaN(roomId)) {
+      showToast('Invalid room ID in URL', 'error');
+    } else if (!rooms.find(r => r.id === roomId)) {
       showToast(`Room #${roomId} not found`, 'error');
     } else {
       const result = await showPromptFields('New Door', [
