@@ -150,7 +150,7 @@ const ALL_TABS = ['basic', 'rooms', 'state', 'locks', 'triggers', 'portal', 'per
   let exitRoomSelect: SearchableSelect;
 
   function getRoomOptions(): SelectOption[] {
-    return rooms
+    return [...rooms]
       .sort((a, b) => (a.area || '').localeCompare(b.area || '') || a.name.localeCompare(b.name))
       .map(r => ({
         value: String(r.id),

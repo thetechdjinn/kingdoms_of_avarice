@@ -283,21 +283,21 @@ interface SpellRef {
       tickDamageMax: isNaN(tickDamageMax) ? undefined : tickDamageMax,
       tickHealingMin: isNaN(tickHealingMin) ? undefined : tickHealingMin,
       tickHealingMax: isNaN(tickHealingMax) ? undefined : tickHealingMax,
-      tickMessage: (document.getElementById('effect-tick-message') as HTMLInputElement).value || undefined,
-      wearOffMessage: (document.getElementById('effect-wear-off') as HTMLInputElement).value || undefined,
-      silentTick: !(document.getElementById('effect-show-tick-message') as HTMLInputElement).checked,
+      tickMessage: (document.getElementById('effect-tick-message') as HTMLInputElement | null)?.value || undefined,
+      wearOffMessage: (document.getElementById('effect-wear-off') as HTMLInputElement | null)?.value || undefined,
+      silentTick: !(document.getElementById('effect-show-tick-message') as HTMLInputElement | null)?.checked,
     };
 
     // Modifiers
     for (const [elemId, field] of modifierFields) {
-      const el = document.getElementById(elemId) as HTMLInputElement;
-      (data as Record<string, unknown>)[field] = parseInt(el.value, 10) || 0;
+      const el = document.getElementById(elemId) as HTMLInputElement | null;
+      if (el) (data as Record<string, unknown>)[field] = parseInt(el.value, 10) || 0;
     }
 
     // Flags
     for (const [elemId, field] of flagFields) {
-      const el = document.getElementById(elemId) as HTMLInputElement;
-      (data as Record<string, unknown>)[field] = el.checked;
+      const el = document.getElementById(elemId) as HTMLInputElement | null;
+      if (el) (data as Record<string, unknown>)[field] = el.checked;
     }
 
     return data;

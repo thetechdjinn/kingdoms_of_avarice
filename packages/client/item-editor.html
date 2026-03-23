@@ -307,9 +307,9 @@
               <!-- Light -->
               <div id="light-section" class="type-section" style="display:none;">
                 <div class="form-row">
-                  <div class="form-group"><label for="light-radius">Luminance <span class="future-badge">Not Yet Implemented</span></label><input type="number" id="light-radius" min="0" value="0" /></div>
+                  <div class="form-group"><label for="light-radius">Light Radius <span class="future-badge">NYI</span></label><input type="number" id="light-radius" min="0" value="0" /></div>
                   <div class="form-group"><label for="light-fuel-max">Max Fuel</label><input type="number" id="light-fuel-max" min="0" value="0" /><span class="hint-inline">0 = permanent</span></div>
-                  <div class="form-group"><label for="light-fuel-rate">Fuel Rate/min <span class="future-badge">Not Yet Implemented</span></label><input type="number" id="light-fuel-rate" min="0" value="0" disabled /></div>
+                  <div class="form-group"><label for="light-fuel-rate">Fuel Rate/min <span class="future-badge">NYI</span></label><input type="number" id="light-fuel-rate" min="0" value="0" disabled /></div>
                 </div>
               </div>
 
@@ -320,7 +320,7 @@
                     <label for="tool-type">Tool Type</label>
                     <select id="tool-type"><option value="lockpick">Lockpick</option></select>
                   </div>
-                  <div class="form-group"><label for="tool-quality">Quality</label><input type="number" id="tool-quality" value="1" /><span class="hint-inline">Positive = bonus, negative = penalty</span></div>
+                  <div class="form-group"><label for="tool-quality">Quality</label><input type="number" id="tool-quality" min="1" max="5" value="1" /><span class="hint-inline">1 (poor) to 5 (masterwork)</span></div>
                   <div class="form-group"><label for="tool-durability">Durability</label><input type="number" id="tool-durability" min="1" value="50" /><span class="hint-inline">101+ = unbreakable</span></div>
                 </div>
               </div>

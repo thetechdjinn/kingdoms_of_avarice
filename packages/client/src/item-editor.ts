@@ -12,6 +12,7 @@ interface ItemTemplate {
   name: string;
   short_desc?: string;
   long_desc?: string;
+  room_desc?: string;
   keywords: string[];
   weight: number;
   size: number;
@@ -30,6 +31,12 @@ interface ItemTemplate {
   requirements?: Record<string, unknown>;
   stat_modifiers?: Record<string, unknown>;
   stealth_modifier?: number;
+  spellcasting_modifier?: number;
+  lockpicking_modifier?: number;
+  perception_modifier?: number;
+  critical_chance_modifier?: number;
+  magic_resistance_modifier?: number;
+  trap_modifier?: number;
   effect_slots: number;
   rarity?: string;
   max_in_world?: number;
@@ -302,13 +309,12 @@ function formatCopper(copper: number): string {
     (document.getElementById('mod-max-health') as HTMLInputElement).value = String(mods.max_health || 0);
     (document.getElementById('mod-max-mana') as HTMLInputElement).value = String(mods.max_mana || 0);
     (document.getElementById('mod-stealth') as HTMLInputElement).value = String(t.stealth_modifier || 0);
-    const tx = t as unknown as Record<string, unknown>;
-    (document.getElementById('mod-spellcasting') as HTMLInputElement).value = String(tx.spellcasting_modifier || 0);
-    (document.getElementById('mod-lockpicking') as HTMLInputElement).value = String(tx.lockpicking_modifier || 0);
-    (document.getElementById('mod-perception') as HTMLInputElement).value = String(tx.perception_modifier || 0);
-    (document.getElementById('mod-critical') as HTMLInputElement).value = String(tx.critical_chance_modifier || 0);
-    (document.getElementById('mod-magic-resist') as HTMLInputElement).value = String(tx.magic_resistance_modifier || 0);
-    (document.getElementById('mod-trap') as HTMLInputElement).value = String(tx.trap_modifier || 0);
+    (document.getElementById('mod-spellcasting') as HTMLInputElement).value = String(t.spellcasting_modifier || 0);
+    (document.getElementById('mod-lockpicking') as HTMLInputElement).value = String(t.lockpicking_modifier || 0);
+    (document.getElementById('mod-perception') as HTMLInputElement).value = String(t.perception_modifier || 0);
+    (document.getElementById('mod-critical') as HTMLInputElement).value = String(t.critical_chance_modifier || 0);
+    (document.getElementById('mod-magic-resist') as HTMLInputElement).value = String(t.magic_resistance_modifier || 0);
+    (document.getElementById('mod-trap') as HTMLInputElement).value = String(t.trap_modifier || 0);
 
     // Flags
     const flags = t.flags || {};
@@ -489,8 +495,8 @@ function formatCopper(copper: number): string {
     // Type-specific data
     if (itemType === 'weapon') {
       data.weapon_data = {
-        min_damage: parseInt((document.getElementById('weapon-min-damage') as HTMLInputElement).value) || 0,
-        max_damage: parseInt((document.getElementById('weapon-max-damage') as HTMLInputElement).value) || 0,
+        min_damage: parseInt((document.getElementById('weapon-min-damage') as HTMLInputElement).value) || 1,
+        max_damage: parseInt((document.getElementById('weapon-max-damage') as HTMLInputElement).value) || 1,
         damage_type: (document.getElementById('weapon-damage-type') as HTMLSelectElement).value,
         attack_speed: parseInt((document.getElementById('weapon-attack-speed') as HTMLInputElement).value) || 2000,
         crit_modifier: parseInt((document.getElementById('weapon-crit-modifier') as HTMLInputElement).value) || 0,
