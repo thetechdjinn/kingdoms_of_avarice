@@ -219,6 +219,11 @@ const ALL_TABS = ['basic', 'rooms', 'state', 'locks', 'triggers', 'portal', 'per
     try {
       const res = await fetch('/api/rooms', { credentials: 'include' });
       const data = await res.json();
+      if (data.success === false) {
+        console.error('Failed to fetch rooms:', data.message);
+        rooms = [];
+        return;
+      }
       rooms = data.rooms || [];
     } catch (error) {
       console.error('Failed to fetch rooms:', error);
@@ -534,9 +539,9 @@ const ALL_TABS = ['basic', 'rooms', 'state', 'locks', 'triggers', 'portal', 'per
       if (door.autoResetSeconds) html += `<div class="preview-stat"><span class="label">Auto-reset:</span> ${door.autoResetSeconds}s</div>`;
       if (door.hasLock) {
         const pickAvg = Math.round((door.pickDifficultyMin + door.pickDifficultyMax) / 2);
-        const pickLabel = pickAvg === 0 ? 'Unpickable' : pickAvg <= 30 ? 'Easy' : pickAvg <= 60 ? 'Moderate' : pickAvg <= 90 ? 'Hard' : 'Very Hard';
+        const pickLabel = (door.pickDifficultyMin >= 500 && door.pickDifficultyMax >= 500) ? 'Unpickable' : pickAvg <= 30 ? 'Easy' : pickAvg <= 60 ? 'Moderate' : pickAvg <= 90 ? 'Hard' : 'Very Hard';
         html += `<div class="preview-stat"><span class="label">Pick:</span> ${door.pickDifficultyMin}-${door.pickDifficultyMax} (${pickLabel})</div>`;
-        html += `<div class="preview-stat"><span class="label">Bash:</span> ${door.bashDifficulty}${door.bashDifficulty === 0 ? ' (Unbashable)' : ''}</div>`;
+        html += `<div class="preview-stat"><span class="label">Bash:</span> ${door.bashDifficulty}${door.bashDifficulty >= 500 ? ' (Unbashable)' : ''}</div>`;
         if (door.keyItemTag) html += `<div class="preview-stat"><span class="label">Key:</span> ${escapeHtml(door.keyItemTag)}</div>`;
       }
       html += `</div>`;
@@ -548,11 +553,17 @@ const ALL_TABS = ['basic', 'rooms', 'state', 'locks', 'triggers', 'portal', 'per
       html += `</div>`;
     }
 
-    if (door.requiredLevel || door.requiredQuestFlag || door.requiredItemTag || (door.requiredClasses && door.requiredClasses.length > 0)) {
+    if (door.requiredLevel || door.maxLevel || door.requiredQuestFlag || door.requiredItemTag || (door.requiredClasses && door.requiredClasses.length > 0)) {
       html += `<div class="preview-section"><div class="preview-section-title">Permissions</div>`;
-      if (door.requiredLevel) html += `<div class="preview-stat"><span class="label">Level:</span> ${door.requiredLevel}${door.maxLevel ? `-${door.maxLevel}` : '+'}</div>`;
+      if (door.requiredLevel && door.maxLevel) {
+        html += `<div class="preview-stat"><span class="label">Level:</span> ${door.requiredLevel}-${door.maxLevel}</div>`;
+      } else if (door.requiredLevel) {
+        html += `<div class="preview-stat"><span class="label">Level:</span> ${door.requiredLevel}+</div>`;
+      } else if (door.maxLevel) {
+        html += `<div class="preview-stat"><span class="label">Max Level:</span> ${door.maxLevel}</div>`;
+      }
       if (door.requiredClasses && door.requiredClasses.length > 0) {
-        const names = door.requiredClasses.map(id => classDefs.find(c => c.id === id)?.displayName || id);
+        const names = door.requiredClasses.map(id => escapeHtml(classDefs.find(c => c.id === id)?.displayName || id));
         html += `<div class="preview-stat"><span class="label">Classes:</span> ${names.join(', ')}</div>`;
       }
       if (door.requiredQuestFlag) html += `<div class="preview-stat"><span class="label">Quest:</span> ${escapeHtml(door.requiredQuestFlag)}</div>`;
@@ -690,6 +701,12 @@ const ALL_TABS = ['basic', 'rooms', 'state', 'locks', 'triggers', 'portal', 'per
 
   // New door
   document.getElementById('new-door-btn')?.addEventListener('click', async () => {
+    const defaultEntryRoomId = rooms[0]?.id;
+    if (defaultEntryRoomId === undefined) {
+      showToast('No rooms available. Please create rooms first.', 'error');
+      return;
+    }
+
     const result = await showPromptFields('New Door', [
       { key: 'name', label: 'Door Name', required: true, placeholder: 'Main Gate' },
     ]);
@@ -698,7 +715,7 @@ const ALL_TABS = ['basic', 'rooms', 'state', 'locks', 'triggers', 'portal', 'per
     const doorData: Partial<Door> = {
       name: result.name,
       doorType: 'physical',
-      entryRoomId: rooms[0]?.id || 1,
+      entryRoomId: defaultEntryRoomId,
       entryDirection: 'north',
       defaultState: 'closed',
       hasLock: false,
@@ -822,23 +839,20 @@ const ALL_TABS = ['basic', 'rooms', 'state', 'locks', 'triggers', 'portal', 'per
   searchInput.addEventListener('input', renderList);
 
   // Export
-  document.getElementById('export-btn')?.addEventListener('click', async () => {
-    try {
-      const res = await fetch('/api/doors', { credentials: 'include' });
-      const data = await res.json();
-      if (!data.success) { showToast('Export failed', 'error'); return; }
-
-      const blob = new Blob([JSON.stringify({ doors: data.doors }, null, 2)], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'doors_export.json';
-      a.click();
-      URL.revokeObjectURL(url);
-      showToast(`Exported ${data.doors.length} doors`, 'success');
-    } catch (error) {
-      showToast('Failed to export', 'error');
+  document.getElementById('export-btn')?.addEventListener('click', () => {
+    if (doors.length === 0) {
+      showToast('No doors to export', 'warning');
+      return;
     }
+
+    const blob = new Blob([JSON.stringify({ doors }, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'doors_export.json';
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast(`Exported ${doors.length} doors`, 'success');
   });
 
   // ============================================================================
@@ -851,4 +865,45 @@ const ALL_TABS = ['basic', 'rooms', 'state', 'locks', 'triggers', 'portal', 'per
   initRoomSelects();
   renderClassButtons();
   renderList();
+
+  // Handle URL parameters
+  const urlParams = new URLSearchParams(window.location.search);
+  const doorIdParam = urlParams.get('doorId');
+  const newDoorForRoomParam = urlParams.get('newDoorForRoom');
+
+  if (doorIdParam) {
+    const doorId = parseInt(doorIdParam);
+    if (!isNaN(doorId) && doors.find(d => d.id === doorId)) {
+      await selectDoor(doorId);
+    }
+  } else if (newDoorForRoomParam) {
+    const roomId = parseInt(newDoorForRoomParam);
+    const room = rooms.find(r => r.id === roomId);
+    if (!room) {
+      showToast(`Room #${roomId} not found`, 'error');
+    } else {
+      const result = await showPromptFields('New Door', [
+        { key: 'name', label: 'Door Name', required: true, placeholder: 'Main Gate' },
+      ]);
+      if (result) {
+        const doorData: Partial<Door> = {
+          name: result.name,
+          doorType: 'physical',
+          entryRoomId: roomId,
+          entryDirection: 'north',
+          defaultState: 'closed',
+          hasLock: false,
+          isHidden: false,
+          pickDifficultyMin: 0,
+          pickDifficultyMax: 0,
+          bashDifficulty: 0,
+        };
+        const saved = await saveDoor(doorData, true);
+        if (saved) {
+          await fetchDoors();
+          await selectDoor(saved.id);
+        }
+      }
+    }
+  }
 })();

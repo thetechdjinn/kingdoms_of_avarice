@@ -47,13 +47,10 @@ Game Event → Emits Tags → Matches Class Tags → Awards Essence
 
 Access the Progression Editor at `/progression-editor.html` (requires Developer role).
 
-The editor has five tabs:
+The editor has two tabs:
 
 - **Classes**: Define playable and NPC classes
 - **Races**: Define playable and NPC races
-- **Abilities**: Create skills, spells, techniques, and passives
-- **Talents**: Create purchasable upgrades
-- **Events**: Define essence-generating game events
 
 ### Using Admin Commands
 

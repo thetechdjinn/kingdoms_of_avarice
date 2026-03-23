@@ -1005,10 +1005,34 @@ function formatItemExamine(item: ItemInstance): CommandResponse {
     }
   }
 
-  // Stealth modifier (for any equippable item)
+  // Skill/ability modifiers (for any equippable item)
   if (template.stealth_modifier && template.stealth_modifier !== 0) {
     const sign = template.stealth_modifier >= 0 ? '+' : '';
     lines.push(`Stealth: ${colors.boldWhite(`${sign}${template.stealth_modifier}`)}`);
+  }
+  if (template.spellcasting_modifier && template.spellcasting_modifier !== 0) {
+    const sign = template.spellcasting_modifier >= 0 ? '+' : '';
+    lines.push(`Spellcasting: ${colors.boldWhite(`${sign}${template.spellcasting_modifier}`)}`);
+  }
+  if (template.lockpicking_modifier && template.lockpicking_modifier !== 0) {
+    const sign = template.lockpicking_modifier >= 0 ? '+' : '';
+    lines.push(`Lockpicking: ${colors.boldWhite(`${sign}${template.lockpicking_modifier}`)}`);
+  }
+  if (template.perception_modifier && template.perception_modifier !== 0) {
+    const sign = template.perception_modifier >= 0 ? '+' : '';
+    lines.push(`Perception: ${colors.boldWhite(`${sign}${template.perception_modifier}`)}`);
+  }
+  if (template.critical_chance_modifier && template.critical_chance_modifier !== 0) {
+    const sign = template.critical_chance_modifier >= 0 ? '+' : '';
+    lines.push(`Critical Chance: ${colors.boldWhite(`${sign}${template.critical_chance_modifier}`)}`);
+  }
+  if (template.magic_resistance_modifier && template.magic_resistance_modifier !== 0) {
+    const sign = template.magic_resistance_modifier >= 0 ? '+' : '';
+    lines.push(`Magic Resistance: ${colors.boldWhite(`${sign}${template.magic_resistance_modifier}`)}`);
+  }
+  if (template.trap_modifier && template.trap_modifier !== 0) {
+    const sign = template.trap_modifier >= 0 ? '+' : '';
+    lines.push(`Trap: ${colors.boldWhite(`${sign}${template.trap_modifier}`)}`);
   }
 
   // Rarity (if not common)

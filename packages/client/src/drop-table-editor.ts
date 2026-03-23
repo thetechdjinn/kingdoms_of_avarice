@@ -73,7 +73,7 @@ const ALL_DENOMINATIONS = ['copper', 'silver', 'gold', 'platinum', 'runic'];
   const idDisplay = document.getElementById('dt-id-display') as HTMLSpanElement;
   const dtCount = document.getElementById('dt-count') as HTMLSpanElement;
   const nameInput = document.getElementById('dt-name') as HTMLInputElement;
-  const descriptionInput = document.getElementById('dt-description') as HTMLInputElement;
+  const descriptionInput = document.getElementById('dt-description') as HTMLTextAreaElement;
   const entriesContainer = document.getElementById('entries-container') as HTMLDivElement;
   const noEntriesHint = document.getElementById('no-entries-hint') as HTMLDivElement;
   const npcRefContent = document.getElementById('npc-ref-content') as HTMLDivElement;
@@ -285,7 +285,7 @@ const ALL_DENOMINATIONS = ['copper', 'silver', 'gold', 'platinum', 'runic'];
   // ============================================================================
 
   function getItemName(itemId: number | null): string {
-    if (!itemId) return '(none)';
+    if (itemId == null) return '(none)';
     const item = itemTemplates.find(i => i.id === itemId);
     return item ? item.name : `Item #${itemId}`;
   }
@@ -360,7 +360,7 @@ const ALL_DENOMINATIONS = ['copper', 'silver', 'gold', 'platinum', 'runic'];
           if (title) title.textContent = getItemName(itemEntries[index].itemTemplateId);
         },
       });
-      if (entry.itemTemplateId) {
+      if (entry.itemTemplateId != null) {
         select.setValue(String(entry.itemTemplateId));
       }
       entrySelects.set(rowId, select);
@@ -512,12 +512,18 @@ const ALL_DENOMINATIONS = ['copper', 'silver', 'gold', 'platinum', 'runic'];
       const editingIds = new Set(allEntries.filter(e => e.id).map(e => e.id));
 
       // Delete removed entries
+      const entryErrors: string[] = [];
       for (const id of existingIds) {
         if (!editingIds.has(id)) {
-          await fetch(`/api/drop-tables/${selectedTableId}/entries/${id}`, {
+          const res = await fetch(`/api/drop-tables/${selectedTableId}/entries/${id}`, {
             method: 'DELETE',
             credentials: 'include',
           });
+          if (!res.ok) {
+            const errData = await res.json().catch(() => ({}));
+            console.error('Entry delete failed:', errData);
+            entryErrors.push(`Failed to delete entry #${id}`);
+          }
         }
       }
 
@@ -534,20 +540,34 @@ const ALL_DENOMINATIONS = ['copper', 'silver', 'gold', 'platinum', 'runic'];
         };
 
         if (entry.id && existingIds.has(entry.id)) {
-          await fetch(`/api/drop-tables/${selectedTableId}/entries/${entry.id}`, {
+          const res = await fetch(`/api/drop-tables/${selectedTableId}/entries/${entry.id}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             credentials: 'include',
             body: JSON.stringify(body),
           });
+          if (!res.ok) {
+            const errData = await res.json().catch(() => ({}));
+            console.error('Entry update failed:', errData);
+            entryErrors.push(`Failed to update entry #${entry.id}`);
+          }
         } else {
-          await fetch(`/api/drop-tables/${selectedTableId}/entries`, {
+          const res = await fetch(`/api/drop-tables/${selectedTableId}/entries`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             credentials: 'include',
             body: JSON.stringify(body),
           });
+          if (!res.ok) {
+            const errData = await res.json().catch(() => ({}));
+            console.error('Entry create failed:', errData);
+            entryErrors.push('Failed to create new entry');
+          }
         }
+      }
+
+      if (entryErrors.length > 0) {
+        showToast(`${entryErrors.length} entry operation(s) failed`, 'error');
       }
 
       await fetchDropTables();
@@ -667,7 +687,7 @@ const ALL_DENOMINATIONS = ['copper', 'silver', 'gold', 'platinum', 'runic'];
         if (Math.random() * 100 < entry.dropChance) {
           totalDrops++;
 
-          if (entry.itemTemplateId) {
+          if (entry.itemTemplateId != null) {
             const qty = entry.minQuantity + Math.floor(Math.random() * (entry.maxQuantity - entry.minQuantity + 1));
             const name = getItemName(entry.itemTemplateId);
             itemDropCounts[name] = (itemDropCounts[name] || 0) + qty;
@@ -687,8 +707,7 @@ const ALL_DENOMINATIONS = ['copper', 'silver', 'gold', 'platinum', 'runic'];
     const sorted = Object.entries(itemDropCounts).sort((a, b) => b[1] - a[1]);
     for (const [name, count] of sorted) {
       const avg = (count / iterations).toFixed(2);
-      const pct = ((count / iterations) * 100).toFixed(1);
-      itemLines += `<div class="sim-stat"><span class="label">${escapeHtml(name)}:</span> <span class="value">${count} (${avg}/kill, ${pct}%)</span></div>`;
+      itemLines += `<div class="sim-stat"><span class="label">${escapeHtml(name)}:</span> <span class="value">${count} total (${avg} avg per kill)</span></div>`;
     }
 
     simulationContent.innerHTML = `

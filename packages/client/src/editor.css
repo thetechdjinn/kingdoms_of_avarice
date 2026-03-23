@@ -679,46 +679,6 @@ body {
   border-top: 1px solid #333;
 }
 
-/* Buttons */
-.btn-primary,
-.btn-secondary,
-.btn-danger {
-  padding: 0.75rem 1.5rem;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 0.9rem;
-  font-weight: 500;
-  transition: all 0.2s;
-}
-
-.btn-primary {
-  background-color: #00ff00;
-  color: #1a1a2e;
-}
-
-.btn-primary:hover {
-  background-color: #00cc00;
-}
-
-.btn-secondary {
-  background-color: #333;
-  color: #eee;
-}
-
-.btn-secondary:hover {
-  background-color: #444;
-}
-
-.btn-danger {
-  background-color: #661111;
-  color: #eee;
-}
-
-.btn-danger:hover {
-  background-color: #881111;
-}
-
 /* Map Panel */
 #map-panel {
   width: 350px;
@@ -1823,4 +1783,20 @@ ul[id$="-list"] li:focus-visible {
   padding: 1px 4px;
   border-radius: 3px;
   z-index: 1;
+}
+
+/* Responsive breakpoints */
+@media (max-width: 900px) {
+  .modifier-grid {
+    grid-template-columns: 1fr;
+  }
+  .flag-grid {
+    grid-template-columns: 1fr;
+  }
+  .class-btn-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .form-tabs {
+    flex-wrap: wrap;
+  }
 }

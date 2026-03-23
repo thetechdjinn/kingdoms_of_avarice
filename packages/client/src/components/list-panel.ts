@@ -35,7 +35,10 @@ export interface ListPanelOptions<T> {
   onSelect: (item: T) => void;
   /** Extract a unique ID from an item. */
   getId: (item: T) => number | string;
-  /** Return inner HTML for a list item. */
+  /**
+   * Render function that returns innerHTML for a list item.
+   * IMPORTANT: All user-derived strings must be wrapped in escapeHtml() to prevent XSS.
+   */
   renderItem: (item: T, isSelected: boolean) => string;
   /** Return CSS class(es) for a list item (beyond 'selected'). Optional. */
   getItemClass?: (item: T) => string;
@@ -58,6 +61,7 @@ export class ListPanel<T> {
   private debounceTimer: ReturnType<typeof setTimeout> | null = null;
   private boundSearch: (() => void) | null = null;
   private boundFilter: (() => void) | null = null;
+  private _lastFilteredCount = 0;
 
   constructor(options: ListPanelOptions<T>) {
     this.options = options;
@@ -123,6 +127,7 @@ export class ListPanel<T> {
   /** Re-render the list. */
   render(): void {
     const filtered = this.getFilteredItems();
+    this._lastFilteredCount = filtered.length;
     const { listElement, getId, renderItem, getItemClass, onSelect, onRender } = this.options;
 
     listElement.innerHTML = '';
@@ -153,9 +158,9 @@ export class ListPanel<T> {
     this.debounceTimer = setTimeout(() => this.render(), this.options.debounceMs ?? 100);
   }
 
-  /** Get the count of currently displayed items. */
+  /** Get the count of currently displayed items (cached from last render). */
   get filteredCount(): number {
-    return this.getFilteredItems().length;
+    return this._lastFilteredCount;
   }
 
   /** Get the total item count (unfiltered). */

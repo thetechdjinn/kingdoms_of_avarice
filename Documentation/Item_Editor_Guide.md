@@ -30,7 +30,6 @@ Access the Item Editor at `/item-editor.html` (requires Developer or Admin role)
 2. Enter a name for the item
 3. Fill in the required fields:
    - **Name**: Internal identifier
-   - **Short Description**: What players see (e.g., "a rusty sword")
    - **Type**: Determines available options and behavior
 
 ### Editor Tabs
@@ -41,15 +40,13 @@ Access the Item Editor at `/item-editor.html` (requires Developer or Admin role)
 | ----------------- | ---------------------------------------------------- |
 | Name              | Internal template name                               |
 | Type              | Item category (weapon, armor, etc.)                  |
-| Short Description | Displayed name (lowercase, with article)             |
 | Long Description  | Shown when examining                                 |
-| Room Description  | Shown in room (e.g., "A sword lies here.")           |
 | Keywords          | Comma-separated words players can use to target item |
 | Weight            | Affects carrying capacity                            |
 | Size              | Relative size (1-5)                                  |
 | Base Value        | Gold value                                           |
 | Equipment Slot    | Where item is worn/wielded                           |
-| Max Stack         | How many can stack (1 = no stacking)                 |
+| Max Stack         | How many can stack in one inventory slot (1 = no stacking) |
 | Effect Slots      | Number of enchantments allowed                       |
 
 #### Type Data Tab
@@ -58,11 +55,10 @@ Shows fields specific to the selected item type:
 
 **Weapons:**
 
-- Damage Dice (e.g., "1d8", "2d6")
+- Min Damage / Max Damage (integer damage range)
 - Damage Type (slashing, piercing, etc.)
 - Attack Speed
 - Critical Modifier
-- Range (melee/ranged/thrown)
 
 **Armor:**
 
@@ -192,7 +188,8 @@ All item commands start with `@` and require appropriate roles.
       "flags": { "takeable": true },
       "max_stack": 1,
       "weapon_data": {
-        "damage_dice": "1d8",
+        "min_damage": 3,
+        "max_damage": 8,
         "damage_type": "slashing",
         "attack_speed": 10,
         "crit_modifier": 2
@@ -218,11 +215,11 @@ Equipment that deals damage. Requires `equipment_slot` and `weapon_data`.
   "item_type": "weapon",
   "equipment_slot": "main_hand",
   "weapon_data": {
-    "damage_dice": "1d8",
+    "min_damage": 3,
+    "max_damage": 8,
     "damage_type": "slashing",
     "attack_speed": 10,
-    "crit_modifier": 2,
-    "range": "melee"
+    "crit_modifier": 2
   }
 }
 ```
@@ -356,11 +353,11 @@ curl -X POST http://localhost:3001/api/items/templates \
   -H "Content-Type: application/json" \
   -d '{
     "name": "Test Sword",
-    "short_desc": "a test sword",
     "item_type": "weapon",
     "keywords": ["sword", "test"],
     "weapon_data": {
-      "damage_dice": "1d6",
+      "min_damage": 2,
+      "max_damage": 6,
       "damage_type": "slashing"
     }
   }'
@@ -385,8 +382,6 @@ curl -X POST http://localhost:3001/api/items/spawn \
 ### Naming Conventions
 
 - **Name**: Title case, no article ("Iron Sword")
-- **Short Description**: Lowercase with article ("an iron sword")
-- **Room Description**: Full sentence ("An iron sword lies here.")
 - **Keywords**: Lowercase, include variations ("sword", "iron sword", "blade")
 
 ### Balance Guidelines

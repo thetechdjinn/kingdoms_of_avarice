@@ -201,6 +201,9 @@ These improvements apply across every editor and should be built as shared compo
 - Filter by name, ID, or type depending on the editor
 - Simple client-side filtering on keyup (data already loaded)
 
+**XSS Prevention:**
+- All user-derived content rendered via innerHTML must use the shared escapeHtml() utility from components/escape-html.ts
+
 **Consistent Design Language:**
 - Shared CSS variables, spacing, typography across all editors
 - Consistent button styles, form layouts, tab patterns

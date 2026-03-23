@@ -133,9 +133,9 @@ interface SpellRef {
     }
   }
 
-  async function saveEffect(effectData: Partial<StatusEffectDefinition>): Promise<StatusEffectDefinition | null> {
+  async function saveEffect(effectData: Partial<StatusEffectDefinition>, forceNew = false): Promise<StatusEffectDefinition | null> {
     try {
-      const isNew = !selectedEffectId;
+      const isNew = forceNew || !selectedEffectId;
       const url = isNew ? '/api/status-effects' : `/api/status-effects/${selectedEffectId}`;
       const method = isNew ? 'POST' : 'PUT';
 
@@ -273,18 +273,29 @@ interface SpellRef {
     const tickHealingMin = parseInt((document.getElementById('effect-tick-healing-min') as HTMLInputElement).value, 10);
     const tickHealingMax = parseInt((document.getElementById('effect-tick-healing-max') as HTMLInputElement).value, 10);
 
+    // If only one of min/max is set, use it for both (fixed damage value)
+    let resolvedTickDmgMin = isNaN(tickDamageMin) ? undefined : tickDamageMin;
+    let resolvedTickDmgMax = isNaN(tickDamageMax) ? undefined : tickDamageMax;
+    if (resolvedTickDmgMin !== undefined && resolvedTickDmgMax === undefined) resolvedTickDmgMax = resolvedTickDmgMin;
+    if (resolvedTickDmgMax !== undefined && resolvedTickDmgMin === undefined) resolvedTickDmgMin = resolvedTickDmgMax;
+
+    let resolvedTickHealMin = isNaN(tickHealingMin) ? undefined : tickHealingMin;
+    let resolvedTickHealMax = isNaN(tickHealingMax) ? undefined : tickHealingMax;
+    if (resolvedTickHealMin !== undefined && resolvedTickHealMax === undefined) resolvedTickHealMax = resolvedTickHealMin;
+    if (resolvedTickHealMax !== undefined && resolvedTickHealMin === undefined) resolvedTickHealMin = resolvedTickHealMax;
+
     const data: Partial<StatusEffectDefinition> = {
       name: nameInput.value.trim(),
       description: descriptionInput.value.trim() || '',
       category: categorySelect.value as StatusEffectCategory,
       stackingBehavior: stackingSelect.value as StackingBehavior,
       maxStacks: isNaN(maxStacks) || maxStacks < 1 ? 1 : maxStacks,
-      tickDamageMin: isNaN(tickDamageMin) ? undefined : tickDamageMin,
-      tickDamageMax: isNaN(tickDamageMax) ? undefined : tickDamageMax,
-      tickHealingMin: isNaN(tickHealingMin) ? undefined : tickHealingMin,
-      tickHealingMax: isNaN(tickHealingMax) ? undefined : tickHealingMax,
-      tickMessage: (document.getElementById('effect-tick-message') as HTMLInputElement | null)?.value || undefined,
-      wearOffMessage: (document.getElementById('effect-wear-off') as HTMLInputElement | null)?.value || undefined,
+      tickDamageMin: resolvedTickDmgMin,
+      tickDamageMax: resolvedTickDmgMax,
+      tickHealingMin: resolvedTickHealMin,
+      tickHealingMax: resolvedTickHealMax,
+      tickMessage: (document.getElementById('effect-tick-message') as HTMLInputElement | null)?.value ?? undefined,
+      wearOffMessage: (document.getElementById('effect-wear-off') as HTMLInputElement | null)?.value ?? undefined,
       silentTick: !(document.getElementById('effect-show-tick-message') as HTMLInputElement | null)?.checked,
     };
 
@@ -500,7 +511,7 @@ interface SpellRef {
     }
 
     const data = { ...gatherFormData(), id: newId, name: result.name };
-    const saved = await saveEffect(data);
+    const saved = await saveEffect(data, true);
     if (saved) selectEffect(saved.id);
   });
 

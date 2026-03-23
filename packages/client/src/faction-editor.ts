@@ -218,7 +218,7 @@ interface NpcTemplate {
       <li>
         <span class="npc-link-name">${escapeHtml(npc.name)}</span>
         <span class="npc-link-level">Lv ${npc.level}</span>
-        <a href="/npc-editor.html" class="npc-link-edit" title="Open NPC Editor">Edit</a>
+        <a href="/npc-editor.html?npcId=${npc.id}" class="npc-link-edit" title="Open NPC Editor">Edit</a>
       </li>
     `).join('');
 
@@ -283,7 +283,7 @@ interface NpcTemplate {
   });
 
   // Duplicate
-  document.getElementById('duplicate-faction-btn')?.addEventListener('click', () => {
+  document.getElementById('duplicate-faction-btn')?.addEventListener('click', async () => {
     if (!selectedFactionId) return;
 
     const baseName = nameInput.value;
@@ -297,15 +297,19 @@ interface NpcTemplate {
 
     const currentDescription = descriptionInput.value;
     const currentType = typeSelect.value;
+
+    // Clear selection so saveFaction creates a new entry
     selectedFactionId = null;
-    formTitle.textContent = 'New Faction';
-    idDisplay.textContent = '';
-    nameInput.value = newName;
-    descriptionInput.value = currentDescription;
-    typeSelect.value = currentType;
-    listPanel.setSelected(null);
-    nameInput.focus();
-    linkedNpcsEl.innerHTML = '<p class="no-linked-npcs">Save the faction first to see linked NPCs</p>';
+
+    const saved = await saveFaction({
+      name: newName,
+      factionType: currentType,
+      description: currentDescription.trim() || null,
+    });
+
+    if (saved) {
+      selectFaction(saved.id);
+    }
   });
 
   // Export

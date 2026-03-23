@@ -3,7 +3,7 @@
  * armor restrictions, dynamic allowed class buttons.
  */
 
-import { initAuth, showToast, showConfirm, showPromptFields, escapeHtml } from './components/index.js';
+import { initAuth, showToast, showConfirm, showPromptFields, escapeHtml, ChipTagInput } from './components/index.js';
 
 // ============================================================================
 // Trait Definitions (hardcoded until trait_definitions table exists)
@@ -90,6 +90,12 @@ interface RaceDef {
   let classTraitState: Map<string, { enabled: boolean; value: number }> = new Map();
   let raceTraitState: Map<string, { enabled: boolean; value: number }> = new Map();
 
+  // Dirty-state tracking (CR-53)
+  let formDirty = false;
+
+  // Subscribed tags chip input (CR-26)
+  let classTagsInput: ChipTagInput | null = null;
+
   // ============================================================================
   // DOM
   // ============================================================================
@@ -102,6 +108,23 @@ interface RaceDef {
   const listTitle = document.getElementById('list-title') as HTMLHeadingElement;
   const searchInput = document.getElementById('search-input') as HTMLInputElement;
 
+  // Initialize ChipTagInput for subscribed tags (CR-26)
+  const classTagsContainer = document.getElementById('class-tags-container');
+  if (classTagsContainer) {
+    classTagsInput = new ChipTagInput({
+      container: classTagsContainer,
+      placeholder: 'Add tags... (e.g., combat, magic, stealth)',
+      freeform: true,
+      onChange: () => { formDirty = true; },
+    });
+  }
+
+  // Dirty-state tracking: listen for input changes on both forms (CR-53)
+  classForm.addEventListener('input', () => { formDirty = true; });
+  classForm.addEventListener('change', () => { formDirty = true; });
+  raceForm.addEventListener('input', () => { formDirty = true; });
+  raceForm.addEventListener('change', () => { formDirty = true; });
+
   // ============================================================================
   // API
   // ============================================================================
@@ -111,7 +134,7 @@ interface RaceDef {
       const res = await fetch('/api/progression/classes', { credentials: 'include' });
       const data = await res.json();
       if (data.success) classes = data.classes || [];
-    } catch (error) { console.error('Failed to fetch classes:', error); }
+    } catch (error) { console.error('Failed to fetch classes:', error); showToast('Failed to load classes', 'error'); }
   }
 
   async function fetchRaces(): Promise<void> {
@@ -119,7 +142,7 @@ interface RaceDef {
       const res = await fetch('/api/progression/races', { credentials: 'include' });
       const data = await res.json();
       if (data.success) races = data.races || [];
-    } catch (error) { console.error('Failed to fetch races:', error); }
+    } catch (error) { console.error('Failed to fetch races:', error); showToast('Failed to load races', 'error'); }
   }
 
   // ============================================================================
@@ -194,7 +217,8 @@ interface RaceDef {
       label.appendChild(text);
       item.appendChild(label);
 
-      if (def.numeric) {
+      if (def.numeric && entityType === 'race') {
+        // Only races store numeric trait values; classes store traits as string[] (CR-27)
         if (def.presets && def.presets.length > 0) {
           // Dropdown select for preset-based traits
           const selectEl = document.createElement('select');
@@ -209,7 +233,7 @@ interface RaceDef {
           selectEl.value = String(traitState.value ?? def.presets[0].value);
           selectEl.addEventListener('change', () => {
             const s = state.get(def.id);
-            if (s) s.value = parseInt(selectEl.value) || 0;
+            if (s) s.value = parseInt(selectEl.value, 10) || 0;
           });
           cb.addEventListener('change', () => {
             const s = state.get(def.id) || { enabled: false, value: 0 };
@@ -228,7 +252,7 @@ interface RaceDef {
           valInput.disabled = !traitState.enabled;
           valInput.addEventListener('change', () => {
             const s = state.get(def.id);
-            if (s) s.value = parseInt(valInput.value) || 0;
+            if (s) s.value = parseInt(valInput.value, 10) || 0;
           });
           cb.addEventListener('change', () => {
             const s = state.get(def.id) || { enabled: false, value: 0 };
@@ -339,10 +363,14 @@ interface RaceDef {
     (document.getElementById('class-armor-scalemail') as HTMLInputElement).checked = armorTypes.includes('scalemail');
     (document.getElementById('class-armor-platemail') as HTMLInputElement).checked = armorTypes.includes('platemail');
 
+    // Subscribed tags (CR-26)
+    classTagsInput?.setValues(cls.subscribed_tags || []);
+
     // Traits
     loadClassTraits(cls.traits || []);
     renderTraits(document.getElementById('class-traits-container')!, 'class', classTraitState);
 
+    formDirty = false;
     renderList();
   }
 
@@ -397,6 +425,7 @@ interface RaceDef {
     );
     renderAllowedClasses();
 
+    formDirty = false;
     renderList();
   }
 
@@ -416,7 +445,7 @@ interface RaceDef {
   function renderAllowedClasses(): void {
     const container = document.getElementById('race-allowed-classes')!;
     container.innerHTML = '';
-    for (const cls of classes.sort((a, b) => a.display_name.localeCompare(b.display_name))) {
+    for (const cls of [...classes].sort((a, b) => a.display_name.localeCompare(b.display_name))) {
       const btn = document.createElement('button');
       btn.type = 'button';
       btn.className = `class-btn${raceAllowedClasses.has(cls.class_id) ? ' selected' : ''}`;
@@ -453,13 +482,14 @@ interface RaceDef {
       essence_multiplier: Number.isFinite(parseFloat((document.getElementById('class-multiplier') as HTMLInputElement).value)) ? parseFloat((document.getElementById('class-multiplier') as HTMLInputElement).value) : 1.0,
       resource_type: (document.getElementById('class-resource') as HTMLSelectElement).value || null,
       playable: (document.getElementById('class-playable') as HTMLInputElement).checked,
-      combat_level: Number.isFinite(parseInt((document.getElementById('class-combat-level') as HTMLInputElement).value)) ? parseInt((document.getElementById('class-combat-level') as HTMLInputElement).value) : 3,
-      magic_level: parseInt((document.getElementById('class-magic-level') as HTMLInputElement).value) || 0,
+      combat_level: Number.isFinite(parseInt((document.getElementById('class-combat-level') as HTMLInputElement).value, 10)) ? parseInt((document.getElementById('class-combat-level') as HTMLInputElement).value, 10) : 3,
+      magic_level: parseInt((document.getElementById('class-magic-level') as HTMLInputElement).value, 10) || 0,
       magic_school: (document.getElementById('class-magic-school') as HTMLSelectElement).value || null,
-      crit_bonus: parseInt((document.getElementById('class-crit-bonus') as HTMLInputElement).value) || 0,
-      dodge_bonus: parseInt((document.getElementById('class-dodge-bonus') as HTMLInputElement).value) || 0,
+      crit_bonus: parseInt((document.getElementById('class-crit-bonus') as HTMLInputElement).value, 10) || 0,
+      dodge_bonus: parseInt((document.getElementById('class-dodge-bonus') as HTMLInputElement).value, 10) || 0,
       traits: traitsToArray(classTraitState, 'class'),
       armor_type_restrictions: armorTypes.length > 0 ? armorTypes : null,
+      subscribed_tags: classTagsInput?.getValues() || [],
     };
   }
 
@@ -471,8 +501,8 @@ interface RaceDef {
     const base_stats: Record<string, { min: number; max: number }> = {};
     for (const [key, abbr] of Object.entries(statMap)) {
       base_stats[key] = {
-        min: parseInt((document.getElementById(`race-${abbr}-min`) as HTMLInputElement).value) || 40,
-        max: parseInt((document.getElementById(`race-${abbr}-max`) as HTMLInputElement).value) || 100,
+        min: parseInt((document.getElementById(`race-${abbr}-min`) as HTMLInputElement).value, 10) || 40,
+        max: parseInt((document.getElementById(`race-${abbr}-max`) as HTMLInputElement).value, 10) || 100,
       };
     }
 
@@ -481,11 +511,11 @@ interface RaceDef {
       display_name: (document.getElementById('race-name') as HTMLInputElement).value.trim(),
       description: (document.getElementById('race-description') as HTMLTextAreaElement).value.trim() || null,
       playable: (document.getElementById('race-playable') as HTMLInputElement).checked,
-      dodge_bonus: parseInt((document.getElementById('race-dodge-bonus') as HTMLInputElement).value) || 0,
+      dodge_bonus: parseInt((document.getElementById('race-dodge-bonus') as HTMLInputElement).value, 10) || 0,
       base_stats,
       traits: [
         ...traitsToArray(raceTraitState, 'race') as Array<{ id: string; value: number | boolean }>,
-        { id: 'base_vision', value: Number.isFinite(parseInt((document.getElementById('race-base-vision') as HTMLSelectElement).value)) ? parseInt((document.getElementById('race-base-vision') as HTMLSelectElement).value) : 100 },
+        { id: 'base_vision', value: Number.isFinite(parseInt((document.getElementById('race-base-vision') as HTMLSelectElement).value, 10)) ? parseInt((document.getElementById('race-base-vision') as HTMLSelectElement).value, 10) : 100 },
       ],
       allowed_classes: [...new Set(Array.from(raceAllowedClasses).filter(c => c && c.trim()))],
     };
@@ -652,19 +682,29 @@ interface RaceDef {
   // Tab Switching
   // ============================================================================
 
-  document.getElementById('tab-classes-btn')?.addEventListener('click', () => {
+  document.getElementById('tab-classes-btn')?.addEventListener('click', async () => {
+    if (formDirty) {
+      const confirmed = await showConfirm('You have unsaved changes. Switch tab anyway?');
+      if (!confirmed) return;
+    }
     currentTab = 'classes';
     document.getElementById('tab-classes-btn')!.classList.add('active');
     document.getElementById('tab-races-btn')!.classList.remove('active');
     searchInput.value = '';
+    formDirty = false;
     clearSelection();
   });
 
-  document.getElementById('tab-races-btn')?.addEventListener('click', () => {
+  document.getElementById('tab-races-btn')?.addEventListener('click', async () => {
+    if (formDirty) {
+      const confirmed = await showConfirm('You have unsaved changes. Switch tab anyway?');
+      if (!confirmed) return;
+    }
     currentTab = 'races';
     document.getElementById('tab-races-btn')!.classList.add('active');
     document.getElementById('tab-classes-btn')!.classList.remove('active');
     searchInput.value = '';
+    formDirty = false;
     clearSelection();
   });
 
@@ -674,17 +714,15 @@ interface RaceDef {
   // Export
   document.getElementById('export-btn')?.addEventListener('click', async () => {
     try {
-      const data = currentTab === 'classes'
-        ? { classes }
-        : { races };
+      const data = { classes, races };
       const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `${currentTab}_export.json`;
+      a.download = 'progression-data.json';
       a.click();
       URL.revokeObjectURL(url);
-      showToast(`Exported ${currentTab}`, 'success');
+      showToast('Exported progression data', 'success');
     } catch { showToast('Export failed', 'error'); }
   });
 

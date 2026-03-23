@@ -176,11 +176,17 @@ interface StatusEffectDef {
   async function fetchSpells(): Promise<void> {
     try {
       const res = await fetch('/api/spells', { credentials: 'include' });
+      if (!res.ok) {
+        showToast('Failed to load spells', 'error');
+        return;
+      }
       const data = await res.json();
       if (data.success) {
         spells = data.spells || [];
         listPanel.setItems(spells);
         listPanel.setSelected(selectedSpellId);
+      } else {
+        showToast('Failed to load spells', 'error');
       }
     } catch (error) {
       console.error('Failed to fetch spells:', error);
@@ -273,6 +279,11 @@ interface StatusEffectDef {
     healScalingFactorInput.value = String((spell.healingScalingFactor ?? 0) * 100);
 
     // Status effect
+    const categoryFilter = document.getElementById('effect-category-filter') as HTMLSelectElement;
+    if (categoryFilter) {
+      categoryFilter.value = '';
+      statusEffectSelect.setOptions(getEffectOptions());
+    }
     statusEffectSelect.setValue(spell.statusEffect || '');
     effectDurationInput.value = String(spell.effectDuration ?? 0);
     saveStatSelect.value = spell.saveStat || 'none';
@@ -382,20 +393,20 @@ interface StatusEffectDef {
       castDifficulty: parseInt(castDifficultyInput.value) || 0,
       fizzleMessage: fizzleMessageInput.value.trim() || null,
       telegraphMessage: telegraphInput.value.trim() || null,
-      minDamage: parseInt(minDamageInput.value) || null,
-      maxDamage: parseInt(maxDamageInput.value) || null,
+      minDamage: Number.isFinite(parseInt(minDamageInput.value)) ? parseInt(minDamageInput.value) : null,
+      maxDamage: Number.isFinite(parseInt(maxDamageInput.value)) ? parseInt(maxDamageInput.value) : null,
       hitsPerCast: parseInt(hitsPerCastInput.value) || 1,
       damageScalingStat: (dmgScalingStatSelect.value === 'none' ? null : dmgScalingStatSelect.value) as SpellScalingStat | null,
-      damageScalingFactor: dmgFactor ? dmgFactor / 100 : null,
-      minHealing: parseInt(minHealingInput.value) || null,
-      maxHealing: parseInt(maxHealingInput.value) || null,
+      damageScalingFactor: dmgFactor ? parseFloat((dmgFactor / 100).toFixed(4)) : null,
+      minHealing: Number.isFinite(parseInt(minHealingInput.value)) ? parseInt(minHealingInput.value) : null,
+      maxHealing: Number.isFinite(parseInt(maxHealingInput.value)) ? parseInt(maxHealingInput.value) : null,
       healingScalingStat: (healScalingStatSelect.value === 'none' ? null : healScalingStatSelect.value) as SpellScalingStat | null,
-      healingScalingFactor: healFactor ? healFactor / 100 : null,
+      healingScalingFactor: healFactor ? parseFloat((healFactor / 100).toFixed(4)) : null,
       statusEffect: statusEffect || null,
       effectDuration: parseInt(effectDurationInput.value) || null,
       saveStat: (saveStatSelect.value === 'none' ? null : saveStatSelect.value) as SpellScalingStat | null,
       saveDifficulty: parseInt(saveDifficultyInput.value) || 0,
-      scalingPerLevel: scalingPerLevel ? scalingPerLevel / 100 : null,
+      scalingPerLevel: scalingPerLevel ? parseFloat((scalingPerLevel / 100).toFixed(4)) : null,
       maxScalingLevel: parseInt(maxScalingLevelInput.value) || null,
       hitMessageSelf: hitMsgSelfInput.value.trim() || null,
       hitMessageTarget: hitMsgTargetInput.value.trim() || null,
@@ -517,9 +528,9 @@ interface StatusEffectDef {
   // CRUD
   // ============================================================================
 
-  async function saveSpell(spellData: Partial<Spell>): Promise<Spell | null> {
+  async function saveSpell(spellData: Partial<Spell>, forceNew = false): Promise<Spell | null> {
     try {
-      const isNew = !selectedSpellId;
+      const isNew = forceNew || !selectedSpellId;
       const url = isNew ? '/api/spells' : `/api/spells/${selectedSpellId}`;
       const method = isNew ? 'POST' : 'PUT';
 
@@ -668,7 +679,7 @@ interface StatusEffectDef {
     }
 
     const data = { ...gatherFormData(), name: result.name, mnemonic };
-    const saved = await saveSpell(data);
+    const saved = await saveSpell(data, true);
     if (saved) selectSpell(saved.id);
   });
 

@@ -87,6 +87,7 @@ export interface RoomData {
   id: number;
   name: string;
   description: string;
+  darkness_level?: number;
   exits: string[];
   players: string[];
   npcs: string[];

@@ -40,7 +40,7 @@ Physical doors can have locks with these properties:
 | **Pick Difficulty Min** | Minimum skill needed for any chance | 0-500+ |
 | **Pick Difficulty Max** | Skill needed for guaranteed success | 0-500+ |
 | **Bash Difficulty** | Strength needed to bash open | 0-500+ |
-| **Auto-Lock** | Seconds until door re-locks | 0 = never |
+| **Auto-Reset** | Seconds until door resets to default state | 0 = never |
 
 ### Door States
 
@@ -49,7 +49,7 @@ Locked doors cycle through these states:
 ```
 LOCKED ──[unlock/pick/bash]──> CLOSED ──[open]──> OPEN
    ^                              │
-   └────────[auto-lock]───────────┘
+   └────────[auto-reset]──────────┘
 ```
 
 ### Difficulty Ranges
@@ -318,7 +318,7 @@ bash <direction>
 4. Set the **Key Item Tag** (matching key's key_tag)
 5. Set **Pick Difficulty Min** and **Max**
 6. Set **Bash Difficulty**
-7. Optionally set **Auto-Lock** timer
+7. Optionally set **Auto-Reset** timer
 8. Set **Default State** to **Locked**
 9. Save
 

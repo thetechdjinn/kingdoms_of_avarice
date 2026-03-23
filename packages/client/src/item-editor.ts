@@ -45,8 +45,9 @@ interface ItemTemplate {
 interface Room { id: number; name: string; area: string | null; }
 interface ClassDef { id: string; displayName: string; }
 interface RaceDef { id: string; displayName: string; }
-interface DropTableRef { id: number; name: string; }
-interface NpcRef { id: number; name: string; }
+interface DropTableEntryRef { itemTemplateId: number | null; }
+interface DropTableRef { id: number; name: string; entries?: DropTableEntryRef[]; }
+interface NpcRef { id: number; name: string; dropTableId?: number | null; }
 
 const DENOMINATION_BREAKS = [
   { name: 'runic', value: 10000 },
@@ -110,6 +111,7 @@ function formatCopper(copper: number): string {
   const effectSlotsInput = document.getElementById('item-effect-slots') as HTMLInputElement;
   const raritySelect = document.getElementById('item-rarity') as HTMLSelectElement;
   const maxInWorldInput = document.getElementById('item-max-in-world') as HTMLInputElement;
+  const maxStackInput = document.getElementById('item-max-stack') as HTMLInputElement;
 
   // Type sections
   const typeSections: Record<string, HTMLElement> = {
@@ -222,7 +224,9 @@ function formatCopper(copper: number): string {
       const res = await fetch('/api/drop-tables', { credentials: 'include' });
       const data = await res.json();
       dropTables = (data.dropTables || []).map((t: Record<string, unknown>) => ({
-        id: t.id as number, name: t.name as string, entries: t.entries,
+        id: t.id as number,
+        name: t.name as string,
+        entries: (t.entries as DropTableEntryRef[] | undefined) || [],
       }));
     } catch (error) { console.error('Failed to fetch drop tables:', error); showToast('Failed to load drop tables', 'error'); }
   }
@@ -232,7 +236,9 @@ function formatCopper(copper: number): string {
       const res = await fetch('/api/npcs', { credentials: 'include' });
       const data = await res.json();
       npcTemplates = (data.templates || []).map((n: Record<string, unknown>) => ({
-        id: n.id as number, name: n.name as string,
+        id: n.id as number,
+        name: n.name as string,
+        dropTableId: (n.dropTableId as number | null) ?? null,
       }));
     } catch (error) { console.error('Failed to fetch NPCs:', error); showToast('Failed to load NPCs', 'error'); }
   }
@@ -263,6 +269,7 @@ function formatCopper(copper: number): string {
     effectSlotsInput.value = String(t.effect_slots || 0);
     raritySelect.value = t.rarity || 'common';
     maxInWorldInput.value = String(t.max_in_world || 0);
+    maxStackInput.value = String(t.max_stack || 1);
 
     // Type data
     loadWeaponData(t);
@@ -340,7 +347,7 @@ function formatCopper(copper: number): string {
     (document.getElementById('weapon-damage-type') as HTMLSelectElement).value = (w.damage_type as string) || 'slashing';
     (document.getElementById('weapon-attack-speed') as HTMLInputElement).value = String(w.attack_speed || 2000);
     (document.getElementById('weapon-crit-modifier') as HTMLInputElement).value = String(w.crit_modifier || 0);
-    (document.getElementById('weapon-allows-backstab') as HTMLInputElement).checked = !!w.allows_backstab;
+    (document.getElementById('weapon-allows-backstab') as HTMLInputElement).checked = w.allows_backstab !== false;
     (document.getElementById('weapon-backstab-accuracy') as HTMLInputElement).value = String(w.backstab_accuracy || 0);
     (document.getElementById('weapon-backstab-min-damage') as HTMLInputElement).value = String(w.backstab_min_damage_bonus || 0);
     (document.getElementById('weapon-backstab-max-damage') as HTMLInputElement).value = String(w.backstab_max_damage_bonus || 0);
@@ -470,7 +477,7 @@ function formatCopper(copper: number): string {
       effect_slots: parseInt(effectSlotsInput.value) || 0,
       rarity: raritySelect.value,
       max_in_world: parseInt(maxInWorldInput.value) || null,
-      max_stack: 999,
+      max_stack: parseInt(maxStackInput.value) || 1,
     };
 
     // Flags
@@ -499,7 +506,7 @@ function formatCopper(copper: number): string {
         max_damage: parseInt((document.getElementById('weapon-max-damage') as HTMLInputElement).value) || 1,
         damage_type: (document.getElementById('weapon-damage-type') as HTMLSelectElement).value,
         attack_speed: parseInt((document.getElementById('weapon-attack-speed') as HTMLInputElement).value) || 2000,
-        crit_modifier: parseInt((document.getElementById('weapon-crit-modifier') as HTMLInputElement).value) || 0,
+        crit_modifier: parseFloat((document.getElementById('weapon-crit-modifier') as HTMLInputElement).value) || 0,
         allows_backstab: (document.getElementById('weapon-allows-backstab') as HTMLInputElement).checked,
         backstab_accuracy: parseInt((document.getElementById('weapon-backstab-accuracy') as HTMLInputElement).value) || 0,
         backstab_min_damage_bonus: parseInt((document.getElementById('weapon-backstab-min-damage') as HTMLInputElement).value) || 0,
@@ -521,12 +528,16 @@ function formatCopper(copper: number): string {
       data.container_capacity = parseInt((document.getElementById('container-capacity') as HTMLInputElement).value) || 0;
       data.container_weight_limit = parseInt((document.getElementById('container-weight-limit') as HTMLInputElement).value) || 0;
     } else if (itemType === 'consumable') {
-      data.consumable_data = {
+      const durationInput = document.getElementById('consumable-duration') as HTMLInputElement;
+      const consumableData: Record<string, unknown> = {
         effect_type: (document.getElementById('consumable-effect-type') as HTMLSelectElement).value,
         effect_value: parseInt((document.getElementById('consumable-effect-value') as HTMLInputElement).value) || 0,
         charges: parseInt((document.getElementById('consumable-charges') as HTMLInputElement).value) || 0,
-        duration: parseInt((document.getElementById('consumable-duration') as HTMLInputElement).value) || 0,
       };
+      if (!durationInput.disabled) {
+        consumableData.duration = parseInt(durationInput.value) || 0;
+      }
+      data.consumable_data = consumableData;
     } else if (itemType === 'light') {
       data.light_data = {
         radius: parseInt((document.getElementById('light-radius') as HTMLInputElement).value) || 0,
@@ -537,7 +548,7 @@ function formatCopper(copper: number): string {
       data.tool_data = {
         toolType: (document.getElementById('tool-type') as HTMLSelectElement).value,
         quality: Math.max(1, Math.min(5, parseInt((document.getElementById('tool-quality') as HTMLInputElement).value) || 1)),
-        durability: Math.max(1, Math.min(101, parseInt((document.getElementById('tool-durability') as HTMLInputElement).value) || 50)),
+        durability: Math.max(1, parseInt((document.getElementById('tool-durability') as HTMLInputElement).value) || 50),
       };
     }
 
@@ -592,21 +603,21 @@ function formatCopper(copper: number): string {
 
     html += `<div class="preview-stat"><span class="label">Weight:</span> ${t.weight}</div>`;
     html += `<div class="preview-stat"><span class="label">Value:</span> ${formatCopper(t.base_value)}</div>`;
-    if (t.equipment_slot) html += `<div class="preview-stat"><span class="label">Slot:</span> ${t.equipment_slot}</div>`;
+    if (t.equipment_slot) html += `<div class="preview-stat"><span class="label">Slot:</span> ${escapeHtml(t.equipment_slot)}</div>`;
 
     // Type-specific
     if (t.item_type === 'weapon' && t.weapon_data) {
       const w = t.weapon_data;
       html += `<div class="preview-section"><div class="preview-section-title">Weapon</div>`;
-      html += `<div class="preview-stat">Damage: ${w.min_damage}-${w.max_damage} (${w.damage_type})</div>`;
+      html += `<div class="preview-stat">Damage: ${w.min_damage}-${w.max_damage} (${escapeHtml(String(w.damage_type))})</div>`;
       html += `<div class="preview-stat">Speed: ${w.attack_speed}ms</div>`;
       if (w.crit_modifier) html += `<div class="preview-stat">Crit: +${w.crit_modifier}</div>`;
       if (w.allows_backstab) html += `<div class="preview-stat" style="color:#c084fc;">Allows Backstab</div>`;
       html += `</div>`;
     } else if (t.item_type === 'armor' && t.armor_data) {
       html += `<div class="preview-section"><div class="preview-section-title">Armor</div>`;
-      html += `<div class="preview-stat">AC: ${t.armor_data.armor_class}, DR: ${t.armor_data.damage_resistance}</div>`;
-      html += `<div class="preview-stat">Type: ${t.armor_data.armor_type || 'leather'}</div>`;
+      html += `<div class="preview-stat">AC: ${escapeHtml(String(t.armor_data.armor_class))}, DR: ${escapeHtml(String(t.armor_data.damage_resistance))}</div>`;
+      html += `<div class="preview-stat">Type: ${escapeHtml(String(t.armor_data.armor_type || 'leather'))}</div>`;
       html += `</div>`;
     } else if (t.item_type === 'container') {
       html += `<div class="preview-section"><div class="preview-section-title">Container</div>`;
@@ -616,7 +627,7 @@ function formatCopper(copper: number): string {
     } else if (t.item_type === 'consumable' && t.consumable_data) {
       const c = t.consumable_data;
       html += `<div class="preview-section"><div class="preview-section-title">Consumable</div>`;
-      html += `<div class="preview-stat">Effect: ${c.effect_type} ${c.effect_value || ''}</div>`;
+      html += `<div class="preview-stat">Effect: ${escapeHtml(String(c.effect_type))} ${escapeHtml(String(c.effect_value || ''))}</div>`;
       if (c.charges) html += `<div class="preview-stat">Charges: ${c.charges}</div>`;
       html += `</div>`;
     } else if (t.item_type === 'light' && t.light_data) {
@@ -637,7 +648,13 @@ function formatCopper(copper: number): string {
     if (t.item_type === 'key') {
       html += `<div class="preview-section"><div class="preview-section-title">Key</div>`;
       if (flags.key_tag) html += `<div class="preview-stat"><span class="label">Tag:</span> ${escapeHtml(String(flags.key_tag))}</div>`;
-      if (flags.consumeOnUse) html += `<div class="preview-stat">Consumed on use${flags.consumeChance ? ` (${flags.consumeChance}% chance)` : ''}</div>`;
+      if (flags.consumeOnUse) {
+        html += `<div class="preview-stat">Always consumed on use</div>`;
+      } else if (Number(flags.consumeChance) > 0) {
+        html += `<div class="preview-stat">${escapeHtml(String(flags.consumeChance))}% chance to break on use</div>`;
+      } else {
+        html += `<div class="preview-stat">Reusable</div>`;
+      }
       html += `</div>`;
     }
 
@@ -657,9 +674,21 @@ function formatCopper(copper: number): string {
   function updateReferences(itemId: number): void {
     const refs: string[] = [];
 
-    // Check drop tables (we need entries — fetch per table if needed, or check from templates)
-    // For now, just show NPC merchants
-    // TODO: Full drop table entry cross-reference requires fetching entries
+    // Find drop tables that contain this item in their entries
+    const matchingTableIds = new Set<number>();
+    for (const dt of dropTables) {
+      if (dt.entries && dt.entries.some(e => e.itemTemplateId === itemId)) {
+        matchingTableIds.add(dt.id);
+        refs.push(`Drop Table: ${escapeHtml(dt.name)} (#${dt.id})`);
+      }
+    }
+
+    // Find NPC templates that use matching drop tables
+    for (const npc of npcTemplates) {
+      if (npc.dropTableId && matchingTableIds.has(npc.dropTableId)) {
+        refs.push(`NPC: ${escapeHtml(npc.name)} (#${npc.id})`);
+      }
+    }
 
     refContent.innerHTML = refs.length > 0
       ? `<ul class="ref-list">${refs.map(r => `<li>${r}</li>`).join('')}</ul>`

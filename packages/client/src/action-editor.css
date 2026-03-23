@@ -97,7 +97,8 @@
   .top-row {
     flex-direction: column;
   }
-  .top-row .top-left {
+  .top-row .top-left,
+  .top-row .top-right {
     flex: none;
     width: 100%;
   }

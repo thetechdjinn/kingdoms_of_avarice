@@ -203,9 +203,9 @@ import { initAuth, ListPanel, showToast, showConfirm, escapeHtml } from './compo
   // ============================================================================
 
   function replacePlaceholders(template: string, player: string, target?: string): string {
-    let result = template.replace(/\{player\}/gi, player);
+    let result = template.replace(/\{player\}/g, player);
     if (target !== undefined) {
-      result = result.replace(/\{target\}/gi, target);
+      result = result.replace(/\{target\}/g, target);
     }
     return result;
   }
@@ -359,6 +359,11 @@ import { initAuth, ListPanel, showToast, showConfirm, escapeHtml } from './compo
       return;
     }
 
+    if (firstPersonNoTarget.includes('{target}') || roomNoTarget.includes('{target}')) {
+      showToast('Warning: "No target" messages should not contain {target} placeholder', 'error');
+      return;
+    }
+
     const actionData = {
       command,
       description: descriptionInput.value.trim() || null,
@@ -392,7 +397,7 @@ import { initAuth, ListPanel, showToast, showConfirm, escapeHtml } from './compo
   });
 
   // Duplicate
-  document.getElementById('duplicate-action-btn')?.addEventListener('click', () => {
+  document.getElementById('duplicate-action-btn')?.addEventListener('click', async () => {
     if (!selectedActionId) return;
 
     const baseCommand = commandInput.value.trim();
@@ -406,13 +411,24 @@ import { initAuth, ListPanel, showToast, showConfirm, escapeHtml } from './compo
       counter++;
     }
 
+    // Capture current form values before clearing selection
+    const actionData = {
+      command: newCommand,
+      description: descriptionInput.value.trim() || null,
+      firstPersonNoTarget: selfNoTargetInput.value.trim(),
+      roomNoTarget: roomNoTargetInput.value.trim(),
+      firstPersonWithTarget: selfWithTargetInput.value.trim() || null,
+      targetPerspective: targetPerspectiveInput.value.trim() || null,
+      roomWithTarget: roomWithTargetInput.value.trim() || null,
+    };
+
+    // Clear selection so saveAction creates a new entry
     selectedActionId = null;
-    formTitle.textContent = 'New Action';
-    idDisplay.textContent = '';
-    commandInput.value = newCommand;
-    listPanel.setSelected(null);
-    commandInput.focus();
-    updateAllPreviews();
+
+    const saved = await saveAction(actionData);
+    if (saved) {
+      selectAction(saved.id);
+    }
   });
 
   // Live preview on all message inputs
@@ -471,8 +487,14 @@ import { initAuth, ListPanel, showToast, showConfirm, escapeHtml } from './compo
           return;
         }
 
+        const mergeCheckbox = document.getElementById('import-merge') as HTMLInputElement;
+        const merge = mergeCheckbox?.checked ?? true;
+
+        const mergeNote = merge
+          ? 'Existing actions with matching commands will be updated.'
+          : 'Only new actions will be created; existing ones will be skipped.';
         const confirmed = await showConfirm(
-          `Import ${actionsToImport.length} action${actionsToImport.length === 1 ? '' : 's'}? Existing actions with matching commands will be updated.`,
+          `Import ${actionsToImport.length} action${actionsToImport.length === 1 ? '' : 's'}? ${mergeNote}`,
         );
         if (!confirmed) return;
 
@@ -480,7 +502,7 @@ import { initAuth, ListPanel, showToast, showConfirm, escapeHtml } from './compo
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'include',
-          body: JSON.stringify({ actions: actionsToImport, merge: true }),
+          body: JSON.stringify({ actions: actionsToImport, merge }),
         });
 
         if (!res.ok) {

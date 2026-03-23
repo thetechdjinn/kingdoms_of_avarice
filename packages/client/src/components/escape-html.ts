@@ -1,5 +1,6 @@
 /** Escape HTML special characters to prevent XSS in innerHTML assignments. */
 export function escapeHtml(text: string): string {
+  if (!text) return '';
   return text
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')

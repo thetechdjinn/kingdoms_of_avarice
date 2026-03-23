@@ -57,8 +57,8 @@ If your spell will apply a buff, debuff, or damage/healing over time, you need t
 
 | Field | Description |
 |-------|-------------|
-| **Damage Dice** | Dice notation for offensive spells (e.g., `2d6+4`) |
-| **Healing Dice** | Dice notation for healing spells (e.g., `1d8+2`) |
+| **Min Damage / Max Damage** | Integer damage range for offensive spells (e.g., min 4, max 16) |
+| **Min Healing / Max Healing** | Integer healing range for healing spells (e.g., min 3, max 10) |
 | **Status Effect** | Effect ID to apply (e.g., `poisoned`, `blessed`) |
 | **Effect Duration** | How long the effect lasts in seconds (0 = instant) |
 
@@ -75,8 +75,8 @@ If your spell will apply a buff, debuff, or damage/healing over time, you need t
 
 | Type | Use For | Key Fields |
 |------|---------|------------|
-| **offensive** | Damage spells that replace melee combat | `damageDice`, check `isAttackSpell` |
-| **healing** | Restore HP to self or allies | `healingDice` |
+| **offensive** | Damage spells that replace melee combat | `minDamage`/`maxDamage`, check `isAttackSpell` |
+| **healing** | Restore HP to self or allies | `minHealing`/`maxHealing` |
 | **buff** | Beneficial effects on self | `statusEffect`, `effectDuration` |
 | **debuff** | Harmful effects on enemies | `statusEffect`, `effectDuration` |
 | **utility** | Non-combat utility spells | Varies by implementation |
@@ -121,8 +121,8 @@ For DoT (damage over time) and HoT (healing over time) effects:
 
 | Field | Description |
 |-------|-------------|
-| **Tick Damage** | Dice notation for damage per tick (e.g., `1d4`) |
-| **Tick Healing** | Dice notation for healing per tick (e.g., `1d6`) |
+| **Tick Damage Min / Max** | Integer damage range per tick (e.g., min 1, max 4) |
+| **Tick Healing Min / Max** | Integer healing range per tick (e.g., min 1, max 6) |
 | **Tick Message** | Custom message shown each tick |
 | **Silent Tick** | If checked, no message is shown on tick |
 | **Wear Off Message** | Message shown when effect expires |
@@ -134,6 +134,9 @@ For DoT (damage over time) and HoT (healing over time) effects:
 | **Blocks Regeneration** | Prevents natural HP/mana regen |
 | **Blocks Movement** | Prevents movement commands |
 | **Is Blind** | Applies blind combat penalty |
+| **Blocks Casting** | Prevents casting spells |
+| **Blocks Combat** | Prevents entering or continuing combat |
+| **Blocks Stealth** | Prevents using stealth abilities |
 
 ---
 
@@ -143,8 +146,8 @@ For DoT (damage over time) and HoT (healing over time) effects:
 |----------|-------------|---------|
 | **buff** | Beneficial modifier | Blessed (+accuracy) |
 | **debuff** | Harmful modifier | Cursed (-accuracy/-defense) |
-| **dot** | Damage over time | Poisoned (1d4 damage/tick) |
-| **hot** | Healing over time | Regenerating (1d6 heal/tick) |
+| **dot** | Damage over time | Poisoned (1-4 damage/tick) |
+| **hot** | Healing over time | Regenerating (1-6 heal/tick) |
 | **control** | Movement restriction | Entangled (blocks movement) |
 
 ---
@@ -164,7 +167,7 @@ For DoT (damage over time) and HoT (healing over time) effects:
    - **Max Stacks**: `3`
 4. Modifiers Tab: Leave at 0
 5. Periodic Tab:
-   - **Tick Damage**: `1d4`
+   - **Tick Damage Min**: `1`, **Tick Damage Max**: `4`
    - **Tick Message**: `The poison burns through your veins.`
    - **Wear Off Message**: `The poison fades from your system.`
 6. Flags Tab:

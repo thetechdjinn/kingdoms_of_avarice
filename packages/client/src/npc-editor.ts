@@ -159,9 +159,13 @@ function showToast(message: string, type: ToastType = 'info', duration: number =
 // ============================================================================
 
 function escapeHtml(text: string): string {
-  const div = document.createElement('div');
-  div.textContent = text;
-  return div.innerHTML;
+  if (!text) return '';
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
 
 function parseNumberOrDefault(value: string, defaultValue: number): number {
