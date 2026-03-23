@@ -190,7 +190,7 @@ interface SpellRef {
 
   function selectEffect(id: string): void {
     const effect = effects.find(e => e.id === id);
-    if (!effect) return;
+    if (!effect) { clearForm(); return; }
 
     selectedEffectId = id;
     noEffectSelected.style.display = 'none';
@@ -373,7 +373,7 @@ interface SpellRef {
       html += `<div class="preview-section"><div class="preview-section-title">Periodic (every 5s)</div>`;
       if (hasDmg) html += `<div class="preview-modifier">Damage: <span class="mod-value negative">${effect.tickDamageMin}-${effect.tickDamageMax}</span>/tick</div>`;
       if (hasHeal) html += `<div class="preview-modifier">Healing: <span class="mod-value positive">${effect.tickHealingMin}-${effect.tickHealingMax}</span>/tick</div>`;
-      if (effect.tickMessage) html += `<div class="preview-message">"${escapeHtml(effect.tickMessage)}"</div>`;
+      if (effect.tickMessage && !effect.silentTick) html += `<div class="preview-message">"${escapeHtml(effect.tickMessage)}"</div>`;
       if (effect.silentTick) html += `<div class="preview-modifier" style="color:#888;">Silent ticks</div>`;
       html += `</div>`;
     }
@@ -582,7 +582,7 @@ interface SpellRef {
       a.href = url;
       a.download = 'status_effects_export.json';
       a.click();
-      URL.revokeObjectURL(url);
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
       showToast('Effects exported successfully', 'success');
     } catch (error) {
       console.error('Export failed:', error);

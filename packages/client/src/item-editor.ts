@@ -50,7 +50,7 @@ interface DropTableRef { id: number; name: string; entries?: DropTableEntryRef[]
 interface NpcRef { id: number; name: string; dropTableId?: number | null; }
 
 const DENOMINATION_BREAKS = [
-  { name: 'runic', value: 10000 },
+  { name: 'runic', value: 100000 },
   { name: 'platinum', value: 1000 },
   { name: 'gold', value: 100 },
   { name: 'silver', value: 10 },
@@ -477,7 +477,7 @@ function formatCopper(copper: number): string {
       effect_slots: parseInt(effectSlotsInput.value) || 0,
       rarity: raritySelect.value,
       max_in_world: parseInt(maxInWorldInput.value) || null,
-      max_stack: parseInt(maxStackInput.value) || 1,
+      max_stack: Number.isFinite(parseInt(maxStackInput.value)) ? parseInt(maxStackInput.value) : 1,
     };
 
     // Flags
