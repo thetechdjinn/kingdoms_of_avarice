@@ -151,7 +151,7 @@ export function setupRoomRoutes(app: Express): void {
           description: roomWithExits!.description,
           area: roomWithExits!.area,
           terrain: roomWithExits!.terrain || 'indoor',
-          darkness_level: roomWithExits!.darkness_level || 0,
+          darkness_level: roomWithExits!.darkness_level ?? 0,
           features: roomWithExits!.features || {},
           tag: roomWithExits!.tag || null,
           exits: Object.fromEntries(roomWithExits!.exits),

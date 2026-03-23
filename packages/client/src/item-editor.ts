@@ -626,13 +626,22 @@ function formatCopper(copper: number): string {
       html += `</div>`;
     } else if (t.item_type === 'tool' && t.tool_data) {
       html += `<div class="preview-section"><div class="preview-section-title">Tool</div>`;
-      html += `<div class="preview-stat">Type: ${t.tool_data.toolType}</div>`;
-      html += `<div class="preview-stat">Quality: ${t.tool_data.quality}, Durability: ${t.tool_data.durability}</div>`;
+      html += `<div class="preview-stat">Type: ${escapeHtml(String(t.tool_data.toolType || 'lockpick')).replace(/^\w/, c => c.toUpperCase())}</div>`;
+      html += `<div class="preview-stat">Quality: ${t.tool_data.quality}/5</div>`;
+      html += `<div class="preview-stat">Durability: ${t.tool_data.durability}${Number(t.tool_data.durability) > 100 ? ' (unbreakable)' : ''}</div>`;
+      html += `</div>`;
+    }
+
+    // Key info
+    const flags = t.flags || {};
+    if (t.item_type === 'key') {
+      html += `<div class="preview-section"><div class="preview-section-title">Key</div>`;
+      if (flags.key_tag) html += `<div class="preview-stat"><span class="label">Tag:</span> ${escapeHtml(String(flags.key_tag))}</div>`;
+      if (flags.consumeOnUse) html += `<div class="preview-stat">Consumed on use${flags.consumeChance ? ` (${flags.consumeChance}% chance)` : ''}</div>`;
       html += `</div>`;
     }
 
     // Flags
-    const flags = t.flags || {};
     const activeFlags = [];
     if (flags.two_handed) activeFlags.push('Two-Handed');
     if (flags.cursed) activeFlags.push('Cursed');
@@ -723,6 +732,10 @@ function formatCopper(copper: number): string {
     if (!selectedTemplateId) return;
     const data = gatherFormData();
     if (!(data.name as string)?.trim()) { showToast('Name is required', 'warning'); return; }
+    if (data.item_type === 'key' && !(data.flags as Record<string, unknown>)?.key_tag) {
+      showToast('Key tag is required for key items', 'warning');
+      return;
+    }
     const saved = await saveTemplate(data, false);
     if (saved) selectTemplate(saved.id);
   });
