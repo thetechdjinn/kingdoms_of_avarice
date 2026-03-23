@@ -450,10 +450,10 @@ interface RaceDef {
       class_id: (document.getElementById('class-id') as HTMLInputElement).value.trim(),
       display_name: (document.getElementById('class-name') as HTMLInputElement).value.trim(),
       description: (document.getElementById('class-description') as HTMLTextAreaElement).value.trim() || null,
-      essence_multiplier: parseFloat((document.getElementById('class-multiplier') as HTMLInputElement).value) || 1.0,
+      essence_multiplier: Number.isFinite(parseFloat((document.getElementById('class-multiplier') as HTMLInputElement).value)) ? parseFloat((document.getElementById('class-multiplier') as HTMLInputElement).value) : 1.0,
       resource_type: (document.getElementById('class-resource') as HTMLSelectElement).value || null,
       playable: (document.getElementById('class-playable') as HTMLInputElement).checked,
-      combat_level: parseInt((document.getElementById('class-combat-level') as HTMLInputElement).value) || 3,
+      combat_level: Number.isFinite(parseInt((document.getElementById('class-combat-level') as HTMLInputElement).value)) ? parseInt((document.getElementById('class-combat-level') as HTMLInputElement).value) : 3,
       magic_level: parseInt((document.getElementById('class-magic-level') as HTMLInputElement).value) || 0,
       magic_school: (document.getElementById('class-magic-school') as HTMLSelectElement).value || null,
       crit_bonus: parseInt((document.getElementById('class-crit-bonus') as HTMLInputElement).value) || 0,
@@ -485,7 +485,7 @@ interface RaceDef {
       base_stats,
       traits: [
         ...traitsToArray(raceTraitState, 'race') as Array<{ id: string; value: number | boolean }>,
-        { id: 'base_vision', value: parseInt((document.getElementById('race-base-vision') as HTMLSelectElement).value) || 100 },
+        { id: 'base_vision', value: Number.isFinite(parseInt((document.getElementById('race-base-vision') as HTMLSelectElement).value)) ? parseInt((document.getElementById('race-base-vision') as HTMLSelectElement).value) : 100 },
       ],
       allowed_classes: [...new Set(Array.from(raceAllowedClasses).filter(c => c && c.trim()))],
     };

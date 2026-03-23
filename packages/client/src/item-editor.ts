@@ -608,6 +608,27 @@ function formatCopper(copper: number): string {
       html += `<div class="preview-stat">AC: ${t.armor_data.armor_class}, DR: ${t.armor_data.damage_resistance}</div>`;
       html += `<div class="preview-stat">Type: ${t.armor_data.armor_type || 'leather'}</div>`;
       html += `</div>`;
+    } else if (t.item_type === 'container') {
+      html += `<div class="preview-section"><div class="preview-section-title">Container</div>`;
+      if (t.container_capacity) html += `<div class="preview-stat">Capacity: ${t.container_capacity} items</div>`;
+      if (t.container_weight_limit) html += `<div class="preview-stat">Weight Limit: ${t.container_weight_limit}</div>`;
+      html += `</div>`;
+    } else if (t.item_type === 'consumable' && t.consumable_data) {
+      const c = t.consumable_data;
+      html += `<div class="preview-section"><div class="preview-section-title">Consumable</div>`;
+      html += `<div class="preview-stat">Effect: ${c.effect_type} ${c.effect_value || ''}</div>`;
+      if (c.charges) html += `<div class="preview-stat">Charges: ${c.charges}</div>`;
+      html += `</div>`;
+    } else if (t.item_type === 'light' && t.light_data) {
+      html += `<div class="preview-section"><div class="preview-section-title">Light</div>`;
+      html += `<div class="preview-stat">Radius: ${t.light_data.radius}</div>`;
+      if (t.light_data.fuel_max) html += `<div class="preview-stat">Fuel: ${t.light_data.fuel_max}</div>`;
+      html += `</div>`;
+    } else if (t.item_type === 'tool' && t.tool_data) {
+      html += `<div class="preview-section"><div class="preview-section-title">Tool</div>`;
+      html += `<div class="preview-stat">Type: ${t.tool_data.toolType}</div>`;
+      html += `<div class="preview-stat">Quality: ${t.tool_data.quality}, Durability: ${t.tool_data.durability}</div>`;
+      html += `</div>`;
     }
 
     // Flags

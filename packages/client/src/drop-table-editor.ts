@@ -595,7 +595,7 @@ const ALL_DENOMINATIONS = ['copper', 'silver', 'gold', 'platinum', 'runic'];
   async function duplicateTable(): Promise<void> {
     if (!selectedTableId) return;
 
-    const name = (nameInput.value || 'Drop Table') + ' (copy)';
+    const name = (nameInput.value.trim() || 'Drop Table') + ' (copy)';
     const description = descriptionInput.value.trim() || null;
 
     try {

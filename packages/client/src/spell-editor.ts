@@ -200,6 +200,7 @@ interface StatusEffectDef {
       }
     } catch (error) {
       console.error('Failed to fetch classes:', error);
+      showToast('Failed to load classes', 'error');
     }
   }
 
@@ -212,6 +213,7 @@ interface StatusEffectDef {
       }
     } catch (error) {
       console.error('Failed to fetch NPCs:', error);
+      showToast('Failed to load NPCs', 'error');
     }
   }
 
@@ -228,6 +230,7 @@ interface StatusEffectDef {
       }
     } catch (error) {
       console.error('Failed to fetch status effects:', error);
+      showToast('Failed to load status effects', 'error');
     }
   }
 

@@ -321,10 +321,17 @@ const ALL_TABS = ['basic', 'rooms', 'state', 'locks', 'triggers', 'portal', 'per
     for (const room of rooms) {
       if (area && room.area !== area) continue;
       if (roomId && room.id !== roomId) continue;
-      if (search && !room.name.toLowerCase().includes(search) && !room.area?.toLowerCase().includes(search)) continue;
 
       const roomExits = room.exits || {};
       for (const [direction, targetRoomId] of Object.entries(roomExits)) {
+        if (search) {
+          const targetRoom = rooms.find(r => r.id === targetRoomId);
+          const targetName = targetRoom?.name?.toLowerCase() || '';
+          if (!room.name.toLowerCase().includes(search) &&
+              !targetName.includes(search) &&
+              !direction.toLowerCase().includes(search) &&
+              !(room.area?.toLowerCase().includes(search) ?? false)) continue;
+        }
         // Check both entry and exit sides — a door from the other side also covers this exit
         const door = doors.find(d =>
           (d.entryRoomId === room.id && d.entryDirection === direction) ||
