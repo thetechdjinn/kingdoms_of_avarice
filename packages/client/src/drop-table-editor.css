@@ -1,330 +1,355 @@
-/* Drop Table Editor Specific Styles */
+/* Drop Table Editor — three-panel with simulation */
 
-#dt-editor-panel {
-  flex: 1;
-  padding: 1.5rem;
-  overflow-y: auto;
-}
+/* ============================================================================
+   List Panel
+   ============================================================================ */
 
-#dt-form {
-  max-width: 800px;
-}
-
-#dt-form .form-actions {
-  display: flex;
-  gap: 1rem;
-  margin-top: 1.5rem;
-  padding: 1rem 0;
-  border-top: 1px solid #333;
-  background: #1a1a2e;
-  position: sticky;
-  bottom: 0;
-}
-
-/* Left list panel */
 #dt-list-panel {
   display: flex;
   flex-direction: column;
+  width: 280px;
+  min-width: 280px;
+  background: #16213e;
+  border-right: 1px solid #333;
 }
 
 #dt-list {
   flex: 1;
   overflow-y: auto;
+  list-style: none;
 }
 
 #dt-list li {
-  display: flex;
-  flex-direction: column;
-  padding: 8px 12px;
-  border-bottom: 1px solid #333;
+  padding: 0.6rem 0.75rem;
   cursor: pointer;
-  transition: background 0.2s;
+  border-bottom: 1px solid #222;
+  border-left: 3px solid transparent;
+  transition: background-color 0.15s, border-color 0.15s;
 }
 
 #dt-list li:hover {
-  background: #1a1a2e;
+  background: var(--hover-bg);
 }
 
 #dt-list li.selected {
-  background: #0e4429;
-  border-left: 3px solid #00ff00;
+  background: var(--selected-bg);
+  border-left-color: var(--primary-color);
 }
 
 #dt-list li .dt-name {
-  font-weight: bold;
-  color: #00ff00;
+  display: block;
+  font-weight: 600;
+  color: var(--text-primary);
+  font-size: 0.9rem;
 }
 
-#dt-list li .dt-info {
+#dt-list li .dt-meta {
+  font-size: 0.75rem;
+  color: #555;
+  margin-top: 2px;
+}
+
+/* ============================================================================
+   Editor Panel
+   ============================================================================ */
+
+#dt-editor-panel {
+  flex: 1;
+  padding: 1.5rem 2rem;
+  overflow-y: auto;
+}
+
+#no-dt-selected {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+}
+
+/* ============================================================================
+   NPC References
+   ============================================================================ */
+
+.references-section {
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid #333;
+}
+
+.references-section h4 {
+  color: var(--primary-color);
+  font-size: 0.85rem;
+  margin-bottom: 0.5rem;
+}
+
+.npc-ref-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.npc-ref-list li {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.3rem 0.5rem;
+  font-size: 0.85rem;
+  background: #0f0f23;
+  border-radius: 4px;
+  margin-bottom: 0.3rem;
+}
+
+.npc-ref-list li .npc-ref-name {
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.npc-ref-list li .npc-ref-level {
+  color: #555;
+  font-size: 0.7rem;
+}
+
+.no-refs {
+  color: #555;
+  font-size: 0.85rem;
+  font-style: italic;
+}
+
+/* ============================================================================
+   Currency Drop Section
+   ============================================================================ */
+
+.denom-section {
+  margin-top: 0.75rem;
+}
+
+.denom-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.4rem;
+}
+
+.denom-title {
   font-size: 0.8rem;
   color: #888;
 }
 
-#dt-list li .dt-id {
-  font-size: 0.75rem;
-  color: #666;
-}
-
-#dt-search {
-  padding: 8px 12px;
-  border-bottom: 1px solid #333;
-}
-
-#dt-search input {
-  width: 100%;
-}
-
-/* Tabs */
-.form-tabs {
+.denom-grid {
   display: flex;
-  gap: 4px;
-  margin-bottom: 16px;
-  border-bottom: 2px solid #333;
-  padding-bottom: 8px;
+  flex-wrap: wrap;
+  gap: 0.75rem;
 }
 
-.tab-btn {
-  padding: 8px 16px;
-  background: transparent;
-  border: none;
-  color: #888;
+.denom-grid label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.8rem;
+  color: #ccc;
   cursor: pointer;
-  border-radius: 4px 4px 0 0;
-  transition: all 0.2s;
 }
 
-.tab-btn:hover {
-  color: #00ff00;
-  background: #1a1a2e;
-}
+/* ============================================================================
+   Item Drop Entries
+   ============================================================================ */
 
-.tab-btn.active {
-  color: #00ff00;
-  background: #0e4429;
-}
-
-.tab-content {
-  display: none;
-}
-
-.tab-content.active {
-  display: block;
-}
-
-/* Form Rows */
-.form-row {
-  display: flex;
-  gap: 16px;
-  margin-bottom: 12px;
-}
-
-.form-row .form-group {
-  flex: 1;
-  margin-bottom: 0;
-}
-
-/* Entries */
 .entries-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 12px;
-}
-
-.entries-header h3 {
-  margin: 0;
-  color: #ffaa00;
-  font-size: 0.95rem;
+  margin-bottom: 1rem;
 }
 
 .entry-row {
-  border: 1px solid #333;
-  border-radius: 4px;
-  padding: 12px;
-  margin-bottom: 12px;
   background: #0f0f23;
+  border: 1px solid #333;
+  border-radius: 6px;
+  margin-bottom: 0.75rem;
 }
 
 .entry-row-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 8px;
+  padding: 0.5rem 0.75rem;
+  background: #16213e;
+  border-bottom: 1px solid #333;
 }
 
-.entry-row-header .entry-title {
-  font-weight: bold;
-  color: #00ff00;
-  font-size: 0.9rem;
-}
-
-.entry-row-header .btn-remove {
-  background: none;
-  border: 1px solid #ff4444;
-  color: #ff4444;
-  padding: 2px 8px;
-  border-radius: 3px;
-  cursor: pointer;
-  font-size: 0.8rem;
-}
-
-.entry-row-header .btn-remove:hover {
-  background: #ff4444;
-  color: #fff;
+.entry-title {
+  font-weight: 600;
+  font-size: 0.85rem;
+  color: var(--text-primary);
 }
 
 .entry-fields {
-  display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
-  gap: 8px;
+  display: flex;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  align-items: flex-end;
 }
 
 .entry-fields .form-group {
-  margin-bottom: 4px;
+  margin-bottom: 0;
 }
 
 .entry-fields label {
-  font-size: 0.8rem;
-  color: #888;
-  margin-bottom: 2px;
-  display: block;
+  font-size: 0.75rem;
 }
 
-.entry-fields input,
-.entry-fields select {
+.entry-type-filter {
+  flex: 0 0 110px;
+}
+
+.entry-type-filter select {
   width: 100%;
-  padding: 4px 8px;
-  font-size: 0.85rem;
-}
-
-.denomination-checkboxes {
-  margin-top: 8px;
-  padding-top: 8px;
-  border-top: 1px solid #333;
-}
-
-.denomination-checkboxes .denom-title {
-  font-size: 0.8rem;
-  color: #888;
-  margin-bottom: 6px;
-}
-
-.denomination-checkboxes .denom-grid {
-  display: flex;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-
-.denomination-checkboxes .denom-grid label {
-  font-size: 0.8rem;
-  color: #aaa;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-/* Preview/Simulation Panel */
-#preview-panel {
-  width: 300px;
+  padding: 0.4rem 0.5rem;
   background: #0f0f23;
+  border: 1px solid #333;
+  border-radius: 4px;
+  color: #eee;
+  font-size: 0.8rem;
+}
+
+.entry-type-filter select:focus {
+  outline: none;
+  border-color: #00ff00;
+}
+
+.entry-item-select {
+  flex: 2;
+  min-width: 180px;
+}
+
+.entry-number-field {
+  flex: 0 0 85px;
+}
+
+.entry-number-field input {
+  text-align: center;
+}
+
+.btn-remove {
+  background: none;
+  border: 1px solid #552222;
+  color: #ff6b6b;
+  padding: 0.2rem 0.5rem;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 0.75rem;
+  transition: background 0.15s;
+}
+
+.btn-remove:hover {
+  background: #3a1a1a;
+}
+
+/* ============================================================================
+   Simulation Panel
+   ============================================================================ */
+
+#sim-panel {
+  width: 300px;
+  min-width: 250px;
+  background: #16213e;
   border-left: 1px solid #333;
   display: flex;
   flex-direction: column;
+  overflow-y: auto;
 }
 
-#simulation-panel {
-  flex: 1;
+.sim-controls {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid #333;
   display: flex;
-  flex-direction: column;
+  gap: 0.5rem;
+  align-items: flex-end;
+}
+
+.sim-controls .form-group {
+  flex: 1;
+  margin-bottom: 0;
+}
+
+.sim-controls label {
+  font-size: 0.8rem;
+}
+
+.sim-controls input {
+  text-align: center;
+}
+
+.sim-controls .btn-primary {
+  white-space: nowrap;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.8rem;
 }
 
 #simulation-content {
   flex: 1;
-  padding: 16px;
+  padding: 0.75rem 1rem;
+  font-size: 0.85rem;
   overflow-y: auto;
-  font-family: 'Courier New', monospace;
-  font-size: 0.85rem;
-  line-height: 1.5;
 }
 
-#simulation-content .sim-section {
-  margin-bottom: 12px;
+.sim-section {
+  margin-bottom: 1rem;
 }
 
-#simulation-content .sim-title {
+.sim-title {
   color: #ffaa00;
-  font-weight: bold;
-  margin-bottom: 4px;
-}
-
-#simulation-content .sim-stat {
-  color: #888;
-  margin: 2px 0;
-}
-
-#simulation-content .sim-stat .label {
-  color: #aaa;
-}
-
-#simulation-content .sim-stat .value {
-  color: #00ff00;
-}
-
-.panel-section {
-  padding: 16px;
-  border-top: 1px solid #333;
-}
-
-.panel-section h3 {
-  margin-top: 0;
-  margin-bottom: 12px;
-  font-size: 0.9rem;
-  color: #888;
-}
-
-/* Hints */
-.hint {
-  color: #666;
-  font-size: 0.9rem;
-}
-
-.hint-inline {
-  color: #666;
+  font-weight: 600;
   font-size: 0.8rem;
-  font-weight: normal;
+  margin-bottom: 0.3rem;
+  padding-bottom: 0.2rem;
+  border-bottom: 1px solid #2a2a2e;
 }
 
-/* Button variants */
-.btn-small {
-  padding: 6px 12px;
-  font-size: 0.85rem;
+.sim-stat {
+  padding: 2px 0;
+  font-size: 0.8rem;
 }
 
-.btn-secondary {
-  background: #333;
-  color: #fff;
-  border: 1px solid #555;
+.sim-stat .label {
+  color: #888;
 }
 
-.btn-secondary:hover {
-  background: #444;
+.sim-stat .value {
+  color: #eee;
 }
 
-.btn-secondary:disabled {
-  background: #222;
-  color: #666;
-  cursor: not-allowed;
+/* ============================================================================
+   Form Actions (sticky)
+   ============================================================================ */
+
+#dt-form .form-actions {
+  position: sticky;
+  bottom: 0;
+  background: #1a1a2e;
+  padding: 1rem 0;
+  margin-top: 1.5rem;
+  border-top: 1px solid #333;
+  z-index: 1;
 }
 
-/* Responsive */
+#dt-form .form-actions .spacer {
+  flex: 1;
+}
+
+/* ============================================================================
+   Responsive
+   ============================================================================ */
+
 @media (max-width: 1200px) {
-  #preview-panel {
+  #sim-panel {
     width: 250px;
+    min-width: 200px;
   }
 }
 
 @media (max-width: 900px) {
-  #preview-panel {
+  #sim-panel {
     display: none;
   }
 }

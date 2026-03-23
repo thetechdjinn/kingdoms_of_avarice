@@ -221,6 +221,11 @@ export async function runMigrations(): Promise<void> {
         ALTER TABLE rooms ADD COLUMN IF NOT EXISTS features JSONB DEFAULT '{}'
       `);
 
+      // Add darkness_level column to rooms (luminance system)
+      await client.query(`
+        ALTER TABLE rooms ADD COLUMN IF NOT EXISTS darkness_level INTEGER DEFAULT 0
+      `);
+
       // Add tag column to rooms (portable string identifier for export/import)
       await client.query(`
         ALTER TABLE rooms ADD COLUMN IF NOT EXISTS tag VARCHAR(100)
@@ -379,6 +384,9 @@ export async function runMigrations(): Promise<void> {
         ALTER TABLE doors ADD COLUMN IF NOT EXISTS passage_message_room TEXT
       `);
       await client.query(`
+        ALTER TABLE doors ADD COLUMN IF NOT EXISTS passage_message_arrival TEXT
+      `);
+      await client.query(`
         ALTER TABLE doors ADD COLUMN IF NOT EXISTS item_display_name VARCHAR(100)
       `);
 
@@ -440,9 +448,27 @@ export async function runMigrations(): Promise<void> {
         ALTER TABLE doors ADD COLUMN IF NOT EXISTS denial_message TEXT
       `);
 
-      // Add stealth_modifier column to item_templates (Stealth System Phase 6)
+      // Add combat modifier columns to item_templates
       await client.query(`
         ALTER TABLE item_templates ADD COLUMN IF NOT EXISTS stealth_modifier INTEGER DEFAULT 0
+      `);
+      await client.query(`
+        ALTER TABLE item_templates ADD COLUMN IF NOT EXISTS spellcasting_modifier INTEGER DEFAULT 0
+      `);
+      await client.query(`
+        ALTER TABLE item_templates ADD COLUMN IF NOT EXISTS lockpicking_modifier INTEGER DEFAULT 0
+      `);
+      await client.query(`
+        ALTER TABLE item_templates ADD COLUMN IF NOT EXISTS perception_modifier INTEGER DEFAULT 0
+      `);
+      await client.query(`
+        ALTER TABLE item_templates ADD COLUMN IF NOT EXISTS critical_chance_modifier INTEGER DEFAULT 0
+      `);
+      await client.query(`
+        ALTER TABLE item_templates ADD COLUMN IF NOT EXISTS magic_resistance_modifier INTEGER DEFAULT 0
+      `);
+      await client.query(`
+        ALTER TABLE item_templates ADD COLUMN IF NOT EXISTS trap_modifier INTEGER DEFAULT 0
       `);
 
       // Add tool_data column to item_templates (Lockpicking System Phase 5)

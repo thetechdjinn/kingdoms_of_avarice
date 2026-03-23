@@ -20,7 +20,7 @@
               <a href="/item-editor.html" class="nav-dropdown-item">Item Editor</a>
               <a href="/spell-editor.html" class="nav-dropdown-item">Spell Editor</a>
               <a href="/status-editor.html" class="nav-dropdown-item">Status Effects Editor</a>
-              <a href="/progression-editor.html" class="nav-dropdown-item">Progression Editor</a>
+              <a href="/progression-editor.html" class="nav-dropdown-item">Class / Race Editor</a>
               <a href="/door-editor.html" class="nav-dropdown-item active">Door Editor</a>
               <a href="/action-editor.html" class="nav-dropdown-item">Action Editor</a>
               <a href="/npc-editor.html" class="nav-dropdown-item">NPC Editor</a>
@@ -41,7 +41,7 @@
           </div>
         </div>
         <div class="nav-spacer"></div>
-        <a href="/docs.html?file=Door_System_Guide.md" target="_blank" rel="noopener noreferrer" class="help-link nav-help" title="View Documentation">?</a>
+        <a href="/docs.html?file=Door_System_Guide.md" class="help-link nav-help" title="View Documentation" target="_blank" rel="noopener noreferrer">?</a>
         <div class="nav-user-menu">
           <button class="nav-user-btn" id="nav-username">User</button>
           <div class="dropdown-menu" id="user-dropdown">
@@ -53,48 +53,45 @@
       <div id="editor-layout">
         <aside id="door-list-panel">
           <div class="panel-header">
-            <h2 id="list-panel-title">Doors</h2>
-            <button id="new-door-btn" class="btn-primary">+ New Door</button>
+            <h2>Doors</h2>
+            <button id="new-door-btn" class="btn-primary">+ New</button>
           </div>
-          <div id="view-toggle">
-            <button class="view-btn active" data-view="doors">Doors</button>
-            <button class="view-btn" data-view="exits">Room Exits</button>
+          <div class="view-toggle">
+            <button type="button" class="toggle-btn active" id="view-doors-btn">Doors</button>
+            <button type="button" class="toggle-btn" id="view-exits-btn">Room Exits</button>
           </div>
-          <div id="door-filters">
-            <div class="filter-row">
-              <label for="area-select">Area:</label>
-              <select id="area-select">
-                <option value="">All Areas</option>
-              </select>
-            </div>
-            <div class="filter-row">
-              <label for="room-select">Room:</label>
-              <select id="room-select">
-                <option value="">All Rooms</option>
-              </select>
-            </div>
-            <div class="filter-row">
-              <label for="type-select">Type:</label>
-              <select id="type-select">
-                <option value="">All Types</option>
-                <option value="open_passageway">Open Passageway</option>
-                <option value="physical">Physical Door</option>
-                <option value="special">Special</option>
-                <option value="triggered_passageway">Triggered Passageway</option>
-                <option value="temporary_portal">Temporary Portal</option>
-              </select>
-            </div>
-            <div class="filter-row">
-              <input type="text" id="search-input" placeholder="Search doors..." />
-            </div>
+          <div class="list-filters">
+            <select id="area-filter">
+              <option value="">All Areas</option>
+            </select>
+            <select id="room-filter">
+              <option value="">All Rooms</option>
+            </select>
+            <select id="type-filter">
+              <option value="">All Types</option>
+              <option value="open_passageway">Open Passageway</option>
+              <option value="physical">Physical</option>
+              <option value="special">Special</option>
+              <option value="triggered_passageway">Triggered Passageway</option>
+              <option value="temporary_portal">Temporary Portal</option>
+            </select>
+            <input type="text" id="search-input" placeholder="Search doors..." />
           </div>
-          <div id="door-count"></div>
           <ul id="door-list"></ul>
+          <div class="panel-footer">
+            <span id="door-count" class="list-count"></span>
+            <div class="footer-buttons">
+              <button id="export-btn" class="btn-small">Export</button>
+            </div>
+          </div>
         </aside>
 
         <main id="door-editor-panel">
           <div id="no-door-selected">
-            <p>Select a door from the list or create a new one.</p>
+            <div class="empty-state">
+              <div class="empty-icon">&gt;_</div>
+              <p>Select a door from the list or create a new one.</p>
+            </div>
           </div>
 
           <form id="door-form" style="display: none;">
@@ -103,72 +100,65 @@
               <span id="door-id-display"></span>
             </div>
 
-            <!-- Tab Navigation -->
             <div class="form-tabs">
               <button type="button" class="tab-btn active" data-tab="basic">Basic</button>
               <button type="button" class="tab-btn" data-tab="rooms">Rooms</button>
-              <button type="button" class="tab-btn" data-tab="state" id="tab-btn-state">State</button>
-              <button type="button" class="tab-btn" data-tab="locks" id="tab-btn-locks">Locks</button>
-              <button type="button" class="tab-btn" data-tab="triggers" id="tab-btn-triggers">Triggers</button>
-              <button type="button" class="tab-btn" data-tab="portal" id="tab-btn-portal">Portal</button>
-              <button type="button" class="tab-btn" data-tab="permissions" id="tab-btn-permissions">Permissions</button>
+              <button type="button" class="tab-btn" data-tab="state">State</button>
+              <button type="button" class="tab-btn" data-tab="locks">Locks</button>
+              <button type="button" class="tab-btn" data-tab="triggers">Triggers</button>
+              <button type="button" class="tab-btn" data-tab="portal">Portal</button>
+              <button type="button" class="tab-btn" data-tab="permissions">Permissions</button>
             </div>
 
-            <!-- Basic Tab Content -->
+            <!-- Basic Tab -->
             <div class="tab-content active" id="tab-basic">
               <div class="form-row">
                 <div class="form-group">
-                  <label for="door-name">Name <span class="hint-inline">(internal, for editors)</span></label>
-                  <input type="text" id="door-name" required placeholder="Arindale broken door" />
+                  <label for="door-name">Name <span class="required">*</span></label>
+                  <input type="text" id="door-name" required placeholder="Main Gate" />
+                  <span class="hint-inline">Internal name for editor use</span>
                 </div>
                 <div class="form-group">
                   <label for="door-type">Door Type</label>
-                  <select id="door-type" required>
+                  <select id="door-type">
                     <option value="open_passageway">Open Passageway</option>
-                    <option value="physical">Physical Door</option>
+                    <option value="physical">Physical</option>
                     <option value="special">Special</option>
                     <option value="triggered_passageway">Triggered Passageway</option>
                     <option value="temporary_portal">Temporary Portal</option>
                   </select>
                 </div>
               </div>
-
               <div class="form-row">
                 <div class="form-group">
-                  <label for="door-display-name">Display Name <span class="hint-inline">(shown to players)</span></label>
-                  <input type="text" id="door-display-name" placeholder="Leave blank for 'door to the [direction]'" />
+                  <label for="door-display-name">Display Name</label>
+                  <input type="text" id="door-display-name" placeholder="Leave blank for default" />
+                  <span class="hint-inline">Shown to players. Blank = "door to the [direction]"</span>
                 </div>
-              </div>
-
-              <div class="form-group">
-                <label for="door-description">Description</label>
-                <textarea id="door-description" rows="3" placeholder="Description shown when player looks at the door..."></textarea>
-              </div>
-
-              <div class="form-row">
-                <div class="form-group">
-                  <label class="checkbox-label">
+                <div class="form-group" style="flex: 0 0 auto; align-self: center; padding-top: 0.5rem;">
+                  <label class="toggle-label">
                     <input type="checkbox" id="door-hidden" />
-                    Hidden (not shown in exits)
+                    <span class="toggle-track"></span>
+                    Hidden
                   </label>
                 </div>
               </div>
+              <div class="form-group">
+                <label for="door-description">Description</label>
+                <textarea id="door-description" rows="3" placeholder="A heavy oak door reinforced with iron bands."></textarea>
+              </div>
             </div>
 
-            <!-- Rooms Tab Content -->
+            <!-- Rooms Tab -->
             <div class="tab-content" id="tab-rooms">
-              <h3>Entry Side</h3>
               <div class="form-row">
                 <div class="form-group">
-                  <label for="entry-room-id">Entry Room</label>
-                  <select id="entry-room-id" required>
-                    <option value="">Select room...</option>
-                  </select>
+                  <label>Entry Room <span class="required">*</span></label>
+                  <div id="entry-room-select-container"></div>
                 </div>
-                <div class="form-group">
-                  <label for="entry-direction">Entry Direction</label>
-                  <select id="entry-direction" required>
-                    <option value="">Select direction...</option>
+                <div class="form-group" style="flex: 0 0 140px;">
+                  <label for="entry-direction">Direction <span class="required">*</span></label>
+                  <select id="entry-direction">
                     <option value="north">North</option>
                     <option value="south">South</option>
                     <option value="east">East</option>
@@ -182,19 +172,16 @@
                   </select>
                 </div>
               </div>
-
-              <h3>Exit Side <span class="hint-inline">(leave empty for one-way)</span></h3>
               <div class="form-row">
                 <div class="form-group">
-                  <label for="exit-room-id">Exit Room</label>
-                  <select id="exit-room-id">
-                    <option value="">None (one-way)</option>
-                  </select>
+                  <label>Exit Room</label>
+                  <div id="exit-room-select-container"></div>
+                  <span class="hint-inline">Leave empty for one-way door</span>
                 </div>
-                <div class="form-group">
-                  <label for="exit-direction">Exit Direction</label>
+                <div class="form-group" style="flex: 0 0 140px;">
+                  <label for="exit-direction">Direction</label>
                   <select id="exit-direction">
-                    <option value="">None</option>
+                    <option value="">(none — one-way)</option>
                     <option value="north">North</option>
                     <option value="south">South</option>
                     <option value="east">East</option>
@@ -210,9 +197,8 @@
               </div>
             </div>
 
-            <!-- State Tab Content (for PHYSICAL doors) -->
+            <!-- State Tab (physical) -->
             <div class="tab-content" id="tab-state">
-              <h3>Door State</h3>
               <div class="form-row">
                 <div class="form-group">
                   <label for="default-state">Default State</label>
@@ -223,134 +209,152 @@
                   </select>
                 </div>
                 <div class="form-group">
-                  <label for="auto-reset-seconds">Auto-Reset <span class="hint-inline">(seconds, 0=none)</span></label>
+                  <label for="auto-reset-seconds">Auto-Reset (seconds)</label>
                   <input type="number" id="auto-reset-seconds" min="0" value="0" />
+                  <span class="hint-inline">0 = never resets. 300 = 5 minutes.</span>
                 </div>
               </div>
             </div>
 
-            <!-- Locks Tab Content (for PHYSICAL doors) -->
+            <!-- Locks Tab (physical) -->
             <div class="tab-content" id="tab-locks">
-              <h3>Lock Settings</h3>
               <div class="form-group">
-                <label class="checkbox-label">
+                <label class="toggle-label">
                   <input type="checkbox" id="has-lock" />
+                  <span class="toggle-track"></span>
                   Has Lock
                 </label>
               </div>
-
-              <div id="lock-options">
+              <div id="lock-options" style="display: none;">
                 <div class="form-group">
                   <label for="key-item-tag">Key Item Tag</label>
-                  <input type="text" id="key-item-tag" placeholder="e.g., brass_key" />
+                  <input type="text" id="key-item-tag" placeholder="e.g., gate_key" />
+                  <span class="hint-inline">Must match an item's key_tag to unlock</span>
                 </div>
-
+                <div class="lock-presets">
+                  <span class="hint-inline">Presets:</span>
+                  <button type="button" class="btn-tiny preset-btn" data-pick-min="30" data-pick-max="60" data-bash="100">Easy</button>
+                  <button type="button" class="btn-tiny preset-btn" data-pick-min="60" data-pick-max="100" data-bash="200">Standard</button>
+                  <button type="button" class="btn-tiny preset-btn" data-pick-min="100" data-pick-max="150" data-bash="300">Hard</button>
+                  <button type="button" class="btn-tiny preset-btn" data-pick-min="150" data-pick-max="250" data-bash="400">Master</button>
+                  <button type="button" class="btn-tiny preset-btn" data-pick-min="500" data-pick-max="999" data-bash="999">Unpickable</button>
+                </div>
                 <div class="form-row">
                   <div class="form-group">
-                    <label for="pick-difficulty-min">Pick Difficulty Min <span class="hint-inline">(0-500+)</span></label>
+                    <label for="pick-difficulty-min">Pick Min</label>
                     <input type="number" id="pick-difficulty-min" min="0" value="0" />
                   </div>
                   <div class="form-group">
-                    <label for="pick-difficulty-max">Pick Difficulty Max <span class="hint-inline">(0-500+)</span></label>
+                    <label for="pick-difficulty-max">Pick Max</label>
                     <input type="number" id="pick-difficulty-max" min="0" value="0" />
                   </div>
+                  <div class="form-group">
+                    <label for="bash-difficulty">Bash Difficulty</label>
+                    <input type="number" id="bash-difficulty" min="0" value="0" />
+                  </div>
                 </div>
-                <p class="hint">Skill below min = auto-fail, skill at/above max = auto-success. 500+ = unpickable.</p>
-
-                <div class="form-group">
-                  <label for="bash-difficulty">Bash Difficulty <span class="hint-inline">(0-500+, 500+ = unbashable)</span></label>
-                  <input type="number" id="bash-difficulty" min="0" value="0" />
-                </div>
+                <span class="hint-inline">Below min = auto-fail. At/above max = auto-success. 500+ = impossible.</span>
               </div>
             </div>
 
-            <!-- Triggers Tab Content -->
+            <!-- Triggers Tab (special, triggered_passageway, temporary_portal) -->
             <div class="tab-content" id="tab-triggers">
-              <h3>Trigger Settings</h3>
               <div class="form-group">
-                <label for="trigger-text">Trigger Text <span class="hint-inline">(what player types)</span></label>
-                <input type="text" id="trigger-text" placeholder="e.g., go portal, climb rope" />
+                <label for="trigger-text">Trigger Text</label>
+                <input type="text" id="trigger-text" placeholder="go portal" />
+                <span class="hint-inline">What the player types to use this passage</span>
               </div>
-
               <div class="form-group">
                 <label for="passage-message-self">Passage Message (Self)</label>
-                <input type="text" id="passage-message-self" placeholder="e.g., You crawl through the hole." />
+                <input type="text" id="passage-message-self" placeholder="You squeeze through the crack in the wall..." />
+                <span class="hint-inline">What the player sees</span>
               </div>
-
               <div class="form-group">
-                <label for="passage-message-room">Passage Message (Room)</label>
-                <input type="text" id="passage-message-room" placeholder="e.g., {player} crawls through the hole." />
+                <label for="passage-message-room">Departure Message (Room)</label>
+                <input type="text" id="passage-message-room" placeholder="{player} squeezes through a crack in the wall." />
+                <span class="hint-inline">What people in the departure room see. Use {player} for the actor.</span>
               </div>
-
-              <div class="form-group" id="item-display-group">
-                <label for="item-display-name">Item Display Name <span class="hint-inline">(shown on "Also here:")</span></label>
-                <input type="text" id="item-display-name" placeholder="e.g., A shimmering portal" />
+              <div class="form-group">
+                <label for="passage-message-arrival">Arrival Message (Destination)</label>
+                <input type="text" id="passage-message-arrival" placeholder="{player} squeezes through a crack in the wall." />
+                <span class="hint-inline">What people in the destination room see. Use {player} for the actor. Blank = "[player] arrives."</span>
+              </div>
+              <div class="form-group" id="item-display-name-group">
+                <label for="item-display-name">Item Display Name</label>
+                <input type="text" id="item-display-name" placeholder="a shimmering portal" />
+                <span class="hint-inline">Shown in "Also here:" room listing</span>
               </div>
             </div>
 
-            <!-- Portal Tab Content (for TEMPORARY_PORTAL) -->
+            <!-- Portal Tab (temporary_portal) -->
             <div class="tab-content" id="tab-portal">
-              <h3>Temporary Portal Settings</h3>
               <div class="form-group">
-                <label for="spawn-trigger-text">Spawn Trigger Text <span class="hint-inline">(what player says to spawn)</span></label>
-                <input type="text" id="spawn-trigger-text" placeholder="e.g., Valar Morghulis" />
+                <label for="spawn-trigger-text">Spawn Trigger Text</label>
+                <input type="text" id="spawn-trigger-text" placeholder="cast portal" />
+                <span class="hint-inline">What a player says to create the portal</span>
               </div>
-
-              <div class="form-group">
-                <label for="duration-seconds">Duration <span class="hint-inline">(seconds)</span></label>
-                <input type="number" id="duration-seconds" min="1" value="60" />
-              </div>
-
-              <div class="form-group">
-                <label for="appear-message">Appear Message</label>
-                <input type="text" id="appear-message" placeholder="e.g., A portal tears open reality!" />
-              </div>
-
-              <div class="form-group">
-                <label for="disappear-message">Disappear Message</label>
-                <input type="text" id="disappear-message" placeholder="e.g., The portal collapses!" />
-              </div>
-            </div>
-
-            <!-- Permissions Tab Content -->
-            <div class="tab-content" id="tab-permissions">
-              <h3>Permission Requirements</h3>
               <div class="form-row">
                 <div class="form-group">
-                  <label for="required-level">Min Level <span class="hint-inline">(0=none)</span></label>
+                  <label for="duration-seconds">Duration (seconds)</label>
+                  <input type="number" id="duration-seconds" min="1" value="60" />
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="appear-message">Appear Message</label>
+                  <input type="text" id="appear-message" placeholder="A shimmering portal materializes..." />
+                </div>
+                <div class="form-group">
+                  <label for="disappear-message">Disappear Message</label>
+                  <input type="text" id="disappear-message" placeholder="The portal flickers and vanishes." />
+                </div>
+              </div>
+            </div>
+
+            <!-- Permissions Tab (all except open_passageway) -->
+            <div class="tab-content" id="tab-permissions">
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="required-level">Min Level</label>
                   <input type="number" id="required-level" min="0" value="0" />
+                  <span class="hint-inline">0 = no minimum</span>
                 </div>
                 <div class="form-group">
-                  <label for="max-level">Max Level <span class="hint-inline">(0=none, must be &ge; min)</span></label>
+                  <label for="max-level">Max Level</label>
                   <input type="number" id="max-level" min="0" value="0" />
+                  <span class="hint-inline">0 = no maximum</span>
                 </div>
-                <div class="form-group">
-                  <label for="required-classes">Required Classes <span class="hint-inline">(comma-separated)</span></label>
-                  <input type="text" id="required-classes" placeholder="e.g., warrior, paladin" />
-                </div>
+              </div>
+
+              <div class="form-section">
+                <h4>Required Classes</h4>
+                <p class="section-hint">Empty = all classes allowed.</p>
+                <div id="class-buttons" class="class-button-grid"></div>
               </div>
 
               <div class="form-row">
                 <div class="form-group">
                   <label for="required-quest-flag">Required Quest Flag</label>
-                  <input type="text" id="required-quest-flag" placeholder="e.g., completed_dungeon" />
+                  <input type="text" id="required-quest-flag" placeholder="quest_flag_name" />
                 </div>
                 <div class="form-group">
-                  <label for="required-item-tag">Required Item Tag <span class="hint-inline">(not consumed)</span></label>
-                  <input type="text" id="required-item-tag" placeholder="e.g., guild_badge" />
+                  <label for="required-item-tag">Required Item Tag</label>
+                  <input type="text" id="required-item-tag" placeholder="item_tag" />
                 </div>
               </div>
 
               <div class="form-group">
                 <label for="denial-message">Denial Message</label>
-                <textarea id="denial-message" rows="2" placeholder="Custom message when player fails permission check..."></textarea>
+                <textarea id="denial-message" rows="2" placeholder="You cannot pass through here."></textarea>
+                <span class="hint-inline">Custom message when permission check fails</span>
               </div>
             </div>
 
             <div class="form-actions">
               <button type="submit" class="btn-primary">Save Door</button>
               <button type="button" id="duplicate-door-btn" class="btn-secondary">Duplicate</button>
-              <button type="button" id="delete-door-btn" class="btn-danger">Delete Door</button>
+              <div class="spacer"></div>
+              <button type="button" id="delete-door-btn" class="btn-danger">Delete</button>
             </div>
           </form>
         </main>
@@ -362,25 +366,6 @@
           <div id="door-preview">
             <div id="preview-content">
               <p class="hint">Select a door to see preview</p>
-            </div>
-          </div>
-
-          <div class="panel-section" id="connection-preview">
-            <h3>Connection</h3>
-            <div id="connection-diagram">
-              <div class="connection-room" id="entry-room-preview">
-                <span class="room-label">Entry Room</span>
-                <span class="room-name">-</span>
-              </div>
-              <div class="connection-arrow">
-                <span class="direction-label" id="entry-dir-label">-</span>
-                <span class="arrow-icon">&#8594;</span>
-                <span class="direction-label" id="exit-dir-label">-</span>
-              </div>
-              <div class="connection-room" id="exit-room-preview">
-                <span class="room-label">Exit Room</span>
-                <span class="room-name">-</span>
-              </div>
             </div>
           </div>
         </aside>

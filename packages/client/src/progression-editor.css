@@ -1,328 +1,204 @@
-/* Progression Editor Specific Styles */
+/* Class / Race Editor */
 
-/* Main Tab Navigation in Nav Bar */
-.main-tabs {
+/* ============================================================================
+   Entity Type Tabs (below nav bar)
+   ============================================================================ */
+
+.entity-tabs {
   display: flex;
-  gap: 0;
-  margin-left: 2rem;
+  background: #16213e;
+  border-bottom: 1px solid #333;
+  padding: 0 1rem;
+  flex-shrink: 0;
 }
 
-.main-tab {
+.entity-tab {
   background: transparent;
   border: none;
-  border-bottom: 3px solid transparent;
+  border-bottom: 2px solid transparent;
   color: #888;
-  padding: 0.75rem 1.25rem;
-  font-size: 0.95rem;
+  padding: 0.6rem 1.25rem;
   cursor: pointer;
-  transition: all 0.2s;
+  font-size: 0.9rem;
+  font-family: inherit;
+  transition: color 0.15s, border-color 0.15s;
 }
 
-.main-tab:hover {
-  color: #00ff00;
-  background: rgba(0, 255, 0, 0.05);
+.entity-tab:hover {
+  color: var(--primary-color);
 }
 
-.main-tab.active {
-  color: #00ff00;
-  border-bottom-color: #00ff00;
+.entity-tab.active {
+  color: var(--primary-color);
+  border-bottom-color: var(--primary-color);
 }
 
-/* Help link in nav */
-.nav-help {
-  margin-right: 1rem;
-}
+/* ============================================================================
+   List Panel
+   ============================================================================ */
 
-/* Tab Pages */
-.tab-page {
-  display: none;
-  height: calc(100vh - 45px);
-}
-
-.tab-page.active {
-  display: block;
-}
-
-/* Override editor-layout for tab pages */
-.tab-page .editor-layout {
-  display: flex;
-  height: 100%;
-}
-
-/* List Panel */
-.list-panel {
-  width: 300px;
-  min-width: 300px;
-  background: #16213e;
-  border-right: 1px solid #333;
+#entity-list-panel {
   display: flex;
   flex-direction: column;
-  overflow: hidden;
-}
-
-.list-panel .panel-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 1rem;
-  border-bottom: 1px solid #333;
-  flex-shrink: 0;
-}
-
-.list-panel .panel-header h2 {
-  font-size: 1.1rem;
-  color: #00ff00;
-  margin: 0;
-}
-
-.list-panel .filter-row {
-  padding: 0.75rem 1rem;
-  border-bottom: 1px solid #333;
-  flex-shrink: 0;
-}
-
-.list-panel .filter-row select {
-  width: 100%;
-  padding: 0.5rem;
-  background: #1a1a2e;
-  border: 1px solid #333;
-  color: #eee;
-  border-radius: 4px;
-}
-
-/* Entity List */
-.entity-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  overflow-y: auto;
-  flex: 1;
-}
-
-.entity-list li {
-  padding: 0.75rem 1rem;
-  border-bottom: 1px solid #222;
-  cursor: pointer;
-  transition: background 0.15s;
-}
-
-.entity-list li:hover {
-  background: rgba(0, 255, 0, 0.1);
-}
-
-.entity-list li.selected {
-  background: rgba(0, 255, 0, 0.2);
-  border-left: 3px solid #00ff00;
-}
-
-.entity-list li .entity-name {
-  font-weight: 500;
-  color: #eee;
-}
-
-.entity-list li .entity-id {
-  font-size: 0.8rem;
-  color: #888;
-  margin-top: 0.25rem;
-}
-
-.entity-list li .entity-type {
-  font-size: 0.75rem;
-  color: #00ff00;
-  background: rgba(0, 255, 0, 0.1);
-  padding: 0.1rem 0.4rem;
-  border-radius: 3px;
-  margin-left: 0.5rem;
-}
-
-/* Editor Panel */
-.editor-panel {
-  flex: 1;
-  padding: 1.5rem;
-  overflow-y: auto;
-  background: #1a1a2e;
-}
-
-.no-selection {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 100%;
-  color: #666;
-  font-size: 1.1rem;
-}
-
-/* Entity Form */
-.entity-form {
-  max-width: 800px;
-}
-
-.entity-form .form-header {
-  margin-bottom: 1.5rem;
-  padding-bottom: 1rem;
-  border-bottom: 1px solid #333;
-}
-
-.entity-form .form-header h2 {
-  color: #00ff00;
-  margin: 0;
-}
-
-.entity-form .form-row {
-  display: flex;
-  gap: 1rem;
-  margin-bottom: 1rem;
-}
-
-.entity-form .form-row .form-group {
-  flex: 1;
-}
-
-.entity-form .form-group {
-  margin-bottom: 1rem;
-}
-
-.entity-form .form-group label {
-  display: block;
-  margin-bottom: 0.4rem;
-  color: #aaa;
-  font-size: 0.9rem;
-}
-
-.entity-form .form-group input,
-.entity-form .form-group select,
-.entity-form .form-group textarea {
-  width: 100%;
-  padding: 0.6rem;
+  width: 280px;
+  min-width: 280px;
   background: #16213e;
-  border: 1px solid #333;
-  color: #eee;
-  border-radius: 4px;
-  font-size: 0.95rem;
+  border-right: 1px solid #333;
 }
 
-.entity-form .form-group input:focus,
-.entity-form .form-group select:focus,
-.entity-form .form-group textarea:focus {
-  outline: none;
-  border-color: #00ff00;
+#entity-list { flex: 1; overflow-y: auto; list-style: none; }
+
+#entity-list li {
+  padding: 0.6rem 0.75rem;
+  cursor: pointer;
+  border-bottom: 1px solid #222;
+  border-left: 3px solid transparent;
+  transition: background-color 0.15s, border-color 0.15s;
 }
 
-.entity-form .checkbox-group {
+#entity-list li:hover { background: var(--hover-bg); }
+#entity-list li.selected { background: var(--selected-bg); border-left-color: var(--primary-color); }
+
+#entity-list li .entity-name { font-weight: 600; color: var(--text-primary); font-size: 0.9rem; }
+#entity-list li .entity-meta { font-size: 0.75rem; color: #555; margin-top: 2px; }
+#entity-list li .entity-meta .npc-badge { color: #fbbf24; font-weight: 600; }
+
+/* ============================================================================
+   Editor Panel
+   ============================================================================ */
+
+#entity-editor-panel { flex: 1; padding: 1.5rem 2rem; overflow-y: auto; }
+#no-entity-selected { display: flex; align-items: center; justify-content: center; height: 100%; }
+
+/* ============================================================================
+   Armor Grid
+   ============================================================================ */
+
+.armor-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+/* ============================================================================
+   Stat Grid (Races)
+   ============================================================================ */
+
+.stat-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.stat-row {
   display: flex;
   align-items: center;
+  gap: 0.4rem;
+  background: #0f0f23;
+  padding: 0.4rem 0.6rem;
+  border-radius: 4px;
+  border: 1px solid #222;
+  flex: 0 0 auto;
 }
 
-.entity-form .checkbox-group label {
+.stat-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--primary-color);
+  min-width: 30px;
+}
+
+.stat-input {
+  width: 55px;
+  text-align: center;
+  padding: 0.3rem;
+  background: #1a1a2e;
+  border: 1px solid #333;
+  border-radius: 3px;
+  color: #eee;
+  font-size: 0.85rem;
+}
+
+.stat-input:focus { outline: none; border-color: #00ff00; }
+
+.stat-sep {
+  color: #555;
+  font-size: 0.8rem;
+}
+
+/* ============================================================================
+   Traits Container
+   ============================================================================ */
+
+.traits-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 0.5rem;
+}
+
+.trait-item {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  cursor: pointer;
-  margin-bottom: 0;
+  padding: 0.4rem 0.6rem;
+  background: #0f0f23;
+  border-radius: 4px;
+  border: 1px solid #222;
 }
 
-.entity-form .checkbox-group input[type="checkbox"] {
-  width: auto;
-}
-
-/* Stats Row */
-.stats-row .form-group {
-  flex: 0 0 auto;
-  text-align: center;
-}
-
-.stats-row .form-group label {
-  text-align: center;
-  font-weight: bold;
-  color: #00ff00;
-}
-
-.stats-row .form-group input {
-  text-align: center;
-}
-
-/* Stat Range (min-max inputs for races) */
-.stat-range {
-  display: flex;
-  align-items: center;
-  gap: 0.25rem;
-}
-
-.stat-range input {
+.trait-item .trait-value-input {
   width: 60px;
-  padding: 0.4rem;
   text-align: center;
-}
-
-.stat-range span {
-  color: #666;
-}
-
-/* Form Section */
-.form-section {
-  margin: 1.5rem 0;
-  padding: 1rem;
-  background: rgba(0, 0, 0, 0.2);
-  border-radius: 6px;
-}
-
-.form-section h3 {
-  color: #00ff00;
-  margin: 0 0 1rem 0;
-  font-size: 1rem;
-}
-
-/* Form Actions */
-.form-actions {
-  display: flex;
-  gap: 1rem;
-  margin-top: 2rem;
-  padding-top: 1.5rem;
-  border-top: 1px solid #333;
-}
-
-/* Buttons */
-.btn-primary {
-  background: #00ff00;
-  color: #1a1a2e;
-  border: none;
-  padding: 0.6rem 1.2rem;
-  border-radius: 4px;
-  cursor: pointer;
-  font-weight: 600;
-  transition: background 0.2s;
-}
-
-.btn-primary:hover {
-  background: #00cc00;
-}
-
-.btn-secondary {
-  background: #333;
+  padding: 0.25rem;
+  background: #1a1a2e;
+  border: 1px solid #333;
+  border-radius: 3px;
   color: #eee;
-  border: 1px solid #555;
-  padding: 0.5rem 1rem;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: background 0.2s;
+  font-size: 0.8rem;
+  margin-left: auto;
 }
 
-.btn-secondary:hover {
-  background: #444;
+.trait-item .trait-value-input:focus { outline: none; border-color: #00ff00; }
+.trait-item .trait-value-input:disabled { opacity: 0.3; }
+
+.trait-select-input {
+  margin-left: auto;
+  padding: 0.25rem 0.4rem;
+  background: #1a1a2e;
+  border: 1px solid #333;
+  border-radius: 3px;
+  color: #eee;
+  font-size: 0.8rem;
 }
 
-.btn-danger {
-  background: transparent;
-  color: #ff4444;
-  border: 1px solid #ff4444;
-  padding: 0.6rem 1.2rem;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: all 0.2s;
+.trait-select-input:focus { outline: none; border-color: #00ff00; }
+.trait-select-input:disabled { opacity: 0.3; }
+
+/* ============================================================================
+   Class Buttons (Race allowed classes)
+   ============================================================================ */
+
+/* ============================================================================
+   Form Actions
+   ============================================================================ */
+
+#class-form .form-actions,
+#race-form .form-actions {
+  position: sticky;
+  bottom: 0;
+  background: #1a1a2e;
+  padding: 1rem 0;
+  margin-top: 1.5rem;
+  border-top: 1px solid #333;
+  z-index: 1;
 }
 
-.btn-danger:hover {
-  background: #ff4444;
-  color: #fff;
+#class-form .form-actions .spacer,
+#race-form .form-actions .spacer {
+  flex: 1;
 }
 
+@media (max-width: 768px) {
+  .stat-grid { flex-direction: column; }
+  .traits-container { grid-template-columns: 1fr; }
+}

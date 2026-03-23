@@ -20,7 +20,7 @@
               <a href="/item-editor.html" class="nav-dropdown-item">Item Editor</a>
               <a href="/spell-editor.html" class="nav-dropdown-item">Spell Editor</a>
               <a href="/status-editor.html" class="nav-dropdown-item active">Status Effects Editor</a>
-              <a href="/progression-editor.html" class="nav-dropdown-item">Progression Editor</a>
+              <a href="/progression-editor.html" class="nav-dropdown-item">Class / Race Editor</a>
               <a href="/door-editor.html" class="nav-dropdown-item">Door Editor</a>
               <a href="/action-editor.html" class="nav-dropdown-item">Action Editor</a>
               <a href="/npc-editor.html" class="nav-dropdown-item">NPC Editor</a>
@@ -41,7 +41,7 @@
           </div>
         </div>
         <div class="nav-spacer"></div>
-        <a href="/docs.html?file=Spell_and_Effects_Guide.md" target="_blank" rel="noopener noreferrer" class="help-link nav-help" title="View Documentation">?</a>
+        <a href="/docs.html?file=Status_Effects_Guide.md" class="help-link nav-help" title="View Documentation" target="_blank" rel="noopener noreferrer">?</a>
         <div class="nav-user-menu">
           <button class="nav-user-btn" id="nav-username">User</button>
           <div class="dropdown-menu" id="user-dropdown">
@@ -53,34 +53,38 @@
       <div id="editor-layout">
         <aside id="effect-list-panel">
           <div class="panel-header">
-            <h2>Status Effects</h2>
-            <button id="new-effect-btn" class="btn-primary">+ New Effect</button>
+            <h2>Effects</h2>
+            <button id="new-effect-btn" class="btn-primary">+ New</button>
           </div>
-          <div id="effect-filter">
-            <label for="category-select">Filter by Category:</label>
+          <div class="list-filter">
             <select id="category-select">
               <option value="">All Categories</option>
               <option value="buff">Buff</option>
               <option value="debuff">Debuff</option>
-              <option value="dot">DoT (Damage over Time)</option>
-              <option value="hot">HoT (Healing over Time)</option>
+              <option value="dot">DoT</option>
+              <option value="hot">HoT</option>
               <option value="control">Control</option>
             </select>
           </div>
-          <div id="effect-search">
+          <div class="list-search">
             <input type="text" id="search-input" placeholder="Search effects..." />
           </div>
           <ul id="effect-list"></ul>
-
           <div class="panel-footer">
-            <button id="import-btn" class="btn-small">Import</button>
-            <button id="export-btn" class="btn-small">Export</button>
+            <span id="effect-count" class="list-count"></span>
+            <div class="footer-buttons">
+              <button id="import-btn" class="btn-small">Import</button>
+              <button id="export-btn" class="btn-small">Export</button>
+            </div>
           </div>
         </aside>
 
         <main id="effect-editor-panel">
           <div id="no-effect-selected">
-            <p>Select an effect from the list or create a new one.</p>
+            <div class="empty-state">
+              <div class="empty-icon">&gt;_</div>
+              <p>Select an effect from the list or create a new one.</p>
+            </div>
           </div>
 
           <form id="effect-form" style="display: none;">
@@ -89,7 +93,6 @@
               <span id="effect-id-display"></span>
             </div>
 
-            <!-- Tabs -->
             <div class="form-tabs">
               <button type="button" class="tab-btn active" data-tab="basic">Basic</button>
               <button type="button" class="tab-btn" data-tab="modifiers">Modifiers</button>
@@ -97,16 +100,16 @@
               <button type="button" class="tab-btn" data-tab="flags">Flags</button>
             </div>
 
-            <!-- Basic Tab Content -->
+            <!-- Basic Tab -->
             <div class="tab-content active" id="tab-basic">
               <div class="form-row">
                 <div class="form-group">
                   <label for="effect-id">Effect ID</label>
-                  <input type="text" id="effect-id" required placeholder="poisoned" pattern="[a-z_]+" />
-                  <span class="hint-inline">Lowercase, no spaces (e.g., poisoned, blessed)</span>
+                  <input type="text" id="effect-id" required placeholder="poisoned" pattern="[a-z][a-z0-9_]*" />
+                  <span class="hint-inline">Immutable after creation. Lowercase, underscores only.</span>
                 </div>
                 <div class="form-group">
-                  <label for="effect-name">Display Name</label>
+                  <label for="effect-name">Display Name <span class="required">*</span></label>
                   <input type="text" id="effect-name" required placeholder="Poisoned" />
                 </div>
               </div>
@@ -135,57 +138,39 @@
                     <option value="stack">Stack (multiple instances)</option>
                   </select>
                 </div>
-              </div>
-
-              <div class="form-row">
                 <div class="form-group" id="max-stacks-group">
                   <label for="effect-max-stacks">Max Stacks</label>
                   <input type="number" id="effect-max-stacks" min="1" value="1" />
-                  <span class="hint-inline">Only applies when stacking behavior is "Stack"</span>
                 </div>
               </div>
             </div>
 
-            <!-- Modifiers Tab Content -->
+            <!-- Modifiers Tab -->
             <div class="tab-content" id="tab-modifiers">
-              <p class="hint">Combat stat modifiers. Positive values are bonuses, negative are penalties.</p>
+              <p class="section-hint">Positive values are bonuses, negative are penalties. Leave at 0 for no effect.</p>
 
-              <div class="form-row">
+              <h4 class="modifier-group-header">Combat</h4>
+              <div class="modifier-grid">
                 <div class="form-group">
-                  <label for="effect-accuracy">Accuracy Modifier</label>
+                  <label for="effect-accuracy">Accuracy</label>
                   <input type="number" id="effect-accuracy" value="0" />
-                  <span class="hint-inline">+/- to hit chance</span>
                 </div>
                 <div class="form-group">
-                  <label for="effect-defense">Defense Modifier</label>
+                  <label for="effect-defense">Defense</label>
                   <input type="number" id="effect-defense" value="0" />
-                  <span class="hint-inline">+/- to defense</span>
                 </div>
-              </div>
-
-              <div class="form-row">
                 <div class="form-group">
-                  <label for="effect-energy">Energy Modifier (%)</label>
+                  <label for="effect-energy">Energy %</label>
                   <input type="number" id="effect-energy" value="0" />
-                  <span class="hint-inline">% change to attack energy gain</span>
                 </div>
                 <div class="form-group">
-                  <label for="effect-damage">Damage Modifier (%)</label>
+                  <label for="effect-damage">Damage %</label>
                   <input type="number" id="effect-damage" value="0" />
-                  <span class="hint-inline">% change to damage dealt</span>
                 </div>
-              </div>
-
-              <div class="form-row">
                 <div class="form-group">
-                  <label for="effect-speed">Speed Modifier (%)</label>
+                  <label for="effect-speed">Speed %</label>
                   <input type="number" id="effect-speed" value="0" />
-                  <span class="hint-inline">Negative = faster, positive = slower</span>
                 </div>
-              </div>
-
-              <h4 style="margin-top: 12px;">Combat Modifiers</h4>
-              <div class="form-row">
                 <div class="form-group">
                   <label for="effect-crit-chance">Crit Chance</label>
                   <input type="number" id="effect-crit-chance" value="0" />
@@ -194,144 +179,143 @@
                   <label for="effect-dodge">Dodge</label>
                   <input type="number" id="effect-dodge" value="0" />
                 </div>
-                <div class="form-group">
-                  <label for="effect-magic-resist">Magic Resist (%)</label>
-                  <input type="number" id="effect-magic-resist" value="0" />
-                </div>
-                <div class="form-group">
-                  <label for="effect-healing-received">Healing Received (%)</label>
-                  <input type="number" id="effect-healing-received" value="0" />
-                </div>
               </div>
-              <h4 style="margin-top: 12px;">Skill Modifiers</h4>
-              <div class="form-row">
+
+              <h4 class="modifier-group-header">Magic</h4>
+              <div class="modifier-grid">
                 <div class="form-group">
-                  <label for="effect-perception">Perception</label>
-                  <input type="number" id="effect-perception" value="0" />
-                </div>
-                <div class="form-group">
-                  <label for="effect-stealth">Stealth</label>
-                  <input type="number" id="effect-stealth" value="0" />
+                  <label for="effect-magic-resist">Magic Resist %</label>
+                  <input type="number" id="effect-magic-resist" value="0" />
                 </div>
                 <div class="form-group">
                   <label for="effect-spellcasting">Spellcasting</label>
                   <input type="number" id="effect-spellcasting" value="0" />
                 </div>
                 <div class="form-group">
+                  <label for="effect-healing-received">Healing Recv %</label>
+                  <input type="number" id="effect-healing-received" value="0" />
+                </div>
+              </div>
+
+              <h4 class="modifier-group-header">Skills</h4>
+              <div class="modifier-grid">
+                <div class="form-group">
+                  <label for="effect-stealth">Stealth</label>
+                  <input type="number" id="effect-stealth" value="0" />
+                </div>
+                <div class="form-group">
+                  <label for="effect-perception">Perception</label>
+                  <input type="number" id="effect-perception" value="0" />
+                </div>
+                <div class="form-group">
                   <label for="effect-lockpicking">Lockpicking</label>
                   <input type="number" id="effect-lockpicking" value="0" />
                 </div>
               </div>
-              <h4 style="margin-top: 12px;">Stat Modifiers</h4>
-              <div class="form-row">
+
+              <h4 class="modifier-group-header">Stats</h4>
+              <div class="modifier-grid">
                 <div class="form-group"><label for="effect-str">STR</label><input type="number" id="effect-str" value="0" /></div>
                 <div class="form-group"><label for="effect-dex">DEX</label><input type="number" id="effect-dex" value="0" /></div>
                 <div class="form-group"><label for="effect-con">CON</label><input type="number" id="effect-con" value="0" /></div>
-              </div>
-              <div class="form-row">
                 <div class="form-group"><label for="effect-int">INT</label><input type="number" id="effect-int" value="0" /></div>
                 <div class="form-group"><label for="effect-wis">WIS</label><input type="number" id="effect-wis" value="0" /></div>
                 <div class="form-group"><label for="effect-cha">CHA</label><input type="number" id="effect-cha" value="0" /></div>
-              </div>
-              <div class="form-row">
                 <div class="form-group"><label for="effect-max-hp">Max HP</label><input type="number" id="effect-max-hp" value="0" /></div>
                 <div class="form-group"><label for="effect-max-mana">Max Mana</label><input type="number" id="effect-max-mana" value="0" /></div>
               </div>
             </div>
 
-            <!-- Periodic Tab Content -->
+            <!-- Periodic Tab -->
             <div class="tab-content" id="tab-periodic">
-              <p class="hint">Periodic effects apply every 5 seconds. Use for DoT/HoT effects.</p>
+              <p class="section-hint">Periodic effects apply every 5 seconds. Use for DoT/HoT effects.</p>
 
               <div class="form-row">
                 <div class="form-group">
-                  <label>Tick Damage Range</label>
+                  <label>Tick Damage</label>
                   <div class="range-inputs">
                     <input type="number" id="effect-tick-damage-min" placeholder="Min" min="0" />
-                    <span class="range-separator">-</span>
+                    <span class="range-separator">to</span>
                     <input type="number" id="effect-tick-damage-max" placeholder="Max" min="0" />
                   </div>
-                  <span class="hint-inline">Damage range per tick (e.g., 1-4 for 1 to 4 damage)</span>
                 </div>
                 <div class="form-group">
-                  <label>Tick Healing Range</label>
+                  <label>Tick Healing</label>
                   <div class="range-inputs">
                     <input type="number" id="effect-tick-healing-min" placeholder="Min" min="0" />
-                    <span class="range-separator">-</span>
+                    <span class="range-separator">to</span>
                     <input type="number" id="effect-tick-healing-max" placeholder="Max" min="0" />
                   </div>
-                  <span class="hint-inline">Healing range per tick (e.g., 1-6 for 1 to 6 healing)</span>
+                </div>
+              </div>
+
+              <div class="form-row future-feature">
+                <div class="form-group">
+                  <label>Tick Mana Drain <span class="future-badge">Not Yet Implemented</span></label>
+                  <div class="range-inputs">
+                    <input type="number" id="effect-tick-mana-drain-min" placeholder="Min" min="0" disabled />
+                    <span class="range-separator">to</span>
+                    <input type="number" id="effect-tick-mana-drain-max" placeholder="Max" min="0" disabled />
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label>Tick Mana Restore <span class="future-badge">Not Yet Implemented</span></label>
+                  <div class="range-inputs">
+                    <input type="number" id="effect-tick-mana-restore-min" placeholder="Min" min="0" disabled />
+                    <span class="range-separator">to</span>
+                    <input type="number" id="effect-tick-mana-restore-max" placeholder="Max" min="0" disabled />
+                  </div>
                 </div>
               </div>
 
               <div class="form-group">
+                <label class="toggle-label">
+                  <input type="checkbox" id="effect-show-tick-message" />
+                  <span class="toggle-track"></span>
+                  Show Tick Message
+                </label>
+              </div>
+              <div class="form-group" id="tick-message-group" style="display: none;">
                 <label for="effect-tick-message">Tick Message</label>
                 <input type="text" id="effect-tick-message" placeholder="You feel sick." />
-                <span class="hint-inline">Custom message shown each tick (leave empty for default)</span>
-              </div>
-
-              <div class="form-row">
-                <div class="form-group checkbox-group">
-                  <label class="checkbox-label">
-                    <input type="checkbox" id="effect-silent-tick" />
-                    Silent Tick
-                  </label>
-                  <span class="hint-inline">Suppress tick messages (good for passive effects)</span>
-                </div>
+                <span class="hint-inline">Shown to the player each tick</span>
               </div>
 
               <div class="form-group">
                 <label for="effect-wear-off">Wear Off Message</label>
                 <input type="text" id="effect-wear-off" placeholder="The poison fades." />
-                <span class="hint-inline">Message shown when effect expires</span>
+                <span class="hint-inline">Shown when the effect expires</span>
               </div>
             </div>
 
-            <!-- Flags Tab Content -->
+            <!-- Flags Tab -->
             <div class="tab-content" id="tab-flags">
-              <p class="hint">Special flags that affect gameplay behavior.</p>
+              <p class="section-hint">Special flags that affect gameplay behavior.</p>
 
               <div class="flag-grid">
-                <div class="form-group checkbox-group">
-                  <label class="checkbox-label">
-                    <input type="checkbox" id="effect-blocks-regen" />
-                    Blocks Regeneration
-                  </label>
+                <div class="flag-item">
+                  <label class="toggle-label"><input type="checkbox" id="effect-blocks-regen" /><span class="toggle-track"></span> Blocks Regeneration</label>
                   <span class="hint-inline">Prevents natural HP/mana regen</span>
                 </div>
-
-                <div class="form-group checkbox-group">
-                  <label class="checkbox-label">
-                    <input type="checkbox" id="effect-blocks-movement" />
-                    Blocks Movement
-                  </label>
+                <div class="flag-item">
+                  <label class="toggle-label"><input type="checkbox" id="effect-blocks-movement" /><span class="toggle-track"></span> Blocks Movement</label>
                   <span class="hint-inline">Prevents movement commands</span>
                 </div>
-
-                <div class="form-group checkbox-group">
-                  <label class="checkbox-label">
-                    <input type="checkbox" id="effect-is-blind" />
-                    Is Blind
-                  </label>
-                  <span class="hint-inline">Applies blind penalty in combat</span>
+                <div class="flag-item">
+                  <label class="toggle-label"><input type="checkbox" id="effect-is-blind" /><span class="toggle-track"></span> Is Blind</label>
+                  <span class="hint-inline">Severe accuracy penalty in combat</span>
                 </div>
-                <div class="form-group checkbox-group">
-                  <label class="checkbox-label">
-                    <input type="checkbox" id="effect-blocks-casting" />
-                    Blocks Casting
-                  </label>
+                <div class="flag-item">
+                  <label class="toggle-label"><input type="checkbox" id="effect-blocks-casting" /><span class="toggle-track"></span> Blocks Casting</label>
+                  <span class="hint-inline">Prevents spell use (silence)</span>
                 </div>
-                <div class="form-group checkbox-group">
-                  <label class="checkbox-label">
-                    <input type="checkbox" id="effect-blocks-combat" />
-                    Blocks Combat
-                  </label>
+                <div class="flag-item">
+                  <label class="toggle-label"><input type="checkbox" id="effect-blocks-combat" /><span class="toggle-track"></span> Blocks Combat</label>
+                  <span class="hint-inline">Prevents attacking (stun)</span>
                 </div>
-                <div class="form-group checkbox-group">
-                  <label class="checkbox-label">
-                    <input type="checkbox" id="effect-blocks-stealth" />
-                    Blocks Stealth
-                  </label>
+                <div class="flag-item">
+                  <label class="toggle-label"><input type="checkbox" id="effect-blocks-stealth" /><span class="toggle-track"></span> Blocks Stealth</label>
+                  <span class="hint-inline">Prevents hiding/sneaking</span>
                 </div>
               </div>
             </div>
@@ -339,7 +323,8 @@
             <div class="form-actions">
               <button type="submit" class="btn-primary">Save Effect</button>
               <button type="button" id="duplicate-effect-btn" class="btn-secondary">Duplicate</button>
-              <button type="button" id="delete-effect-btn" class="btn-danger">Delete Effect</button>
+              <div class="spacer"></div>
+              <button type="button" id="delete-effect-btn" class="btn-danger">Delete</button>
             </div>
           </form>
         </main>
@@ -353,37 +338,13 @@
               <p class="hint">Select an effect to see preview</p>
             </div>
           </div>
-
-          <div class="panel-section">
-            <h3>Usage</h3>
-            <div id="usage-info">
-              <p class="hint">This effect ID can be used in the Spell Editor's "Status Effect" field to apply this effect when a spell is cast.</p>
+          <div id="spell-references" class="panel-section">
+            <h3>Used By</h3>
+            <div id="spell-ref-content">
+              <p class="hint">Select an effect to see spell references</p>
             </div>
           </div>
         </aside>
-      </div>
-    </div>
-
-    <!-- Import Modal -->
-    <div id="import-modal" class="modal" style="display: none;">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h3>Import Status Effects</h3>
-          <button id="close-import-modal" class="close-btn">&times;</button>
-        </div>
-        <div class="modal-body">
-          <div class="form-group">
-            <label for="import-file">Select JSON file:</label>
-            <input type="file" id="import-file" accept=".json" />
-          </div>
-          <label class="checkbox-label">
-            <input type="checkbox" id="import-merge" checked />
-            Merge with existing (update if ID matches)
-          </label>
-        </div>
-        <div class="modal-footer">
-          <button id="do-import-btn" class="btn-primary">Import</button>
-        </div>
       </div>
     </div>
 

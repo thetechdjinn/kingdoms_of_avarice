@@ -47,6 +47,8 @@ export interface ListPanelOptions<T> {
   sortFn?: (a: T, b: T) => number;
   /** Debounce delay in ms for search input. Default: 100. */
   debounceMs?: number;
+  /** Callback fired after each render with filtered and total counts. */
+  onRender?: (filteredCount: number, totalCount: number) => void;
 }
 
 export class ListPanel<T> {
@@ -121,7 +123,7 @@ export class ListPanel<T> {
   /** Re-render the list. */
   render(): void {
     const filtered = this.getFilteredItems();
-    const { listElement, getId, renderItem, getItemClass, onSelect } = this.options;
+    const { listElement, getId, renderItem, getItemClass, onSelect, onRender } = this.options;
 
     listElement.innerHTML = '';
     for (const item of filtered) {
@@ -139,6 +141,10 @@ export class ListPanel<T> {
       li.innerHTML = renderItem(item, isSelected);
       li.addEventListener('click', () => onSelect(item));
       listElement.appendChild(li);
+    }
+
+    if (onRender) {
+      onRender(filtered.length, this.items.length);
     }
   }
 

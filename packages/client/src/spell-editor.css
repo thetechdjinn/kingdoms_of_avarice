@@ -1,444 +1,294 @@
-/* Spell Editor Specific Styles */
+/* Spell Editor — three-panel with type-specific effects */
 
-/* Main editor panel needs to scroll */
-#spell-editor-panel {
-  flex: 1;
-  padding: 1.5rem;
-  overflow-y: auto;
-}
-
-#spell-form {
-  max-width: 800px;
-}
-
-/* Form actions - ensure visible */
-#spell-form .form-actions {
-  display: flex;
-  gap: 1rem;
-  margin-top: 1.5rem;
-  padding: 1rem 0;
-  border-top: 1px solid #333;
-  background: #1a1a2e;
-  position: sticky;
-  bottom: 0;
-}
+/* ============================================================================
+   List Panel
+   ============================================================================ */
 
 #spell-list-panel {
   display: flex;
   flex-direction: column;
+  width: 280px;
+  min-width: 280px;
+  background: #16213e;
+  border-right: 1px solid #333;
+}
+
+.list-filter {
+  padding: 0.5rem 0.75rem 0;
+}
+
+.list-filter select {
+  width: 100%;
+  padding: 0.4rem 0.5rem;
+  background: #0f0f23;
+  border: 1px solid #333;
+  border-radius: 4px;
+  color: #eee;
+  font-size: 0.8rem;
+}
+
+.list-filter select:focus {
+  outline: none;
+  border-color: #00ff00;
 }
 
 #spell-list {
   flex: 1;
   overflow-y: auto;
+  list-style: none;
 }
 
 #spell-list li {
-  display: flex;
-  flex-direction: column;
-  padding: 8px 12px;
-  border-bottom: 1px solid #333;
+  padding: 0.5rem 0.75rem;
   cursor: pointer;
-  transition: background 0.2s;
+  border-bottom: 1px solid #222;
+  border-left: 3px solid transparent;
+  transition: background-color 0.15s, border-color 0.15s;
 }
 
 #spell-list li:hover {
-  background: #1a1a2e;
+  background: var(--hover-bg);
 }
 
 #spell-list li.selected {
-  background: #0e4429;
-  border-left: 3px solid #00ff00;
+  background: var(--selected-bg);
+  border-left-color: var(--primary-color);
 }
 
 #spell-list li .spell-name {
-  font-weight: bold;
-  color: #00ff00;
-}
-
-#spell-list li .spell-mnemonic {
-  font-size: 0.75rem;
-  color: #60a5fa;
-  font-family: monospace;
-  background: #1a1a2e;
-  padding: 2px 6px;
-  border-radius: 3px;
-  align-self: flex-start;
-  margin-bottom: 4px;
+  font-weight: 600;
+  color: var(--text-primary);
+  font-size: 0.9rem;
 }
 
 #spell-list li .spell-meta {
   display: flex;
-  gap: 8px;
   align-items: center;
+  gap: 0.4rem;
+  margin-top: 2px;
 }
 
-#spell-list li .spell-type {
-  font-size: 0.75rem;
-  text-transform: capitalize;
-  padding: 2px 6px;
-  border-radius: 3px;
-}
-
-#spell-list li .spell-type-offensive {
-  background: rgba(255, 107, 107, 0.2);
-  color: #ff6b6b;
-}
-
-#spell-list li .spell-type-healing {
-  background: rgba(74, 222, 128, 0.2);
-  color: #4ade80;
-}
-
-#spell-list li .spell-type-buff {
-  background: rgba(96, 165, 250, 0.2);
+#spell-list li .spell-mnemonic {
+  font-family: 'Courier New', monospace;
+  font-size: 0.7rem;
   color: #60a5fa;
-}
-
-#spell-list li .spell-type-debuff {
-  background: rgba(192, 132, 252, 0.2);
-  color: #c084fc;
-}
-
-#spell-list li .spell-type-utility {
-  background: rgba(251, 191, 36, 0.2);
-  color: #fbbf24;
+  background: #0f0f23;
+  padding: 1px 4px;
+  border-radius: 2px;
 }
 
 #spell-list li .spell-level {
-  font-size: 0.75rem;
-  color: #888;
+  font-size: 0.7rem;
+  color: #555;
 }
 
-#spell-filter,
-#spell-search {
-  padding: 8px 12px;
-  border-bottom: 1px solid #333;
+/* Spell type badges */
+.type-badge {
+  font-size: 0.65rem;
+  padding: 1px 5px;
+  border-radius: 3px;
+  text-transform: uppercase;
+  font-weight: 600;
+  letter-spacing: 0.03em;
 }
 
-#spell-search input {
-  width: 100%;
-}
+.type-badge.offensive { background: #3a1a1a; color: #ff6b6b; }
+.type-badge.healing { background: #0e3a1e; color: #4ade80; }
+.type-badge.buff { background: #1a2a3a; color: #60a5fa; }
+.type-badge.debuff { background: #2a1a3a; color: #c084fc; }
+.type-badge.utility { background: #3a2a1a; color: #fbbf24; }
 
-.panel-footer {
-  padding: 12px;
-  border-top: 1px solid #333;
-  display: flex;
-  gap: 8px;
-}
+/* ============================================================================
+   Editor Panel
+   ============================================================================ */
 
-.panel-footer button {
+#spell-editor-panel {
   flex: 1;
+  padding: 1.5rem 2rem;
+  overflow-y: auto;
 }
 
-/* Tabs */
-.form-tabs {
+#no-spell-selected {
   display: flex;
-  gap: 4px;
-  margin-bottom: 16px;
-  border-bottom: 2px solid #333;
-  padding-bottom: 8px;
-}
-
-.tab-btn {
-  padding: 8px 16px;
-  background: transparent;
-  border: none;
-  color: #888;
-  cursor: pointer;
-  border-radius: 4px 4px 0 0;
-  transition: all 0.2s;
-}
-
-.tab-btn:hover {
-  color: #00ff00;
-  background: #1a1a2e;
-}
-
-.tab-btn.active {
-  color: #00ff00;
-  background: #0e4429;
-}
-
-.tab-content {
-  display: none;
-}
-
-.tab-content.active {
-  display: block;
-}
-
-/* Form Rows */
-.form-row {
-  display: flex;
-  gap: 16px;
-  margin-bottom: 12px;
-}
-
-.form-row .form-group {
-  flex: 1;
-  margin-bottom: 0;
-}
-
-/* Effect sections */
-.effect-section {
-  padding: 16px;
-  background: #1a1a2e;
-  border-radius: 4px;
-  margin-bottom: 16px;
-}
-
-.effect-section h3 {
-  margin-top: 0;
-  margin-bottom: 16px;
-  color: #00ff00;
-  font-size: 1rem;
-}
-
-/* Checkbox group styling */
-.checkbox-group {
-  display: flex;
-  flex-direction: column;
+  align-items: center;
   justify-content: center;
+  height: 100%;
 }
 
-.checkbox-group .checkbox-label {
-  margin-bottom: 4px;
+/* ============================================================================
+   Effects Tab — Type-Specific Sections
+   ============================================================================ */
+
+.effect-type-section {
+  margin-bottom: 1.25rem;
+  padding: 1rem;
+  background: #0f0f23;
+  border: 1px solid #333;
+  border-radius: 6px;
 }
 
-/* Class quick select */
-.class-quick-select {
-  margin-top: 16px;
-  padding: 16px;
-  background: #1a1a2e;
-  border-radius: 4px;
-}
-
-.class-quick-select label {
-  display: block;
-  color: #888;
-  margin-bottom: 8px;
+.effect-type-header {
+  color: var(--primary-color);
   font-size: 0.9rem;
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid #2a2a2e;
 }
 
-.class-buttons {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
+.utility-placeholder {
+  text-align: center;
+  padding: 1rem;
 }
 
-.class-btn {
-  padding: 6px 12px;
-  background: #333;
-  border: 1px solid #555;
-  color: #888;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: all 0.2s;
-}
+/* ============================================================================
+   Preview Panel
+   ============================================================================ */
 
-.class-btn:hover {
-  background: #444;
-  color: #fff;
-}
-
-.class-btn.active {
-  background: #0e4429;
-  border-color: #00ff00;
-  color: #00ff00;
-}
-
-/* Preview Panel */
 #preview-panel {
   width: 300px;
-  background: #0f0f23;
+  min-width: 250px;
+  background: #16213e;
   border-left: 1px solid #333;
   display: flex;
   flex-direction: column;
+  overflow-y: auto;
 }
 
 #spell-preview {
   flex: 1;
-  padding: 16px;
+  padding: 0.75rem 1rem;
   overflow-y: auto;
 }
 
 #preview-content {
-  font-family: 'Courier New', monospace;
-  font-size: 0.9rem;
-  line-height: 1.5;
-}
-
-#preview-content .preview-name {
-  color: #00ff00;
-  font-weight: bold;
-  font-size: 1.1rem;
-}
-
-#preview-content .preview-mnemonic {
-  color: #60a5fa;
-  font-size: 0.9rem;
-  margin: 4px 0;
-}
-
-#preview-content .preview-mnemonic code {
-  background: #1a1a2e;
-  padding: 2px 6px;
-  border-radius: 3px;
-}
-
-#preview-content .preview-desc {
-  color: #aaa;
-  margin: 8px 0;
-}
-
-#preview-content .preview-stats {
-  color: #888;
   font-size: 0.85rem;
-  margin: 4px 0;
+  line-height: 1.6;
 }
 
-#preview-content .preview-stats span {
-  display: inline-block;
-  margin-right: 12px;
+.preview-name {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--primary-color);
+  margin-bottom: 0.25rem;
 }
 
-#preview-content .preview-section {
-  margin-top: 12px;
-  padding-top: 12px;
-  border-top: 1px solid #333;
+.preview-mnemonic {
+  font-family: 'Courier New', monospace;
+  font-size: 0.8rem;
+  color: #60a5fa;
+  margin-bottom: 0.5rem;
 }
 
-#preview-content .preview-section-title {
+.preview-desc {
+  color: #aaa;
+  font-size: 0.85rem;
+  margin-bottom: 0.75rem;
+}
+
+.preview-badges {
+  display: flex;
+  gap: 0.4rem;
+  margin-bottom: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.preview-stat {
+  font-size: 0.8rem;
+  color: #ccc;
+  padding: 2px 0;
+}
+
+.preview-stat .label {
+  color: #888;
+}
+
+.preview-section {
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid #2a2a2e;
+}
+
+.preview-section-title {
   color: #ffaa00;
-  font-weight: bold;
-  margin-bottom: 4px;
+  font-weight: 600;
+  font-size: 0.8rem;
+  margin-bottom: 0.3rem;
 }
 
+.preview-message {
+  color: #aaa;
+  font-style: italic;
+  font-size: 0.8rem;
+  margin-top: 0.25rem;
+}
+
+/* NPC/Spell references */
 .panel-section {
-  padding: 16px;
+  padding: 0.75rem 1rem;
   border-top: 1px solid #333;
 }
 
 .panel-section h3 {
-  margin-top: 0;
-  margin-bottom: 12px;
-  font-size: 0.9rem;
-  color: #888;
-}
-
-.panel-section code {
-  background: #1a1a2e;
-  padding: 2px 6px;
-  border-radius: 3px;
-  color: #60a5fa;
-}
-
-/* Modal Styles */
-.modal {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.8);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-}
-
-.modal-content {
-  background: #1a1a2e;
-  border-radius: 8px;
-  width: 90%;
-  max-width: 500px;
-  max-height: 80vh;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-}
-
-.modal-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 16px;
-  border-bottom: 1px solid #333;
-}
-
-.modal-header h3 {
-  margin: 0;
-  color: #00ff00;
-}
-
-.modal-body {
-  padding: 16px;
-  overflow-y: auto;
-}
-
-.modal-footer {
-  padding: 16px;
-  border-top: 1px solid #333;
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-}
-
-.close-btn {
-  background: none;
-  border: none;
-  color: #888;
-  font-size: 1.5rem;
-  cursor: pointer;
-  padding: 0;
-  line-height: 1;
-}
-
-.close-btn:hover {
-  color: #ff4444;
-}
-
-/* Hint text */
-.hint {
-  color: #666;
-  font-size: 0.9rem;
-}
-
-.hint-inline {
-  color: #666;
-  font-size: 0.8rem;
-  font-weight: normal;
-  display: block;
-  margin-top: 4px;
-}
-
-/* Button variants */
-.btn-small {
-  padding: 6px 12px;
+  color: var(--primary-color);
   font-size: 0.85rem;
+  margin-bottom: 0.5rem;
 }
 
-.btn-secondary {
-  background: #333;
-  color: #fff;
-  border: 1px solid #555;
+.npc-ref-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
 }
 
-.btn-secondary:hover {
-  background: #444;
+.npc-ref-list li {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.3rem 0;
+  font-size: 0.8rem;
 }
 
-.btn-secondary:disabled {
-  background: #222;
-  color: #666;
-  cursor: not-allowed;
+.npc-ref-list li .npc-ref-name {
+  color: var(--text-primary);
 }
 
-/* Responsive adjustments */
+.npc-ref-list li .npc-ref-level {
+  color: #555;
+  font-size: 0.7rem;
+}
+
+.no-refs {
+  color: #555;
+  font-size: 0.8rem;
+  font-style: italic;
+}
+
+/* ============================================================================
+   Form Actions
+   ============================================================================ */
+
+#spell-form .form-actions {
+  position: sticky;
+  bottom: 0;
+  background: #1a1a2e;
+  padding: 1rem 0;
+  margin-top: 1.5rem;
+  border-top: 1px solid #333;
+  z-index: 1;
+}
+
+#spell-form .form-actions .spacer {
+  flex: 1;
+}
+
+/* ============================================================================
+   Responsive
+   ============================================================================ */
+
 @media (max-width: 1200px) {
   #preview-panel {
     width: 250px;
+    min-width: 200px;
   }
 }
 

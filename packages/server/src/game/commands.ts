@@ -2092,9 +2092,11 @@ async function handleSpecialDoorTrigger(
   // Update player location
   setPlayerLocation(socket.playerId, newRoom.id);
 
-  // Broadcast arrival to new room
-  const arrivalMessage = colors.green(`${colors.red(socket.username)} arrives.`);
-  broadcastToRoom(newRoom.id, arrivalMessage, socket.playerId);
+  // Broadcast arrival to new room (custom or default)
+  const arrivalMessage = wordWrap(door.passageMessageArrival
+    ? door.passageMessageArrival.replace('{player}', colors.red(socket.username))
+    : `${colors.red(socket.username)} arrives.`, 80);
+  broadcastToRoom(newRoom.id, colors.green(arrivalMessage), socket.playerId);
 
   // Build player's passage message (custom or default)
   const playerMessage = wordWrap(door.passageMessageSelf

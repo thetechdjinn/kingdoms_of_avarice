@@ -227,7 +227,13 @@ export interface ItemTemplate {
   tool_data?: ToolData;
   requirements?: ItemRequirements;
   stat_modifiers?: StatModifiers;
-  stealth_modifier?: number; // Modifier to stealth when equipped (negative for heavy armor)
+  stealth_modifier?: number;           // Modifier to stealth when equipped
+  spellcasting_modifier?: number;      // Bonus/penalty to spellcasting ability
+  lockpicking_modifier?: number;       // Bonus/penalty to lockpicking skill
+  perception_modifier?: number;        // Bonus/penalty to perception (detect hidden)
+  critical_chance_modifier?: number;    // Bonus/penalty to critical hit chance
+  magic_resistance_modifier?: number;  // Bonus/penalty to magic resistance
+  trap_modifier?: number;              // Bonus/penalty to trap detection/disarm
   effect_slots: number;
   base_effects?: unknown;
   rarity?: ItemRarity;        // Item rarity tier (default: common)

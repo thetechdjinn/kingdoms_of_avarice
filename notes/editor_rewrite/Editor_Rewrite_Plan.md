@@ -1187,6 +1187,8 @@ editor rewrite but are tracked in TODO.md:
 - Fuel consumption for light sources
 - Dynamic terrain types (DB-driven instead of hardcoded)
 - Combat stat caching (remove DB reads during combat)
+- Periodic mana tick (drain/restore) on status effects — schema: tickManaMin/tickManaMax
+  columns on status_effect_definitions, tick processor logic mirrors tickDamage/tickHealing
 
 ---
 

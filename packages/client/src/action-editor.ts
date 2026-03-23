@@ -1,100 +1,71 @@
 /**
- * Action Editor - IIFE for managing social actions
+ * Action Editor — two-panel layout with inline previews.
+ * Uses shared components: initAuth, ListPanel, showToast, showConfirm.
  */
 
 import { Action } from '@koa/shared';
+import { initAuth, ListPanel, showToast, showConfirm, escapeHtml } from './components/index.js';
 
 (async function () {
-  // ============================================================================
-  // Authentication & Initialization
-  // ============================================================================
-
-  async function checkAuth(): Promise<boolean> {
-    try {
-      const res = await fetch('/api/auth/me');
-      if (!res.ok) {
-        window.location.href = '/';
-        return false;
-      }
-      const data = await res.json();
-      if (!data.authenticated) {
-        window.location.href = '/';
-        return false;
-      }
-
-      const roles = data.roles || [];
-      const hasDeveloperAccess = roles.includes('developer') || roles.includes('admin');
-
-      if (!hasDeveloperAccess) {
-        window.location.href = '/';
-        return false;
-      }
-
-      // Update username display
-      const usernameEl = document.getElementById('nav-username');
-      if (usernameEl) usernameEl.textContent = data.username || 'User';
-
-      // Show admin dropdown for admin users
-      const isAdmin = roles.includes('admin');
-      const adminDropdown = document.getElementById('nav-admin-dropdown');
-      if (adminDropdown) {
-        adminDropdown.style.display = isAdmin ? 'flex' : 'none';
-      }
-
-      return true;
-    } catch (error) {
-      console.error('Auth check failed:', error);
-      window.location.href = '/';
-      return false;
-    }
-  }
-
-  const authenticated = await checkAuth();
-  if (!authenticated) {
-    return;
-  }
-
-  // Logout handler
-  document.getElementById('logout-btn')?.addEventListener('click', async () => {
-    await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
-    window.location.href = '/';
-  });
-
-  // User dropdown toggle
-  const userBtn = document.getElementById('nav-username');
-  const userDropdown = document.getElementById('user-dropdown');
-  userBtn?.addEventListener('click', (e) => {
-    e.stopPropagation();
-    userDropdown?.classList.toggle('show');
-  });
-  document.addEventListener('click', () => userDropdown?.classList.remove('show'));
+  const auth = await initAuth('developer');
+  if (!auth) return;
 
   // ============================================================================
-  // State & DOM Elements
+  // State
   // ============================================================================
 
   let actions: Action[] = [];
   let selectedActionId: number | null = null;
 
-  const actionList = document.getElementById('action-list') as HTMLUListElement;
+  // ============================================================================
+  // DOM References
+  // ============================================================================
+
   const actionForm = document.getElementById('action-form') as HTMLFormElement;
   const noActionSelected = document.getElementById('no-action-selected') as HTMLDivElement;
   const formTitle = document.getElementById('action-form-title') as HTMLHeadingElement;
   const idDisplay = document.getElementById('action-id-display') as HTMLSpanElement;
-  const previewContent = document.getElementById('preview-content') as HTMLDivElement;
-  const searchInput = document.getElementById('search-input') as HTMLInputElement;
+  const actionCount = document.getElementById('action-count') as HTMLSpanElement;
+  const targetingStatus = document.getElementById('targeting-status') as HTMLDivElement;
 
-  // Form fields
+  // Form inputs
   const commandInput = document.getElementById('action-command') as HTMLInputElement;
   const descriptionInput = document.getElementById('action-description') as HTMLInputElement;
-  const firstPersonNoTargetInput = document.getElementById('action-first-person-no-target') as HTMLInputElement;
+  const selfNoTargetInput = document.getElementById('action-self-no-target') as HTMLInputElement;
   const roomNoTargetInput = document.getElementById('action-room-no-target') as HTMLInputElement;
-  const firstPersonWithTargetInput = document.getElementById('action-first-person-with-target') as HTMLInputElement;
+  const selfWithTargetInput = document.getElementById('action-self-with-target') as HTMLInputElement;
   const targetPerspectiveInput = document.getElementById('action-target-perspective') as HTMLInputElement;
   const roomWithTargetInput = document.getElementById('action-room-with-target') as HTMLInputElement;
 
+  // Inline preview elements
+  const previewSelfNoTarget = document.getElementById('preview-self-no-target') as HTMLDivElement;
+  const previewRoomNoTarget = document.getElementById('preview-room-no-target') as HTMLDivElement;
+  const previewSelfWithTarget = document.getElementById('preview-self-with-target') as HTMLDivElement;
+  const previewTargetPerspective = document.getElementById('preview-target-perspective') as HTMLDivElement;
+  const previewRoomWithTarget = document.getElementById('preview-room-with-target') as HTMLDivElement;
+
   // ============================================================================
-  // API Functions
+  // List Panel
+  // ============================================================================
+
+  const listPanel = new ListPanel<Action>({
+    listElement: document.getElementById('action-list')!,
+    searchInput: document.getElementById('search-input') as HTMLInputElement,
+    onSelect: (item) => selectAction(item.id),
+    getId: (item) => item.id,
+    renderItem: (item) => `
+      <span class="action-command">${escapeHtml(item.command)}</span>
+      <span class="action-desc">${escapeHtml(item.description || '')}</span>
+    `,
+    filterFn: (item, search) =>
+      item.command.toLowerCase().includes(search) ||
+      (item.description?.toLowerCase().includes(search) ?? false),
+    sortFn: (a, b) => a.command.localeCompare(b.command),
+    onRender: updateCount,
+  });
+
+  // ============================================================================
+  // API
   // ============================================================================
 
   async function fetchActions(): Promise<void> {
@@ -103,12 +74,14 @@ import { Action } from '@koa/shared';
       const data = await res.json();
       if (data.success) {
         actions = data.actions;
-        renderActionList();
+        listPanel.setItems(actions);
+        listPanel.setSelected(selectedActionId);
       } else {
-        console.error('Failed to fetch actions:', data.message || 'Unknown error');
+        showToast(data.message || 'Failed to fetch actions', 'error');
       }
     } catch (error) {
       console.error('Failed to fetch actions:', error);
+      showToast('Failed to fetch actions', 'error');
     }
   }
 
@@ -127,15 +100,16 @@ import { Action } from '@koa/shared';
 
       const data = await res.json();
       if (data.success) {
+        showToast(isNew ? 'Action created' : 'Action saved', 'success');
         await fetchActions();
         return data.action;
       } else {
-        alert(data.message || 'Failed to save action');
+        showToast(data.message || 'Failed to save action', 'error');
         return null;
       }
     } catch (error) {
       console.error('Failed to save action:', error);
-      alert('Failed to save action');
+      showToast('Failed to save action', 'error');
       return null;
     }
   }
@@ -148,45 +122,23 @@ import { Action } from '@koa/shared';
       });
       const data = await res.json();
       if (data.success) {
+        showToast('Action deleted', 'success');
         await fetchActions();
         return true;
       } else {
-        alert(data.message || 'Failed to delete action');
+        showToast(data.message || 'Failed to delete action', 'error');
         return false;
       }
     } catch (error) {
       console.error('Failed to delete action:', error);
-      alert('Failed to delete action');
+      showToast('Failed to delete action', 'error');
       return false;
     }
   }
 
   // ============================================================================
-  // UI Rendering
+  // Selection & Form
   // ============================================================================
-
-  function renderActionList(): void {
-    const searchTerm = searchInput?.value.toLowerCase() ?? '';
-    const filtered = actions.filter(a =>
-      a.command.toLowerCase().includes(searchTerm) ||
-      (a.description?.toLowerCase().includes(searchTerm) ?? false)
-    );
-
-    actionList.innerHTML = '';
-    for (const action of filtered) {
-      const li = document.createElement('li');
-      li.className = 'action-list-item' + (action.id === selectedActionId ? ' selected' : '');
-      li.dataset.id = String(action.id);
-
-      li.innerHTML = `
-        <span class="action-command">${escapeHtml(action.command)}</span>
-        <span class="action-desc">${escapeHtml(action.description || '')}</span>
-      `;
-
-      li.addEventListener('click', () => selectAction(action.id));
-      actionList.appendChild(li);
-    }
-  }
 
   function selectAction(id: number): void {
     selectedActionId = id;
@@ -198,95 +150,35 @@ import { Action } from '@koa/shared';
     formTitle.textContent = 'Edit Action';
     idDisplay.textContent = `ID: ${action.id}`;
 
-    // Fill form
     commandInput.value = action.command;
     descriptionInput.value = action.description || '';
-    firstPersonNoTargetInput.value = action.firstPersonNoTarget;
+    selfNoTargetInput.value = action.firstPersonNoTarget;
     roomNoTargetInput.value = action.roomNoTarget;
-    firstPersonWithTargetInput.value = action.firstPersonWithTarget || '';
+    selfWithTargetInput.value = action.firstPersonWithTarget || '';
     targetPerspectiveInput.value = action.targetPerspective || '';
     roomWithTargetInput.value = action.roomWithTarget || '';
 
-    renderActionList();
-    updatePreview();
+    listPanel.setSelected(id);
+    updateAllPreviews();
   }
 
   function clearForm(): void {
     selectedActionId = null;
     commandInput.value = '';
     descriptionInput.value = '';
-    firstPersonNoTargetInput.value = '';
+    selfNoTargetInput.value = '';
     roomNoTargetInput.value = '';
-    firstPersonWithTargetInput.value = '';
+    selfWithTargetInput.value = '';
     targetPerspectiveInput.value = '';
     roomWithTargetInput.value = '';
 
-    noActionSelected.style.display = 'block';
+    noActionSelected.style.display = 'flex';
     actionForm.style.display = 'none';
     idDisplay.textContent = '';
-    previewContent.innerHTML = '<p class="hint">Select an action to see preview</p>';
-    renderActionList();
+    listPanel.setSelected(null);
   }
 
-  function updatePreview(): void {
-    const command = commandInput.value || 'action';
-    const selfNoTarget = firstPersonNoTargetInput.value || '(not set)';
-    const roomNoTarget = roomNoTargetInput.value || '(not set)';
-    const selfWithTarget = firstPersonWithTargetInput.value;
-    const targetMsg = targetPerspectiveInput.value;
-    const roomWithTarget = roomWithTargetInput.value;
-
-    const playerName = 'You';
-    const targetName = 'Bob';
-    const otherPlayerName = 'Alice';
-
-    let html = `<h4>Command: ${escapeHtml(command)}</h4>`;
-
-    // No target preview
-    html += `<div class="preview-section">`;
-    html += `<h5>No Target</h5>`;
-    html += `<div class="preview-line"><span class="label">You see:</span> ${escapeHtml(selfNoTarget)}</div>`;
-    html += `<div class="preview-line"><span class="label">Others see:</span> ${escapeHtml(replacePlaceholders(roomNoTarget, otherPlayerName))}</div>`;
-    html += `</div>`;
-
-    // With target preview
-    if (selfWithTarget && targetMsg && roomWithTarget) {
-      html += `<div class="preview-section">`;
-      html += `<h5>With Target (${escapeHtml(command)} bob)</h5>`;
-      html += `<div class="preview-line"><span class="label">You see:</span> ${escapeHtml(replacePlaceholders(selfWithTarget, playerName, targetName))}</div>`;
-      html += `<div class="preview-line"><span class="label">Target sees:</span> ${escapeHtml(replacePlaceholders(targetMsg, otherPlayerName, playerName))}</div>`;
-      html += `<div class="preview-line"><span class="label">Others see:</span> ${escapeHtml(replacePlaceholders(roomWithTarget, otherPlayerName, targetName))}</div>`;
-      html += `</div>`;
-    } else {
-      html += `<div class="preview-section muted">`;
-      html += `<h5>With Target</h5>`;
-      html += `<p>Targeting disabled (fill all three target fields to enable)</p>`;
-      html += `</div>`;
-    }
-
-    previewContent.innerHTML = html;
-  }
-
-  function replacePlaceholders(template: string, player: string, target?: string): string {
-    let result = template.replace(/\{player\}/gi, player);
-    if (target) {
-      result = result.replace(/\{target\}/gi, target);
-    }
-    return result;
-  }
-
-  function escapeHtml(text: string): string {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-  }
-
-  // ============================================================================
-  // Event Handlers
-  // ============================================================================
-
-  // New action button
-  document.getElementById('new-action-btn')?.addEventListener('click', () => {
+  function showNewForm(): void {
     selectedActionId = null;
     noActionSelected.style.display = 'none';
     actionForm.style.display = 'block';
@@ -295,38 +187,176 @@ import { Action } from '@koa/shared';
 
     commandInput.value = '';
     descriptionInput.value = '';
-    firstPersonNoTargetInput.value = '';
+    selfNoTargetInput.value = '';
     roomNoTargetInput.value = '';
-    firstPersonWithTargetInput.value = '';
+    selfWithTargetInput.value = '';
     targetPerspectiveInput.value = '';
     roomWithTargetInput.value = '';
 
+    listPanel.setSelected(null);
     commandInput.focus();
-    renderActionList();
-    updatePreview();
-  });
+    updateAllPreviews();
+  }
+
+  // ============================================================================
+  // Inline Previews
+  // ============================================================================
+
+  function replacePlaceholders(template: string, player: string, target?: string): string {
+    let result = template.replace(/\{player\}/gi, player);
+    if (target !== undefined) {
+      result = result.replace(/\{target\}/gi, target);
+    }
+    return result;
+  }
+
+  function setPreview(el: HTMLDivElement, label: string, text: string, active: boolean): void {
+    if (!text) {
+      el.className = 'inline-preview';
+      el.textContent = 'Type a message to see preview';
+      return;
+    }
+    el.className = active ? 'inline-preview active' : 'inline-preview disabled';
+    el.innerHTML = `<span class="preview-label">${escapeHtml(label)}</span>${escapeHtml(text)}`;
+  }
+
+  function isTargetingEnabled(): boolean {
+    return !!(
+      selfWithTargetInput.value.trim() &&
+      targetPerspectiveInput.value.trim() &&
+      roomWithTargetInput.value.trim()
+    );
+  }
+
+  function updateTargetingStatus(): void {
+    const enabled = isTargetingEnabled();
+    const anyFilled = !!(
+      selfWithTargetInput.value.trim() ||
+      targetPerspectiveInput.value.trim() ||
+      roomWithTargetInput.value.trim()
+    );
+
+    if (enabled) {
+      targetingStatus.className = 'targeting-status enabled';
+      targetingStatus.textContent = 'Targeting enabled';
+    } else if (anyFilled) {
+      // Some fields filled but not all
+      const missing: string[] = [];
+      if (!selfWithTargetInput.value.trim()) missing.push('self');
+      if (!targetPerspectiveInput.value.trim()) missing.push('target');
+      if (!roomWithTargetInput.value.trim()) missing.push('room');
+      targetingStatus.className = 'targeting-status disabled';
+      targetingStatus.textContent = `Targeting disabled: missing ${missing.join(', ')} message${missing.length > 1 ? 's' : ''}`;
+    } else {
+      targetingStatus.className = 'targeting-status disabled';
+      targetingStatus.textContent = 'Targeting disabled: fill all three fields to enable';
+    }
+  }
+
+  function updateAllPreviews(): void {
+    // No-target previews
+    const selfNoTarget = selfNoTargetInput.value;
+    const roomNoTarget = roomNoTargetInput.value;
+
+    setPreview(previewSelfNoTarget, 'You see:', selfNoTarget, true);
+    setPreview(
+      previewRoomNoTarget,
+      'Others see:',
+      roomNoTarget ? replacePlaceholders(roomNoTarget, 'Alice') : '',
+      true,
+    );
+
+    // With-target previews
+    const targeting = isTargetingEnabled();
+    updateTargetingStatus();
+
+    const selfWithTarget = selfWithTargetInput.value;
+    const targetPersp = targetPerspectiveInput.value;
+    const roomWithTarget = roomWithTargetInput.value;
+
+    if (targeting) {
+      setPreview(
+        previewSelfWithTarget,
+        'You see:',
+        replacePlaceholders(selfWithTarget, 'You', 'Bob'),
+        true,
+      );
+      setPreview(
+        previewTargetPerspective,
+        'Target sees:',
+        replacePlaceholders(targetPersp, 'Alice', 'you'),
+        true,
+      );
+      setPreview(
+        previewRoomWithTarget,
+        'Others see:',
+        replacePlaceholders(roomWithTarget, 'Alice', 'Bob'),
+        true,
+      );
+    } else {
+      setPreview(
+        previewSelfWithTarget,
+        '',
+        selfWithTarget ? replacePlaceholders(selfWithTarget, 'You', 'Bob') : '',
+        false,
+      );
+      setPreview(
+        previewTargetPerspective,
+        '',
+        targetPersp ? replacePlaceholders(targetPersp, 'Alice', 'you') : '',
+        false,
+      );
+      setPreview(
+        previewRoomWithTarget,
+        '',
+        roomWithTarget ? replacePlaceholders(roomWithTarget, 'Alice', 'Bob') : '',
+        false,
+      );
+    }
+  }
+
+  function updateCount(filtered: number, total: number): void {
+    actionCount.textContent = filtered === total ? `${total}` : `${filtered}/${total}`;
+  }
+
+  // ============================================================================
+  // Event Handlers
+  // ============================================================================
+
+  // New action
+  document.getElementById('new-action-btn')?.addEventListener('click', showNewForm);
 
   // Form submission
   actionForm.addEventListener('submit', async (e) => {
     e.preventDefault();
 
-    // Validate required fields
     const command = commandInput.value.trim();
-    const firstPersonNoTarget = firstPersonNoTargetInput.value.trim();
-    const roomNoTarget = roomNoTargetInput.value.trim();
-
     if (!command) {
-      alert('Command is required');
+      showToast('Command is required', 'warning');
       commandInput.focus();
       return;
     }
+
+    // Check for duplicate command on new actions
+    if (!selectedActionId) {
+      const existing = actions.find(a => a.command.toLowerCase() === command.toLowerCase());
+      if (existing) {
+        showToast(`Action "${command}" already exists`, 'warning');
+        commandInput.focus();
+        return;
+      }
+    }
+
+    const firstPersonNoTarget = selfNoTargetInput.value.trim();
+    const roomNoTarget = roomNoTargetInput.value.trim();
+
     if (!firstPersonNoTarget) {
-      alert('First person no target message is required');
-      firstPersonNoTargetInput.focus();
+      showToast('Self message (no target) is required', 'warning');
+      selfNoTargetInput.focus();
       return;
     }
     if (!roomNoTarget) {
-      alert('Room no target message is required');
+      showToast('Room message (no target) is required', 'warning');
       roomNoTargetInput.focus();
       return;
     }
@@ -336,7 +366,7 @@ import { Action } from '@koa/shared';
       description: descriptionInput.value.trim() || null,
       firstPersonNoTarget,
       roomNoTarget,
-      firstPersonWithTarget: firstPersonWithTargetInput.value.trim() || null,
+      firstPersonWithTarget: selfWithTargetInput.value.trim() || null,
       targetPerspective: targetPerspectiveInput.value.trim() || null,
       roomWithTarget: roomWithTargetInput.value.trim() || null,
     };
@@ -347,52 +377,64 @@ import { Action } from '@koa/shared';
     }
   });
 
-  // Delete button
+  // Delete
   document.getElementById('delete-action-btn')?.addEventListener('click', async () => {
     if (!selectedActionId) return;
-    if (!confirm('Are you sure you want to delete this action?')) return;
+    const action = actions.find(a => a.id === selectedActionId);
+    const name = action?.command || 'this action';
+
+    const confirmed = await showConfirm(
+      `Delete action "${name}"? This cannot be undone.`,
+      { confirmText: 'Delete', dangerous: true },
+    );
+    if (!confirmed) return;
 
     const success = await deleteAction(selectedActionId);
-    if (success) {
-      clearForm();
-    }
+    if (success) clearForm();
   });
 
-  // Duplicate button
+  // Duplicate
   document.getElementById('duplicate-action-btn')?.addEventListener('click', () => {
     if (!selectedActionId) return;
+
+    const baseCommand = commandInput.value;
+    let newCommand = baseCommand + '_copy';
+
+    // Auto-increment if _copy already exists
+    const existing = actions.map(a => a.command.toLowerCase());
+    let counter = 2;
+    while (existing.includes(newCommand.toLowerCase())) {
+      newCommand = `${baseCommand}_${counter}`;
+      counter++;
+    }
 
     selectedActionId = null;
     formTitle.textContent = 'New Action';
     idDisplay.textContent = '';
-    commandInput.value = commandInput.value + '_copy';
+    commandInput.value = newCommand;
+    listPanel.setSelected(null);
     commandInput.focus();
-    renderActionList();
-    updatePreview();
+    updateAllPreviews();
   });
 
-  // Search
-  searchInput.addEventListener('input', renderActionList);
-
-  // Live preview updates
-  [commandInput, descriptionInput, firstPersonNoTargetInput, roomNoTargetInput,
-   firstPersonWithTargetInput, targetPerspectiveInput, roomWithTargetInput].forEach(input => {
-    input.addEventListener('input', updatePreview);
-  });
+  // Live preview on all message inputs
+  const previewInputs = [
+    selfNoTargetInput, roomNoTargetInput,
+    selfWithTargetInput, targetPerspectiveInput, roomWithTargetInput,
+  ];
+  for (const input of previewInputs) {
+    input.addEventListener('input', updateAllPreviews);
+  }
 
   // ============================================================================
-  // Import/Export
+  // Import / Export
   // ============================================================================
-
-  const importModal = document.getElementById('import-modal') as HTMLDivElement;
-  const importFile = document.getElementById('import-file') as HTMLInputElement;
-  const importMerge = document.getElementById('import-merge') as HTMLInputElement;
 
   document.getElementById('export-btn')?.addEventListener('click', async () => {
     try {
       const res = await fetch('/api/actions/export/all', { credentials: 'include' });
       if (!res.ok) {
-        alert(`Export failed: ${res.status} ${res.statusText}`);
+        showToast(`Export failed: ${res.status}`, 'error');
         return;
       }
       const data = await res.json();
@@ -404,74 +446,68 @@ import { Action } from '@koa/shared';
       a.download = 'actions_export.json';
       a.click();
       URL.revokeObjectURL(url);
+      showToast(`Exported ${actions.length} actions`, 'success');
     } catch (error) {
       console.error('Export failed:', error);
-      alert('Failed to export actions');
+      showToast('Failed to export actions', 'error');
     }
   });
 
   document.getElementById('import-btn')?.addEventListener('click', () => {
-    importModal.style.display = 'flex';
-  });
+    // Create a file input dynamically
+    const fileInput = document.createElement('input');
+    fileInput.type = 'file';
+    fileInput.accept = '.json';
 
-  document.getElementById('close-import-modal')?.addEventListener('click', () => {
-    importModal.style.display = 'none';
-    importFile.value = '';
-  });
+    fileInput.addEventListener('change', async () => {
+      const file = fileInput.files?.[0];
+      if (!file) return;
 
-  document.getElementById('do-import-btn')?.addEventListener('click', async () => {
-    const file = importFile.files?.[0];
-    if (!file) {
-      alert('Please select a file');
-      return;
-    }
+      try {
+        const text = await file.text();
+        const data = JSON.parse(text);
+        const actionsToImport = data.actions || data;
 
-    try {
-      const text = await file.text();
-      const data = JSON.parse(text);
-      const actionsToImport = data.actions || data;
-
-      const res = await fetch('/api/actions/import', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({
-          actions: actionsToImport,
-          merge: importMerge.checked,
-        }),
-      });
-
-      if (!res.ok) {
-        alert(`Import failed: ${res.status} ${res.statusText}`);
-        return;
-      }
-
-      const result = await res.json();
-      if (result.success) {
-        const { created, updated, errors } = result.results;
-        let message = `Import complete: ${created} created, ${updated} updated`;
-        if (errors.length > 0) {
-          message += `\n\nErrors:\n${errors.join('\n')}`;
+        if (!Array.isArray(actionsToImport) || actionsToImport.length === 0) {
+          showToast('No actions found in file', 'warning');
+          return;
         }
-        alert(message);
-        await fetchActions();
-        importModal.style.display = 'none';
-        importFile.value = '';
-      } else {
-        alert(result.message || 'Import failed');
-      }
-    } catch (error) {
-      console.error('Import failed:', error);
-      alert('Failed to parse import file');
-    }
-  });
 
-  // Close modal on outside click
-  importModal.addEventListener('click', (e) => {
-    if (e.target === importModal) {
-      importModal.style.display = 'none';
-      importFile.value = '';
-    }
+        const confirmed = await showConfirm(
+          `Import ${actionsToImport.length} action(s)? Existing actions with matching commands will be updated.`,
+        );
+        if (!confirmed) return;
+
+        const res = await fetch('/api/actions/import', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ actions: actionsToImport, merge: true }),
+        });
+
+        if (!res.ok) {
+          showToast(`Import failed: ${res.status}`, 'error');
+          return;
+        }
+
+        const result = await res.json();
+        if (result.success) {
+          const { created, updated, errors } = result.results;
+          showToast(`Imported: ${created} created, ${updated} updated`, 'success');
+          if (errors.length > 0) {
+            showToast(`${errors.length} error(s) during import`, 'warning');
+          }
+          await fetchActions();
+        } else {
+          showToast(result.message || 'Import failed', 'error');
+        }
+      } catch (error) {
+        console.error('Import failed:', error);
+        showToast('Failed to parse import file', 'error');
+      }
+    });
+
+    fileInput.click();
   });
 
   // ============================================================================

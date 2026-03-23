@@ -20,7 +20,7 @@
               <a href="/item-editor.html" class="nav-dropdown-item">Item Editor</a>
               <a href="/spell-editor.html" class="nav-dropdown-item">Spell Editor</a>
               <a href="/status-editor.html" class="nav-dropdown-item">Status Effects Editor</a>
-              <a href="/progression-editor.html" class="nav-dropdown-item">Progression Editor</a>
+              <a href="/progression-editor.html" class="nav-dropdown-item">Class / Race Editor</a>
               <a href="/door-editor.html" class="nav-dropdown-item">Door Editor</a>
               <a href="/action-editor.html" class="nav-dropdown-item">Action Editor</a>
               <a href="/npc-editor.html" class="nav-dropdown-item">NPC Editor</a>
@@ -41,7 +41,6 @@
           </div>
         </div>
         <div class="nav-spacer"></div>
-        <a href="/docs.html?file=NPC_Creation_Guide.md" target="_blank" rel="noopener noreferrer" class="help-link nav-help" title="View Documentation">?</a>
         <div class="nav-user-menu">
           <button class="nav-user-btn" id="nav-username">User</button>
           <div class="dropdown-menu" id="user-dropdown">
@@ -54,17 +53,26 @@
         <aside id="dt-list-panel">
           <div class="panel-header">
             <h2>Drop Tables</h2>
-            <button id="new-dt-btn" class="btn-primary">+ New Table</button>
+            <button id="new-dt-btn" class="btn-primary">+ New</button>
           </div>
-          <div id="dt-search">
-            <input type="text" id="search-input" placeholder="Search drop tables..." />
+          <div class="list-search">
+            <input type="text" id="search-input" placeholder="Search tables..." />
           </div>
           <ul id="dt-list"></ul>
+          <div class="panel-footer">
+            <span id="dt-count" class="list-count"></span>
+            <div class="footer-buttons">
+              <button id="export-btn" class="btn-small">Export</button>
+            </div>
+          </div>
         </aside>
 
         <main id="dt-editor-panel">
           <div id="no-dt-selected">
-            <p>Select a drop table from the list or create a new one.</p>
+            <div class="empty-state">
+              <div class="empty-icon">&gt;_</div>
+              <p>Select a drop table from the list or create a new one.</p>
+            </div>
           </div>
 
           <form id="dt-form" style="display: none;">
@@ -75,56 +83,99 @@
 
             <div class="form-tabs">
               <button type="button" class="tab-btn active" data-tab="details">Details</button>
-              <button type="button" class="tab-btn" data-tab="entries">Entries</button>
+              <button type="button" class="tab-btn" data-tab="entries">Item Drops</button>
             </div>
 
             <!-- Details Tab -->
             <div class="tab-content active" id="tab-details">
-              <div class="form-group">
-                <label for="dt-name">Name</label>
-                <input type="text" id="dt-name" required placeholder="e.g., goblin loot" />
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="dt-name">Name <span class="required">*</span></label>
+                  <input type="text" id="dt-name" required placeholder="Goblin Loot" />
+                </div>
+                <div class="form-group">
+                  <label for="dt-description">Description</label>
+                  <input type="text" id="dt-description" placeholder="Drops from goblin warriors" />
+                </div>
               </div>
-              <div class="form-group">
-                <label for="dt-description">Description</label>
-                <textarea id="dt-description" rows="3" placeholder="Description of this drop table..."></textarea>
+
+              <!-- Currency Drop Section -->
+              <div class="form-section">
+                <h3>Currency Drop</h3>
+                <div class="form-group">
+                  <label class="toggle-label">
+                    <input type="checkbox" id="currency-enabled" />
+                    <span class="toggle-track"></span>
+                    Enable Currency Drop
+                  </label>
+                </div>
+                <div id="currency-fields" style="display: none;">
+                  <div class="form-row">
+                    <div class="form-group">
+                      <label for="currency-chance">Drop Chance %</label>
+                      <input type="number" id="currency-chance" min="0" max="100" step="0.1" value="100" />
+                    </div>
+                    <div class="form-group">
+                      <label for="currency-min">Min (copper)</label>
+                      <input type="number" id="currency-min" min="0" value="1" />
+                    </div>
+                    <div class="form-group">
+                      <label for="currency-max">Max (copper)</label>
+                      <input type="number" id="currency-max" min="0" value="10" />
+                    </div>
+                  </div>
+                  <div class="denom-section">
+                    <div class="denom-header">
+                      <span class="denom-title">Allowed Denominations</span>
+                      <button type="button" id="denom-all-btn" class="btn-tiny">All</button>
+                      <button type="button" id="denom-none-btn" class="btn-tiny">None</button>
+                    </div>
+                    <div class="denom-grid" id="currency-denoms"></div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- NPC References -->
+              <div id="npc-references" class="references-section">
+                <h4>Used By NPCs</h4>
+                <div id="npc-ref-content">
+                  <p class="hint">Select a table to see NPC references</p>
+                </div>
               </div>
             </div>
 
-            <!-- Entries Tab -->
+            <!-- Item Drops Tab -->
             <div class="tab-content" id="tab-entries">
               <div class="entries-header">
-                <h3>Drop Table Entries</h3>
-                <button type="button" id="add-entry-btn" class="btn-small btn-primary">+ Add Entry</button>
+                <p class="section-hint">Each entry rolls independently per kill. Use the type filter to narrow item search.</p>
+                <button type="button" id="add-entry-btn" class="btn-secondary">+ Add Item</button>
               </div>
               <div id="entries-container"></div>
-              <p id="no-entries-hint" class="hint">No entries defined. Add an entry to configure drops.</p>
+              <div id="no-entries-hint" class="hint" style="display: none;">No item drops yet. Click "+ Add Item" to add one.</div>
             </div>
 
             <div class="form-actions">
               <button type="submit" class="btn-primary">Save Table</button>
               <button type="button" id="duplicate-dt-btn" class="btn-secondary">Duplicate</button>
-              <button type="button" id="delete-dt-btn" class="btn-danger">Delete Table</button>
+              <div class="spacer"></div>
+              <button type="button" id="delete-dt-btn" class="btn-danger">Delete</button>
             </div>
           </form>
         </main>
 
-        <aside id="preview-panel">
+        <aside id="sim-panel">
           <div class="panel-header">
-            <h2>Drop Simulation</h2>
+            <h2>Simulation</h2>
           </div>
-          <div id="simulation-panel">
-            <div id="simulation-content">
-              <p class="hint">Select a drop table to simulate drops</p>
+          <div class="sim-controls">
+            <div class="form-group">
+              <label for="sim-iterations">Iterations</label>
+              <input type="number" id="sim-iterations" value="1000" min="1" max="10000" />
             </div>
-            <div class="panel-section">
-              <div class="form-row">
-                <div class="form-group">
-                  <label for="sim-iterations">Iterations</label>
-                  <input type="number" id="sim-iterations" min="1" max="10000" value="100" />
-                </div>
-              </div>
-              <button id="simulate-btn" class="btn-secondary" disabled>Simulate Drops</button>
-            </div>
+            <button type="button" id="simulate-btn" class="btn-primary" disabled>Simulate</button>
+          </div>
+          <div id="simulation-content">
+            <p class="hint">Select a drop table to simulate drops</p>
           </div>
         </aside>
       </div>
