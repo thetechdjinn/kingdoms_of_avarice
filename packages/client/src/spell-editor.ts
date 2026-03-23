@@ -342,15 +342,15 @@ interface StatusEffectDef {
     for (const cls of classDefs) {
       const btn = document.createElement('button');
       btn.type = 'button';
-      btn.className = `class-btn${selectedClasses.has(cls.id) ? ' active' : ''}`;
+      btn.className = `class-btn${selectedClasses.has(cls.id) ? ' selected' : ''}`;
       btn.textContent = cls.displayName;
       btn.addEventListener('click', () => {
         if (selectedClasses.has(cls.id)) {
           selectedClasses.delete(cls.id);
-          btn.classList.remove('active');
+          btn.classList.remove('selected');
         } else {
           selectedClasses.add(cls.id);
-          btn.classList.add('active');
+          btn.classList.add('selected');
         }
       });
       classButtonsContainer.appendChild(btn);
@@ -571,7 +571,7 @@ interface StatusEffectDef {
     ]);
     if (!result) return;
 
-    const mnemonic = result.mnemonic.toLowerCase();
+    const mnemonic = result.mnemonic.trim().toLowerCase();
     if (mnemonic.length < 2) {
       showToast('Mnemonic must be at least 2 characters', 'warning');
       return;
@@ -623,7 +623,7 @@ interface StatusEffectDef {
 
     let message = `Delete spell "${name}"?`;
     if (npcRefs.length > 0) {
-      message += ` ${npcRefs.length} NPC(s) have this spell assigned.`;
+      message += ` ${npcRefs.length} NPC${npcRefs.length === 1 ? '' : 's'} have this spell assigned.`;
     }
 
     const confirmed = await showConfirm(message, { confirmText: 'Delete', dangerous: true });
@@ -643,7 +643,7 @@ interface StatusEffectDef {
     ]);
     if (!result) return;
 
-    const mnemonic = result.mnemonic.toLowerCase();
+    const mnemonic = result.mnemonic.trim().toLowerCase();
     if (mnemonic.length < 2) {
       showToast('Mnemonic must be at least 2 characters', 'warning');
       return;
@@ -694,6 +694,11 @@ interface StatusEffectDef {
           credentials: 'include',
           body: JSON.stringify({ spells: spellsToImport, merge: true }),
         });
+
+        if (!res.ok) {
+          showToast(`Import failed: ${res.status}`, 'error');
+          return;
+        }
 
         const result = await res.json();
         if (result.success) {

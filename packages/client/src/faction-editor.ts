@@ -96,6 +96,7 @@ interface NpcTemplate {
       }
     } catch (error) {
       console.error('Failed to fetch NPC templates:', error);
+      showToast('Failed to fetch NPC data', 'error');
     }
   }
 

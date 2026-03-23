@@ -205,7 +205,7 @@ interface RaceDef {
             opt.textContent = `${preset.label} (${preset.value})`;
             selectEl.appendChild(opt);
           }
-          selectEl.value = String(traitState.value || def.presets[0].value);
+          selectEl.value = String(traitState.value ?? def.presets[0].value);
           selectEl.addEventListener('change', () => {
             const s = state.get(def.id);
             if (s) s.value = parseInt(selectEl.value) || 0;
@@ -213,7 +213,7 @@ interface RaceDef {
           cb.addEventListener('change', () => {
             const s = state.get(def.id) || { enabled: false, value: 0 };
             s.enabled = cb.checked;
-            if (cb.checked && !s.value) s.value = def.presets![0].value;
+            if (cb.checked && s.value === 0) s.value = def.presets![0].value;
             state.set(def.id, s);
             selectEl.disabled = !cb.checked;
           });
@@ -223,7 +223,7 @@ interface RaceDef {
           const valInput = document.createElement('input');
           valInput.type = 'number';
           valInput.className = 'trait-value-input';
-          valInput.value = String(traitState.value || 0);
+          valInput.value = String(traitState.value ?? 0);
           valInput.disabled = !traitState.enabled;
           valInput.addEventListener('change', () => {
             const s = state.get(def.id);
@@ -418,15 +418,15 @@ interface RaceDef {
     for (const cls of classes.sort((a, b) => a.display_name.localeCompare(b.display_name))) {
       const btn = document.createElement('button');
       btn.type = 'button';
-      btn.className = `class-btn${raceAllowedClasses.has(cls.class_id) ? ' active' : ''}`;
+      btn.className = `class-btn${raceAllowedClasses.has(cls.class_id) ? ' selected' : ''}`;
       btn.textContent = cls.display_name;
       btn.addEventListener('click', () => {
         if (raceAllowedClasses.has(cls.class_id)) {
           raceAllowedClasses.delete(cls.class_id);
-          btn.classList.remove('active');
+          btn.classList.remove('selected');
         } else {
           raceAllowedClasses.add(cls.class_id);
-          btn.classList.add('active');
+          btn.classList.add('selected');
         }
       });
       container.appendChild(btn);

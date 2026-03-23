@@ -478,15 +478,15 @@ const ALL_TABS = ['basic', 'rooms', 'state', 'locks', 'triggers', 'portal', 'per
     for (const cls of classDefs) {
       const btn = document.createElement('button');
       btn.type = 'button';
-      btn.className = `class-btn${selectedClasses.has(cls.id) ? ' active' : ''}`;
+      btn.className = `class-btn${selectedClasses.has(cls.id) ? ' selected' : ''}`;
       btn.textContent = cls.displayName;
       btn.addEventListener('click', () => {
         if (selectedClasses.has(cls.id)) {
           selectedClasses.delete(cls.id);
-          btn.classList.remove('active');
+          btn.classList.remove('selected');
         } else {
           selectedClasses.add(cls.id);
-          btn.classList.add('active');
+          btn.classList.add('selected');
         }
       });
       classButtonsContainer.appendChild(btn);

@@ -418,11 +418,11 @@ function formatCopper(copper: number): string {
     for (const cls of classDefs) {
       const btn = document.createElement('button');
       btn.type = 'button';
-      btn.className = `class-btn${selectedClasses.has(cls.id) ? ' active' : ''}`;
+      btn.className = `class-btn${selectedClasses.has(cls.id) ? ' selected' : ''}`;
       btn.textContent = cls.displayName;
       btn.addEventListener('click', () => {
-        if (selectedClasses.has(cls.id)) { selectedClasses.delete(cls.id); btn.classList.remove('active'); }
-        else { selectedClasses.add(cls.id); btn.classList.add('active'); }
+        if (selectedClasses.has(cls.id)) { selectedClasses.delete(cls.id); btn.classList.remove('selected'); }
+        else { selectedClasses.add(cls.id); btn.classList.add('selected'); }
       });
       container.appendChild(btn);
     }
@@ -434,11 +434,11 @@ function formatCopper(copper: number): string {
     for (const race of raceDefs) {
       const btn = document.createElement('button');
       btn.type = 'button';
-      btn.className = `class-btn${selectedRaces.has(race.id) ? ' active' : ''}`;
+      btn.className = `class-btn${selectedRaces.has(race.id) ? ' selected' : ''}`;
       btn.textContent = race.displayName;
       btn.addEventListener('click', () => {
-        if (selectedRaces.has(race.id)) { selectedRaces.delete(race.id); btn.classList.remove('active'); }
-        else { selectedRaces.add(race.id); btn.classList.add('active'); }
+        if (selectedRaces.has(race.id)) { selectedRaces.delete(race.id); btn.classList.remove('selected'); }
+        else { selectedRaces.add(race.id); btn.classList.add('selected'); }
       });
       container.appendChild(btn);
     }
@@ -795,8 +795,8 @@ function formatCopper(copper: number): string {
       a.href = url;
       a.download = 'items_export.json';
       a.click();
-      URL.revokeObjectURL(url);
-      showToast(`Exported ${templates.length} items`, 'success');
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      showToast(`Exported ${templates.length} item${templates.length === 1 ? '' : 's'}`, 'success');
     } catch { showToast('Export failed', 'error'); }
   });
 

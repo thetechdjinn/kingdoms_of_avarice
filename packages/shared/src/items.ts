@@ -227,7 +227,7 @@ export interface ItemTemplate {
   tool_data?: ToolData;
   requirements?: ItemRequirements;
   stat_modifiers?: StatModifiers;
-  stealth_modifier?: number;           // Modifier to stealth when equipped
+  stealth_modifier?: number;           // Bonus/penalty to stealth when equipped (negative for heavy armor)
   spellcasting_modifier?: number;      // Bonus/penalty to spellcasting ability
   lockpicking_modifier?: number;       // Bonus/penalty to lockpicking skill
   perception_modifier?: number;        // Bonus/penalty to perception (detect hidden)

@@ -427,7 +427,7 @@ const ALL_DENOMINATIONS = ['copper', 'silver', 'gold', 'platinum', 'runic'];
       entries.push({
         id: currencyEntry?.id,
         itemTemplateId: null,
-        dropChance: parseFloat(currencyChance.value) || 100,
+        dropChance: Number.isFinite(parseFloat(currencyChance.value)) ? parseFloat(currencyChance.value) : 100,
         minQuantity: 1,
         maxQuantity: 1,
         currencyMin: parseInt(currencyMin.value) || 0,
