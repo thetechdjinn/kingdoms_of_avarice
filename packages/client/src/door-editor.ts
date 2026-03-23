@@ -338,6 +338,8 @@ const ALL_TABS = ['basic', 'rooms', 'state', 'locks', 'triggers', 'portal', 'per
       }
     }
 
+    exits.sort((a, b) => a.fromRoom.name.localeCompare(b.fromRoom.name) || a.direction.localeCompare(b.direction));
+
     doorList.innerHTML = '';
     for (const exit of exits) {
       const li = document.createElement('li');
@@ -430,7 +432,7 @@ const ALL_TABS = ['basic', 'rooms', 'state', 'locks', 'triggers', 'portal', 'per
 
       // Portal
       spawnTriggerInput.value = door.spawnTriggerText || '';
-      durationInput.value = String(door.durationSeconds || 60);
+      durationInput.value = String(door.durationSeconds ?? 60);
       appearMsgInput.value = door.appearMessage || '';
       disappearMsgInput.value = door.disappearMessage || '';
 
@@ -522,7 +524,8 @@ const ALL_TABS = ['basic', 'rooms', 'state', 'locks', 'triggers', 'portal', 'per
       html += `<div class="preview-stat"><span class="label">Default:</span> ${door.defaultState}</div>`;
       if (door.autoResetSeconds) html += `<div class="preview-stat"><span class="label">Auto-reset:</span> ${door.autoResetSeconds}s</div>`;
       if (door.hasLock) {
-        html += `<div class="preview-stat"><span class="label">Lock:</span> pick ${door.pickDifficultyMin}-${door.pickDifficultyMax}, bash ${door.bashDifficulty}</div>`;
+        html += `<div class="preview-stat"><span class="label">Pick:</span> ${door.pickDifficultyMin}-${door.pickDifficultyMax}</div>`;
+        html += `<div class="preview-stat"><span class="label">Bash:</span> ${door.bashDifficulty}</div>`;
         if (door.keyItemTag) html += `<div class="preview-stat"><span class="label">Key:</span> ${escapeHtml(door.keyItemTag)}</div>`;
       }
       html += `</div>`;
@@ -760,7 +763,6 @@ const ALL_TABS = ['basic', 'rooms', 'state', 'locks', 'triggers', 'portal', 'per
     const data = { ...gatherFormData(), name: result.name };
     const saved = await saveDoor(data, true);
     if (saved) {
-      await fetchDoors();
       selectDoor(saved.id);
     }
   });

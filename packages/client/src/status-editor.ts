@@ -215,14 +215,20 @@ interface SpellRef {
     }
 
     // Periodic
-    (document.getElementById('effect-tick-damage-min') as HTMLInputElement).value = effect.tickDamageMin?.toString() || '';
-    (document.getElementById('effect-tick-damage-max') as HTMLInputElement).value = effect.tickDamageMax?.toString() || '';
-    (document.getElementById('effect-tick-healing-min') as HTMLInputElement).value = effect.tickHealingMin?.toString() || '';
-    (document.getElementById('effect-tick-healing-max') as HTMLInputElement).value = effect.tickHealingMax?.toString() || '';
-    (document.getElementById('effect-tick-message') as HTMLInputElement).value = effect.tickMessage || '';
-    (document.getElementById('effect-wear-off') as HTMLInputElement).value = effect.wearOffMessage || '';
-    const showTickMsg = !effect.silentTick;
-    (document.getElementById('effect-show-tick-message') as HTMLInputElement).checked = showTickMsg;
+    const tickDmgMin = document.getElementById('effect-tick-damage-min') as HTMLInputElement | null;
+    const tickDmgMax = document.getElementById('effect-tick-damage-max') as HTMLInputElement | null;
+    const tickHealMin = document.getElementById('effect-tick-healing-min') as HTMLInputElement | null;
+    const tickHealMax = document.getElementById('effect-tick-healing-max') as HTMLInputElement | null;
+    const tickMsg = document.getElementById('effect-tick-message') as HTMLInputElement | null;
+    const wearOff = document.getElementById('effect-wear-off') as HTMLInputElement | null;
+    const showTickCb = document.getElementById('effect-show-tick-message') as HTMLInputElement | null;
+    if (tickDmgMin) tickDmgMin.value = effect.tickDamageMin?.toString() || '';
+    if (tickDmgMax) tickDmgMax.value = effect.tickDamageMax?.toString() || '';
+    if (tickHealMin) tickHealMin.value = effect.tickHealingMin?.toString() || '';
+    if (tickHealMax) tickHealMax.value = effect.tickHealingMax?.toString() || '';
+    if (tickMsg) tickMsg.value = effect.tickMessage || '';
+    if (wearOff) wearOff.value = effect.wearOffMessage || '';
+    if (showTickCb) showTickCb.checked = !effect.silentTick;
     updateTickMessageVisibility();
 
     // Flags
@@ -251,8 +257,9 @@ interface SpellRef {
   }
 
   function updateTickMessageVisibility(): void {
-    const show = (document.getElementById('effect-show-tick-message') as HTMLInputElement).checked;
-    document.getElementById('tick-message-group')!.style.display = show ? 'block' : 'none';
+    const cb = document.getElementById('effect-show-tick-message') as HTMLInputElement | null;
+    const group = document.getElementById('tick-message-group');
+    if (cb && group) group.style.display = cb.checked ? 'block' : 'none';
   }
 
   // ============================================================================

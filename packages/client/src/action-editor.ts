@@ -337,14 +337,12 @@ import { initAuth, ListPanel, showToast, showConfirm, escapeHtml } from './compo
       return;
     }
 
-    // Check for duplicate command on new actions
-    if (!selectedActionId) {
-      const existing = actions.find(a => a.command.toLowerCase() === command.toLowerCase());
-      if (existing) {
-        showToast(`Action "${command}" already exists`, 'warning');
-        commandInput.focus();
-        return;
-      }
+    // Check for duplicate command
+    const duplicate = actions.find(a => a.command.toLowerCase() === command.toLowerCase() && a.id !== selectedActionId);
+    if (duplicate) {
+      showToast(`Action "${command}" already exists`, 'warning');
+      commandInput.focus();
+      return;
     }
 
     const firstPersonNoTarget = selfNoTargetInput.value.trim();
@@ -397,7 +395,7 @@ import { initAuth, ListPanel, showToast, showConfirm, escapeHtml } from './compo
   document.getElementById('duplicate-action-btn')?.addEventListener('click', () => {
     if (!selectedActionId) return;
 
-    const baseCommand = commandInput.value;
+    const baseCommand = commandInput.value.trim();
     let newCommand = baseCommand + '_copy';
 
     // Auto-increment if _copy already exists
@@ -446,7 +444,7 @@ import { initAuth, ListPanel, showToast, showConfirm, escapeHtml } from './compo
       a.download = 'actions_export.json';
       a.click();
       URL.revokeObjectURL(url);
-      showToast(`Exported ${actions.length} actions`, 'success');
+      showToast(`Exported ${actions.length} action${actions.length === 1 ? '' : 's'}`, 'success');
     } catch (error) {
       console.error('Export failed:', error);
       showToast('Failed to export actions', 'error');
@@ -474,7 +472,7 @@ import { initAuth, ListPanel, showToast, showConfirm, escapeHtml } from './compo
         }
 
         const confirmed = await showConfirm(
-          `Import ${actionsToImport.length} action(s)? Existing actions with matching commands will be updated.`,
+          `Import ${actionsToImport.length} action${actionsToImport.length === 1 ? '' : 's'}? Existing actions with matching commands will be updated.`,
         );
         if (!confirmed) return;
 
@@ -495,7 +493,7 @@ import { initAuth, ListPanel, showToast, showConfirm, escapeHtml } from './compo
           const { created, updated, errors } = result.results;
           showToast(`Imported: ${created} created, ${updated} updated`, 'success');
           if (errors.length > 0) {
-            showToast(`${errors.length} error(s) during import`, 'warning');
+            showToast(`${errors.length} error${errors.length === 1 ? '' : 's'} during import`, 'warning');
           }
           await fetchActions();
         } else {

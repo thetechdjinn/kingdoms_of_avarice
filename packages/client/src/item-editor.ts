@@ -508,7 +508,7 @@ function formatCopper(copper: number): string {
     } else if (itemType === 'armor') {
       data.armor_data = {
         armor_class: parseInt((document.getElementById('armor-class') as HTMLInputElement).value) || 0,
-        damage_resistance: parseInt((document.getElementById('armor-damage-resistance') as HTMLInputElement).value) || 0,
+        damage_resistance: parseFloat((document.getElementById('armor-damage-resistance') as HTMLInputElement).value) || 0,
         armor_type: (document.getElementById('armor-type') as HTMLSelectElement).value,
       };
     } else if (itemType === 'container') {
@@ -530,8 +530,8 @@ function formatCopper(copper: number): string {
     } else if (itemType === 'tool') {
       data.tool_data = {
         toolType: (document.getElementById('tool-type') as HTMLSelectElement).value,
-        quality: parseInt((document.getElementById('tool-quality') as HTMLInputElement).value) || 1,
-        durability: parseInt((document.getElementById('tool-durability') as HTMLInputElement).value) || 50,
+        quality: Math.max(1, Math.min(5, parseInt((document.getElementById('tool-quality') as HTMLInputElement).value) || 1)),
+        durability: Math.max(1, Math.min(101, parseInt((document.getElementById('tool-durability') as HTMLInputElement).value) || 50)),
       };
     }
 
@@ -736,13 +736,15 @@ function formatCopper(copper: number): string {
     const roomId = spawnRoomSelect.getValue();
     const qty = parseInt((document.getElementById('spawn-quantity') as HTMLInputElement).value) || 1;
     if (!roomId) { showToast('Select a room', 'warning'); return; }
+    const parsedRoomId = parseInt(roomId);
+    if (isNaN(parsedRoomId)) { showToast('Invalid room ID', 'warning'); return; }
 
     try {
       const res = await fetch('/api/items/spawn', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ template_id: selectedTemplateId, room_id: parseInt(roomId), quantity: qty }),
+        body: JSON.stringify({ template_id: selectedTemplateId, room_id: parsedRoomId, quantity: qty }),
       });
       const data = await res.json();
       if (data.success) showToast(`Spawned ${qty} item(s) in room`, 'success');

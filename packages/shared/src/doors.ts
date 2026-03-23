@@ -90,7 +90,7 @@ export interface Door {
   // Passage messages
   /** Message shown to player when passing through (e.g., "You crawl through the hole.") */
   passageMessageSelf: string | null;
-  /** Message shown to departure room when player passes through (e.g., "{player} crawls through the hole.") */
+  /** Message shown to departure room when player passes through. Uses {player} placeholder (e.g., "{player} crawls through the hole.") */
   passageMessageRoom: string | null;
   /** Message shown to arrival room when player enters (e.g., "{player} squeezes through a crack."). Uses {player} placeholder. */
   passageMessageArrival: string | null;

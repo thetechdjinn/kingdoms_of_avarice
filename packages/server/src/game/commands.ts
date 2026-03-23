@@ -2084,19 +2084,19 @@ async function handleSpecialDoorTrigger(
   // Database succeeded, now update in-memory state and broadcast
 
   // Broadcast departure message to current room (custom or default)
-  const departureMessage = wordWrap(door.passageMessageRoom
-    ? door.passageMessageRoom.replace('{player}', colors.red(socket.username))
-    : `${colors.red(socket.username)} passes through ${door.itemDisplayName || door.name}.`, 80);
-  broadcastToRoom(currentRoomId, colors.green(departureMessage), socket.playerId);
+  const rawDeparture = wordWrap(door.passageMessageRoom
+    ? door.passageMessageRoom.replace('{player}', socket.username)
+    : `${socket.username} passes through ${door.itemDisplayName || door.name}.`, 80);
+  broadcastToRoom(currentRoomId, colors.green(rawDeparture.replace(socket.username, colors.red(socket.username))), socket.playerId);
 
   // Update player location
   setPlayerLocation(socket.playerId, newRoom.id);
 
   // Broadcast arrival to new room (custom or default)
-  const arrivalMessage = wordWrap(door.passageMessageArrival
-    ? door.passageMessageArrival.replace('{player}', colors.red(socket.username))
-    : `${colors.red(socket.username)} arrives.`, 80);
-  broadcastToRoom(newRoom.id, colors.green(arrivalMessage), socket.playerId);
+  const rawArrival = wordWrap(door.passageMessageArrival
+    ? door.passageMessageArrival.replace('{player}', socket.username)
+    : `${socket.username} arrives.`, 80);
+  broadcastToRoom(newRoom.id, colors.green(rawArrival.replace(socket.username, colors.red(socket.username))), socket.playerId);
 
   // Build player's passage message (custom or default)
   const playerMessage = wordWrap(door.passageMessageSelf
