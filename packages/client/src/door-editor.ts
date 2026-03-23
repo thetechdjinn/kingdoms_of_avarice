@@ -222,6 +222,7 @@ const ALL_TABS = ['basic', 'rooms', 'state', 'locks', 'triggers', 'portal', 'per
       rooms = data.rooms || [];
     } catch (error) {
       console.error('Failed to fetch rooms:', error);
+      showToast('Failed to load rooms', 'error');
     }
   }
 
@@ -339,7 +340,7 @@ const ALL_TABS = ['basic', 'rooms', 'state', 'locks', 'triggers', 'portal', 'per
       }
     }
 
-    exits.sort((a, b) => a.fromRoom.name.localeCompare(b.fromRoom.name) || a.direction.localeCompare(b.direction));
+    exits.sort((a, b) => (a.fromRoom.area || '').localeCompare(b.fromRoom.area || '') || a.fromRoom.name.localeCompare(b.fromRoom.name) || a.direction.localeCompare(b.direction));
 
     doorList.innerHTML = '';
     for (const exit of exits) {
