@@ -62,8 +62,8 @@
               <option value="">All Categories</option>
               <option value="buff">Buff</option>
               <option value="debuff">Debuff</option>
-              <option value="dot">DoT</option>
-              <option value="hot">HoT</option>
+              <option value="dot">DoT (Damage over Time)</option>
+              <option value="hot">HoT (Healing over Time)</option>
               <option value="control">Control</option>
             </select>
           </div>
@@ -107,7 +107,7 @@
                 <div class="form-group">
                   <label for="effect-id">Effect ID</label>
                   <input type="text" id="effect-id" required placeholder="poisoned" pattern="[a-z][a-z0-9_]*" />
-                  <span class="hint-inline">Immutable after creation. Lowercase, underscores only.</span>
+                  <span class="hint-inline">Immutable after creation. Lowercase letters, numbers, underscores only.</span>
                 </div>
                 <div class="form-group">
                   <label for="effect-name">Display Name <span class="required">*</span></label>

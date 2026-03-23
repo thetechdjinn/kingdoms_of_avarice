@@ -533,8 +533,10 @@ const ALL_TABS = ['basic', 'rooms', 'state', 'locks', 'triggers', 'portal', 'per
       html += `<div class="preview-stat"><span class="label">Default:</span> ${door.defaultState}</div>`;
       if (door.autoResetSeconds) html += `<div class="preview-stat"><span class="label">Auto-reset:</span> ${door.autoResetSeconds}s</div>`;
       if (door.hasLock) {
-        html += `<div class="preview-stat"><span class="label">Pick:</span> ${door.pickDifficultyMin}-${door.pickDifficultyMax}</div>`;
-        html += `<div class="preview-stat"><span class="label">Bash:</span> ${door.bashDifficulty}</div>`;
+        const pickAvg = Math.round((door.pickDifficultyMin + door.pickDifficultyMax) / 2);
+        const pickLabel = pickAvg === 0 ? 'Unpickable' : pickAvg <= 30 ? 'Easy' : pickAvg <= 60 ? 'Moderate' : pickAvg <= 90 ? 'Hard' : 'Very Hard';
+        html += `<div class="preview-stat"><span class="label">Pick:</span> ${door.pickDifficultyMin}-${door.pickDifficultyMax} (${pickLabel})</div>`;
+        html += `<div class="preview-stat"><span class="label">Bash:</span> ${door.bashDifficulty}${door.bashDifficulty === 0 ? ' (Unbashable)' : ''}</div>`;
         if (door.keyItemTag) html += `<div class="preview-stat"><span class="label">Key:</span> ${escapeHtml(door.keyItemTag)}</div>`;
       }
       html += `</div>`;
@@ -546,7 +548,7 @@ const ALL_TABS = ['basic', 'rooms', 'state', 'locks', 'triggers', 'portal', 'per
       html += `</div>`;
     }
 
-    if (door.requiredLevel || door.requiredQuestFlag || (door.requiredClasses && door.requiredClasses.length > 0)) {
+    if (door.requiredLevel || door.requiredQuestFlag || door.requiredItemTag || (door.requiredClasses && door.requiredClasses.length > 0)) {
       html += `<div class="preview-section"><div class="preview-section-title">Permissions</div>`;
       if (door.requiredLevel) html += `<div class="preview-stat"><span class="label">Level:</span> ${door.requiredLevel}${door.maxLevel ? `-${door.maxLevel}` : '+'}</div>`;
       if (door.requiredClasses && door.requiredClasses.length > 0) {
@@ -554,6 +556,8 @@ const ALL_TABS = ['basic', 'rooms', 'state', 'locks', 'triggers', 'portal', 'per
         html += `<div class="preview-stat"><span class="label">Classes:</span> ${names.join(', ')}</div>`;
       }
       if (door.requiredQuestFlag) html += `<div class="preview-stat"><span class="label">Quest:</span> ${escapeHtml(door.requiredQuestFlag)}</div>`;
+      if (door.requiredItemTag) html += `<div class="preview-stat"><span class="label">Item:</span> ${escapeHtml(door.requiredItemTag)}</div>`;
+      if (door.denialMessage) html += `<div class="preview-stat"><span class="label">Denial:</span> "${escapeHtml(door.denialMessage)}"</div>`;
       html += `</div>`;
     }
 
