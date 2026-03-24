@@ -37,17 +37,42 @@ export function setupTabs(options: TabOptions = {}): void {
   const buttons = root.querySelectorAll(buttonSelector);
   const panels = root.querySelectorAll(contentSelector);
 
+  // Set ARIA roles on initial load
+  buttons.forEach(btn => {
+    const el = btn as HTMLElement;
+    el.setAttribute('role', 'tab');
+    const tabName = el.dataset.tab;
+    if (tabName) {
+      el.setAttribute('aria-controls', `tab-${tabName}`);
+      el.setAttribute('aria-selected', String(el.classList.contains('active')));
+    }
+  });
+
+  panels.forEach(panel => {
+    (panel as HTMLElement).setAttribute('role', 'tabpanel');
+  });
+
+  // Find the tab button container and mark it as a tablist
+  const firstBtn = buttons[0] as HTMLElement | null;
+  if (firstBtn?.parentElement) {
+    firstBtn.parentElement.setAttribute('role', 'tablist');
+  }
+
   buttons.forEach(btn => {
     btn.addEventListener('click', () => {
       const tabName = (btn as HTMLElement).dataset.tab;
       if (!tabName) return;
 
       // Deactivate all
-      buttons.forEach(b => b.classList.remove('active'));
+      buttons.forEach(b => {
+        b.classList.remove('active');
+        (b as HTMLElement).setAttribute('aria-selected', 'false');
+      });
       panels.forEach(c => c.classList.remove('active'));
 
       // Activate selected
       btn.classList.add('active');
+      (btn as HTMLElement).setAttribute('aria-selected', 'true');
       const tabContent = root.querySelector(`#tab-${tabName}`);
       if (tabContent) tabContent.classList.add('active');
 
@@ -71,11 +96,13 @@ export function activateTab(tabName: string, options: Pick<TabOptions, 'containe
   const panels = root.querySelectorAll(contentSelector);
 
   buttons.forEach(b => {
-    if ((b as HTMLElement).dataset.tab === tabName) {
+    const isActive = (b as HTMLElement).dataset.tab === tabName;
+    if (isActive) {
       b.classList.add('active');
     } else {
       b.classList.remove('active');
     }
+    (b as HTMLElement).setAttribute('aria-selected', String(isActive));
   });
 
   panels.forEach(c => c.classList.remove('active'));

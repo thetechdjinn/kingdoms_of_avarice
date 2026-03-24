@@ -270,7 +270,7 @@ interface RoomLayoutInfo {
   async function selectRoom(id: number): Promise<void> {
     selectedRoomId = id;
 
-    // Fetch fresh room data
+    // Fetch fresh room data — abort if fetch fails to avoid showing stale data
     try {
       const res = await fetch(`/api/rooms/${id}`, { credentials: 'include' });
       const data = await res.json();
@@ -278,9 +278,13 @@ interface RoomLayoutInfo {
         const idx = rooms.findIndex(r => r.id === id);
         if (idx !== -1) rooms[idx] = data.room;
         else rooms.push(data.room);
+      } else {
+        showToast('Failed to load room', 'error');
+        return;
       }
     } catch {
       showToast('Failed to load room', 'error');
+      return;
     }
 
     const room = rooms.find(r => r.id === id);
