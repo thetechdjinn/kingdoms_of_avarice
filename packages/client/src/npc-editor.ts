@@ -1142,9 +1142,10 @@ function updatePreview(): void {
         const spellInfo = availableSpells.find(sp => sp.id === s.spellId);
         if (!spellInfo) return `<div class="preview-stat"><span class="label">Spell #${s.spellId}:</span> <span class="value">unknown</span></div>`;
         const spellPower = getNum('npc-spell-power', 0);
+        const isHealing = spellInfo.spellType === 'healing';
         const scaled = calcSpellScaling(
-          spellInfo.minDamage || spellInfo.minHealing,
-          spellInfo.maxDamage || spellInfo.maxHealing,
+          isHealing ? spellInfo.minHealing : spellInfo.minDamage,
+          isHealing ? spellInfo.maxHealing : spellInfo.maxDamage,
           level,
           spellInfo.scalingPerLevel,
           spellPower,

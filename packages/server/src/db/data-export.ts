@@ -610,7 +610,7 @@ export async function runExport(): Promise<ExportResult> {
 }
 
 // --- CLI entry point ---
-// Only run main() when executed directly (not when imported by the API route)
+// Only run CLI export when executed directly (not when imported by the API route)
 const isCli = process.argv[1] && (
   process.argv[1].endsWith('data-export.ts') ||
   process.argv[1].endsWith('data-export.js')

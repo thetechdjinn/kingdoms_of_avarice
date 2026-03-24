@@ -512,7 +512,7 @@ interface RoomLayoutInfo {
     }
 
     const darknessRaw = parseInt(darknessInput.value, 10);
-    const darkness_level = Number.isFinite(darknessRaw) ? Math.max(0, Math.min(10, darknessRaw)) : 0;
+    const darkness_level = Number.isFinite(darknessRaw) ? Math.max(-500, Math.min(0, darknessRaw)) : 0;
 
     return {
       name: nameInput.value.trim(),
