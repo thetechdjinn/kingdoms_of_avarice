@@ -827,7 +827,7 @@ interface RoomLayoutInfo {
 
   function exportRooms(): void {
     const filterArea = areaFilter.value;
-    const toExport = filterArea ? rooms.filter(r => r.area === filterArea) : rooms;
+    const toExport = roomListPanel.getFilteredItems();
 
     if (toExport.length === 0) {
       showToast('No rooms to export', 'warning');
