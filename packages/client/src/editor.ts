@@ -541,7 +541,7 @@ interface RoomLayoutInfo {
         credentials: 'include',
         body: JSON.stringify({
           name: result.name,
-          area: result.area || '',
+          area: result.area || null,
           description: 'A newly created room.',
         }),
       });
@@ -936,6 +936,35 @@ interface RoomLayoutInfo {
   }
 
   // ============================================================================
+  // Seed Export (full game data to data/ directory)
+  // ============================================================================
+
+  async function seedExport(): Promise<void> {
+    const confirmed = await showConfirm(
+      'Export all game data to data/ directory?\n\nThis overwrites the seed data files that new installs use. Make sure to commit the result.'
+    );
+    if (!confirmed) return;
+
+    showToast('Exporting game data...', 'info', 10000);
+
+    try {
+      const res = await fetch('/api/data/export', {
+        method: 'POST',
+        credentials: 'include',
+      });
+      const data = await res.json();
+      if (data.success) {
+        const warnSuffix = data.warnings?.length > 0 ? ` (${data.warnings.length} warnings)` : '';
+        showToast(`${data.message}${warnSuffix}`, data.warnings?.length > 0 ? 'warning' : 'success', 5000);
+      } else {
+        showToast(data.message || 'Export failed', 'error');
+      }
+    } catch {
+      showToast('Export failed', 'error');
+    }
+  }
+
+  // ============================================================================
   // Map Canvas (preserved from original)
   // ============================================================================
 
@@ -1326,17 +1355,17 @@ interface RoomLayoutInfo {
           ctx.fillText(`L${pos.level > 0 ? '+' : ''}${pos.level}`, pos.x - half + 2, pos.y - half + 10);
         }
 
-        // Room name (show more chars at higher zoom)
+        // Room name (show more chars at higher zoom, constant screen-size text)
         const maxChars = zoom >= 1.5 ? 20 : (zoom >= 0.8 ? 12 : 8);
         ctx.fillStyle = isSelected ? '#00ff00' : '#aaa';
-        ctx.font = `${isSelected ? 'bold ' : ''}${10}px sans-serif`;
+        ctx.font = `${isSelected ? 'bold ' : ''}${10 / zoom}px sans-serif`;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
 
         const truncated = room.name.length > maxChars ? room.name.slice(0, maxChars - 1) + '\u2026' : room.name;
         ctx.fillText(truncated, pos.x, pos.y - 5);
         ctx.fillStyle = '#666';
-        ctx.font = '8px sans-serif';
+        ctx.font = `${8 / zoom}px sans-serif`;
         ctx.fillText(`#${room.id}`, pos.x, pos.y + 8);
       }
 
@@ -1474,10 +1503,6 @@ interface RoomLayoutInfo {
     resetView();
   }
 
-  /**
-   * Calculate room positions in unbounded world space (no clamping to canvas).
-   * Uses BFS from selected/first room with fixed spacing.
-   */
   /**
    * Calculate room positions in unbounded world space.
    *
@@ -1652,6 +1677,16 @@ interface RoomLayoutInfo {
   // Import/Export
   document.getElementById('export-btn')?.addEventListener('click', exportRooms);
   document.getElementById('import-btn')?.addEventListener('click', importRooms);
+
+  // Seed export (admin only)
+  const seedExportBtn = document.getElementById('seed-export-btn');
+  if (seedExportBtn) {
+    if (auth.isAdmin) {
+      seedExportBtn.addEventListener('click', seedExport);
+    } else {
+      seedExportBtn.style.display = 'none';
+    }
+  }
 
   // Resize -> redraw map
   window.addEventListener('resize', () => drawMap());
