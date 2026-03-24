@@ -862,46 +862,72 @@ interface RoomLayoutInfo {
 
         let created = 0;
         let updated = 0;
+        let failed = 0;
+        const createdIdMap = new Map<number, number>(); // old ID -> new ID
+
+        // Pass 1: Create/update rooms (without exits)
         for (const room of importRoomList) {
           const existing = rooms.find(r => r.id === room.id);
+          const payload = {
+            name: room.name,
+            description: room.description,
+            area: room.area,
+            terrain: room.terrain,
+            darkness_level: room.darkness_level,
+            features: room.features,
+            tag: room.tag,
+          };
+
           if (existing) {
-            await fetch(`/api/rooms/${room.id}`, {
+            const res = await fetch(`/api/rooms/${room.id}`, {
               method: 'PUT',
               headers: { 'Content-Type': 'application/json' },
               credentials: 'include',
-              body: JSON.stringify({
-                name: room.name,
-                description: room.description,
-                area: room.area,
-                terrain: room.terrain,
-                darkness_level: room.darkness_level,
-                features: room.features,
-                tag: room.tag,
-              }),
+              body: JSON.stringify(payload),
             });
-            updated++;
+            const data = await res.json();
+            if (data.success) { updated++; createdIdMap.set(room.id, room.id); }
+            else failed++;
           } else {
-            await fetch('/api/rooms', {
+            const res = await fetch('/api/rooms', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               credentials: 'include',
-              body: JSON.stringify({
-                name: room.name,
-                description: room.description,
-                area: room.area,
-                terrain: room.terrain,
-                darkness_level: room.darkness_level,
-                features: room.features,
-                tag: room.tag,
-              }),
+              body: JSON.stringify(payload),
             });
-            created++;
+            const data = await res.json();
+            if (data.success) { created++; createdIdMap.set(room.id, data.room.id); }
+            else failed++;
+          }
+        }
+
+        // Pass 2: Recreate exits (only if both rooms were imported)
+        let exitsCreated = 0;
+        for (const room of importRoomList) {
+          const fromId = createdIdMap.get(room.id);
+          if (!fromId || !room.exits) continue;
+
+          for (const [direction, targetOldId] of Object.entries(room.exits)) {
+            const toId = createdIdMap.get(targetOldId);
+            if (!toId) continue;
+
+            const res = await fetch(`/api/rooms/${fromId}/exits`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              credentials: 'include',
+              body: JSON.stringify({ direction, toRoomId: toId, bidirectional: false }),
+            });
+            const data = await res.json();
+            if (data.success) exitsCreated++;
           }
         }
 
         await fetchRooms();
         await fetchAreas();
-        showToast(`Imported: ${created} created, ${updated} updated`, 'success');
+        const parts = [`${created} created`, `${updated} updated`];
+        if (exitsCreated > 0) parts.push(`${exitsCreated} exits linked`);
+        if (failed > 0) parts.push(`${failed} failed`);
+        showToast(`Import: ${parts.join(', ')}`, failed > 0 ? 'warning' : 'success');
       } catch {
         showToast('Failed to import rooms', 'error');
       }
