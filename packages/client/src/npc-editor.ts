@@ -126,7 +126,12 @@ let merchantResponses: MerchantResponse[] = [];
 let selectedTemplateId: number | null = null;
 let editingAttacks: NpcAttack[] = [];
 let editingSpells: NpcSpell[] = [];
-let availableSpells: Array<{ id: number; name: string; mnemonic: string; spellType: string; manaCost: number }> = [];
+let availableSpells: Array<{
+  id: number; name: string; mnemonic: string; spellType: string; manaCost: number;
+  minDamage: number; maxDamage: number; minHealing: number; maxHealing: number;
+  scalingPerLevel: number; damageScalingFactor: number; healingScalingFactor: number;
+  maxScalingLevel: number; hitsPerCast: number; levelRequired: number;
+}> = [];
 let currentUser: AuthInfo | null = null;
 
 // ============================================================================
@@ -166,6 +171,30 @@ function escapeHtml(text: string): string {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
+}
+
+/** Mirror of server's calculateSpellScaling for preview display. */
+function calcSpellScaling(
+  baseMin: number, baseMax: number, casterLevel: number,
+  scalingPerLevel: number, statValue: number, scalingFactor: number,
+  maxScalingLevel: number, spellLevelRequired?: number,
+): { min: number; max: number } {
+  let bonus = 0;
+  if (scalingPerLevel && scalingPerLevel > 0) {
+    const spellLevel = spellLevelRequired ?? 1;
+    const levelsAbove = Math.max(0, casterLevel - spellLevel);
+    const cappedLevels = (maxScalingLevel > 0) ? Math.min(levelsAbove, maxScalingLevel) : levelsAbove;
+    bonus += cappedLevels * scalingPerLevel;
+  }
+  if (scalingFactor && scalingFactor > 0 && statValue > 0) {
+    const tiers = Math.floor(statValue / 10);
+    bonus += tiers * scalingFactor;
+  }
+  const multiplier = 1 + bonus;
+  return {
+    min: Math.max(1, Math.floor(baseMin * multiplier)),
+    max: Math.max(1, Math.floor(baseMax * multiplier)),
+  };
 }
 
 function parseNumberOrDefault(value: string, defaultValue: number): number {
@@ -582,8 +611,18 @@ async function fetchAvailableSpells(): Promise<void> {
       id: s.id as number,
       name: s.name as string,
       mnemonic: s.mnemonic as string,
-      spellType: s.spellType as string,
-      manaCost: s.manaCost as number,
+      spellType: (s.spellType || s.spell_type) as string,
+      manaCost: (s.manaCost ?? s.mana_cost ?? 0) as number,
+      minDamage: (s.minDamage ?? s.min_damage ?? 0) as number,
+      maxDamage: (s.maxDamage ?? s.max_damage ?? 0) as number,
+      minHealing: (s.minHealing ?? s.min_healing ?? 0) as number,
+      maxHealing: (s.maxHealing ?? s.max_healing ?? 0) as number,
+      scalingPerLevel: (s.scalingPerLevel ?? s.scaling_per_level ?? 0) as number,
+      damageScalingFactor: (s.damageScalingFactor ?? s.damage_scaling_factor ?? 0) as number,
+      healingScalingFactor: (s.healingScalingFactor ?? s.healing_scaling_factor ?? 0) as number,
+      maxScalingLevel: (s.maxScalingLevel ?? s.max_scaling_level ?? 0) as number,
+      hitsPerCast: (s.hitsPerCast ?? s.hits_per_cast ?? 1) as number,
+      levelRequired: (s.levelRequired ?? s.level_required ?? 1) as number,
     }));
   } catch (e) {
     console.error('Failed to load spells:', e);
@@ -1099,12 +1138,32 @@ function updatePreview(): void {
     ${editingSpells.length > 0 ? `
     <div class="preview-section">
       <div class="preview-section-title">Spells (${editingSpells.length})</div>
-      ${editingSpells.map(s => `
-        <div class="preview-stat">
-          <span class="label">${escapeHtml(getSpellName(s.spellId))}:</span>
-          <span class="value">P${s.priority} ${s.castChance}% ${s.conditionType !== 'any' ? escapeHtml(s.conditionType) + ' ' + s.conditionValue : ''}</span>
-        </div>
-      `).join('')}
+      ${editingSpells.map(s => {
+        const spellInfo = availableSpells.find(sp => sp.id === s.spellId);
+        if (!spellInfo) return `<div class="preview-stat"><span class="label">Spell #${s.spellId}:</span> <span class="value">unknown</span></div>`;
+        const spellPower = getNum('npc-spell-power', 0);
+        const scaled = calcSpellScaling(
+          spellInfo.minDamage || spellInfo.minHealing,
+          spellInfo.maxDamage || spellInfo.maxHealing,
+          level,
+          spellInfo.scalingPerLevel,
+          spellPower,
+          spellInfo.spellType === 'healing' ? spellInfo.healingScalingFactor : spellInfo.damageScalingFactor,
+          spellInfo.maxScalingLevel,
+          spellInfo.levelRequired,
+        );
+        const hits = spellInfo.hitsPerCast || 1;
+        const dmgLabel = spellInfo.spellType === 'healing' ? 'heal' : 'dmg';
+        const perHit = scaled.min > 0 ? `${scaled.min}-${scaled.max} ${dmgLabel}` : '';
+        const totalLabel = hits > 1 && perHit ? ` x${hits} = ${scaled.min * hits}-${scaled.max * hits}` : '';
+        const condLabel = s.conditionType !== 'any' ? ` ${escapeHtml(s.conditionType)} ${s.conditionValue}` : '';
+        return `
+          <div class="preview-stat">
+            <span class="label">${escapeHtml(spellInfo.name)}:</span>
+            <span class="value">${perHit}${totalLabel} (${s.castChance}%${condLabel})</span>
+          </div>
+        `;
+      }).join('')}
     </div>` : ''}
     <div class="preview-section">
       <div class="preview-section-title">Rewards</div>

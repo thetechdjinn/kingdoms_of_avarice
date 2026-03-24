@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Room Editor - Kingdoms of Avarice</title>
     <link rel="stylesheet" href="/src/editor.css" />
+    <link rel="stylesheet" href="/src/room-editor.css" />
   </head>
   <body>
     <div id="editor-app">
@@ -50,93 +51,111 @@
       </nav>
 
       <div id="editor-layout">
+        <!-- Left Panel: Room List -->
         <aside id="room-list-panel">
           <div class="panel-header">
             <h2>Rooms</h2>
-            <button id="new-room-btn" class="btn-primary">+ New Room</button>
+            <button id="new-room-btn" class="btn-primary btn-small">+ New</button>
           </div>
-          <div id="area-filter">
-            <label for="area-select">Filter by Area:</label>
-            <select id="area-select">
+          <div class="list-filters">
+            <label for="area-filter" class="sr-only">Filter by area</label>
+            <select id="area-filter">
               <option value="">All Areas</option>
             </select>
-            <button id="manage-areas-btn" class="btn-small" title="Manage Areas">⚙</button>
+            <label for="search-input" class="sr-only">Search rooms</label>
+            <input type="text" id="search-input" placeholder="Search rooms..." />
           </div>
           <ul id="room-list"></ul>
-          
-          <!-- Area Management Modal -->
-          <div id="area-modal" class="modal" style="display: none;">
-            <div class="modal-content">
-              <div class="modal-header">
-                <h3>Manage Areas</h3>
-                <button id="close-area-modal" class="close-btn">&times;</button>
-              </div>
-              <div class="modal-body">
-                <p class="hint">Click an area to rename it. Type a new area name in the room's Area field to create a new area.</p>
-                <ul id="area-list"></ul>
-              </div>
+          <div class="panel-footer">
+            <span id="room-count" class="list-count"></span>
+            <div class="footer-buttons">
+              <button id="manage-areas-btn" class="btn-tiny" title="Manage Areas">Areas</button>
+              <button id="export-btn" class="btn-tiny" title="Export rooms as JSON">Export</button>
+              <button id="import-btn" class="btn-tiny" title="Import rooms from JSON">Import</button>
             </div>
           </div>
         </aside>
-        
+
+        <!-- Center Panel: Form -->
         <main id="room-editor-panel">
           <div id="no-room-selected">
-            <p>Select a room from the list or create a new one.</p>
+            <div class="empty-state">
+              <div class="empty-icon">&gt;_</div>
+              <p>Select a room from the list or create a new one.</p>
+            </div>
           </div>
-          
+
           <form id="room-form" style="display: none;">
             <div class="form-header">
               <h2 id="room-form-title">Edit Room</h2>
               <span id="room-id-display"></span>
             </div>
-            
-            <div class="form-group">
-              <label for="room-name">Name</label>
-              <input type="text" id="room-name" required />
-            </div>
-            
-            <div class="form-group">
-              <label for="room-area">Area <span class="hint-inline">(type to create new)</span></label>
-              <input type="text" id="room-area" list="area-suggestions" placeholder="Enter existing or new area name" />
-              <datalist id="area-suggestions"></datalist>
+
+            <div class="form-tabs">
+              <button type="button" class="tab-btn active" data-tab="basic">Basic</button>
+              <button type="button" class="tab-btn" data-tab="features">Features</button>
+              <button type="button" class="tab-btn" data-tab="exits">Exits</button>
+              <button type="button" class="tab-btn" data-tab="doors">Doors</button>
             </div>
 
-            <div class="form-group">
-              <label for="room-terrain">Terrain <span class="hint-inline">(affects movement speed)</span></label>
-              <select id="room-terrain">
-                <option value="indoor">Indoor (1.0x)</option>
-                <option value="road">Road (0.8x - faster)</option>
-                <option value="grass">Grass (1.0x)</option>
-                <option value="forest">Forest (1.2x)</option>
-                <option value="sand">Sand (1.3x)</option>
-                <option value="mountain">Mountain (1.4x)</option>
-                <option value="swamp">Swamp (1.6x)</option>
-                <option value="underwater">Underwater (2.0x - slowest)</option>
-                <option value="ice">Ice (1.1x)</option>
-                <option value="dungeon">Dungeon (1.1x)</option>
-              </select>
-            </div>
-
-            <div class="form-group">
-              <label for="room-description">Description</label>
-              <textarea id="room-description" rows="5"></textarea>
-            </div>
-
-            <div class="form-section collapsible">
-              <h3 class="section-header" id="training-section-header">
-                <span class="collapse-icon">▶</span>
-                Training Room Settings
-              </h3>
-              <div class="section-content" id="training-section-content" style="display: none;">
+            <!-- Basic Tab -->
+            <div class="tab-content active" id="tab-basic">
+              <div class="form-group">
+                <label for="room-name">Name <span class="required">*</span></label>
+                <input type="text" id="room-name" required />
+              </div>
+              <div class="form-row">
                 <div class="form-group">
-                  <label class="checkbox-label">
-                    <input type="checkbox" id="room-training-enabled" />
-                    Enable Training Room
-                  </label>
-                  <p class="hint">When enabled, players can use 'train' (level up) and 'train stats' (allocate CP) here.</p>
+                  <label for="room-area">Area <span class="hint-inline">(type to create new)</span></label>
+                  <input type="text" id="room-area" list="area-suggestions" placeholder="Enter area name" />
+                  <datalist id="area-suggestions"></datalist>
                 </div>
+                <div class="form-group" style="flex: 0 0 180px;">
+                  <label for="room-terrain">Terrain</label>
+                  <select id="room-terrain">
+                    <option value="indoor">Indoor (1.0x)</option>
+                    <option value="road">Road (0.8x)</option>
+                    <option value="grass">Grass (1.0x)</option>
+                    <option value="forest">Forest (1.2x)</option>
+                    <option value="sand">Sand (1.3x)</option>
+                    <option value="mountain">Mountain (1.4x)</option>
+                    <option value="swamp">Swamp (1.6x)</option>
+                    <option value="underwater">Underwater (2.0x)</option>
+                    <option value="ice">Ice (1.1x)</option>
+                    <option value="dungeon">Dungeon (1.1x)</option>
+                    <option value="underground">Underground (1.1x)</option>
+                  </select>
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group" style="flex: 0 0 120px;">
+                  <label for="room-darkness">Darkness <span class="hint-inline">(NYI)</span></label>
+                  <input type="number" id="room-darkness" min="0" max="10" value="0" />
+                  <span class="hint-inline">Not yet implemented. Will use luminance system (0 to -500).</span>
+                </div>
+                <div class="form-group">
+                  <label for="room-tag">Tag</label>
+                  <input type="text" id="room-tag" placeholder="auto-generated" />
+                  <span class="hint-inline">Unique identifier for scripting</span>
+                </div>
+              </div>
+              <div class="form-group">
+                <label for="room-description">Description</label>
+                <textarea id="room-description" rows="5"></textarea>
+              </div>
+            </div>
 
-                <div id="training-options" style="display: none;">
+            <!-- Features Tab -->
+            <div class="tab-content" id="tab-features">
+              <!-- Training Section -->
+              <div class="feature-section">
+                <label class="toggle-label">
+                  <input type="checkbox" id="room-training-enabled" />
+                  <span class="toggle-track"></span>
+                  Training Room
+                </label>
+                <span class="hint-inline">Players can train (level up) and allocate stat points here.</span>
+                <div id="training-options" class="feature-options" style="display: none;">
                   <div class="form-row">
                     <div class="form-group">
                       <label for="room-training-min-level">Min Level</label>
@@ -147,120 +166,109 @@
                       <input type="number" id="room-training-max-level" min="1" max="999" value="999" />
                     </div>
                   </div>
-
                   <div class="form-group">
-                    <label>Allowed Classes <span class="hint-inline">(select which classes can train here)</span></label>
-                    <div id="room-training-classes" class="class-select-list">
-                      <!-- Populated by JavaScript -->
-                    </div>
+                    <label>Allowed Classes</label>
+                    <div id="training-classes-container"></div>
+                    <span class="hint-inline">Empty = all classes allowed</span>
                   </div>
                 </div>
               </div>
-            </div>
 
-            <div class="form-section collapsible">
-              <h3 class="section-header" id="bank-section-header">
-                <span class="collapse-icon">▶</span>
-                Bank Settings
-              </h3>
-              <div class="section-content" id="bank-section-content" style="display: none;">
-                <div class="form-group">
-                  <label class="checkbox-label">
-                    <input type="checkbox" id="room-bank-enabled" />
-                    Mark as Bank
-                  </label>
-                  <p class="hint">Players can deposit and withdraw currency in this room.</p>
-                </div>
+              <!-- Bank Section -->
+              <div class="feature-section">
+                <label class="toggle-label">
+                  <input type="checkbox" id="room-bank-enabled" />
+                  <span class="toggle-track"></span>
+                  Bank
+                </label>
+                <span class="hint-inline">Players can deposit and withdraw currency here.</span>
               </div>
-            </div>
 
-            <div class="form-section collapsible">
-              <h3 class="section-header" id="respawn-section-header">
-                <span class="collapse-icon">▶</span>
-                Respawn Point Settings
-              </h3>
-              <div class="section-content" id="respawn-section-content" style="display: none;">
-                <div class="form-group">
-                  <label class="checkbox-label">
-                    <input type="checkbox" id="room-respawn-enabled" />
-                    Mark as Respawn Point
-                  </label>
-                  <p class="hint">Players who die in this area will respawn here. Only one respawn point per area is used.</p>
-                </div>
-
-                <div id="respawn-options" style="display: none;">
+              <!-- Respawn Section -->
+              <div class="feature-section">
+                <label class="toggle-label">
+                  <input type="checkbox" id="room-respawn-enabled" />
+                  <span class="toggle-track"></span>
+                  Respawn Point
+                </label>
+                <span class="hint-inline">Players who die in served areas respawn here.</span>
+                <div id="respawn-options" class="feature-options" style="display: none;">
                   <div class="form-group">
                     <label for="room-respawn-priority">Priority</label>
                     <input type="number" id="room-respawn-priority" min="0" max="999" value="0" />
-                    <p class="hint">Lower value = higher priority. If multiple respawn rooms serve the same area, the lowest priority is used.</p>
+                    <span class="hint-inline">Lower = higher priority when multiple respawn points serve the same area.</span>
                   </div>
-
                   <div class="form-group">
-                    <label>Served Areas <span class="hint-inline">(select additional areas this respawn point covers)</span></label>
-                    <div id="room-respawn-areas" class="area-select-list">
-                      <!-- Populated by JavaScript -->
-                    </div>
-                    <p class="hint">This room automatically serves its own area. Check additional areas that should also respawn here.</p>
+                    <label>Also Serve These Areas</label>
+                    <div id="respawn-areas-container"></div>
+                    <span class="hint-inline">This room automatically serves its own area. Select additional areas.</span>
                   </div>
                 </div>
               </div>
             </div>
 
-            <div class="form-section">
-              <h3>Exits</h3>
+            <!-- Exits Tab -->
+            <div class="tab-content" id="tab-exits">
               <div id="exits-list"></div>
-              <div id="add-exit-form">
-                <select id="exit-direction">
-                  <option value="">Select direction...</option>
-                  <option value="north">North</option>
-                  <option value="south">South</option>
-                  <option value="east">East</option>
-                  <option value="west">West</option>
-                  <option value="up">Up</option>
-                  <option value="down">Down</option>
-                  <option value="northeast">Northeast</option>
-                  <option value="northwest">Northwest</option>
-                  <option value="southeast">Southeast</option>
-                  <option value="southwest">Southwest</option>
-                </select>
-                <select id="exit-area-filter">
-                  <option value="">All Areas</option>
-                </select>
-                <select id="exit-target">
-                  <option value="">Select target room...</option>
-                </select>
-                <label class="checkbox-label">
-                  <input type="checkbox" id="exit-bidirectional" checked />
-                  Two-way
-                </label>
-                <button type="button" id="add-exit-btn" class="btn-secondary">Add Exit</button>
+              <div class="exit-add-section">
+                <h4>Add Exit</h4>
+                <div class="form-row">
+                  <div class="form-group" style="flex: 0 0 150px;">
+                    <label for="exit-direction">Direction</label>
+                    <select id="exit-direction">
+                      <option value="">Select...</option>
+                      <option value="north">North</option>
+                      <option value="south">South</option>
+                      <option value="east">East</option>
+                      <option value="west">West</option>
+                      <option value="up">Up</option>
+                      <option value="down">Down</option>
+                      <option value="northeast">Northeast</option>
+                      <option value="northwest">Northwest</option>
+                      <option value="southeast">Southeast</option>
+                      <option value="southwest">Southwest</option>
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label>Target Room</label>
+                    <div id="exit-target-container"></div>
+                  </div>
+                </div>
+                <div class="exit-add-actions">
+                  <label class="toggle-label">
+                    <input type="checkbox" id="exit-bidirectional" checked />
+                    <span class="toggle-track"></span>
+                    Two-way
+                  </label>
+                  <button type="button" id="add-exit-btn" class="btn-secondary">Add Exit</button>
+                </div>
               </div>
             </div>
 
-            <div class="form-section">
-              <h3>Doors</h3>
-              <p class="hint" id="doors-hint">Doors add mechanics (locks, triggers, permissions) to exits.</p>
+            <!-- Doors Tab -->
+            <div class="tab-content" id="tab-doors">
+              <p class="hint">Doors add mechanics (locks, triggers, permissions) to exits.</p>
               <div id="doors-list"></div>
-              <div id="add-door-actions">
-                <button type="button" id="add-door-btn" class="btn-secondary">+ New Door for This Room</button>
-                <a href="/door-editor.html" class="btn-link" id="open-door-editor-link">Open Door Editor</a>
+              <div class="door-add-actions">
+                <button type="button" id="add-door-btn" class="btn-secondary">+ New Door</button>
+                <a href="/door-editor.html" target="_blank" rel="noopener noreferrer" class="btn-link">Open Door Editor</a>
               </div>
             </div>
-            
+
             <div class="form-actions">
               <button type="submit" class="btn-primary">Save Room</button>
-              <button type="button" id="delete-room-btn" class="btn-danger">Delete Room</button>
+              <button type="button" id="duplicate-room-btn" class="btn-secondary">Duplicate</button>
+              <div style="flex: 1;"></div>
+              <button type="button" id="delete-room-btn" class="btn-danger">Delete</button>
             </div>
           </form>
         </main>
-        
+
+        <!-- Right Panel: Map -->
         <aside id="map-panel">
           <div class="map-header">
-            <h2>Map Preview</h2>
-            <div class="map-view-toggle">
-              <button id="view-room-btn" class="toggle-btn active" title="Show selected room and neighbors">Room</button>
-              <button id="view-area-btn" class="toggle-btn" title="Show full area map">Area</button>
-            </div>
+            <h2>Map</h2>
+            <button id="view-area-btn" class="btn-small" title="Open full area map with zoom and pan">Area Map</button>
           </div>
           <div id="map-container">
             <canvas id="room-map"></canvas>

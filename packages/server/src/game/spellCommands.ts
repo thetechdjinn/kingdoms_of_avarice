@@ -404,6 +404,7 @@ async function handleHealingSpell(
     statValue,
     spell.healingScalingFactor,
     spell.maxScalingLevel,
+    spell.levelRequired,
   );
   const healAmount = Math.floor(Math.random() * (scaled.max - scaled.min + 1)) + scaled.min;
 

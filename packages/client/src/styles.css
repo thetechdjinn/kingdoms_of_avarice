@@ -707,7 +707,9 @@ button:hover {
 
 .hub-btn-large {
   margin-top: 2rem;
-  padding: 2rem 3rem;
+  padding: 2rem;
+  width: 500px;
+  max-width: 90vw;
 }
 
 .hub-btn-large .hub-btn-icon {

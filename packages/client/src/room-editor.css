@@ -1,0 +1,439 @@
+/* Room Editor — three-panel with tabbed form and map canvas */
+
+/* ============================================================================
+   List Panel
+   ============================================================================ */
+
+#room-list-panel {
+  display: flex;
+  flex-direction: column;
+  width: 280px;
+  min-width: 260px;
+  background: #16213e;
+  border-right: 1px solid #333;
+}
+
+.list-filters {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid #333;
+}
+
+.list-filters select,
+.list-filters input {
+  width: 100%;
+  padding: 0.4rem 0.5rem;
+  background: #0f0f23;
+  color: #eee;
+  border: 1px solid #333;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  font-family: inherit;
+}
+
+.list-filters select:focus,
+.list-filters input:focus {
+  border-color: #00ff00;
+  outline: none;
+}
+
+#room-list {
+  list-style: none;
+  flex: 1;
+  overflow-y: auto;
+}
+
+#room-list li {
+  padding: 0.5rem 0.75rem;
+  cursor: pointer;
+  border-bottom: 1px solid #222;
+  border-left: 3px solid transparent;
+  transition: background-color 0.15s;
+}
+
+#room-list li:hover {
+  background-color: var(--hover-bg, #1f2b47);
+}
+
+#room-list li.selected {
+  background-color: var(--selected-bg, #0e4429);
+  border-left-color: var(--primary-color, #00ff00);
+}
+
+#room-list li .room-id {
+  font-size: 0.75rem;
+  color: #666;
+  float: right;
+}
+
+#room-list li .room-name {
+  font-weight: 500;
+}
+
+#room-list li .room-area {
+  font-size: 0.8rem;
+  color: #888;
+  margin-top: 0.15rem;
+}
+
+/* ============================================================================
+   Editor Panel
+   ============================================================================ */
+
+#room-editor-panel {
+  flex: 1;
+  padding: 1.5rem 2rem;
+  overflow-y: auto;
+}
+
+#room-form {
+  max-width: 700px;
+}
+
+#room-id-display {
+  color: #666;
+  font-size: 0.9rem;
+}
+
+/* ============================================================================
+   Features Tab
+   ============================================================================ */
+
+.feature-section {
+  padding: 1rem 0;
+  border-bottom: 1px solid #333;
+}
+
+.feature-section:last-child {
+  border-bottom: none;
+}
+
+.feature-section > .toggle-label {
+  font-size: 1rem;
+  color: #ccc;
+  font-weight: 500;
+}
+
+.feature-section > .hint-inline {
+  display: block;
+  margin-top: 0.25rem;
+  margin-left: 2.75rem;
+}
+
+.feature-options {
+  margin-top: 0.75rem;
+  padding: 1rem;
+  background: #0f0f23;
+  border-radius: 4px;
+  border: 1px solid #333;
+}
+
+/* ============================================================================
+   Exits Tab
+   ============================================================================ */
+
+#exits-list {
+  margin-bottom: 1rem;
+}
+
+.exit-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.5rem 0.75rem;
+  background-color: #0f0f23;
+  border-radius: 4px;
+  margin-bottom: 0.5rem;
+}
+
+.exit-item .exit-info {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex: 1;
+}
+
+.exit-item .exit-direction {
+  color: #00ff00;
+  font-weight: 500;
+  min-width: 80px;
+}
+
+.exit-item .exit-target {
+  color: #aaa;
+}
+
+.exit-item .exit-actions {
+  display: flex;
+  gap: 0.25rem;
+  align-items: center;
+}
+
+.exit-item .delete-exit-btn {
+  background: none;
+  border: none;
+  color: #ff4444;
+  cursor: pointer;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.85rem;
+  border-radius: 3px;
+  transition: background 0.15s;
+}
+
+.exit-item .delete-exit-btn:hover {
+  color: #ff6666;
+  background: rgba(255, 68, 68, 0.1);
+}
+
+.exit-item .delete-exit-oneway {
+  background: none;
+  border: none;
+  color: #888;
+  cursor: pointer;
+  padding: 0.15rem 0.35rem;
+  font-size: 0.7rem;
+  border-radius: 3px;
+  transition: color 0.15s;
+}
+
+.exit-item .delete-exit-oneway:hover {
+  color: #ff6666;
+}
+
+.no-exits {
+  color: #666;
+  font-style: italic;
+  font-size: 0.9rem;
+  padding: 0.5rem 0;
+}
+
+.exit-add-section {
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid #333;
+}
+
+.exit-add-section h4 {
+  color: #aaa;
+  margin-bottom: 0.75rem;
+  font-size: 0.9rem;
+  font-weight: normal;
+}
+
+.exit-add-actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 0.75rem;
+}
+
+/* ============================================================================
+   Doors Tab
+   ============================================================================ */
+
+#doors-list {
+  margin-bottom: 0.75rem;
+}
+
+.door-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.5rem 0.75rem;
+  background-color: #0f0f23;
+  border-radius: 4px;
+  margin-bottom: 0.5rem;
+  cursor: pointer;
+  transition: background-color 0.15s;
+}
+
+.door-item:hover {
+  background-color: #16213e;
+}
+
+.door-item .door-info {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex: 1;
+}
+
+.door-item .door-direction {
+  color: #00ff00;
+  font-weight: 500;
+  min-width: 80px;
+}
+
+.door-item .door-name {
+  color: #eee;
+}
+
+.door-item .door-type-badge {
+  font-size: 0.75rem;
+  padding: 0.15rem 0.4rem;
+  border-radius: 3px;
+  text-transform: uppercase;
+}
+
+.door-item .door-type-badge.open_passageway {
+  background: #1a3a1a;
+  color: #4ade80;
+}
+
+.door-item .door-type-badge.physical {
+  background: #2a2a1a;
+  color: #d4a574;
+}
+
+.door-item .door-type-badge.special {
+  background: #2a1a3a;
+  color: #c084fc;
+}
+
+.door-item .door-type-badge.triggered_passageway {
+  background: #1a2a3a;
+  color: #60d4d4;
+}
+
+.door-item .door-type-badge.temporary_portal {
+  background: #3a1a2a;
+  color: #f472b6;
+}
+
+.door-item .edit-door-btn {
+  background: #0f3460;
+  border: 1px solid #333;
+  color: #ccc;
+  padding: 0.25rem 0.5rem;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 0.8rem;
+}
+
+.door-item .edit-door-btn:hover {
+  background: #16213e;
+  color: #00ff00;
+}
+
+.no-doors {
+  color: #666;
+  font-style: italic;
+  font-size: 0.9rem;
+  padding: 0.5rem 0;
+}
+
+.door-add-actions {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  margin-top: 0.5rem;
+}
+
+/* ============================================================================
+   Map Panel
+   ============================================================================ */
+
+#map-panel {
+  width: 350px;
+  background-color: #16213e;
+  border-left: 1px solid #333;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+}
+
+#map-panel h2 {
+  color: #00ff00;
+  font-size: 1.1rem;
+  margin-bottom: 0;
+}
+
+.map-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.map-header h2 {
+  margin: 0;
+}
+
+
+#map-container {
+  flex: 1;
+  background-color: #0f0f23;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+#room-map {
+  width: 100%;
+  height: 100%;
+}
+
+/* ============================================================================
+   Area Management Modal
+   ============================================================================ */
+
+#area-list {
+  list-style: none;
+}
+
+#area-list li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem;
+  background: #0f0f23;
+  border-radius: 4px;
+  margin-bottom: 0.5rem;
+}
+
+#area-list li .area-name {
+  color: #00ff00;
+  font-weight: 500;
+}
+
+#area-list li .area-count {
+  color: #666;
+  font-size: 0.85rem;
+}
+
+#area-list li .rename-btn {
+  background: #333;
+  border: none;
+  color: #aaa;
+  padding: 0.25rem 0.75rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+
+#area-list li .rename-btn:hover {
+  background: #444;
+  color: #eee;
+}
+
+/* ============================================================================
+   Responsive
+   ============================================================================ */
+
+@media (max-width: 1200px) {
+  #map-panel {
+    width: 280px;
+  }
+}
+
+@media (max-width: 900px) {
+  #map-panel {
+    display: none;
+  }
+
+  #room-list-panel {
+    width: 220px;
+    min-width: 200px;
+  }
+}
