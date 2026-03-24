@@ -218,7 +218,7 @@ interface RoomLayoutInfo {
   }
 
   function updateAreaSuggestions(): void {
-    areaSuggestions.innerHTML = areas.map(a => `<option value="${escapeHtml(a)}">`).join('');
+    areaSuggestions.innerHTML = areas.map(a => `<option value="${escapeHtml(a)}"></option>`).join('');
   }
 
   // ============================================================================
@@ -1652,6 +1652,8 @@ interface RoomLayoutInfo {
   document.getElementById('add-door-btn')?.addEventListener('click', () => {
     if (selectedRoomId) {
       window.open(`/door-editor.html?newDoorForRoom=${selectedRoomId}`, '_blank');
+    } else {
+      showToast('Select a room first', 'warning');
     }
   });
 

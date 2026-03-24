@@ -562,6 +562,9 @@ export async function runExport(): Promise<ExportResult> {
   for (const ids of areaRoomIds.values()) totalRooms += ids.length;
   counts.rooms = totalRooms;
 
+  const templates = await npcRepo.getAllTemplates();
+  counts.npcs = templates.length;
+
   // Build manifest
   const importOrder: string[] = [
     'global/spells.json',
