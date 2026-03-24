@@ -80,9 +80,9 @@ Shows fields specific to the selected item type:
 
 **Light Sources:**
 
-- Light Radius
-- Max Fuel (0 = permanent)
-- Fuel Rate (consumption per minute)
+- Vision Bonus (vision points added when lit, e.g., torch: 100, lantern: 175)
+- Max Fuel (0 = permanent, e.g., torch: 180, lantern: 720)
+- Fuel Rate/tick (fuel consumed per 10s game tick)
 
 #### Requirements Tab
 
@@ -282,8 +282,8 @@ Provides illumination. Requires `light_data`.
 {
   "item_type": "light",
   "light_data": {
-    "radius": 2,
-    "fuel_max": 60,
+    "vision_bonus": 100,
+    "fuel_max": 180,
     "fuel_rate": 1
   }
 }

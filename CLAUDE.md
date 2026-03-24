@@ -312,7 +312,7 @@ Players can access different help categories based on their role:
 | `@iteminfo <id\|name>`        | Show item details                                        |
 | `@spawn <id\|name> [qty]`     | Spawn item in your inventory                             |
 | `@purge items`                | Remove all room items                                    |
-| `@reload [type]`              | Reload data (rooms, items, effects, doors, actions, all) |
+| `@reload [type]`              | Reload data (rooms, items, mobs, effects, doors, actions, droptables, factions, merchants, merchantresponses, quests, progression, settings, all) |
 | `@setstealth <mode> [player]` | Force stealth state (none/sneaking/hidden)               |
 | `@testbackstab <target>`      | Test backstab without stealth requirement                |
 | `@lockpicking [player]`       | Show lockpicking skill breakdown                         |

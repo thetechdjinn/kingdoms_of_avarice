@@ -72,8 +72,8 @@ export function setupRoomRoutes(app: Express): void {
         return;
       }
 
-      if (darkness_level !== undefined && (typeof darkness_level !== 'number' || !Number.isInteger(darkness_level) || darkness_level < 0 || darkness_level > 10)) {
-        res.status(400).json({ success: false, message: 'darkness_level must be an integer between 0 and 10' });
+      if (darkness_level !== undefined && (typeof darkness_level !== 'number' || !Number.isInteger(darkness_level) || darkness_level < -500 || darkness_level > 0)) {
+        res.status(400).json({ success: false, message: 'darkness_level must be an integer between -500 and 0' });
         return;
       }
 
@@ -127,8 +127,8 @@ export function setupRoomRoutes(app: Express): void {
 
       const { name, description, area, terrain, darkness_level, features, tag } = req.body;
 
-      if (darkness_level !== undefined && (typeof darkness_level !== 'number' || !Number.isInteger(darkness_level) || darkness_level < 0 || darkness_level > 10)) {
-        res.status(400).json({ success: false, message: 'darkness_level must be an integer between 0 and 10' });
+      if (darkness_level !== undefined && (typeof darkness_level !== 'number' || !Number.isInteger(darkness_level) || darkness_level < -500 || darkness_level > 0)) {
+        res.status(400).json({ success: false, message: 'darkness_level must be an integer between -500 and 0' });
         return;
       }
 

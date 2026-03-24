@@ -310,7 +310,7 @@ VALUES
     1, 1, 2,
     'light',
     '{"takeable": true}',
-    '{"radius": 2, "fuel_max": 60, "fuel_rate": 1}'
+    '{"vision_bonus": 100, "fuel_max": 180, "fuel_rate": 1}'
 ),
 (
     'Lantern',
@@ -321,7 +321,7 @@ VALUES
     2, 1, 15,
     'light',
     '{"takeable": true}',
-    '{"radius": 3, "fuel_max": 120, "fuel_rate": 1}'
+    '{"vision_bonus": 175, "fuel_max": 720, "fuel_rate": 1}'
 );
 
 -- Hidden Items

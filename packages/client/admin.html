@@ -205,6 +205,62 @@
                 <p class="setting-desc">Flat bonus to max damage per level. Default: 0.50 (range: 0.0-2.0).</p>
               </div>
 
+              <h3 style="margin-top: 2rem;">Regeneration</h3>
+
+              <div class="form-group">
+                <label for="setting-health-tick">Health Tick Interval (ms)</label>
+                <div class="setting-row">
+                  <input type="number" id="setting-health-tick" min="1000" max="60000" step="1000" />
+                  <button id="save-health-tick-btn" class="btn-small">Save</button>
+                </div>
+                <p class="setting-desc">Milliseconds between health regen ticks. Default: 5000 (5 seconds).</p>
+              </div>
+
+              <div class="form-group">
+                <label for="setting-mana-tick">Mana Tick Interval (ms)</label>
+                <div class="setting-row">
+                  <input type="number" id="setting-mana-tick" min="1000" max="60000" step="1000" />
+                  <button id="save-mana-tick-btn" class="btn-small">Save</button>
+                </div>
+                <p class="setting-desc">Milliseconds between mana regen ticks. Default: 5000 (5 seconds).</p>
+              </div>
+
+              <div class="form-group">
+                <label for="setting-health-base">Health Regen Base %</label>
+                <div class="setting-row">
+                  <input type="number" id="setting-health-base" min="0" max="100" step="0.5" />
+                  <button id="save-health-base-btn" class="btn-small">Save</button>
+                </div>
+                <p class="setting-desc">Percentage of max HP regenerated per tick (out of combat). Default: 1%.</p>
+              </div>
+
+              <div class="form-group">
+                <label for="setting-health-enhanced">Health Regen Enhanced %</label>
+                <div class="setting-row">
+                  <input type="number" id="setting-health-enhanced" min="0" max="100" step="0.5" />
+                  <button id="save-health-enhanced-btn" class="btn-small">Save</button>
+                </div>
+                <p class="setting-desc">Enhanced regen rate (resting/inn). Default: 3%.</p>
+              </div>
+
+              <div class="form-group">
+                <label for="setting-mana-base">Mana Regen Base %</label>
+                <div class="setting-row">
+                  <input type="number" id="setting-mana-base" min="0" max="100" step="0.5" />
+                  <button id="save-mana-base-btn" class="btn-small">Save</button>
+                </div>
+                <p class="setting-desc">Percentage of max mana regenerated per tick. Default: 2%.</p>
+              </div>
+
+              <div class="form-group">
+                <label for="setting-mana-enhanced">Mana Regen Enhanced %</label>
+                <div class="setting-row">
+                  <input type="number" id="setting-mana-enhanced" min="0" max="100" step="0.5" />
+                  <button id="save-mana-enhanced-btn" class="btn-small">Save</button>
+                </div>
+                <p class="setting-desc">Enhanced mana regen rate (resting/inn). Default: 5%.</p>
+              </div>
+
               <p id="settings-message" class="message"></p>
             </div>
           </section>

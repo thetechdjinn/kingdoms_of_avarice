@@ -157,9 +157,9 @@ export interface ConsumableData {
 
 // Light source data
 export interface LightData {
-  radius: number;
-  fuel_max?: number;
-  fuel_rate?: number;
+  vision_bonus: number;    // Vision points added when lit (e.g., torch: 100, lantern: 175)
+  fuel_max?: number;       // Maximum fuel (e.g., torch: 180, lantern: 720)
+  fuel_rate?: number;      // Fuel consumed per game tick (default 1)
 }
 
 // Tool data (lockpicks, etc.)

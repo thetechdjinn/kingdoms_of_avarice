@@ -44,6 +44,7 @@ interface DbNpcTemplate {
   merchant_enabled: boolean;
   proper_name: boolean;
   spell_power: number;
+  vision_level: number;
   enabled: boolean;
 }
 
@@ -147,6 +148,7 @@ function dbToTemplate(row: DbNpcTemplate, attacks: NpcAttack[], spells: NpcSpell
     merchantEnabled: row.merchant_enabled,
     properName: row.proper_name,
     spellPower: row.spell_power ?? 0,
+    visionLevel: row.vision_level ?? 100,
     enabled: row.enabled ?? true,
     attacks,
     spells,
@@ -328,6 +330,7 @@ export interface CreateNpcTemplateInput {
   merchantEnabled?: boolean;
   properName?: boolean;
   spellPower?: number;
+  visionLevel?: number;
   enabled?: boolean;
 }
 
@@ -362,7 +365,7 @@ export async function createTemplate(input: CreateNpcTemplateInput, client?: pg.
       drop_table_id, essence_reward, essence_class,
       leave_corpse, corpse_duration, augmentations,
       enter_room_message, exit_room_message, spawn_message,
-      primary_faction_id, merchant_enabled, proper_name, spell_power, enabled
+      primary_faction_id, merchant_enabled, proper_name, spell_power, vision_level, enabled
     ) VALUES (
       $1, $2, $3, $4, $4, $5, $6,
       $7, $8, $9,
@@ -372,7 +375,7 @@ export async function createTemplate(input: CreateNpcTemplateInput, client?: pg.
       $25, $26, $27,
       $28, $29, $30,
       $31, $32, $33,
-      $34, $35, $36, $37, $38
+      $34, $35, $36, $37, $38, $39
     ) RETURNING id`,
     [
       input.name,
@@ -412,6 +415,7 @@ export async function createTemplate(input: CreateNpcTemplateInput, client?: pg.
       input.merchantEnabled ?? false,
       input.properName ?? false,
       input.spellPower ?? 0,
+      input.visionLevel ?? 100,
       input.enabled ?? true,
     ],
     client
@@ -472,6 +476,7 @@ export async function updateTemplate(id: number, input: Partial<CreateNpcTemplat
   if (input.merchantEnabled !== undefined) fieldMap.merchantEnabled = { column: 'merchant_enabled', value: input.merchantEnabled };
   if (input.properName !== undefined) fieldMap.properName = { column: 'proper_name', value: input.properName };
   if (input.spellPower !== undefined) fieldMap.spellPower = { column: 'spell_power', value: input.spellPower };
+  if (input.visionLevel !== undefined) fieldMap.visionLevel = { column: 'vision_level', value: input.visionLevel };
   if (input.enabled !== undefined) fieldMap.enabled = { column: 'enabled', value: input.enabled };
 
   const entries = Object.values(fieldMap);

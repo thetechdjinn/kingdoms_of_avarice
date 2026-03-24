@@ -61,6 +61,7 @@ import { formatCopperAsDenominations, wordWrap } from '../utils/textFormat.js';
 import { clearProgressionCaches } from '../db/repositories/progressionRepository.js';
 import { loadProgressionTableFromDb } from './progressionLoader.js';
 import { clearEquipmentCache } from './combatStats.js';
+import { reloadRegenSettings } from './regeneration.js';
 
 interface CommandResponse {
   type: MessageType;
@@ -494,7 +495,7 @@ async function handleReload(
   // @reload [rooms|items|mobs|effects|doors|actions|droptables|all]
   const target = args[0]?.toLowerCase() || 'all';
 
-  const validTargets = ['rooms', 'items', 'mobs', 'effects', 'doors', 'actions', 'droptables', 'factions', 'merchants', 'merchantresponses', 'quests', 'progression', 'all'];
+  const validTargets = ['rooms', 'items', 'mobs', 'effects', 'doors', 'actions', 'droptables', 'factions', 'merchants', 'merchantresponses', 'quests', 'progression', 'settings', 'all'];
   if (!validTargets.includes(target)) {
     return { type: MessageType.ERROR, message: `Usage: @reload [${validTargets.join('|')}]` };
   }
@@ -564,6 +565,11 @@ async function handleReload(
       clearEquipmentCache();
       const table = await loadProgressionTableFromDb();
       results.push(`${colors.green('✓')} Reloaded ${table.length} level requirements, cleared progression and equipment caches`);
+    }
+
+    if (target === 'settings' || target === 'all') {
+      await reloadRegenSettings();
+      results.push(`${colors.green('✓')} Reloaded regen settings and restarted regen loops`);
     }
 
     return {

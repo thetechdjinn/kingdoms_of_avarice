@@ -1045,6 +1045,16 @@ export async function runMigrations(): Promise<void> {
       // Add max_scaling_level column to spells (caps level scaling at a specific caster level)
       await client.query(`ALTER TABLE spells ADD COLUMN IF NOT EXISTS max_scaling_level INTEGER`);
 
+      // Add vision_modifier column to status_effect_definitions (light & vision system)
+      await client.query(`
+        ALTER TABLE status_effect_definitions ADD COLUMN IF NOT EXISTS vision_modifier INTEGER DEFAULT 0
+      `);
+
+      // Add vision_level column to npcs (how well NPCs see in darkness, default 100 = normal)
+      await client.query(`
+        ALTER TABLE npcs ADD COLUMN IF NOT EXISTS vision_level INTEGER DEFAULT 100
+      `);
+
     });
 
     console.log('Database migrations completed successfully');

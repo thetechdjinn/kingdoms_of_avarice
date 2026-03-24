@@ -90,7 +90,22 @@ interface RoomLayoutInfo {
   const areaInput = document.getElementById('room-area') as HTMLInputElement;
   const terrainSelect = document.getElementById('room-terrain') as HTMLSelectElement;
   const darknessInput = document.getElementById('room-darkness') as HTMLInputElement;
+  const darknessBandLabel = document.getElementById('darkness-band-label')!;
   const tagInput = document.getElementById('room-tag') as HTMLInputElement;
+
+  // Update darkness band label based on value
+  function updateDarknessBandLabel(): void {
+    const val = parseInt(darknessInput.value) || 0;
+    let label = '';
+    if (val === 0) label = 'Bright';
+    else if (val >= -75) label = 'Dim';
+    else if (val >= -150) label = 'Dark';
+    else if (val >= -250) label = 'Very Dark';
+    else if (val >= -400) label = 'Pitch Black';
+    else label = 'Abyssal';
+    darknessBandLabel.textContent = label;
+  }
+  darknessInput.addEventListener('input', updateDarknessBandLabel);
   const descriptionInput = document.getElementById('room-description') as HTMLTextAreaElement;
 
   // Features tab
@@ -307,6 +322,7 @@ interface RoomLayoutInfo {
     areaInput.value = room.area || '';
     terrainSelect.value = room.terrain || 'indoor';
     darknessInput.value = String(room.darkness_level ?? 0);
+    updateDarknessBandLabel();
     tagInput.value = room.tag || '';
     descriptionInput.value = room.description || '';
 

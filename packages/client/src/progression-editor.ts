@@ -398,7 +398,7 @@ interface RaceDef {
     const visionTrait = Array.isArray(race.traits) ? race.traits.find(
       (t): t is { id: string; value: number } => typeof t === 'object' && t !== null && t.id === 'base_vision'
     ) : null;
-    (document.getElementById('race-base-vision') as HTMLSelectElement).value = String(visionTrait?.value ?? 100);
+    (document.getElementById('race-base-vision') as HTMLInputElement).value = String(visionTrait?.value ?? 100);
 
     // Stats
     const stats = race.base_stats || {};
@@ -515,7 +515,7 @@ interface RaceDef {
       base_stats,
       traits: [
         ...traitsToArray(raceTraitState, 'race') as Array<{ id: string; value: number | boolean }>,
-        { id: 'base_vision', value: Number.isFinite(parseInt((document.getElementById('race-base-vision') as HTMLSelectElement).value, 10)) ? parseInt((document.getElementById('race-base-vision') as HTMLSelectElement).value, 10) : 100 },
+        { id: 'base_vision', value: Number.isFinite(parseInt((document.getElementById('race-base-vision') as HTMLInputElement).value, 10)) ? parseInt((document.getElementById('race-base-vision') as HTMLInputElement).value, 10) : 100 },
       ],
       allowed_classes: [...new Set(Array.from(raceAllowedClasses).filter(c => c && c.trim()))],
     };

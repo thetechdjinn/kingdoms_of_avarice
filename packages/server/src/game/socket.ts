@@ -131,7 +131,7 @@ export async function initializeGameWorld(): Promise<void> {
   }
 
   // Initialize resource regeneration system
-  initializeDefaultRegenConfigs();
+  await initializeDefaultRegenConfigs();
   startRegenLoops(connectedPlayers, sendVitals);
 
   // Start status effect processing loop
