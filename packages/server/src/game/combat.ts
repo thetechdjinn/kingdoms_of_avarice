@@ -82,9 +82,14 @@ export function getStatValueForScaling(
 
 /**
  * Calculate scaled min/max values for a spell based on caster level and stats.
- * 1. Apply level scaling: value * (1 + effectiveLevel * scalingPerLevel)
- *    - effectiveLevel is capped at maxScalingLevel if set
- * 2. Apply stat scaling: value * (1 + floor(statValue / 10) * scalingFactor)
+ *
+ * Level scaling: based on caster levels ABOVE the spell's level requirement,
+ *   capped at maxScalingLevel additional levels. scalingPerLevel is a decimal
+ *   (0.02 = 2% per level above requirement).
+ *
+ * Stat scaling: scalingFactor is a decimal (0.02 = 2% per 10 stat points).
+ *
+ * Both bonuses are additive — they sum into one multiplier applied to the base.
  */
 export function calculateSpellScaling(
   baseMin: number,
@@ -94,27 +99,31 @@ export function calculateSpellScaling(
   statValue: number,
   scalingFactor: number | null,
   maxScalingLevel?: number | null,
+  spellLevelRequired?: number,
 ): { min: number; max: number } {
-  let min = baseMin;
-  let max = baseMax;
+  let bonus = 0;
 
-  // Level scaling (capped at maxScalingLevel if set)
+  // Level scaling: levels above the spell's requirement, capped at maxScalingLevel
   if (scalingPerLevel && scalingPerLevel > 0) {
-    const effectiveLevel = (maxScalingLevel != null && maxScalingLevel > 0) ? Math.min(casterLevel, maxScalingLevel) : casterLevel;
-    const levelMultiplier = 1 + effectiveLevel * scalingPerLevel;
-    min = Math.floor(min * levelMultiplier);
-    max = Math.floor(max * levelMultiplier);
+    const spellLevel = spellLevelRequired ?? 1;
+    const levelsAbove = Math.max(0, casterLevel - spellLevel);
+    const cappedLevels = (maxScalingLevel != null && maxScalingLevel > 0)
+      ? Math.min(levelsAbove, maxScalingLevel)
+      : levelsAbove;
+    bonus += cappedLevels * scalingPerLevel;
   }
 
-  // Stat scaling (% increase per 10 stat points)
+  // Stat scaling: % increase per 10 stat points
   if (scalingFactor && scalingFactor > 0 && statValue > 0) {
     const statTiers = Math.floor(statValue / 10);
-    const statMultiplier = 1 + statTiers * scalingFactor;
-    min = Math.floor(min * statMultiplier);
-    max = Math.floor(max * statMultiplier);
+    bonus += statTiers * scalingFactor;
   }
 
-  return { min: Math.max(1, min), max: Math.max(1, max) };
+  const multiplier = 1 + bonus;
+  const min = Math.max(1, Math.floor(baseMin * multiplier));
+  const max = Math.max(1, Math.floor(baseMax * multiplier));
+
+  return { min, max };
 }
 
 /**
@@ -367,6 +376,7 @@ async function processSpellCombat(
     statValue,
     spell.damageScalingFactor,
     spell.maxScalingLevel,
+    spell.levelRequired,
   );
 
   const hitsPerCast = spell.hitsPerCast || 1;
@@ -387,52 +397,52 @@ async function processSpellCombat(
       continue;
     }
 
-    // Roll damage for each hit
-    let totalDamage = 0;
-    for (let hit = 0; hit < hitsPerCast; hit++) {
-      totalDamage += Math.floor(Math.random() * (scaled.max - scaled.min + 1)) + scaled.min;
-    }
-
-    // Send spell messages (use custom messages if defined)
     const defName = withNpcName(target.entityName, target.isProperName);
     const atkName = withNpcNameCapitalized(attacker.entityName, attacker.isProperName);
-    const dmgStr = colors.combatDamage(totalDamage.toString());
-    const hitSuffix = hitsPerCast > 1 ? ` (${hitsPerCast} hits)` : '';
 
-    const attackerMsg = spell.hitMessageSelf
-      ? spell.hitMessageSelf.replace(/\{target\}/g, defName).replace(/\{damage\}/g, totalDamage.toString())
-      : `You cast ${colors.cyan(spell.spellName)} at ${colors.combatDefender(defName)} for ${dmgStr} damage!${hitSuffix}`;
-    const defenderMsg = spell.hitMessageTarget
-      ? spell.hitMessageTarget.replace(/\{name\}/g, atkName).replace(/\{damage\}/g, totalDamage.toString())
-      : `${colors.combatAttacker(atkName)} casts ${colors.cyan(spell.spellName)} at you for ${dmgStr} damage!${hitSuffix}`;
-    const roomMsg = spell.hitMessageRoom
-      ? spell.hitMessageRoom.replace(/\{name\}/g, atkName).replace(/\{target\}/g, defName).replace(/\{damage\}/g, totalDamage.toString())
-      : `${colors.combatAttacker(atkName)} casts ${colors.cyan(spell.spellName)} at ${colors.combatDefender(defName)} for ${dmgStr} damage!${hitSuffix}`;
+    // Roll and apply each hit individually
+    let targetDied = false;
+    for (let hit = 0; hit < hitsPerCast; hit++) {
+      if (target.vitals.hp <= 0) break;
 
-    sendCombatMessage(attacker, MessageType.OUTPUT, attackerMsg);
-    sendCombatMessage(target, MessageType.OUTPUT, defenderMsg);
-    broadcastCombatToRoom(attackerRoomId, roomMsg, [attacker.entityId, targetId]);
+      const hitDamage = Math.floor(Math.random() * (scaled.max - scaled.min + 1)) + scaled.min;
+      const dmgStr = colors.combatDamage(hitDamage.toString());
 
-    // Apply damage using centralized handler
-    const damageResult = await applyDamage(target, totalDamage, 'spell');
+      const attackerMsg = spell.hitMessageSelf
+        ? spell.hitMessageSelf.replace(/\{target\}/g, defName).replace(/\{damage\}/g, hitDamage.toString())
+        : `You cast ${colors.cyan(spell.spellName)} at ${colors.combatDefender(defName)} for ${dmgStr} damage!`;
+      const defenderMsg = spell.hitMessageTarget
+        ? spell.hitMessageTarget.replace(/\{name\}/g, atkName).replace(/\{damage\}/g, hitDamage.toString())
+        : `${colors.combatAttacker(atkName)} casts ${colors.cyan(spell.spellName)} at you for ${dmgStr} damage!`;
+      const roomMsg = spell.hitMessageRoom
+        ? spell.hitMessageRoom.replace(/\{name\}/g, atkName).replace(/\{target\}/g, defName).replace(/\{damage\}/g, hitDamage.toString())
+        : `${colors.combatAttacker(atkName)} casts ${colors.cyan(spell.spellName)} at ${colors.combatDefender(defName)} for ${dmgStr} damage!`;
 
-    // Handle state changes (dropped/death send vitals with updated status)
-    if (damageResult.stateChange === 'dropped') {
-      if (!isPlayerEntity(target)) {
-        // NPCs die immediately at 0 HP — skip dropped state
+      sendCombatMessage(attacker, MessageType.OUTPUT, attackerMsg);
+      sendCombatMessage(target, MessageType.OUTPUT, defenderMsg);
+      broadcastCombatToRoom(attackerRoomId, roomMsg, [attacker.entityId, targetId]);
+
+      const damageResult = await applyDamage(target, hitDamage, 'spell');
+
+      if (damageResult.stateChange === 'dropped') {
+        if (!isPlayerEntity(target)) {
+          await handleEntityDeath(target, attacker, attackerRoomId, deferredRewards);
+        } else {
+          await handleEntityDropped(target, attacker, attackerRoomId);
+        }
+        targetDied = true;
+        break;
+      } else if (damageResult.stateChange === 'death') {
         await handleEntityDeath(target, attacker, attackerRoomId, deferredRewards);
+        targetDied = true;
+        break;
       } else {
-        await handleEntityDropped(target, attacker, attackerRoomId);
+        sendEntityVitals(target);
       }
-    } else if (damageResult.stateChange === 'death') {
-      await handleEntityDeath(target, attacker, attackerRoomId, deferredRewards);
-    } else {
-      // Only send vitals here if no state change — dropped/death handlers send their own
-      sendEntityVitals(target);
     }
 
     // Apply status effect if the spell has one (e.g., burning, poisoned)
-    if (spell.statusEffect && spell.effectDuration && target.vitals.hp > 0) {
+    if (!targetDied && spell.statusEffect && spell.effectDuration && target.vitals.hp > 0) {
       const effectDurationMs = spell.effectDuration * 1000;
       if (isPlayerEntity(target)) {
         await applyEffect(target as unknown as AuthenticatedSocket, spell.statusEffect, effectDurationMs, spell.spellId);
@@ -943,6 +953,7 @@ async function processNpcOffensiveSpell(
     npc.template.spellPower,
     spell.damageScalingFactor,
     spell.maxScalingLevel,
+    spell.levelRequired,
   );
   const isAoE = spell.targetType === SpellTargetType.ROOM;
   const hitsPerCast = spell.hitsPerCast || 1;
@@ -973,43 +984,48 @@ async function processNpcOffensiveSpell(
       continue;
     }
 
-    // Roll damage for each hit
-    let damage = 0;
-    for (let hit = 0; hit < hitsPerCast; hit++) {
-      damage += Math.floor(Math.random() * (scaled.max - scaled.min + 1)) + scaled.min;
-    }
-
-    // Per-target message
     const atkName = withNpcNameCapitalized(npc.entityName, npc.isProperName);
-    sendCombatMessage(target, MessageType.OUTPUT,
-      `${colors.combatAttacker(atkName)} casts ${colors.cyan(spell.name)} at you for ${colors.combatDamage(damage.toString())} damage!`
-    );
+    const defName = withNpcName(target.entityName, target.isProperName);
 
-    // Single-target: also broadcast to room observers
-    if (!isAoE) {
-      broadcastCombatToRoom(npcRoomId,
-        `${colors.combatAttacker(atkName)} casts ${colors.cyan(spell.name)} at ${colors.combatDefender(withNpcName(target.entityName, target.isProperName))} for ${colors.combatDamage(damage.toString())} damage!`,
-        [targetId]
+    // Roll and apply each hit individually
+    let targetDied = false;
+    for (let hit = 0; hit < hitsPerCast; hit++) {
+      // Stop if target is dead/dropped
+      if (target.vitals.hp <= 0) break;
+
+      const hitDamage = Math.floor(Math.random() * (scaled.max - scaled.min + 1)) + scaled.min;
+      sendCombatMessage(target, MessageType.OUTPUT,
+        `${colors.combatAttacker(atkName)} casts ${colors.cyan(spell.name)} at you for ${colors.combatDamage(hitDamage.toString())} damage!`
       );
-    }
 
-    // Apply damage
-    const damageResult = await applyDamage(target, damage, 'spell');
-
-    if (damageResult.stateChange === 'dropped') {
-      if (!isPlayerEntity(target)) {
-        await handleEntityDeath(target, npc, npcRoomId, deferredRewards);
-      } else {
-        await handleEntityDropped(target, npc, npcRoomId);
+      if (!isAoE) {
+        broadcastCombatToRoom(npcRoomId,
+          `${colors.combatAttacker(atkName)} casts ${colors.cyan(spell.name)} at ${colors.combatDefender(defName)} for ${colors.combatDamage(hitDamage.toString())} damage!`,
+          [targetId]
+        );
       }
-    } else if (damageResult.stateChange === 'death') {
-      await handleEntityDeath(target, npc, npcRoomId, deferredRewards);
-    } else {
-      sendEntityVitals(target);
+
+      const damageResult = await applyDamage(target, hitDamage, 'spell');
+
+      if (damageResult.stateChange === 'dropped') {
+        if (!isPlayerEntity(target)) {
+          await handleEntityDeath(target, npc, npcRoomId, deferredRewards);
+        } else {
+          await handleEntityDropped(target, npc, npcRoomId);
+        }
+        targetDied = true;
+        break;
+      } else if (damageResult.stateChange === 'death') {
+        await handleEntityDeath(target, npc, npcRoomId, deferredRewards);
+        targetDied = true;
+        break;
+      } else {
+        sendEntityVitals(target);
+      }
     }
 
     // Apply status effect if the spell has one (e.g., burning, poisoned)
-    if (spell.statusEffect && spell.effectDuration && target.vitals.hp > 0) {
+    if (!targetDied && spell.statusEffect && spell.effectDuration && target.vitals.hp > 0) {
       const effectDurationMs = spell.effectDuration * 1000;
       if (isPlayerEntity(target)) {
         await applyEffect(target as unknown as AuthenticatedSocket, spell.statusEffect, effectDurationMs, spell.id);
@@ -1038,6 +1054,7 @@ function processNpcHealingSpell(
     npc.template.spellPower,
     spell.healingScalingFactor,
     spell.maxScalingLevel,
+    spell.levelRequired,
   );
 
   // Helper to heal a single NPC

@@ -190,6 +190,7 @@ async function handleOffensiveSpell(
       spellName: spell.name,
       mnemonic: spell.mnemonic,
       manaCost: spell.manaCost,
+      levelRequired: spell.levelRequired,
       minDamage: spell.minDamage ?? 1,
       maxDamage: spell.maxDamage ?? 4,
       hitsPerCast: spell.hitsPerCast ?? 1,
@@ -267,6 +268,7 @@ async function handleOffensiveSpell(
     spellName: spell.name,
     mnemonic: spell.mnemonic,
     manaCost: spell.manaCost,
+    levelRequired: spell.levelRequired,
     minDamage: spell.minDamage ?? 1,
     maxDamage: spell.maxDamage ?? 4,
     hitsPerCast: spell.hitsPerCast ?? 1,
@@ -404,6 +406,7 @@ async function handleHealingSpell(
     statValue,
     spell.healingScalingFactor,
     spell.maxScalingLevel,
+    spell.levelRequired,
   );
   const healAmount = Math.floor(Math.random() * (scaled.max - scaled.min + 1)) + scaled.min;
 

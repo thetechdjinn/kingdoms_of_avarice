@@ -423,10 +423,14 @@ async function processRespawnQueue(): Promise<void> {
     }
   }
 
-  // Spawn each
+  // Spawn each (re-check maxActive in case of race conditions)
   for (const entry of toSpawn) {
     const template = npcTemplates.get(entry.templateId);
     if (!template || !template.enabled) continue;
+
+    // Guard: don't exceed maxActive (live non-corpse instances)
+    const liveCount = Array.from(npcInstances.values()).filter(n => n.templateId === entry.templateId && !n.isCorpse).length;
+    if (liveCount >= (template.maxActive ?? 1)) continue;
 
     try {
       const npc = await spawnNpcFromTemplate(template, entry.spawnRoomId);

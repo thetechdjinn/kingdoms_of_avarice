@@ -1,11 +1,12 @@
 /**
- * Game Data Export Script
+ * Game Data Export
  *
  * Exports all base game content (rooms, NPCs, items, spells, etc.) to JSON files
  * in the data/ directory. Player data is excluded.
  *
- * Run: npx tsx packages/server/src/db/data-export.ts
- * Or:  npm run data:export
+ * Can be used as:
+ * - CLI script: npx tsx packages/server/src/db/data-export.ts  (or npm run data:export)
+ * - Library: import { runExport } from './data-export.js' (used by API route)
  */
 import dotenv from 'dotenv';
 import { fileURLToPath } from 'url';
@@ -41,6 +42,12 @@ interface ExportEnvelope {
   data: unknown[];
 }
 
+export interface ExportResult {
+  success: boolean;
+  warnings: string[];
+  counts: Record<string, number>;
+}
+
 function envelope(type: string, data: unknown[]): ExportEnvelope {
   return {
     version: '1.0',
@@ -72,7 +79,7 @@ function stripMeta(obj: Record<string, unknown>, extraKeys: string[] = []): Reco
   return stripped;
 }
 
-async function exportSpells(): Promise<void> {
+async function exportSpells(): Promise<number> {
   const spells = await spellRepo.getAllSpells();
   const data = spells.map(s => {
     const obj = stripMeta(s as unknown as Record<string, unknown>);
@@ -80,9 +87,10 @@ async function exportSpells(): Promise<void> {
   });
   writeJson(join(DATA_DIR, 'global', 'spells.json'), envelope('spells', data));
   console.log(`  spells: ${data.length} exported`);
+  return data.length;
 }
 
-async function exportStatusEffects(): Promise<void> {
+async function exportStatusEffects(): Promise<number> {
   const effects = await effectDefRepo.getAllDefinitions();
   // Status effect `id` is a string identifier (e.g. "poison"), not a numeric DB ID — preserve it
   const data = effects.map(e => {
@@ -93,30 +101,34 @@ async function exportStatusEffects(): Promise<void> {
   });
   writeJson(join(DATA_DIR, 'global', 'status_effects.json'), envelope('status_effects', data));
   console.log(`  status_effects: ${data.length} exported`);
+  return data.length;
 }
 
-async function exportActions(): Promise<void> {
+async function exportActions(): Promise<number> {
   const actions = await actionRepo.getAllActions();
   const data = actions.map(a => stripMeta(a as unknown as Record<string, unknown>));
   writeJson(join(DATA_DIR, 'global', 'actions.json'), envelope('actions', data));
   console.log(`  actions: ${data.length} exported`);
+  return data.length;
 }
 
-async function exportItems(): Promise<void> {
+async function exportItems(): Promise<number> {
   const items = await itemRepo.getAllTemplates();
   const data = items.map(item => stripMeta(item as unknown as Record<string, unknown>));
   writeJson(join(DATA_DIR, 'global', 'items.json'), envelope('items', data));
   console.log(`  items: ${data.length} exported`);
+  return data.length;
 }
 
-async function exportFactions(): Promise<void> {
+async function exportFactions(): Promise<number> {
   const factions = await factionRepo.getAllFactions();
   const data = factions.map(f => stripMeta(f as unknown as Record<string, unknown>));
   writeJson(join(DATA_DIR, 'global', 'factions.json'), envelope('factions', data));
   console.log(`  factions: ${data.length} exported`);
+  return data.length;
 }
 
-async function exportDropTables(itemIdToName: Map<number, string>): Promise<void> {
+async function exportDropTables(itemIdToName: Map<number, string>): Promise<number> {
   const tables = await dropTableRepo.getAllDropTables();
   const data: unknown[] = [];
 
@@ -151,9 +163,10 @@ async function exportDropTables(itemIdToName: Map<number, string>): Promise<void
 
   writeJson(join(DATA_DIR, 'global', 'drop_tables.json'), envelope('drop_tables', data));
   console.log(`  drop_tables: ${data.length} exported`);
+  return data.length;
 }
 
-async function exportProgression(): Promise<void> {
+async function exportProgression(): Promise<Record<string, number>> {
   const progDir = join(DATA_DIR, 'global', 'progression');
   ensureDir(progDir);
 
@@ -169,6 +182,7 @@ async function exportProgression(): Promise<void> {
   writeJson(join(progDir, 'progression_table.json'), envelope('progression_table', levels as unknown as unknown[]));
   console.log(`  progression/progression_table: ${levels.length} exported`);
 
+  return { classes: classes.length, races: races.length, levels: levels.length };
 }
 
 async function exportRooms(
@@ -491,10 +505,13 @@ async function exportNpcs(
   return areasWithNpcs;
 }
 
-async function main(): Promise<void> {
-  console.log('=== Game Data Export ===\n');
-
+/**
+ * Run the full game data export. Writes JSON files to data/.
+ * Can be called from CLI or from an API route.
+ */
+export async function runExport(): Promise<ExportResult> {
   const warnings: string[] = [];
+  const counts: Record<string, number> = {};
 
   // Build FK lookup maps
   console.log('Building lookup maps...');
@@ -527,17 +544,26 @@ async function main(): Promise<void> {
   ensureDir(join(DATA_DIR, 'global'));
 
   console.log('\nExporting global data...');
-  await exportSpells();
-  await exportStatusEffects();
-  await exportActions();
-  await exportProgression();
-  await exportItems();
-  await exportFactions();
-  await exportDropTables(itemIdToName);
+  counts.spells = await exportSpells();
+  counts.status_effects = await exportStatusEffects();
+  counts.actions = await exportActions();
+  const progCounts = await exportProgression();
+  Object.assign(counts, progCounts);
+  counts.items = await exportItems();
+  counts.factions = await exportFactions();
+  counts.drop_tables = await exportDropTables(itemIdToName);
 
   console.log('\nExporting area data...');
   const areaRoomIds = await exportRooms(idToTagMap, warnings);
   const areasWithNpcs = await exportNpcs(idToTagMap, itemIdToName, spellIdToMnemonic, dropTableIdToName, factionIdToName, warnings);
+
+  // Count rooms and NPCs
+  let totalRooms = 0;
+  for (const ids of areaRoomIds.values()) totalRooms += ids.length;
+  counts.rooms = totalRooms;
+
+  const templates = await npcRepo.getAllTemplates();
+  counts.npcs = templates.length;
 
   // Build manifest
   const importOrder: string[] = [
@@ -580,11 +606,30 @@ async function main(): Promise<void> {
 
   console.log('\n=== Export Complete ===');
 
-  const pool = getPool();
-  await pool.end();
+  return { success: true, warnings, counts };
 }
 
-main().catch(err => {
-  console.error('Export failed:', err);
-  process.exit(1);
-});
+// --- CLI entry point ---
+// Only run CLI export when executed directly (not when imported by the API route)
+const isCli = process.argv[1] && (
+  process.argv[1].endsWith('data-export.ts') ||
+  process.argv[1].endsWith('data-export.js')
+);
+
+if (isCli) {
+  (async () => {
+    console.log('=== Game Data Export ===\n');
+    try {
+      const result = await runExport();
+      if (result.warnings.length > 0) {
+        console.log(`\n${result.warnings.length} warning(s) recorded in manifest.`);
+      }
+    } finally {
+      const pool = getPool();
+      await pool.end();
+    }
+  })().catch(err => {
+    console.error('Export failed:', err);
+    process.exit(1);
+  });
+}

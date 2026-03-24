@@ -125,6 +125,7 @@ export interface SpellCastingState {
   minDamage: number;
   maxDamage: number;
   hitsPerCast: number;
+  levelRequired: number;
   // Scaling info for combat calculations
   scalingPerLevel: number | null;
   maxScalingLevel: number | null;

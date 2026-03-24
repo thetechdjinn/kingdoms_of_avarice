@@ -29,6 +29,7 @@ import { setupFactionRoutes } from './routes/factions.js';
 import { setupMerchantRoutes } from './routes/merchants.js';
 import { setupQuestRoutes } from './routes/quests.js';
 import { setupProgressionTableRoutes } from './routes/progression-table.js';
+import { setupDataExportRoutes } from './routes/dataExport.js';
 import { setupGameSocket, initializeGameWorld } from './game/socket.js';
 import { stopCharacterSaveLoop } from './game/characterSaveLoop.js';
 import { stopCombatLoop } from './game/combat.js';
@@ -72,6 +73,7 @@ setupFactionRoutes(app);
 setupMerchantRoutes(app);
 setupQuestRoutes(app);
 setupProgressionTableRoutes(app);
+setupDataExportRoutes(app);
 
 const server = createServer(app);
 

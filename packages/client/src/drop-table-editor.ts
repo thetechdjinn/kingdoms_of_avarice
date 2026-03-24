@@ -189,7 +189,7 @@ const ALL_DENOMINATIONS = ['copper', 'silver', 'gold', 'platinum', 'runic'];
   function renderCurrencyDenoms(): void {
     currencyDenomsContainer.innerHTML = ALL_DENOMINATIONS.map(d => {
       const checked = currencyDenoms.includes(d) ? 'checked' : '';
-      return `<label><input type="checkbox" data-denom="${d}" ${checked} /> ${escapeHtml(d)}</label>`;
+      return `<label class="toggle-label"><input type="checkbox" data-denom="${d}" ${checked} /><span class="toggle-track"></span> ${escapeHtml(d)}</label>`;
     }).join('');
 
     currencyDenomsContainer.querySelectorAll('input[data-denom]').forEach(el => {

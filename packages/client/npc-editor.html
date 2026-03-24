@@ -91,6 +91,15 @@
 
             <!-- Basic Tab -->
             <div class="tab-content active" id="tab-basic">
+              <div class="enabled-banner">
+                <label class="toggle-label">
+                  <input type="checkbox" id="npc-enabled" checked />
+                  <span class="toggle-track"></span>
+                  Enabled
+                </label>
+                <span class="hint-inline">Disabled NPCs are preserved but do not spawn.</span>
+              </div>
+
               <div class="form-row">
                 <div class="form-group">
                   <label for="npc-name">Name</label>
@@ -122,27 +131,22 @@
                 </div>
               </div>
 
-              <div class="form-row">
-                <div class="form-group">
-                  <label class="checkbox-label">
-                    <input type="checkbox" id="npc-hostile" checked />
-                    Hostile
-                  </label>
-                  <label class="checkbox-label">
-                    <input type="checkbox" id="npc-proper-name" />
-                    Proper Name
-                  </label>
-                  <label class="checkbox-label">
-                    <input type="checkbox" id="npc-enabled" checked />
-                    Enabled
-                  </label>
-                </div>
-                <div class="form-group">
-                  <label class="checkbox-label">
-                    <input type="checkbox" id="npc-interactable" />
-                    Interactable
-                  </label>
-                </div>
+              <div class="toggle-row">
+                <label class="toggle-label">
+                  <input type="checkbox" id="npc-hostile" checked />
+                  <span class="toggle-track"></span>
+                  Hostile
+                </label>
+                <label class="toggle-label">
+                  <input type="checkbox" id="npc-proper-name" />
+                  <span class="toggle-track"></span>
+                  Proper Name
+                </label>
+                <label class="toggle-label">
+                  <input type="checkbox" id="npc-interactable" />
+                  <span class="toggle-track"></span>
+                  Interactable
+                </label>
               </div>
             </div>
 
@@ -195,8 +199,9 @@
               <h3>Flee Behavior</h3>
               <div class="form-row">
                 <div class="form-group">
-                  <label class="checkbox-label">
+                  <label class="toggle-label">
                     <input type="checkbox" id="npc-flee-enabled" />
+                    <span class="toggle-track"></span>
                     Flee Enabled
                   </label>
                 </div>
@@ -218,8 +223,9 @@
               <h3>Roaming</h3>
               <div class="form-row">
                 <div class="form-group">
-                  <label class="checkbox-label">
+                  <label class="toggle-label">
                     <input type="checkbox" id="npc-roam-enabled" />
+                    <span class="toggle-track"></span>
                     Roam Enabled
                   </label>
                 </div>
@@ -292,8 +298,9 @@
               <h3>Corpse</h3>
               <div class="form-row">
                 <div class="form-group">
-                  <label class="checkbox-label">
+                  <label class="toggle-label">
                     <input type="checkbox" id="npc-leave-corpse" />
+                    <span class="toggle-track"></span>
                     Leave Corpse
                   </label>
                 </div>
@@ -328,8 +335,10 @@
             <div class="tab-content" id="tab-merchant">
               <div class="form-row">
                 <div class="form-group">
-                  <label>
-                    <input type="checkbox" id="npc-merchant-enabled" /> Merchant Enabled
+                  <label class="toggle-label">
+                    <input type="checkbox" id="npc-merchant-enabled" />
+                    <span class="toggle-track"></span>
+                    Merchant Enabled
                   </label>
                 </div>
                 <div class="form-group">
@@ -449,8 +458,9 @@
             <label for="import-file">Select JSON file:</label>
             <input type="file" id="import-file" accept=".json" />
           </div>
-          <label class="checkbox-label">
+          <label class="toggle-label">
             <input type="checkbox" id="import-merge" checked />
+            <span class="toggle-track"></span>
             Merge with existing (update if name matches)
           </label>
         </div>

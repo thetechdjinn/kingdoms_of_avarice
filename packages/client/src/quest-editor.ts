@@ -344,8 +344,9 @@ function createStepCard(step: QuestStep, index: number): HTMLElement {
         <input type="text" class="step-trigger-text" value="${escapeHtml(step.triggerText || '')}" placeholder="Keyword for talk trigger" />
       </div>
       <div class="step-field">
-        <label class="checkbox-label" style="margin-top: 18px;">
+        <label class="toggle-label" style="margin-top: 18px;">
           <input type="checkbox" class="step-consume-item" ${step.consumeItem ? 'checked' : ''} />
+          <span class="toggle-track"></span>
           Consume Item
         </label>
       </div>

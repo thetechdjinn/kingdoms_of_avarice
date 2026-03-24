@@ -140,7 +140,7 @@ export function getHearthstead(): DistrictData {
         tag: 'hs_loop_l',
         name: 'Forest Crossing',
         description: `A well-worn junction where several trails converge. The main path from the south meets a loop trail that circles Hearthstead, and a narrower track leads northeast toward the village center. The grass is trampled flat here from regular foot traffic. A weathered wooden sign points in several directions, though the paint has faded to near-illegibility.`,
-        area: AREA_LOOP,
+        area: AREA_SAFE,
         terrain: 'outdoor',
       },
       loopRoom('hs_loop_1'),
