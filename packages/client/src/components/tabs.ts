@@ -1,5 +1,5 @@
 /**
- * Shared tab component.
+ * Shared tab component with WAI-ARIA keyboard navigation.
  * Replaces per-editor setupTabs() implementations.
  *
  * Expects HTML structure:
@@ -25,6 +25,25 @@ export interface TabOptions {
   onTabChange?: (tabName: string) => void;
 }
 
+function setTabState(buttons: NodeListOf<Element>, panels: NodeListOf<Element>, activeBtn: Element, root: Document | HTMLElement, onTabChange?: (tabName: string) => void): void {
+  const tabName = (activeBtn as HTMLElement).dataset.tab;
+  if (!tabName) return;
+
+  buttons.forEach(b => {
+    const el = b as HTMLElement;
+    const isActive = b === activeBtn;
+    el.classList.toggle('active', isActive);
+    el.setAttribute('aria-selected', String(isActive));
+    el.tabIndex = isActive ? 0 : -1;
+  });
+
+  panels.forEach(c => c.classList.remove('active'));
+  const tabContent = root.querySelector(`#tab-${tabName}`);
+  if (tabContent) tabContent.classList.add('active');
+
+  onTabChange?.(tabName);
+}
+
 export function setupTabs(options: TabOptions = {}): void {
   const {
     container,
@@ -36,47 +55,72 @@ export function setupTabs(options: TabOptions = {}): void {
   const root = container ?? document;
   const buttons = root.querySelectorAll(buttonSelector);
   const panels = root.querySelectorAll(contentSelector);
+  const btnArray = Array.from(buttons);
 
-  // Set ARIA roles on initial load
+  // Set ARIA roles and initial tabindex
   buttons.forEach(btn => {
     const el = btn as HTMLElement;
     el.setAttribute('role', 'tab');
     const tabName = el.dataset.tab;
     if (tabName) {
       el.setAttribute('aria-controls', `tab-${tabName}`);
-      el.setAttribute('aria-selected', String(el.classList.contains('active')));
+      const isActive = el.classList.contains('active');
+      el.setAttribute('aria-selected', String(isActive));
+      el.tabIndex = isActive ? 0 : -1;
     }
   });
 
   panels.forEach(panel => {
-    (panel as HTMLElement).setAttribute('role', 'tabpanel');
+    const el = panel as HTMLElement;
+    el.setAttribute('role', 'tabpanel');
+    // Link panel back to its controlling tab button
+    const panelId = el.id;  // e.g. "tab-basic"
+    const tabName = panelId.startsWith('tab-') ? panelId.slice(4) : '';
+    const controllingBtn = btnArray.find(b => (b as HTMLElement).dataset.tab === tabName);
+    if (controllingBtn) {
+      el.setAttribute('aria-labelledby', controllingBtn.id || '');
+    }
   });
 
-  // Find the tab button container and mark it as a tablist
+  // Mark the tab button container as a tablist
   const firstBtn = buttons[0] as HTMLElement | null;
   if (firstBtn?.parentElement) {
     firstBtn.parentElement.setAttribute('role', 'tablist');
   }
 
+  // Click handler
   buttons.forEach(btn => {
     btn.addEventListener('click', () => {
-      const tabName = (btn as HTMLElement).dataset.tab;
-      if (!tabName) return;
+      setTabState(buttons, panels, btn, root, onTabChange);
+    });
+  });
 
-      // Deactivate all
-      buttons.forEach(b => {
-        b.classList.remove('active');
-        (b as HTMLElement).setAttribute('aria-selected', 'false');
-      });
-      panels.forEach(c => c.classList.remove('active'));
+  // Keyboard navigation: ArrowLeft/ArrowRight to move between tabs
+  buttons.forEach(btn => {
+    btn.addEventListener('keydown', (e) => {
+      const event = e as KeyboardEvent;
+      let targetIndex = -1;
+      const currentIndex = btnArray.indexOf(btn);
 
-      // Activate selected
-      btn.classList.add('active');
-      (btn as HTMLElement).setAttribute('aria-selected', 'true');
-      const tabContent = root.querySelector(`#tab-${tabName}`);
-      if (tabContent) tabContent.classList.add('active');
+      if (event.key === 'ArrowRight' || event.key === 'ArrowDown') {
+        event.preventDefault();
+        targetIndex = (currentIndex + 1) % btnArray.length;
+      } else if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') {
+        event.preventDefault();
+        targetIndex = (currentIndex - 1 + btnArray.length) % btnArray.length;
+      } else if (event.key === 'Home') {
+        event.preventDefault();
+        targetIndex = 0;
+      } else if (event.key === 'End') {
+        event.preventDefault();
+        targetIndex = btnArray.length - 1;
+      }
 
-      onTabChange?.(tabName);
+      if (targetIndex >= 0) {
+        const target = btnArray[targetIndex] as HTMLElement;
+        setTabState(buttons, panels, target, root, onTabChange);
+        target.focus();
+      }
     });
   });
 }
@@ -96,13 +140,11 @@ export function activateTab(tabName: string, options: Pick<TabOptions, 'containe
   const panels = root.querySelectorAll(contentSelector);
 
   buttons.forEach(b => {
-    const isActive = (b as HTMLElement).dataset.tab === tabName;
-    if (isActive) {
-      b.classList.add('active');
-    } else {
-      b.classList.remove('active');
-    }
-    (b as HTMLElement).setAttribute('aria-selected', String(isActive));
+    const el = b as HTMLElement;
+    const isActive = el.dataset.tab === tabName;
+    el.classList.toggle('active', isActive);
+    el.setAttribute('aria-selected', String(isActive));
+    el.tabIndex = isActive ? 0 : -1;
   });
 
   panels.forEach(c => c.classList.remove('active'));
