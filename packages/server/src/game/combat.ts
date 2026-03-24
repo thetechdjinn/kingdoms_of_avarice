@@ -988,6 +988,7 @@ async function processNpcOffensiveSpell(
     const defName = withNpcName(target.entityName, target.isProperName);
 
     // Roll and apply each hit individually
+    let targetDied = false;
     for (let hit = 0; hit < hitsPerCast; hit++) {
       // Stop if target is dead/dropped
       if (target.vitals.hp <= 0) break;
@@ -1012,9 +1013,11 @@ async function processNpcOffensiveSpell(
         } else {
           await handleEntityDropped(target, npc, npcRoomId);
         }
+        targetDied = true;
         break;
       } else if (damageResult.stateChange === 'death') {
         await handleEntityDeath(target, npc, npcRoomId, deferredRewards);
+        targetDied = true;
         break;
       } else {
         sendEntityVitals(target);
@@ -1022,7 +1025,7 @@ async function processNpcOffensiveSpell(
     }
 
     // Apply status effect if the spell has one (e.g., burning, poisoned)
-    if (spell.statusEffect && spell.effectDuration && target.vitals.hp > 0) {
+    if (!targetDied && spell.statusEffect && spell.effectDuration && target.vitals.hp > 0) {
       const effectDurationMs = spell.effectDuration * 1000;
       if (isPlayerEntity(target)) {
         await applyEffect(target as unknown as AuthenticatedSocket, spell.statusEffect, effectDurationMs, spell.id);

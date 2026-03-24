@@ -414,14 +414,6 @@ body {
   text-decoration: underline;
 }
 
-.checkbox-label {
-  display: flex;
-  align-items: center;
-  gap: 0.25rem;
-  color: #aaa;
-  font-size: 0.9rem;
-}
-
 .form-actions {
   display: flex;
   gap: 1rem;
