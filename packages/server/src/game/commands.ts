@@ -9,7 +9,7 @@ import { colors } from '../utils/colors.js';
 import { processAdminCommand, getPlayerLocation, setPlayerLocation } from './adminCommands.js';
 import * as doorStateManager from '../services/doorStateManager.js';
 import * as playerRepo from '../db/repositories/playerRepository.js';
-import { handleGet, handleDrop, handleInventory, handleExamine, getRoomItemsDescription, handleWield, handleWear, handleRemove, handleEquipment, handlePut, handleGetFrom, handleLookIn, handleUse, handleLight, handleExtinguish, handleRepair, handleSearch, handleRecipes, handleCraft, handleEnchantments, handleEnchant, handleDropCurrency, handleGetCurrency } from './itemCommands.js';
+import { handleGet, handleDrop, handleInventory, handleExamine, getRoomItemsDescription, handleWield, handleWear, handleRemove, handleEquipment, handlePut, handleGetFrom, handleLookIn, handleUse, handleLight, handleExtinguish, handleRefuel, handleRepair, handleSearch, handleRecipes, handleCraft, handleEnchantments, handleEnchant, handleDropCurrency, handleGetCurrency } from './itemCommands.js';
 import { handleAttack, handleFlee, handleBreak } from './combatCommands.js';
 import { isSpellMnemonic, handleSpellCommand, handleSpellbook } from './spellCommands.js';
 import { isActionCommand, handleActionCommand, handleEmoteCommand, getActionHelpList } from './actionCommands.js';
@@ -305,17 +305,22 @@ export async function processCommand(
     return handleEquipment(socket);
   }
 
-  if (command === 'use' || command === 'eat' || command === 'drink' || command === 'quaff') {
+  if (command === 'use') {
     // Check if this is a key usage: use [key] [direction]
-    if (command === 'use' && args.length >= 2) {
+    if (args.length >= 2) {
       const lastArg = args[args.length - 1].toLowerCase();
       const possibleDirection = DIRECTION_ALIASES[lastArg] || lastArg;
       if (isDirection(possibleDirection)) {
         return await handleUseKey(socket, args, currentRoomId);
       }
     }
-    // Otherwise handle as normal consumable item
+    // Dispatch by item type (consumable, light, etc.)
     return handleUse(socket, args, currentRoomId);
+  }
+
+  if (command === 'eat' || command === 'drink' || command === 'quaff') {
+    // These aliases only work for consumables (not light sources)
+    return handleUse(socket, args, currentRoomId, true);
   }
 
   if (command === 'light') {
@@ -324,6 +329,10 @@ export async function processCommand(
 
   if (command === 'extinguish' || command === 'douse') {
     return handleExtinguish(socket, args, currentRoomId);
+  }
+
+  if (command === 'refuel') {
+    return handleRefuel(socket, args, currentRoomId);
   }
 
   if (command === 'repair') {
@@ -2471,10 +2480,11 @@ function getHelpSections(): HelpSection[] {
         `  ${colors.white('wear <item>')}           - Wear armor or accessories`,
         `  ${colors.white('remove <item>')}         - Remove equipped item`,
         `  ${colors.white('equipment')} (eq)        - List equipped items`,
-        `  ${colors.white('use <item>')}            - Use a consumable item`,
+        `  ${colors.white('use <item>')}            - Use an item (light, consumable)`,
         `  ${colors.white('eat/drink/quaff <item>')} - Consume food/drink/potion`,
         `  ${colors.white('light <item>')}          - Light a torch or lantern`,
         `  ${colors.white('extinguish <item>')}     - Put out a light source`,
+        `  ${colors.white('refuel <item>')}         - Refuel a lantern with oil`,
         `  ${colors.white('repair <item>')}         - Repair a damaged item`,
       ],
     },
