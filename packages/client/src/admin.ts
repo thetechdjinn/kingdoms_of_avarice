@@ -39,6 +39,7 @@ interface GameSettings {
   health_regen_enhanced_percent?: number;
   mana_regen_base_percent?: number;
   mana_regen_enhanced_percent?: number;
+  blind_accuracy_penalty?: number;
 }
 
 // ============================================================================
@@ -537,6 +538,10 @@ async function loadSettings(): Promise<void> {
       (document.getElementById('setting-bs-level-max') as HTMLInputElement).value =
         String(settings.backstab_level_bonus_max ?? 0.50);
 
+      // Vision & Combat settings
+      (document.getElementById('setting-blind-accuracy') as HTMLInputElement).value =
+        String(settings.blind_accuracy_penalty ?? 10);
+
       // Regen settings
       (document.getElementById('setting-health-tick') as HTMLInputElement).value =
         String(settings.health_tick_interval_ms ?? 5000);
@@ -801,6 +806,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (saveBsLevelMaxBtn) {
     saveBsLevelMaxBtn.addEventListener('click', () =>
       saveNumericSetting('backstab_level_bonus_max', 'setting-bs-level-max', 0.0, 2.0, 'Level Bonus Max'));
+  }
+
+  // Vision & Combat settings
+  const saveBlindAccuracyBtn = document.getElementById('save-blind-accuracy-btn');
+  if (saveBlindAccuracyBtn) {
+    saveBlindAccuracyBtn.addEventListener('click', () =>
+      saveNumericSetting('blind_accuracy_penalty', 'setting-blind-accuracy', 1, 50, 'Blind Accuracy Penalty'));
   }
 
   // Regen settings

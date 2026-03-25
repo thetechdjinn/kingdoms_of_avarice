@@ -215,10 +215,16 @@ describe('calculateAccuracy', () => {
     expect(accHigh).toBeGreaterThan(accLow);
   });
 
-  it('applies blind penalty', () => {
+  it('applies blind penalty (default)', () => {
     const normal = calculateAccuracy(baseFactors);
     const blind = calculateAccuracy({ ...baseFactors, isBlind: true });
     expect(blind).toBe(normal - 10);
+  });
+
+  it('applies configurable blind penalty', () => {
+    const normal = calculateAccuracy(baseFactors);
+    const blind25 = calculateAccuracy({ ...baseFactors, isBlind: true, blindPenaltyValue: 25 });
+    expect(blind25).toBe(normal - 25);
   });
 
   it('applies encumbrance penalty', () => {

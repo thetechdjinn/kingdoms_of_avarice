@@ -63,6 +63,7 @@ import { loadProgressionTableFromDb } from './progressionLoader.js';
 import { clearEquipmentCache } from './combatStats.js';
 import { reloadRegenSettings } from './regeneration.js';
 import { reloadFuelLoop } from './fuelManager.js';
+import { clearBlindAccuracyCache } from '../db/repositories/settingsRepository.js';
 
 interface CommandResponse {
   type: MessageType;
@@ -571,6 +572,7 @@ async function handleReload(
     if (target === 'settings' || target === 'all') {
       await reloadRegenSettings();
       await reloadFuelLoop();
+      clearBlindAccuracyCache();
       results.push(`${colors.green('✓')} Reloaded settings and restarted regen/fuel loops`);
     }
 

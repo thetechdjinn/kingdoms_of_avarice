@@ -129,6 +129,12 @@ export function setupAdminRoutes(app: Express): void {
         res.status(400).json({ success: false, message: 'Regen percent must be between 0 and 100' });
         return;
       }
+    } else if (key === 'blind_accuracy_penalty') {
+      const numValue = Number(value);
+      if (isNaN(numValue) || !Number.isInteger(numValue) || numValue < 1 || numValue > 50) {
+        res.status(400).json({ success: false, message: 'Blind accuracy penalty must be a whole number between 1 and 50' });
+        return;
+      }
     } else if (key in settingsRepo.BACKSTAB_SETTING_RANGES) {
       const numValue = Number(value);
       const range = settingsRepo.BACKSTAB_SETTING_RANGES[key as settingsRepo.BackstabSettingKey];
@@ -170,6 +176,9 @@ export function setupAdminRoutes(app: Express): void {
       }
       if (key.startsWith('backstab_')) {
         settingsRepo.clearBackstabSettingsCache();
+      }
+      if (key === 'blind_accuracy_penalty') {
+        settingsRepo.clearBlindAccuracyCache();
       }
       if (key.match(/^(health|mana)_(tick_interval_ms|regen_(base|enhanced)_percent)$/)) {
         settingsRepo.clearRegenSettingsCache();

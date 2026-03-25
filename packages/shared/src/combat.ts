@@ -97,6 +97,7 @@ export interface AccuracyFactors {
   spellModifier: number;
   encumbrancePenalty: number;
   isBlind: boolean;
+  blindPenaltyValue?: number;
 }
 
 /**

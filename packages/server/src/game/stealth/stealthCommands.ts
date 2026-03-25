@@ -29,6 +29,8 @@ import { calculateBackstabDamage, calculateStrengthDamageBonus } from '../combat
 import { applyDamage, initializeDroppedState, initializeDeadState, formatDroppedMessage, formatDeathMessage } from '../damageHandler.js';
 import { getEquipmentCombatStats } from '../combatStats.js';
 import { getEffectModifiers } from '../statusEffects.js';
+import { calculateEffectiveVision, canSee } from '../vision.js';
+import { getWorldRef } from '../npcManager.js';
 
 // ============================================================================
 // STEALTH ROLL
@@ -359,6 +361,20 @@ export async function handleBackstab(
   const targetName = args.join(' ');
   const currentRoomId = getPlayerLocation(socket.playerId);
 
+  // Vision check: can't target a backstab when you can't see
+  // (world/roomDarkness are reused below for the target's blind check)
+  if (getEffectModifiers(socket).isBlind) {
+    return { type: MessageType.ERROR, message: 'You can\'t see well enough to find your target!' };
+  }
+  const bsWorld = getWorldRef();
+  const bsRoomDarkness = bsWorld?.getRoom(currentRoomId)?.darkness_level ?? 0;
+  if (bsRoomDarkness < 0) {
+    const attackerVision = await calculateEffectiveVision(socket);
+    if (!canSee(attackerVision, bsRoomDarkness)) {
+      return { type: MessageType.ERROR, message: 'You can\'t see well enough to find your target!' };
+    }
+  }
+
   // Find the target - only see hidden players if attacker has canSeeHidden
   const target = findPlayerInRoom(targetName, currentRoomId, connectedPlayers, socket.playerId, socket.canSeeHidden);
   if (!target) {
@@ -466,8 +482,14 @@ export async function handleBackstab(
     targetPerception.total
   );
 
-  // Roll to hit
-  const hitResult = rollBackstabHit(attackerAccuracy, defenderDefense);
+  // Check if target can see — backstab auto-hits blind targets
+  const targetVision = await calculateEffectiveVision(target);
+  const targetCanSee = canSee(targetVision, bsRoomDarkness);
+
+  // Roll to hit (auto-succeed if target can't see)
+  const hitResult = targetCanSee
+    ? rollBackstabHit(attackerAccuracy, defenderDefense)
+    : { hit: true, attackerAccuracy, defenderDefense, roll: 0 };
 
   // Break stealth regardless of hit/miss
   breakStealth(socket, 'attack', true);

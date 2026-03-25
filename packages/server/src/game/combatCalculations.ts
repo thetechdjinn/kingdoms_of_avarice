@@ -238,7 +238,7 @@ export function calculateAccuracy(
 
   // Penalties
   const encPenalty = factors.encumbrancePenalty;
-  const blindPenalty = factors.isBlind ? 10 : 0;
+  const blindPenalty = factors.isBlind ? (factors.blindPenaltyValue ?? 10) : 0;
 
   const total = combatBonus
     + levelBonus

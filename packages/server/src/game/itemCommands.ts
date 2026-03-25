@@ -15,6 +15,9 @@ import { rollStealthCheck } from './stealth/stealthCheck.js';
 import { calculateStealth, calculatePerception } from './stats/secondaryStats.js';
 import * as progressionRepo from '../db/repositories/progressionRepository.js';
 import { trackLitCharacter, untrackLitCharacter } from './fuelManager.js';
+import { calculateEffectiveVision, canSee } from './vision.js';
+import { getWorldRef } from './npcManager.js';
+import { getEffectModifiers } from './statusEffects.js';
 
 // Guard function to check if character is selected
 function requireCharacter(socket: AuthenticatedSocket): CommandResponse | null {
@@ -2201,6 +2204,19 @@ export async function handleSearch(
   currentRoomId: number,
   connectedPlayers: Map<number, AuthenticatedSocket>
 ): Promise<CommandResponse> {
+  // Vision check: search auto-fails when searcher can't see (perception drops to 0)
+  if (getEffectModifiers(socket).isBlind) {
+    return { type: MessageType.OUTPUT, message: 'You fumble around blindly but can\'t find anything.' };
+  }
+  const world = getWorldRef();
+  const roomDarkness = world?.getRoom(currentRoomId)?.darkness_level ?? 0;
+  if (roomDarkness < 0) {
+    const vision = await calculateEffectiveVision(socket);
+    if (!canSee(vision, roomDarkness)) {
+      return { type: MessageType.OUTPUT, message: 'You fumble around in the darkness but can\'t find anything.' };
+    }
+  }
+
   const results: string[] = [];
   results.push('You search the area...');
 
