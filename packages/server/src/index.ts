@@ -12,6 +12,8 @@ import express from 'express';
 import { createServer } from 'http';
 import { WebSocketServer } from 'ws';
 import cookieParser from 'cookie-parser';
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
 import { setupAuthRoutes, setDatabaseMode } from './routes/auth.js';
 import { setupRoomRoutes } from './routes/rooms.js';
 import { setupItemRoutes } from './routes/items.js';
@@ -45,9 +47,25 @@ import { startDnsResolver } from './services/dnsResolver.js';
 const app = express();
 const PORT = Number(process.env.PORT) || 3001;
 
+// Security headers (allow inline scripts and WebSocket connections for the game client)
+app.use(helmet({
+  contentSecurityPolicy: false,
+  crossOriginEmbedderPolicy: false,
+}));
+
 // Limit JSON payload size to prevent DOS attacks
 app.use(express.json({ limit: '100kb' }));
 app.use(cookieParser());
+
+// Rate limit auth endpoints to prevent brute force
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 50, // 50 requests per window per IP
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many requests, please try again later.' },
+});
+app.use('/api/auth', authLimiter);
 
 // IP access control middleware (runs on all API requests)
 app.use('/api', ipAccessMiddleware);

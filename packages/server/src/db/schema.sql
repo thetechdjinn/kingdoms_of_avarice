@@ -268,6 +268,7 @@ CREATE TABLE IF NOT EXISTS item_instances (
     -- Consumable state
     charges_remaining INTEGER,
     fuel_remaining INTEGER,
+    is_lit BOOLEAN DEFAULT FALSE,
     
     -- Custom modifications
     custom_data JSONB DEFAULT '{}',

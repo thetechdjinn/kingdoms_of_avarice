@@ -9,6 +9,7 @@ export interface Room {
   description: string;
   area: string;
   terrain: string;
+  darkness_level: number;
   exits: Map<string, number>;
 }
 
@@ -39,6 +40,7 @@ export class GameWorld {
         description: dbRoom.description || '',
         area: dbRoom.area || 'Unknown',
         terrain: dbRoom.terrain || 'indoor',
+        darkness_level: dbRoom.darkness_level ?? 0,
         exits: dbRoom.exits,
       });
     }
@@ -64,6 +66,7 @@ export class GameWorld {
       description: dbRoom.description || '',
       area: dbRoom.area || 'Unknown',
       terrain: dbRoom.terrain || 'indoor',
+      darkness_level: dbRoom.darkness_level ?? 0,
       exits: dbRoom.exits,
     };
 
@@ -80,6 +83,7 @@ export class GameWorld {
       description: dbRoom.description || '',
       area: dbRoom.area || 'Unknown',
       terrain: dbRoom.terrain || 'indoor',
+      darkness_level: dbRoom.darkness_level ?? 0,
       exits: new Map(),
     };
 
@@ -135,6 +139,7 @@ export class GameWorld {
           description: dbRoom.description || '',
           area: dbRoom.area || 'Unknown',
           terrain: dbRoom.terrain || 'indoor',
+          darkness_level: dbRoom.darkness_level ?? 0,
           exits: dbRoom.exits,
         });
       }
@@ -163,7 +168,7 @@ export class GameWorld {
     return this.rooms.get(targetId);
   }
 
-  formatRoomDescription(room: Room, otherPlayers: string[] = [], briefMode: boolean = false, itemDescriptions: string | null = null, preColoredEntities: string[] = []): string {
+  formatRoomDescription(room: Room, otherPlayers: string[] = [], briefMode: boolean = false, itemDescriptions: string | null = null, preColoredEntities: string[] = [], darknessTag: string = ''): string {
     // Get doors in this room
     const doors = doorStateManager.getDoorsInRoom(room.id);
     const doorsByDirection = new Map<string, { door: typeof doors[0]; state: DoorState | null }>();
@@ -213,7 +218,8 @@ export class GameWorld {
 
     const exitStr = formattedExits.length > 0 ? formattedExits.join(', ') : 'none';
 
-    let output = `${colors.roomName(room.name)}\r\n`;
+    const nameWithTag = darknessTag ? `${room.name} ${darknessTag}` : room.name;
+    let output = `${colors.roomName(nameWithTag)}\r\n`;
 
     // Only show description if not in brief mode
     if (!briefMode) {
@@ -294,6 +300,7 @@ export class GameWorld {
       id: room.id,
       name: room.name,
       description: room.description,
+      darkness_level: room.darkness_level,
       exits: Array.from(room.exits.keys()),
       players: [],
       npcs: [],

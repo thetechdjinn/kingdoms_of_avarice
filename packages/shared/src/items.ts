@@ -252,6 +252,7 @@ export interface ItemInstance {
   condition: ItemCondition;
   charges_remaining?: number;
   fuel_remaining?: number;
+  is_lit: boolean;
   custom_data: ItemCustomData;
 }
 

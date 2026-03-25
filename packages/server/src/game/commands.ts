@@ -48,6 +48,7 @@ import { handleQuest } from './questCommands.js';
 import * as questRepo from '../db/repositories/questRepository.js';
 import { handleBank, handleDeposit, handleWithdraw } from './bankCommands.js';
 import { handleList, handleBuy, handleSell, handlePrice, handleHaggle } from './merchantCommands.js';
+import { calculateEffectiveVision, canSee, getDarknessTag, getBlindMessage } from './vision.js';
 
 export interface CommandResponse {
   type: MessageType;
@@ -157,8 +158,25 @@ export async function processCommand(
   if (command === 'look' || command === 'l') {
     // Check if looking at an item, player, or in a container
     if (args.length > 0) {
+      // Compute vision once for all look sub-commands that need it
+      let canSeeInRoom = true;
+      const lookRoom = world.getRoom(currentRoomId);
+      if (lookRoom) {
+        const lookVision = await calculateEffectiveVision(socket);
+        canSeeInRoom = canSee(lookVision, lookRoom.darkness_level);
+      }
+
       // Check for "look in <container>"
       if (args[0].toLowerCase() === 'in' && args.length > 1) {
+        // Vision check: inventory containers always work, room containers require sight
+        if (!canSeeInRoom) {
+          const containerKw = args.slice(1).join(' ');
+          const invMatches = await itemRepo.findItemsInCharacterInventoryByKeyword(socket.characterId!, containerKw);
+          const invContainers = invMatches.filter(m => m.template?.item_type === 'container');
+          if (invContainers.length === 0) {
+            return { type: MessageType.ERROR, message: `You can't see anything in the darkness!` };
+          }
+        }
         return handleLookIn(socket, args.slice(1), currentRoomId);
       }
       const direction = DIRECTION_ALIASES[args[0]] || args[0];
@@ -166,34 +184,39 @@ export async function processCommand(
       if (isDirection(direction)) {
         return await handleLookDirection(socket, currentRoomId, direction, world, _connectedPlayers);
       }
-      // Check if looking at self
+      // Check if looking at self - always works
       const targetName = args.join(' ').toLowerCase();
       if (socket.username.toLowerCase() === targetName || socket.username.toLowerCase().startsWith(targetName)) {
         return await handleLookAtPlayer(socket);
       }
-      // Try to find another player in the room with that name (respects stealth visibility)
-      const targetPlayer = findPlayerInRoom(targetName, currentRoomId, _connectedPlayers, socket.playerId, socket.canSeeHidden);
-      if (targetPlayer) {
-        const result = await handleLookAtPlayer(targetPlayer);
-        // Notify the target player and room
-        sendMessage(targetPlayer, MessageType.OUTPUT, colors.green(`${colors.red(socket.username)} looks you up and down.`));
-        broadcastToRoom(currentRoomId, colors.green(`${colors.red(socket.username)} looks ${colors.red(targetPlayer.username)} up and down.`), [socket.playerId, targetPlayer.playerId]);
-        return result;
+
+      // Room targets (players, NPCs, special doors) require sight
+      if (canSeeInRoom) {
+        // Try to find another player in the room with that name (respects stealth visibility)
+        const targetPlayer = findPlayerInRoom(targetName, currentRoomId, _connectedPlayers, socket.playerId, socket.canSeeHidden);
+        if (targetPlayer) {
+          const result = await handleLookAtPlayer(targetPlayer);
+          // Notify the target player and room
+          sendMessage(targetPlayer, MessageType.OUTPUT, colors.green(`${colors.red(socket.username)} looks you up and down.`));
+          broadcastToRoom(currentRoomId, colors.green(`${colors.red(socket.username)} looks ${colors.red(targetPlayer.username)} up and down.`), [socket.playerId, targetPlayer.playerId]);
+          return result;
+        }
+        // Check if looking at an NPC
+        const npcTarget = findNpcInRoom(targetName, currentRoomId);
+        if (npcTarget) {
+          const result = handleLookAtNpc(npcTarget);
+          broadcastToRoom(currentRoomId, colors.green(`${colors.red(socket.username)} looks at ${colors.red(npcTarget.entityName)}.`), socket.playerId);
+          return result;
+        }
+        // Check if looking at a special door (e.g., "look portal", "look vortex")
+        const specialDoor = doorStateManager.findSpecialDoorByDisplayName(currentRoomId, targetName);
+        if (specialDoor) {
+          return handleLookAtSpecialDoor(specialDoor);
+        }
       }
-      // Check if looking at an NPC
-      const npcTarget = findNpcInRoom(targetName, currentRoomId);
-      if (npcTarget) {
-        const result = handleLookAtNpc(npcTarget);
-        broadcastToRoom(currentRoomId, colors.green(`${colors.red(socket.username)} looks at ${colors.red(npcTarget.entityName)}.`), socket.playerId);
-        return result;
-      }
-      // Check if looking at a special door (e.g., "look portal", "look vortex")
-      const specialDoor = doorStateManager.findSpecialDoorByDisplayName(currentRoomId, targetName);
-      if (specialDoor) {
-        return handleLookAtSpecialDoor(specialDoor);
-      }
-      // Otherwise, examine an item
-      return handleExamine(socket, args, currentRoomId);
+
+      // Examine item - checks inventory first, then room (room items blocked when blind)
+      return handleExamine(socket, args, currentRoomId, canSeeInRoom);
     }
     // Broadcast that the player is looking around
     broadcastToRoom(currentRoomId, colors.green(`${colors.red(socket.username)} looks around the room.`), socket.playerId);
@@ -201,14 +224,45 @@ export async function processCommand(
   }
 
   if (command === 'examine' || command === 'exa') {
-    return handleExamine(socket, args, currentRoomId);
+    // Vision check for examine: inventory always works, room items require sight
+    let canSeeForExamine = true;
+    const examRoom = world.getRoom(currentRoomId);
+    if (examRoom) {
+      const examVision = await calculateEffectiveVision(socket);
+      canSeeForExamine = canSee(examVision, examRoom.darkness_level);
+    }
+    return handleExamine(socket, args, currentRoomId, canSeeForExamine);
   }
 
   if (command === 'get' || command === 'take' || command === 'g') {
+    // Compute vision once for all get sub-commands
+    let canSeeForGet = true;
+    const getRoom = world.getRoom(currentRoomId);
+    if (getRoom) {
+      const getVision = await calculateEffectiveVision(socket);
+      canSeeForGet = canSee(getVision, getRoom.darkness_level);
+    }
+
     // Check for "get <item> from <container>"
     const fullArgs = args.join(' ');
     if (fullArgs.toLowerCase().includes(' from ')) {
+      // Vision check: block room container access when blind, allow inventory containers
+      if (!canSeeForGet) {
+        const fromMatch = fullArgs.match(/^.+?\s+\bfrom\b\s+(.+)$/i);
+        if (fromMatch) {
+          const containerKw = fromMatch[1].trim();
+          const invMatches = await itemRepo.findItemsInCharacterInventoryByKeyword(socket.characterId!, containerKw);
+          const invContainers = invMatches.filter(m => m.template?.item_type === 'container');
+          if (invContainers.length === 0) {
+            return { type: MessageType.ERROR, message: `You can't see anything to get items from!` };
+          }
+        }
+      }
       return handleGetFrom(socket, args, currentRoomId);
+    }
+    // Picking up items from the room floor requires sight
+    if (!canSeeForGet) {
+      return { type: MessageType.ERROR, message: `You can't see anything to pick up!` };
     }
     // Try currency handling first (e.g., "get gold", "get 50 gold")
     const currencyResult = await handleGetCurrency(socket, args, currentRoomId);
@@ -277,6 +331,14 @@ export async function processCommand(
   }
 
   if (command === 'search') {
+    // Vision check: searching requires sight
+    const searchRoom = world.getRoom(currentRoomId);
+    if (searchRoom) {
+      const searchVision = await calculateEffectiveVision(socket);
+      if (!canSee(searchVision, searchRoom.darkness_level)) {
+        return { type: MessageType.ERROR, message: `You can't search when you can't see!` };
+      }
+    }
     return handleSearch(socket, currentRoomId, _connectedPlayers);
   }
 
@@ -902,10 +964,17 @@ async function handleLook(
     return { type: MessageType.ERROR, message: 'You are in an unknown location.' };
   }
 
+  // Vision check: can the player see in this room?
+  const effectiveVision = await calculateEffectiveVision(socket);
+  if (!canSee(effectiveVision, room.darkness_level)) {
+    return { type: MessageType.OUTPUT, message: getBlindMessage(room.darkness_level) };
+  }
+
+  const darknessTag = getDarknessTag(room.darkness_level);
   const otherPlayers = getOtherPlayersInRoom(roomId, socket.playerId, connectedPlayers, socket.canSeeHidden);
   const npcNames = getNpcDisplayNames(roomId);
   const itemDescriptions = await getRoomItemsDescription(roomId);
-  return { type: MessageType.OUTPUT, message: world.formatRoomDescription(room, otherPlayers, useBriefMode, itemDescriptions, npcNames) };
+  return { type: MessageType.OUTPUT, message: world.formatRoomDescription(room, otherPlayers, useBriefMode, itemDescriptions, npcNames, darknessTag) };
 }
 
 async function handleLookDirection(
@@ -918,6 +987,15 @@ async function handleLookDirection(
   // Check if it's a valid direction
   if (!isDirection(direction)) {
     return { type: MessageType.ERROR, message: `You can't look that way.` };
+  }
+
+  // Vision check: can the player see in their current room?
+  const currentRoom = world.getRoom(currentRoomId);
+  if (currentRoom) {
+    const effectiveVision = await calculateEffectiveVision(socket);
+    if (!canSee(effectiveVision, currentRoom.darkness_level)) {
+      return { type: MessageType.OUTPUT, message: `You can't see anything in the darkness!` };
+    }
   }
 
   const targetRoom = world.getRoomInDirection(currentRoomId, direction);
@@ -942,11 +1020,18 @@ async function handleLookDirection(
   const oppositeDir = OPPOSITE_DIRECTIONS[direction] || direction;
   broadcastToRoom(targetRoom.id, colors.green(`${colors.red(socket.username)} peeks in from the ${oppositeDir}.`), socket.playerId);
 
+  // Vision check for the target room (use looker's vision against target room darkness)
+  const effectiveVision = await calculateEffectiveVision(socket);
+  if (!canSee(effectiveVision, targetRoom.darkness_level)) {
+    return { type: MessageType.OUTPUT, message: `You peer ${direction} but can't see anything in the darkness.` };
+  }
+
   // Show the full room including players, NPCs, and exits
+  const darknessTag = getDarknessTag(targetRoom.darkness_level);
   const playersInRoom = getPlayersInRoom(targetRoom.id, connectedPlayers, socket.canSeeHidden);
   const adjacentNpcNames = getNpcDisplayNames(targetRoom.id);
   const itemDescriptions = await getRoomItemsDescription(targetRoom.id);
-  return { type: MessageType.OUTPUT, message: world.formatRoomDescription(targetRoom, playersInRoom, false, itemDescriptions, adjacentNpcNames) };
+  return { type: MessageType.OUTPUT, message: world.formatRoomDescription(targetRoom, playersInRoom, false, itemDescriptions, adjacentNpcNames, darknessTag) };
 }
 
 async function handleBrief(socket: AuthenticatedSocket): Promise<CommandResponse> {
@@ -1132,11 +1217,18 @@ async function moveFollower(
     broadcastToRoom(newRoom.id, colors.green(`${colors.red(follower.username)} walks in from the ${oppositeDir}.`), follower.playerId);
   }
 
-  // Send room description to follower
-  const otherPlayers = getOtherPlayersInRoom(newRoom.id, follower.playerId, connectedPlayers, follower.canSeeHidden);
-  const npcNames = getNpcDisplayNames(newRoom.id);
-  const itemDescriptions = await getRoomItemsDescription(newRoom.id);
-  const roomDescription = world.formatRoomDescription(newRoom, otherPlayers, follower.briefMode, itemDescriptions, npcNames);
+  // Send room description to follower with vision check
+  const followerVision = await calculateEffectiveVision(follower);
+  let roomDescription: string;
+  if (!canSee(followerVision, newRoom.darkness_level)) {
+    roomDescription = getBlindMessage(newRoom.darkness_level);
+  } else {
+    const darknessTag = getDarknessTag(newRoom.darkness_level);
+    const otherPlayers = getOtherPlayersInRoom(newRoom.id, follower.playerId, connectedPlayers, follower.canSeeHidden);
+    const npcNames = getNpcDisplayNames(newRoom.id);
+    const itemDescriptions = await getRoomItemsDescription(newRoom.id);
+    roomDescription = world.formatRoomDescription(newRoom, otherPlayers, follower.briefMode, itemDescriptions, npcNames, darknessTag);
+  }
   sendMessage(follower, MessageType.OUTPUT, roomDescription);
 
   // Trigger aggro check in new room
@@ -1263,11 +1355,19 @@ async function handleMove(
     broadcastToRoom(newRoom.id, colors.green(`${colors.red(socket.username)} walks in from the ${oppositeDir}.`), socket.playerId);
   }
 
-  // Build room description
-  const otherPlayers = getOtherPlayersInRoom(newRoom.id, socket.playerId, connectedPlayers, socket.canSeeHidden);
-  const npcNames = getNpcDisplayNames(newRoom.id);
-  const itemDescriptions = await getRoomItemsDescription(newRoom.id);
-  let roomDescription = world.formatRoomDescription(newRoom, otherPlayers, socket.briefMode, itemDescriptions, npcNames);
+  // Build room description with vision check
+  const effectiveVision = await calculateEffectiveVision(socket);
+  let roomDescription: string;
+
+  if (!canSee(effectiveVision, newRoom.darkness_level)) {
+    roomDescription = getBlindMessage(newRoom.darkness_level);
+  } else {
+    const darknessTag = getDarknessTag(newRoom.darkness_level);
+    const otherPlayers = getOtherPlayersInRoom(newRoom.id, socket.playerId, connectedPlayers, socket.canSeeHidden);
+    const npcNames = getNpcDisplayNames(newRoom.id);
+    const itemDescriptions = await getRoomItemsDescription(newRoom.id);
+    roomDescription = world.formatRoomDescription(newRoom, otherPlayers, socket.briefMode, itemDescriptions, npcNames, darknessTag);
+  }
 
   // Prepend stealth message if applicable
   if (playerMessage) {
@@ -2105,10 +2205,17 @@ async function handleSpecialDoorTrigger(
     ? door.passageMessageSelf.replace(/{player}/g, coloredYou)
     : `You pass through ${door.itemDisplayName || door.name}.`, 80);
 
-  // Get the new room display
-  const otherPlayers = getOtherPlayersInRoom(newRoom.id, socket.playerId, connectedPlayers, socket.canSeeHidden);
-  const itemDescriptions = await getRoomItemsDescription(newRoom.id);
-  const roomDisplay = world.formatRoomDescription(newRoom, otherPlayers, socket.briefMode, itemDescriptions);
+  // Get the new room display with vision check
+  const passageVision = await calculateEffectiveVision(socket);
+  let roomDisplay: string;
+  if (!canSee(passageVision, newRoom.darkness_level)) {
+    roomDisplay = getBlindMessage(newRoom.darkness_level);
+  } else {
+    const darknessTag = getDarknessTag(newRoom.darkness_level);
+    const otherPlayers = getOtherPlayersInRoom(newRoom.id, socket.playerId, connectedPlayers, socket.canSeeHidden);
+    const itemDescriptions = await getRoomItemsDescription(newRoom.id);
+    roomDisplay = world.formatRoomDescription(newRoom, otherPlayers, socket.briefMode, itemDescriptions, [], darknessTag);
+  }
 
   return {
     type: MessageType.OUTPUT,
@@ -3257,10 +3364,17 @@ async function handleRespawn(
     return { type: MessageType.SYSTEM, message: 'You wake up at a safe location...' };
   }
 
-  const otherPlayers = getOtherPlayersInRoom(respawnRoomId, socket.playerId, connectedPlayers, socket.canSeeHidden);
-  const itemDescriptions = await getRoomItemsDescription(respawnRoomId);
-
-  const roomDesc = world.formatRoomDescription(room, otherPlayers, socket.briefMode, itemDescriptions);
+  // Vision check for respawn room
+  const respawnVision = await calculateEffectiveVision(socket);
+  let roomDesc: string;
+  if (!canSee(respawnVision, room.darkness_level)) {
+    roomDesc = getBlindMessage(room.darkness_level);
+  } else {
+    const darknessTag = getDarknessTag(room.darkness_level);
+    const otherPlayers = getOtherPlayersInRoom(respawnRoomId, socket.playerId, connectedPlayers, socket.canSeeHidden);
+    const itemDescriptions = await getRoomItemsDescription(respawnRoomId);
+    roomDesc = world.formatRoomDescription(room, otherPlayers, socket.briefMode, itemDescriptions, [], darknessTag);
+  }
 
   return {
     type: MessageType.OUTPUT,
