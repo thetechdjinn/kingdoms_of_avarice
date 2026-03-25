@@ -113,6 +113,9 @@ export function canSee(effectiveVision: number, roomDarkness: number): boolean {
  * Get the "can't see" message based on room darkness level.
  */
 export function getBlindMessage(darknessLevel: number): string {
+  if (darknessLevel <= -401) {
+    return 'An impenetrable darkness surrounds you - you can\'t see anything!';
+  }
   if (darknessLevel <= -251) {
     return 'The room is pitch black - you can\'t see anything!';
   }
