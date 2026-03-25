@@ -107,15 +107,16 @@ export async function reloadFuelLoop(): Promise<void> {
 async function processFuelTick(): Promise<void> {
   if (!connectedPlayersRef || litCharacters.size === 0) return;
 
-  for (const characterId of litCharacters) {
-    // Find the socket for this character
-    let socket: AuthenticatedSocket | undefined;
-    for (const [, s] of connectedPlayersRef) {
-      if (s.characterId === characterId) {
-        socket = s;
-        break;
-      }
+  // Build characterId->socket index once per tick
+  const socketByCharacter = new Map<number, AuthenticatedSocket>();
+  for (const [, s] of connectedPlayersRef) {
+    if (s.characterId) {
+      socketByCharacter.set(s.characterId, s);
     }
+  }
+
+  for (const characterId of litCharacters) {
+    const socket = socketByCharacter.get(characterId);
 
     if (!socket) {
       // Player disconnected but wasn't cleaned up
