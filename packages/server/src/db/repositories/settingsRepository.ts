@@ -17,6 +17,7 @@ export interface GameSettings {
   health_regen_enhanced_percent: number;
   mana_regen_base_percent: number;
   mana_regen_enhanced_percent: number;
+  blind_accuracy_penalty: number;
 }
 
 // ============================================================================
@@ -244,6 +245,11 @@ export async function getAllSettings(): Promise<GameSettings> {
           settings[row.key as RegenSettingKey] = parsed;
         }
         break;
+      case 'blind_accuracy_penalty':
+        if (typeof parsed === 'number' && parsed >= 1 && parsed <= 50) {
+          settings.blind_accuracy_penalty = parsed;
+        }
+        break;
     }
   }
 
@@ -263,6 +269,7 @@ export async function getAllSettings(): Promise<GameSettings> {
     health_regen_enhanced_percent: settings.health_regen_enhanced_percent ?? DEFAULT_REGEN_SETTINGS.health_regen_enhanced_percent,
     mana_regen_base_percent: settings.mana_regen_base_percent ?? DEFAULT_REGEN_SETTINGS.mana_regen_base_percent,
     mana_regen_enhanced_percent: settings.mana_regen_enhanced_percent ?? DEFAULT_REGEN_SETTINGS.mana_regen_enhanced_percent,
+    blind_accuracy_penalty: settings.blind_accuracy_penalty ?? 10,
   };
 }
 
@@ -774,6 +781,47 @@ export async function getBackstabSettings(): Promise<BackstabSettings> {
 export function clearBackstabSettingsCache(): void {
   backstabSettingsCache = null;
   backstabSettingsCacheTime = 0;
+}
+
+// ============================================================================
+// BLIND ACCURACY PENALTY
+// ============================================================================
+
+const DEFAULT_BLIND_ACCURACY_PENALTY = 10;
+
+let blindAccuracyCache: number | null = null;
+let blindAccuracyCacheTime: number = 0;
+const BLIND_ACCURACY_CACHE_TTL = 60000;
+
+/**
+ * Get the blind accuracy penalty (applied when a combatant cannot see).
+ * Stored as a positive number (1-50), applied as a subtraction in accuracy calc.
+ * Default: 10
+ */
+export async function getBlindAccuracyPenalty(): Promise<number> {
+  const now = Date.now();
+
+  if (blindAccuracyCache !== null && (now - blindAccuracyCacheTime) < BLIND_ACCURACY_CACHE_TTL) {
+    return blindAccuracyCache;
+  }
+
+  const value = await getSetting<number>('blind_accuracy_penalty');
+  const result = (typeof value === 'number' && value >= 1 && value <= 50)
+    ? value
+    : DEFAULT_BLIND_ACCURACY_PENALTY;
+
+  blindAccuracyCache = result;
+  blindAccuracyCacheTime = now;
+
+  return result;
+}
+
+/**
+ * Clear the blind accuracy penalty cache (call after updating settings)
+ */
+export function clearBlindAccuracyCache(): void {
+  blindAccuracyCache = null;
+  blindAccuracyCacheTime = 0;
 }
 
 // ============================================================================

@@ -746,7 +746,8 @@ export async function runMigrations(): Promise<void> {
           ('currency_runic_per_enc', '4'),
           ('training_base_cost', '28'),
           ('training_cost_multiplier', '1.8'),
-          ('initial_character_points', '100')
+          ('initial_character_points', '100'),
+          ('blind_accuracy_penalty', '10')
         ON CONFLICT (key) DO NOTHING
       `);
       // NOTE: Never update existing game_settings values - respect user configuration

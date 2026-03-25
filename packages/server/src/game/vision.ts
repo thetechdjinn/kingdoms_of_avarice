@@ -1,5 +1,7 @@
 import { EquipmentSlot, ItemType, RacialTrait } from '@koa/shared';
 import { AuthenticatedSocket } from './socket.js';
+import type { CombatEntity } from './combatEntity.js';
+import { isPlayerEntity } from './combatEntity.js';
 import { NpcCombatInstance } from './npcManager.js';
 import { getEffectModifiers } from './statusEffects.js';
 import * as itemRepo from '../db/repositories/itemRepository.js';
@@ -103,10 +105,27 @@ export function calculateNpcEffectiveVision(npc: NpcCombatInstance): number {
 
 /**
  * Determine if an entity can see given their effective vision and the room's darkness level.
- * net >= 0 means they can see (exact offset = barely visible).
+ * net > 0 means they can see. net <= 0 means they can't.
  */
 export function canSee(effectiveVision: number, roomDarkness: number): boolean {
-  return (roomDarkness + effectiveVision) >= 0;
+  return (roomDarkness + effectiveVision) > 0;
+}
+
+/**
+ * Determine if a combat entity (player or NPC) can see in a room.
+ * Handles the isBlind fast-path, player/NPC branching, and type narrowing.
+ */
+export async function entityCanSee(entity: CombatEntity, roomDarkness: number): Promise<boolean> {
+  const effectMods = getEffectModifiers(entity);
+  if (effectMods.isBlind) return false;
+
+  if (isPlayerEntity(entity)) {
+    const vision = await calculateEffectiveVision(entity as unknown as AuthenticatedSocket);
+    return canSee(vision, roomDarkness);
+  }
+
+  const vision = calculateNpcEffectiveVision(entity as unknown as NpcCombatInstance);
+  return canSee(vision, roomDarkness);
 }
 
 /**

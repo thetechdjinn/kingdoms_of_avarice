@@ -23,6 +23,8 @@ import { withNpcName, withNpcNameCapitalized } from '../utils/textFormat.js';
 import { isStealthing, breakStealth } from './stealth/stealthState.js';
 import { applyEffectToEntity } from './statusEffects.js';
 import { breakCasterCombat } from './combatCommands.js';
+import { calculateEffectiveVision, canSee } from './vision.js';
+import { getWorldRef } from './npcManager.js';
 
 /**
  * Cache of all spell mnemonics for quick lookup
@@ -49,6 +51,27 @@ async function checkInstantSpellFizzle(
     return { type: MessageType.OUTPUT, message: colors.red(spell.fizzleMessage || `Your ${spell.name} fizzles!`) };
   }
   return null;
+}
+
+/**
+ * Check if the caster can see in the current room.
+ * Returns false if the room is too dark for the caster's vision,
+ * or if the caster is blinded by a status effect (even in bright rooms).
+ */
+async function casterCanSeeInRoom(socket: AuthenticatedSocket, roomId: number): Promise<boolean> {
+  // Fast path: status-effect blindness always prevents sight (no DB calls needed)
+  const effectMods = getEffectModifiers(socket);
+  if (effectMods.isBlind) return false;
+
+  const world = getWorldRef();
+  const roomDarkness = world?.getRoom(roomId)?.darkness_level ?? 0;
+
+  // Bright room with no negative vision effects: always visible
+  // (race base vision is always >= 100, so net vision is positive)
+  if (roomDarkness >= 0 && effectMods.visionModifier >= 0) return true;
+
+  const vision = await calculateEffectiveVision(socket);
+  return canSee(vision, roomDarkness);
 }
 
 /**
@@ -168,6 +191,11 @@ async function handleOffensiveSpell(
 
   const targetName = args.join(' ');
   const currentRoomId = getPlayerLocation(socket.playerId);
+
+  // Vision check: can't target offensive spells when you can't see
+  if (!await casterCanSeeInRoom(socket, currentRoomId)) {
+    return { type: MessageType.ERROR, message: 'You can\'t see well enough to target that spell!' };
+  }
 
   // Find the target — try players first, then NPCs
   const target = findPlayerInRoom(targetName, currentRoomId, connectedPlayers, socket.playerId, socket.canSeeHidden);
@@ -363,6 +391,12 @@ async function handleHealingSpell(
   // Check if targeting another player
   if (args.length > 0) {
     const targetArg = args.join(' ');
+
+    // Vision check: can't target other players when you can't see (self-heal always works)
+    if (!await casterCanSeeInRoom(socket, currentRoomId)) {
+      return { type: MessageType.ERROR, message: 'You can\'t see well enough to target that spell!' };
+    }
+
     // Don't exclude anyone (-1), but respect stealth visibility
     const foundTarget = findPlayerInRoom(targetArg, currentRoomId, connectedPlayers, -1, socket.canSeeHidden);
 
@@ -584,6 +618,11 @@ async function handleDebuffSpell(
 
   const targetName = args.join(' ');
   const currentRoomId = getPlayerLocation(socket.playerId);
+
+  // Vision check: can't target debuff spells when you can't see
+  if (!await casterCanSeeInRoom(socket, currentRoomId)) {
+    return { type: MessageType.ERROR, message: 'You can\'t see well enough to target that spell!' };
+  }
 
   // Find the target — try players first, then NPCs
   const target = findPlayerInRoom(targetName, currentRoomId, connectedPlayers, socket.playerId, socket.canSeeHidden);

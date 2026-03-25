@@ -233,6 +233,8 @@ Access via Hub > Admin Tools (requires ADMIN role). Three tabs:
   - **Base Max Multiplier**: Maximum damage multiplier for backstab (default: 4.0)
   - **Level Bonus Min**: Added to min damage per level (default: 0.5)
   - **Level Bonus Max**: Added to max damage per level (default: 1.0)
+- **Vision & Combat**:
+  - **Blind Accuracy Penalty**: Accuracy penalty when a combatant cannot see (default: 10, range: 1-50)
 
 ## IP Access Control
 

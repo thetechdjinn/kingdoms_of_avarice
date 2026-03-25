@@ -9,7 +9,7 @@ import { MessageType, AttackResult, SpellScalingStat, SpellType, SpellTargetType
 import { AuthenticatedSocket, sendVitals as sendPlayerVitals } from './socket.js';
 import type { CombatEntity } from './combatEntity.js';
 import { isPlayerEntity, getEntityRoomId } from './combatEntity.js';
-import { getAllNpcInstances, getNpcInstance, getNpcsInRoom, resetNpcBehaviorState } from './npcManager.js';
+import { getAllNpcInstances, getNpcInstance, getNpcsInRoom, resetNpcBehaviorState, getWorldRef } from './npcManager.js';
 import type { NpcCombatInstance } from './npcManager.js';
 import { processNpcBehavior } from './npcBehavior.js';
 import { setSpellCooldown } from './npcSpellAI.js';
@@ -33,7 +33,8 @@ import {
   toRuntimeConfig,
   DEFAULT_RUNTIME_CONFIG,
 } from './combatCalculations.js';
-import { getCombatSettings } from '../db/repositories/settingsRepository.js';
+import { getCombatSettings, getBlindAccuracyPenalty } from '../db/repositories/settingsRepository.js';
+import { entityCanSee } from './vision.js';
 import { clearCombatState, breakCasterCombat } from './combatCommands.js';
 import {
   applyDamage,
@@ -162,6 +163,17 @@ export function spellCastSucceeds(castDifficulty: number, spellcastingAbility: n
   const threshold = castDifficulty - spellcastingAbility;
   if (threshold <= 0) return true; // spellcasting exceeds difficulty
   return roll >= threshold;
+}
+
+/**
+ * Get room darkness level from world reference.
+ * Returns 0 (bright) if world or room not found.
+ */
+function getRoomDarkness(roomId: number): number {
+  const world = getWorldRef();
+  if (!world) return 0;
+  const room = world.getRoom(roomId);
+  return room?.darkness_level ?? 0;
 }
 
 const DEFAULT_COMBAT_ROUND_MS = 4000;
@@ -345,6 +357,14 @@ async function processSpellCombat(
     return false;
   }
 
+  // Vision check: targeted offensive spells fail when caster can't see.
+  // Self-buffs are cast via spellCommands.ts handleBuffSpell() and bypass this check.
+  const spellRoomDarkness = getRoomDarkness(attackerRoomId);
+  if (!await entityCanSee(attacker, spellRoomDarkness)) {
+    sendCombatMessage(attacker, MessageType.OUTPUT, colors.red('You can\'t see well enough to target your spell!'));
+    return true; // combat continues but spell does nothing this round (mana NOT consumed)
+  }
+
   // Deduct mana
   attacker.vitals.resource = (attacker.vitals.resource ?? 0) - spell.manaCost;
   sendEntityVitals(attacker);
@@ -510,6 +530,11 @@ async function processAttackerCombat(
   const energyMultiplier = 1 + (attackerStats.effectModifiers.energyModifier / 100);
   const roundEnergy = Math.floor(calculateRoundEnergy(energyFactors, combatConfig) * energyMultiplier);
 
+  // Determine if attacker can see (room darkness + effective vision)
+  const attackerRoomDarkness = getRoomDarkness(getEntityRoomId(attacker));
+  const attackerCanSee = await entityCanSee(attacker, attackerRoomDarkness);
+  const blindPenaltyValue = !attackerCanSee ? await getBlindAccuracyPenalty() : undefined;
+
   // Calculate attacker's accuracy with equipment and status effect bonuses
   const accuracyFactors = {
     characterLevel: attacker.characterLevel,
@@ -520,7 +545,8 @@ async function processAttackerCombat(
     equipmentBonus: attackerStats.equipmentAccuracyBonus,
     spellModifier: attackerStats.effectModifiers.accuracyModifier,
     encumbrancePenalty: attackerStats.encumbranceRatio > 0.75 ? Math.floor((attackerStats.encumbranceRatio - 0.75) * 40) : 0,
-    isBlind: attackerStats.effectModifiers.isBlind,
+    isBlind: !attackerCanSee,
+    blindPenaltyValue,
   };
 
   const attackerAccuracy = calculateAccuracy(accuracyFactors, combatConfig);
@@ -1236,6 +1262,11 @@ async function processNpcAttackerCombat(
   const attack = selectNpcAttack(npc);
   if (!attack) return;
 
+  // Determine if NPC can see (room darkness + effective vision)
+  const npcRoomDarkness = getRoomDarkness(npcRoomId);
+  const npcCanSee = await entityCanSee(npc, npcRoomDarkness);
+  const npcBlindPenalty = !npcCanSee ? await getBlindAccuracyPenalty() : undefined;
+
   // Calculate NPC accuracy
   const accuracyFactors = {
     characterLevel: npc.characterLevel,
@@ -1246,7 +1277,8 @@ async function processNpcAttackerCombat(
     equipmentBonus: npc.template.baseAccuracy,
     spellModifier: npcStats.effectModifiers.accuracyModifier,
     encumbrancePenalty: 0,
-    isBlind: npcStats.effectModifiers.isBlind,
+    isBlind: !npcCanSee,
+    blindPenaltyValue: npcBlindPenalty,
   };
   const npcAccuracy = calculateAccuracy(accuracyFactors, combatConfig);
 
