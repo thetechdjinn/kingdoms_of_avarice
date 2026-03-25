@@ -589,6 +589,7 @@ function generateSectionFile(config: SectionConfig): string {
         description: \`${hw.description}\`,
         area: 'Arindale Sewer',
         terrain: 'underground',
+        darkness_level: -120,
       }`;
     }
 
@@ -604,6 +605,7 @@ function generateSectionFile(config: SectionConfig): string {
         description: ${descCall},
         area: 'Arindale Sewer',
         terrain: 'underground',
+        darkness_level: -120,
       }`;
   });
 

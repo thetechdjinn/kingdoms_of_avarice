@@ -20,6 +20,7 @@ export function getCentralHub(): DistrictData {
         description: `A large vaulted chamber where four major tunnels converge. Faint grey light filters down through a heavy iron grate far above — the town square, by the sound of cart wheels and voices overhead. The stonework is solid and well-maintained this close to the surface. Water channels run along the floor in all four directions, their flow steady and purposeful.`,
         area: 'Arindale Sewer',
         terrain: 'underground',
+        darkness_level: -120,
       },
       {
         tag: 'sewer_central_1',
@@ -27,6 +28,7 @@ export function getCentralHub(): DistrictData {
         description: desc('sewer_central_1'),
         area: 'Arindale Sewer',
         terrain: 'underground',
+        darkness_level: -120,
       },
       {
         tag: 'sewer_central_2',
@@ -34,6 +36,7 @@ export function getCentralHub(): DistrictData {
         description: desc('sewer_central_2'),
         area: 'Arindale Sewer',
         terrain: 'underground',
+        darkness_level: -120,
       },
       {
         tag: 'sewer_central_3',
@@ -41,6 +44,7 @@ export function getCentralHub(): DistrictData {
         description: desc('sewer_central_3'),
         area: 'Arindale Sewer',
         terrain: 'underground',
+        darkness_level: -120,
       },
       {
         tag: 'sewer_central_4',
@@ -48,6 +52,7 @@ export function getCentralHub(): DistrictData {
         description: desc('sewer_central_4'),
         area: 'Arindale Sewer',
         terrain: 'underground',
+        darkness_level: -120,
       },
       {
         tag: 'sewer_central_5',
@@ -55,6 +60,7 @@ export function getCentralHub(): DistrictData {
         description: desc('sewer_central_5'),
         area: 'Arindale Sewer',
         terrain: 'underground',
+        darkness_level: -120,
       },
       {
         tag: 'sewer_central_6',
@@ -62,6 +68,7 @@ export function getCentralHub(): DistrictData {
         description: desc('sewer_central_6'),
         area: 'Arindale Sewer',
         terrain: 'underground',
+        darkness_level: -120,
       },
       {
         tag: 'sewer_central_7',
@@ -69,6 +76,7 @@ export function getCentralHub(): DistrictData {
         description: desc('sewer_central_7'),
         area: 'Arindale Sewer',
         terrain: 'underground',
+        darkness_level: -120,
       },
       {
         tag: 'sewer_central_8',
@@ -76,6 +84,7 @@ export function getCentralHub(): DistrictData {
         description: desc('sewer_central_8'),
         area: 'Arindale Sewer',
         terrain: 'underground',
+        darkness_level: -120,
       },
       {
         tag: 'sewer_central_9',
@@ -83,6 +92,7 @@ export function getCentralHub(): DistrictData {
         description: desc('sewer_central_9'),
         area: 'Arindale Sewer',
         terrain: 'underground',
+        darkness_level: -120,
       },
     ],
 

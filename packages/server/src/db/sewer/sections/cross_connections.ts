@@ -19,6 +19,7 @@ export function getCrossConnections(): DistrictData {
         description: desc('sewer_cross_1'),
         area: 'Arindale Sewer',
         terrain: 'underground',
+        darkness_level: -120,
       },
       {
         tag: 'sewer_cross_2',
@@ -26,6 +27,7 @@ export function getCrossConnections(): DistrictData {
         description: desc('sewer_cross_2'),
         area: 'Arindale Sewer',
         terrain: 'underground',
+        darkness_level: -120,
       },
       {
         tag: 'sewer_cross_3',
@@ -33,6 +35,7 @@ export function getCrossConnections(): DistrictData {
         description: desc('sewer_cross_3'),
         area: 'Arindale Sewer',
         terrain: 'underground',
+        darkness_level: -120,
       },
       {
         tag: 'sewer_cross_4',
@@ -40,6 +43,7 @@ export function getCrossConnections(): DistrictData {
         description: desc('sewer_cross_4'),
         area: 'Arindale Sewer',
         terrain: 'underground',
+        darkness_level: -120,
       },
       {
         tag: 'sewer_cross_5',
@@ -47,6 +51,7 @@ export function getCrossConnections(): DistrictData {
         description: desc('sewer_cross_5'),
         area: 'Arindale Sewer',
         terrain: 'underground',
+        darkness_level: -120,
       },
       {
         tag: 'sewer_cross_6',
@@ -54,6 +59,7 @@ export function getCrossConnections(): DistrictData {
         description: desc('sewer_cross_6'),
         area: 'Arindale Sewer',
         terrain: 'underground',
+        darkness_level: -120,
       },
       {
         tag: 'sewer_cross_7',
@@ -61,6 +67,7 @@ export function getCrossConnections(): DistrictData {
         description: desc('sewer_cross_7'),
         area: 'Arindale Sewer',
         terrain: 'underground',
+        darkness_level: -120,
       },
       {
         tag: 'sewer_cross_8',
@@ -68,6 +75,7 @@ export function getCrossConnections(): DistrictData {
         description: desc('sewer_cross_8'),
         area: 'Arindale Sewer',
         terrain: 'underground',
+        darkness_level: -120,
       },
       {
         tag: 'sewer_cross_9',
@@ -75,6 +83,7 @@ export function getCrossConnections(): DistrictData {
         description: desc('sewer_cross_9'),
         area: 'Arindale Sewer',
         terrain: 'underground',
+        darkness_level: -120,
       },
       {
         tag: 'sewer_cross_10',
@@ -82,6 +91,7 @@ export function getCrossConnections(): DistrictData {
         description: desc('sewer_cross_10'),
         area: 'Arindale Sewer',
         terrain: 'underground',
+        darkness_level: -120,
       },
     ],
 

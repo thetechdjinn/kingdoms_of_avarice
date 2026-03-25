@@ -99,7 +99,7 @@ Example:
 ```
 @createrace orc_01 Orc
 @editrace orc_01 stats {"strength": 2, "constitution": 1, "intelligence": -2}
-@editrace orc_01 traits darkvision,intimidating
+@editrace orc_01 traits base_vision,intimidating
 @editrace orc_01 dodge_bonus 10
 ```
 

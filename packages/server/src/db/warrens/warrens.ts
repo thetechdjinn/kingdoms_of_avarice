@@ -34,7 +34,7 @@ function desc(section: 'passage' | 'scratched' | 'filthy' | 'deep', tag: string)
 }
 
 function room(tag: string, name: string, description: string) {
-  return { tag, name, description, area: AREA, terrain: TERRAIN };
+  return { tag, name, description, area: AREA, terrain: TERRAIN, darkness_level: -120 };
 }
 
 export function getWarrens(): DistrictData {

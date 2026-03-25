@@ -225,20 +225,21 @@ async function insertAll(
 
     for (let j = 0; j < batch.length; j++) {
       const r = batch[j];
-      const base = j * 6;
-      placeholders.push(`($${base + 1}, $${base + 2}, $${base + 3}, $${base + 4}, $${base + 5}, $${base + 6})`);
+      const base = j * 7;
+      placeholders.push(`($${base + 1}, $${base + 2}, $${base + 3}, $${base + 4}, $${base + 5}, $${base + 6}, $${base + 7})`);
       values.push(
         r.name,
         r.description,
         r.area ?? 'Arindale',
         r.terrain ?? 'indoor',
+        r.darkness_level ?? 0,
         JSON.stringify(r.features ?? {}),
         r.tag,
       );
     }
 
     const result = await client.query(
-      `INSERT INTO rooms (name, description, area, terrain, features, tag)
+      `INSERT INTO rooms (name, description, area, terrain, darkness_level, features, tag)
        VALUES ${placeholders.join(', ')}
        RETURNING id`,
       values

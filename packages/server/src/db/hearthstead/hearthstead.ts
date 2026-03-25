@@ -98,6 +98,7 @@ function caveRoom(tag: string) {
     description: maybeAddDetail(hearthsteadDescription('cave', tag), tag, 'cave'),
     area: AREA_WILDS,
     terrain: 'underground',
+    darkness_level: -120,
   };
 }
 
@@ -385,6 +386,7 @@ export function getHearthstead(): DistrictData {
         description: `A foul-smelling chamber littered with crude furnishings. A pile of stained rags serves as a bed, a collection of stolen trinkets is heaped in one corner, and gnawed bones are scattered across the floor. The walls are smeared with filth and scratched with crude markings. The air is thick with the stench of unwashed goblin and rotten food. Something has been living here for a long time, and it has no intention of sharing.`,
         area: AREA_WILDS,
         terrain: 'underground',
+        darkness_level: -120,
       },
 
       // --- Bone-Littered Burrow (boss) ---
@@ -394,6 +396,7 @@ export function getHearthstead(): DistrictData {
         description: `A large natural chamber at the deepest point of the cave. The floor is carpeted with a nest of shredded bark, matted fur, and bones, the accumulated debris of a large predator's den. The walls bear deep gouges from massive claws. A strange, dark growth clings to the stone in patches, pulsing faintly with a sickly luminescence. The air is thick with animal musk and a sweet, rotten smell that makes the eyes water. Whatever lives here is large, aggressive, and very ill.`,
         area: AREA_WILDS,
         terrain: 'underground',
+        darkness_level: -120,
       },
     ],
 

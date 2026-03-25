@@ -522,8 +522,8 @@
       },
       "max_stack": 1,
       "light_data": {
-        "radius": 2,
-        "fuel_max": 60,
+        "vision_bonus": 100,
+        "fuel_max": 180,
         "fuel_rate": 1
       },
       "stealth_modifier": 0,
@@ -550,8 +550,8 @@
       },
       "max_stack": 1,
       "light_data": {
-        "radius": 3,
-        "fuel_max": 120,
+        "vision_bonus": 175,
+        "fuel_max": 720,
         "fuel_rate": 1
       },
       "stealth_modifier": 0,
