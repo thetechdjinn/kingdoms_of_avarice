@@ -1093,6 +1093,11 @@ export async function runMigrations(): Promise<void> {
         console.log('  Migrated race traits: night_vision/dark_vision → base_vision');
       }
 
+      // Add is_lit column to item_instances
+      await client.query(`
+        ALTER TABLE item_instances ADD COLUMN IF NOT EXISTS is_lit BOOLEAN DEFAULT FALSE
+      `);
+
       // One-time: set darkness_level = -120 on underground/dark rooms
       const darknessMigDone = await client.query(
         `SELECT 1 FROM game_settings WHERE key = 'migration_room_darkness' LIMIT 1`

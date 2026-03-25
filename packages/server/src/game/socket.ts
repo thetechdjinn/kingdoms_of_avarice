@@ -38,6 +38,7 @@ import { cleanupBroadcastMembership } from './socialCommands.js';
 import { cleanupPlayerGroup } from './groupManager.js';
 import { clearHaggleState } from './merchantCommands.js';
 import { initializeQuestManager } from './questManager.js';
+import { calculateEffectiveVision, canSee as canSeeVision, getDarknessTag, getBlindMessage } from './vision.js';
 
 interface AuthenticatedSocket extends WebSocket {
   playerId: number;
@@ -508,7 +509,14 @@ export function setupGameSocket(wss: WebSocketServer): void {
       } catch (err) {
         console.error('Failed to get room items:', err);
       }
-      sendMessage(authWs, MessageType.OUTPUT, gameWorld.formatRoomDescription(room, otherPlayers, authWs.briefMode, itemDescriptions, npcNames));
+      // Vision check for login room display
+      const loginVision = await calculateEffectiveVision(authWs);
+      if (!canSeeVision(loginVision, room.darkness_level)) {
+        sendMessage(authWs, MessageType.OUTPUT, getBlindMessage(room.darkness_level));
+      } else {
+        const darknessTag = getDarknessTag(room.darkness_level);
+        sendMessage(authWs, MessageType.OUTPUT, gameWorld.formatRoomDescription(room, otherPlayers, authWs.briefMode, itemDescriptions, npcNames, darknessTag));
+      }
     }
 
     // Send initial vitals

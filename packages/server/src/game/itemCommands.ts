@@ -897,7 +897,8 @@ export async function handleInventory(
 export async function handleExamine(
   socket: AuthenticatedSocket,
   args: string[],
-  currentRoomId: number
+  currentRoomId: number,
+  canSeeRoom: boolean = true
 ): Promise<CommandResponse> {
   const charError = requireCharacter(socket);
   if (charError) return charError;
@@ -923,8 +924,11 @@ export async function handleExamine(
     });
   }
 
-  // If not in inventory or equipped, check room
+  // If not in inventory or equipped, check room (requires sight)
   if (matches.length === 0) {
+    if (!canSeeRoom) {
+      return { type: MessageType.ERROR, message: `You can't see anything in the darkness!` };
+    }
     matches = await itemRepo.findItemsInRoomByKeyword(currentRoomId, keyword);
   }
 
@@ -1845,23 +1849,23 @@ export async function handleLight(
     return { type: MessageType.ERROR, message: `You can't light that.` };
   }
 
-  // Check if already lit (fuel_remaining > 0 for consumable lights, -1 for permanent lights)
-  if (item.fuel_remaining !== undefined && item.fuel_remaining !== 0) {
+  // Check if already lit
+  if (item.is_lit) {
     return { type: MessageType.ERROR, message: `It's already lit.` };
   }
 
   // Check if it has fuel (for items with fuel_max)
   if (lightData.fuel_max !== undefined) {
-    // Initialize fuel if not set
+    // Initialize fuel on first light, or resume from remaining fuel
     const fuelToSet = item.fuel_remaining ?? lightData.fuel_max;
     if (fuelToSet <= 0) {
       return { type: MessageType.ERROR, message: `It's out of fuel.` };
     }
     await itemRepo.updateInstanceFuel(item.id, fuelToSet);
-  } else {
-    // Permanent light source - set fuel to -1 to indicate "lit"
-    await itemRepo.updateInstanceFuel(item.id, -1);
   }
+
+  // Mark as lit
+  await itemRepo.updateInstanceLitState(item.id, true);
 
   const itemName = template.name;
   broadcastToRoom(currentRoomId, `${socket.username} lights ${itemName}.`, socket.playerId);
@@ -1902,19 +1906,12 @@ export async function handleExtinguish(
   }
 
   // Check if it's lit
-  if (item.fuel_remaining === undefined || item.fuel_remaining === 0) {
+  if (!item.is_lit) {
     return { type: MessageType.ERROR, message: `It's not lit.` };
   }
 
-  // Extinguish - set fuel to 0 (preserving remaining fuel would require different tracking)
-  // For now, extinguishing a torch uses it up
-  if (template.light_data?.fuel_max !== undefined) {
-    // Consumable light - set to 0
-    await itemRepo.updateInstanceFuel(item.id, 0);
-  } else {
-    // Permanent light - just turn off
-    await itemRepo.updateInstanceFuel(item.id, 0);
-  }
+  // Mark as unlit - fuel_remaining is preserved for relighting
+  await itemRepo.updateInstanceLitState(item.id, false);
 
   const itemName = template.name;
   broadcastToRoom(currentRoomId, `${socket.username} extinguishes ${itemName}.`, socket.playerId);

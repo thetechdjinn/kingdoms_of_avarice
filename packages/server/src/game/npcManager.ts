@@ -21,6 +21,7 @@ import * as merchantRepo from '../db/repositories/merchantRepository.js';
 import { processNpcEffectsTick, getEffectDefinition } from './statusEffects.js';
 import * as merchantResponseRepo from '../db/repositories/merchantResponseRepository.js';
 import type { MerchantResponse } from '@koa/shared';
+import { calculateNpcEffectiveVision, canSee } from './vision.js';
 
 // Lazy world reference for NPC movement (flee, return, roam)
 let worldRef: GameWorld | null = null;
@@ -651,6 +652,17 @@ function initiateAggro(npc: NpcCombatInstance, player: CombatEntity, roomId: num
 }
 
 /**
+ * Check if an NPC can see in a given room based on its vision vs room darkness.
+ */
+function canNpcSeeInRoom(npc: NpcCombatInstance, roomId: number): boolean {
+  if (!worldRef) return true;
+  const room = worldRef.getRoom(roomId);
+  if (!room) return true;
+  const npcVision = calculateNpcEffectiveVision(npc);
+  return canSee(npcVision, room.darkness_level);
+}
+
+/**
  * Check all players in an NPC's room for aggro (reverse of checkHostileAggro).
  * Called internally after an NPC roams into a room or respawns.
  */
@@ -660,6 +672,8 @@ function checkNpcAggroOnArrival(npc: NpcCombatInstance): void {
   if (npc.vitals.hp <= 0) return;
   if (npc.combatState.targets.size > 0) return;
   if (npc.behaviorState === 'fleeing' || npc.behaviorState === 'returning') return;
+
+  if (!canNpcSeeInRoom(npc, npc.currentRoomId)) return;
 
   for (const player of connectedPlayersRef.values()) {
     const playerRoomId = getEntityRoomId(player);
@@ -826,6 +840,9 @@ export function checkHostileAggro(
     if (npc.combatState.targets.size > 0) continue;
     if (npc.vitals.hp <= 0) continue;
     if (npc.behaviorState === 'fleeing' || npc.behaviorState === 'returning') continue;
+
+    // Skip if NPC can't see in this room's darkness
+    if (!canNpcSeeInRoom(npc, roomId)) continue;
 
     // Determine if this NPC should aggro: either naturally hostile,
     // or a merchant that was previously attacked by this player

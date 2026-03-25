@@ -79,6 +79,7 @@ interface DbItemInstance {
   condition: string;
   charges_remaining: number | null;
   fuel_remaining: number | null;
+  is_lit: boolean;
   custom_data: ItemCustomData;
   created_at: Date;
   updated_at: Date;
@@ -175,6 +176,7 @@ function dbToInstance(row: DbItemInstance, template?: ItemTemplate): ItemInstanc
     condition: row.condition as ItemCondition,
     charges_remaining: row.charges_remaining ?? undefined,
     fuel_remaining: row.fuel_remaining ?? undefined,
+    is_lit: row.is_lit || false,
     custom_data: row.custom_data,
   };
 }
@@ -493,6 +495,7 @@ export interface CreateInstanceInput {
   condition?: ItemCondition;
   charges_remaining?: number;
   fuel_remaining?: number;
+  is_lit?: boolean;
   custom_data?: ItemCustomData;
 }
 
@@ -512,8 +515,8 @@ export async function createInstance(input: CreateInstanceInput, client?: pg.Poo
   const result = await query<DbItemInstance>(
     `INSERT INTO item_instances (
       template_id, location_type, location_id, equipped_slot,
-      quantity, condition, charges_remaining, fuel_remaining, custom_data
-    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+      quantity, condition, charges_remaining, fuel_remaining, is_lit, custom_data
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
     RETURNING *`,
     [
       input.template_id,
@@ -524,6 +527,7 @@ export async function createInstance(input: CreateInstanceInput, client?: pg.Poo
       input.condition ?? ItemCondition.PRISTINE,
       input.charges_remaining ?? null,
       input.fuel_remaining ?? null,
+      input.is_lit ?? false,
       JSON.stringify(input.custom_data ?? {}),
     ],
     client
@@ -791,6 +795,19 @@ export async function updateInstanceFuel(
      SET fuel_remaining = $1, updated_at = CURRENT_TIMESTAMP
      WHERE id = $2`,
     [fuel, instanceId]
+  );
+  return (result.rowCount ?? 0) > 0;
+}
+
+export async function updateInstanceLitState(
+  instanceId: number,
+  isLit: boolean
+): Promise<boolean> {
+  const result = await query(
+    `UPDATE item_instances
+     SET is_lit = $1, updated_at = CURRENT_TIMESTAMP
+     WHERE id = $2`,
+    [isLit, instanceId]
   );
   return (result.rowCount ?? 0) > 0;
 }
