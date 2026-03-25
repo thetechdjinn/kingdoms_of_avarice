@@ -22,6 +22,7 @@ export function getEastTunnels(): DistrictData {
         description: `The tunnel wall has been chewed and clawed through here, creating a ragged opening just large enough to crawl through. The edges of the hole are smooth with use, and the stench emanating from beyond is overwhelming — a concentrated reek of animal filth, matted fur, and rotting food. Faint squeaking and scratching sounds echo from the dark passage beyond.`,
         area: 'Arindale Sewer',
         terrain: 'underground',
+        darkness_level: -120,
       },
       {
         tag: 'sewer_east_junction',
@@ -29,6 +30,7 @@ export function getEastTunnels(): DistrictData {
         description: `A junction where the main sewer line meets tunnels that run beneath the cathedral and garrison districts. The construction is heavy here — thick stone walls and a low vaulted ceiling that bears the weight of the city's most massive buildings. A cold draft pushes through from the south.`,
         area: 'Arindale Sewer',
         terrain: 'underground',
+        darkness_level: -120,
       },
       {
         tag: 'sewer_east_hub',
@@ -36,6 +38,7 @@ export function getEastTunnels(): DistrictData {
         description: `A sturdy tunnel beneath the garrison district. The weight of the military buildings above is evident in the massive stone blocks that form the walls. A shaft of dim light falls from a heavy manhole cover overhead, barely illuminating the passage. The air is dry and cold.`,
         area: 'Arindale Sewer',
         terrain: 'underground',
+        darkness_level: -120,
       },
       {
         tag: 'sewer_east_1',
@@ -43,6 +46,7 @@ export function getEastTunnels(): DistrictData {
         description: desc('sewer_east_1'),
         area: 'Arindale Sewer',
         terrain: 'underground',
+        darkness_level: -120,
       },
       {
         tag: 'sewer_east_2',
@@ -50,6 +54,7 @@ export function getEastTunnels(): DistrictData {
         description: desc('sewer_east_2'),
         area: 'Arindale Sewer',
         terrain: 'underground',
+        darkness_level: -120,
       },
       {
         tag: 'sewer_east_3',
@@ -57,6 +62,7 @@ export function getEastTunnels(): DistrictData {
         description: desc('sewer_east_3'),
         area: 'Arindale Sewer',
         terrain: 'underground',
+        darkness_level: -120,
       },
       {
         tag: 'sewer_east_4',
@@ -64,6 +70,7 @@ export function getEastTunnels(): DistrictData {
         description: desc('sewer_east_4'),
         area: 'Arindale Sewer',
         terrain: 'underground',
+        darkness_level: -120,
       },
       {
         tag: 'sewer_east_5',
@@ -71,6 +78,7 @@ export function getEastTunnels(): DistrictData {
         description: desc('sewer_east_5'),
         area: 'Arindale Sewer',
         terrain: 'underground',
+        darkness_level: -120,
       },
       {
         tag: 'sewer_east_6',
@@ -78,6 +86,7 @@ export function getEastTunnels(): DistrictData {
         description: desc('sewer_east_6'),
         area: 'Arindale Sewer',
         terrain: 'underground',
+        darkness_level: -120,
       },
       {
         tag: 'sewer_east_7',
@@ -85,6 +94,7 @@ export function getEastTunnels(): DistrictData {
         description: desc('sewer_east_7'),
         area: 'Arindale Sewer',
         terrain: 'underground',
+        darkness_level: -120,
       },
       {
         tag: 'sewer_east_8',
@@ -92,6 +102,7 @@ export function getEastTunnels(): DistrictData {
         description: desc('sewer_east_8'),
         area: 'Arindale Sewer',
         terrain: 'underground',
+        darkness_level: -120,
       },
       {
         tag: 'sewer_east_9',
@@ -99,6 +110,7 @@ export function getEastTunnels(): DistrictData {
         description: desc('sewer_east_9'),
         area: 'Arindale Sewer',
         terrain: 'underground',
+        darkness_level: -120,
       },
       {
         tag: 'sewer_east_10',
@@ -106,6 +118,7 @@ export function getEastTunnels(): DistrictData {
         description: desc('sewer_east_10'),
         area: 'Arindale Sewer',
         terrain: 'underground',
+        darkness_level: -120,
       },
       {
         tag: 'sewer_east_11',
@@ -113,6 +126,7 @@ export function getEastTunnels(): DistrictData {
         description: desc('sewer_east_11'),
         area: 'Arindale Sewer',
         terrain: 'underground',
+        darkness_level: -120,
       },
       {
         tag: 'sewer_east_12',
@@ -120,6 +134,7 @@ export function getEastTunnels(): DistrictData {
         description: desc('sewer_east_12'),
         area: 'Arindale Sewer',
         terrain: 'underground',
+        darkness_level: -120,
       },
       {
         tag: 'sewer_east_13',
@@ -127,6 +142,7 @@ export function getEastTunnels(): DistrictData {
         description: desc('sewer_east_13'),
         area: 'Arindale Sewer',
         terrain: 'underground',
+        darkness_level: -120,
       },
       {
         tag: 'sewer_east_14',
@@ -134,6 +150,7 @@ export function getEastTunnels(): DistrictData {
         description: desc('sewer_east_14'),
         area: 'Arindale Sewer',
         terrain: 'underground',
+        darkness_level: -120,
       },
       {
         tag: 'sewer_east_15',
@@ -141,6 +158,7 @@ export function getEastTunnels(): DistrictData {
         description: desc('sewer_east_15'),
         area: 'Arindale Sewer',
         terrain: 'underground',
+        darkness_level: -120,
       },
       {
         tag: 'sewer_east_16',
@@ -148,6 +166,7 @@ export function getEastTunnels(): DistrictData {
         description: desc('sewer_east_16'),
         area: 'Arindale Sewer',
         terrain: 'underground',
+        darkness_level: -120,
       },
       {
         tag: 'sewer_east_crack',
@@ -155,6 +174,7 @@ export function getEastTunnels(): DistrictData {
         description: `A jagged crack splits the tunnel wall here, running from floor to ceiling through ancient stonework. The gap is just wide enough for a person to squeeze through sideways. A cold, still breeze pushes through from the other side, carrying a faint otherworldly chill — the unmistakable breath of the dead. Faint pale light glows beyond the crack.`,
         area: 'Arindale Sewer',
         terrain: 'underground',
+        darkness_level: -120,
       },
       {
         tag: 'sewer_east_17',
@@ -162,6 +182,7 @@ export function getEastTunnels(): DistrictData {
         description: desc('sewer_east_17'),
         area: 'Arindale Sewer',
         terrain: 'underground',
+        darkness_level: -120,
       },
       {
         tag: 'sewer_east_18',
@@ -169,6 +190,7 @@ export function getEastTunnels(): DistrictData {
         description: desc('sewer_east_18'),
         area: 'Arindale Sewer',
         terrain: 'underground',
+        darkness_level: -120,
       },
       {
         tag: 'sewer_east_19',
@@ -176,6 +198,7 @@ export function getEastTunnels(): DistrictData {
         description: desc('sewer_east_19'),
         area: 'Arindale Sewer',
         terrain: 'underground',
+        darkness_level: -120,
       },
       {
         tag: 'sewer_east_20',
@@ -183,6 +206,7 @@ export function getEastTunnels(): DistrictData {
         description: desc('sewer_east_20'),
         area: 'Arindale Sewer',
         terrain: 'underground',
+        darkness_level: -120,
       },
       {
         tag: 'sewer_east_21',
@@ -190,6 +214,7 @@ export function getEastTunnels(): DistrictData {
         description: desc('sewer_east_21'),
         area: 'Arindale Sewer',
         terrain: 'underground',
+        darkness_level: -120,
       },
       {
         tag: 'sewer_east_22',
@@ -197,6 +222,7 @@ export function getEastTunnels(): DistrictData {
         description: desc('sewer_east_22'),
         area: 'Arindale Sewer',
         terrain: 'underground',
+        darkness_level: -120,
       },
       {
         tag: 'sewer_east_23',
@@ -204,6 +230,7 @@ export function getEastTunnels(): DistrictData {
         description: desc('sewer_east_23'),
         area: 'Arindale Sewer',
         terrain: 'underground',
+        darkness_level: -120,
       },
       {
         tag: 'sewer_east_24',
@@ -211,6 +238,7 @@ export function getEastTunnels(): DistrictData {
         description: desc('sewer_east_24'),
         area: 'Arindale Sewer',
         terrain: 'underground',
+        darkness_level: -120,
       },
       {
         tag: 'sewer_east_25',
@@ -218,6 +246,7 @@ export function getEastTunnels(): DistrictData {
         description: desc('sewer_east_25'),
         area: 'Arindale Sewer',
         terrain: 'underground',
+        darkness_level: -120,
       },
       {
         tag: 'sewer_east_26',
@@ -225,6 +254,7 @@ export function getEastTunnels(): DistrictData {
         description: desc('sewer_east_26'),
         area: 'Arindale Sewer',
         terrain: 'underground',
+        darkness_level: -120,
       },
       {
         tag: 'sewer_east_27',
@@ -232,6 +262,7 @@ export function getEastTunnels(): DistrictData {
         description: desc('sewer_east_27'),
         area: 'Arindale Sewer',
         terrain: 'underground',
+        darkness_level: -120,
       },
     ],
 

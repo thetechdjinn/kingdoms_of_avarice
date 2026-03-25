@@ -5,8 +5,9 @@ export interface RoomDef {
   tag: string;
   name: string;
   description: string;
-  area?: string;       // defaults to 'Arindale'
-  terrain?: string;    // defaults to 'indoor'
+  area?: string;             // defaults to 'Arindale'
+  terrain?: string;          // defaults to 'indoor'
+  darkness_level?: number;   // 0 to -500, defaults to 0
   features?: Record<string, unknown>;
 }
 

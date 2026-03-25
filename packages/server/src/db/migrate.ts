@@ -1055,6 +1055,72 @@ export async function runMigrations(): Promise<void> {
         ALTER TABLE npcs ADD COLUMN IF NOT EXISTS vision_level INTEGER DEFAULT 100
       `);
 
+      // One-time: consolidate night_vision/dark_vision → base_vision on race_definitions
+      const visionMigDone = await client.query(
+        `SELECT 1 FROM game_settings WHERE key = 'migration_race_base_vision' LIMIT 1`
+      );
+      if (visionMigDone.rows.length === 0) {
+        // Map night_vision/dark_vision values to base_vision values per race
+        const visionMap: Record<string, number> = {
+          human: 100, half_elf: 100, halfling: 100, half_ogre: 100, kang: 100,
+          elf: 150, dark_elf: 150, half_orc: 150, nekojin: 150, goblin: 150,
+          dwarf: 170, gnome: 170,
+          gaunt_one: 200,
+        };
+        for (const [raceId, value] of Object.entries(visionMap)) {
+          // Remove night_vision and dark_vision traits, add base_vision if not present
+          await client.query(`
+            UPDATE race_definitions
+            SET traits = (
+              SELECT COALESCE(jsonb_agg(elem), '[]'::jsonb)
+              FROM jsonb_array_elements(traits::jsonb) AS elem
+              WHERE elem->>'id' NOT IN ('night_vision', 'dark_vision')
+            )
+            WHERE race_id = $1
+              AND (traits @> '[{"id": "night_vision"}]'::jsonb OR traits @> '[{"id": "dark_vision"}]'::jsonb)
+          `, [raceId]);
+          // Add base_vision if missing
+          await client.query(`
+            UPDATE race_definitions
+            SET traits = traits::jsonb || $1::jsonb
+            WHERE race_id = $2
+              AND NOT traits::jsonb @> '[{"id": "base_vision"}]'::jsonb
+          `, [JSON.stringify([{ id: 'base_vision', value }]), raceId]);
+        }
+        await client.query(
+          `INSERT INTO game_settings (key, value) VALUES ('migration_race_base_vision', '"done"')`
+        );
+        console.log('  Migrated race traits: night_vision/dark_vision → base_vision');
+      }
+
+      // One-time: set darkness_level = -120 on underground/dark rooms
+      const darknessMigDone = await client.query(
+        `SELECT 1 FROM game_settings WHERE key = 'migration_room_darkness' LIMIT 1`
+      );
+      if (darknessMigDone.rows.length === 0) {
+        await client.query(`
+          UPDATE rooms SET darkness_level = -120
+          WHERE darkness_level = 0
+            AND (
+              area IN (
+                'Arindale Sewer',
+                'Warrens of Filth',
+                'The Iridescent Menagerie',
+                'Sanctum of the Damned',
+                'The Thieves Guild',
+                'Hearthstead Wilds'
+              )
+              OR tag LIKE 'cathedral_crypt_%'
+              OR tag = 'cathedral_halls_dead'
+            )
+            AND (terrain = 'underground' OR tag LIKE 'cathedral_crypt_%' OR tag = 'cathedral_halls_dead')
+        `);
+        await client.query(
+          `INSERT INTO game_settings (key, value) VALUES ('migration_room_darkness', '"done"')`
+        );
+        console.log('  Set darkness_level = -120 on underground rooms');
+      }
+
     });
 
     console.log('Database migrations completed successfully');

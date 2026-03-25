@@ -12,7 +12,9 @@
       "wisdom": { "min": 40, "max": 100 },
       "charisma": { "min": 40, "max": 100 }
     },
-    "traits": [],
+    "traits": [
+      { "id": "base_vision", "value": 100 }
+    ],
     "allowed_classes": []
   },
   {
@@ -29,8 +31,8 @@
       "charisma": { "min": 50, "max": 120 }
     },
     "traits": [
+      { "id": "base_vision", "value": 150 },
       { "id": "mana_bonus", "value": 10 },
-      { "id": "night_vision", "value": 50 },
       { "id": "stealth", "value": true }
     ],
     "allowed_classes": []
@@ -50,8 +52,8 @@
     },
     "traits": [
       { "id": "accuracy_bonus", "value": 3 },
+      { "id": "base_vision", "value": 150 },
       { "id": "crit_bonus", "value": 1 },
-      { "id": "night_vision", "value": 80 },
       { "id": "stealth", "value": true }
     ],
     "allowed_classes": []
@@ -70,9 +72,9 @@
       "charisma": { "min": 30, "max": 85 }
     },
     "traits": [
+      { "id": "base_vision", "value": 170 },
       { "id": "encumbrance_bonus", "value": 20 },
-      { "id": "magic_resist", "value": 10 },
-      { "id": "night_vision", "value": 75 }
+      { "id": "magic_resist", "value": 10 }
     ],
     "allowed_classes": []
   },
@@ -90,9 +92,9 @@
       "charisma": { "min": 35, "max": 90 }
     },
     "traits": [
-      { "id": "magic_resist", "value": 5 },
-      { "id": "night_vision", "value": 65 },
-      { "id": "lockpicking", "value": 1 }
+      { "id": "base_vision", "value": 170 },
+      { "id": "lockpicking", "value": 1 },
+      { "id": "magic_resist", "value": 5 }
     ],
     "allowed_classes": []
   },
@@ -111,6 +113,7 @@
       "charisma": { "min": 40, "max": 100 }
     },
     "traits": [
+      { "id": "base_vision", "value": 100 },
       { "id": "hp_per_level", "value": -1 },
       { "id": "stealth", "value": true }
     ],
@@ -130,8 +133,8 @@
       "charisma": { "min": 50, "max": 110 }
     },
     "traits": [
-      { "id": "mana_bonus", "value": 10 },
-      { "id": "night_vision", "value": 25 }
+      { "id": "base_vision", "value": 100 },
+      { "id": "mana_bonus", "value": 10 }
     ],
     "allowed_classes": []
   },
@@ -148,7 +151,9 @@
       "wisdom": { "min": 30, "max": 95 },
       "charisma": { "min": 30, "max": 80 }
     },
-    "traits": [],
+    "traits": [
+      { "id": "base_vision", "value": 150 }
+    ],
     "allowed_classes": []
   },
   {
@@ -165,9 +170,10 @@
       "charisma": { "min": 25, "max": 60 }
     },
     "traits": [
+      { "id": "ac_bonus", "value": 2 },
+      { "id": "base_vision", "value": 100 },
       { "id": "hp_per_level", "value": 1 },
       { "id": "magic_resist", "value": 15 },
-      { "id": "ac_bonus", "value": 2 },
       { "id": "no_kai", "value": true }
     ],
     "allowed_classes": []
@@ -186,7 +192,7 @@
       "charisma": { "min": 40, "max": 100 }
     },
     "traits": [
-      { "id": "night_vision", "value": 65 },
+      { "id": "base_vision", "value": 150 },
       { "id": "stealth", "value": true }
     ],
     "allowed_classes": []
@@ -206,6 +212,7 @@
     },
     "traits": [
       { "id": "ac_bonus", "value": 5 },
+      { "id": "base_vision", "value": 100 },
       { "id": "poison_immunity", "value": true }
     ],
     "allowed_classes": []
@@ -224,9 +231,9 @@
       "charisma": { "min": 50, "max": 110 }
     },
     "traits": [
+      { "id": "base_vision", "value": 150 },
       { "id": "cold_resist", "value": -10 },
       { "id": "fire_resist", "value": 10 },
-      { "id": "night_vision", "value": 50 },
       { "id": "stealth", "value": true },
       { "id": "tracking", "value": 10 }
     ],
@@ -246,7 +253,7 @@
       "charisma": { "min": 30, "max": 80 }
     },
     "traits": [
-      { "id": "dark_vision", "value": 200 },
+      { "id": "base_vision", "value": 200 },
       { "id": "perception", "value": 10 },
       { "id": "see_hidden", "value": true }
     ],

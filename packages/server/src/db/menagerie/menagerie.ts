@@ -34,7 +34,7 @@ function desc(section: MenagerieSection, tag: string): string {
 }
 
 function room(tag: string, name: string, description: string) {
-  return { tag, name, description, area: AREA, terrain: TERRAIN };
+  return { tag, name, description, area: AREA, terrain: TERRAIN, darkness_level: -120 };
 }
 
 export function getIridescentMenagerie(): DistrictData {

@@ -73,7 +73,7 @@ export function getCathedralDistrict(): DistrictData {
       {
         tag: 'cathedral_holy_items',
         name: 'Holy Items Repository',
-        description: `Glass-fronted cabinets hold blessed items — vials of holy water, prayer beads of polished bone, and silver amulets bearing the marks of protection. A priest tends the displays, polishing each piece with a soft cloth.`,
+        description: `Glass-fronted cabinets hold blessed items: vials of holy water, prayer beads of polished bone, and silver amulets bearing the marks of protection. A priest tends the displays, polishing each piece with a soft cloth.`,
       },
 
       // Crypt
@@ -81,43 +81,59 @@ export function getCathedralDistrict(): DistrictData {
         tag: 'cathedral_crypt_stairs',
         name: 'Crypt Stairs',
         description: `Worn stone steps spiral downward into darkness. The air grows cold and still as the stairway descends. Torches in iron brackets light the way at long intervals, their flames barely flickering in the dead air.`,
+        terrain: 'underground',
+        darkness_level: -120,
       },
       {
         tag: 'cathedral_crypt_upper',
         name: 'Upper Crypt',
         description: `Stone sarcophagi rest in recessed alcoves along the walls of this underground chamber. The lids are carved with the likenesses of the interred, their hands folded over stone swords. Cobwebs bridge the gaps between the alcoves.`,
+        terrain: 'underground',
+        darkness_level: -120,
       },
       {
         tag: 'cathedral_crypt_passage',
         name: 'Crypt Passage',
         description: `A low-ceilinged passage runs between burial chambers. The walls are lined with niches holding dusty urns and faded name plaques. A cold draft stirs the air, carrying the scent of damp stone and old earth.`,
+        terrain: 'underground',
+        darkness_level: -120,
       },
       {
         tag: 'cathedral_crypt_chamber',
         name: 'Crypt Chamber',
         description: `A larger chamber opens at the junction of two passages. A cracked stone angel kneels at the center, its wings broken, its face turned upward. The names on the surrounding tombs are too worn to read.`,
+        terrain: 'underground',
+        darkness_level: -120,
       },
       {
         tag: 'cathedral_crypt_deep',
         name: 'Deep Crypt',
-        description: `The crypt grows darker and colder with each step. The stonework here is older, rougher — predating the cathedral above. A pool of candlewax has hardened on the floor where mourners once knelt.`,
+        description: `The crypt grows darker and colder with each step. The stonework here is older, rougher, predating the cathedral above. A pool of candlewax has hardened on the floor where mourners once knelt.`,
+        terrain: 'underground',
+        darkness_level: -120,
       },
       {
         tag: 'cathedral_crypt_alcove',
         name: 'Crypt Alcove',
         description: `A dead-end alcove holds a single ornate sarcophagus of black marble. Gold leaf traces a pattern of vines and thorns across its lid. The air is perfectly still, and the silence is absolute.`,
+        terrain: 'underground',
+        darkness_level: -120,
       },
       {
         tag: 'cathedral_crypt_descent',
         name: 'Crypt Descent',
         description: `A final set of stairs leads down from the deepest part of the crypt. The steps are carved from living rock, and the walls bear no decoration. A faint, otherworldly glow rises from below.`,
+        terrain: 'underground',
+        darkness_level: -120,
       },
 
       // Halls of the Dead — respawn room
       {
         tag: 'cathedral_halls_dead',
         name: 'Halls of the Dead',
-        description: `A vast subterranean hall stretches into dimness, its ceiling lost in shadow. Pale light emanates from the stone itself, casting no shadows. The air is neither warm nor cold, and all sound seems muffled, as if the world above has ceased to exist. A narrow stairway carved into the far wall leads back up toward the living city. In the eastern wall, a jagged crack runs from floor to ceiling — barely wide enough to squeeze through, but passable.`,
+        description: `A vast subterranean hall stretches into dimness, its ceiling lost in shadow. Pale light emanates from the stone itself, casting no shadows. The air is neither warm nor cold, and all sound seems muffled, as if the world above has ceased to exist. A narrow stairway carved into the far wall leads back up toward the living city. In the eastern wall, a jagged crack runs from floor to ceiling, barely wide enough to squeeze through but passable.`,
+        terrain: 'underground',
+        darkness_level: -120,
         features: { respawn: { enabled: true, priority: 0, servedAreas: ['Arindale'] } },
       },
     ],

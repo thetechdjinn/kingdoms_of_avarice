@@ -21,6 +21,7 @@ export function getWestTunnels(): DistrictData {
         description: `A wide tunnel beneath the market district. Faint light seeps down through a heavy iron manhole cover far above. The air carries an acrid chemical tang — runoff from the alchemist's and dyer's shops on the street above. The brickwork here is older than elsewhere in the sewer, patched and repatched over the years.`,
         area: 'Arindale Sewer',
         terrain: 'underground',
+        darkness_level: -120,
       },
       {
         tag: 'sewer_west_junction',
@@ -28,6 +29,7 @@ export function getWestTunnels(): DistrictData {
         description: `A junction chamber where older brick tunnels meet the main sewer line. The walls change character here — the standardized construction of the main passages giving way to rougher, older brickwork to the west. Chemical stains streak the stones in iridescent patterns.`,
         area: 'Arindale Sewer',
         terrain: 'underground',
+        darkness_level: -120,
       },
       {
         tag: 'sewer_west_1',
@@ -35,6 +37,7 @@ export function getWestTunnels(): DistrictData {
         description: desc('sewer_west_1'),
         area: 'Arindale Sewer',
         terrain: 'underground',
+        darkness_level: -120,
       },
       {
         tag: 'sewer_west_2',
@@ -42,6 +45,7 @@ export function getWestTunnels(): DistrictData {
         description: desc('sewer_west_2'),
         area: 'Arindale Sewer',
         terrain: 'underground',
+        darkness_level: -120,
       },
       {
         tag: 'sewer_west_3',
@@ -49,6 +53,7 @@ export function getWestTunnels(): DistrictData {
         description: desc('sewer_west_3'),
         area: 'Arindale Sewer',
         terrain: 'underground',
+        darkness_level: -120,
       },
       {
         tag: 'sewer_entrance_menagerie',
@@ -56,6 +61,7 @@ export function getWestTunnels(): DistrictData {
         description: `The tunnel wall here is streaked with brilliant iridescent stains that seem to pulse with a faint inner light. The air smells of chemicals and something else — something alive and strange. A section of the wall is subtly different from the surrounding brickwork, its mortar lines not quite matching. Behind it, a faint greenish glow leaks through hairline cracks.`,
         area: 'Arindale Sewer',
         terrain: 'underground',
+        darkness_level: -120,
       },
       {
         tag: 'sewer_west_4',
@@ -63,6 +69,7 @@ export function getWestTunnels(): DistrictData {
         description: desc('sewer_west_4'),
         area: 'Arindale Sewer',
         terrain: 'underground',
+        darkness_level: -120,
       },
       {
         tag: 'sewer_west_5',
@@ -70,6 +77,7 @@ export function getWestTunnels(): DistrictData {
         description: desc('sewer_west_5'),
         area: 'Arindale Sewer',
         terrain: 'underground',
+        darkness_level: -120,
       },
       {
         tag: 'sewer_west_6',
@@ -77,6 +85,7 @@ export function getWestTunnels(): DistrictData {
         description: desc('sewer_west_6'),
         area: 'Arindale Sewer',
         terrain: 'underground',
+        darkness_level: -120,
       },
       {
         tag: 'sewer_west_7',
@@ -84,6 +93,7 @@ export function getWestTunnels(): DistrictData {
         description: desc('sewer_west_7'),
         area: 'Arindale Sewer',
         terrain: 'underground',
+        darkness_level: -120,
       },
       {
         tag: 'sewer_west_8',
@@ -91,6 +101,7 @@ export function getWestTunnels(): DistrictData {
         description: desc('sewer_west_8'),
         area: 'Arindale Sewer',
         terrain: 'underground',
+        darkness_level: -120,
       },
       {
         tag: 'sewer_west_9',
@@ -98,6 +109,7 @@ export function getWestTunnels(): DistrictData {
         description: desc('sewer_west_9'),
         area: 'Arindale Sewer',
         terrain: 'underground',
+        darkness_level: -120,
       },
       {
         tag: 'sewer_west_10',
@@ -105,6 +117,7 @@ export function getWestTunnels(): DistrictData {
         description: desc('sewer_west_10'),
         area: 'Arindale Sewer',
         terrain: 'underground',
+        darkness_level: -120,
       },
     ],
 

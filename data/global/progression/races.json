@@ -39,12 +39,12 @@
           "value": 3
         },
         {
-          "id": "crit_bonus",
-          "value": 1
+          "id": "base_vision",
+          "value": 150
         },
         {
-          "id": "night_vision",
-          "value": 80
+          "id": "crit_bonus",
+          "value": 1
         },
         {
           "id": "stealth",
@@ -87,16 +87,16 @@
       },
       "traits": [
         {
+          "id": "base_vision",
+          "value": 170
+        },
+        {
           "id": "encumbrance_bonus",
           "value": 20
         },
         {
           "id": "magic_resist",
           "value": 10
-        },
-        {
-          "id": "night_vision",
-          "value": 75
         }
       ],
       "allowed_classes": [],
@@ -135,12 +135,12 @@
       },
       "traits": [
         {
-          "id": "mana_bonus",
-          "value": 10
+          "id": "base_vision",
+          "value": 150
         },
         {
-          "id": "night_vision",
-          "value": 50
+          "id": "mana_bonus",
+          "value": 10
         },
         {
           "id": "stealth",
@@ -183,7 +183,7 @@
       },
       "traits": [
         {
-          "id": "dark_vision",
+          "id": "base_vision",
           "value": 200
         },
         {
@@ -231,16 +231,16 @@
       },
       "traits": [
         {
+          "id": "base_vision",
+          "value": 170
+        },
+        {
+          "id": "lockpicking",
+          "value": 1
+        },
+        {
           "id": "magic_resist",
           "value": 5
-        },
-        {
-          "id": "night_vision",
-          "value": 65
-        },
-        {
-          "id": "picklocks",
-          "value": 10
         }
       ],
       "allowed_classes": [],
@@ -279,8 +279,8 @@
       },
       "traits": [
         {
-          "id": "night_vision",
-          "value": 65
+          "id": "base_vision",
+          "value": 150
         },
         {
           "id": "stealth",
@@ -323,12 +323,12 @@
       },
       "traits": [
         {
-          "id": "mana_bonus",
-          "value": 10
+          "id": "base_vision",
+          "value": 100
         },
         {
-          "id": "night_vision",
-          "value": 25
+          "id": "mana_bonus",
+          "value": 10
         }
       ],
       "allowed_classes": [],
@@ -366,6 +366,10 @@
         }
       },
       "traits": [
+        {
+          "id": "base_vision",
+          "value": 100
+        },
         {
           "id": "dodge_bonus",
           "value": 10
@@ -415,16 +419,20 @@
       },
       "traits": [
         {
+          "id": "ac_bonus",
+          "value": 2
+        },
+        {
+          "id": "base_vision",
+          "value": 100
+        },
+        {
           "id": "hp_per_level",
           "value": 1
         },
         {
           "id": "magic_resist",
           "value": 15
-        },
-        {
-          "id": "ac_bonus",
-          "value": 2
         },
         {
           "id": "no_kai",
@@ -465,7 +473,12 @@
           "min": 50
         }
       },
-      "traits": [],
+      "traits": [
+        {
+          "id": "base_vision",
+          "value": 150
+        }
+      ],
       "allowed_classes": [],
       "playable": true,
       "dodge_bonus": 0
@@ -500,7 +513,12 @@
           "min": 40
         }
       },
-      "traits": [],
+      "traits": [
+        {
+          "id": "base_vision",
+          "value": 100
+        }
+      ],
       "allowed_classes": [],
       "playable": true,
       "dodge_bonus": 0
@@ -539,6 +557,10 @@
         {
           "id": "ac_bonus",
           "value": 5
+        },
+        {
+          "id": "base_vision",
+          "value": 100
         },
         {
           "id": "poison_immunity",
@@ -581,16 +603,16 @@
       },
       "traits": [
         {
+          "id": "base_vision",
+          "value": 150
+        },
+        {
           "id": "cold_resist",
           "value": -10
         },
         {
           "id": "fire_resist",
           "value": 10
-        },
-        {
-          "id": "night_vision",
-          "value": 50
         },
         {
           "id": "stealth",

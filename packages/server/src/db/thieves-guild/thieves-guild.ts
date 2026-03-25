@@ -29,7 +29,7 @@ const AREA = 'The Thieves Guild';
 const TERRAIN = 'underground';
 
 function room(tag: string, name: string, description: string) {
-  return { tag, name, description, area: AREA, terrain: TERRAIN };
+  return { tag, name, description, area: AREA, terrain: TERRAIN, darkness_level: -120 };
 }
 
 export function getThievesGuild(): DistrictData {

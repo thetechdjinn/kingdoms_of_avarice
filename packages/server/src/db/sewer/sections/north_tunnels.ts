@@ -26,6 +26,7 @@ export function getNorthTunnels(): DistrictData {
         description: `The tunnel reaches its northern terminus near the city's harbor-side foundations. A heavy iron grate is set into a thick stone wall, beyond which a drainage channel slopes downward toward the waterfront. The faint sounds of the harbor — lapping waves, creaking hulls, distant gulls — filter through the rusted bars. The grate is solid despite its age, too strong to break through. A cold sea breeze pushes in, carrying the smell of brine and open air.`,
         area: 'Arindale Sewer',
         terrain: 'underground',
+        darkness_level: -120,
       },
       {
         tag: 'sewer_north_1',
@@ -33,6 +34,7 @@ export function getNorthTunnels(): DistrictData {
         description: desc('sewer_north_1'),
         area: 'Arindale Sewer',
         terrain: 'underground',
+        darkness_level: -120,
       },
       {
         tag: 'sewer_north_2',
@@ -40,6 +42,7 @@ export function getNorthTunnels(): DistrictData {
         description: desc('sewer_north_2'),
         area: 'Arindale Sewer',
         terrain: 'underground',
+        darkness_level: -120,
       },
       {
         tag: 'sewer_north_3',
@@ -47,6 +50,7 @@ export function getNorthTunnels(): DistrictData {
         description: desc('sewer_north_3'),
         area: 'Arindale Sewer',
         terrain: 'underground',
+        darkness_level: -120,
       },
       {
         tag: 'sewer_north_4',
@@ -54,6 +58,7 @@ export function getNorthTunnels(): DistrictData {
         description: desc('sewer_north_4'),
         area: 'Arindale Sewer',
         terrain: 'underground',
+        darkness_level: -120,
       },
       {
         tag: 'sewer_north_5',
@@ -61,6 +66,7 @@ export function getNorthTunnels(): DistrictData {
         description: desc('sewer_north_5'),
         area: 'Arindale Sewer',
         terrain: 'underground',
+        darkness_level: -120,
       },
       {
         tag: 'sewer_north_hub',
@@ -68,6 +74,7 @@ export function getNorthTunnels(): DistrictData {
         description: `A large junction chamber beneath the harbor district. Seawater seeps steadily through the walls, mixing with the sewer flow and filling the air with the smell of brine and rot. A vertical shaft leads up to a manhole on the street far above. Tunnels branch in all directions, their walls glistening with moisture in the dim light.`,
         area: 'Arindale Sewer',
         terrain: 'underground',
+        darkness_level: -120,
       },
       {
         tag: 'sewer_north_6',
@@ -75,6 +82,7 @@ export function getNorthTunnels(): DistrictData {
         description: desc('sewer_north_6'),
         area: 'Arindale Sewer',
         terrain: 'underground',
+        darkness_level: -120,
       },
       {
         tag: 'sewer_north_7',
@@ -82,6 +90,7 @@ export function getNorthTunnels(): DistrictData {
         description: desc('sewer_north_7'),
         area: 'Arindale Sewer',
         terrain: 'underground',
+        darkness_level: -120,
       },
       {
         tag: 'sewer_north_8',
@@ -89,6 +98,7 @@ export function getNorthTunnels(): DistrictData {
         description: desc('sewer_north_8'),
         area: 'Arindale Sewer',
         terrain: 'underground',
+        darkness_level: -120,
       },
       {
         tag: 'sewer_north_9',
@@ -96,6 +106,7 @@ export function getNorthTunnels(): DistrictData {
         description: desc('sewer_north_9'),
         area: 'Arindale Sewer',
         terrain: 'underground',
+        darkness_level: -120,
       },
       {
         tag: 'sewer_north_10',
@@ -103,6 +114,7 @@ export function getNorthTunnels(): DistrictData {
         description: desc('sewer_north_10'),
         area: 'Arindale Sewer',
         terrain: 'underground',
+        darkness_level: -120,
       },
       {
         tag: 'sewer_north_11',
@@ -110,6 +122,7 @@ export function getNorthTunnels(): DistrictData {
         description: desc('sewer_north_11'),
         area: 'Arindale Sewer',
         terrain: 'underground',
+        darkness_level: -120,
       },
       {
         tag: 'sewer_north_12',
@@ -117,6 +130,7 @@ export function getNorthTunnels(): DistrictData {
         description: desc('sewer_north_12'),
         area: 'Arindale Sewer',
         terrain: 'underground',
+        darkness_level: -120,
       },
       {
         tag: 'sewer_north_13',
@@ -124,6 +138,7 @@ export function getNorthTunnels(): DistrictData {
         description: desc('sewer_north_13'),
         area: 'Arindale Sewer',
         terrain: 'underground',
+        darkness_level: -120,
       },
       {
         tag: 'sewer_north_14',
@@ -131,6 +146,7 @@ export function getNorthTunnels(): DistrictData {
         description: desc('sewer_north_14'),
         area: 'Arindale Sewer',
         terrain: 'underground',
+        darkness_level: -120,
       },
       {
         tag: 'sewer_north_15',
@@ -138,6 +154,7 @@ export function getNorthTunnels(): DistrictData {
         description: desc('sewer_north_15'),
         area: 'Arindale Sewer',
         terrain: 'underground',
+        darkness_level: -120,
       },
       {
         tag: 'sewer_north_16',
@@ -145,6 +162,7 @@ export function getNorthTunnels(): DistrictData {
         description: desc('sewer_north_16'),
         area: 'Arindale Sewer',
         terrain: 'underground',
+        darkness_level: -120,
       },
       {
         tag: 'sewer_north_17',
@@ -152,6 +170,7 @@ export function getNorthTunnels(): DistrictData {
         description: desc('sewer_north_17'),
         area: 'Arindale Sewer',
         terrain: 'underground',
+        darkness_level: -120,
       },
       {
         tag: 'sewer_north_18',
@@ -159,6 +178,7 @@ export function getNorthTunnels(): DistrictData {
         description: desc('sewer_north_18'),
         area: 'Arindale Sewer',
         terrain: 'underground',
+        darkness_level: -120,
       },
       {
         tag: 'sewer_north_19',
@@ -166,6 +186,7 @@ export function getNorthTunnels(): DistrictData {
         description: desc('sewer_north_19'),
         area: 'Arindale Sewer',
         terrain: 'underground',
+        darkness_level: -120,
       },
       {
         tag: 'sewer_north_20',
@@ -173,6 +194,7 @@ export function getNorthTunnels(): DistrictData {
         description: desc('sewer_north_20'),
         area: 'Arindale Sewer',
         terrain: 'underground',
+        darkness_level: -120,
       },
       {
         tag: 'sewer_flooded_1',
@@ -180,6 +202,7 @@ export function getNorthTunnels(): DistrictData {
         description: `Water rises to knee height in this section of tunnel. The flooding has turned the passage into a wading channel, the current sluggish but persistent. Debris floats on the surface — scraps of wood, matted refuse, and less identifiable things. The walls are slimy above the waterline.`,
         area: 'Arindale Sewer',
         terrain: 'underground',
+        darkness_level: -120,
       },
       {
         tag: 'sewer_north_21',
@@ -187,6 +210,7 @@ export function getNorthTunnels(): DistrictData {
         description: desc('sewer_north_21'),
         area: 'Arindale Sewer',
         terrain: 'underground',
+        darkness_level: -120,
       },
       {
         tag: 'sewer_north_22',
@@ -194,6 +218,7 @@ export function getNorthTunnels(): DistrictData {
         description: desc('sewer_north_22'),
         area: 'Arindale Sewer',
         terrain: 'underground',
+        darkness_level: -120,
       },
       {
         tag: 'sewer_entrance_sanctum',
@@ -201,6 +226,7 @@ export function getNorthTunnels(): DistrictData {
         description: `The tunnel walls here bear strange carved symbols — angular, deliberate marks that are clearly not mason's work. The faint smell of incense hangs in the still air, incongruous in the sewer's filth. A dark opening in the wall has been framed with fitted stones, creating an archway where the rough tunnel meets something older and more purposeful beyond. Scorch marks from candles or torches blacken the stone around the entrance.`,
         area: 'Arindale Sewer',
         terrain: 'underground',
+        darkness_level: -120,
       },
       {
         tag: 'sewer_north_23',
@@ -208,6 +234,7 @@ export function getNorthTunnels(): DistrictData {
         description: desc('sewer_north_23'),
         area: 'Arindale Sewer',
         terrain: 'underground',
+        darkness_level: -120,
       },
       {
         tag: 'sewer_north_24',
@@ -215,6 +242,7 @@ export function getNorthTunnels(): DistrictData {
         description: desc('sewer_north_24'),
         area: 'Arindale Sewer',
         terrain: 'underground',
+        darkness_level: -120,
       },
       {
         tag: 'sewer_north_25',
@@ -222,6 +250,7 @@ export function getNorthTunnels(): DistrictData {
         description: desc('sewer_north_25'),
         area: 'Arindale Sewer',
         terrain: 'underground',
+        darkness_level: -120,
       },
       {
         tag: 'sewer_north_26',
@@ -229,6 +258,7 @@ export function getNorthTunnels(): DistrictData {
         description: desc('sewer_north_26'),
         area: 'Arindale Sewer',
         terrain: 'underground',
+        darkness_level: -120,
       },
       {
         tag: 'sewer_north_27',
@@ -236,6 +266,7 @@ export function getNorthTunnels(): DistrictData {
         description: desc('sewer_north_27'),
         area: 'Arindale Sewer',
         terrain: 'underground',
+        darkness_level: -120,
       },
       {
         tag: 'sewer_north_28',
@@ -243,6 +274,7 @@ export function getNorthTunnels(): DistrictData {
         description: desc('sewer_north_28'),
         area: 'Arindale Sewer',
         terrain: 'underground',
+        darkness_level: -120,
       },
       {
         tag: 'sewer_north_29',
@@ -250,6 +282,7 @@ export function getNorthTunnels(): DistrictData {
         description: desc('sewer_north_29'),
         area: 'Arindale Sewer',
         terrain: 'underground',
+        darkness_level: -120,
       },
       {
         tag: 'sewer_north_30',
@@ -257,6 +290,7 @@ export function getNorthTunnels(): DistrictData {
         description: desc('sewer_north_30'),
         area: 'Arindale Sewer',
         terrain: 'underground',
+        darkness_level: -120,
       },
       {
         tag: 'sewer_north_31',
@@ -264,6 +298,7 @@ export function getNorthTunnels(): DistrictData {
         description: desc('sewer_north_31'),
         area: 'Arindale Sewer',
         terrain: 'underground',
+        darkness_level: -120,
       },
       {
         tag: 'sewer_north_32',
@@ -271,6 +306,7 @@ export function getNorthTunnels(): DistrictData {
         description: desc('sewer_north_32'),
         area: 'Arindale Sewer',
         terrain: 'underground',
+        darkness_level: -120,
       },
       {
         tag: 'sewer_north_33',
@@ -278,6 +314,7 @@ export function getNorthTunnels(): DistrictData {
         description: desc('sewer_north_33'),
         area: 'Arindale Sewer',
         terrain: 'underground',
+        darkness_level: -120,
       },
       {
         tag: 'sewer_north_34',
@@ -285,6 +322,7 @@ export function getNorthTunnels(): DistrictData {
         description: desc('sewer_north_34'),
         area: 'Arindale Sewer',
         terrain: 'underground',
+        darkness_level: -120,
       },
       {
         tag: 'sewer_north_35',
@@ -292,6 +330,7 @@ export function getNorthTunnels(): DistrictData {
         description: desc('sewer_north_35'),
         area: 'Arindale Sewer',
         terrain: 'underground',
+        darkness_level: -120,
       },
       {
         tag: 'sewer_flooded_2',
@@ -299,6 +338,7 @@ export function getNorthTunnels(): DistrictData {
         description: `The flooding deepens here, dark water reaching waist-height in the lower sections. The tunnel slopes downward, and the current grows stronger, pulling at anything in its path. The walls are coated in thick green algae up to the ceiling. The air is heavy and foul.`,
         area: 'Arindale Sewer',
         terrain: 'underground',
+        darkness_level: -120,
       },
       {
         tag: 'sewer_flooded_3',
@@ -306,6 +346,7 @@ export function getNorthTunnels(): DistrictData {
         description: flDesc('sewer_flooded_3'),
         area: 'Arindale Sewer',
         terrain: 'underground',
+        darkness_level: -120,
       },
       {
         tag: 'sewer_north_36',
@@ -313,6 +354,7 @@ export function getNorthTunnels(): DistrictData {
         description: desc('sewer_north_36'),
         area: 'Arindale Sewer',
         terrain: 'underground',
+        darkness_level: -120,
       },
       {
         tag: 'sewer_north_37',
@@ -320,6 +362,7 @@ export function getNorthTunnels(): DistrictData {
         description: desc('sewer_north_37'),
         area: 'Arindale Sewer',
         terrain: 'underground',
+        darkness_level: -120,
       },
       {
         tag: 'sewer_north_38',
@@ -327,6 +370,7 @@ export function getNorthTunnels(): DistrictData {
         description: desc('sewer_north_38'),
         area: 'Arindale Sewer',
         terrain: 'underground',
+        darkness_level: -120,
       },
       {
         tag: 'sewer_north_39',
@@ -334,6 +378,7 @@ export function getNorthTunnels(): DistrictData {
         description: desc('sewer_north_39'),
         area: 'Arindale Sewer',
         terrain: 'underground',
+        darkness_level: -120,
       },
       {
         tag: 'sewer_north_40',
@@ -341,6 +386,7 @@ export function getNorthTunnels(): DistrictData {
         description: desc('sewer_north_40'),
         area: 'Arindale Sewer',
         terrain: 'underground',
+        darkness_level: -120,
       },
       {
         tag: 'sewer_north_41',
@@ -348,6 +394,7 @@ export function getNorthTunnels(): DistrictData {
         description: desc('sewer_north_41'),
         area: 'Arindale Sewer',
         terrain: 'underground',
+        darkness_level: -120,
       },
       {
         tag: 'sewer_north_42',
@@ -355,6 +402,7 @@ export function getNorthTunnels(): DistrictData {
         description: desc('sewer_north_42'),
         area: 'Arindale Sewer',
         terrain: 'underground',
+        darkness_level: -120,
       },
       {
         tag: 'sewer_north_43',
@@ -362,6 +410,7 @@ export function getNorthTunnels(): DistrictData {
         description: desc('sewer_north_43'),
         area: 'Arindale Sewer',
         terrain: 'underground',
+        darkness_level: -120,
       },
       {
         tag: 'sewer_north_44',
@@ -369,6 +418,7 @@ export function getNorthTunnels(): DistrictData {
         description: desc('sewer_north_44'),
         area: 'Arindale Sewer',
         terrain: 'underground',
+        darkness_level: -120,
       },
       {
         tag: 'sewer_north_45',
@@ -376,6 +426,7 @@ export function getNorthTunnels(): DistrictData {
         description: desc('sewer_north_45'),
         area: 'Arindale Sewer',
         terrain: 'underground',
+        darkness_level: -120,
       },
       {
         tag: 'sewer_north_46',
@@ -383,6 +434,7 @@ export function getNorthTunnels(): DistrictData {
         description: desc('sewer_north_46'),
         area: 'Arindale Sewer',
         terrain: 'underground',
+        darkness_level: -120,
       },
       {
         tag: 'sewer_north_47',
@@ -390,6 +442,7 @@ export function getNorthTunnels(): DistrictData {
         description: desc('sewer_north_47'),
         area: 'Arindale Sewer',
         terrain: 'underground',
+        darkness_level: -120,
       },
       {
         tag: 'sewer_north_48',
@@ -397,6 +450,7 @@ export function getNorthTunnels(): DistrictData {
         description: desc('sewer_north_48'),
         area: 'Arindale Sewer',
         terrain: 'underground',
+        darkness_level: -120,
       },
       {
         tag: 'sewer_north_49',
@@ -404,6 +458,7 @@ export function getNorthTunnels(): DistrictData {
         description: desc('sewer_north_49'),
         area: 'Arindale Sewer',
         terrain: 'underground',
+        darkness_level: -120,
       },
       {
         tag: 'sewer_north_50',
@@ -411,6 +466,7 @@ export function getNorthTunnels(): DistrictData {
         description: desc('sewer_north_50'),
         area: 'Arindale Sewer',
         terrain: 'underground',
+        darkness_level: -120,
       },
       {
         tag: 'sewer_flooded_4',
@@ -418,6 +474,7 @@ export function getNorthTunnels(): DistrictData {
         description: flDesc('sewer_flooded_4'),
         area: 'Arindale Sewer',
         terrain: 'underground',
+        darkness_level: -120,
       },
       {
         tag: 'sewer_flooded_5',
@@ -425,6 +482,7 @@ export function getNorthTunnels(): DistrictData {
         description: flDesc('sewer_flooded_5'),
         area: 'Arindale Sewer',
         terrain: 'underground',
+        darkness_level: -120,
       },
       {
         tag: 'sewer_north_51',
@@ -432,6 +490,7 @@ export function getNorthTunnels(): DistrictData {
         description: desc('sewer_north_51'),
         area: 'Arindale Sewer',
         terrain: 'underground',
+        darkness_level: -120,
       },
       {
         tag: 'sewer_north_52',
@@ -439,6 +498,7 @@ export function getNorthTunnels(): DistrictData {
         description: desc('sewer_north_52'),
         area: 'Arindale Sewer',
         terrain: 'underground',
+        darkness_level: -120,
       },
       {
         tag: 'sewer_north_53',
@@ -446,6 +506,7 @@ export function getNorthTunnels(): DistrictData {
         description: desc('sewer_north_53'),
         area: 'Arindale Sewer',
         terrain: 'underground',
+        darkness_level: -120,
       },
       {
         tag: 'sewer_north_54',
@@ -453,6 +514,7 @@ export function getNorthTunnels(): DistrictData {
         description: desc('sewer_north_54'),
         area: 'Arindale Sewer',
         terrain: 'underground',
+        darkness_level: -120,
       },
       {
         tag: 'sewer_north_55',
@@ -460,6 +522,7 @@ export function getNorthTunnels(): DistrictData {
         description: desc('sewer_north_55'),
         area: 'Arindale Sewer',
         terrain: 'underground',
+        darkness_level: -120,
       },
       {
         tag: 'sewer_north_56',
@@ -467,6 +530,7 @@ export function getNorthTunnels(): DistrictData {
         description: desc('sewer_north_56'),
         area: 'Arindale Sewer',
         terrain: 'underground',
+        darkness_level: -120,
       },
       {
         tag: 'sewer_north_57',
@@ -474,6 +538,7 @@ export function getNorthTunnels(): DistrictData {
         description: desc('sewer_north_57'),
         area: 'Arindale Sewer',
         terrain: 'underground',
+        darkness_level: -120,
       },
       {
         tag: 'sewer_north_58',
@@ -481,6 +546,7 @@ export function getNorthTunnels(): DistrictData {
         description: desc('sewer_north_58'),
         area: 'Arindale Sewer',
         terrain: 'underground',
+        darkness_level: -120,
       },
       {
         tag: 'sewer_north_59',
@@ -488,6 +554,7 @@ export function getNorthTunnels(): DistrictData {
         description: desc('sewer_north_59'),
         area: 'Arindale Sewer',
         terrain: 'underground',
+        darkness_level: -120,
       },
       {
         tag: 'sewer_north_60',
@@ -495,6 +562,7 @@ export function getNorthTunnels(): DistrictData {
         description: desc('sewer_north_60'),
         area: 'Arindale Sewer',
         terrain: 'underground',
+        darkness_level: -120,
       },
       {
         tag: 'sewer_north_61',
@@ -502,6 +570,7 @@ export function getNorthTunnels(): DistrictData {
         description: desc('sewer_north_61'),
         area: 'Arindale Sewer',
         terrain: 'underground',
+        darkness_level: -120,
       },
       {
         tag: 'sewer_north_62',
@@ -509,6 +578,7 @@ export function getNorthTunnels(): DistrictData {
         description: desc('sewer_north_62'),
         area: 'Arindale Sewer',
         terrain: 'underground',
+        darkness_level: -120,
       },
       {
         tag: 'sewer_north_63',
@@ -516,6 +586,7 @@ export function getNorthTunnels(): DistrictData {
         description: desc('sewer_north_63'),
         area: 'Arindale Sewer',
         terrain: 'underground',
+        darkness_level: -120,
       },
       {
         tag: 'sewer_north_64',
@@ -523,6 +594,7 @@ export function getNorthTunnels(): DistrictData {
         description: desc('sewer_north_64'),
         area: 'Arindale Sewer',
         terrain: 'underground',
+        darkness_level: -120,
       },
       {
         tag: 'sewer_north_65',
@@ -530,6 +602,7 @@ export function getNorthTunnels(): DistrictData {
         description: desc('sewer_north_65'),
         area: 'Arindale Sewer',
         terrain: 'underground',
+        darkness_level: -120,
       },
       {
         tag: 'sewer_north_66',
@@ -537,6 +610,7 @@ export function getNorthTunnels(): DistrictData {
         description: desc('sewer_north_66'),
         area: 'Arindale Sewer',
         terrain: 'underground',
+        darkness_level: -120,
       },
       {
         tag: 'sewer_north_67',
@@ -544,6 +618,7 @@ export function getNorthTunnels(): DistrictData {
         description: desc('sewer_north_67'),
         area: 'Arindale Sewer',
         terrain: 'underground',
+        darkness_level: -120,
       },
       {
         tag: 'sewer_north_68',
@@ -551,6 +626,7 @@ export function getNorthTunnels(): DistrictData {
         description: desc('sewer_north_68'),
         area: 'Arindale Sewer',
         terrain: 'underground',
+        darkness_level: -120,
       },
       {
         tag: 'sewer_north_69',
@@ -558,6 +634,7 @@ export function getNorthTunnels(): DistrictData {
         description: desc('sewer_north_69'),
         area: 'Arindale Sewer',
         terrain: 'underground',
+        darkness_level: -120,
       },
       {
         tag: 'sewer_north_70',
@@ -565,6 +642,7 @@ export function getNorthTunnels(): DistrictData {
         description: desc('sewer_north_70'),
         area: 'Arindale Sewer',
         terrain: 'underground',
+        darkness_level: -120,
       },
       {
         tag: 'sewer_north_71',
@@ -572,6 +650,7 @@ export function getNorthTunnels(): DistrictData {
         description: desc('sewer_north_71'),
         area: 'Arindale Sewer',
         terrain: 'underground',
+        darkness_level: -120,
       },
       {
         tag: 'sewer_north_72',
@@ -579,6 +658,7 @@ export function getNorthTunnels(): DistrictData {
         description: desc('sewer_north_72'),
         area: 'Arindale Sewer',
         terrain: 'underground',
+        darkness_level: -120,
       },
       {
         tag: 'sewer_north_73',
@@ -586,6 +666,7 @@ export function getNorthTunnels(): DistrictData {
         description: desc('sewer_north_73'),
         area: 'Arindale Sewer',
         terrain: 'underground',
+        darkness_level: -120,
       },
       {
         tag: 'sewer_north_74',
@@ -593,6 +674,7 @@ export function getNorthTunnels(): DistrictData {
         description: desc('sewer_north_74'),
         area: 'Arindale Sewer',
         terrain: 'underground',
+        darkness_level: -120,
       },
       {
         tag: 'sewer_north_75',
@@ -600,6 +682,7 @@ export function getNorthTunnels(): DistrictData {
         description: desc('sewer_north_75'),
         area: 'Arindale Sewer',
         terrain: 'underground',
+        darkness_level: -120,
       },
       {
         tag: 'sewer_north_76',
@@ -607,6 +690,7 @@ export function getNorthTunnels(): DistrictData {
         description: desc('sewer_north_76'),
         area: 'Arindale Sewer',
         terrain: 'underground',
+        darkness_level: -120,
       },
       {
         tag: 'sewer_north_77',
@@ -614,6 +698,7 @@ export function getNorthTunnels(): DistrictData {
         description: desc('sewer_north_77'),
         area: 'Arindale Sewer',
         terrain: 'underground',
+        darkness_level: -120,
       },
     ],
 
