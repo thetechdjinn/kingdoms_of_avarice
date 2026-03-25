@@ -380,7 +380,7 @@ function formatCopper(copper: number): string {
 
   function loadLightData(t: ItemTemplate): void {
     const l = t.light_data || {};
-    (document.getElementById('light-radius') as HTMLInputElement).value = String(l.radius || 0);
+    (document.getElementById('light-radius') as HTMLInputElement).value = String(l.vision_bonus ?? (l as Record<string, unknown>).radius ?? 0);
     (document.getElementById('light-fuel-max') as HTMLInputElement).value = String(l.fuel_max || 0);
     (document.getElementById('light-fuel-rate') as HTMLInputElement).value = String(l.fuel_rate || 0);
   }
@@ -540,7 +540,7 @@ function formatCopper(copper: number): string {
       data.consumable_data = consumableData;
     } else if (itemType === 'light') {
       data.light_data = {
-        radius: parseInt((document.getElementById('light-radius') as HTMLInputElement).value) || 0,
+        vision_bonus: parseInt((document.getElementById('light-radius') as HTMLInputElement).value) || 0,
         fuel_max: parseInt((document.getElementById('light-fuel-max') as HTMLInputElement).value) || 0,
         fuel_rate: parseInt((document.getElementById('light-fuel-rate') as HTMLInputElement).value) || 0,
       };
@@ -632,7 +632,7 @@ function formatCopper(copper: number): string {
       html += `</div>`;
     } else if (t.item_type === 'light' && t.light_data) {
       html += `<div class="preview-section"><div class="preview-section-title">Light</div>`;
-      html += `<div class="preview-stat">Radius: ${t.light_data.radius}</div>`;
+      html += `<div class="preview-stat">Vision Bonus: ${t.light_data.vision_bonus ?? (t.light_data as Record<string, unknown>).radius ?? 0}</div>`;
       if (t.light_data.fuel_max) html += `<div class="preview-stat">Fuel: ${t.light_data.fuel_max}</div>`;
       html += `</div>`;
     } else if (t.item_type === 'tool' && t.tool_data) {

@@ -74,6 +74,9 @@ export interface StatusEffectDefinition {
   silentTick?: boolean;        // If true, don't show any tick message (for passive effects)
   wearOffMessage?: string;     // Custom message when effect expires
 
+  // Vision modifier (positive = better vision, negative = worse)
+  visionModifier?: number;     // Added to effective vision calculation
+
   // Special flags
   blocksRegen?: boolean;       // Prevents natural regeneration
   blocksMovement?: boolean;    // Prevents movement commands
@@ -121,6 +124,7 @@ export interface EffectModifiers {
   charismaModifier: number;
   maxHpModifier: number;
   maxManaModifier: number;
+  visionModifier: number;
   blocksRegen: boolean;
   blocksMovement: boolean;
   isBlind: boolean;

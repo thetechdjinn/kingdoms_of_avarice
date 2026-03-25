@@ -35,6 +35,7 @@ interface DbStatusEffectDefinition {
   charisma_modifier: number;
   max_hp_modifier: number;
   max_mana_modifier: number;
+  vision_modifier: number;
   tick_damage_min: number | null;
   tick_damage_max: number | null;
   tick_healing_min: number | null;
@@ -82,6 +83,7 @@ function dbToDefinition(row: DbStatusEffectDefinition): StatusEffectDefinition {
     charismaModifier: row.charisma_modifier,
     maxHpModifier: row.max_hp_modifier,
     maxManaModifier: row.max_mana_modifier,
+    visionModifier: row.vision_modifier,
     tickDamageMin: row.tick_damage_min ?? undefined,
     tickDamageMax: row.tick_damage_max ?? undefined,
     tickHealingMin: row.tick_healing_min ?? undefined,
@@ -177,6 +179,7 @@ export interface CreateDefinitionInput {
   charismaModifier?: number;
   maxHpModifier?: number;
   maxManaModifier?: number;
+  visionModifier?: number;
   tickDamageMin?: number;
   tickDamageMax?: number;
   tickHealingMin?: number;
@@ -204,11 +207,11 @@ export async function createDefinition(input: CreateDefinitionInput): Promise<St
       perception_modifier, stealth_modifier, spellcasting_modifier, lockpicking_modifier,
       strength_modifier, dexterity_modifier, constitution_modifier,
       intelligence_modifier, wisdom_modifier, charisma_modifier,
-      max_hp_modifier, max_mana_modifier,
+      max_hp_modifier, max_mana_modifier, vision_modifier,
       tick_damage_min, tick_damage_max, tick_healing_min, tick_healing_max,
       tick_message, silent_tick, wear_off_message,
       blocks_regen, blocks_movement, is_blind, blocks_casting, blocks_combat, blocks_stealth
-    ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29,$30,$31,$32,$33,$34,$35,$36,$37,$38,$39,$40)
+    ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29,$30,$31,$32,$33,$34,$35,$36,$37,$38,$39,$40,$41)
     RETURNING *`,
     [
       input.id.toLowerCase(), input.name, input.description || null,
@@ -221,7 +224,7 @@ export async function createDefinition(input: CreateDefinitionInput): Promise<St
       input.spellcastingModifier ?? 0, input.lockpickingModifier ?? 0,
       input.strengthModifier ?? 0, input.dexterityModifier ?? 0, input.constitutionModifier ?? 0,
       input.intelligenceModifier ?? 0, input.wisdomModifier ?? 0, input.charismaModifier ?? 0,
-      input.maxHpModifier ?? 0, input.maxManaModifier ?? 0,
+      input.maxHpModifier ?? 0, input.maxManaModifier ?? 0, input.visionModifier ?? 0,
       input.tickDamageMin ?? null, input.tickDamageMax ?? null,
       input.tickHealingMin ?? null, input.tickHealingMax ?? null,
       input.tickMessage || null, input.silentTick ?? false, input.wearOffMessage || null,
@@ -267,6 +270,7 @@ export async function updateDefinition(id: string, input: Partial<CreateDefiniti
     charismaModifier: input.charismaModifier ?? existing.charismaModifier,
     maxHpModifier: input.maxHpModifier ?? existing.maxHpModifier,
     maxManaModifier: input.maxManaModifier ?? existing.maxManaModifier,
+    visionModifier: input.visionModifier ?? existing.visionModifier,
     tickDamageMin: input.tickDamageMin !== undefined ? input.tickDamageMin : existing.tickDamageMin,
     tickDamageMax: input.tickDamageMax !== undefined ? input.tickDamageMax : existing.tickDamageMax,
     tickHealingMin: input.tickHealingMin !== undefined ? input.tickHealingMin : existing.tickHealingMin,
@@ -290,12 +294,12 @@ export async function updateDefinition(id: string, input: Partial<CreateDefiniti
       perception_modifier=$15, stealth_modifier=$16, spellcasting_modifier=$17, lockpicking_modifier=$18,
       strength_modifier=$19, dexterity_modifier=$20, constitution_modifier=$21,
       intelligence_modifier=$22, wisdom_modifier=$23, charisma_modifier=$24,
-      max_hp_modifier=$25, max_mana_modifier=$26,
-      tick_damage_min=$27, tick_damage_max=$28, tick_healing_min=$29, tick_healing_max=$30,
-      tick_message=$31, silent_tick=$32, wear_off_message=$33,
-      blocks_regen=$34, blocks_movement=$35, is_blind=$36,
-      blocks_casting=$37, blocks_combat=$38, blocks_stealth=$39, updated_at=NOW()
-    WHERE id = $40
+      max_hp_modifier=$25, max_mana_modifier=$26, vision_modifier=$27,
+      tick_damage_min=$28, tick_damage_max=$29, tick_healing_min=$30, tick_healing_max=$31,
+      tick_message=$32, silent_tick=$33, wear_off_message=$34,
+      blocks_regen=$35, blocks_movement=$36, is_blind=$37,
+      blocks_casting=$38, blocks_combat=$39, blocks_stealth=$40, updated_at=NOW()
+    WHERE id = $41
     RETURNING *`,
     [
       u.name, u.description || null, u.category, u.stackingBehavior, u.maxStacks,
@@ -304,7 +308,7 @@ export async function updateDefinition(id: string, input: Partial<CreateDefiniti
       u.perceptionModifier, u.stealthModifier, u.spellcastingModifier, u.lockpickingModifier,
       u.strengthModifier, u.dexterityModifier, u.constitutionModifier,
       u.intelligenceModifier, u.wisdomModifier, u.charismaModifier,
-      u.maxHpModifier, u.maxManaModifier,
+      u.maxHpModifier, u.maxManaModifier, u.visionModifier,
       u.tickDamageMin ?? null, u.tickDamageMax ?? null, u.tickHealingMin ?? null, u.tickHealingMax ?? null,
       u.tickMessage || null, u.silentTick, u.wearOffMessage || null,
       u.blocksRegen, u.blocksMovement, u.isBlind,
@@ -372,10 +376,17 @@ export async function importDefinitions(definitions: StatusEffectDefinition[]): 
           `UPDATE status_effect_definitions SET
             name = $1, description = $2, category = $3, stacking_behavior = $4, max_stacks = $5,
             accuracy_modifier = $6, defense_modifier = $7, energy_modifier = $8, damage_modifier = $9,
-            tick_damage_min = $10, tick_damage_max = $11, tick_healing_min = $12, tick_healing_max = $13,
-            tick_message = $14, silent_tick = $15, wear_off_message = $16,
-            blocks_regen = $17, blocks_movement = $18, is_blind = $19, updated_at = NOW()
-          WHERE id = $20`,
+            speed_modifier = $10, critical_chance_modifier = $11, dodge_modifier = $12,
+            magic_resistance = $13, healing_received = $14,
+            perception_modifier = $15, stealth_modifier = $16, spellcasting_modifier = $17, lockpicking_modifier = $18,
+            strength_modifier = $19, dexterity_modifier = $20, constitution_modifier = $21,
+            intelligence_modifier = $22, wisdom_modifier = $23, charisma_modifier = $24,
+            max_hp_modifier = $25, max_mana_modifier = $26, vision_modifier = $27,
+            tick_damage_min = $28, tick_damage_max = $29, tick_healing_min = $30, tick_healing_max = $31,
+            tick_message = $32, silent_tick = $33, wear_off_message = $34,
+            blocks_regen = $35, blocks_movement = $36, is_blind = $37,
+            blocks_casting = $38, blocks_combat = $39, blocks_stealth = $40, updated_at = NOW()
+          WHERE id = $41`,
           [
             def.name,
             def.description || null,
@@ -386,6 +397,24 @@ export async function importDefinitions(definitions: StatusEffectDefinition[]): 
             def.defenseModifier ?? 0,
             def.energyModifier ?? 0,
             def.damageModifier ?? 0,
+            def.speedModifier ?? 0,
+            def.criticalChanceModifier ?? 0,
+            def.dodgeModifier ?? 0,
+            def.magicResistance ?? 0,
+            def.healingReceived ?? 0,
+            def.perceptionModifier ?? 0,
+            def.stealthModifier ?? 0,
+            def.spellcastingModifier ?? 0,
+            def.lockpickingModifier ?? 0,
+            def.strengthModifier ?? 0,
+            def.dexterityModifier ?? 0,
+            def.constitutionModifier ?? 0,
+            def.intelligenceModifier ?? 0,
+            def.wisdomModifier ?? 0,
+            def.charismaModifier ?? 0,
+            def.maxHpModifier ?? 0,
+            def.maxManaModifier ?? 0,
+            def.visionModifier ?? 0,
             def.tickDamageMin ?? null,
             def.tickDamageMax ?? null,
             def.tickHealingMin ?? null,
@@ -396,6 +425,9 @@ export async function importDefinitions(definitions: StatusEffectDefinition[]): 
             def.blocksRegen ?? false,
             def.blocksMovement ?? false,
             def.isBlind ?? false,
+            def.blocksCasting ?? false,
+            def.blocksCombat ?? false,
+            def.blocksStealth ?? false,
             normalizedId,
           ]
         );
@@ -406,10 +438,17 @@ export async function importDefinitions(definitions: StatusEffectDefinition[]): 
           `INSERT INTO status_effect_definitions (
             id, name, description, category, stacking_behavior, max_stacks,
             accuracy_modifier, defense_modifier, energy_modifier, damage_modifier,
+            speed_modifier, critical_chance_modifier, dodge_modifier,
+            magic_resistance, healing_received,
+            perception_modifier, stealth_modifier, spellcasting_modifier, lockpicking_modifier,
+            strength_modifier, dexterity_modifier, constitution_modifier,
+            intelligence_modifier, wisdom_modifier, charisma_modifier,
+            max_hp_modifier, max_mana_modifier, vision_modifier,
             tick_damage_min, tick_damage_max, tick_healing_min, tick_healing_max,
             tick_message, silent_tick, wear_off_message,
-            blocks_regen, blocks_movement, is_blind
-          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)`,
+            blocks_regen, blocks_movement, is_blind,
+            blocks_casting, blocks_combat, blocks_stealth
+          ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29,$30,$31,$32,$33,$34,$35,$36,$37,$38,$39,$40,$41)`,
           [
             normalizedId,
             def.name,
@@ -421,6 +460,24 @@ export async function importDefinitions(definitions: StatusEffectDefinition[]): 
             def.defenseModifier ?? 0,
             def.energyModifier ?? 0,
             def.damageModifier ?? 0,
+            def.speedModifier ?? 0,
+            def.criticalChanceModifier ?? 0,
+            def.dodgeModifier ?? 0,
+            def.magicResistance ?? 0,
+            def.healingReceived ?? 0,
+            def.perceptionModifier ?? 0,
+            def.stealthModifier ?? 0,
+            def.spellcastingModifier ?? 0,
+            def.lockpickingModifier ?? 0,
+            def.strengthModifier ?? 0,
+            def.dexterityModifier ?? 0,
+            def.constitutionModifier ?? 0,
+            def.intelligenceModifier ?? 0,
+            def.wisdomModifier ?? 0,
+            def.charismaModifier ?? 0,
+            def.maxHpModifier ?? 0,
+            def.maxManaModifier ?? 0,
+            def.visionModifier ?? 0,
             def.tickDamageMin ?? null,
             def.tickDamageMax ?? null,
             def.tickHealingMin ?? null,
@@ -431,6 +488,9 @@ export async function importDefinitions(definitions: StatusEffectDefinition[]): 
             def.blocksRegen ?? false,
             def.blocksMovement ?? false,
             def.isBlind ?? false,
+            def.blocksCasting ?? false,
+            def.blocksCombat ?? false,
+            def.blocksStealth ?? false,
           ]
         );
         created++;

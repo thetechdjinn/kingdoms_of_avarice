@@ -815,6 +815,7 @@ export function getEffectModifiers(socket: CombatEntity): EffectModifiers {
     charismaModifier: 0,
     maxHpModifier: 0,
     maxManaModifier: 0,
+    visionModifier: 0,
     blocksRegen: false,
     blocksMovement: false,
     isBlind: false,
@@ -866,6 +867,7 @@ export function getEffectModifiers(socket: CombatEntity): EffectModifiers {
     modifiers.charismaModifier += (definition.charismaModifier ?? 0) * stackMultiplier;
     modifiers.maxHpModifier += (definition.maxHpModifier ?? 0) * stackMultiplier;
     modifiers.maxManaModifier += (definition.maxManaModifier ?? 0) * stackMultiplier;
+    modifiers.visionModifier += (definition.visionModifier ?? 0) * stackMultiplier;
 
     // Boolean flags don't stack - any one effect sets them
     if (definition.blocksRegen) modifiers.blocksRegen = true;
@@ -874,6 +876,11 @@ export function getEffectModifiers(socket: CombatEntity): EffectModifiers {
     if (definition.blocksCasting) modifiers.blocksCasting = true;
     if (definition.blocksCombat) modifiers.blocksCombat = true;
     if (definition.blocksStealth) modifiers.blocksStealth = true;
+  }
+
+  // isBlind flag forces vision to -9999 regardless of other modifiers
+  if (modifiers.isBlind) {
+    modifiers.visionModifier = -9999;
   }
 
   // Clean up expired effects to prevent memory bloat

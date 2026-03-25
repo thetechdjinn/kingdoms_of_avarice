@@ -244,12 +244,8 @@
               </div>
               <div class="form-group">
                 <label for="race-base-vision">Base Vision</label>
-                <select id="race-base-vision">
-                  <option value="100">Normal (100)</option>
-                  <option value="150">Low-Light (150)</option>
-                  <option value="200">Darkvision (200)</option>
-                  <option value="300">Blindsight (300)</option>
-                </select>
+                <input type="number" id="race-base-vision" min="0" max="500" value="100" />
+                <span class="hint-inline">100 = Normal | 150 = Low-Light | 200 = Darkvision | 300 = Blindsight</span>
               </div>
             </div>
 

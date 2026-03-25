@@ -129,10 +129,12 @@
                 </div>
               </div>
               <div class="form-row">
-                <div class="form-group" style="flex: 0 0 120px;">
-                  <label for="room-darkness">Darkness <span class="hint-inline">(NYI)</span></label>
-                  <input type="number" id="room-darkness" min="-500" max="0" value="0" />
-                  <span class="hint-inline">Not yet implemented. Will use luminance system (0 to -500).</span>
+                <div class="form-group" style="flex: 0 0 200px;">
+                  <label for="room-darkness">Darkness</label>
+                  <div style="display: flex; align-items: center; gap: 8px;">
+                    <input type="number" id="room-darkness" min="-500" max="0" value="0" style="width: 80px;" />
+                    <span id="darkness-band-label" class="hint-inline" style="white-space: nowrap;"></span>
+                  </div>
                 </div>
                 <div class="form-group">
                   <label for="room-tag">Tag</label>

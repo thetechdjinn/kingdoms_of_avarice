@@ -332,6 +332,7 @@ export interface NpcTemplate {
   merchantEnabled: boolean;
   properName: boolean;
   spellPower: number;
+  visionLevel: number;         // Vision points for darkness calculation (default 100)
   enabled: boolean;
   attacks: NpcAttack[];
   spells: NpcSpell[];

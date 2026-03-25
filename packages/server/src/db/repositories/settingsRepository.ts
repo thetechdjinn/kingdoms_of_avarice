@@ -11,6 +11,12 @@ export interface GameSettings {
   backstab_base_max_multiplier: number;
   backstab_level_bonus_min: number;
   backstab_level_bonus_max: number;
+  health_tick_interval_ms: number;
+  mana_tick_interval_ms: number;
+  health_regen_base_percent: number;
+  health_regen_enhanced_percent: number;
+  mana_regen_base_percent: number;
+  mana_regen_enhanced_percent: number;
 }
 
 // ============================================================================
@@ -26,6 +32,10 @@ export const BACKSTAB_SETTING_RANGES = {
 
 export type BackstabSettingKey = keyof typeof BACKSTAB_SETTING_RANGES;
 
+export type RegenSettingKey = 'health_tick_interval_ms' | 'mana_tick_interval_ms' |
+  'health_regen_base_percent' | 'health_regen_enhanced_percent' |
+  'mana_regen_base_percent' | 'mana_regen_enhanced_percent';
+
 /**
  * Validate a backstab setting value against its defined range
  */
@@ -34,6 +44,24 @@ export function isValidBackstabSetting(key: string, value: number): boolean {
   if (!range) return false;
   return typeof value === 'number' && !isNaN(value) && value >= range.min && value <= range.max;
 }
+
+export interface RegenSettings {
+  health_tick_interval_ms: number;
+  mana_tick_interval_ms: number;
+  health_regen_base_percent: number;
+  health_regen_enhanced_percent: number;
+  mana_regen_base_percent: number;
+  mana_regen_enhanced_percent: number;
+}
+
+const DEFAULT_REGEN_SETTINGS: RegenSettings = {
+  health_tick_interval_ms: 5000,
+  mana_tick_interval_ms: 5000,
+  health_regen_base_percent: 1,
+  health_regen_enhanced_percent: 3,
+  mana_regen_base_percent: 2,
+  mana_regen_enhanced_percent: 5,
+};
 
 /**
  * Combat-related settings stored in the database
@@ -202,6 +230,20 @@ export async function getAllSettings(): Promise<GameSettings> {
           settings[row.key as BackstabSettingKey] = parsed as number;
         }
         break;
+      case 'health_tick_interval_ms':
+      case 'mana_tick_interval_ms':
+        if (typeof parsed === 'number' && parsed >= 1000 && parsed <= 60000) {
+          settings[row.key as RegenSettingKey] = parsed;
+        }
+        break;
+      case 'health_regen_base_percent':
+      case 'health_regen_enhanced_percent':
+      case 'mana_regen_base_percent':
+      case 'mana_regen_enhanced_percent':
+        if (typeof parsed === 'number' && parsed >= 0 && parsed <= 100) {
+          settings[row.key as RegenSettingKey] = parsed;
+        }
+        break;
     }
   }
 
@@ -215,6 +257,12 @@ export async function getAllSettings(): Promise<GameSettings> {
     backstab_base_max_multiplier: settings.backstab_base_max_multiplier ?? BACKSTAB_SETTING_RANGES.backstab_base_max_multiplier.default,
     backstab_level_bonus_min: settings.backstab_level_bonus_min ?? BACKSTAB_SETTING_RANGES.backstab_level_bonus_min.default,
     backstab_level_bonus_max: settings.backstab_level_bonus_max ?? BACKSTAB_SETTING_RANGES.backstab_level_bonus_max.default,
+    health_tick_interval_ms: settings.health_tick_interval_ms ?? DEFAULT_REGEN_SETTINGS.health_tick_interval_ms,
+    mana_tick_interval_ms: settings.mana_tick_interval_ms ?? DEFAULT_REGEN_SETTINGS.mana_tick_interval_ms,
+    health_regen_base_percent: settings.health_regen_base_percent ?? DEFAULT_REGEN_SETTINGS.health_regen_base_percent,
+    health_regen_enhanced_percent: settings.health_regen_enhanced_percent ?? DEFAULT_REGEN_SETTINGS.health_regen_enhanced_percent,
+    mana_regen_base_percent: settings.mana_regen_base_percent ?? DEFAULT_REGEN_SETTINGS.mana_regen_base_percent,
+    mana_regen_enhanced_percent: settings.mana_regen_enhanced_percent ?? DEFAULT_REGEN_SETTINGS.mana_regen_enhanced_percent,
   };
 }
 
@@ -726,4 +774,41 @@ export async function getBackstabSettings(): Promise<BackstabSettings> {
 export function clearBackstabSettingsCache(): void {
   backstabSettingsCache = null;
   backstabSettingsCacheTime = 0;
+}
+
+// ============================================================================
+// REGENERATION SETTINGS
+// ============================================================================
+
+let regenSettingsCache: RegenSettings | null = null;
+let regenSettingsCacheTime: number = 0;
+const REGEN_SETTINGS_CACHE_TTL = 60000;
+
+export async function getRegenSettings(): Promise<RegenSettings> {
+  const now = Date.now();
+
+  if (regenSettingsCache && (now - regenSettingsCacheTime) < REGEN_SETTINGS_CACHE_TTL) {
+    return regenSettingsCache;
+  }
+
+  const allSettings = await getAllSettings();
+
+  const settings: RegenSettings = {
+    health_tick_interval_ms: allSettings.health_tick_interval_ms,
+    mana_tick_interval_ms: allSettings.mana_tick_interval_ms,
+    health_regen_base_percent: allSettings.health_regen_base_percent,
+    health_regen_enhanced_percent: allSettings.health_regen_enhanced_percent,
+    mana_regen_base_percent: allSettings.mana_regen_base_percent,
+    mana_regen_enhanced_percent: allSettings.mana_regen_enhanced_percent,
+  };
+
+  regenSettingsCache = settings;
+  regenSettingsCacheTime = now;
+
+  return settings;
+}
+
+export function clearRegenSettingsCache(): void {
+  regenSettingsCache = null;
+  regenSettingsCacheTime = 0;
 }

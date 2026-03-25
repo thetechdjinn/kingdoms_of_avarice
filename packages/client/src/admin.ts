@@ -33,6 +33,12 @@ interface GameSettings {
   backstab_base_max_multiplier?: number;
   backstab_level_bonus_min?: number;
   backstab_level_bonus_max?: number;
+  health_tick_interval_ms?: number;
+  mana_tick_interval_ms?: number;
+  health_regen_base_percent?: number;
+  health_regen_enhanced_percent?: number;
+  mana_regen_base_percent?: number;
+  mana_regen_enhanced_percent?: number;
 }
 
 // ============================================================================
@@ -530,6 +536,20 @@ async function loadSettings(): Promise<void> {
         String(settings.backstab_level_bonus_min ?? 0.20);
       (document.getElementById('setting-bs-level-max') as HTMLInputElement).value =
         String(settings.backstab_level_bonus_max ?? 0.50);
+
+      // Regen settings
+      (document.getElementById('setting-health-tick') as HTMLInputElement).value =
+        String(settings.health_tick_interval_ms ?? 5000);
+      (document.getElementById('setting-mana-tick') as HTMLInputElement).value =
+        String(settings.mana_tick_interval_ms ?? 5000);
+      (document.getElementById('setting-health-base') as HTMLInputElement).value =
+        String(settings.health_regen_base_percent ?? 1);
+      (document.getElementById('setting-health-enhanced') as HTMLInputElement).value =
+        String(settings.health_regen_enhanced_percent ?? 3);
+      (document.getElementById('setting-mana-base') as HTMLInputElement).value =
+        String(settings.mana_regen_base_percent ?? 2);
+      (document.getElementById('setting-mana-enhanced') as HTMLInputElement).value =
+        String(settings.mana_regen_enhanced_percent ?? 5);
     }
   } catch (error) {
     console.error('Failed to load settings:', error);
@@ -666,7 +686,7 @@ async function saveDroppedTickSetting(): Promise<void> {
   }
 }
 
-async function saveBackstabSetting(settingKey: string, inputId: string, min: number, max: number, displayName: string): Promise<void> {
+async function saveNumericSetting(settingKey: string, inputId: string, min: number, max: number, displayName: string): Promise<void> {
   const value = parseFloat((document.getElementById(inputId) as HTMLInputElement).value);
   const messageEl = document.getElementById('settings-message')!;
 
@@ -762,25 +782,41 @@ document.addEventListener('DOMContentLoaded', async () => {
   const saveBsMinMultBtn = document.getElementById('save-bs-min-mult-btn');
   if (saveBsMinMultBtn) {
     saveBsMinMultBtn.addEventListener('click', () =>
-      saveBackstabSetting('backstab_base_min_multiplier', 'setting-bs-min-mult', 1.0, 5.0, 'Base Min Multiplier'));
+      saveNumericSetting('backstab_base_min_multiplier', 'setting-bs-min-mult', 1.0, 5.0, 'Base Min Multiplier'));
   }
 
   const saveBsMaxMultBtn = document.getElementById('save-bs-max-mult-btn');
   if (saveBsMaxMultBtn) {
     saveBsMaxMultBtn.addEventListener('click', () =>
-      saveBackstabSetting('backstab_base_max_multiplier', 'setting-bs-max-mult', 1.5, 6.0, 'Base Max Multiplier'));
+      saveNumericSetting('backstab_base_max_multiplier', 'setting-bs-max-mult', 1.5, 6.0, 'Base Max Multiplier'));
   }
 
   const saveBsLevelMinBtn = document.getElementById('save-bs-level-min-btn');
   if (saveBsLevelMinBtn) {
     saveBsLevelMinBtn.addEventListener('click', () =>
-      saveBackstabSetting('backstab_level_bonus_min', 'setting-bs-level-min', 0.0, 1.0, 'Level Bonus Min'));
+      saveNumericSetting('backstab_level_bonus_min', 'setting-bs-level-min', 0.0, 1.0, 'Level Bonus Min'));
   }
 
   const saveBsLevelMaxBtn = document.getElementById('save-bs-level-max-btn');
   if (saveBsLevelMaxBtn) {
     saveBsLevelMaxBtn.addEventListener('click', () =>
-      saveBackstabSetting('backstab_level_bonus_max', 'setting-bs-level-max', 0.0, 2.0, 'Level Bonus Max'));
+      saveNumericSetting('backstab_level_bonus_max', 'setting-bs-level-max', 0.0, 2.0, 'Level Bonus Max'));
+  }
+
+  // Regen settings
+  const regenButtons: Array<[string, string, string, number, number, string]> = [
+    ['save-health-tick-btn', 'health_tick_interval_ms', 'setting-health-tick', 1000, 60000, 'Health Tick Interval'],
+    ['save-mana-tick-btn', 'mana_tick_interval_ms', 'setting-mana-tick', 1000, 60000, 'Mana Tick Interval'],
+    ['save-health-base-btn', 'health_regen_base_percent', 'setting-health-base', 0, 100, 'Health Regen Base %'],
+    ['save-health-enhanced-btn', 'health_regen_enhanced_percent', 'setting-health-enhanced', 0, 100, 'Health Regen Enhanced %'],
+    ['save-mana-base-btn', 'mana_regen_base_percent', 'setting-mana-base', 0, 100, 'Mana Regen Base %'],
+    ['save-mana-enhanced-btn', 'mana_regen_enhanced_percent', 'setting-mana-enhanced', 0, 100, 'Mana Regen Enhanced %'],
+  ];
+  for (const [btnId, key, inputId, min, max, name] of regenButtons) {
+    const btn = document.getElementById(btnId);
+    if (btn) {
+      btn.addEventListener('click', () => saveNumericSetting(key, inputId, min, max, name));
+    }
   }
 
   // User menu dropdown toggle

@@ -117,6 +117,18 @@ export function setupAdminRoutes(app: Express): void {
         res.status(400).json({ success: false, message: 'Save interval must be between 10000ms (10s) and 600000ms (10min)' });
         return;
       }
+    } else if (key === 'health_tick_interval_ms' || key === 'mana_tick_interval_ms') {
+      const numValue = Number(value);
+      if (isNaN(numValue) || numValue < 1000 || numValue > 60000) {
+        res.status(400).json({ success: false, message: 'Tick interval must be between 1000ms and 60000ms' });
+        return;
+      }
+    } else if (key.match(/^(health|mana)_regen_(base|enhanced)_percent$/)) {
+      const numValue = Number(value);
+      if (isNaN(numValue) || numValue < 0 || numValue > 100) {
+        res.status(400).json({ success: false, message: 'Regen percent must be between 0 and 100' });
+        return;
+      }
     } else if (key in settingsRepo.BACKSTAB_SETTING_RANGES) {
       const numValue = Number(value);
       const range = settingsRepo.BACKSTAB_SETTING_RANGES[key as settingsRepo.BackstabSettingKey];
@@ -158,6 +170,9 @@ export function setupAdminRoutes(app: Express): void {
       }
       if (key.startsWith('backstab_')) {
         settingsRepo.clearBackstabSettingsCache();
+      }
+      if (key.match(/^(health|mana)_(tick_interval_ms|regen_(base|enhanced)_percent)$/)) {
+        settingsRepo.clearRegenSettingsCache();
       }
 
       res.json({ success: true, message: 'Setting updated' });

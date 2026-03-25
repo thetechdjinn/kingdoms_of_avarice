@@ -37,6 +37,7 @@ CREATE TABLE IF NOT EXISTS status_effect_definitions (
     charisma_modifier INTEGER DEFAULT 0,
     max_hp_modifier INTEGER DEFAULT 0,
     max_mana_modifier INTEGER DEFAULT 0,
+    vision_modifier INTEGER DEFAULT 0,
 
     -- Periodic effects (DoT/HoT) - damage/healing ranges
     tick_damage_min INTEGER,                -- Minimum damage per tick

@@ -1,4 +1,5 @@
 import { ResourceRegenConfig, VitalsData, PlayerRegenState, DeathState } from '@koa/shared';
+import { getRegenSettings } from '../db/repositories/settingsRepository.js';
 
 // Interface for the socket with vitals and regen state
 // This is a minimal interface that AuthenticatedSocket implements
@@ -204,30 +205,42 @@ export function stopRegenLoops(): void {
 }
 
 /**
- * Initialize default resource regeneration configs
- * Called on server startup
+ * Initialize resource regeneration configs from database settings.
+ * Called on server startup and on @reload settings.
  */
-export function initializeDefaultRegenConfigs(): void {
-  // Minimum tick interval to prevent invalid setInterval values
+export async function initializeDefaultRegenConfigs(): Promise<void> {
   const MIN_TICK_INTERVAL = 100;
+  const settings = await getRegenSettings();
 
   // Mana regeneration
-  const manaTickInterval = Number(process.env.MANA_TICK_INTERVAL_MS) || 5000;
   registerRegenResource({
     resourceKey: 'mana',
-    tickIntervalMs: Math.max(MIN_TICK_INTERVAL, manaTickInterval),
-    baseRegenPercent: Number(process.env.MANA_REGEN_BASE_PERCENT) || 2,
-    enhancedRegenPercent: Number(process.env.MANA_REGEN_ENHANCED_PERCENT) || 5,
+    tickIntervalMs: Math.max(MIN_TICK_INTERVAL, settings.mana_tick_interval_ms),
+    baseRegenPercent: settings.mana_regen_base_percent,
+    enhancedRegenPercent: settings.mana_regen_enhanced_percent,
     regenInCombat: true,
   });
 
   // Health regeneration
-  const healthTickInterval = Number(process.env.HEALTH_TICK_INTERVAL_MS) || 5000;
   registerRegenResource({
     resourceKey: 'health',
-    tickIntervalMs: Math.max(MIN_TICK_INTERVAL, healthTickInterval),
-    baseRegenPercent: Number(process.env.HEALTH_REGEN_BASE_PERCENT) || 1,
-    enhancedRegenPercent: Number(process.env.HEALTH_REGEN_ENHANCED_PERCENT) || 3,
+    tickIntervalMs: Math.max(MIN_TICK_INTERVAL, settings.health_tick_interval_ms),
+    baseRegenPercent: settings.health_regen_base_percent,
+    enhancedRegenPercent: settings.health_regen_enhanced_percent,
     regenInCombat: true,
   });
+}
+
+/**
+ * Reinitialize regen loops with current settings.
+ * Saves refs before stopping (stopRegenLoops nulls them), reloads configs, restarts.
+ */
+export async function reloadRegenSettings(): Promise<void> {
+  const savedPlayers = connectedPlayersRef;
+  const savedSendVitals = sendVitalsFn;
+  stopRegenLoops();
+  await initializeDefaultRegenConfigs();
+  if (savedPlayers && savedSendVitals) {
+    startRegenLoops(savedPlayers, savedSendVitals);
+  }
 }
