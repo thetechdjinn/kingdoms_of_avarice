@@ -1958,15 +1958,17 @@ export async function handleLight(
         return { type: MessageType.ERROR, message: `You can't replace the cursed item in your hand.` };
       }
       // If the current held item is a lit light source, extinguish it first
+      let wasExtinguished = false;
       if (currentHeld.is_lit && currentHeld.template?.item_type === ItemType.LIGHT) {
         await itemRepo.updateInstanceLitState(currentHeld.id, false);
         untrackLitCharacter(characterId);
         const heldName = getItemName(currentHeld);
         messages.push(`You extinguish ${colors.item(heldName)}.`);
         broadcastToRoom(currentRoomId, `${socket.username} extinguishes ${heldName}.`, socket.playerId);
+        wasExtinguished = true;
       }
       await itemRepo.updateInstanceLocation(currentHeld.id, ItemLocationType.PLAYER, characterId);
-      if (!currentHeld.is_lit) {
+      if (!wasExtinguished) {
         const heldName = getItemName(currentHeld);
         messages.push(`You put away ${colors.item(heldName)}.`);
       }
