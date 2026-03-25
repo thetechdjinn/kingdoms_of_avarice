@@ -62,6 +62,7 @@ import { clearProgressionCaches } from '../db/repositories/progressionRepository
 import { loadProgressionTableFromDb } from './progressionLoader.js';
 import { clearEquipmentCache } from './combatStats.js';
 import { reloadRegenSettings } from './regeneration.js';
+import { reloadFuelLoop } from './fuelManager.js';
 
 interface CommandResponse {
   type: MessageType;
@@ -569,7 +570,8 @@ async function handleReload(
 
     if (target === 'settings' || target === 'all') {
       await reloadRegenSettings();
-      results.push(`${colors.green('✓')} Reloaded regen settings and restarted regen loops`);
+      await reloadFuelLoop();
+      results.push(`${colors.green('✓')} Reloaded settings and restarted regen/fuel loops`);
     }
 
     return {

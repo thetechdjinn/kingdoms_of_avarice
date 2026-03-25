@@ -27,6 +27,7 @@ import { initializeDoorStates } from '../services/doorStateManager.js';
 import { getCommandQueueConfig } from '../config/commandQueueConfig.js';
 import { initializeInterruptHandler } from './interruptHandler.js';
 import { startDroppedStateLoop, stopDroppedStateLoop, handleDroppedDisconnect } from './droppedStateManager.js';
+import { startFuelLoop, stopFuelLoop, untrackLitCharacter } from './fuelManager.js';
 import { isPlayerDropped, isPlayerDead, clearDeathState } from './damageHandler.js';
 import { getRespawnRoomId } from '../services/respawnService.js';
 import { raceCanSeeHidden } from './stats/secondaryStats.js';
@@ -143,6 +144,9 @@ export async function initializeGameWorld(): Promise<void> {
 
   // Start dropped state processing loop (bleed/recovery for downed players)
   await startDroppedStateLoop(connectedPlayers, sendMessage, sendVitals, broadcastToRoom);
+
+  // Start fuel consumption loop (burns fuel on lit light sources)
+  await startFuelLoop(connectedPlayers, sendMessage, gameWorld);
 
   // Start periodic character save loop (saves HP/mana at configurable interval)
   await startCharacterSaveLoop(connectedPlayers);
@@ -634,10 +638,11 @@ export function setupGameSocket(wss: WebSocketServer): void {
         cleanupBroadcastMembership(authWs, connectedPlayers);
         cleanupPlayerGroup(authWs.playerId);
 
-        // Clean up merchant state (haggle reputation, hostility)
+        // Clean up merchant state (haggle reputation, hostility) and fuel tracking
         if (authWs.characterId) {
           clearHaggleState(authWs.characterId);
           clearMerchantHostility(authWs.characterId);
+          untrackLitCharacter(authWs.characterId);
         }
 
         // Broadcast appropriate message based on how they disconnected.

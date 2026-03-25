@@ -14,6 +14,7 @@ import { isHidden, breakStealth } from './stealth/stealthState.js';
 import { rollStealthCheck } from './stealth/stealthCheck.js';
 import { calculateStealth, calculatePerception } from './stats/secondaryStats.js';
 import * as progressionRepo from '../db/repositories/progressionRepository.js';
+import { trackLitCharacter, untrackLitCharacter } from './fuelManager.js';
 
 // Guard function to check if character is selected
 function requireCharacter(socket: AuthenticatedSocket): CommandResponse | null {
@@ -27,6 +28,18 @@ function requireCharacter(socket: AuthenticatedSocket): CommandResponse | null {
 // Returns name as stored in database (should be lowercase)
 function getItemName(item: ItemInstance): string {
   return item.template?.name ?? item.template?.short_desc ?? 'something';
+}
+
+// Find equipped items matching a keyword (prefix match, consistent with repository)
+function findEquippedByKeyword(equipped: ItemInstance[], keyword: string): ItemInstance[] {
+  const searchTerm = keyword.toLowerCase();
+  return equipped.filter(item => {
+    const template = item.template;
+    if (!template) return false;
+    if (template.name.toLowerCase().startsWith(searchTerm)) return true;
+    if (template.keywords?.some(kw => kw.toLowerCase().startsWith(searchTerm))) return true;
+    return false;
+  });
 }
 
 // Add article (a/an) to item name
@@ -572,6 +585,17 @@ async function dropItem(
     return { type: MessageType.ERROR, message: `You can't drop that.` };
   }
 
+  const itemName = getItemName(item);
+  const messages: string[] = [];
+
+  // Auto-extinguish lit light sources when dropped
+  if (item.is_lit && item.template?.item_type === ItemType.LIGHT) {
+    await itemRepo.updateInstanceLitState(item.id, false);
+    untrackLitCharacter(socket.characterId!);
+    messages.push(`You extinguish ${colors.item(itemName)}.`);
+    broadcastToRoom(currentRoomId, `${socket.username} extinguishes ${itemName}.`, socket.playerId);
+  }
+
   // Check if we can stack with existing item in room (same condition only)
   const existingStack = await itemRepo.findStackableInstance(
     item.template_id,
@@ -579,7 +603,7 @@ async function dropItem(
     currentRoomId,
     item.condition
   );
-  
+
   if (existingStack) {
     // Add to existing stack and delete inventory instance
     await itemRepo.addToInstanceQuantity(existingStack.id, item.quantity);
@@ -594,12 +618,11 @@ async function dropItem(
   }
   invalidateEquipmentCache(socket.characterId!);
 
-  const itemName = getItemName(item);
-
   // Broadcast to room
   broadcastToRoom(currentRoomId, colors.green(`${colors.red(socket.username)} drops ${withArticle(itemName)}.`), socket.playerId);
+  messages.push(`You drop ${colors.item(withArticle(itemName))}.`);
 
-  return { type: MessageType.OUTPUT, message: `You drop ${colors.item(withArticle(itemName))}.` };
+  return { type: MessageType.OUTPUT, message: messages.join('\r\n') };
 }
 
 // Drop a specific quantity from a stacked item
@@ -689,8 +712,18 @@ async function handleDropAll(
   }
 
   const dropped: string[] = [];
+  const extinguished: string[] = [];
 
   for (const item of droppableItems) {
+    // Extinguish lit light sources when dropped
+    if (item.is_lit && item.template?.item_type === ItemType.LIGHT) {
+      await itemRepo.updateInstanceLitState(item.id, false);
+      untrackLitCharacter(socket.characterId!);
+      const litName = getItemName(item);
+      extinguished.push(litName);
+      broadcastToRoom(currentRoomId, `${socket.username} extinguishes ${litName}.`, socket.playerId);
+    }
+
     // Check if we can stack with existing item in room
     const existingStack = await itemRepo.findStackableInstance(
       item.template_id,
@@ -698,7 +731,7 @@ async function handleDropAll(
       currentRoomId,
       item.condition
     );
-    
+
     if (existingStack) {
       await itemRepo.addToInstanceQuantity(existingStack.id, item.quantity);
       await itemRepo.deleteInstance(item.id);
@@ -715,9 +748,15 @@ async function handleDropAll(
   // Broadcast to room
   broadcastToRoom(currentRoomId, colors.green(`${colors.red(socket.username)} drops some items.`), socket.playerId);
 
+  const messages: string[] = [];
+  for (const name of extinguished) {
+    messages.push(`You extinguish ${colors.item(name)}.`);
+  }
+  messages.push(`You drop: ${dropped.map(n => colors.item(n)).join(', ')}.`);
+
   return {
     type: MessageType.OUTPUT,
-    message: `You drop: ${dropped.map(n => colors.item(n)).join(', ')}.`,
+    message: messages.join('\r\n'),
   };
 }
 
@@ -1197,6 +1236,7 @@ export async function handleWield(
 
   // Get currently equipped items
   const equipped = await itemRepo.getCharacterEquipped(socket.characterId!);
+  const messages: string[] = [];
 
   // Check for two-handed weapon conflicts
   if (isTwoHanded) {
@@ -1205,6 +1245,14 @@ export async function handleWield(
       if (equippedItem.equipped_slot && TWO_HANDED_BLOCKED_SLOTS.includes(equippedItem.equipped_slot as EquipmentSlot)) {
         if (equippedItem.template?.flags?.cursed) {
           return { type: MessageType.ERROR, message: `You can't wield that - a cursed item is blocking the slot.` };
+        }
+        // Extinguish lit light sources being displaced
+        if (equippedItem.is_lit && equippedItem.template?.item_type === ItemType.LIGHT) {
+          await itemRepo.updateInstanceLitState(equippedItem.id, false);
+          untrackLitCharacter(socket.characterId!);
+          const litName = getItemName(equippedItem);
+          messages.push(`You extinguish ${colors.item(litName)}.`);
+          broadcastToRoom(currentRoomId, `${socket.username} extinguishes ${litName}.`, socket.playerId);
         }
         await itemRepo.updateInstanceLocation(equippedItem.id, ItemLocationType.PLAYER, socket.characterId!);
         const unequippedName = getItemName(equippedItem);
@@ -1231,8 +1279,9 @@ export async function handleWield(
 
   const itemName = template.name;
   broadcastToRoom(currentRoomId, colors.green(`${colors.red(socket.username)} wields ${itemName}.`), socket.playerId);
+  messages.push(`You wield ${colors.item(itemName)}.`);
 
-  return { type: MessageType.OUTPUT, message: `You wield ${colors.item(itemName)}.` };
+  return { type: MessageType.OUTPUT, message: messages.join('\r\n') };
 }
 
 // Handle "wear <item>" command - for armor/accessories
@@ -1357,16 +1406,7 @@ export async function handleRemove(
 
   // Search equipped items
   const equipped = await itemRepo.getCharacterEquipped(socket.characterId!);
-  
-  // Filter by keyword
-  const matches = equipped.filter(item => {
-    const template = item.template;
-    if (!template) return false;
-    const searchTerm = keyword.toLowerCase();
-    if (template.name.toLowerCase().includes(searchTerm)) return true;
-    if (template.keywords?.some(kw => kw.toLowerCase().includes(searchTerm))) return true;
-    return false;
-  });
+  const matches = findEquippedByKeyword(equipped, keyword);
 
   if (matches.length === 0) {
     return { type: MessageType.ERROR, message: `You're not wearing that.` };
@@ -1384,14 +1424,25 @@ export async function handleRemove(
     return { type: MessageType.ERROR, message: `You can't remove that! It's cursed!` };
   }
 
+  const itemName = getItemName(item);
+  const messages: string[] = [];
+
+  // If removing a lit light source, extinguish it first
+  if (item.is_lit && template?.item_type === ItemType.LIGHT) {
+    await itemRepo.updateInstanceLitState(item.id, false);
+    untrackLitCharacter(socket.characterId!);
+    messages.push(`You extinguish ${colors.item(itemName)}.`);
+    broadcastToRoom(currentRoomId, `${socket.username} extinguishes ${itemName}.`, socket.playerId);
+  }
+
   // Move to inventory
   await itemRepo.updateInstanceLocation(item.id, ItemLocationType.PLAYER, socket.characterId!);
   invalidateEquipmentCache(socket.characterId!);
 
-  const itemName = getItemName(item);
   broadcastToRoom(currentRoomId, colors.green(`${colors.red(socket.username)} removes ${itemName}.`), socket.playerId);
+  messages.push(`You remove ${colors.item(itemName)}.`);
 
-  return { type: MessageType.OUTPUT, message: `You remove ${colors.item(itemName)}.` };
+  return { type: MessageType.OUTPUT, message: messages.join('\r\n') };
 }
 
 // Handle "equipment" / "eq" command
@@ -1435,7 +1486,8 @@ export async function handleEquipment(
     if (item) {
       const slotName = SLOT_DISPLAY_NAMES[slot];
       const itemName = getItemName(item);
-      lines.push(`  ${colors.boldWhite(slotName + ':')} ${colors.item(itemName)}`);
+      const litTag = item.is_lit ? colors.yellow(' (lit)') : '';
+      lines.push(`  ${colors.boldWhite(slotName + ':')} ${colors.item(itemName)}${litTag}`);
     }
   }
 
@@ -1712,10 +1764,12 @@ export async function handleLookIn(
 // ============================================================================
 
 // Handle "use <item>" / "eat <item>" / "drink <item>" / "quaff <item>" command
+// When consumableOnly is true (eat/drink/quaff), only consumable items are accepted
 export async function handleUse(
   socket: AuthenticatedSocket,
   args: string[],
-  currentRoomId: number
+  currentRoomId: number,
+  consumableOnly: boolean = false
 ): Promise<CommandResponse> {
   const charError = requireCharacter(socket);
   if (charError) return charError;
@@ -1725,7 +1779,15 @@ export async function handleUse(
   }
 
   const keyword = args.join(' ');
-  const matches = await itemRepo.findItemsInCharacterInventoryByKeyword(socket.characterId!, keyword);
+  const characterId = socket.characterId!;
+
+  // Search inventory; also search equipped items for light sources via `use`
+  let matches = await itemRepo.findItemsInCharacterInventoryByKeyword(characterId, keyword);
+  if (!consumableOnly) {
+    const equipped = await itemRepo.getCharacterEquipped(characterId);
+    const equippedMatches = findEquippedByKeyword(equipped, keyword);
+    matches = [...matches, ...equippedMatches];
+  }
 
   if (matches.length === 0) {
     return { type: MessageType.ERROR, message: `You don't have that.` };
@@ -1738,9 +1800,18 @@ export async function handleUse(
   const item = matches[0];
   const template = item.template;
 
-  // Must be a consumable
-  if (!template || template.item_type !== ItemType.CONSUMABLE) {
+  if (!template) {
     return { type: MessageType.ERROR, message: `You can't use that.` };
+  }
+
+  // Dispatch by item type (only when called via `use`, not eat/drink/quaff)
+  if (!consumableOnly && template.item_type === ItemType.LIGHT) {
+    return handleLight(socket, args, currentRoomId);
+  }
+
+  // Must be a consumable
+  if (template.item_type !== ItemType.CONSUMABLE) {
+    return { type: MessageType.ERROR, message: `You can't ${consumableOnly ? 'eat' : 'use'} that.` };
   }
 
   const consumableData = template.consumable_data;
@@ -1812,7 +1883,8 @@ function applyConsumableEffect(socket: AuthenticatedSocket, data: { effect_type:
 // LIGHT SOURCE COMMANDS
 // ============================================================================
 
-// Handle "light <item>" command
+// Handle "light <item>" or "use <light source>" command
+// Auto-equips to HELD slot if not already equipped there
 export async function handleLight(
   socket: AuthenticatedSocket,
   args: string[],
@@ -1826,7 +1898,12 @@ export async function handleLight(
   }
 
   const keyword = args.join(' ');
-  const matches = await itemRepo.findItemsInCharacterInventoryByKeyword(socket.characterId!, keyword);
+  const characterId = socket.characterId!;
+
+  // Search inventory first, then equipped items
+  let matches = await itemRepo.findItemsInCharacterInventoryByKeyword(characterId, keyword);
+  const equipped = await itemRepo.getCharacterEquipped(characterId);
+  matches = [...matches, ...findEquippedByKeyword(equipped, keyword)];
 
   if (matches.length === 0) {
     return { type: MessageType.ERROR, message: `You don't have that.` };
@@ -1856,7 +1933,6 @@ export async function handleLight(
 
   // Check if it has fuel (for items with fuel_max)
   if (lightData.fuel_max !== undefined) {
-    // Initialize fuel on first light, or resume from remaining fuel
     const fuelToSet = item.fuel_remaining ?? lightData.fuel_max;
     if (fuelToSet <= 0) {
       return { type: MessageType.ERROR, message: `It's out of fuel.` };
@@ -1864,13 +1940,54 @@ export async function handleLight(
     await itemRepo.updateInstanceFuel(item.id, fuelToSet);
   }
 
+  // Auto-equip to HELD slot if not already equipped there
+  const isEquippedInHeld = item.equipped_slot === EquipmentSlot.HELD;
+  const messages: string[] = [];
+
+  if (!isEquippedInHeld) {
+    // Check for two-handed weapon blocking the HELD slot
+    const mainHandItem = equipped.find(e => e.equipped_slot === EquipmentSlot.MAIN_HAND);
+    if (mainHandItem?.template?.flags?.two_handed) {
+      return { type: MessageType.ERROR, message: `You can't hold that while wielding a two-handed weapon.` };
+    }
+
+    // Unequip anything currently in HELD slot
+    const currentHeld = equipped.find(e => e.equipped_slot === EquipmentSlot.HELD);
+    if (currentHeld) {
+      if (currentHeld.template?.flags?.cursed) {
+        return { type: MessageType.ERROR, message: `You can't replace the cursed item in your hand.` };
+      }
+      // If the current held item is a lit light source, extinguish it first
+      if (currentHeld.is_lit && currentHeld.template?.item_type === ItemType.LIGHT) {
+        await itemRepo.updateInstanceLitState(currentHeld.id, false);
+        untrackLitCharacter(characterId);
+        const heldName = getItemName(currentHeld);
+        messages.push(`You extinguish ${colors.item(heldName)}.`);
+        broadcastToRoom(currentRoomId, `${socket.username} extinguishes ${heldName}.`, socket.playerId);
+      }
+      await itemRepo.updateInstanceLocation(currentHeld.id, ItemLocationType.PLAYER, characterId);
+      if (!currentHeld.is_lit) {
+        const heldName = getItemName(currentHeld);
+        messages.push(`You put away ${colors.item(heldName)}.`);
+      }
+    }
+
+    // Equip the light source to HELD slot
+    await itemRepo.updateInstanceLocation(item.id, ItemLocationType.EQUIPPED, characterId, EquipmentSlot.HELD);
+    invalidateEquipmentCache(characterId);
+  }
+
   // Mark as lit
   await itemRepo.updateInstanceLitState(item.id, true);
+  if (lightData.fuel_max !== undefined) {
+    trackLitCharacter(characterId);
+  }
 
   const itemName = template.name;
   broadcastToRoom(currentRoomId, `${socket.username} lights ${itemName}.`, socket.playerId);
+  messages.push(`You light ${colors.item(itemName)}. It casts a warm glow.`);
 
-  return { type: MessageType.OUTPUT, message: `You light ${colors.item(itemName)}. It casts a warm glow.` };
+  return { type: MessageType.OUTPUT, message: messages.join('\r\n') };
 }
 
 // Handle "extinguish <item>" command
@@ -1887,7 +2004,12 @@ export async function handleExtinguish(
   }
 
   const keyword = args.join(' ');
-  const matches = await itemRepo.findItemsInCharacterInventoryByKeyword(socket.characterId!, keyword);
+  const characterId = socket.characterId!;
+
+  // Search inventory and equipped items
+  let matches = await itemRepo.findItemsInCharacterInventoryByKeyword(characterId, keyword);
+  const equipped = await itemRepo.getCharacterEquipped(characterId);
+  matches = [...matches, ...findEquippedByKeyword(equipped, keyword)];
 
   if (matches.length === 0) {
     return { type: MessageType.ERROR, message: `You don't have that.` };
@@ -1912,11 +2034,89 @@ export async function handleExtinguish(
 
   // Mark as unlit - fuel_remaining is preserved for relighting
   await itemRepo.updateInstanceLitState(item.id, false);
+  untrackLitCharacter(characterId);
 
   const itemName = template.name;
   broadcastToRoom(currentRoomId, `${socket.username} extinguishes ${itemName}.`, socket.playerId);
 
   return { type: MessageType.OUTPUT, message: `You extinguish ${colors.item(itemName)}.` };
+}
+
+// Handle "refuel <item>" command - uses an oil flask to refuel a lantern
+export async function handleRefuel(
+  socket: AuthenticatedSocket,
+  args: string[],
+  currentRoomId: number
+): Promise<CommandResponse> {
+  const charError = requireCharacter(socket);
+  if (charError) return charError;
+
+  if (args.length === 0) {
+    return { type: MessageType.ERROR, message: 'Refuel what?' };
+  }
+
+  const keyword = args.join(' ');
+  const characterId = socket.characterId!;
+
+  // Search inventory and equipped items for the light source
+  let matches = await itemRepo.findItemsInCharacterInventoryByKeyword(characterId, keyword);
+  const equipped = await itemRepo.getCharacterEquipped(characterId);
+  matches = [...matches, ...findEquippedByKeyword(equipped, keyword)];
+
+  if (matches.length === 0) {
+    return { type: MessageType.ERROR, message: `You don't have that.` };
+  }
+
+  if (matches.length > 1 && !areAllSameTemplate(matches)) {
+    return { type: MessageType.ERROR, message: formatDisambiguation(matches) };
+  }
+
+  const item = matches[0];
+  const template = item.template;
+
+  // Must be a light source with fuel
+  if (!template || template.item_type !== ItemType.LIGHT) {
+    return { type: MessageType.ERROR, message: `You can't refuel that.` };
+  }
+
+  const lightData = template.light_data;
+  if (!lightData || lightData.fuel_max === undefined) {
+    return { type: MessageType.ERROR, message: `That doesn't use fuel.` };
+  }
+
+  // Check if already full
+  const currentFuel = item.fuel_remaining ?? lightData.fuel_max;
+  if (currentFuel >= lightData.fuel_max) {
+    return { type: MessageType.ERROR, message: `It's already full.` };
+  }
+
+  // Must not be lit while refueling
+  if (item.is_lit) {
+    return { type: MessageType.ERROR, message: `You need to extinguish it first.` };
+  }
+
+  // Find an oil flask in inventory
+  const oilMatches = await itemRepo.findItemsInCharacterInventoryByKeyword(characterId, 'oil flask');
+  if (oilMatches.length === 0) {
+    return { type: MessageType.ERROR, message: `You don't have any oil to refuel with.` };
+  }
+
+  const oilFlask = oilMatches[0];
+
+  // Consume oil and refuel atomically
+  await withTransaction(async (client) => {
+    if (oilFlask.quantity > 1) {
+      await client.query('UPDATE item_instances SET quantity = quantity - 1, updated_at = CURRENT_TIMESTAMP WHERE id = $1', [oilFlask.id]);
+    } else {
+      await client.query('DELETE FROM item_instances WHERE id = $1', [oilFlask.id]);
+    }
+    await client.query('UPDATE item_instances SET fuel_remaining = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2', [lightData.fuel_max, item.id]);
+  });
+
+  const itemName = template.name;
+  broadcastToRoom(currentRoomId, `${socket.username} refuels ${itemName}.`, socket.playerId);
+
+  return { type: MessageType.OUTPUT, message: `You refuel ${colors.item(itemName)}.` };
 }
 
 // ============================================================================
@@ -2740,6 +2940,12 @@ export async function dropAllItemsOnDeath(characterId: number, roomId: number): 
     // Skip items with no_drop flag
     if (item.template?.flags?.no_drop) {
       continue;
+    }
+
+    // Extinguish lit light sources on death
+    if (item.is_lit && item.template?.item_type === ItemType.LIGHT) {
+      await itemRepo.updateInstanceLitState(item.id, false);
+      untrackLitCharacter(characterId);
     }
 
     // Move item to room (unequip if equipped)

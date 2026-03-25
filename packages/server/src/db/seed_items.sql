@@ -324,6 +324,20 @@ VALUES
     '{"vision_bonus": 175, "fuel_max": 720, "fuel_rate": 1}'
 );
 
+-- Oil Flask (consumable for refueling lanterns)
+INSERT INTO item_templates (name, short_desc, long_desc, room_desc, keywords, weight, size, base_value, item_type, flags)
+VALUES
+(
+    'oil flask',
+    'a small flask of oil',
+    'A small glass flask filled with lamp oil. It can be used to refuel a lantern.',
+    'A small flask of oil sits here.',
+    ARRAY['oil', 'flask', 'lamp oil'],
+    1, 1, 5,
+    'misc',
+    '{"takeable": true, "stackable": true}'
+);
+
 -- Hidden Items
 INSERT INTO item_templates (name, short_desc, long_desc, room_desc, keywords, weight, size, base_value, item_type, flags)
 VALUES 
