@@ -47,9 +47,18 @@ import { startDnsResolver } from './services/dnsResolver.js';
 const app = express();
 const PORT = Number(process.env.PORT) || 3001;
 
-// Security headers (allow inline scripts and WebSocket connections for the game client)
+// Security headers with CSP configured for game client (inline scripts, WebSocket, same-origin)
 app.use(helmet({
-  contentSecurityPolicy: false,
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      connectSrc: ["'self'", "ws:", "wss:"],
+      imgSrc: ["'self'", "data:"],
+      fontSrc: ["'self'", "data:"],
+    },
+  },
   crossOriginEmbedderPolicy: false,
 }));
 

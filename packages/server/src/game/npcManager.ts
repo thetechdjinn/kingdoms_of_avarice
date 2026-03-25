@@ -841,6 +841,9 @@ export function checkHostileAggro(
     if (npc.vitals.hp <= 0) continue;
     if (npc.behaviorState === 'fleeing' || npc.behaviorState === 'returning') continue;
 
+    // Skip if NPC can't see in this room's darkness
+    if (!canNpcSeeInRoom(npc, roomId)) continue;
+
     // Determine if this NPC should aggro: either naturally hostile,
     // or a merchant that was previously attacked by this player
     const isHostile = npc.template.hostile;
@@ -852,8 +855,6 @@ export function checkHostileAggro(
 
     // Skip if player is hidden and NPC can't see hidden
     if (player.stealthMode === 'hidden' && !npc.canSeeHidden) continue;
-
-    if (!canNpcSeeInRoom(npc, roomId)) continue;
 
     // Reset hostility timer when merchant re-aggros
     if (isAngryMerchant) {
