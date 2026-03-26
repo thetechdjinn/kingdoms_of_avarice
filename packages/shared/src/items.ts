@@ -157,6 +157,9 @@ export interface ConsumableData {
   spell_id?: number;            // Reference to spells table for scroll effect_types ('learn_spell', 'cast_spell')
   fizzle_chance?: number;       // 0-100 percent chance of fizzle for casting scrolls (0 or omitted = never fails)
   destination_room_id?: number; // Target room for teleport/portal utility scrolls
+  use_message_self?: string;    // Custom self message, e.g. "You eat {item} and feel nourished."
+  use_message_target?: string;  // Custom target message, e.g. "{player} reads a scroll and you feel weakened."
+  use_message_room?: string;    // Custom room message, e.g. "{player} eats {item}."
 }
 
 // Light source data
