@@ -85,6 +85,7 @@ This document lists all available commands in Kingdoms of Avarice.
 | `light <item>` | | Light a torch or lantern |
 | `extinguish <item>` | `douse` | Put out a light source |
 | `repair <item>` | | Repair a damaged item |
+| `read <scroll>` | | Read a scroll to learn a spell |
 
 ### Crafting
 
