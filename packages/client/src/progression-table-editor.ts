@@ -2,6 +2,8 @@
  * Progression Table Editor - View and edit XP/essence requirements per level
  */
 import { renderNav } from './components/nav.js';
+import { initAuth } from './components/auth.js';
+import { showConfirm } from './components/modal.js';
 
 interface LevelRow {
   level: number;
@@ -12,69 +14,8 @@ interface LevelRow {
 (async function () {
   renderNav({ activePage: 'progression-table-editor' });
 
-  // ============================================================================
-  // Authentication & Initialization
-  // ============================================================================
-
-  async function checkAuth(): Promise<boolean> {
-    try {
-      const res = await fetch('/api/auth/me');
-      if (!res.ok) {
-        window.location.href = '/';
-        return false;
-      }
-      const data = await res.json();
-      if (!data.authenticated) {
-        window.location.href = '/';
-        return false;
-      }
-
-      const roles = data.roles || [];
-      const hasDeveloperAccess = roles.includes('developer') || roles.includes('admin');
-
-      if (!hasDeveloperAccess) {
-        window.location.href = '/';
-        return false;
-      }
-
-      // Update username display
-      const usernameEl = document.getElementById('nav-username');
-      if (usernameEl) usernameEl.textContent = data.username || 'User';
-
-      // Show admin dropdown for admin users
-      const isAdmin = roles.includes('admin');
-      const adminDropdown = document.getElementById('nav-admin-dropdown');
-      if (adminDropdown) {
-        adminDropdown.style.display = isAdmin ? 'flex' : 'none';
-      }
-
-      return true;
-    } catch (error) {
-      console.error('Auth check failed:', error);
-      window.location.href = '/';
-      return false;
-    }
-  }
-
-  const authenticated = await checkAuth();
-  if (!authenticated) {
-    return;
-  }
-
-  // Logout handler
-  document.getElementById('logout-btn')?.addEventListener('click', async () => {
-    await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
-    window.location.href = '/';
-  });
-
-  // User dropdown toggle
-  const userBtn = document.getElementById('nav-username');
-  const userDropdown = document.getElementById('user-dropdown');
-  userBtn?.addEventListener('click', (e) => {
-    e.stopPropagation();
-    userDropdown?.classList.toggle('show');
-  });
-  document.addEventListener('click', () => userDropdown?.classList.remove('show'));
+  const auth = await initAuth('developer');
+  if (!auth) return;
 
   // ============================================================================
   // State & DOM Elements
@@ -285,11 +226,11 @@ interface LevelRow {
     saveLevel(level, xp, essence);
   }
 
-  function handleDelete(e: Event): void {
+  async function handleDelete(e: Event): Promise<void> {
     const btn = e.currentTarget as HTMLButtonElement;
     const level = parseInt(btn.dataset.level!);
 
-    if (!confirm(`Delete level ${level}? This cannot be undone.`)) {
+    if (!await showConfirm(`Delete level ${level}? This cannot be undone.`, { dangerous: true })) {
       return;
     }
 
@@ -297,7 +238,7 @@ interface LevelRow {
   }
 
   // Add level button
-  addLevelBtn.addEventListener('click', () => {
+  addLevelBtn.addEventListener('click', async () => {
     const level = parseInt(newLevelInput.value);
     const xp = parseInt(newXpInput.value);
     const essence = parseInt(newEssenceInput.value);
@@ -322,7 +263,7 @@ interface LevelRow {
 
     // Check for duplicate level
     if (levels.some(l => l.level === level)) {
-      if (!confirm(`Level ${level} already exists. Overwrite it?`)) {
+      if (!await showConfirm(`Level ${level} already exists. Overwrite it?`)) {
         return;
       }
     }

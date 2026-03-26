@@ -234,8 +234,8 @@ ITEM PROPOSALS
  revenant bone blade     weapon      main_hand   6-10 slashing, spd 10  bone revenant drop
  hollow guardian's skull misc        —           trophy/quest item       boss drop (100%)
  bone key                key         —           unlocks shrine gate     bone revenant drop (25%)
- dried rations           consumable  —           food, heals 10 HP      Maren's shop
- herbal poultice         consumable  —           heals 30 HP            Maren's shop
+ dried rations           consumable  —           food, restores health   Maren's shop
+ herbal poultice         consumable  —           restores health        Maren's shop
  tattered leather armor  armor       body        AC 3                   Maren's shop
  antivenom vial          consumable  —           cures poisoned          Maren's shop
 

@@ -42,9 +42,9 @@ Access the Item Editor at `/item-editor.html` (requires Developer or Admin role)
 | Type              | Item category (weapon, armor, etc.)                  |
 | Long Description  | Shown when examining                                 |
 | Keywords          | Comma-separated words players can use to target item |
-| Weight            | Affects carrying capacity                            |
+| Weight            | Affects carrying capacity (not shown to players)     |
 | Size              | Relative size (1-5)                                  |
-| Base Value        | Gold value                                           |
+| Base Value        | Base price for merchant calculations (not shown to players) |
 | Equipment Slot    | Where item is worn/wielded                           |
 | Max Stack         | How many can stack in one inventory slot (1 = no stacking) |
 | Effect Slots      | Number of enchantments allowed                       |

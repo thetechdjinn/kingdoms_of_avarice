@@ -1,4 +1,6 @@
 import { renderNav } from './components/nav.js';
+import { initAuth } from './components/auth.js';
+import { showConfirm } from './components/modal.js';
 
 (function() {
 
@@ -112,13 +114,6 @@ interface DropTable {
   description: string | null;
 }
 
-interface AuthInfo {
-  authenticated: boolean;
-  playerId?: number;
-  username?: string;
-  roles?: string[];
-}
-
 let templates: NpcTemplate[] = [];
 let dropTables: DropTable[] = [];
 let factions: Faction[] = [];
@@ -134,8 +129,6 @@ let availableSpells: Array<{
   scalingPerLevel: number; damageScalingFactor: number; healingScalingFactor: number;
   maxScalingLevel: number; hitsPerCast: number; levelRequired: number;
 }> = [];
-let currentUser: AuthInfo | null = null;
-
 // ============================================================================
 // Toast Notifications
 // ============================================================================
@@ -213,57 +206,6 @@ function getElement<T extends HTMLElement>(id: string): T | null {
 // ============================================================================
 // Authentication
 // ============================================================================
-
-async function checkAuth(): Promise<boolean> {
-  try {
-    const response = await fetch('/api/auth/me', { credentials: 'include' });
-    if (!response.ok) {
-      window.location.href = '/';
-      return false;
-    }
-    const data: AuthInfo = await response.json();
-    currentUser = data;
-
-    if (!data.authenticated) {
-      window.location.href = '/';
-      return false;
-    }
-
-    const roles = data.roles || [];
-    const hasDeveloperAccess = roles.includes('developer') || roles.includes('admin');
-
-    if (!hasDeveloperAccess) {
-      window.location.href = '/';
-      return false;
-    }
-
-    const usernameEl = document.getElementById('nav-username');
-    if (usernameEl && data.username) {
-      usernameEl.textContent = data.username;
-    }
-
-    const isAdmin = roles.includes('admin');
-    const adminDropdown = document.getElementById('nav-admin-dropdown');
-    if (adminDropdown) {
-      adminDropdown.style.display = isAdmin ? 'flex' : 'none';
-    }
-
-    return true;
-  } catch (error) {
-    console.error('Failed to check auth:', error);
-    window.location.href = '/';
-    return false;
-  }
-}
-
-async function handleLogout(): Promise<void> {
-  try {
-    await fetch('/api/logout', { method: 'POST', credentials: 'include' });
-  } catch {
-    // Ignore errors
-  }
-  window.location.href = '/';
-}
 
 // ============================================================================
 // Data Loading
@@ -903,7 +845,7 @@ async function saveTemplate(): Promise<void> {
 
 async function deleteTemplate(): Promise<void> {
   if (!selectedTemplateId) return;
-  if (!confirm('Delete this NPC template? All active instances will be despawned.')) return;
+  if (!await showConfirm('Delete this NPC template? All active instances will be despawned.', { dangerous: true })) return;
 
   try {
     const response = await fetch(`/api/npcs/${selectedTemplateId}`, { method: 'DELETE' });
@@ -1308,7 +1250,7 @@ function renderMerchantInventory(): void {
   tbody.querySelectorAll('.inv-delete').forEach(btn => {
     btn.addEventListener('click', async () => {
       const id = parseInt((btn as HTMLElement).dataset.id || '0');
-      if (!id || !confirm('Remove this item from inventory?')) return;
+      if (!id || !await showConfirm('Remove this item from inventory?', { dangerous: true })) return;
       try {
         await fetch(`/api/merchants/inventory/${id}`, { method: 'DELETE' });
         if (selectedTemplateId) await loadMerchantData(selectedTemplateId);
@@ -1367,7 +1309,7 @@ function renderMerchantResponses(): void {
   tbody.querySelectorAll('.resp-delete').forEach(btn => {
     btn.addEventListener('click', async () => {
       const id = parseInt((btn as HTMLElement).dataset.id || '0');
-      if (!id || !confirm('Delete this response?')) return;
+      if (!id || !await showConfirm('Delete this response?', { dangerous: true })) return;
       try {
         await fetch(`/api/merchants/responses/${id}`, { method: 'DELETE' });
         if (selectedTemplateId) await loadMerchantData(selectedTemplateId);
@@ -1465,8 +1407,8 @@ function setupTabs(): void {
 
 document.addEventListener('DOMContentLoaded', async () => {
   renderNav({ activePage: 'npc-editor', helpDoc: 'NPC_Creation_Guide.md' });
-  const hasAccess = await checkAuth();
-  if (!hasAccess) return;
+  const auth = await initAuth('developer');
+  if (!auth) return;
 
   await Promise.all([fetchTemplates(), fetchDropTables(), fetchFactions(), fetchItemTemplates(), fetchAvailableSpells()]);
   setupTabs();
@@ -1520,25 +1462,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Spawn
   addListener('spawn-btn', 'click', spawnNpc);
-
-  // Logout
-  addListener('logout-btn', 'click', handleLogout);
-
-  // User menu dropdown toggle
-  const userMenuBtn = document.getElementById('nav-username');
-  const userMenu = userMenuBtn?.closest('.nav-user-menu');
-  if (userMenuBtn && userMenu) {
-    userMenuBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      userMenu.classList.toggle('open');
-    });
-    userMenu.addEventListener('click', (e) => {
-      e.stopPropagation();
-    });
-    document.addEventListener('click', () => {
-      userMenu.classList.remove('open');
-    });
-  }
 
   // Live preview updates when any form input changes
   document.getElementById('npc-form')?.addEventListener('input', updatePreview);

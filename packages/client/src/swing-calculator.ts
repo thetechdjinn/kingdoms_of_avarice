@@ -7,13 +7,7 @@ import {
   DODGE_MIN_ATTACKER_ACCURACY,
 } from '@koa/shared';
 import { renderNav } from './components/nav.js';
-
-interface AuthInfo {
-  authenticated: boolean;
-  playerId?: number;
-  username?: string;
-  roles?: string[];
-}
+import { initAuth } from './components/auth.js';
 
 interface WeaponTemplate {
   id: number;
@@ -27,67 +21,6 @@ interface WeaponTemplate {
 }
 
 let weapons: WeaponTemplate[] = [];
-
-// ============================================================================
-// Authentication
-// ============================================================================
-
-async function checkAuth(): Promise<boolean> {
-  try {
-    const response = await fetch('/api/auth/me', { credentials: 'include' });
-    if (!response.ok) {
-      window.location.href = '/';
-      return false;
-    }
-    const data: AuthInfo = await response.json();
-
-    if (!data.authenticated) {
-      window.location.href = '/';
-      return false;
-    }
-
-    const roles = data.roles || [];
-    const hasDeveloperAccess = roles.includes('developer') || roles.includes('admin');
-
-    if (!hasDeveloperAccess) {
-      window.location.href = '/';
-      return false;
-    }
-
-    const usernameEl = document.getElementById('nav-username');
-    if (usernameEl && data.username) {
-      usernameEl.textContent = data.username;
-    }
-
-    // Show developer dropdown
-    const devDropdown = document.getElementById('nav-dev-dropdown');
-    if (devDropdown) {
-      devDropdown.style.display = 'flex';
-    }
-
-    // Show admin dropdown if admin
-    const isAdmin = roles.includes('admin');
-    const adminDropdown = document.getElementById('nav-admin-dropdown');
-    if (adminDropdown) {
-      adminDropdown.style.display = isAdmin ? 'flex' : 'none';
-    }
-
-    return true;
-  } catch (error) {
-    console.error('Failed to check auth:', error);
-    window.location.href = '/';
-    return false;
-  }
-}
-
-async function handleLogout(): Promise<void> {
-  try {
-    await fetch('/api/logout', { method: 'POST', credentials: 'include' });
-  } catch {
-    // Ignore errors
-  }
-  window.location.href = '/';
-}
 
 // ============================================================================
 // Load Weapons
@@ -767,33 +700,12 @@ function setupEventListeners(): void {
     });
   }
 
-  // Logout handler
-  const logoutBtn = document.getElementById('logout-btn');
-  if (logoutBtn) {
-    logoutBtn.addEventListener('click', handleLogout);
-  }
-
-  // User menu dropdown toggle
-  const userMenuBtn = document.getElementById('nav-username');
-  const userMenu = userMenuBtn?.closest('.nav-user-menu');
-  if (userMenuBtn && userMenu) {
-    userMenuBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      userMenu.classList.toggle('open');
-    });
-    userMenu.addEventListener('click', (e) => {
-      e.stopPropagation();
-    });
-    document.addEventListener('click', () => {
-      userMenu.classList.remove('open');
-    });
-  }
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
   renderNav({ activePage: 'swing-calculator' });
-  const hasAccess = await checkAuth();
-  if (!hasAccess) return;
+  const auth = await initAuth('developer');
+  if (!auth) return;
 
   setupEventListeners();
   await loadWeapons();

@@ -363,7 +363,7 @@ If an NPC runs out of mana, it cannot cast spells that have a mana cost and fall
 
 ## Merchant Tab
 
-The Merchant tab appears when **Merchant Enabled** is checked in the Basic tab. Merchants sell items, respond to keywords, and use the faction/reputation system for pricing.
+The Merchant tab appears when **Merchant Enabled** is checked in the Basic tab. Merchants sell items, respond to trigger words and phrases, and use the faction/reputation system for pricing.
 
 ### Enabling Merchant Mode
 
@@ -393,14 +393,24 @@ Keyword-triggered dialogue for when players speak to the merchant using directed
 
 | Field | Description |
 |-------|-------------|
-| **Trigger Keywords** | List of words that trigger this response |
+| **Trigger Keywords** | Comma-separated words or phrases that trigger this response |
 | **Response** | What the merchant says |
 
+Triggers support both single keywords and multi-word phrases. Matching is case-insensitive and ignores punctuation. Write triggers as generically as possible since players won't reproduce them exactly.
+
+- **Single word** triggers match as whole words (e.g., `gems` matches "do you have gems?" but not "this gem")
+- **Multi-word** triggers match as phrases anywhere in the message (e.g., `have gems` matches "do you have gems?")
+- Longer/more specific triggers take priority over shorter ones
+
 Example:
-- Keywords: `["sword", "swords", "weapons"]`
+- Keywords: `sword, swords, weapons`
 - Response: `"I have the finest blades in all of Arindale! Use 'list' to see my wares."`
 
-When a player says `>goran tell me about your swords`, the system checks for keyword matches and the merchant responds.
+Example with phrase:
+- Keywords: `have gems, gems for sale`
+- Response: `"Yes! Let me show you what I have."`
+
+When a player says `>goran tell me about your swords`, the system checks for matches and the merchant responds.
 
 ### Pricing Engine
 
@@ -646,7 +656,7 @@ A non-hostile NPC that sells items:
 
 1. **Basic Tab**: Set a proper name, check **Merchant Enabled**. Leave hostile off. Set primary faction.
 2. **Appearance Tab**: Add a spawn message for flavor.
-3. **Merchant Tab**: Add inventory items, set stock levels, add keyword responses.
+3. **Merchant Tab**: Add inventory items, set stock levels, add trigger responses.
 
 Example - Blacksmith:
 - Name: "Brendan the Blacksmith", Proper Name: On
@@ -759,7 +769,7 @@ SPAWN ──> IDLE ──> COMBAT ──> FLEEING ──> RETURNING
 - Always use proper names for merchants ("Goran", not "weaponsmith")
 - Set a primary faction so reputation-based pricing works
 - Keep restock chance at 100% for common items, lower it for rare inventory
-- Add keyword responses for common player questions (prices, items, lore)
+- Add trigger responses for common player questions (prices, items, lore). Use generic phrases without punctuation (e.g., `have gems` not `Do you have gems?`)
 - Merchants don't drop gold or loot on death - their inventory persists through death/respawn
 
 ### Balance

@@ -178,7 +178,7 @@ export async function awardEssence(characterId: number, amount: number): Promise
   return awardProgression(
     characterId, amount,
     progressionRepo.incrementEssenceWallet,
-    (prog, result) => { prog.essence_wallet = result.essence_wallet; prog.total_essence_earned = result.total_essence_earned; },
+    (prog, result) => { prog.essence_wallet = result.essence_wallet; prog.essence_earned_this_level = result.essence_earned_this_level; prog.total_essence_earned = result.total_essence_earned; },
     'essence award'
   );
 }
