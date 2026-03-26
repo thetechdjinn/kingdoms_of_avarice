@@ -216,6 +216,9 @@ export interface ConsumableData {
   spell_id?: number;            // NEW: reference to spells table (soft ref, not FK)
   fizzle_chance?: number;       // NEW: 0-100, for casting scrolls (0 or omitted = never fails)
   destination_room_id?: number; // NEW: for teleport/utility scrolls
+  use_message_self?: string;    // Custom self message: "You eat {item} and feel nourished."
+  use_message_target?: string;  // Custom target message: "{player} reads a scroll and you feel weakened."
+  use_message_room?: string;    // Custom room message: "{player} eats {item}."
 }
 ```
 
@@ -355,6 +358,17 @@ This does NOT reuse `handleOffensiveSpell` directly because that handler sets up
   - Pre-defined portals continue working unchanged (both rooms in DB)
 - Other utility subtypes as needed (detect, identify, recall)
 - Works both as learned spells (for caster classes) and via casting scrolls (for anyone)
+
+### Phase 4: Editor Support & Custom Consumable Messages
+- Add `learn_spell` and `cast_spell` options to item editor consumable effect type dropdown
+- Add spell picker (SearchableSelect) for scroll `spell_id` selection
+- Add fizzle_chance input (shown only for `cast_spell`)
+- Add destination room picker (shown only for `cast_spell`, for teleport scrolls)
+- Add `use_message_self` and `use_message_room` optional fields to ConsumableData
+- Custom message support in `handleUse()`: `{player}` and `{item}` placeholders with fallback to defaults
+- Add custom message inputs to item editor consumable section (all consumable types)
+- Update help system with casting scroll syntax: `read <scroll> <target>`
+- Update commands.md documentation
 
 ---
 

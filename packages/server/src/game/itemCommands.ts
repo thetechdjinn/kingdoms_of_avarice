@@ -1869,9 +1869,28 @@ export async function handleUse(
   }
 
   const itemName = template.name;
-  broadcastToRoom(currentRoomId, `${socket.username} uses ${itemName}.`, socket.playerId);
+  const itemNameWithArticle = withArticle(itemName);
 
-  return { type: MessageType.OUTPUT, message: `You use ${colors.item(itemName)}. ${effectResult}` };
+  // Room broadcast: custom or default
+  if (consumableData.use_message_room) {
+    broadcastToRoom(currentRoomId, replaceConsumablePlaceholders(consumableData.use_message_room, socket.username, itemNameWithArticle), socket.playerId);
+  } else {
+    broadcastToRoom(currentRoomId, `${socket.username} uses ${itemNameWithArticle}.`, socket.playerId);
+  }
+
+  // Self message: custom replaces full output, default appends effect result
+  if (consumableData.use_message_self) {
+    const selfMsg = replaceConsumablePlaceholders(consumableData.use_message_self, socket.username, colors.item(itemNameWithArticle));
+    return { type: MessageType.OUTPUT, message: selfMsg };
+  }
+  return { type: MessageType.OUTPUT, message: `You use ${colors.item(itemNameWithArticle)}. ${effectResult}` };
+}
+
+// Replace {player}, {item}, and {target} placeholders in consumable message templates
+function replaceConsumablePlaceholders(template: string, playerName: string, itemName: string, targetName?: string): string {
+  let result = template.replace(/\{player\}/gi, playerName).replace(/\{item\}/gi, itemName);
+  if (targetName) result = result.replace(/\{target\}/gi, targetName);
+  return result;
 }
 
 // Apply consumable effect and return description
@@ -2013,16 +2032,23 @@ async function handleLearnScroll(
   }
 
   // Messages
-  if (destroyed) {
+  const itemNameWithArticle = withArticle(template.name);
+  if (consumableData.use_message_room) {
+    broadcastToRoom(currentRoomId, replaceConsumablePlaceholders(consumableData.use_message_room, socket.username, itemNameWithArticle), socket.playerId);
+  } else if (destroyed) {
     broadcastToRoom(currentRoomId, `${socket.username} reads a scroll, which crumbles to dust.`, socket.playerId);
   } else {
     broadcastToRoom(currentRoomId, `${socket.username} reads a scroll.`, socket.playerId);
   }
 
-  const lines = [
-    destroyed
+  const selfMsg = consumableData.use_message_self
+    ? replaceConsumablePlaceholders(consumableData.use_message_self, socket.username, colors.item(itemNameWithArticle))
+    : destroyed
       ? colors.boldWhite(`You study the scroll intently. The words of power burn into your memory as the parchment crumbles to dust.`)
-      : colors.boldWhite(`You study the scroll intently. The words of power burn into your memory.`),
+      : colors.boldWhite(`You study the scroll intently. The words of power burn into your memory.`);
+
+  const lines = [
+    selfMsg,
     `${colors.boldGreen('Learned:')} ${colors.cyan(spell.name)} (${colors.white(spell.mnemonic)}) - ${spell.manaCost} mana`,
   ];
 

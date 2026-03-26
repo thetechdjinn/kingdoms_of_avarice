@@ -260,10 +260,69 @@
                       <option value="damage">Damage</option>
                       <option value="food">Food</option>
                       <option value="drink">Drink</option>
+                      <option value="learn_spell">Learn Spell (Scroll)</option>
+                      <option value="cast_spell">Cast Spell (Scroll)</option>
                     </select>
                   </div>
-                  <div class="form-group"><label for="consumable-effect-value">Effect Value</label><input type="number" id="consumable-effect-value" min="0" value="0" /></div>
+                  <div id="consumable-effect-value-group" class="form-group"><label for="consumable-effect-value">Effect Value</label><input type="number" id="consumable-effect-value" min="0" value="0" /></div>
                   <div class="form-group"><label for="consumable-charges">Charges</label><input type="number" id="consumable-charges" min="0" value="0" /><span class="hint-inline">0 = single use</span></div>
+                </div>
+                <div id="consumable-scroll-fields" style="display:none;">
+                  <div class="form-row">
+                    <div class="form-group" style="flex:0 0 120px;">
+                      <label for="consumable-spell-type-filter">Spell Type</label>
+                      <select id="consumable-spell-type-filter">
+                        <option value="">All</option>
+                        <option value="offensive">Offensive</option>
+                        <option value="healing">Healing</option>
+                        <option value="buff">Buff</option>
+                        <option value="debuff">Debuff</option>
+                        <option value="utility">Utility</option>
+                      </select>
+                    </div>
+                    <div class="form-group" style="flex:2;">
+                      <label>Spell</label>
+                      <div id="consumable-spell-select-container"></div>
+                    </div>
+                  </div>
+                  <div id="consumable-cast-fields" style="display:none;">
+                    <div class="form-row">
+                      <div class="form-group">
+                        <label for="consumable-fizzle-chance">Fizzle Chance (%)</label>
+                        <input type="number" id="consumable-fizzle-chance" min="0" max="100" value="0" />
+                        <span class="hint-inline">0 = never fizzles</span>
+                      </div>
+                      <div class="form-group" style="flex:0 0 150px;">
+                        <label for="consumable-dest-area-filter">Area</label>
+                        <select id="consumable-dest-area-filter">
+                          <option value="">All</option>
+                        </select>
+                      </div>
+                      <div class="form-group" style="flex:2;">
+                        <label>Destination Room (teleport)</label>
+                        <div id="consumable-destination-room-container"></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div class="form-row">
+                  <div class="form-group" style="flex:1;">
+                    <label for="consumable-use-message-self">Custom Self Message</label>
+                    <input type="text" id="consumable-use-message-self" placeholder="You eat {item} and feel better!" />
+                    <span class="hint-inline">{player} = name, {item} = item with article, {target} = target name</span>
+                  </div>
+                  <div class="form-group" style="flex:1;">
+                    <label for="consumable-use-message-room">Custom Room Message</label>
+                    <input type="text" id="consumable-use-message-room" placeholder="{player} eats {item}." />
+                    <span class="hint-inline">Leave blank for defaults</span>
+                  </div>
+                </div>
+                <div class="form-row">
+                  <div class="form-group" style="flex:1;">
+                    <label for="consumable-use-message-target">Custom Target Message</label>
+                    <input type="text" id="consumable-use-message-target" placeholder="{player} reads a scroll and you feel weakened." />
+                    <span class="hint-inline">What the target sees (casting scrolls with a target)</span>
+                  </div>
                 </div>
                 <div class="form-row future-feature">
                   <div class="form-group"><label for="consumable-duration">Duration (sec) <span class="future-badge">Not Yet Implemented</span></label><input type="number" id="consumable-duration" min="0" value="0" disabled /></div>

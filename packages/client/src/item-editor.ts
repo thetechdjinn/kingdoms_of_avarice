@@ -49,6 +49,7 @@ interface RaceDef { id: string; displayName: string; }
 interface DropTableEntryRef { itemTemplateId: number | null; }
 interface DropTableRef { id: number; name: string; entries?: DropTableEntryRef[]; }
 interface NpcRef { id: number; name: string; dropTableId?: number | null; }
+interface SpellRef { id: number; name: string; mnemonic: string; spellType: string; }
 
 const DENOMINATION_BREAKS = [
   { name: 'runic', value: 100000 },
@@ -84,6 +85,7 @@ function formatCopper(copper: number): string {
   let raceDefs: RaceDef[] = [];
   let dropTables: DropTableRef[] = [];
   let npcTemplates: NpcRef[] = [];
+  let spells: SpellRef[] = [];
   let selectedTemplateId: number | null = null;
   let selectedClasses: Set<string> = new Set();
   let selectedRaces: Set<string> = new Set();
@@ -159,6 +161,8 @@ function formatCopper(copper: number): string {
   // ============================================================================
 
   let spawnRoomSelect: SearchableSelect;
+  let consumableSpellSelect: SearchableSelect;
+  let consumableDestRoomSelect: SearchableSelect;
 
   function initSpawnRoomSelect(): void {
     spawnRoomSelect = new SearchableSelect({
@@ -167,6 +171,68 @@ function formatCopper(copper: number): string {
       options: rooms.sort((a, b) => (a.area || '').localeCompare(b.area || '') || a.name.localeCompare(b.name))
         .map(r => ({ value: String(r.id), label: r.name, group: r.area || 'No Area', detail: `#${r.id}` })),
       onChange: () => {},
+    });
+  }
+
+  function getSpellOptions(typeFilter?: string): SelectOption[] {
+    let filtered = spells;
+    if (typeFilter) {
+      filtered = filtered.filter(s => s.spellType === typeFilter);
+    }
+    return filtered
+      .sort((a, b) => a.name.localeCompare(b.name))
+      .map(s => ({ value: String(s.id), label: `${s.name} (${s.mnemonic})`, group: s.spellType, detail: `#${s.id}` }));
+  }
+
+  function initConsumableSpellSelect(): void {
+    consumableSpellSelect = new SearchableSelect({
+      container: document.getElementById('consumable-spell-select-container')!,
+      placeholder: 'Search spells...',
+      options: getSpellOptions(),
+      onChange: () => {},
+    });
+
+    document.getElementById('consumable-spell-type-filter')?.addEventListener('change', (e) => {
+      const filter = (e.target as HTMLSelectElement).value;
+      const currentValue = consumableSpellSelect.getValue();
+      consumableSpellSelect.setOptions(getSpellOptions(filter || undefined));
+      if (currentValue) consumableSpellSelect.setValue(currentValue);
+    });
+  }
+
+  function getDestRoomOptions(areaFilter?: string): SelectOption[] {
+    let filtered = rooms;
+    if (areaFilter) {
+      filtered = filtered.filter(r => (r.area || '') === areaFilter);
+    }
+    return filtered
+      .sort((a, b) => (a.area || '').localeCompare(b.area || '') || a.name.localeCompare(b.name))
+      .map(r => ({ value: String(r.id), label: r.name, group: r.area || 'No Area', detail: `#${r.id}` }));
+  }
+
+  function initConsumableDestRoomSelect(): void {
+    consumableDestRoomSelect = new SearchableSelect({
+      container: document.getElementById('consumable-destination-room-container')!,
+      placeholder: 'Search rooms...',
+      options: getDestRoomOptions(),
+      onChange: () => {},
+    });
+
+    // Populate area filter dropdown from rooms data
+    const areaFilterSelect = document.getElementById('consumable-dest-area-filter') as HTMLSelectElement;
+    const areas = [...new Set(rooms.map(r => r.area || '').filter(Boolean))].sort();
+    for (const area of areas) {
+      const option = document.createElement('option');
+      option.value = area;
+      option.textContent = area;
+      areaFilterSelect.appendChild(option);
+    }
+
+    areaFilterSelect.addEventListener('change', () => {
+      const filter = areaFilterSelect.value;
+      const currentValue = consumableDestRoomSelect.getValue();
+      consumableDestRoomSelect.setOptions(getDestRoomOptions(filter || undefined));
+      if (currentValue) consumableDestRoomSelect.setValue(currentValue);
     });
   }
 
@@ -243,6 +309,19 @@ function formatCopper(copper: number): string {
         dropTableId: (n.dropTableId as number | null) ?? null,
       }));
     } catch (error) { console.error('Failed to fetch NPCs:', error); showToast('Failed to load NPCs', 'error'); }
+  }
+
+  async function fetchSpells(): Promise<void> {
+    try {
+      const res = await fetch('/api/spells', { credentials: 'include' });
+      const data = await res.json();
+      spells = ((data.spells || []) as Record<string, unknown>[]).map(s => ({
+        id: s.id as number,
+        name: s.name as string,
+        mnemonic: s.mnemonic as string,
+        spellType: (s.spellType || s.spell_type) as string,
+      }));
+    } catch (error) { console.error('Failed to fetch spells:', error); showToast('Failed to load spells', 'error'); }
   }
 
   // ============================================================================
@@ -375,10 +454,39 @@ function formatCopper(copper: number): string {
 
   function loadConsumableData(t: ItemTemplate): void {
     const c = t.consumable_data || {};
-    (document.getElementById('consumable-effect-type') as HTMLSelectElement).value = (c.effect_type as string) || 'heal';
+    const effectType = (c.effect_type as string) || 'heal';
+    (document.getElementById('consumable-effect-type') as HTMLSelectElement).value = effectType;
     (document.getElementById('consumable-effect-value') as HTMLInputElement).value = String(c.effect_value || 0);
     (document.getElementById('consumable-charges') as HTMLInputElement).value = String(c.charges || 0);
     (document.getElementById('consumable-duration') as HTMLInputElement).value = String(c.duration || 0);
+
+    // Scroll fields — reset filters to "All" and restore full option lists
+    (document.getElementById('consumable-spell-type-filter') as HTMLSelectElement).value = '';
+    if (consumableSpellSelect) {
+      consumableSpellSelect.setOptions(getSpellOptions());
+      if (c.spell_id) {
+        consumableSpellSelect.setValue(String(c.spell_id));
+      } else {
+        consumableSpellSelect.clear();
+      }
+    }
+    (document.getElementById('consumable-fizzle-chance') as HTMLInputElement).value = String(c.fizzle_chance || 0);
+    (document.getElementById('consumable-dest-area-filter') as HTMLSelectElement).value = '';
+    if (consumableDestRoomSelect) {
+      consumableDestRoomSelect.setOptions(getDestRoomOptions());
+      if (c.destination_room_id) {
+        consumableDestRoomSelect.setValue(String(c.destination_room_id));
+      } else {
+        consumableDestRoomSelect.clear();
+      }
+    }
+
+    // Custom messages
+    (document.getElementById('consumable-use-message-self') as HTMLInputElement).value = (c.use_message_self as string) || '';
+    (document.getElementById('consumable-use-message-target') as HTMLInputElement).value = (c.use_message_target as string) || '';
+    (document.getElementById('consumable-use-message-room') as HTMLInputElement).value = (c.use_message_room as string) || '';
+
+    updateConsumableFieldVisibility(effectType);
   }
 
   function loadLightData(t: ItemTemplate): void {
@@ -422,6 +530,14 @@ function formatCopper(copper: number): string {
       section.style.display = type === itemType ? 'block' : 'none';
     }
     typeDataHeader.textContent = `${itemType.charAt(0).toUpperCase() + itemType.slice(1)} Data`;
+  }
+
+  function updateConsumableFieldVisibility(effectType: string): void {
+    const isScroll = effectType === 'learn_spell' || effectType === 'cast_spell';
+    const isCastScroll = effectType === 'cast_spell';
+    document.getElementById('consumable-scroll-fields')!.style.display = isScroll ? 'block' : 'none';
+    document.getElementById('consumable-cast-fields')!.style.display = isCastScroll ? 'block' : 'none';
+    document.getElementById('consumable-effect-value-group')!.style.display = isScroll ? 'none' : '';
   }
 
   // ============================================================================
@@ -532,15 +648,38 @@ function formatCopper(copper: number): string {
       data.container_capacity = parseInt((document.getElementById('container-capacity') as HTMLInputElement).value) || 0;
       data.container_weight_limit = parseInt((document.getElementById('container-weight-limit') as HTMLInputElement).value) || 0;
     } else if (itemType === 'consumable') {
+      const effectType = (document.getElementById('consumable-effect-type') as HTMLSelectElement).value;
+      const isScroll = effectType === 'learn_spell' || effectType === 'cast_spell';
       const durationInput = document.getElementById('consumable-duration') as HTMLInputElement;
       const consumableData: Record<string, unknown> = {
-        effect_type: (document.getElementById('consumable-effect-type') as HTMLSelectElement).value,
-        effect_value: parseInt((document.getElementById('consumable-effect-value') as HTMLInputElement).value) || 0,
+        effect_type: effectType,
+        effect_value: isScroll ? 0 : (parseInt((document.getElementById('consumable-effect-value') as HTMLInputElement).value) || 0),
         charges: parseInt((document.getElementById('consumable-charges') as HTMLInputElement).value) || 0,
       };
+
+      // Scroll-specific fields
+      if (isScroll) {
+        const spellId = consumableSpellSelect?.getValue();
+        if (spellId) consumableData.spell_id = parseInt(spellId);
+      }
+      if (effectType === 'cast_spell') {
+        consumableData.fizzle_chance = parseInt((document.getElementById('consumable-fizzle-chance') as HTMLInputElement).value) || 0;
+        const destRoom = consumableDestRoomSelect?.getValue();
+        if (destRoom) consumableData.destination_room_id = parseInt(destRoom);
+      }
+
       if (!durationInput.disabled) {
         consumableData.duration = parseInt(durationInput.value) || 0;
       }
+
+      // Custom messages
+      const selfMsg = (document.getElementById('consumable-use-message-self') as HTMLInputElement).value.trim();
+      const targetMsg = (document.getElementById('consumable-use-message-target') as HTMLInputElement).value.trim();
+      const roomMsg = (document.getElementById('consumable-use-message-room') as HTMLInputElement).value.trim();
+      if (selfMsg) consumableData.use_message_self = selfMsg;
+      if (targetMsg) consumableData.use_message_target = targetMsg;
+      if (roomMsg) consumableData.use_message_room = roomMsg;
+
       data.consumable_data = consumableData;
     } else if (itemType === 'light') {
       data.light_data = {
@@ -630,9 +769,33 @@ function formatCopper(copper: number): string {
       html += `</div>`;
     } else if (t.item_type === 'consumable' && t.consumable_data) {
       const c = t.consumable_data;
+      const effectType = String(c.effect_type || '');
       html += `<div class="preview-section"><div class="preview-section-title">Consumable</div>`;
-      html += `<div class="preview-stat">Effect: ${escapeHtml(String(c.effect_type))} ${escapeHtml(String(c.effect_value || ''))}</div>`;
+
+      if (effectType === 'learn_spell' || effectType === 'cast_spell') {
+        html += `<div class="preview-stat">Type: ${effectType === 'learn_spell' ? 'Learning Scroll' : 'Casting Scroll'}</div>`;
+        const spellId = c.spell_id as number | undefined;
+        const spell = spellId ? spells.find(s => s.id === spellId) : null;
+        if (spell) {
+          html += `<div class="preview-stat">Spell: ${escapeHtml(spell.name)} (${escapeHtml(spell.mnemonic)})</div>`;
+        } else if (spellId) {
+          html += `<div class="preview-stat" style="color:#f87171;">Spell ID: ${spellId} (not found)</div>`;
+        }
+        if (effectType === 'cast_spell') {
+          if (c.fizzle_chance) html += `<div class="preview-stat">Fizzle: ${c.fizzle_chance}%</div>`;
+          if (c.destination_room_id) {
+            const room = rooms.find(r => r.id === c.destination_room_id);
+            html += `<div class="preview-stat">Destination: ${room ? escapeHtml(room.name) : `Room #${c.destination_room_id}`}</div>`;
+          }
+        }
+      } else {
+        html += `<div class="preview-stat">Effect: ${escapeHtml(effectType)} ${escapeHtml(String(c.effect_value || ''))}</div>`;
+      }
+
       if (c.charges) html += `<div class="preview-stat">Charges: ${c.charges}</div>`;
+      if (c.use_message_self) html += `<div class="preview-stat" style="color:#6ee7b7;">Self: ${escapeHtml(String(c.use_message_self))}</div>`;
+      if (c.use_message_target) html += `<div class="preview-stat" style="color:#fbbf24;">Target: ${escapeHtml(String(c.use_message_target))}</div>`;
+      if (c.use_message_room) html += `<div class="preview-stat" style="color:#93c5fd;">Room: ${escapeHtml(String(c.use_message_room))}</div>`;
       html += `</div>`;
     } else if (t.item_type === 'light' && t.light_data) {
       html += `<div class="preview-section"><div class="preview-section-title">Light</div>`;
@@ -803,6 +966,11 @@ function formatCopper(copper: number): string {
   // Type change
   itemTypeSelect.addEventListener('change', () => updateTypeSections(itemTypeSelect.value));
 
+  // Consumable effect type change — toggle scroll fields
+  document.getElementById('consumable-effect-type')?.addEventListener('change', (e) => {
+    updateConsumableFieldVisibility((e.target as HTMLSelectElement).value);
+  });
+
   // Spawn
   document.getElementById('spawn-btn')?.addEventListener('click', async () => {
     if (!selectedTemplateId) return;
@@ -881,8 +1049,10 @@ function formatCopper(copper: number): string {
   // Initialize
   // ============================================================================
 
-  await Promise.all([fetchTemplates(), fetchRooms(), fetchClasses(), fetchRaces(), fetchDropTables(), fetchNpcTemplates()]);
+  await Promise.all([fetchTemplates(), fetchRooms(), fetchClasses(), fetchRaces(), fetchDropTables(), fetchNpcTemplates(), fetchSpells()]);
   initSpawnRoomSelect();
+  initConsumableSpellSelect();
+  initConsumableDestRoomSelect();
   renderClassButtons();
   renderRaceButtons();
 })();
