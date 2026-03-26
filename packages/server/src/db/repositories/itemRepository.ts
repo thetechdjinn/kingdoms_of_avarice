@@ -515,8 +515,11 @@ export async function createInstance(input: CreateInstanceInput, client?: pg.Poo
   // Auto-initialize charges from template if not explicitly provided
   // Fuel stays null — it's initialized on first light (use command)
   const template = await getTemplateById(input.template_id, client);
+  if (!template) {
+    throw new Error(`Cannot create instance: template ${input.template_id} not found`);
+  }
   const charges = input.charges_remaining
-    ?? template?.consumable_data?.charges
+    ?? template.consumable_data?.charges
     ?? null;
 
   const result = await query<DbItemInstance>(
