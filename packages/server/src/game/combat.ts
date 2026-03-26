@@ -850,8 +850,8 @@ async function handleEntityDeath(
   sendEntityVitals(victim);
 }
 
-// Export for use by droppedStateManager and statusEffects (DoT deaths)
-export { handleEntityDeath as handleActualDeath };
+// Export for use by droppedStateManager, statusEffects (DoT deaths), and scroll damage
+export { handleEntityDeath as handleActualDeath, handleEntityDropped as handleActualDropped };
 
 /**
  * Process NPC spell combat.

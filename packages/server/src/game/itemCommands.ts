@@ -1,24 +1,28 @@
-import { MessageType, ItemLocationType, ItemInstance, getItemDisplayName, EquipmentSlot, ItemType, TWO_HANDED_BLOCKED_SLOTS, getAlternatePairedSlot, ItemCondition, CraftingRecipe, AppliedEnchantment, Currency, ItemTemplate, ConsumableData } from '@koa/shared';
+import { MessageType, ItemLocationType, ItemInstance, getItemDisplayName, EquipmentSlot, ItemType, TWO_HANDED_BLOCKED_SLOTS, getAlternatePairedSlot, ItemCondition, CraftingRecipe, AppliedEnchantment, Currency, ItemTemplate, ConsumableData, SpellType } from '@koa/shared';
 import { CommandResponse } from './commands.js';
-import { AuthenticatedSocket, broadcastToRoom, sendMessage } from './socket.js';
+import { AuthenticatedSocket, broadcastToRoom, sendMessage, sendVitals } from './socket.js';
 import { getPlayerLocation } from './adminCommands.js';
 import { colors } from '../utils/colors.js';
-import { wordWrap } from '../utils/textFormat.js';
+import { wordWrap, withNpcName, withNpcNameCapitalized } from '../utils/textFormat.js';
 import * as itemRepo from '../db/repositories/itemRepository.js';
 import * as craftingRepo from '../db/repositories/craftingRepository.js';
 import * as characterRepo from '../db/repositories/characterRepository.js';
 import * as settingsRepo from '../db/repositories/settingsRepository.js';
 import { withTransaction } from '../db/index.js';
 import { calculateEncumbranceRatio, getEquipmentCombatStats, invalidateEquipmentCache } from './combatStats.js';
-import { isHidden, breakStealth } from './stealth/stealthState.js';
+import { isHidden, breakStealth, isStealthing } from './stealth/stealthState.js';
 import { rollStealthCheck } from './stealth/stealthCheck.js';
 import { calculateStealth, calculatePerception } from './stats/secondaryStats.js';
 import * as progressionRepo from '../db/repositories/progressionRepository.js';
 import * as spellRepo from '../db/repositories/spellRepository.js';
 import { trackLitCharacter, untrackLitCharacter } from './fuelManager.js';
 import { calculateEffectiveVision, canSee } from './vision.js';
-import { getWorldRef } from './npcManager.js';
-import { getEffectModifiers } from './statusEffects.js';
+import { getWorldRef, findNpcInRoom, setMerchantHostile } from './npcManager.js';
+import { getEffectModifiers, applyEffect, applyEffectToEntity, getEffectDefinition, formatDuration } from './statusEffects.js';
+import { findPlayerInRoom } from './playerUtils.js';
+import { getStatValueForScaling, calculateSpellScaling, handleActualDeath, handleActualDropped } from './combat.js';
+import { applyDamage, isPlayerDead, isPlayerDropped, clearDeathState } from './damageHandler.js';
+import type { NpcCombatInstance } from './npcManager.js';
 
 // Guard function to check if character is selected
 function requireCharacter(socket: AuthenticatedSocket): CommandResponse | null {
@@ -1935,7 +1939,8 @@ function applyConsumableEffect(socket: AuthenticatedSocket, data: { effect_type:
 export async function handleRead(
   socket: AuthenticatedSocket,
   args: string[],
-  currentRoomId: number
+  currentRoomId: number,
+  connectedPlayers?: Map<number, AuthenticatedSocket>
 ): Promise<CommandResponse> {
   const charError = requireCharacter(socket);
   if (charError) return charError;
@@ -1985,8 +1990,13 @@ export async function handleRead(
     return handleLearnScroll(socket, item, template, consumableData, currentRoomId);
   }
 
-  // cast_spell will be handled in Phase 2
-  return { type: MessageType.ERROR, message: `You can't use that yet.` };
+  // Casting scroll
+  if (consumableData.effect_type === 'cast_spell') {
+    const targetArgs = args.slice(1);
+    return handleCastScroll(socket, item, template, consumableData, currentRoomId, targetArgs, connectedPlayers);
+  }
+
+  return { type: MessageType.ERROR, message: `That isn't a scroll.` };
 }
 
 // Handle a learning scroll: teach the reader a spell
@@ -2053,6 +2063,556 @@ async function handleLearnScroll(
   ];
 
   return { type: MessageType.OUTPUT, message: lines.join('\r\n') };
+}
+
+// Handle a casting scroll: cast a spell once from the scroll
+async function handleCastScroll(
+  socket: AuthenticatedSocket,
+  item: ItemInstance,
+  template: ItemTemplate,
+  consumableData: ConsumableData,
+  currentRoomId: number,
+  targetArgs: string[],
+  connectedPlayers?: Map<number, AuthenticatedSocket>
+): Promise<CommandResponse> {
+  // Validate spell_id exists on the scroll
+  if (!consumableData.spell_id) {
+    return { type: MessageType.ERROR, message: `The writing on this scroll is illegible.` };
+  }
+
+  // Look up the spell
+  const spell = await spellRepo.getSpellById(consumableData.spell_id);
+  if (!spell) {
+    return { type: MessageType.ERROR, message: `The writing on this scroll is illegible.` };
+  }
+
+  const itemNameWithArticle = withArticle(template.name);
+
+  // Consume the scroll (always, even on fizzle)
+  const charges = item.charges_remaining ?? consumableData.charges ?? 0;
+  const destroyed = charges <= 1;
+
+  async function consumeScroll(): Promise<void> {
+    if (destroyed) {
+      await itemRepo.deleteInstance(item.id);
+    } else {
+      await itemRepo.updateInstanceCharges(item.id, charges - 1);
+    }
+  }
+
+  // Room broadcast helper for scroll consumption
+  function broadcastScrollUse(): void {
+    if (consumableData.use_message_room) {
+      broadcastToRoom(currentRoomId, replaceConsumablePlaceholders(consumableData.use_message_room, socket.username, itemNameWithArticle), socket.playerId);
+    } else if (destroyed) {
+      broadcastToRoom(currentRoomId, `${socket.username} reads a scroll, which crumbles to dust.`, socket.playerId);
+    } else {
+      broadcastToRoom(currentRoomId, `${socket.username} reads a scroll.`, socket.playerId);
+    }
+  }
+
+  // Fizzle helper: each handler calls this AFTER validating targets.
+  // Returns a CommandResponse on fizzle (scroll consumed), or null on success.
+  const fizzleChance = consumableData.fizzle_chance ?? 0;
+  async function checkFizzleAndConsume(): Promise<CommandResponse | null> {
+    if (fizzleChance > 0 && Math.random() * 100 < fizzleChance) {
+      if (isStealthing(socket)) {
+        breakStealth(socket, 'spell_cast', true);
+      }
+      await consumeScroll();
+      broadcastScrollUse();
+      const fizzleMsg = spell!.fizzleMessage
+        ? spell!.fizzleMessage
+        : `You struggle to read the scroll, but the magic fizzles and dissipates.${destroyed ? ' The parchment crumbles to dust.' : ''}`;
+      return { type: MessageType.OUTPUT, message: colors.red(fizzleMsg) };
+    }
+    return null;
+  }
+
+  // Dispatch by spell type
+  switch (spell.spellType) {
+    case SpellType.OFFENSIVE:
+      return handleScrollOffensive(socket, spell, item, template, consumableData, currentRoomId, targetArgs, connectedPlayers, consumeScroll, broadcastScrollUse, checkFizzleAndConsume);
+
+    case SpellType.HEALING:
+      return handleScrollHealing(socket, spell, item, template, consumableData, currentRoomId, targetArgs, connectedPlayers, consumeScroll, broadcastScrollUse, checkFizzleAndConsume);
+
+    case SpellType.BUFF:
+      return handleScrollBuff(socket, spell, item, template, consumableData, currentRoomId, consumeScroll, broadcastScrollUse, checkFizzleAndConsume);
+
+    case SpellType.DEBUFF:
+      return handleScrollDebuff(socket, spell, item, template, consumableData, currentRoomId, targetArgs, connectedPlayers, consumeScroll, broadcastScrollUse, checkFizzleAndConsume);
+
+    case SpellType.UTILITY:
+      // Utility scrolls handled in Phase 3
+      return { type: MessageType.ERROR, message: `The magic in this scroll is too complex to invoke. (Utility scrolls not yet implemented)` };
+
+    default:
+      return { type: MessageType.ERROR, message: `The writing on this scroll is illegible.` };
+  }
+}
+
+// Vision check for scroll targeting (same logic as spellCommands.ts)
+async function scrollCasterCanSee(socket: AuthenticatedSocket, roomId: number): Promise<boolean> {
+  const effectMods = getEffectModifiers(socket);
+  if (effectMods.isBlind) return false;
+  const world = getWorldRef();
+  const roomDarkness = world?.getRoom(roomId)?.darkness_level ?? 0;
+  if (roomDarkness >= 0 && effectMods.visionModifier >= 0) return true;
+  const vision = await calculateEffectiveVision(socket);
+  return canSee(vision, roomDarkness);
+}
+
+// ---- Offensive Scroll: one-shot direct damage, NO combat rounds ----
+// Design: single hit, no activeSpell, no combat round engagement from the scroll.
+// The target's aggro response may initiate combat separately.
+async function handleScrollOffensive(
+  socket: AuthenticatedSocket,
+  spell: import('@koa/shared').Spell,
+  _item: ItemInstance,
+  template: ItemTemplate,
+  consumableData: ConsumableData,
+  currentRoomId: number,
+  targetArgs: string[],
+  connectedPlayers: Map<number, AuthenticatedSocket> | undefined,
+  consumeScroll: () => Promise<void>,
+  broadcastScrollUse: () => void,
+  checkFizzleAndConsume: () => Promise<CommandResponse | null>,
+): Promise<CommandResponse> {
+  // --- Validate everything BEFORE consuming scroll ---
+  if (targetArgs.length === 0) {
+    return { type: MessageType.ERROR, message: `Read the scroll at whom? (read <scroll> <target>)` };
+  }
+
+  const targetName = targetArgs.join(' ');
+
+  if (!await scrollCasterCanSee(socket, currentRoomId)) {
+    return { type: MessageType.ERROR, message: `You can't see well enough to target that scroll!` };
+  }
+
+  const playerTarget = connectedPlayers
+    ? findPlayerInRoom(targetName, currentRoomId, connectedPlayers, socket.playerId, socket.canSeeHidden)
+    : null;
+  const npcTarget = !playerTarget ? findNpcInRoom(targetName, currentRoomId) : null;
+
+  if (!playerTarget && !npcTarget) {
+    return { type: MessageType.ERROR, message: `You don't see ${targetName} here.` };
+  }
+
+  // Check dead/down state before consuming
+  if (npcTarget && (npcTarget.vitals.hp <= 0 || npcTarget.isCorpse)) {
+    return { type: MessageType.ERROR, message: `${withNpcNameCapitalized(npcTarget.entityName, npcTarget.isProperName)} is already dead.` };
+  }
+  if (playerTarget && (isPlayerDead(playerTarget) || isPlayerDropped(playerTarget))) {
+    return { type: MessageType.ERROR, message: `${playerTarget.username} is already down.` };
+  }
+
+  if (!spell.minDamage || !spell.maxDamage || spell.minDamage <= 0 || spell.maxDamage <= 0) {
+    return { type: MessageType.ERROR, message: `The scroll's magic has no force behind it.` };
+  }
+
+  // --- Validation passed. Fizzle check (consumes scroll on fizzle) ---
+  const fizzleResult = await checkFizzleAndConsume();
+  if (fizzleResult) return fizzleResult;
+
+  // Break stealth only after validation + fizzle
+  if (isStealthing(socket)) {
+    breakStealth(socket, 'spell_cast', true);
+  }
+
+  // Calculate scaled damage (single roll per design: "rolls once, applies damage, done")
+  const statValue = getStatValueForScaling(socket.characterStats, spell.damageScalingStat);
+  const scaled = calculateSpellScaling(
+    spell.minDamage, spell.maxDamage,
+    socket.characterLevel,
+    spell.scalingPerLevel,
+    statValue,
+    spell.damageScalingFactor,
+    spell.maxScalingLevel,
+    spell.levelRequired,
+  );
+  const hitDamage = Math.floor(Math.random() * (scaled.max - scaled.min + 1)) + scaled.min;
+  const dmgStr = colors.combatDamage(hitDamage.toString());
+
+  // Consume scroll and broadcast
+  await consumeScroll();
+  broadcastScrollUse();
+
+  // NPC target
+  if (npcTarget) {
+    const npcDisplayName = withNpcName(npcTarget.entityName, npcTarget.isProperName);
+
+    const selfMsg = spell.hitMessageSelf
+      ? spell.hitMessageSelf.replace(/\{target\}/g, npcDisplayName).replace(/\{damage\}/g, hitDamage.toString())
+      : `The scroll's magic strikes ${colors.combatDefender(npcDisplayName)} for ${dmgStr} damage!`;
+
+    const roomMsg = spell.hitMessageRoom
+      ? spell.hitMessageRoom.replace(/\{name\}/g, socket.username).replace(/\{target\}/g, npcDisplayName).replace(/\{damage\}/g, hitDamage.toString())
+      : `${socket.username}'s scroll strikes ${npcDisplayName} for ${dmgStr} damage!`;
+    broadcastToRoom(currentRoomId, roomMsg, socket.playerId);
+
+    // Apply damage directly to NPC
+    const damageResult = await applyDamage(npcTarget, hitDamage, 'spell');
+
+    if (damageResult.stateChange === 'dropped' || damageResult.stateChange === 'death') {
+      await handleActualDeath(npcTarget, socket, currentRoomId);
+      return { type: MessageType.OUTPUT, message: selfMsg };
+    }
+
+    // NPC aggro response: the NPC was attacked, it fights back.
+    // The scroll itself does NOT put the reader in combat; the NPC's
+    // response does (it adds the player to its targets and the combat
+    // loop will reciprocally engage the player).
+    npcTarget.combatState.targets.add(socket.playerId);
+    npcTarget.regenState.inCombat = true;
+    npcTarget.behaviorState = 'combat';
+
+    if (npcTarget.template.merchantEnabled && socket.characterId) {
+      setMerchantHostile(socket.characterId, npcTarget.template.id);
+    }
+
+    return { type: MessageType.OUTPUT, message: selfMsg };
+  }
+
+  // Player target (PvP)
+  const target = playerTarget!;
+
+  const selfMsg = spell.hitMessageSelf
+    ? spell.hitMessageSelf.replace(/\{target\}/g, target.username).replace(/\{damage\}/g, hitDamage.toString())
+    : `The scroll's magic strikes ${colors.combatDefender(target.username)} for ${dmgStr} damage!`;
+
+  const targetMsg = spell.hitMessageTarget
+    ? spell.hitMessageTarget.replace(/\{name\}/g, socket.username).replace(/\{damage\}/g, hitDamage.toString())
+    : `${colors.combatAttacker(socket.username)}'s scroll strikes you for ${dmgStr} damage!`;
+  sendMessage(target, MessageType.OUTPUT, targetMsg);
+
+  const roomMsg = spell.hitMessageRoom
+    ? spell.hitMessageRoom.replace(/\{name\}/g, socket.username).replace(/\{target\}/g, target.username).replace(/\{damage\}/g, hitDamage.toString())
+    : `${socket.username}'s scroll strikes ${target.username} for ${dmgStr} damage!`;
+  broadcastToRoom(currentRoomId, roomMsg, [socket.playerId, target.playerId]);
+
+  const damageResult = await applyDamage(target, hitDamage, 'spell');
+
+  if (damageResult.stateChange === 'dropped') {
+    await handleActualDropped(target, socket, currentRoomId);
+  } else if (damageResult.stateChange === 'death') {
+    await handleActualDeath(target, socket, currentRoomId);
+  } else {
+    sendVitals(target);
+  }
+
+  return { type: MessageType.OUTPUT, message: selfMsg };
+}
+
+// ---- Healing Scroll: instant heal on self or target ----
+async function handleScrollHealing(
+  socket: AuthenticatedSocket,
+  spell: import('@koa/shared').Spell,
+  _item: ItemInstance,
+  template: ItemTemplate,
+  consumableData: ConsumableData,
+  currentRoomId: number,
+  targetArgs: string[],
+  connectedPlayers: Map<number, AuthenticatedSocket> | undefined,
+  consumeScroll: () => Promise<void>,
+  broadcastScrollUse: () => void,
+  checkFizzleAndConsume: () => Promise<CommandResponse | null>,
+): Promise<CommandResponse> {
+  let targetSocket: AuthenticatedSocket = socket;
+  let targetName = socket.username;
+  let isSelfHeal = true;
+  let npcTarget: NpcCombatInstance | null = null;
+
+  // --- Validate target BEFORE fizzle/consume ---
+  if (targetArgs.length > 0) {
+    const targetArg = targetArgs.join(' ');
+
+    if (!await scrollCasterCanSee(socket, currentRoomId)) {
+      return { type: MessageType.ERROR, message: `You can't see well enough to target that scroll!` };
+    }
+
+    // Try players first, then NPCs (beneficial NPC targeting per design doc)
+    const foundPlayer = connectedPlayers
+      ? findPlayerInRoom(targetArg, currentRoomId, connectedPlayers, -1, socket.canSeeHidden)
+      : null;
+
+    if (foundPlayer) {
+      targetSocket = foundPlayer;
+      targetName = foundPlayer.username;
+      isSelfHeal = foundPlayer.playerId === socket.playerId;
+    } else {
+      // Check for NPC target (beneficial spell on NPC)
+      const foundNpc = findNpcInRoom(targetArg, currentRoomId);
+      if (foundNpc) {
+        npcTarget = foundNpc;
+      } else {
+        return { type: MessageType.ERROR, message: `You don't see ${targetArg} here.` };
+      }
+    }
+  }
+
+  // NPC healing target: consume scroll, show message, no mechanical effect (per design doc)
+  if (npcTarget) {
+    const fizzleResult = await checkFizzleAndConsume();
+    if (fizzleResult) return fizzleResult;
+
+    if (isStealthing(socket)) {
+      breakStealth(socket, 'spell_cast', true);
+    }
+    await consumeScroll();
+    broadcastScrollUse();
+
+    const npcDisplayName = withNpcName(npcTarget.entityName, npcTarget.isProperName);
+    return {
+      type: MessageType.OUTPUT,
+      message: `You read the scroll. The healing magic washes over ${colors.cyan(npcDisplayName)}.`,
+    };
+  }
+
+  // Cannot heal dead players
+  if (isPlayerDead(targetSocket)) {
+    return { type: MessageType.ERROR, message: `${targetName} is dead. They need to respawn, not be healed.` };
+  }
+
+  // --- Validation passed. Fizzle check ---
+  const fizzleResult = await checkFizzleAndConsume();
+  if (fizzleResult) return fizzleResult;
+
+  if (isStealthing(socket)) {
+    breakStealth(socket, 'spell_cast', true);
+  }
+
+  const wasDropped = isPlayerDropped(targetSocket);
+
+  // Calculate scaled healing
+  const statValue = getStatValueForScaling(socket.characterStats, spell.healingScalingStat);
+  const scaled = calculateSpellScaling(
+    spell.minHealing ?? 1, spell.maxHealing ?? 8,
+    socket.characterLevel,
+    spell.scalingPerLevel,
+    statValue,
+    spell.healingScalingFactor,
+    spell.maxScalingLevel,
+    spell.levelRequired,
+  );
+  const healAmount = Math.floor(Math.random() * (scaled.max - scaled.min + 1)) + scaled.min;
+
+  // Apply healing
+  targetSocket.vitals.hp = Math.min(targetSocket.vitals.hp + healAmount, targetSocket.vitals.maxHp);
+
+  // Consume scroll and broadcast
+  await consumeScroll();
+  broadcastScrollUse();
+
+  // Check if healing brought a dropped player back
+  if (wasDropped && targetSocket.vitals.hp > 0) {
+    clearDeathState(targetSocket);
+    broadcastToRoom(
+      currentRoomId,
+      `${targetName} regains consciousness and rises to their feet!`,
+      targetSocket.playerId
+    );
+    sendMessage(targetSocket, MessageType.SYSTEM, colors.boldGreen('You regain consciousness and rise to your feet!'));
+  }
+
+  // Persist HP
+  if (targetSocket.characterId) {
+    characterRepo.updateCharacterStats(targetSocket.characterId, { health: targetSocket.vitals.hp }).catch((error: unknown) => {
+      console.error('Failed to persist health after scroll healing:', error);
+    });
+  }
+
+  sendVitals(targetSocket);
+
+  const selfMsg = consumableData.use_message_self
+    ? replaceConsumablePlaceholders(consumableData.use_message_self, socket.username, colors.item(withArticle(template.name)), targetName)
+    : colors.green(`The scroll's healing magic washes over ${isSelfHeal ? 'you' : colors.cyan(targetName)}.`);
+
+  if (!isSelfHeal) {
+    const targetMsg = consumableData.use_message_target
+      ? replaceConsumablePlaceholders(consumableData.use_message_target, socket.username, colors.item(withArticle(template.name)), targetName)
+      : colors.green(`${colors.cyan(socket.username)} reads a scroll and you feel healing magic wash over you.`);
+    sendMessage(targetSocket, MessageType.OUTPUT, targetMsg);
+  }
+
+  return { type: MessageType.OUTPUT, message: selfMsg };
+}
+
+// ---- Buff Scroll: apply beneficial status effect to self ----
+async function handleScrollBuff(
+  socket: AuthenticatedSocket,
+  spell: import('@koa/shared').Spell,
+  _item: ItemInstance,
+  template: ItemTemplate,
+  consumableData: ConsumableData,
+  currentRoomId: number,
+  consumeScroll: () => Promise<void>,
+  broadcastScrollUse: () => void,
+  checkFizzleAndConsume: () => Promise<CommandResponse | null>,
+): Promise<CommandResponse> {
+  // --- Validate before fizzle/consume ---
+  if (!spell.statusEffect) {
+    return { type: MessageType.ERROR, message: `The scroll's magic has no discernible effect.` };
+  }
+
+  const effectDef = getEffectDefinition(spell.statusEffect);
+  if (!effectDef) {
+    return { type: MessageType.ERROR, message: `The scroll's magic has no discernible effect.` };
+  }
+
+  // --- Fizzle check ---
+  const fizzleResult = await checkFizzleAndConsume();
+  if (fizzleResult) return fizzleResult;
+
+  if (isStealthing(socket)) {
+    breakStealth(socket, 'spell_cast', true);
+  }
+
+  // Consume scroll and broadcast (always consumed once fizzle check passes)
+  await consumeScroll();
+  broadcastScrollUse();
+
+  const durationMs = (spell.effectDuration ?? 60) * 1000;
+  const result = await applyEffect(socket, spell.statusEffect, durationMs, spell.id);
+
+  sendVitals(socket);
+
+  if (!result.success) {
+    return { type: MessageType.OUTPUT, message: `You read the scroll, but the magic dissipates harmlessly.` };
+  }
+
+  const selfMsg = consumableData.use_message_self
+    ? replaceConsumablePlaceholders(consumableData.use_message_self, socket.username, colors.item(withArticle(template.name)))
+    : `You read the scroll and feel ${colors.yellow(effectDef.name.toLowerCase())}. (${formatDuration(durationMs)})`;
+
+  return { type: MessageType.OUTPUT, message: selfMsg };
+}
+
+// ---- Debuff Scroll: apply harmful status effect to target ----
+async function handleScrollDebuff(
+  socket: AuthenticatedSocket,
+  spell: import('@koa/shared').Spell,
+  _item: ItemInstance,
+  template: ItemTemplate,
+  consumableData: ConsumableData,
+  currentRoomId: number,
+  targetArgs: string[],
+  connectedPlayers: Map<number, AuthenticatedSocket> | undefined,
+  consumeScroll: () => Promise<void>,
+  broadcastScrollUse: () => void,
+  checkFizzleAndConsume: () => Promise<CommandResponse | null>,
+): Promise<CommandResponse> {
+  // --- Validate everything BEFORE fizzle/consume ---
+  if (targetArgs.length === 0) {
+    return { type: MessageType.ERROR, message: `Read the scroll at whom? (read <scroll> <target>)` };
+  }
+
+  const targetName = targetArgs.join(' ');
+
+  if (!await scrollCasterCanSee(socket, currentRoomId)) {
+    return { type: MessageType.ERROR, message: `You can't see well enough to target that scroll!` };
+  }
+
+  if (!spell.statusEffect) {
+    return { type: MessageType.ERROR, message: `The scroll's magic has no discernible effect.` };
+  }
+
+  const playerTarget = connectedPlayers
+    ? findPlayerInRoom(targetName, currentRoomId, connectedPlayers, socket.playerId, socket.canSeeHidden)
+    : null;
+  const npcTarget = !playerTarget ? findNpcInRoom(targetName, currentRoomId) : null;
+
+  if (!playerTarget && !npcTarget) {
+    return { type: MessageType.ERROR, message: `You don't see ${targetName} here.` };
+  }
+
+  if (npcTarget && (npcTarget.vitals.hp <= 0 || npcTarget.isCorpse)) {
+    return { type: MessageType.ERROR, message: `${withNpcNameCapitalized(npcTarget.entityName, npcTarget.isProperName)} is already dead.` };
+  }
+  if (playerTarget && (isPlayerDead(playerTarget) || isPlayerDropped(playerTarget))) {
+    return { type: MessageType.ERROR, message: `${playerTarget.username} is already down.` };
+  }
+
+  // --- Validation passed. Fizzle check ---
+  const fizzleResult = await checkFizzleAndConsume();
+  if (fizzleResult) return fizzleResult;
+
+  if (isStealthing(socket)) {
+    breakStealth(socket, 'spell_cast', true);
+  }
+
+  const durationMs = (spell.effectDuration ?? 60) * 1000;
+
+  // NPC target
+  if (npcTarget) {
+    // Consume scroll and broadcast (always consumed once fizzle check passes)
+    await consumeScroll();
+    broadcastScrollUse();
+
+    if (npcTarget.template.merchantEnabled && socket.characterId) {
+      setMerchantHostile(socket.characterId, npcTarget.template.id);
+    }
+
+    // NPC aggro response (same pattern as offensive: NPC fights back,
+    // scroll itself does not put reader in combat)
+    npcTarget.combatState.targets.add(socket.playerId);
+    npcTarget.regenState.inCombat = true;
+    npcTarget.behaviorState = 'combat';
+
+    const effectResult = applyEffectToEntity(npcTarget, spell.statusEffect, durationMs, spell.id);
+    const npcDisplayName = withNpcName(npcTarget.entityName, npcTarget.isProperName);
+
+    if (!effectResult.success) {
+      return { type: MessageType.OUTPUT, message: `The scroll's magic strikes ${colors.magenta(npcDisplayName)}, but the effect dissipates harmlessly.` };
+    }
+
+    const durationStr = formatDuration(durationMs);
+    const selfMsg = consumableData.use_message_self
+      ? replaceConsumablePlaceholders(consumableData.use_message_self, socket.username, colors.item(withArticle(template.name)), npcDisplayName)
+      : `The scroll's magic strikes ${colors.magenta(npcDisplayName)}. ${effectResult.message} (${durationStr})`;
+
+    return { type: MessageType.OUTPUT, message: selfMsg };
+  }
+
+  // Player target (PvP)
+  const target = playerTarget!;
+
+  const effectDef = getEffectDefinition(spell.statusEffect);
+  if (!effectDef) {
+    return { type: MessageType.ERROR, message: `The scroll's magic has no discernible effect.` };
+  }
+
+  // Consume scroll and broadcast (always consumed once fizzle check passes)
+  await consumeScroll();
+  broadcastScrollUse();
+
+  broadcastToRoom(
+    currentRoomId,
+    `${socket.username} reads a scroll at ${target.username}!`,
+    [socket.playerId, target.playerId]
+  );
+
+  const result = await applyEffect(target, spell.statusEffect, durationMs, spell.id);
+
+  if (!result.success) {
+    sendMessage(target, MessageType.OUTPUT, `${colors.combatAttacker(socket.username)} reads a scroll at you, but the magic dissipates harmlessly.`);
+    return { type: MessageType.OUTPUT, message: `The scroll's magic strikes ${colors.magenta(target.username)}, but the effect dissipates harmlessly.` };
+  }
+
+  sendVitals(target);
+
+  // Notify target
+  const targetMsg = consumableData.use_message_target
+    ? replaceConsumablePlaceholders(consumableData.use_message_target, socket.username, colors.item(withArticle(template.name)), target.username)
+    : `${colors.combatAttacker(socket.username)} reads a scroll and you feel ${colors.magenta(effectDef.name.toLowerCase())}!`;
+  sendMessage(target, MessageType.OUTPUT, targetMsg);
+
+  const durationStr = formatDuration(durationMs);
+  const selfMsg = consumableData.use_message_self
+    ? replaceConsumablePlaceholders(consumableData.use_message_self, socket.username, colors.item(withArticle(template.name)), target.username)
+    : `The scroll's magic strikes ${colors.magenta(target.username)}. ${result.message} (${durationStr})`;
+
+  return { type: MessageType.OUTPUT, message: selfMsg };
 }
 
 // ============================================================================

@@ -319,7 +319,7 @@ export async function processCommand(
   }
 
   if (command === 'read') {
-    return handleRead(socket, args, currentRoomId);
+    return handleRead(socket, args, currentRoomId, _connectedPlayers);
   }
 
   if (command === 'eat' || command === 'drink' || command === 'quaff') {
@@ -2528,8 +2528,11 @@ function getHelpSections(): HelpSection[] {
         `  ${colors.white('<mnemonic> <target>')}   - Cast a spell (e.g., mmis goblin)`,
         '',
         `  ${colors.boldYellow('Scrolls:')}`,
-        `  ${colors.white('read <scroll>')}          - Read a scroll to learn a spell`,
+        `  ${colors.white('read <scroll>')}          - Read a learning scroll to learn a spell`,
+        `  ${colors.white('read <scroll> <target>')} - Read a casting scroll at a target`,
         `  ${colors.gray('Learning scrolls teach you a spell permanently.')}`,
+        `  ${colors.gray('Casting scrolls cast a spell once and are consumed.')}`,
+        `  ${colors.gray('Offensive/debuff scrolls require a target name.')}`,
       ],
     },
     {
