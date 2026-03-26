@@ -2003,19 +2003,26 @@ async function handleLearnScroll(
     return { type: MessageType.ERROR, message: `Something went wrong. The scroll remains intact.` };
   }
 
-  // Consume the scroll (single-use if no charge data)
-  const charges = item.charges_remaining ?? consumableData.charges ?? 1;
-  if (charges > 1) {
-    await itemRepo.updateInstanceCharges(item.id, charges - 1);
-  } else {
+  // Consume the scroll
+  const charges = item.charges_remaining ?? consumableData.charges ?? 0;
+  const destroyed = charges <= 1;
+  if (destroyed) {
     await itemRepo.deleteInstance(item.id);
+  } else {
+    await itemRepo.updateInstanceCharges(item.id, charges - 1);
   }
 
   // Messages
-  broadcastToRoom(currentRoomId, `${socket.username} reads a scroll, which crumbles to dust.`, socket.playerId);
+  if (destroyed) {
+    broadcastToRoom(currentRoomId, `${socket.username} reads a scroll, which crumbles to dust.`, socket.playerId);
+  } else {
+    broadcastToRoom(currentRoomId, `${socket.username} reads a scroll.`, socket.playerId);
+  }
 
   const lines = [
-    colors.boldWhite(`You study the scroll intently. The words of power burn into your memory as the parchment crumbles to dust.`),
+    destroyed
+      ? colors.boldWhite(`You study the scroll intently. The words of power burn into your memory as the parchment crumbles to dust.`)
+      : colors.boldWhite(`You study the scroll intently. The words of power burn into your memory.`),
     `${colors.boldGreen('Learned:')} ${colors.cyan(spell.name)} (${colors.white(spell.mnemonic)}) - ${spell.manaCost} mana`,
   ];
 
