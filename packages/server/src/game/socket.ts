@@ -452,11 +452,8 @@ export function setupGameSocket(wss: WebSocketServer): void {
 
     setPlayerLocation(payload.playerId, startRoomId);
 
-    // Check if this is a new character that should show the training form
-    // New characters have full unspent CP and no points allocated
-    const isNewCharacter = character.unspent_cp >= 100 &&
-      (!character.cp_spent || Object.keys(character.cp_spent).length === 0 ||
-       Object.values(character.cp_spent).every(v => v === 0));
+    // Check if this is a new character that hasn't completed initial training
+    const isNewCharacter = !character.initial_training_complete;
 
     // Broadcast to all players that someone entered the realm (using character name).
     // Skip for new characters — they go straight into training, which broadcasts

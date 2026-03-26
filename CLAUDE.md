@@ -89,6 +89,8 @@ Client (xterm.js) <--WebSocket--> Server (Express/ws) <--pg--> PostgreSQL
 
 Vite serves multiple pages: `index.html` (game), `editor.html` (rooms), `item-editor.html`, `spell-editor.html`, `status-editor.html`, `progression-editor.html`, `door-editor.html`, `action-editor.html`, `admin.html`, `docs.html`
 
+**Shared Navigation:** All editor/admin pages use `renderNav()` from `packages/client/src/components/nav.ts` for their navigation menus. This is the single source of truth for page navigation. The `index.html` hub/terminal navs remain hardcoded due to their unique structure.
+
 ## Code Conventions
 
 ### Text Output
@@ -206,7 +208,9 @@ Players can manage their account:
 
 ## Admin Panel
 
-Access via Hub > Admin Tools (requires ADMIN role). Three tabs:
+Access via Hub > Admin Tools (requires ADMIN role). The Admin dropdown menu on all editor/admin pages also includes "Export Game Data", which exports all game data (rooms, NPCs, items, spells, factions, drop tables, effects, actions, progression) to the `data/` directory as JSON files. Characters are not exported.
+
+Three tabs:
 
 ### Users Tab
 
@@ -292,6 +296,7 @@ Players can access different help categories based on their role:
 | `@rooms`                           | List all rooms                          |
 | `@roominfo [id]`                   | Show room details                       |
 | `@give <id\|name> [qty]`           | Give yourself an item                   |
+| `@currency <amount> [type]`        | Give yourself currency (default: gold)  |
 | `@hurt [amount] [player]`          | Damage HP (testing)                     |
 | `@drain [amount] [player]`         | Drain mana (testing)                    |
 | `@learn <mnemonic>`                | Learn a spell                           |

@@ -12,7 +12,7 @@ export function setupDataExportRoutes(app: Express): void {
       const result = await runExport();
       res.json({
         success: true,
-        message: `Export complete: ${result.counts.rooms ?? 0} rooms, ${result.counts.items ?? 0} items, ${result.counts.spells ?? 0} spells`,
+        message: `Export complete: ${result.counts.rooms ?? 0} rooms, ${result.counts.npcs ?? 0} NPCs, ${result.counts.items ?? 0} items, ${result.counts.spells ?? 0} spells, ${result.counts.factions ?? 0} factions, ${result.counts.drop_tables ?? 0} drop tables, ${result.counts.status_effects ?? 0} effects, ${result.counts.actions ?? 0} actions`,
         warnings: result.warnings,
         counts: result.counts,
       });

@@ -4,6 +4,7 @@
  */
 
 import { initAuth, showToast, showConfirm, showPromptFields, escapeHtml, ChipTagInput } from './components/index.js';
+import { renderNav } from './components/nav.js';
 
 // ============================================================================
 // Trait Definitions (hardcoded until trait_definitions table exists)
@@ -32,7 +33,7 @@ const TRAIT_DEFS: TraitDef[] = [
   { id: 'tracking', label: 'Tracking', numeric: false, forClass: true, forRace: false },
   { id: 'martial_arts', label: 'Martial Arts (NYI)', numeric: false, forClass: true, forRace: false },
   { id: 'natural_magic_resistance', label: 'Natural Magic Resistance', numeric: false, forClass: true, forRace: false },
-  { id: 'no_magic_items', label: 'No Magic Items (NYI)', numeric: false, forClass: true, forRace: false },
+  { id: 'no_magic_items', label: 'No Magic Items', numeric: false, forClass: true, forRace: false },
   { id: 'dodge', label: 'Dodge Bonus', numeric: true, forClass: true, forRace: false },
   { id: 'enhanced_crits', label: 'Enhanced Crits', numeric: true, forClass: true, forRace: false },
   { id: 'magic_resist', label: 'Magic Resistance', numeric: true, forClass: true, forRace: true },
@@ -72,6 +73,7 @@ interface RaceDef {
 }
 
 (async function () {
+  renderNav({ activePage: 'progression-editor', helpDoc: 'Progression_System_Guide.md' });
   const auth = await initAuth('developer');
   if (!auth) return;
 

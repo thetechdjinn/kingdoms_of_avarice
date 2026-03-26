@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "exported_at": "2026-03-15T13:33:32.913Z",
+  "exported_at": "2026-03-26T00:18:09.856Z",
   "import_order": [
     "global/spells.json",
     "global/status_effects.json",
@@ -12,6 +12,7 @@
     "global/factions.json",
     "global/drop_tables.json",
     "areas/arindale/rooms.json",
+    "areas/arindale/npcs.json",
     "areas/arindale_sewer/rooms.json",
     "areas/hearthstead/rooms.json",
     "areas/hearthstead/npcs.json",

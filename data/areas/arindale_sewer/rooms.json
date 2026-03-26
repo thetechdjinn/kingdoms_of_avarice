@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "exported_at": "2026-03-15T13:33:32.892Z",
+  "exported_at": "2026-03-26T00:18:09.821Z",
   "type": "rooms",
   "data": [
     {
@@ -9,6 +9,7 @@
       "description": "A large vaulted chamber where four major tunnels converge. Faint grey light filters down through a heavy iron grate far above — the town square, by the sound of cart wheels and voices overhead. The stonework is solid and well-maintained this close to the surface. Water channels run along the floor in all four directions, their flow steady and purposeful.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -39,6 +40,7 @@
       "description": "The ceiling rises higher here, the brickwork arching into a proper vault. A rusted iron ladder bolted to the wall leads up to a sealed grate. The echoes of dripping water come from every direction.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -57,6 +59,7 @@
       "description": "A wide passage with a shallow channel of water running down its center. The stones are worn smooth by decades of flow. Faint sounds drift down from the city above — muffled footsteps, a distant cart.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -75,6 +78,7 @@
       "description": "The tunnel opens into a circular chamber with a domed ceiling. A ring of iron brackets once held torches, though most are empty now. The air moves slightly, stirred by unseen ventilation.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -93,6 +97,7 @@
       "description": "A junction of old stone tunnels, their walls streaked with mineral deposits. The brickwork here is cleaner than in the deeper passages, and the smell is merely damp rather than putrid. The remains of a campfire — cold ashes and a charred stick — sit in a dry alcove.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -111,6 +116,7 @@
       "description": "The passage widens where a side channel joins the main flow. Moss grows in patches where faint light reaches through overhead grates, the only green in this underground world.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -129,6 +135,7 @@
       "description": "Squared-off stonework lines this section of tunnel. A maintenance alcove is set into one wall, its shelves empty but for a forgotten lantern, rusted beyond use.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -147,6 +154,7 @@
       "description": "The tunnel widens into a vaulted junction where several passages converge. Pale light filters down through a grated opening far above, casting faint squares of grey on the damp stone floor. The air is marginally less foul here than in the deeper tunnels.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -165,6 +173,7 @@
       "description": "A broad chamber opens at the meeting of four tunnels. Water trickles in lazy channels along the floor, converging at a central drain. The stonework is solid and well-fitted — this was built to last. The faint sound of something large moving through water echoes from the darkness.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -183,6 +192,7 @@
       "description": "The ceiling rises higher here, the brickwork arching into a proper vault. A rusted iron ladder bolted to the wall leads up to a sealed grate. The echoes of dripping water come from every direction.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -201,6 +211,7 @@
       "description": "The tunnel reaches its northern terminus near the city's harbor-side foundations. A heavy iron grate is set into a thick stone wall, beyond which a drainage channel slopes downward toward the waterfront. The faint sounds of the harbor — lapping waves, creaking hulls, distant gulls — filter through the rusted bars. The grate is solid despite its age, too strong to break through. A cold sea breeze pushes in, carrying the smell of brine and open air.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -215,6 +226,7 @@
       "description": "The tunnel walls glisten with moisture that seeps through from the harbor above. The air is heavy with the smell of brine and sewage, and the sound of water is constant — dripping, trickling, rushing through unseen channels.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -233,6 +245,7 @@
       "description": "Barrel-vaulted brickwork forms the ceiling of this long drainage tunnel. The acoustics are strange — distant sounds arrive as hollow echoes, making it hard to judge their origin or distance.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -255,6 +268,7 @@
       "description": "The walls of this tunnel are streaked with dark waterlines from seasonal flooding. A rusted iron ring is set into the wall — perhaps once used to moor something in the darkness.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -277,6 +291,7 @@
       "description": "A low-ceilinged passage drips with condensation. The stones are cold to the touch, and the air carries a salt tang that cuts through the sewer's usual stench. Rat droppings litter the ledge along one wall.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -295,6 +310,7 @@
       "description": "The tunnel runs straight between heavy stone walls. Tide debris — bits of rope, fish bones, broken shells — has collected in the corners where the current pushes it. The harbor is somewhere overhead.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -317,6 +333,7 @@
       "description": "A large junction chamber beneath the harbor district. Seawater seeps steadily through the walls, mixing with the sewer flow and filling the air with the smell of brine and rot. A vertical shaft leads up to a manhole on the street far above. Tunnels branch in all directions, their walls glistening with moisture in the dim light.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -343,6 +360,7 @@
       "description": "Water pools in shallow depressions where the tunnel floor has settled unevenly. The bricks here are darker than elsewhere — stained by tidal seepage from the harbor district above.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -361,6 +379,7 @@
       "description": "A brick-lined passage stretches into the gloom. The mortar between the stones is soft and crumbling where persistent moisture has done its work. The smell of the sea mingles with the sewer stench.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -379,6 +398,7 @@
       "description": "The tunnel ceiling drips steadily, each drop echoing in the enclosed space. Salt deposits crust the upper walls where seawater has worked its way through the stone over the years. Something pale and shapeless clings to the ceiling, pulsing faintly. Best not to look too closely.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -401,6 +421,7 @@
       "description": "A wide drainage channel runs along the floor, carrying dark water toward the harbor outflow. The stones are stained with tide marks at varying heights. Something skitters in the darkness ahead.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -423,6 +444,7 @@
       "description": "The walls of this tunnel are streaked with dark waterlines from seasonal flooding. A rusted iron ring is set into the wall — perhaps once used to moor something in the darkness.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -445,6 +467,7 @@
       "description": "Barrel-vaulted brickwork forms the ceiling of this long drainage tunnel. The acoustics are strange — distant sounds arrive as hollow echoes, making it hard to judge their origin or distance.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -467,6 +490,7 @@
       "description": "The tunnel walls glisten with moisture that seeps through from the harbor above. The air is heavy with the smell of brine and sewage, and the sound of water is constant — dripping, trickling, rushing through unseen channels.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -489,6 +513,7 @@
       "description": "Damp stone walls press close in this waterfront drainage tunnel. Green slime coats the lower bricks where the water level rises during high tide. The passage curves slightly, following some forgotten underground stream. The remains of a campfire — cold ashes and a charred stick — sit in a dry alcove.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -511,6 +536,7 @@
       "description": "A wide drainage channel runs along the floor, carrying dark water toward the harbor outflow. The stones are stained with tide marks at varying heights. Something skitters in the darkness ahead.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -529,6 +555,7 @@
       "description": "The tunnel ceiling drips steadily, each drop echoing in the enclosed space. Salt deposits crust the upper walls where seawater has worked its way through the stone over the years.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -551,6 +578,7 @@
       "description": "A brick-lined passage stretches into the gloom. The mortar between the stones is soft and crumbling where persistent moisture has done its work. The smell of the sea mingles with the sewer stench.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -569,6 +597,7 @@
       "description": "Water pools in shallow depressions where the tunnel floor has settled unevenly. The bricks here are darker than elsewhere — stained by tidal seepage from the harbor district above. The faint sound of something large moving through water echoes from the darkness.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -587,6 +616,7 @@
       "description": "The tunnel runs straight between heavy stone walls. Tide debris — bits of rope, fish bones, broken shells — has collected in the corners where the current pushes it. The harbor is somewhere overhead.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -605,6 +635,7 @@
       "description": "A low-ceilinged passage drips with condensation. The stones are cold to the touch, and the air carries a salt tang that cuts through the sewer's usual stench.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -623,6 +654,7 @@
       "description": "Barrel-vaulted brickwork forms the ceiling of this long drainage tunnel. The acoustics are strange — distant sounds arrive as hollow echoes, making it hard to judge their origin or distance. Scratching sounds echo from a crack in the wall, then stop abruptly.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -641,6 +673,7 @@
       "description": "Water rises to knee height in this section of tunnel. The flooding has turned the passage into a wading channel, the current sluggish but persistent. Debris floats on the surface — scraps of wood, matted refuse, and less identifiable things. The walls are slimy above the waterline.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -659,6 +692,7 @@
       "description": "The tunnel walls glisten with moisture that seeps through from the harbor above. The air is heavy with the smell of brine and sewage, and the sound of water is constant — dripping, trickling, rushing through unseen channels.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -681,6 +715,7 @@
       "description": "Damp stone walls press close in this waterfront drainage tunnel. Green slime coats the lower bricks where the water level rises during high tide. The passage curves slightly, following some forgotten underground stream.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -699,6 +734,7 @@
       "description": "The tunnel walls here bear strange carved symbols — angular, deliberate marks that are clearly not mason's work. The faint smell of incense hangs in the still air, incongruous in the sewer's filth. A dark opening in the wall has been framed with fitted stones, creating an archway where the rough tunnel meets something older and more purposeful beyond. Scorch marks from candles or torches blacken the stone around the entrance.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -717,6 +753,7 @@
       "description": "A wide drainage channel runs along the floor, carrying dark water toward the harbor outflow. The stones are stained with tide marks at varying heights. Something skitters in the darkness ahead.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -735,6 +772,7 @@
       "description": "The tunnel ceiling drips steadily, each drop echoing in the enclosed space. Salt deposits crust the upper walls where seawater has worked its way through the stone over the years. Something pale and shapeless clings to the ceiling, pulsing faintly. Best not to look too closely.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -757,6 +795,7 @@
       "description": "A brick-lined passage stretches into the gloom. The mortar between the stones is soft and crumbling where persistent moisture has done its work. The smell of the sea mingles with the sewer stench.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -775,6 +814,7 @@
       "description": "Water pools in shallow depressions where the tunnel floor has settled unevenly. The bricks here are darker than elsewhere — stained by tidal seepage from the harbor district above.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -793,6 +833,7 @@
       "description": "The tunnel runs straight between heavy stone walls. Tide debris — bits of rope, fish bones, broken shells — has collected in the corners where the current pushes it. The harbor is somewhere overhead.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -811,6 +852,7 @@
       "description": "A low-ceilinged passage drips with condensation. The stones are cold to the touch, and the air carries a salt tang that cuts through the sewer's usual stench. Rat droppings litter the ledge along one wall.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -829,6 +871,7 @@
       "description": "The walls of this tunnel are streaked with dark waterlines from seasonal flooding. A rusted iron ring is set into the wall — perhaps once used to moor something in the darkness.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -847,6 +890,7 @@
       "description": "The tunnel walls glisten with moisture that seeps through from the harbor above. The air is heavy with the smell of brine and sewage, and the sound of water is constant — dripping, trickling, rushing through unseen channels.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -865,6 +909,7 @@
       "description": "Damp stone walls press close in this waterfront drainage tunnel. Green slime coats the lower bricks where the water level rises during high tide. The passage curves slightly, following some forgotten underground stream. The remains of a campfire — cold ashes and a charred stick — sit in a dry alcove.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -883,6 +928,7 @@
       "description": "A wide drainage channel runs along the floor, carrying dark water toward the harbor outflow. The stones are stained with tide marks at varying heights. Something skitters in the darkness ahead.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -901,6 +947,7 @@
       "description": "The tunnel ceiling drips steadily, each drop echoing in the enclosed space. Salt deposits crust the upper walls where seawater has worked its way through the stone over the years.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -919,6 +966,7 @@
       "description": "A brick-lined passage stretches into the gloom. The mortar between the stones is soft and crumbling where persistent moisture has done its work. The smell of the sea mingles with the sewer stench.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -937,6 +985,7 @@
       "description": "Water pools in shallow depressions where the tunnel floor has settled unevenly. The bricks here are darker than elsewhere — stained by tidal seepage from the harbor district above. The faint sound of something large moving through water echoes from the darkness.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -955,6 +1004,7 @@
       "description": "The flooding deepens here, dark water reaching waist-height in the lower sections. The tunnel slopes downward, and the current grows stronger, pulling at anything in its path. The walls are coated in thick green algae up to the ceiling. The air is heavy and foul.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -969,6 +1019,7 @@
       "description": "Dark water fills this section of tunnel to waist height, cold and sluggish. The normal flow has backed up here, turning the passage into a stagnant pool. Things move beneath the surface — ripples that have no visible source.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -991,6 +1042,7 @@
       "description": "The tunnel runs straight between heavy stone walls. Tide debris — bits of rope, fish bones, broken shells — has collected in the corners where the current pushes it. The harbor is somewhere overhead.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -1013,6 +1065,7 @@
       "description": "A low-ceilinged passage drips with condensation. The stones are cold to the touch, and the air carries a salt tang that cuts through the sewer's usual stench.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -1039,6 +1092,7 @@
       "description": "The walls of this tunnel are streaked with dark waterlines from seasonal flooding. A rusted iron ring is set into the wall — perhaps once used to moor something in the darkness.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -1061,6 +1115,7 @@
       "description": "Barrel-vaulted brickwork forms the ceiling of this long drainage tunnel. The acoustics are strange — distant sounds arrive as hollow echoes, making it hard to judge their origin or distance. Scratching sounds echo from a crack in the wall, then stop abruptly.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -1083,6 +1138,7 @@
       "description": "Damp stone walls press close in this waterfront drainage tunnel. Green slime coats the lower bricks where the water level rises during high tide. The passage curves slightly, following some forgotten underground stream.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -1109,6 +1165,7 @@
       "description": "A wide drainage channel runs along the floor, carrying dark water toward the harbor outflow. The stones are stained with tide marks at varying heights. Something skitters in the darkness ahead.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -1135,6 +1192,7 @@
       "description": "The tunnel ceiling drips steadily, each drop echoing in the enclosed space. Salt deposits crust the upper walls where seawater has worked its way through the stone over the years. Something pale and shapeless clings to the ceiling, pulsing faintly. Best not to look too closely.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -1161,6 +1219,7 @@
       "description": "A brick-lined passage stretches into the gloom. The mortar between the stones is soft and crumbling where persistent moisture has done its work. The smell of the sea mingles with the sewer stench.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -1187,6 +1246,7 @@
       "description": "Water pools in shallow depressions where the tunnel floor has settled unevenly. The bricks here are darker than elsewhere — stained by tidal seepage from the harbor district above.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -1209,6 +1269,7 @@
       "description": "The tunnel runs straight between heavy stone walls. Tide debris — bits of rope, fish bones, broken shells — has collected in the corners where the current pushes it. The harbor is somewhere overhead.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -1231,6 +1292,7 @@
       "description": "A low-ceilinged passage drips with condensation. The stones are cold to the touch, and the air carries a salt tang that cuts through the sewer's usual stench. Rat droppings litter the ledge along one wall.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -1249,6 +1311,7 @@
       "description": "The walls of this tunnel are streaked with dark waterlines from seasonal flooding. A rusted iron ring is set into the wall — perhaps once used to moor something in the darkness.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -1267,6 +1330,7 @@
       "description": "Barrel-vaulted brickwork forms the ceiling of this long drainage tunnel. The acoustics are strange — distant sounds arrive as hollow echoes, making it hard to judge their origin or distance.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -1289,6 +1353,7 @@
       "description": "The tunnel walls glisten with moisture that seeps through from the harbor above. The air is heavy with the smell of brine and sewage, and the sound of water is constant — dripping, trickling, rushing through unseen channels.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -1307,6 +1372,7 @@
       "description": "A wide drainage channel runs along the floor, carrying dark water toward the harbor outflow. The stones are stained with tide marks at varying heights. Something skitters in the darkness ahead.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -1325,6 +1391,7 @@
       "description": "The flooding is worse here — water rising to chest height, its surface covered in a scum of organic matter. The blocked drainage has turned this section into an underground swamp. Something bumps against your legs beneath the water. Rat droppings litter the ledge along one wall.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -1343,6 +1410,7 @@
       "description": "Stagnant water fills the passage almost to the ceiling in places, leaving only a narrow band of foul air above. The water is dark and opaque, hiding whatever lies beneath. The current that should carry it away has stopped.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -1361,6 +1429,7 @@
       "description": "The tunnel ceiling drips steadily, each drop echoing in the enclosed space. Salt deposits crust the upper walls where seawater has worked its way through the stone over the years.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -1379,6 +1448,7 @@
       "description": "A brick-lined passage stretches into the gloom. The mortar between the stones is soft and crumbling where persistent moisture has done its work. The smell of the sea mingles with the sewer stench.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -1397,6 +1467,7 @@
       "description": "Water pools in shallow depressions where the tunnel floor has settled unevenly. The bricks here are darker than elsewhere — stained by tidal seepage from the harbor district above. The faint sound of something large moving through water echoes from the darkness.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -1415,6 +1486,7 @@
       "description": "The tunnel runs straight between heavy stone walls. Tide debris — bits of rope, fish bones, broken shells — has collected in the corners where the current pushes it. The harbor is somewhere overhead.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -1433,6 +1505,7 @@
       "description": "A low-ceilinged passage drips with condensation. The stones are cold to the touch, and the air carries a salt tang that cuts through the sewer's usual stench.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -1451,6 +1524,7 @@
       "description": "The walls of this tunnel are streaked with dark waterlines from seasonal flooding. A rusted iron ring is set into the wall — perhaps once used to moor something in the darkness.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -1469,6 +1543,7 @@
       "description": "Barrel-vaulted brickwork forms the ceiling of this long drainage tunnel. The acoustics are strange — distant sounds arrive as hollow echoes, making it hard to judge their origin or distance. Scratching sounds echo from a crack in the wall, then stop abruptly.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -1487,6 +1562,7 @@
       "description": "The tunnel walls glisten with moisture that seeps through from the harbor above. The air is heavy with the smell of brine and sewage, and the sound of water is constant — dripping, trickling, rushing through unseen channels.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -1505,6 +1581,7 @@
       "description": "Damp stone walls press close in this waterfront drainage tunnel. Green slime coats the lower bricks where the water level rises during high tide. The passage curves slightly, following some forgotten underground stream.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -1523,6 +1600,7 @@
       "description": "The tunnel ceiling drips steadily, each drop echoing in the enclosed space. Salt deposits crust the upper walls where seawater has worked its way through the stone over the years. Something pale and shapeless clings to the ceiling, pulsing faintly. Best not to look too closely.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -1541,6 +1619,7 @@
       "description": "A brick-lined passage stretches into the gloom. The mortar between the stones is soft and crumbling where persistent moisture has done its work. The smell of the sea mingles with the sewer stench.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -1559,6 +1638,7 @@
       "description": "Water pools in shallow depressions where the tunnel floor has settled unevenly. The bricks here are darker than elsewhere — stained by tidal seepage from the harbor district above.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -1577,6 +1657,7 @@
       "description": "The tunnel runs straight between heavy stone walls. Tide debris — bits of rope, fish bones, broken shells — has collected in the corners where the current pushes it. The harbor is somewhere overhead.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -1595,6 +1676,7 @@
       "description": "A low-ceilinged passage drips with condensation. The stones are cold to the touch, and the air carries a salt tang that cuts through the sewer's usual stench. Rat droppings litter the ledge along one wall.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -1613,6 +1695,7 @@
       "description": "The walls of this tunnel are streaked with dark waterlines from seasonal flooding. A rusted iron ring is set into the wall — perhaps once used to moor something in the darkness.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -1631,6 +1714,7 @@
       "description": "Barrel-vaulted brickwork forms the ceiling of this long drainage tunnel. The acoustics are strange — distant sounds arrive as hollow echoes, making it hard to judge their origin or distance.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -1653,6 +1737,7 @@
       "description": "The tunnel walls glisten with moisture that seeps through from the harbor above. The air is heavy with the smell of brine and sewage, and the sound of water is constant — dripping, trickling, rushing through unseen channels.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -1679,6 +1764,7 @@
       "description": "Damp stone walls press close in this waterfront drainage tunnel. Green slime coats the lower bricks where the water level rises during high tide. The passage curves slightly, following some forgotten underground stream. The remains of a campfire — cold ashes and a charred stick — sit in a dry alcove.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -1701,6 +1787,7 @@
       "description": "A wide drainage channel runs along the floor, carrying dark water toward the harbor outflow. The stones are stained with tide marks at varying heights. Something skitters in the darkness ahead.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -1723,6 +1810,7 @@
       "description": "A brick-lined passage stretches into the gloom. The mortar between the stones is soft and crumbling where persistent moisture has done its work. The smell of the sea mingles with the sewer stench.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -1741,6 +1829,7 @@
       "description": "Water pools in shallow depressions where the tunnel floor has settled unevenly. The bricks here are darker than elsewhere — stained by tidal seepage from the harbor district above. The faint sound of something large moving through water echoes from the darkness.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -1767,6 +1856,7 @@
       "description": "The tunnel runs straight between heavy stone walls. Tide debris — bits of rope, fish bones, broken shells — has collected in the corners where the current pushes it. The harbor is somewhere overhead.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -1789,6 +1879,7 @@
       "description": "A low-ceilinged passage drips with condensation. The stones are cold to the touch, and the air carries a salt tang that cuts through the sewer's usual stench.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -1815,6 +1906,7 @@
       "description": "The walls of this tunnel are streaked with dark waterlines from seasonal flooding. A rusted iron ring is set into the wall — perhaps once used to moor something in the darkness.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -1833,6 +1925,7 @@
       "description": "Barrel-vaulted brickwork forms the ceiling of this long drainage tunnel. The acoustics are strange — distant sounds arrive as hollow echoes, making it hard to judge their origin or distance. Scratching sounds echo from a crack in the wall, then stop abruptly.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -1851,6 +1944,7 @@
       "description": "The tunnel walls glisten with moisture that seeps through from the harbor above. The air is heavy with the smell of brine and sewage, and the sound of water is constant — dripping, trickling, rushing through unseen channels.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -1873,6 +1967,7 @@
       "description": "Damp stone walls press close in this waterfront drainage tunnel. Green slime coats the lower bricks where the water level rises during high tide. The passage curves slightly, following some forgotten underground stream.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -1891,6 +1986,7 @@
       "description": "A wide tunnel beneath the market district. Faint light seeps down through a heavy iron manhole cover far above. The air carries an acrid chemical tang — runoff from the alchemist's and dyer's shops on the street above. The brickwork here is older than elsewhere in the sewer, patched and repatched over the years.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -1913,6 +2009,7 @@
       "description": "A junction chamber where older brick tunnels meet the main sewer line. The walls change character here — the standardized construction of the main passages giving way to rougher, older brickwork to the west. Chemical stains streak the stones in iridescent patterns.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -1935,6 +2032,7 @@
       "description": "The walls are streaked with odd discolorations — patches of vivid green, deep purple, and a sickly yellow that seems to glow faintly in the dark. Something from above has been draining into these tunnels for years.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -1953,6 +2051,7 @@
       "description": "An older tunnel, its construction predating the rest of the sewer. The bricks are a different color — darker, hand-shaped rather than molded. A faint acrid smell hangs in the still air.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -1971,6 +2070,7 @@
       "description": "The brickwork in this section is older, the mortar crumbling between mismatched stones. Strange chemical stains streak the walls in iridescent patterns — residue from the alchemist's shops above, slowly seeping down through the earth.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -1989,6 +2089,7 @@
       "description": "The tunnel wall here is streaked with brilliant iridescent stains that seem to pulse with a faint inner light. The air smells of chemicals and something else — something alive and strange. A section of the wall is subtly different from the surrounding brickwork, its mortar lines not quite matching. Behind it, a faint greenish glow leaks through hairline cracks.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -2007,6 +2108,7 @@
       "description": "The stones here are deeply stained with alchemical runoff. In places the residue has eaten into the brickwork itself, leaving pockmarked surfaces that collect dark, oily water. Scratching sounds echo from a crack in the wall, then stop abruptly.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -2029,6 +2131,7 @@
       "description": "Old construction gives this tunnel a different character — rougher, more uneven, as if built by different hands in a different era. Mineral deposits have crystallized on the lower walls in brittle formations.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -2043,6 +2146,7 @@
       "description": "The passage is lined with bricks so old they've begun to round at the edges. Thick roots push through gaps in the ceiling, groping downward into the damp air. A faint chemical tang irritates the nose.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -2065,6 +2169,7 @@
       "description": "A tunnel of ancient brick, its floor covered in a thin film of oily residue. The sheen catches what little light there is, creating brief rainbows in the murk. The runoff from the market district collects here.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -2079,6 +2184,7 @@
       "description": "Crumbling brick walls bear the marks of age and chemical exposure. The mortar has dissolved in places, leaving gaps wide enough to reach a hand through. The air tastes faintly metallic. The faint sound of something large moving through water echoes from the darkness.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -2097,6 +2203,7 @@
       "description": "The walls are streaked with odd discolorations — patches of vivid green, deep purple, and a sickly yellow that seems to glow faintly in the dark. Something from above has been draining into these tunnels for years.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -2115,6 +2222,7 @@
       "description": "Old construction gives this tunnel a different character — rougher, more uneven, as if built by different hands in a different era. Mineral deposits have crystallized on the lower walls in brittle formations.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -2129,6 +2237,7 @@
       "description": "The tunnel wall has been chewed and clawed through here, creating a ragged opening just large enough to crawl through. The edges of the hole are smooth with use, and the stench emanating from beyond is overwhelming — a concentrated reek of animal filth, matted fur, and rotting food. Faint squeaking and scratching sounds echo from the dark passage beyond.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -2147,6 +2256,7 @@
       "description": "A junction where the main sewer line meets tunnels that run beneath the cathedral and garrison districts. The construction is heavy here — thick stone walls and a low vaulted ceiling that bears the weight of the city's most massive buildings. A cold draft pushes through from the south.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -2173,6 +2283,7 @@
       "description": "A sturdy tunnel beneath the garrison district. The weight of the military buildings above is evident in the massive stone blocks that form the walls. A shaft of dim light falls from a heavy manhole cover overhead, barely illuminating the passage. The air is dry and cold.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -2199,6 +2310,7 @@
       "description": "A passage of squared stone blocks, their surfaces carved with mason's marks that no one alive can read. The ceiling is higher here, supported by the weight-bearing architecture of the cathedral above.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -2217,6 +2329,7 @@
       "description": "The tunnel cuts through what appears to be an older foundation wall. The stones are enormous, fitted without mortar in a style not used in Arindale's current construction. Whatever stood here before was built to endure. Something pale and shapeless clings to the ceiling, pulsing faintly. Best not to look too closely.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -2235,6 +2348,7 @@
       "description": "Heavy stone walls line this passage, their surfaces smooth and precisely fitted. The air is cool and dry compared to the damper sections of the sewer. Faint scratchings echo from somewhere in the darkness.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -2253,6 +2367,7 @@
       "description": "The tunnel passes between walls of dressed stone, each block larger than a man could lift alone. These are the deep foundations of the buildings above — the garrison and cathedral whose weight presses down into the earth.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -2271,6 +2386,7 @@
       "description": "Massive stone blocks form the walls of this tunnel — the foundations of the cathedral district above. The construction is heavier and more imposing than the common sewer brickwork, built to bear the weight of sacred architecture.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -2289,6 +2405,7 @@
       "description": "The tunnel is braced by cathedral foundations — massive stone pillars that descend through the ceiling into the sewer floor. The spaces between them create a series of narrow passages. Scratching sounds echo from a crack in the wall, then stop abruptly.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -2307,6 +2424,7 @@
       "description": "Old stone foundations create natural chambers in the sewer here, where walls of different eras meet at odd angles. A cold draft pushes through gaps in the ancient masonry.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -2325,6 +2443,7 @@
       "description": "The walls transition from common brick to heavy stone masonry as the tunnel passes beneath the cathedral district. The air carries a faint trace of incense — or perhaps it's imagination, knowing what lies above.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -2343,6 +2462,7 @@
       "description": "A passage of squared stone blocks, their surfaces carved with mason's marks that no one alive can read. The ceiling is higher here, supported by the weight-bearing architecture of the cathedral above.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -2361,6 +2481,7 @@
       "description": "A passage of squared stone blocks, their surfaces carved with mason's marks that no one alive can read. The ceiling is higher here, supported by the weight-bearing architecture of the cathedral above.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -2379,6 +2500,7 @@
       "description": "The tunnel cuts through what appears to be an older foundation wall. The stones are enormous, fitted without mortar in a style not used in Arindale's current construction. Whatever stood here before was built to endure. The faint sound of something large moving through water echoes from the darkness.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -2397,6 +2519,7 @@
       "description": "Heavy stone walls line this passage, their surfaces smooth and precisely fitted. The air is cool and dry compared to the damper sections of the sewer. Faint scratchings echo from somewhere in the darkness.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -2415,6 +2538,7 @@
       "description": "The tunnel passes between walls of dressed stone, each block larger than a man could lift alone. These are the deep foundations of the buildings above — the garrison and cathedral whose weight presses down into the earth.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -2433,6 +2557,7 @@
       "description": "Massive stone blocks form the walls of this tunnel — the foundations of the cathedral district above. The construction is heavier and more imposing than the common sewer brickwork, built to bear the weight of sacred architecture.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -2451,6 +2576,7 @@
       "description": "The tunnel is braced by cathedral foundations — massive stone pillars that descend through the ceiling into the sewer floor. The spaces between them create a series of narrow passages. The remains of a campfire — cold ashes and a charred stick — sit in a dry alcove.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -2469,6 +2595,7 @@
       "description": "Old stone foundations create natural chambers in the sewer here, where walls of different eras meet at odd angles. A cold draft pushes through gaps in the ancient masonry.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -2487,6 +2614,7 @@
       "description": "A jagged crack splits the tunnel wall here, running from floor to ceiling through ancient stonework. The gap is just wide enough for a person to squeeze through sideways. A cold, still breeze pushes through from the other side, carrying a faint otherworldly chill — the unmistakable breath of the dead. Faint pale light glows beyond the crack.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -2509,6 +2637,7 @@
       "description": "The walls transition from common brick to heavy stone masonry as the tunnel passes beneath the cathedral district. The air carries a faint trace of incense — or perhaps it's imagination, knowing what lies above.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -2527,6 +2656,7 @@
       "description": "A passage of squared stone blocks, their surfaces carved with mason's marks that no one alive can read. The ceiling is higher here, supported by the weight-bearing architecture of the cathedral above.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -2545,6 +2675,7 @@
       "description": "The tunnel cuts through what appears to be an older foundation wall. The stones are enormous, fitted without mortar in a style not used in Arindale's current construction. Whatever stood here before was built to endure. Rat droppings litter the ledge along one wall.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -2567,6 +2698,7 @@
       "description": "The walls transition from common brick to heavy stone masonry as the tunnel passes beneath the cathedral district. The air carries a faint trace of incense — or perhaps it's imagination, knowing what lies above.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -2585,6 +2717,7 @@
       "description": "A passage of squared stone blocks, their surfaces carved with mason's marks that no one alive can read. The ceiling is higher here, supported by the weight-bearing architecture of the cathedral above.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -2607,6 +2740,7 @@
       "description": "The tunnel cuts through what appears to be an older foundation wall. The stones are enormous, fitted without mortar in a style not used in Arindale's current construction. Whatever stood here before was built to endure. Something pale and shapeless clings to the ceiling, pulsing faintly. Best not to look too closely.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -2621,6 +2755,7 @@
       "description": "Heavy stone walls line this passage, their surfaces smooth and precisely fitted. The air is cool and dry compared to the damper sections of the sewer. Faint scratchings echo from somewhere in the darkness.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -2639,6 +2774,7 @@
       "description": "The tunnel passes between walls of dressed stone, each block larger than a man could lift alone. These are the deep foundations of the buildings above — the garrison and cathedral whose weight presses down into the earth.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -2657,6 +2793,7 @@
       "description": "Massive stone blocks form the walls of this tunnel — the foundations of the cathedral district above. The construction is heavier and more imposing than the common sewer brickwork, built to bear the weight of sacred architecture.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -2679,6 +2816,7 @@
       "description": "The tunnel is braced by cathedral foundations — massive stone pillars that descend through the ceiling into the sewer floor. The spaces between them create a series of narrow passages. Scratching sounds echo from a crack in the wall, then stop abruptly.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -2697,6 +2835,7 @@
       "description": "Old stone foundations create natural chambers in the sewer here, where walls of different eras meet at odd angles. A cold draft pushes through gaps in the ancient masonry.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -2719,6 +2858,7 @@
       "description": "The tunnel descends at a shallow angle, the water flowing faster along the central channel. The brickwork is older and less precise this deep, as if the original builders were working at the limits of their ambition.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -2737,6 +2877,7 @@
       "description": "Deep in the sewer, the air barely moves. The silence is broken only by the distant sound of water and an occasional scraping that could be anything — or nothing. The darkness swallows torchlight within a few paces.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -2755,6 +2896,7 @@
       "description": "The passage narrows between walls of rough stone. The floor is thick with accumulated grime, but in places the muck has been disturbed — footprints, scuff marks, drag lines. Someone comes this way.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -2773,6 +2915,7 @@
       "description": "A section of tunnel where the stonework shows signs of deliberate maintenance — fresh mortar patches, a replaced brick here and there. Someone has been down here more recently than the city above would like to admit. The faint sound of something large moving through water echoes from the darkness.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -2791,6 +2934,7 @@
       "description": "The tunnel walls are damp with condensation in the deep cold. No grates or shafts connect to the surface here. This is the underbelly of the city in the truest sense — forgotten and forsaken.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -2813,6 +2957,7 @@
       "description": "A deep passage with no hint of the city above. The stonework is rough and utilitarian — built for function, not for anyone to see. The darkness ahead feels thick, resistant, as if the tunnel resents intrusion.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -2835,6 +2980,7 @@
       "description": "The tunnel descends deeper here, the air growing colder and the darkness more absolute. No light from above reaches this far down. The only sounds are dripping water and the faint scratch of unseen claws.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -2857,6 +3003,7 @@
       "description": "The tunnels descend into a deep junction where the last traces of surface light have long since vanished. A manhole shaft reaches up into impenetrable darkness above — the Southwall Road, impossibly far overhead. The air is cold and dead. Multiple tunnels branch off into the blackness, each one deeper and more forbidding than the last.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -2879,6 +3026,7 @@
       "description": "The tunnel is partially blocked by a mass of debris — broken masonry, rotting timbers, and accumulated filth compressed into a solid wall. Water backs up behind the obstruction, creating a shallow, stagnant pool that stretches back down the passage. The blockage looks old but solid, and the air behind it reeks of stagnation.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -2897,6 +3045,7 @@
       "description": "A low-ceilinged passage that forces a slight stoop. The walls are close and the air is stale. Scratches on the stone at shoulder height suggest regular traffic — but not the kind that walks upright. The remains of a campfire — cold ashes and a charred stick — sit in a dry alcove.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -2919,6 +3068,7 @@
       "description": "The tunnel widens into a low-ceilinged chamber where a large drainage pipe passes through the city's eastern foundation wall. The pipe is partially blocked by accumulated debris and rust, but faint daylight filters in from beyond. The distant sounds of the East Road — cart wheels on cobblestones, the shuffle of travelers — echo faintly through the obstruction. The pipe could potentially be cleared, but for now it remains impassable.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -2933,6 +3083,7 @@
       "description": "The tunnel descends at a shallow angle, the water flowing faster along the central channel. The brickwork is older and less precise this deep, as if the original builders were working at the limits of their ambition.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -2951,6 +3102,7 @@
       "description": "The tunnel descends at a shallow angle, the water flowing faster along the central channel. The brickwork is older and less precise this deep, as if the original builders were working at the limits of their ambition.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -2969,6 +3121,7 @@
       "description": "A low-ceilinged passage that forces a slight stoop. The walls are close and the air is stale. Scratches on the stone at shoulder height suggest regular traffic — but not the kind that walks upright.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -2987,6 +3140,7 @@
       "description": "The tunnel descends deeper here, the air growing colder and the darkness more absolute. No light from above reaches this far down. The only sounds are dripping water and the faint scratch of unseen claws.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -3005,6 +3159,7 @@
       "description": "A deep passage with no hint of the city above. The stonework is rough and utilitarian — built for function, not for anyone to see. The darkness ahead feels thick, resistant, as if the tunnel resents intrusion. Rat droppings litter the ledge along one wall.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -3023,6 +3178,7 @@
       "description": "A cleaner stretch of tunnel with torch brackets on the walls and a floor swept free of debris. Dead-end branches open to either side — lookout posts, perhaps, or deliberately misleading paths. The faint sound of something large moving through water echoes from the darkness.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -3041,6 +3197,7 @@
       "description": "The tunnel takes a deliberate turn, then another, creating a series of switchbacks that would confuse anyone trying to navigate by direction alone. The floor has been swept clean, and faint scratches on the walls mark the turns.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -3059,6 +3216,7 @@
       "description": "This section of sewer has been maintained by hands other than the city's. The brickwork has been repointed, loose stones replaced. The passage feels less like a sewer and more like a corridor someone uses regularly.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -3077,6 +3235,7 @@
       "description": "The tunnel is noticeably cleaner here — the walls have been swept, the worst of the grime scraped away. Iron torch sconces are set into the walls at regular intervals, though none are lit. Fresh bootprints mark the damp floor.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -3095,6 +3254,7 @@
       "description": "The passage is straighter and better maintained than the surrounding tunnels. A faint smell of torch smoke hangs in the air. The walls bear small scratches at eye height — directional marks for those who know how to read them. The remains of a campfire — cold ashes and a charred stick — sit in a dry alcove.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -3113,6 +3273,7 @@
       "description": "The sewer changes character here. The filth gives way to swept stone, the random tunnels to purposeful corridors. Someone has made this section their own, and they don't want uninvited guests finding their way through.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -3131,6 +3292,7 @@
       "description": "A cleaner stretch of tunnel with torch brackets on the walls and a floor swept free of debris. Dead-end branches open to either side — lookout posts, perhaps, or deliberately misleading paths.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -3149,6 +3311,7 @@
       "description": "The tunnel takes a deliberate turn, then another, creating a series of switchbacks that would confuse anyone trying to navigate by direction alone. The floor has been swept clean, and faint scratches on the walls mark the turns.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -3167,6 +3330,7 @@
       "description": "This section of sewer has been maintained by hands other than the city's. The brickwork has been repointed, loose stones replaced. The passage feels less like a sewer and more like a corridor someone uses regularly. Rat droppings litter the ledge along one wall.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -3185,6 +3349,7 @@
       "description": "The tunnel opens into a wider chamber where a massive water conduit, cracked and broken, lies partially embedded in the floor. The pipe is wide enough for a person to enter, and its interior descends at a steep angle into darkness below the sewer level. The chamber itself is clean — swept, maintained, clearly in regular use. Torch sconces line the walls, recently used. Bootprints in the grime lead directly to the conduit's mouth.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -3216,15 +3381,16 @@
           "triggerText": "honest men knock",
           "passageMessageSelf": "You whisper the secret phrase. A hollow click echoes from behind a large pipe and the pipe shifts exposing a small entrance that you slip through.",
           "passageMessageRoom": "{player} whispers something near the broken conduit and slips into the darkness.",
+          "passageMessageArrival": "{player} squeezes through a crack in the wall.",
           "itemDisplayName": null,
           "isTemporary": false,
           "spawnTriggerText": null,
-          "durationSeconds": null,
+          "durationSeconds": 60,
           "appearMessage": null,
           "disappearMessage": null,
           "requiredLevel": null,
           "maxLevel": null,
-          "requiredClasses": null,
+          "requiredClasses": [],
           "requiredQuestFlag": null,
           "requiredItemTag": null,
           "denialMessage": null
@@ -3237,6 +3403,7 @@
       "description": "The tunnel simply ends here in a wall of rough stone and packed earth. The construction is crude, as if the tunnelers stopped abruptly or the passage was deliberately sealed long ago. Faint scratching sounds come from behind the wall, and the stone feels oddly warm to the touch. Whatever lies beyond was not meant to be reached from this direction.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -3251,6 +3418,7 @@
       "description": "A side passage branches between the main tunnels, its ceiling lower and its walls closer together. Cobwebs span the upper corners, suggesting less traffic than the main routes. Scratching sounds echo from a crack in the wall, then stop abruptly.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -3277,6 +3445,7 @@
       "description": "A narrow connecting tunnel links two larger passages. The walls are plain brick, functional and unremarkable. Water trickles along a shallow groove in the floor.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -3303,6 +3472,7 @@
       "description": "A connecting tunnel with a slight curve, linking the larger passages on either side. The air moves through it in a slow draft, carrying smells from both directions.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -3321,6 +3491,7 @@
       "description": "A narrow passage cuts between the main tunnels at an angle. The floor is uneven where the builders worked around existing foundations. Water pools in the low spots.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -3339,6 +3510,7 @@
       "description": "The tunnel jogs sideways through a connecting passage. The construction changes slightly — different brick, different mortar — marking where two phases of sewer construction were joined. The faint sound of something large moving through water echoes from the darkness.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -3365,6 +3537,7 @@
       "description": "A lateral tunnel connects the larger passages. The brickwork is newer here — perhaps a later addition to improve drainage between the original tunnel networks.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -3383,6 +3556,7 @@
       "description": "A side passage branches between the main tunnels, its ceiling lower and its walls closer together. Cobwebs span the upper corners, suggesting less traffic than the main routes.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -3401,6 +3575,7 @@
       "description": "A narrow connecting tunnel links two larger passages. The walls are plain brick, functional and unremarkable. Water trickles along a shallow groove in the floor.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -3419,6 +3594,7 @@
       "description": "A connecting tunnel with a slight curve, linking the larger passages on either side. The air moves through it in a slow draft, carrying smells from both directions. The remains of a campfire — cold ashes and a charred stick — sit in a dry alcove.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -3441,6 +3617,7 @@
       "description": "The tunnel jogs sideways through a connecting passage. The construction changes slightly — different brick, different mortar — marking where two phases of sewer construction were joined.",
       "area": "Arindale Sewer",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {

@@ -6,6 +6,7 @@ import {
   DODGE_STAT_CONTRIBUTION,
   DODGE_MIN_ATTACKER_ACCURACY,
 } from '@koa/shared';
+import { renderNav } from './components/nav.js';
 
 interface AuthInfo {
   authenticated: boolean;
@@ -790,6 +791,7 @@ function setupEventListeners(): void {
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
+  renderNav({ activePage: 'swing-calculator' });
   const hasAccess = await checkAuth();
   if (!hasAccess) return;
 

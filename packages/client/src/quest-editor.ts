@@ -1,3 +1,5 @@
+import { renderNav } from './components/nav.js';
+
 (function() {
 
 interface QuestItemReward {
@@ -144,6 +146,8 @@ async function checkAuth(): Promise<boolean> {
     }
     const usernameEl = document.getElementById('nav-username');
     if (usernameEl && data.username) usernameEl.textContent = data.username;
+    const devDropdown = document.getElementById('nav-dev-dropdown');
+    if (devDropdown) devDropdown.style.display = (roles.includes('developer') || roles.includes('admin')) ? 'flex' : 'none';
     const adminDropdown = document.getElementById('nav-admin-dropdown');
     if (adminDropdown) adminDropdown.style.display = roles.includes('admin') ? 'flex' : 'none';
     return true;
@@ -870,6 +874,7 @@ function setupTabs(): void {
 // ============================================================================
 
 document.addEventListener('DOMContentLoaded', async () => {
+  renderNav({ activePage: 'quest-editor', helpDoc: 'Quest_System_Guide.md' });
   const hasAccess = await checkAuth();
   if (!hasAccess) return;
 

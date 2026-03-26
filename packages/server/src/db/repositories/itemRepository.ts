@@ -512,6 +512,16 @@ export async function countWorldInstances(templateId: number, client?: pg.PoolCl
 }
 
 export async function createInstance(input: CreateInstanceInput, client?: pg.PoolClient): Promise<ItemInstance> {
+  // Auto-initialize charges from template if not explicitly provided
+  // Fuel stays null — it's initialized on first light (use command)
+  const template = await getTemplateById(input.template_id, client);
+  if (!template) {
+    throw new Error(`Cannot create instance: template ${input.template_id} not found`);
+  }
+  const charges = input.charges_remaining
+    ?? template.consumable_data?.charges
+    ?? null;
+
   const result = await query<DbItemInstance>(
     `INSERT INTO item_instances (
       template_id, location_type, location_id, equipped_slot,
@@ -525,7 +535,7 @@ export async function createInstance(input: CreateInstanceInput, client?: pg.Poo
       input.equipped_slot ?? null,
       input.quantity ?? 1,
       input.condition ?? ItemCondition.PRISTINE,
-      input.charges_remaining ?? null,
+      charges,
       input.fuel_remaining ?? null,
       input.is_lit ?? false,
       JSON.stringify(input.custom_data ?? {}),
@@ -534,7 +544,6 @@ export async function createInstance(input: CreateInstanceInput, client?: pg.Poo
   );
 
   const instance = result.rows[0];
-  const template = await getTemplateById(instance.template_id, client);
   return dbToInstance(instance, template ?? undefined);
 }
 
@@ -589,10 +598,11 @@ export async function findStackableInstance(
     `SELECT ii.*, ${TEMPLATE_COLUMNS}
      FROM item_instances ii
      JOIN item_templates it ON ii.template_id = it.id
-     WHERE ii.template_id = $1 
-       AND ii.location_type = $2 
+     WHERE ii.template_id = $1
+       AND ii.location_type = $2
        AND ii.location_id = $3
        AND (it.flags->>'stackable')::boolean = true
+       AND (it.max_stack IS NULL OR it.max_stack <= 0 OR ii.quantity < it.max_stack)
        ${conditionClause}
      ORDER BY ii.id
      LIMIT 1`,

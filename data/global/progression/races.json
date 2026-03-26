@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "exported_at": "2026-03-15T13:33:32.866Z",
+  "exported_at": "2026-03-26T00:18:09.792Z",
   "type": "races",
   "data": [
     {
@@ -39,16 +39,16 @@
           "value": 3
         },
         {
-          "id": "base_vision",
-          "value": 150
-        },
-        {
           "id": "crit_bonus",
           "value": 1
         },
         {
           "id": "stealth",
           "value": true
+        },
+        {
+          "id": "base_vision",
+          "value": 150
         }
       ],
       "allowed_classes": [],
@@ -87,16 +87,16 @@
       },
       "traits": [
         {
-          "id": "base_vision",
-          "value": 170
-        },
-        {
           "id": "encumbrance_bonus",
           "value": 20
         },
         {
           "id": "magic_resist",
           "value": 10
+        },
+        {
+          "id": "base_vision",
+          "value": 170
         }
       ],
       "allowed_classes": [],
@@ -135,16 +135,16 @@
       },
       "traits": [
         {
-          "id": "base_vision",
-          "value": 150
-        },
-        {
           "id": "mana_bonus",
           "value": 10
         },
         {
           "id": "stealth",
           "value": true
+        },
+        {
+          "id": "base_vision",
+          "value": 150
         }
       ],
       "allowed_classes": [],
@@ -183,16 +183,16 @@
       },
       "traits": [
         {
-          "id": "base_vision",
-          "value": 200
-        },
-        {
           "id": "perception",
           "value": 10
         },
         {
           "id": "see_hidden",
           "value": true
+        },
+        {
+          "id": "base_vision",
+          "value": 200
         }
       ],
       "allowed_classes": [],
@@ -231,16 +231,16 @@
       },
       "traits": [
         {
-          "id": "base_vision",
-          "value": 170
+          "id": "magic_resist",
+          "value": 5
         },
         {
           "id": "lockpicking",
-          "value": 1
+          "value": 10
         },
         {
-          "id": "magic_resist",
-          "value": 5
+          "id": "base_vision",
+          "value": 170
         }
       ],
       "allowed_classes": [],
@@ -279,12 +279,12 @@
       },
       "traits": [
         {
-          "id": "base_vision",
-          "value": 150
-        },
-        {
           "id": "stealth",
           "value": true
+        },
+        {
+          "id": "base_vision",
+          "value": 150
         }
       ],
       "allowed_classes": [],
@@ -323,12 +323,12 @@
       },
       "traits": [
         {
-          "id": "base_vision",
-          "value": 100
-        },
-        {
           "id": "mana_bonus",
           "value": 10
+        },
+        {
+          "id": "base_vision",
+          "value": 100
         }
       ],
       "allowed_classes": [],
@@ -367,10 +367,6 @@
       },
       "traits": [
         {
-          "id": "base_vision",
-          "value": 100
-        },
-        {
           "id": "dodge_bonus",
           "value": 10
         },
@@ -381,6 +377,10 @@
         {
           "id": "stealth",
           "value": true
+        },
+        {
+          "id": "base_vision",
+          "value": 100
         }
       ],
       "allowed_classes": [],
@@ -419,14 +419,6 @@
       },
       "traits": [
         {
-          "id": "ac_bonus",
-          "value": 2
-        },
-        {
-          "id": "base_vision",
-          "value": 100
-        },
-        {
           "id": "hp_per_level",
           "value": 1
         },
@@ -435,8 +427,16 @@
           "value": 15
         },
         {
+          "id": "ac_bonus",
+          "value": 2
+        },
+        {
           "id": "no_kai",
           "value": true
+        },
+        {
+          "id": "base_vision",
+          "value": 100
         }
       ],
       "allowed_classes": [],
@@ -559,12 +559,12 @@
           "value": 5
         },
         {
-          "id": "base_vision",
-          "value": 100
-        },
-        {
           "id": "poison_immunity",
           "value": true
+        },
+        {
+          "id": "base_vision",
+          "value": 100
         }
       ],
       "allowed_classes": [],
@@ -603,10 +603,6 @@
       },
       "traits": [
         {
-          "id": "base_vision",
-          "value": 150
-        },
-        {
           "id": "cold_resist",
           "value": -10
         },
@@ -621,6 +617,10 @@
         {
           "id": "tracking",
           "value": 10
+        },
+        {
+          "id": "base_vision",
+          "value": 150
         }
       ],
       "allowed_classes": [],

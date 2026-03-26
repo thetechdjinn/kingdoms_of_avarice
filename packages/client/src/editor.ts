@@ -2,6 +2,7 @@ import {
   initAuth, showToast, showConfirm, showPrompt, showPromptFields,
   setupTabs, escapeHtml, ListPanel, SearchableSelect, ChipTagInput,
 } from './components/index.js';
+import { renderNav } from './components/nav.js';
 import type { SelectOption } from './components/index.js';
 
 // ============================================================================
@@ -69,6 +70,7 @@ interface RoomLayoutInfo {
 // ============================================================================
 
 (async function () {
+  renderNav({ activePage: 'editor', helpDoc: 'Room_Creation_Guide.md' });
   const auth = await initAuth('developer');
   if (!auth) return;
 

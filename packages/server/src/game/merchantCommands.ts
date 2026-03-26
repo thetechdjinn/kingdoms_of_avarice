@@ -297,15 +297,20 @@ export async function handleBuy(
   const available = isMerchantAvailable(merchant, socket.characterId!);
   if (available) return available;
 
-  // Find item in merchant inventory
+  // Find item in merchant inventory (prefer exact matches over partial)
   const inventory = await merchantRepo.getInventoryWithTemplates(merchant.templateId);
   const lowerKeyword = itemKeyword.toLowerCase();
-  const entry = inventory.find(e => {
+  const matchEntry = (e: typeof inventory[number]) => {
     const t = e.itemTemplate;
-    return t.name.toLowerCase() === lowerKeyword ||
-           t.name.toLowerCase().startsWith(lowerKeyword) ||
-           t.keywords?.some(k => k.toLowerCase() === lowerKeyword || k.toLowerCase().startsWith(lowerKeyword));
-  });
+    const name = t.name.toLowerCase();
+    if (name === lowerKeyword) return 'exact';
+    if (t.keywords?.some(k => k.toLowerCase() === lowerKeyword)) return 'exact';
+    if (name.startsWith(lowerKeyword)) return 'partial';
+    if (t.keywords?.some(k => k.toLowerCase().startsWith(lowerKeyword))) return 'partial';
+    return null;
+  };
+  let entry = inventory.find(e => matchEntry(e) === 'exact');
+  if (!entry) entry = inventory.find(e => matchEntry(e) !== null);
 
   if (!entry) {
     return { type: MessageType.ERROR, message: `${withNpcNameCapitalized(merchant.entityName, merchant.isProperName)} doesn't sell that.` };

@@ -4,6 +4,7 @@
  */
 
 import { initAuth, ListPanel, showToast, showConfirm, escapeHtml } from './components/index.js';
+import { renderNav } from './components/nav.js';
 
 interface Faction {
   id: number;
@@ -20,6 +21,7 @@ interface NpcTemplate {
 }
 
 (async function () {
+  renderNav({ activePage: 'faction-editor' });
   const auth = await initAuth('developer');
   if (!auth) return;
 

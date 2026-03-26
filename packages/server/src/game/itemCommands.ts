@@ -1167,7 +1167,15 @@ const SLOT_DISPLAY_NAMES: Record<EquipmentSlot, string> = {
  * Check if a character meets item requirements.
  * Returns an error message string if requirements are not met, or null if all requirements pass.
  */
-function checkItemRequirements(socket: AuthenticatedSocket, template: ItemTemplate): string | null {
+async function checkItemRequirements(socket: AuthenticatedSocket, template: ItemTemplate): Promise<string | null> {
+  // Check magical item restriction (class trait: no_magic_items)
+  if (template.flags?.magical) {
+    const classDef = await progressionRepo.getClassById(socket.characterClass);
+    if (classDef?.traits?.includes('no_magic_items')) {
+      return 'Your class cannot use magical items.';
+    }
+  }
+
   const reqs = template.requirements;
   if (!reqs) return null;
 
@@ -1229,7 +1237,7 @@ export async function handleWield(
   }
 
   // Check item requirements (level, stats, class, race)
-  const reqError = checkItemRequirements(socket, template);
+  const reqError = await checkItemRequirements(socket, template);
   if (reqError) {
     return { type: MessageType.ERROR, message: reqError };
   }
@@ -1324,7 +1332,7 @@ export async function handleWear(
   }
 
   // Check item requirements (level, stats, class, race)
-  const reqError = checkItemRequirements(socket, template);
+  const reqError = await checkItemRequirements(socket, template);
   if (reqError) {
     return { type: MessageType.ERROR, message: reqError };
   }
@@ -1431,19 +1439,23 @@ export async function handleRemove(
   const messages: string[] = [];
 
   // If removing a lit light source, extinguish it first
-  if (item.is_lit && template?.item_type === ItemType.LIGHT) {
+  const wasLit = item.is_lit && template?.item_type === ItemType.LIGHT;
+  if (wasLit) {
     await itemRepo.updateInstanceLitState(item.id, false);
     untrackLitCharacter(socket.characterId!);
-    messages.push(`You extinguish ${colors.item(itemName)}.`);
-    broadcastToRoom(currentRoomId, `${socket.username} extinguishes ${itemName}.`, socket.playerId);
   }
 
   // Move to inventory
   await itemRepo.updateInstanceLocation(item.id, ItemLocationType.PLAYER, socket.characterId!);
   invalidateEquipmentCache(socket.characterId!);
 
-  broadcastToRoom(currentRoomId, colors.green(`${colors.red(socket.username)} removes ${itemName}.`), socket.playerId);
-  messages.push(`You remove ${colors.item(itemName)}.`);
+  if (wasLit) {
+    broadcastToRoom(currentRoomId, `${socket.username} extinguishes and removes ${itemName}.`, socket.playerId);
+    messages.push(`You extinguish and remove ${colors.item(itemName)}.`);
+  } else {
+    broadcastToRoom(currentRoomId, colors.green(`${colors.red(socket.username)} removes ${itemName}.`), socket.playerId);
+    messages.push(`You remove ${colors.item(itemName)}.`);
+  }
 
   return { type: MessageType.OUTPUT, message: messages.join('\r\n') };
 }
@@ -1574,6 +1586,14 @@ export async function handlePut(
     return { type: MessageType.ERROR, message: error! };
   }
 
+  // Check magical container restriction
+  if (container.template?.flags?.magical) {
+    const classDef = await progressionRepo.getClassById(socket.characterClass);
+    if (classDef?.traits?.includes('no_magic_items')) {
+      return { type: MessageType.ERROR, message: 'Your class cannot use magical items.' };
+    }
+  }
+
   // Can't put container in itself
   if (container.id === item.id) {
     return { type: MessageType.ERROR, message: `You can't put something inside itself.` };
@@ -1641,6 +1661,14 @@ export async function handleGetFrom(
   const { container, error } = await findContainer(socket, containerKeyword, currentRoomId);
   if (!container) {
     return { type: MessageType.ERROR, message: error! };
+  }
+
+  // Check magical container restriction
+  if (container.template?.flags?.magical) {
+    const classDef = await progressionRepo.getClassById(socket.characterClass);
+    if (classDef?.traits?.includes('no_magic_items')) {
+      return { type: MessageType.ERROR, message: 'Your class cannot use magical items.' };
+    }
   }
 
   // Handle "get all from <container>"
@@ -1817,6 +1845,14 @@ export async function handleUse(
     return { type: MessageType.ERROR, message: `You can't ${consumableOnly ? 'eat' : 'use'} that.` };
   }
 
+  // Check magical item restriction for consumables
+  if (template.flags?.magical) {
+    const classDef = await progressionRepo.getClassById(socket.characterClass);
+    if (classDef?.traits?.includes('no_magic_items')) {
+      return { type: MessageType.ERROR, message: 'Your class cannot use magical items.' };
+    }
+  }
+
   const consumableData = template.consumable_data;
   if (!consumableData) {
     return { type: MessageType.ERROR, message: `You can't use that.` };
@@ -1826,9 +1862,11 @@ export async function handleUse(
   const effectResult = applyConsumableEffect(socket, consumableData);
 
   // Handle charges or delete item
-  if (item.charges_remaining !== undefined && item.charges_remaining > 1) {
-    // Multi-charge item (like a wand) - decrement charges
-    await itemRepo.updateInstanceCharges(item.id, item.charges_remaining - 1);
+  // If charges_remaining is null but template defines charges, initialize from template
+  const charges = item.charges_remaining ?? consumableData.charges ?? 0;
+  if (charges > 1) {
+    // Multi-charge item - decrement charges
+    await itemRepo.updateInstanceCharges(item.id, charges - 1);
   } else {
     // Single use or last charge - delete the item
     await itemRepo.deleteInstance(item.id);
@@ -1847,7 +1885,6 @@ function applyConsumableEffect(socket: AuthenticatedSocket, data: { effect_type:
   switch (effect_type.toLowerCase()) {
     case 'heal':
     case 'health': {
-      // Heal the player
       const oldHp = socket.vitals.hp;
       socket.vitals.hp = Math.min(socket.vitals.hp + effect_value, socket.vitals.maxHp);
       const healed = socket.vitals.hp - oldHp;
@@ -1856,7 +1893,6 @@ function applyConsumableEffect(socket: AuthenticatedSocket, data: { effect_type:
 
     case 'mana':
     case 'restore_mana': {
-      // Restore mana
       const oldMana = socket.vitals.resource ?? 0;
       const maxResource = socket.vitals.maxResource ?? 0;
       socket.vitals.resource = Math.min(oldMana + effect_value, maxResource);
@@ -1865,7 +1901,6 @@ function applyConsumableEffect(socket: AuthenticatedSocket, data: { effect_type:
     }
 
     case 'damage':
-      // Damage the player (poison, etc.)
       socket.vitals.hp = Math.max(socket.vitals.hp - effect_value, 0);
       return colors.red(`You take ${effect_value} damage!`);
 

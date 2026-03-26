@@ -98,6 +98,9 @@ This allows players to customize their starting stats at character creation usin
 - Players use the training form to allocate points
 - Must SAVE to finalize the character and enter the game
 - If they EXIT without saving, the character creation is cancelled
+- The training form only appears on the very first login, tracked by the `initial_training_complete` boolean column on characters
+- After submitting or cancelling the form, it never appears again automatically
+- Players can always open the form later via `train stats` in any training room
 
 ## Training Form Interface
 

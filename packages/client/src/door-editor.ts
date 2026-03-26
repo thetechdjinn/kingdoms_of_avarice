@@ -5,6 +5,7 @@
 
 import { initAuth, SearchableSelect, setupTabs, activateTab, showToast, showConfirm, showPromptFields, escapeHtml } from './components/index.js';
 import type { SelectOption } from './components/index.js';
+import { renderNav } from './components/nav.js';
 
 interface Door {
   id: number;
@@ -66,6 +67,7 @@ const TYPE_TABS: Record<string, string[]> = {
 const ALL_TABS = ['basic', 'rooms', 'state', 'locks', 'triggers', 'portal', 'permissions'];
 
 (async function () {
+  renderNav({ activePage: 'door-editor', helpDoc: 'Door_System_Guide.md' });
   const auth = await initAuth('developer');
   if (!auth) return;
 

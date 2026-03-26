@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "exported_at": "2026-03-15T13:33:32.895Z",
+  "exported_at": "2026-03-26T00:18:09.826Z",
   "type": "rooms",
   "data": [
     {
@@ -9,6 +9,7 @@
       "description": "A small sleeping chamber behind an unlocked door. A narrow cot is pushed against one wall, a rough blanket folded at its foot. A wooden peg holds a dark robe. Personal effects are sparse — a clay cup, a worn prayer book, a stub of black candle. The room smells of stale incense and unwashed cloth.",
       "area": "Sanctum of the Damned",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -23,6 +24,7 @@
       "description": "A cramped sleeping cell barely large enough for the cot and small chest it contains. Dark robes hang from a hook on the wall. A half-eaten meal sits on the chest — bread and dried meat. Chalk symbols have been drawn on the wall above the cot, personal devotions to whatever the cult worships.",
       "area": "Sanctum of the Damned",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -37,6 +39,7 @@
       "description": "The smallest of the sleeping chambers, its door hanging slightly ajar. The cot here is unmade, blankets tangled. A leather satchel lies open on the floor, its contents scattered — a knife, bandages, a small pouch of coins. Whoever sleeps here left in a hurry.",
       "area": "Sanctum of the Damned",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -51,6 +54,7 @@
       "description": "A side room converted for storage. Wooden crates stamped with Arindale merchant marks are stacked against the walls — stolen goods, by the look of them. Sacks of grain lean in one corner. The room is dry and surprisingly well-organized, everything arranged with military precision.",
       "area": "Sanctum of the Damned",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -65,6 +69,7 @@
       "description": "A supply room crammed with the necessities of underground living. Barrels of water, bundles of torches, coils of rope, and boxes of dark candles fill the space. A rack along one wall holds clay jars sealed with wax — preserved food, perhaps, or ritual materials. The air is close and smells of tallow.",
       "area": "Sanctum of the Damned",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -79,6 +84,7 @@
       "description": "A corridor transformed by deliberate ritual decoration. The walls are covered in dark fabric, the floor swept clean and marked with painted lines that form geometric patterns. Dark candles in iron holders cast flickering shadows. The air is heavy with the smell of burnt incense and tallow. A rat lies dead in the corner, its neck cleanly broken. Not a trap kill — something did this deliberately, efficiently.",
       "area": "Sanctum of the Damned",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -97,6 +103,7 @@
       "description": "A cult hallway where the original tunnel architecture is completely hidden behind layers of black cloth. The drapes are thick enough to muffle footsteps and swallow sound. Small symbols have been stitched into the fabric in dark thread — visible only when the candlelight catches them at the right angle.",
       "area": "Sanctum of the Damned",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -115,6 +122,7 @@
       "description": "Dark fabric covers the walls from ceiling to floor, creating a corridor that feels narrower than it is. The candles here burn low, their flames blue-tinged and almost smokeless. The air is thick with incense. Shadows pool in the corners where the candlelight fails to reach.",
       "area": "Sanctum of the Damned",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -137,6 +145,7 @@
       "description": "The passage is lined with heavy black drapes that billow slightly in drafts too subtle to feel. Iron sconces hold dark candles whose flames burn steady and unwavering. The symbols painted on the cloth are uniform and precise — whoever made them was practiced and deliberate. Faint chalk marks on the floor form an arrow pointing deeper into the passage — a guide mark for cult members navigating the tunnels.",
       "area": "Sanctum of the Damned",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -155,6 +164,7 @@
       "description": "A short corridor with doors branching off to individual sleeping chambers. Dark robes hang from wooden pegs between the doorways. The floor is covered with thin rush matting. The air smells of bodies and incense — the smell of people living in close quarters underground.",
       "area": "Sanctum of the Damned",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -190,6 +200,7 @@
           "triggerText": null,
           "passageMessageSelf": null,
           "passageMessageRoom": null,
+          "passageMessageArrival": null,
           "itemDisplayName": null,
           "isTemporary": false,
           "spawnTriggerText": null,
@@ -211,6 +222,7 @@
       "description": "The quarters hallway continues, more doors leading to individual cells. A small table against the wall holds a clay water pitcher and a stack of wooden bowls. The candlelight here is dimmer, the candles older. Boot prints mark the rush matting.",
       "area": "Sanctum of the Damned",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -250,6 +262,7 @@
           "triggerText": null,
           "passageMessageSelf": null,
           "passageMessageRoom": null,
+          "passageMessageArrival": null,
           "itemDisplayName": null,
           "isTemporary": false,
           "spawnTriggerText": null,
@@ -271,6 +284,7 @@
       "description": "The end of the quarters corridor. A final door leads to a sleeping chamber. The wall here bears a large painted symbol — a circle with radiating lines, rendered in dark paint that catches the candlelight. Below it, someone has placed a small offering: a black candle, a coin, a dried flower.",
       "area": "Sanctum of the Damned",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -302,6 +316,7 @@
           "triggerText": null,
           "passageMessageSelf": null,
           "passageMessageRoom": null,
+          "passageMessageArrival": null,
           "itemDisplayName": null,
           "isTemporary": false,
           "spawnTriggerText": null,
@@ -323,6 +338,7 @@
       "description": "The tunnel walls are bare stone, cleaned to an unusual degree for a sewer passage. Water stains mark the high-water line, but below it the bricks have been scrubbed almost white. The floor is dry and swept. Someone is living down here. A clay water jug sits in a wall niche, half-full and recently used. Someone has been here within the day.",
       "area": "Sanctum of the Damned",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -341,6 +357,7 @@
       "description": "A stretch of tunnel that feels wrong — too clean, too quiet. The sewer grime has been scraped away, replaced by a thin film of something waxy that darkens the stone. The ceiling is low enough to touch. Scratch marks on the walls could be symbols or could be nothing.",
       "area": "Sanctum of the Damned",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -359,6 +376,7 @@
       "description": "The passage has been widened where the original brickwork allowed, creating a space almost comfortable enough to stand upright. The floor has been leveled with packed earth over the old drain channel. The air is close and still, carrying a faint chemical smell. A discarded scrap of dark cloth lies in the corner, torn from a larger piece. Black dye stains the stone beneath it.",
       "area": "Sanctum of the Damned",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -381,6 +399,7 @@
       "description": "An intersection of old drainage channels that someone has converted into a usable corridor. The grates have been removed or covered, the worst of the sewage diverted elsewhere. What remains is damp, cold stone and an oppressive quiet broken only by distant dripping. The walls here show the ghosts of old graffiti — scratched symbols that have been methodically chiseled away by whoever claimed this passage.",
       "area": "Sanctum of the Damned",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -403,6 +422,7 @@
       "description": "A narrow corridor where every surface has been claimed by the cult. Black cloth covers the walls, dark candles line the passage, and the floor is marked with symbols in chalk and ash. The air tastes of smoke and incense. The silence is absolute, as if the cloth absorbs all sound.",
       "area": "Sanctum of the Damned",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -421,6 +441,7 @@
       "description": "A small chamber set aside for ritual use. A stone slab dominates the center, its surface stained dark with substances best not examined. Black candles arranged in geometric patterns surround the slab. The air is thick with old incense. Angular symbols cover every wall, layered deep.",
       "area": "Sanctum of the Damned",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -435,6 +456,7 @@
       "description": "A narrow corridor where every surface has been claimed by the cult. Black cloth covers the walls, dark candles line the passage, and the floor is marked with symbols in chalk and ash. The air tastes of smoke and incense. The silence is absolute, as if the cloth absorbs all sound.",
       "area": "Sanctum of the Damned",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -457,6 +479,7 @@
       "description": "The hallway is draped in black, the cloth pinned to the ceiling and walls with iron nails. Between the drapes, angular symbols have been carved directly into the stone — deep, deliberate cuts filled with something dark. The candlelight makes the shadows move like living things. The air currents shift here, pulling toward the walls. Somewhere behind the stone, air is moving through hidden spaces.",
       "area": "Sanctum of the Damned",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -479,6 +502,7 @@
       "description": "A corridor transformed by deliberate ritual decoration. The walls are covered in dark fabric, the floor swept clean and marked with painted lines that form geometric patterns. Dark candles in iron holders cast flickering shadows. The air is heavy with the smell of burnt incense and tallow.",
       "area": "Sanctum of the Damned",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -497,6 +521,7 @@
       "description": "A large chamber dominated by a long wooden table surrounded by rough-hewn chairs. Maps and documents are spread across the table's surface — plans, lists of names, schedules. The walls are draped in black cloth bearing the cult's angular symbols. Iron chandeliers hold clusters of dark candles. This is where the cult's leadership makes decisions.",
       "area": "Sanctum of the Damned",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -515,6 +540,7 @@
       "description": "The transition from sewer to something else. The filth and disorder of the tunnels gives way to swept stone and deliberate order. The walls have been cleaned, the floor leveled. A shaft leads up to the sewer passage above. To the east, the tunnel continues, and the faintest scent of incense mixes with the damp air. This is a threshold — beyond it, someone has claimed the darkness for their own purposes.",
       "area": "Sanctum of the Damned",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -537,6 +563,7 @@
       "description": "The tunnel widens into a cleared area where the ceiling vaults slightly higher. The walls show marks of tool work — someone has chiseled away protrusions and smoothed the worst of the rough stone. A few niches have been carved into the walls, empty now but recently used.",
       "area": "Sanctum of the Damned",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -555,6 +582,7 @@
       "description": "The tunnel changes character here. The swept stone of the approach gives way to something more deliberate — the walls are darker, treated with some substance that absorbs light. The first sconces appear, iron brackets bolted to the stone, though the candles they hold are unlit. The smell of incense is stronger.",
       "area": "Sanctum of the Damned",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -573,6 +601,7 @@
       "description": "The transition deepens. Black cloth begins to appear on the walls — not the full draping of the inner sanctum, but patches and panels, test hangings. A carved symbol on the bare stone marks the edge of consecrated ground. The candles in the sconces here are dark and half-burned.",
       "area": "Sanctum of the Damned",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -595,6 +624,7 @@
       "description": "The primary guard station on the main corridor. The passage narrows through a constructed chokepoint of fitted stone blocks, creating a defensible position. Weapon racks line the walls — clubs, short swords, crossbow bolts. This is where the cult's security is thickest. Beyond this point, the sanctum begins in earnest.",
       "area": "Sanctum of the Damned",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -621,6 +651,7 @@
       "description": "Black cloth has been draped across the tunnel walls, hiding the stonework behind heavy fabric that absorbs light and sound. Iron sconces are bolted to the wall at regular intervals, each holding a thick dark candle that burns with a low, steady flame. Angular symbols have been painted on the cloth in a substance that catches the candlelight.",
       "area": "Sanctum of the Damned",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -639,6 +670,7 @@
       "description": "The corridor is a study in controlled darkness. Black cloth, dark candles, angular symbols repeated in careful patterns along the walls. The floor has been covered with thin rush matting that dampens footsteps. The incense smell is strongest here, emanating from small ceramic burners placed in wall niches. A small iron hook has been driven into the mortar between bricks, holding nothing. A dark stain on the wall below it suggests a lantern once hung here.",
       "area": "Sanctum of the Damned",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -661,6 +693,7 @@
       "description": "A cult hallway where the original tunnel architecture is completely hidden behind layers of black cloth. The drapes are thick enough to muffle footsteps and swallow sound. Small symbols have been stitched into the fabric in dark thread — visible only when the candlelight catches them at the right angle.",
       "area": "Sanctum of the Damned",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -683,6 +716,7 @@
       "description": "The hallway is draped in black, the cloth pinned to the ceiling and walls with iron nails. Between the drapes, angular symbols have been carved directly into the stone — deep, deliberate cuts filled with something dark. The candlelight makes the shadows move like living things.",
       "area": "Sanctum of the Damned",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -705,6 +739,7 @@
       "description": "A section of sewer tunnel that has been swept clean — the usual filth scraped away to reveal damp stonework beneath. The air is stale but lacks the sewer's characteristic reek. Someone has been maintaining this passage. Faint scuff marks on the floor suggest regular foot traffic. Boot prints in the thin layer of dust on the floor. Multiple sets, all heading the same direction. Recent.",
       "area": "Sanctum of the Damned",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -723,6 +758,7 @@
       "description": "The tunnel here has been cleared of debris and refuse. The walls are damp but scrubbed, the mortar lines visible between the bricks. A few iron brackets have been hammered into the stone, though whatever they held has been removed. The silence feels deliberate.",
       "area": "Sanctum of the Damned",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -741,6 +777,7 @@
       "description": "The final threshold before the sanctum's deeper reaches. The walls are fully draped in black cloth here, the sconces lit with dark candles. The carved symbols on the stone behind the cloth are larger, more complex. The incense smell is almost overpowering. Below this point, the cult's grip on the architecture is total.",
       "area": "Sanctum of the Damned",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -759,6 +796,7 @@
       "description": "A deeper storage room containing ritual materials rather than mundane supplies. Shelves hold rows of dark candles, ceramic incense burners, sealed clay jars of oils and unguents. Bolts of black cloth are stacked in one corner. A locked chest sits against the far wall, its contents unknown.",
       "area": "Sanctum of the Damned",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -773,6 +811,7 @@
       "description": "A corridor transformed by deliberate ritual decoration. The walls are covered in dark fabric, the floor swept clean and marked with painted lines that form geometric patterns. Dark candles in iron holders cast flickering shadows. The air is heavy with the smell of burnt incense and tallow. The cloth on one wall is pulled slightly aside, revealing deep scratch marks in the stone beneath. Something was carved here, then deliberately hidden.",
       "area": "Sanctum of the Damned",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -799,6 +838,7 @@
       "description": "Black cloth has been draped across the tunnel walls, hiding the stonework behind heavy fabric that absorbs light and sound. Iron sconces are bolted to the wall at regular intervals, each holding a thick dark candle that burns with a low, steady flame. Angular symbols have been painted on the cloth in a substance that catches the candlelight.",
       "area": "Sanctum of the Damned",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -821,6 +861,7 @@
       "description": "The corridor is a study in controlled darkness. Black cloth, dark candles, angular symbols repeated in careful patterns along the walls. The floor has been covered with thin rush matting that dampens footsteps. The incense smell is strongest here, emanating from small ceramic burners placed in wall niches.",
       "area": "Sanctum of the Damned",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -847,6 +888,7 @@
       "description": "A converted passage where the sewer's original purpose has been erased by careful, methodical cleaning. The floor is even, the ceiling braced with rough timber where the original stonework has crumbled. The air smells faintly of lye and something else — incense, perhaps.",
       "area": "Sanctum of the Damned",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -865,6 +907,7 @@
       "description": "The tunnel walls are bare stone, cleaned to an unusual degree for a sewer passage. Water stains mark the high-water line, but below it the bricks have been scrubbed almost white. The floor is dry and swept. Someone is living down here. A dark candle has burned down to a puddle of black wax on the floor, its wick still faintly smoking. Someone was here recently.",
       "area": "Sanctum of the Damned",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -887,6 +930,7 @@
       "description": "The passage has been widened where the original brickwork allowed, creating a space almost comfortable enough to stand upright. The floor has been leveled with packed earth over the old drain channel. The air is close and still, carrying a faint chemical smell. A thin line of dark powder has been laid across the threshold — ash, or something ground finer than ash. Stepping over it feels like crossing a boundary.",
       "area": "Sanctum of the Damned",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -909,6 +953,7 @@
       "description": "An intersection of old drainage channels that someone has converted into a usable corridor. The grates have been removed or covered, the worst of the sewage diverted elsewhere. What remains is damp, cold stone and an oppressive quiet broken only by distant dripping.",
       "area": "Sanctum of the Damned",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -927,6 +972,7 @@
       "description": "A cult hallway where the original tunnel architecture is completely hidden behind layers of black cloth. The drapes are thick enough to muffle footsteps and swallow sound. Small symbols have been stitched into the fabric in dark thread — visible only when the candlelight catches them at the right angle. The incense here is different — heavier, with an undertone of something metallic. It clings to the cloth and settles in the lungs.",
       "area": "Sanctum of the Damned",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -949,6 +995,7 @@
       "description": "A second ritual chamber, larger and more elaborately decorated than the first. The stone altar here is carved with deep channels that lead to a basin set into the floor. The walls are covered in layered symbols — older marks beneath newer ones, decades of devotion. The dark candles here burn with an unusual steadiness, their flames perfectly still in the motionless air.",
       "area": "Sanctum of the Damned",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -963,6 +1010,7 @@
       "description": "Dark fabric covers the walls from ceiling to floor, creating a corridor that feels narrower than it is. The candles here burn low, their flames blue-tinged and almost smokeless. The air is thick with incense. Shadows pool in the corners where the candlelight fails to reach.",
       "area": "Sanctum of the Damned",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -981,6 +1029,7 @@
       "description": "A private chamber that speaks of authority and obsession. A heavy wooden desk dominates one wall, covered in documents — correspondence in code, lists of names, maps of the city above with locations marked. Bookshelves hold forbidden texts bound in dark leather. The walls are hung with finer cloth than the corridors, and the incense here is richer, more complex. A locked door leads south to the leader's personal quarters.",
       "area": "Sanctum of the Damned",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -1012,6 +1061,7 @@
           "triggerText": null,
           "passageMessageSelf": null,
           "passageMessageRoom": null,
+          "passageMessageArrival": null,
           "itemDisplayName": null,
           "isTemporary": false,
           "spawnTriggerText": null,
@@ -1033,6 +1083,7 @@
       "description": "The tunnel widens into a cleared area where the ceiling vaults slightly higher. The walls show marks of tool work — someone has chiseled away protrusions and smoothed the worst of the rough stone. A few niches have been carved into the walls, empty now but recently used.",
       "area": "Sanctum of the Damned",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -1055,6 +1106,7 @@
       "description": "A section of sewer tunnel that has been swept clean — the usual filth scraped away to reveal damp stonework beneath. The air is stale but lacks the sewer's characteristic reek. Someone has been maintaining this passage. Faint scuff marks on the floor suggest regular foot traffic. A small altar niche has been carved into the wall between the drapes — empty, but the stone inside is stained dark and smooth with use.",
       "area": "Sanctum of the Damned",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -1073,6 +1125,7 @@
       "description": "The tunnel here has been cleared of debris and refuse. The walls are damp but scrubbed, the mortar lines visible between the bricks. A few iron brackets have been hammered into the stone, though whatever they held has been removed. The silence feels deliberate.",
       "area": "Sanctum of the Damned",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -1091,6 +1144,7 @@
       "description": "The passage is lined with heavy black drapes that billow slightly in drafts too subtle to feel. Iron sconces hold dark candles whose flames burn steady and unwavering. The symbols painted on the cloth are uniform and precise — whoever made them was practiced and deliberate. The symbols painted on the cloth are different here — larger, more complex, layered over each other in patterns that seem to shift when viewed indirectly.",
       "area": "Sanctum of the Damned",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -1113,6 +1167,7 @@
       "description": "A narrow corridor where every surface has been claimed by the cult. Black cloth covers the walls, dark candles line the passage, and the floor is marked with symbols in chalk and ash. The air tastes of smoke and incense. The silence is absolute, as if the cloth absorbs all sound.",
       "area": "Sanctum of the Damned",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -1135,6 +1190,7 @@
       "description": "The hallway is draped in black, the cloth pinned to the ceiling and walls with iron nails. Between the drapes, angular symbols have been carved directly into the stone — deep, deliberate cuts filled with something dark. The candlelight makes the shadows move like living things.",
       "area": "Sanctum of the Damned",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -1157,6 +1213,7 @@
       "description": "More comfortable than the common sleeping cells, but still austere. A wider cot with actual bedding, a small writing table, a chest of personal belongings. Dark robes of finer material hang from a wooden stand. A mirror — rare underground — is mounted on one wall. The room smells of the same rich incense as the office above. A personal altar sits in one corner, smaller and more intimate than the communal ones.",
       "area": "Sanctum of the Damned",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -1171,6 +1228,7 @@
       "description": "The innermost shrine of the Disciples of Malachi. The chamber is circular, its walls carved from living rock and draped in the finest black cloth. At the center, on a raised stone pedestal, rests the Obsidian Sun — a disc of black stone that seems to drink in the light. Dark candles ring the pedestal in concentric circles, their flames bending inward toward the relic. The air here is heavy with a presence that has nothing to do with incense or atmosphere. Something is here. Something that watches.",
       "area": "Sanctum of the Damned",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -1185,6 +1243,7 @@
       "description": "A converted passage where the sewer's original purpose has been erased by careful, methodical cleaning. The floor is even, the ceiling braced with rough timber where the original stonework has crumbled. The air smells faintly of lye and something else — incense, perhaps.",
       "area": "Sanctum of the Damned",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -1203,6 +1262,7 @@
       "description": "The tunnel walls are bare stone, cleaned to an unusual degree for a sewer passage. Water stains mark the high-water line, but below it the bricks have been scrubbed almost white. The floor is dry and swept. Someone is living down here. A dark candle has burned down to a puddle of black wax on the floor, its wick still faintly smoking. Someone was here recently.",
       "area": "Sanctum of the Damned",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -1225,6 +1285,7 @@
       "description": "A stretch of tunnel that feels wrong — too clean, too quiet. The sewer grime has been scraped away, replaced by a thin film of something waxy that darkens the stone. The ceiling is low enough to touch. Scratch marks on the walls could be symbols or could be nothing.",
       "area": "Sanctum of the Damned",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -1239,6 +1300,7 @@
       "description": "A room dedicated to the written word — or at least, to the cult's version of it. Shelves line every wall, filled with hand-copied texts, scrolls, and bound manuscripts. A long writing desk holds quills, ink, and partially completed pages. The texts are a mix of religious instruction, copied scripture, and meticulous records of cult activities — members, meetings, rituals performed. Some of the older texts are in a language that is not quite recognizable.",
       "area": "Sanctum of the Damned",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -1253,6 +1315,7 @@
       "description": "Where cultists prepare for ritual. A long bench holds neatly arranged implements — ceremonial blades, bowls of dark paint for marking skin, bundles of incense, and folded ritual robes. A basin of water sits in one corner for cleansing. The walls are marked with step-by-step instructions for ritual preparation, painted in careful script. The room has the clinical feel of a sacristy, if the sacristy served something dark.",
       "area": "Sanctum of the Damned",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {

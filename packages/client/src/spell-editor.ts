@@ -6,6 +6,7 @@
 import { Spell, SpellType, SpellTargetType, SpellScalingStat } from '@koa/shared';
 import { initAuth, ListPanel, SearchableSelect, setupTabs, showToast, showConfirm, showPromptFields, escapeHtml } from './components/index.js';
 import type { SelectOption } from './components/index.js';
+import { renderNav } from './components/nav.js';
 
 interface ClassDef {
   id: string;
@@ -26,6 +27,7 @@ interface StatusEffectDef {
 }
 
 (async function () {
+  renderNav({ activePage: 'spell-editor', helpDoc: 'Spell_and_Effects_Guide.md' });
   const auth = await initAuth('developer');
   if (!auth) return;
 

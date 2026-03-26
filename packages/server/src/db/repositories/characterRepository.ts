@@ -33,6 +33,7 @@ export interface DbCharacter {
   bank_balance: number;
   unspent_cp: number;
   cp_spent: Record<string, number>;
+  initial_training_complete: boolean;
   // Appearance fields
   gender: string | null;
   hair: string | null;
@@ -179,7 +180,8 @@ type UpdatableCharacterFields =
   | 'strength' | 'intelligence' | 'dexterity' | 'constitution' | 'wisdom' | 'charisma'
   | 'unspent_cp' | 'cp_spent' | 'max_health' | 'max_mana'
   | 'last_name' | 'hair' | 'eye_color'
-  | 'current_room_id';
+  | 'current_room_id'
+  | 'initial_training_complete';
 
 export async function updateCharacterStats(
   characterId: number,

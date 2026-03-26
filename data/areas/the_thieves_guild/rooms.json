@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "exported_at": "2026-03-15T13:33:32.894Z",
+  "exported_at": "2026-03-26T00:18:09.824Z",
   "type": "rooms",
   "data": [
     {
@@ -9,6 +9,7 @@
       "description": "A narrow vertical shaft carved from raw stone, with iron rungs hammered into the wall forming a crude ladder. The air changes here — the sewer stench fades, replaced by something drier, cleaner. Lamp oil and stone dust. The shaft descends from a cracked conduit above, its opening barely visible in the darkness overhead. Below, the space opens into carved passages that bear no resemblance to the decaying sewer infrastructure above. Someone built this. Someone maintains it.",
       "area": "The Thieves Guild",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -27,6 +28,7 @@
       "description": "The first proper room beyond the entry shaft. Heavy timber beams brace the ceiling, and iron lanterns throw warm light across stone walls that have been chiseled smooth. A thick wooden door behind you can be barred from this side — a last defense if the entrance is compromised. The floor is swept clean, and weapon racks line one wall. This is a guard post, staffed and ready. The air smells of lamp oil and leather.",
       "area": "The Thieves Guild",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -45,6 +47,7 @@
       "description": "A four-way junction where the guild's main passages converge. The stonework here is deliberate and precise — not sewer construction but proper masonry, fitted blocks with narrow mortar lines. Iron sconces hold oil lanterns at regular intervals, casting steady light without flicker. Carved into the lintel above the eastern passage is a crude symbol — a hand holding a coin. The passage feels lived-in: boot scuffs on the floor, the faint smell of cooking from somewhere nearby.",
       "area": "The Thieves Guild",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -71,6 +74,7 @@
       "description": "The guild's common room — a vaulted chamber hollowed from the bedrock, larger than anything else down here. Rough-hewn tables and mismatched chairs fill the space, illuminated by stolen candelabras bolted to the walls. A barrel of cheap wine sits in one corner with a tin cup chained to it. Dice and playing cards are scattered across the nearest table. The walls are decorated with trophies — a city guard's helmet, a merchant's ledger nailed open to a page of losses, a noblewoman's silk scarf pinned like a flag. This is where the guild lives when it isn't working.",
       "area": "The Thieves Guild",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -102,6 +106,7 @@
           "triggerText": null,
           "passageMessageSelf": null,
           "passageMessageRoom": null,
+          "passageMessageArrival": null,
           "itemDisplayName": null,
           "isTemporary": false,
           "spawnTriggerText": null,
@@ -123,6 +128,7 @@
       "description": "Crates and barrels are stacked floor to ceiling along every wall, leaving only a narrow path through the center. The contents are stamped with merchant marks from a dozen different companies — all stolen, all carefully organized. Bolts of cloth, sealed jars of preserves, coils of rope, tools, and less identifiable goods packed in straw fill the shelves. A ledger hanging from a nail by the door tracks inventory in a cramped, coded hand. The guild's supply line, hidden in plain sight beneath the city.",
       "area": "The Thieves Guild",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -137,6 +143,7 @@
       "description": "A carved-out niche in the passage wall, fitted with a heavy wooden counter and iron-barred display cases bolted to the stone behind it. The cases hold lockpicks of varying quality, vials of dark liquid, thin-bladed knives, and other tools of the trade — each item tagged with a price in the guild's own shorthand. A set of scales sits on the counter beside a strongbox. The merchant who operates here deals in what the surface shops won't touch: stolen goods, contraband, and the specialized equipment of the professional thief.",
       "area": "The Thieves Guild",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -151,6 +158,7 @@
       "description": "A private chamber behind a locked door, spartan but purposeful. A heavy desk dominates the room, its surface covered in maps of Arindale's streets and buildings — sewer access points circled in red ink, guard patrol routes traced in blue. Ledgers are stacked in a locked iron cabinet against one wall. A single comfortable chair sits behind the desk, and two plain stools face it. The room smells of sealing wax and ink. Whoever works here runs an operation, not a gang — every detail planned, every risk calculated. A locked strongbox sits beneath the desk, bolted to the floor.",
       "area": "The Thieves Guild",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {

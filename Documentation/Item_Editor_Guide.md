@@ -75,7 +75,7 @@ Shows fields specific to the selected item type:
 
 - Effect Type (heal, mana, damage, food, drink)
 - Effect Value
-- Charges (0 = single use)
+- Charges (0 = single use; when > 0, each use decrements charges and the item is consumed on the last charge)
 - Duration (for timed effects)
 
 **Light Sources:**
@@ -111,6 +111,7 @@ Stat bonuses when equipped:
 | Cursed     | Cannot be removed once equipped |
 | Two-Handed | Blocks off-hand slot            |
 | Throwable  | Can be thrown as weapon         |
+| Magical    | Magical item; classes with `no_magic_items` trait cannot equip, use, or interact with magical containers (but can buy and carry) |
 
 ---
 

@@ -120,7 +120,7 @@ Four hardcoded checkboxes: Stealth, Lockpicking, Traps, Pickpocket.
 > - Tracking — enables track command (not yet implemented)
 > - Martial Arts — unarmed combat bonus (not yet implemented)
 > - Anti Magic — anti-magic class flag (not yet implemented)
-> - No Magic Items — cannot use magic items (not yet implemented)
+> - No Magic Items — cannot equip, use, or interact with items flagged as magical (can still buy and carry them)
 >
 > *Numeric abilities:*
 > - Dodge — additional dodge bonus (flat %)

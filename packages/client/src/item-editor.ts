@@ -5,6 +5,7 @@
 
 import { initAuth, ListPanel, SearchableSelect, setupTabs, showToast, showConfirm, showPromptFields, escapeHtml } from './components/index.js';
 import type { SelectOption } from './components/index.js';
+import { renderNav } from './components/nav.js';
 
 // Minimal interfaces for what we need from the API
 interface ItemTemplate {
@@ -69,6 +70,7 @@ function formatCopper(copper: number): string {
 }
 
 (async function () {
+  renderNav({ activePage: 'item-editor', helpDoc: 'Item_Editor_Guide.md' });
   const auth = await initAuth('developer');
   if (!auth) return;
 
@@ -174,7 +176,7 @@ function formatCopper(copper: number): string {
 
   async function fetchTemplates(): Promise<void> {
     try {
-      const res = await fetch('/api/items/templates', { credentials: 'include' });
+      const res = await fetch('/api/items/templates', { credentials: 'include', cache: 'no-store' });
       const data = await res.json();
       templates = data.templates || [];
       listPanel.setItems(templates);
@@ -331,6 +333,7 @@ function formatCopper(copper: number): string {
     (document.getElementById('flag-stackable') as HTMLInputElement).checked = !!flags.stackable;
     (document.getElementById('flag-cursed') as HTMLInputElement).checked = !!flags.cursed;
     (document.getElementById('flag-two-handed') as HTMLInputElement).checked = !!flags.two_handed;
+    (document.getElementById('flag-magical') as HTMLInputElement).checked = !!flags.magical;
     (document.getElementById('flag-throwable') as HTMLInputElement).checked = !!flags.throwable;
 
     updateTypeSections(t.item_type);
@@ -342,8 +345,8 @@ function formatCopper(copper: number): string {
 
   function loadWeaponData(t: ItemTemplate): void {
     const w = t.weapon_data || {};
-    (document.getElementById('weapon-min-damage') as HTMLInputElement).value = String(w.min_damage || 0);
-    (document.getElementById('weapon-max-damage') as HTMLInputElement).value = String(w.max_damage || 0);
+    (document.getElementById('weapon-min-damage') as HTMLInputElement).value = String(w.min_damage ?? 0);
+    (document.getElementById('weapon-max-damage') as HTMLInputElement).value = String(w.max_damage ?? 0);
     (document.getElementById('weapon-damage-type') as HTMLSelectElement).value = (w.damage_type as string) || 'slashing';
     (document.getElementById('weapon-attack-speed') as HTMLInputElement).value = String(w.attack_speed || 2000);
     (document.getElementById('weapon-crit-modifier') as HTMLInputElement).value = String(w.crit_modifier || 0);
@@ -488,6 +491,7 @@ function formatCopper(copper: number): string {
       stackable: (document.getElementById('flag-stackable') as HTMLInputElement).checked,
       cursed: (document.getElementById('flag-cursed') as HTMLInputElement).checked,
       two_handed: (document.getElementById('flag-two-handed') as HTMLInputElement).checked,
+      magical: (document.getElementById('flag-magical') as HTMLInputElement).checked,
       throwable: (document.getElementById('flag-throwable') as HTMLInputElement).checked,
     };
 
@@ -502,8 +506,8 @@ function formatCopper(copper: number): string {
     // Type-specific data
     if (itemType === 'weapon') {
       data.weapon_data = {
-        min_damage: parseInt((document.getElementById('weapon-min-damage') as HTMLInputElement).value) || 1,
-        max_damage: parseInt((document.getElementById('weapon-max-damage') as HTMLInputElement).value) || 1,
+        min_damage: parseInt((document.getElementById('weapon-min-damage') as HTMLInputElement).value) || 0,
+        max_damage: parseInt((document.getElementById('weapon-max-damage') as HTMLInputElement).value) || 0,
         damage_type: (document.getElementById('weapon-damage-type') as HTMLSelectElement).value,
         attack_speed: parseInt((document.getElementById('weapon-attack-speed') as HTMLInputElement).value) || 2000,
         crit_modifier: parseFloat((document.getElementById('weapon-crit-modifier') as HTMLInputElement).value) || 0,
@@ -749,7 +753,7 @@ function formatCopper(copper: number): string {
       item_type: 'misc',
       weight: 0, size: 0, base_value: 0, effect_slots: 0,
       keywords: result.name.toLowerCase().split(' '),
-      flags: { takeable: true },
+      flags: { takeable: true, stackable: true },
     };
     const saved = await saveTemplate(data, true);
     if (saved) selectTemplate(saved.id);

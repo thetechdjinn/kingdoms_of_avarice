@@ -112,6 +112,7 @@ export interface ItemFlags {
   cursed?: boolean;
   two_handed?: boolean;
   throwable?: boolean;
+  magical?: boolean;
   /** Tag that identifies this item as a key for doors with matching key_item_tag */
   key_tag?: string;
   /** If true, key is always consumed after successful use */

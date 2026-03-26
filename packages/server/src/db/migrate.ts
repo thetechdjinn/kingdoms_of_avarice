@@ -1099,6 +1099,43 @@ export async function runMigrations(): Promise<void> {
         ALTER TABLE item_instances ADD COLUMN IF NOT EXISTS is_lit BOOLEAN DEFAULT FALSE
       `);
 
+      // One-time: migrate light_data JSONB from {radius} to {vision_bonus}
+      const lightMigDone = await client.query(
+        `SELECT 1 FROM game_settings WHERE key = 'migration_light_vision_bonus' LIMIT 1`
+      );
+      if (lightMigDone.rows.length === 0) {
+        // Rename radius → vision_bonus and set correct values for existing templates
+        await client.query(`
+          UPDATE item_templates
+          SET light_data = light_data - 'radius' || jsonb_build_object('vision_bonus',
+            CASE
+              WHEN (light_data->>'radius')::int <= 2 THEN 100
+              WHEN (light_data->>'radius')::int <= 3 THEN 175
+              ELSE (light_data->>'radius')::int * 50
+            END
+          )
+          WHERE light_data IS NOT NULL
+            AND light_data ? 'radius'
+            AND NOT light_data ? 'vision_bonus'
+            AND jsonb_typeof(light_data->'radius') = 'number'
+        `);
+        await client.query(
+          `INSERT INTO game_settings (key, value) VALUES ('migration_light_vision_bonus', '"done"')`
+        );
+        console.log('  Migrated light_data: radius → vision_bonus');
+      }
+
+      // Add initial_training_complete flag to characters
+      await client.query(`
+        ALTER TABLE characters ADD COLUMN IF NOT EXISTS initial_training_complete BOOLEAN DEFAULT FALSE
+      `);
+      // Mark existing characters (level > 1 or cp_spent has any non-zero values) as training-complete
+      await client.query(`
+        UPDATE characters SET initial_training_complete = TRUE
+        WHERE initial_training_complete = FALSE
+          AND (level > 1 OR cp_spent != '{}'::jsonb OR unspent_cp < 100)
+      `);
+
       // One-time: set darkness_level = -120 on underground/dark rooms
       const darknessMigDone = await client.query(
         `SELECT 1 FROM game_settings WHERE key = 'migration_room_darkness' LIMIT 1`

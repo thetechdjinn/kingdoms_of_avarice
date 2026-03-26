@@ -18,17 +18,11 @@ const DARKNESS_BANDS: { min: number; max: number; tag: string; label: string }[]
 
 /**
  * Get the darkness display tag for a room's darkness level.
- * Returns empty string for brightness 0 (fully lit).
+ * Currently disabled: darkness is communicated via the "can't see" message,
+ * not via tags on room names.
  */
-export function getDarknessTag(darknessLevel: number): string {
-  if (darknessLevel >= 0) return '';
-  for (const band of DARKNESS_BANDS) {
-    if (darknessLevel >= band.min && darknessLevel <= band.max) {
-      return band.tag;
-    }
-  }
-  // Below -500, still abyssal
-  return '[Abyssal]';
+export function getDarknessTag(_darknessLevel: number): string {
+  return '';
 }
 
 /**
@@ -73,7 +67,17 @@ async function getHeldLightVisionBonus(characterId: number): Promise<number> {
       item.is_lit &&
       item.template.light_data
     ) {
-      return item.template.light_data.vision_bonus ?? 0;
+      // Fallback: pre-migration data may still use 'radius' key
+      // Convert old radius values: 2 → 100 (torch), 3 → 175 (lantern), else radius * 50
+      if (item.template.light_data.vision_bonus != null) {
+        return item.template.light_data.vision_bonus;
+      }
+      const ld = item.template.light_data as unknown as Record<string, unknown>;
+      const radius = typeof ld.radius === 'number' ? ld.radius : 0;
+      if (radius <= 0) return 0;
+      if (radius <= 2) return 100;
+      if (radius <= 3) return 175;
+      return radius * 50;
     }
   }
   return 0;

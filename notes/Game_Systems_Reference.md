@@ -152,7 +152,7 @@ The squared relationship makes large stat disparities very impactful.
 - Shadow provides flat +10
 
 **Additional Modifiers:**
-- Blindness: -10 Accuracy
+- Blindness/Can't See: Accuracy penalty from admin game setting "Blind Accuracy Penalty" (default -10)
 - Equipment bonuses
 - Buff/debuff spells
 

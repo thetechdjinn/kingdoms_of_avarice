@@ -1,3 +1,5 @@
+import { renderNav } from './components/nav.js';
+
 (function() {
 
 interface PendingUser {
@@ -732,6 +734,7 @@ function escapeHtml(text: string): string {
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
+  renderNav({ activePage: 'admin', activeGroup: 'admin' });
   const isAdmin = await checkAdminAuth();
 
   // Non-admins are redirected in checkAdminAuth, so we only reach here if admin
