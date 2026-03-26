@@ -1,4 +1,4 @@
-import { MessageType, ItemLocationType, ItemInstance, getItemDisplayName, EquipmentSlot, ItemType, TWO_HANDED_BLOCKED_SLOTS, getAlternatePairedSlot, ItemCondition, CraftingRecipe, AppliedEnchantment, Currency, ItemTemplate } from '@koa/shared';
+import { MessageType, ItemLocationType, ItemInstance, getItemDisplayName, EquipmentSlot, ItemType, TWO_HANDED_BLOCKED_SLOTS, getAlternatePairedSlot, ItemCondition, CraftingRecipe, AppliedEnchantment, Currency, ItemTemplate, ConsumableData } from '@koa/shared';
 import { CommandResponse } from './commands.js';
 import { AuthenticatedSocket, broadcastToRoom, sendMessage } from './socket.js';
 import { getPlayerLocation } from './adminCommands.js';
@@ -14,6 +14,7 @@ import { isHidden, breakStealth } from './stealth/stealthState.js';
 import { rollStealthCheck } from './stealth/stealthCheck.js';
 import { calculateStealth, calculatePerception } from './stats/secondaryStats.js';
 import * as progressionRepo from '../db/repositories/progressionRepository.js';
+import * as spellRepo from '../db/repositories/spellRepository.js';
 import { trackLitCharacter, untrackLitCharacter } from './fuelManager.js';
 import { calculateEffectiveVision, canSee } from './vision.js';
 import { getWorldRef } from './npcManager.js';
@@ -1848,6 +1849,11 @@ export async function handleUse(
     return { type: MessageType.ERROR, message: `You can't use that.` };
   }
 
+  // Scrolls must be activated via "read", not "use"
+  if (consumableData.effect_type === 'learn_spell' || consumableData.effect_type === 'cast_spell') {
+    return { type: MessageType.ERROR, message: `You can't use that.` };
+  }
+
   // Apply the effect
   const effectResult = applyConsumableEffect(socket, consumableData);
 
@@ -1900,6 +1906,127 @@ function applyConsumableEffect(socket: AuthenticatedSocket, data: { effect_type:
     default:
       return `The ${effect_type} effect washes over you.`;
   }
+}
+
+// ============================================================================
+// SCROLL COMMANDS
+// ============================================================================
+
+// Handle "read <item keyword> [target]" command - scrolls only
+export async function handleRead(
+  socket: AuthenticatedSocket,
+  args: string[],
+  currentRoomId: number
+): Promise<CommandResponse> {
+  const charError = requireCharacter(socket);
+  if (charError) return charError;
+
+  if (args.length === 0) {
+    return { type: MessageType.ERROR, message: 'Read what?' };
+  }
+
+  // First arg is the item keyword, rest is target (for casting scrolls)
+  const keyword = args[0];
+  const characterId = socket.characterId!;
+
+  // Search inventory only (scrolls must be in inventory, not equipped)
+  const matches = await itemRepo.findItemsInCharacterInventoryByKeyword(characterId, keyword);
+
+  if (matches.length === 0) {
+    return { type: MessageType.ERROR, message: `You don't have that.` };
+  }
+
+  // Filter to consumables with scroll effect types
+  const scrollMatches = matches.filter(m => {
+    const cd = m.template?.consumable_data;
+    return m.template?.item_type === ItemType.CONSUMABLE && cd &&
+      (cd.effect_type === 'learn_spell' || cd.effect_type === 'cast_spell');
+  });
+
+  if (scrollMatches.length === 0) {
+    return { type: MessageType.ERROR, message: `That isn't a scroll.` };
+  }
+
+  if (scrollMatches.length > 1 && !areAllSameTemplate(scrollMatches)) {
+    return { type: MessageType.ERROR, message: formatDisambiguation(scrollMatches) };
+  }
+
+  const item = scrollMatches[0];
+  const template = item.template!;
+  const consumableData = template.consumable_data!;
+
+  // Check item requirements (level, stats, class, race, magical restrictions)
+  const reqError = await checkItemRequirements(socket, template);
+  if (reqError) {
+    return { type: MessageType.ERROR, message: reqError };
+  }
+
+  // Dispatch by scroll type
+  if (consumableData.effect_type === 'learn_spell') {
+    return handleLearnScroll(socket, item, template, consumableData, currentRoomId);
+  }
+
+  // cast_spell will be handled in Phase 2
+  return { type: MessageType.ERROR, message: `You can't use that yet.` };
+}
+
+// Handle a learning scroll: teach the reader a spell
+async function handleLearnScroll(
+  socket: AuthenticatedSocket,
+  item: ItemInstance,
+  template: ItemTemplate,
+  consumableData: ConsumableData,
+  currentRoomId: number
+): Promise<CommandResponse> {
+  const characterId = socket.characterId!;
+
+  // Validate spell_id exists on the scroll
+  if (!consumableData.spell_id) {
+    return { type: MessageType.ERROR, message: `The writing on this scroll is illegible.` };
+  }
+
+  // Look up the spell
+  const spell = await spellRepo.getSpellById(consumableData.spell_id);
+  if (!spell) {
+    return { type: MessageType.ERROR, message: `The writing on this scroll is illegible.` };
+  }
+
+  // Check if the reader already knows this spell (preserve scroll)
+  const alreadyKnown = await spellRepo.hasSpell(characterId, spell.id);
+  if (alreadyKnown) {
+    return { type: MessageType.OUTPUT, message: `You already know ${colors.cyan(spell.name)}.` };
+  }
+
+  // Learn the spell
+  const result = await spellRepo.learnSpell(characterId, spell.id);
+  if (!result) {
+    return { type: MessageType.ERROR, message: `Something went wrong. The scroll remains intact.` };
+  }
+
+  // Consume the scroll
+  const charges = item.charges_remaining ?? consumableData.charges ?? 0;
+  const destroyed = charges <= 1;
+  if (destroyed) {
+    await itemRepo.deleteInstance(item.id);
+  } else {
+    await itemRepo.updateInstanceCharges(item.id, charges - 1);
+  }
+
+  // Messages
+  if (destroyed) {
+    broadcastToRoom(currentRoomId, `${socket.username} reads a scroll, which crumbles to dust.`, socket.playerId);
+  } else {
+    broadcastToRoom(currentRoomId, `${socket.username} reads a scroll.`, socket.playerId);
+  }
+
+  const lines = [
+    destroyed
+      ? colors.boldWhite(`You study the scroll intently. The words of power burn into your memory as the parchment crumbles to dust.`)
+      : colors.boldWhite(`You study the scroll intently. The words of power burn into your memory.`),
+    `${colors.boldGreen('Learned:')} ${colors.cyan(spell.name)} (${colors.white(spell.mnemonic)}) - ${spell.manaCost} mana`,
+  ];
+
+  return { type: MessageType.OUTPUT, message: lines.join('\r\n') };
 }
 
 // ============================================================================

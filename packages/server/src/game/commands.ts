@@ -9,7 +9,7 @@ import { colors } from '../utils/colors.js';
 import { processAdminCommand, getPlayerLocation, setPlayerLocation } from './adminCommands.js';
 import * as doorStateManager from '../services/doorStateManager.js';
 import * as playerRepo from '../db/repositories/playerRepository.js';
-import { handleGet, handleDrop, handleInventory, handleExamine, getRoomItemsDescription, handleWield, handleWear, handleRemove, handleEquipment, handlePut, handleGetFrom, handleLookIn, handleUse, handleLight, handleExtinguish, handleRefuel, handleRepair, handleSearch, handleRecipes, handleCraft, handleEnchantments, handleEnchant, handleDropCurrency, handleGetCurrency } from './itemCommands.js';
+import { handleGet, handleDrop, handleInventory, handleExamine, getRoomItemsDescription, handleWield, handleWear, handleRemove, handleEquipment, handlePut, handleGetFrom, handleLookIn, handleUse, handleRead, handleLight, handleExtinguish, handleRefuel, handleRepair, handleSearch, handleRecipes, handleCraft, handleEnchantments, handleEnchant, handleDropCurrency, handleGetCurrency } from './itemCommands.js';
 import { handleAttack, handleFlee, handleBreak } from './combatCommands.js';
 import { isSpellMnemonic, handleSpellCommand, handleSpellbook } from './spellCommands.js';
 import { isActionCommand, handleActionCommand, handleEmoteCommand, getActionHelpList } from './actionCommands.js';
@@ -316,6 +316,10 @@ export async function processCommand(
     }
     // Dispatch by item type (consumable, light, etc.)
     return handleUse(socket, args, currentRoomId);
+  }
+
+  if (command === 'read') {
+    return handleRead(socket, args, currentRoomId);
   }
 
   if (command === 'eat' || command === 'drink' || command === 'quaff') {
@@ -2518,10 +2522,14 @@ function getHelpSections(): HelpSection[] {
       ],
     },
     {
-      keyword: 'magic', title: 'Magic', aliases: ['spells', 'casting'],
+      keyword: 'magic', title: 'Magic', aliases: ['spells', 'casting', 'scrolls', 'scroll'],
       lines: [
         `  ${colors.white('spells')} (sp)           - View your spellbook`,
         `  ${colors.white('<mnemonic> <target>')}   - Cast a spell (e.g., mmis goblin)`,
+        '',
+        `  ${colors.boldYellow('Scrolls:')}`,
+        `  ${colors.white('read <scroll>')}          - Read a scroll to learn a spell`,
+        `  ${colors.gray('Learning scrolls teach you a spell permanently.')}`,
       ],
     },
     {

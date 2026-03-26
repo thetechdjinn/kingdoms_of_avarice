@@ -154,6 +154,9 @@ export interface ConsumableData {
   effect_type: string;
   effect_value: number;
   duration?: number;
+  spell_id?: number;            // Reference to spells table for scroll effect_types ('learn_spell', 'cast_spell')
+  fizzle_chance?: number;       // 0-100 percent chance of fizzle for casting scrolls (0 or omitted = never fails)
+  destination_room_id?: number; // Target room for teleport/portal utility scrolls
 }
 
 // Light source data
