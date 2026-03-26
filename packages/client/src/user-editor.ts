@@ -1,13 +1,8 @@
 import { renderNav } from './components/nav.js';
+import { initAuth } from './components/auth.js';
+import { showConfirm } from './components/modal.js';
 
 (function() {
-
-interface AuthInfo {
-  authenticated: boolean;
-  playerId?: number;
-  username?: string;
-  roles?: string[];
-}
 
 interface UserWithDetails {
   id: number;
@@ -47,73 +42,10 @@ interface DbCharacter {
   runic: number | null;
 }
 
-let currentUser: AuthInfo | null = null;
 let users: UserWithDetails[] = [];
 let selectedUserId: number | null = null;
 let selectedUserData: UserWithDetails | null = null;
 let userCharacters: DbCharacter[] = [];
-
-// ============================================================================
-// Authentication
-// ============================================================================
-
-async function checkAuth(): Promise<boolean> {
-  try {
-    const response = await fetch('/api/auth/me', { credentials: 'include' });
-    if (!response.ok) {
-      window.location.href = '/';
-      return false;
-    }
-    const data: AuthInfo = await response.json();
-    currentUser = data;
-
-    if (!data.authenticated) {
-      window.location.href = '/';
-      return false;
-    }
-
-    const roles = data.roles || [];
-    const isAdmin = roles.includes('admin');
-
-    if (!isAdmin) {
-      window.location.href = '/';
-      return false;
-    }
-
-    const usernameEl = document.getElementById('nav-username');
-    if (usernameEl && data.username) {
-      usernameEl.textContent = data.username;
-    }
-
-    // Show developer dropdown if developer or admin
-    const hasDeveloperAccess = roles.includes('developer') || roles.includes('admin');
-    const devDropdown = document.getElementById('nav-dev-dropdown');
-    if (devDropdown) {
-      devDropdown.style.display = hasDeveloperAccess ? 'flex' : 'none';
-    }
-
-    // Show admin dropdown
-    const adminDropdown = document.getElementById('nav-admin-dropdown');
-    if (adminDropdown) {
-      adminDropdown.style.display = isAdmin ? 'flex' : 'none';
-    }
-
-    return true;
-  } catch (error) {
-    console.error('Failed to check auth:', error);
-    window.location.href = '/';
-    return false;
-  }
-}
-
-async function handleLogout(): Promise<void> {
-  try {
-    await fetch('/api/logout', { method: 'POST', credentials: 'include' });
-  } catch {
-    // Ignore errors
-  }
-  window.location.href = '/';
-}
 
 // ============================================================================
 // User List
@@ -359,7 +291,7 @@ async function saveUser(): Promise<void> {
 async function resetPassword(): Promise<void> {
   if (!selectedUserId || !selectedUserData) return;
 
-  if (!confirm(`Reset password for ${selectedUserData.username}?`)) return;
+  if (!await showConfirm(`Reset password for ${selectedUserData.username}?`)) return;
 
   try {
     const response = await fetch(`/api/admin/users/${selectedUserId}/reset-password`, {
@@ -535,7 +467,7 @@ async function deleteCharacter(charId: number): Promise<void> {
   const char = userCharacters.find(c => c.id === charId);
   if (!char) return;
 
-  if (!confirm(`Delete character "${char.name}"? This cannot be undone.`)) return;
+  if (!await showConfirm(`Delete character "${char.name}"? This cannot be undone.`, { dangerous: true })) return;
 
   try {
     const response = await fetch(`/api/admin/characters/${charId}`, {
@@ -620,8 +552,8 @@ function formatDate(dateStr: string): string {
 
 document.addEventListener('DOMContentLoaded', async () => {
   renderNav({ activePage: 'user-editor', activeGroup: 'admin' });
-  const hasAccess = await checkAuth();
-  if (!hasAccess) return;
+  const auth = await initAuth('admin');
+  if (!auth) return;
 
   setupTabs();
   await loadUsers();
@@ -668,27 +600,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
-  // Logout handler
-  const logoutBtn = document.getElementById('logout-btn');
-  if (logoutBtn) {
-    logoutBtn.addEventListener('click', handleLogout);
-  }
-
-  // User menu dropdown toggle
-  const userMenuBtn = document.getElementById('nav-username');
-  const userMenu = userMenuBtn?.closest('.nav-user-menu');
-  if (userMenuBtn && userMenu) {
-    userMenuBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      userMenu.classList.toggle('open');
-    });
-    userMenu.addEventListener('click', (e) => {
-      e.stopPropagation();
-    });
-    document.addEventListener('click', () => {
-      userMenu.classList.remove('open');
-    });
-  }
 });
 
 })();

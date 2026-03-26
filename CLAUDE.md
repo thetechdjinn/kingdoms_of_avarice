@@ -12,6 +12,22 @@ Kingdoms of Avarice is a web-based MUD (Multi-User Dungeon) inspired by MajorMUD
 - Use the latest stable versions of libraries, frameworks, and dependencies
 - Never use worktrees unless explicitly asked to do so
 
+## Code Review Exclusions
+
+**Do not review or flag changes in game data/seed files unless explicitly asked.** These files change frequently as the game is built and balanced. Treating data value changes as regressions creates noise.
+
+Excluded paths:
+- `data/` (all exported JSON game data: spells, items, rooms, NPCs, etc.)
+- `packages/server/src/db/arindale/` (city seed data)
+- `packages/server/src/db/sewer/` (sewer seed data)
+- `packages/server/src/db/warrens/` (warrens seed data)
+- `packages/server/src/db/menagerie/` (menagerie seed data)
+- `packages/server/src/db/sanctum/` (sanctum seed data)
+- `packages/server/src/db/seed_*.sql` (SQL seed files)
+- `areas/` (area plan files)
+
+This applies to code reviews and PR reviews. Only review these files when the user explicitly requests it.
+
 ## Commands
 
 ```bash
@@ -104,6 +120,8 @@ Vite serves multiple pages: `index.html` (game), `editor.html` (rooms), `item-ed
 
 - Names lowercase, no articles: `"iron sword"` not `"Iron Sword"` or `"an iron sword"`
 - Use `withArticle(name)` when displaying: `"You pick up an iron sword"`
+- **Never show numeric amounts** for consumable healing/mana/damage in player-visible text. Use flavor text only (e.g., `"You feel better!"` not `"You feel better! (+25 HP)"`). Spells and admin commands may show amounts.
+- **Never show weight or value** when a player examines an item. Weight is used internally for encumbrance; value is used internally for merchant pricing. Neither is displayed to the player.
 
 ### Colors (from `utils/colors.js`)
 

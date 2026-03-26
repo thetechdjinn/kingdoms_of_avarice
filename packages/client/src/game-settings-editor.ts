@@ -1,78 +1,9 @@
 import { renderNav } from './components/nav.js';
+import { initAuth } from './components/auth.js';
 
 (function() {
 
-interface AuthInfo {
-  authenticated: boolean;
-  playerId?: number;
-  username?: string;
-  roles?: string[];
-}
-
-let currentUser: AuthInfo | null = null;
 let settings: Record<string, unknown> = {};
-
-// ============================================================================
-// Authentication
-// ============================================================================
-
-async function checkAuth(): Promise<boolean> {
-  try {
-    const response = await fetch('/api/auth/me', { credentials: 'include' });
-    if (!response.ok) {
-      window.location.href = '/';
-      return false;
-    }
-    const data: AuthInfo = await response.json();
-    currentUser = data;
-
-    if (!data.authenticated) {
-      window.location.href = '/';
-      return false;
-    }
-
-    const roles = data.roles || [];
-    const isAdmin = roles.includes('admin');
-
-    if (!isAdmin) {
-      window.location.href = '/';
-      return false;
-    }
-
-    const usernameEl = document.getElementById('nav-username');
-    if (usernameEl && data.username) {
-      usernameEl.textContent = data.username;
-    }
-
-    // Show developer dropdown if developer or admin
-    const hasDeveloperAccess = roles.includes('developer') || roles.includes('admin');
-    const devDropdown = document.getElementById('nav-dev-dropdown');
-    if (devDropdown) {
-      devDropdown.style.display = hasDeveloperAccess ? 'flex' : 'none';
-    }
-
-    // Show admin dropdown
-    const adminDropdown = document.getElementById('nav-admin-dropdown');
-    if (adminDropdown) {
-      adminDropdown.style.display = isAdmin ? 'flex' : 'none';
-    }
-
-    return true;
-  } catch (error) {
-    console.error('Failed to check auth:', error);
-    window.location.href = '/';
-    return false;
-  }
-}
-
-async function handleLogout(): Promise<void> {
-  try {
-    await fetch('/api/logout', { method: 'POST', credentials: 'include' });
-  } catch {
-    // Ignore errors
-  }
-  window.location.href = '/';
-}
 
 // ============================================================================
 // Settings Management
@@ -373,35 +304,13 @@ function setupSaveButtons(): void {
 
 document.addEventListener('DOMContentLoaded', async () => {
   renderNav({ activePage: 'game-settings-editor', activeGroup: 'admin' });
-  const hasAccess = await checkAuth();
-  if (!hasAccess) return;
+  const auth = await initAuth('admin');
+  if (!auth) return;
 
   setupTabs();
   setupSaveButtons();
   setupAddRowButtons();
   await loadSettings();
-
-  // Logout handler
-  const logoutBtn = document.getElementById('logout-btn');
-  if (logoutBtn) {
-    logoutBtn.addEventListener('click', handleLogout);
-  }
-
-  // User menu dropdown toggle
-  const userMenuBtn = document.getElementById('nav-username');
-  const userMenu = userMenuBtn?.closest('.nav-user-menu');
-  if (userMenuBtn && userMenu) {
-    userMenuBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      userMenu.classList.toggle('open');
-    });
-    userMenu.addEventListener('click', (e) => {
-      e.stopPropagation();
-    });
-    document.addEventListener('click', () => {
-      userMenu.classList.remove('open');
-    });
-  }
 });
 
 })();

@@ -3100,7 +3100,7 @@ async function handleStatus(socket: AuthenticatedSocket): Promise<CommandRespons
 
   // Row 2: Race | Essence | Perception
   const progression = getProgression(socket.characterId);
-  const essence = progression?.essence_wallet ?? 0;
+  const essence = progression?.essence_earned_this_level ?? 0;
   lines.push(
     cellLeft('Race:', raceName, COL1) +
     cellRight('Essence:', essence.toLocaleString(), COL2) +

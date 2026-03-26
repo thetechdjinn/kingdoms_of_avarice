@@ -1,4 +1,6 @@
 import { renderNav } from './components/nav.js';
+import { initAuth } from './components/auth.js';
+import { showConfirm } from './components/modal.js';
 
 (function() {
 
@@ -60,17 +62,9 @@ interface Quest {
   steps: QuestStep[];
 }
 
-interface AuthInfo {
-  authenticated: boolean;
-  playerId?: number;
-  username?: string;
-  roles?: string[];
-}
 
 let quests: Quest[] = [];
 let selectedQuestId: number | null = null;
-let currentUser: AuthInfo | null = null;
-
 // ============================================================================
 // Toast Notifications
 // ============================================================================
@@ -127,42 +121,6 @@ function parseCommaSeparated(value: string | undefined | null): string[] | null 
 function parseCommaNumbers(value: string | undefined | null): number[] {
   if (!value || value.trim() === '') return [];
   return value.split(',').map(s => parseInt(s.trim(), 10)).filter(n => !isNaN(n));
-}
-
-// ============================================================================
-// Authentication
-// ============================================================================
-
-async function checkAuth(): Promise<boolean> {
-  try {
-    const response = await fetch('/api/auth/me', { credentials: 'include' });
-    if (!response.ok) { window.location.href = '/'; return false; }
-    const data: AuthInfo = await response.json();
-    currentUser = data;
-    if (!data.authenticated) { window.location.href = '/'; return false; }
-    const roles = data.roles || [];
-    if (!roles.includes('developer') && !roles.includes('admin')) {
-      window.location.href = '/'; return false;
-    }
-    const usernameEl = document.getElementById('nav-username');
-    if (usernameEl && data.username) usernameEl.textContent = data.username;
-    const devDropdown = document.getElementById('nav-dev-dropdown');
-    if (devDropdown) devDropdown.style.display = (roles.includes('developer') || roles.includes('admin')) ? 'flex' : 'none';
-    const adminDropdown = document.getElementById('nav-admin-dropdown');
-    if (adminDropdown) adminDropdown.style.display = roles.includes('admin') ? 'flex' : 'none';
-    return true;
-  } catch {
-    window.location.href = '/';
-    return false;
-  }
-}
-
-async function handleLogout(): Promise<void> {
-  try {
-    await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
-  } finally {
-    window.location.href = '/';
-  }
 }
 
 // ============================================================================
@@ -713,7 +671,7 @@ async function saveQuest(): Promise<void> {
 
 async function deleteQuest(): Promise<void> {
   if (!selectedQuestId) return;
-  if (!confirm('Delete this quest? This cannot be undone.')) return;
+  if (!await showConfirm('Delete this quest? This cannot be undone.', { dangerous: true })) return;
 
   try {
     const response = await fetch(`/api/quests/${selectedQuestId}`, { method: 'DELETE' });
@@ -875,8 +833,8 @@ function setupTabs(): void {
 
 document.addEventListener('DOMContentLoaded', async () => {
   renderNav({ activePage: 'quest-editor', helpDoc: 'Quest_System_Guide.md' });
-  const hasAccess = await checkAuth();
-  if (!hasAccess) return;
+  const auth = await initAuth('developer');
+  if (!auth) return;
 
   await fetchQuests();
 
@@ -890,7 +848,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   addListener('delete-quest-btn', 'click', deleteQuest);
   addListener('duplicate-quest-btn', 'click', duplicateQuest);
   addListener('search-input', 'input', renderQuestList);
-  addListener('logout-btn', 'click', handleLogout);
   addListener('add-step-btn', 'click', addStep);
   addListener('add-item-reward-btn', 'click', addItemReward);
   addListener('add-faction-reward-btn', 'click', addFactionReward);
@@ -901,16 +858,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   setupTabs();
 
-  // User menu dropdown toggle
-  const userMenuBtn = document.getElementById('nav-username');
-  const userMenu = userMenuBtn?.closest('.nav-user-menu');
-  if (userMenuBtn && userMenu) {
-    userMenuBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      userMenu.classList.toggle('open');
-    });
-    document.addEventListener('click', () => userMenu.classList.remove('open'));
-  }
 });
 
 })();

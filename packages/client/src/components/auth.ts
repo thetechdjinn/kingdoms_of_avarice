@@ -83,15 +83,16 @@ export async function initAuth(requiredRole: RequiredRole = 'developer'): Promis
 
       // User dropdown toggle
       const userBtn = document.getElementById('nav-username');
-      const userDropdown = document.getElementById('user-dropdown');
+      const userMenu = userBtn?.closest('.nav-user-menu');
       userBtn?.addEventListener('click', (e) => {
         e.stopPropagation();
-        userDropdown?.classList.toggle('show');
+        userMenu?.classList.toggle('open');
       });
-      document.addEventListener('click', (e) => {
-        if (userDropdown && !userDropdown.contains(e.target as Node)) {
-          userDropdown.classList.remove('show');
-        }
+      userMenu?.addEventListener('click', (e) => {
+        e.stopPropagation();
+      });
+      document.addEventListener('click', () => {
+        userMenu?.classList.remove('open');
       });
     }
 

@@ -106,8 +106,8 @@ Status: Good. Number inputs with min 0.
 
 > **Claude:** "Base Value (Copper)" is correctly named. The merchant system uses this as
 > the base for buy/sell price calculations (modified by faction rep, charisma, and haggling).
-> Sell price is 50% of base value with the same modifiers. The examine command shows
-> "It looks to be worth about [denominations]" using the raw base value.
+> Sell price is 50% of base value with the same modifiers. The examine command does NOT
+> display weight or value to players. Value is only used internally for merchant pricing.
 >
 > Consider adding hint text: "(merchant prices are calculated from this)" to explain why
 > it says "Base" instead of just "Value."

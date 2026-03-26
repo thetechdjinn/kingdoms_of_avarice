@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "exported_at": "2026-03-26T00:18:09.797Z",
+  "exported_at": "2026-03-26T02:12:42.468Z",
   "type": "items",
   "data": [
     {
@@ -884,7 +884,7 @@
         "throwable": false,
         "two_handed": true
       },
-      "max_stack": 1,
+      "max_stack": 999,
       "weapon_data": {
         "max_damage": 23,
         "min_damage": 7,
@@ -892,9 +892,7 @@
         "attack_speed": 4000,
         "attack_verbs": {
           "hit": "cleave",
-          "miss": "swing at",
-          "hit_3p": "cleaves",
-          "miss_3p": "swings at"
+          "miss": "swing at"
         },
         "crit_modifier": 2,
         "allows_backstab": false,

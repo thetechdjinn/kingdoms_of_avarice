@@ -555,7 +555,7 @@ export async function updateCharacterProgression(
 }
 
 /**
- * Atomically increment essence_wallet and total_essence_earned in the DB.
+ * Atomically increment essence_wallet, essence_earned_this_level, and total_essence_earned in the DB.
  * Returns the updated progression, or null if no row matched.
  */
 export async function incrementEssenceWallet(
@@ -566,6 +566,7 @@ export async function incrementEssenceWallet(
     `WITH updated AS (
       UPDATE character_progression
       SET essence_wallet = essence_wallet + $1,
+          essence_earned_this_level = essence_earned_this_level + $1,
           total_essence_earned = total_essence_earned + $1,
           updated_at = CURRENT_TIMESTAMP
       WHERE character_id = $2

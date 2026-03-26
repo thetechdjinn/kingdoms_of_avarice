@@ -3,7 +3,7 @@ import { CommandResponse } from './commands.js';
 import { AuthenticatedSocket, broadcastToRoom, sendMessage } from './socket.js';
 import { getPlayerLocation } from './adminCommands.js';
 import { colors } from '../utils/colors.js';
-import { wordWrap, formatCopperAsDenominations } from '../utils/textFormat.js';
+import { wordWrap } from '../utils/textFormat.js';
 import * as itemRepo from '../db/repositories/itemRepository.js';
 import * as craftingRepo from '../db/repositories/craftingRepository.js';
 import * as characterRepo from '../db/repositories/characterRepository.js';
@@ -1014,11 +1014,6 @@ function formatItemExamine(item: ItemInstance): CommandResponse {
     lines.push(`It is in ${colors.boldWhite(item.condition)} condition.`);
   }
 
-  // Weight
-  if (template.weight > 0) {
-    lines.push(`It weighs about ${template.weight} unit${template.weight !== 1 ? 's' : ''}.`);
-  }
-
   // Weapon info
   if (template.weapon_data) {
     const wd = template.weapon_data;
@@ -1085,11 +1080,6 @@ function formatItemExamine(item: ItemInstance): CommandResponse {
   if (template.rarity && template.rarity !== 'common') {
     const rarityDisplay = template.rarity.charAt(0).toUpperCase() + template.rarity.slice(1);
     lines.push(`Rarity: ${colors.boldWhite(rarityDisplay)}`);
-  }
-
-  // Value (displayed as denominations since base_value is stored in copper)
-  if (template.base_value > 0) {
-    lines.push(`It looks to be worth about ${colors.gold(formatCopperAsDenominations(template.base_value))}.`);
   }
 
   return { type: MessageType.OUTPUT, message: lines.join('\r\n') };
@@ -1884,25 +1874,20 @@ function applyConsumableEffect(socket: AuthenticatedSocket, data: { effect_type:
 
   switch (effect_type.toLowerCase()) {
     case 'heal':
-    case 'health': {
-      const oldHp = socket.vitals.hp;
+    case 'health':
       socket.vitals.hp = Math.min(socket.vitals.hp + effect_value, socket.vitals.maxHp);
-      const healed = socket.vitals.hp - oldHp;
-      return colors.green(`You feel better! (+${healed} HP)`);
-    }
+      return colors.green(`You feel better!`);
 
     case 'mana':
     case 'restore_mana': {
-      const oldMana = socket.vitals.resource ?? 0;
       const maxResource = socket.vitals.maxResource ?? 0;
-      socket.vitals.resource = Math.min(oldMana + effect_value, maxResource);
-      const restored = (socket.vitals.resource ?? 0) - oldMana;
-      return colors.blue(`Your magical energy is restored! (+${restored} Mana)`);
+      socket.vitals.resource = Math.min((socket.vitals.resource ?? 0) + effect_value, maxResource);
+      return colors.blue(`Your magical energy is restored!`);
     }
 
     case 'damage':
       socket.vitals.hp = Math.max(socket.vitals.hp - effect_value, 0);
-      return colors.red(`You take ${effect_value} damage!`);
+      return colors.red(`You don't feel so good...`);
 
     case 'food':
       // Food effect (placeholder - could track hunger later)

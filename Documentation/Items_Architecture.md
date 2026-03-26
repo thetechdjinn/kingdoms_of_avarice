@@ -481,7 +481,7 @@ export interface ItemDisplay {
 | `drop <item>`                    | Drop an item from inventory   |
 | `drop all`                       | Drop all items                |
 | `inventory` / `i`                | List carried items            |
-| `examine <item>` / `look <item>` | View item name, description, and condition |
+| `examine <item>` / `look <item>` | View item name, description, condition, and stats (no weight/value shown) |
 
 ### Phase 2 Commands (Implemented)
 

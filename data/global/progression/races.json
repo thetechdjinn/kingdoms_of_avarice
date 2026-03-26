@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "exported_at": "2026-03-26T00:18:09.792Z",
+  "exported_at": "2026-03-26T02:12:42.463Z",
   "type": "races",
   "data": [
     {
@@ -183,10 +183,6 @@
       },
       "traits": [
         {
-          "id": "perception",
-          "value": 10
-        },
-        {
           "id": "see_hidden",
           "value": true
         },
@@ -231,12 +227,8 @@
       },
       "traits": [
         {
-          "id": "magic_resist",
-          "value": 5
-        },
-        {
           "id": "lockpicking",
-          "value": 10
+          "value": true
         },
         {
           "id": "base_vision",
@@ -323,17 +315,13 @@
       },
       "traits": [
         {
-          "id": "mana_bonus",
-          "value": 10
-        },
-        {
           "id": "base_vision",
           "value": 100
         }
       ],
       "allowed_classes": [],
       "playable": true,
-      "dodge_bonus": 10
+      "dodge_bonus": 0
     },
     {
       "race_id": "halfling",
@@ -367,14 +355,6 @@
       },
       "traits": [
         {
-          "id": "dodge_bonus",
-          "value": 10
-        },
-        {
-          "id": "hp_per_level",
-          "value": -1
-        },
-        {
           "id": "stealth",
           "value": true
         },
@@ -385,7 +365,7 @@
       ],
       "allowed_classes": [],
       "playable": true,
-      "dodge_bonus": 0
+      "dodge_bonus": 10
     },
     {
       "race_id": "half_ogre",
@@ -419,20 +399,8 @@
       },
       "traits": [
         {
-          "id": "hp_per_level",
-          "value": 1
-        },
-        {
           "id": "magic_resist",
           "value": 15
-        },
-        {
-          "id": "ac_bonus",
-          "value": 2
-        },
-        {
-          "id": "no_kai",
-          "value": true
         },
         {
           "id": "base_vision",
@@ -555,12 +523,8 @@
       },
       "traits": [
         {
-          "id": "ac_bonus",
-          "value": 5
-        },
-        {
-          "id": "poison_immunity",
-          "value": true
+          "id": "poison_resistance",
+          "value": 100
         },
         {
           "id": "base_vision",
@@ -603,20 +567,8 @@
       },
       "traits": [
         {
-          "id": "cold_resist",
-          "value": -10
-        },
-        {
-          "id": "fire_resist",
-          "value": 10
-        },
-        {
           "id": "stealth",
           "value": true
-        },
-        {
-          "id": "tracking",
-          "value": 10
         },
         {
           "id": "base_vision",

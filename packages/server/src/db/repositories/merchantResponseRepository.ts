@@ -92,17 +92,34 @@ export async function deleteAllResponsesForTemplate(npcTemplateId: number): Prom
 }
 
 /**
- * Find a matching response for the given keywords in a message.
- * Checks if any word in the message matches any trigger keyword (case-insensitive).
+ * Find a matching response for the given keywords/phrases in a message.
+ * Multi-word triggers match as phrases (substring). Single-word triggers
+ * match as whole words to avoid false positives.
+ * Longer (more specific) triggers are checked first.
  */
 export function findMatchingResponse(
   responses: MerchantResponse[],
   message: string
 ): MerchantResponse | undefined {
-  const words = message.toLowerCase().split(/\s+/).map(w => w.replace(/[^a-z0-9'-]/g, ''));
-  return responses.find(r =>
-    r.triggerKeywords.some(keyword =>
-      words.includes(keyword.toLowerCase())
-    )
+  const lowerMessage = message.toLowerCase().replace(/[^a-z0-9' -]/g, '');
+  const words = lowerMessage.split(/\s+/);
+
+  // Sort responses so those with longer triggers are checked first (more specific = higher priority)
+  const sorted = [...responses].sort((a, b) => {
+    const aMax = Math.max(...a.triggerKeywords.map(k => k.length));
+    const bMax = Math.max(...b.triggerKeywords.map(k => k.length));
+    return bMax - aMax;
+  });
+
+  return sorted.find(r =>
+    r.triggerKeywords.some(trigger => {
+      const lowerTrigger = trigger.toLowerCase().replace(/[^a-z0-9' -]/g, '');
+      if (lowerTrigger.includes(' ')) {
+        // Multi-word trigger: match as phrase substring
+        return lowerMessage.includes(lowerTrigger);
+      }
+      // Single-word trigger: match as whole word
+      return words.includes(lowerTrigger);
+    })
   );
 }

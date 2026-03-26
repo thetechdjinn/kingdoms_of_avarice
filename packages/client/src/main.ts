@@ -2,6 +2,7 @@ import { Terminal } from '@xterm/xterm';
 import { MessageType, GameMessage, VitalsData, ResourceType, Character, TrainingFormPayload, TrainingSubmitPayload } from '@koa/shared';
 import { TrainingForm, TrainingFormResult } from './forms/TrainingForm.js';
 import { attachExportHandler } from './components/nav.js';
+import { showConfirm } from './components/modal.js';
 import '@xterm/xterm/css/xterm.css';
 
 let terminal: Terminal | null = null;
@@ -621,7 +622,7 @@ async function showEnterGame(): Promise<void> {
           e.stopPropagation(); // Prevent card selection
           const charId = parseInt(btn.getAttribute('data-id') || '0');
           const charName = btn.getAttribute('data-name') || 'this character';
-          if (charId && confirm(`Are you sure you want to delete ${charName}? This cannot be undone.`)) {
+          if (charId && await showConfirm(`Are you sure you want to delete ${charName}? This cannot be undone.`, { dangerous: true })) {
             await deleteCharacter(charId);
           }
         });

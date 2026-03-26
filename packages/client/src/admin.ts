@@ -1,4 +1,6 @@
 import { renderNav } from './components/nav.js';
+import { initAuth } from './components/auth.js';
+import { showConfirm } from './components/modal.js';
 
 (function() {
 
@@ -69,59 +71,6 @@ function showToast(message: string, type: ToastType = 'info', duration: number =
   }, duration);
 }
 
-async function checkAdminAuth(): Promise<boolean> {
-  try {
-    const response = await fetch('/api/auth/me', { credentials: 'include' });
-    
-    if (!response.ok) {
-      // Redirect to login
-      window.location.href = '/';
-      return false;
-    }
-    
-    const data = await response.json();
-    
-    if (data.authenticated) {
-      const roles: string[] = data.roles || [];
-      const isAdmin = roles.includes('admin');
-
-      // Check admin access first before modifying UI
-      if (!isAdmin) {
-        window.location.href = '/';
-        return false;
-      }
-
-      const usernameEl = document.getElementById('nav-username');
-      if (usernameEl) {
-        usernameEl.textContent = data.username;
-      }
-
-      const isDeveloper = roles.includes('developer') || isAdmin;
-
-      // Show/hide Developer nav dropdown based on roles
-      const devDropdown = document.getElementById('nav-dev-dropdown');
-      if (devDropdown) {
-        devDropdown.style.display = isDeveloper ? 'block' : 'none';
-      }
-
-      // Show/hide Admin nav dropdown based on roles (always visible on admin page)
-      const adminDropdown = document.getElementById('nav-admin-dropdown');
-      if (adminDropdown) {
-        adminDropdown.style.display = isAdmin ? 'flex' : 'none';
-      }
-
-      return isAdmin;
-    }
-    // Redirect to login
-    window.location.href = '/';
-    return false;
-  } catch (error) {
-    console.error('Auth check failed:', error);
-    // Redirect to login on error
-    window.location.href = '/';
-    return false;
-  }
-}
 
 async function loadPendingUsers(): Promise<void> {
   const listEl = document.getElementById('pending-users-list');
@@ -222,18 +171,6 @@ async function approveUser(playerId: number): Promise<void> {
     }
     showToast('Failed to approve user', 'error');
   }
-}
-
-async function handleLogout(): Promise<void> {
-  try {
-    await fetch('/api/logout', {
-      method: 'POST',
-      credentials: 'include',
-    });
-  } catch {
-    // Ignore errors
-  }
-  window.location.href = '/';
 }
 
 // ============================================================================
@@ -436,7 +373,7 @@ async function loadIpAccessEntries(): Promise<void> {
       btn.addEventListener('click', async (e) => {
         const row = (e.target as HTMLElement).closest('tr');
         const entryId = parseInt(row?.getAttribute('data-entry-id') || '0');
-        if (confirm('Are you sure you want to delete this entry?')) {
+        if (await showConfirm('Are you sure you want to delete this entry?', { dangerous: true })) {
           await deleteIpEntry(entryId);
         }
       });
@@ -735,10 +672,8 @@ function escapeHtml(text: string): string {
 
 document.addEventListener('DOMContentLoaded', async () => {
   renderNav({ activePage: 'admin', activeGroup: 'admin' });
-  const isAdmin = await checkAdminAuth();
-
-  // Non-admins are redirected in checkAdminAuth, so we only reach here if admin
-  if (!isAdmin) return;
+  const auth = await initAuth('admin');
+  if (!auth) return;
 
   const accessDenied = document.getElementById('access-denied');
   const adminPanel = document.getElementById('admin-panel');
@@ -752,12 +687,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Load initial data
   await loadPendingUsers();
   await loadAllPlayers();
-
-  // Logout button
-  const logoutBtn = document.getElementById('logout-btn');
-  if (logoutBtn) {
-    logoutBtn.addEventListener('click', handleLogout);
-  }
 
   // IP Access buttons
   const addIpEntryBtn = document.getElementById('add-ip-entry-btn');
@@ -834,22 +763,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
-  // User menu dropdown toggle
-  const userMenuBtn = document.getElementById('nav-username');
-  const userMenu = userMenuBtn?.closest('.nav-user-menu');
-  if (userMenuBtn && userMenu) {
-    userMenuBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      userMenu.classList.toggle('open');
-    });
-    // Prevent clicks inside the dropdown from closing it
-    userMenu.addEventListener('click', (e) => {
-      e.stopPropagation();
-    });
-    document.addEventListener('click', () => {
-      userMenu.classList.remove('open');
-    });
-  }
 });
 
 })();
