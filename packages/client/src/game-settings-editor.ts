@@ -1,3 +1,5 @@
+import { renderNav } from './components/nav.js';
+
 (function() {
 
 interface AuthInfo {
@@ -370,6 +372,7 @@ function setupSaveButtons(): void {
 // ============================================================================
 
 document.addEventListener('DOMContentLoaded', async () => {
+  renderNav({ activePage: 'game-settings-editor', activeGroup: 'admin' });
   const hasAccess = await checkAuth();
   if (!hasAccess) return;
 

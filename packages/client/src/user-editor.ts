@@ -1,3 +1,5 @@
+import { renderNav } from './components/nav.js';
+
 (function() {
 
 interface AuthInfo {
@@ -617,6 +619,7 @@ function formatDate(dateStr: string): string {
 // ============================================================================
 
 document.addEventListener('DOMContentLoaded', async () => {
+  renderNav({ activePage: 'user-editor', activeGroup: 'admin' });
   const hasAccess = await checkAuth();
   if (!hasAccess) return;
 

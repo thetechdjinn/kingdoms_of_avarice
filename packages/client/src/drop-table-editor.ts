@@ -5,6 +5,7 @@
  */
 
 import { initAuth, ListPanel, SearchableSelect, setupTabs, showToast, showConfirm, escapeHtml } from './components/index.js';
+import { renderNav } from './components/nav.js';
 import type { SelectOption } from './components/index.js';
 
 interface DropTableEntry {
@@ -43,6 +44,7 @@ interface NpcTemplate {
 const ALL_DENOMINATIONS = ['copper', 'silver', 'gold', 'platinum', 'runic'];
 
 (async function () {
+  renderNav({ activePage: 'drop-table-editor' });
   const auth = await initAuth('developer');
   if (!auth) return;
 

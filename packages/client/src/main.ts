@@ -1,6 +1,7 @@
 import { Terminal } from '@xterm/xterm';
 import { MessageType, GameMessage, VitalsData, ResourceType, Character, TrainingFormPayload, TrainingSubmitPayload } from '@koa/shared';
 import { TrainingForm, TrainingFormResult } from './forms/TrainingForm.js';
+import { attachExportHandler } from './components/nav.js';
 import '@xterm/xterm/css/xterm.css';
 
 let terminal: Terminal | null = null;
@@ -1139,6 +1140,9 @@ function escapeHtmlAttr(text: string): string {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+  // Attach export handler to any nav export buttons on this page
+  attachExportHandler();
+
   // Check if user is already authenticated
   checkExistingAuth();
 
@@ -1241,6 +1245,7 @@ document.addEventListener('DOMContentLoaded', () => {
   if (devToolsBackBtn) {
     devToolsBackBtn.addEventListener('click', () => showHub());
   }
+
 
   // Enter game / Character select buttons
   const createCharacterBtn = document.getElementById('create-character-btn');

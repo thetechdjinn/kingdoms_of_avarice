@@ -138,20 +138,13 @@ fixing, improving, or adding new features to the project.
 - Should show a clear error message on failure (e.g., "You need level 10 to wield this",
   "Only warriors can wear this").
 
-## Implement Luminance / Darkness System
+## ~~Implement Luminance / Darkness System~~ (IMPLEMENTED)
 
-- Additive luminance system: room darkness + player vision + light sources >= 0 means visible.
-- **Rooms**: new "Darkness Level" field (0 = normal, -100 = dim, -200 = dark, -300 = pitch
-  black, -500 = magical darkness).
-- **Races**: new "Base Vision" field (+100 normal, +150 low-light, +200 darkvision, etc.).
-- **Light source items**: rename "Light Radius" to "Luminance" (e.g., candle +50, torch +100,
-  lantern +150, magical orb +300).
-- **Spells**: "Light" spell adds luminance, "Darkness" spell reduces room value.
-- **Status effects**: "Blinded" could set player vision to 0.
-- **Fuel consumption**: wire up Fuel Rate so torches/lanterns burn fuel over time and
-  extinguish when empty. Max Fuel already works (on/off state), needs tick-based drain.
-- Editor fields for darkness level (rooms), base vision (races), and luminance (items) are
-  being added as "(not yet implemented)" during the editor rewrite.
+The Light & Vision system is now implemented across Phases 1-5. See `notes/Light_n_Vision.md` for full details.
+- Room `darkness_level` (0 to -500) + character effective vision (race base_vision + light source vision_bonus + status effect visionModifier). Net > 0 = can see.
+- Darkness tags on room names were removed; darkness is communicated via "can't see" message only.
+- Fuel consumption on 10s game tick. Light sources auto-equip to HELD slot.
+- Blind accuracy penalty configurable in admin settings.
 
 ## Implement Consumable Duration (DoT/HoT from Items)
 

@@ -1,6 +1,7 @@
 /**
  * Progression Table Editor - View and edit XP/essence requirements per level
  */
+import { renderNav } from './components/nav.js';
 
 interface LevelRow {
   level: number;
@@ -9,6 +10,8 @@ interface LevelRow {
 }
 
 (async function () {
+  renderNav({ activePage: 'progression-table-editor' });
+
   // ============================================================================
   // Authentication & Initialization
   // ============================================================================

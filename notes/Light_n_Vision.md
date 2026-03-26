@@ -34,20 +34,20 @@ Stored as `darkness_level` INTEGER on the rooms table (already exists, currently
 - **-251 to -400**: Pitch Black. Sealed tombs, deep underground.
 - **-401 to -500**: Abyssal. Supernatural void, magical darkness zones.
 
-These labels are for display in the room name tag (e.g., "[Dark]") and editor context. The actual mechanic is purely numeric.
+These labels are for editor context and design reference only (darkness tags on room names were removed). The actual mechanic is purely numeric.
 
-### Darkness Tag Display
+### Darkness Tag Display (REMOVED)
 
-When a player enters a room with darkness < 0 and they can see (net > 0), show a tag after the room name:
+Darkness tags ([Dark], [Dim], [Very Dark], [Pitch Black], [Abyssal]) were originally planned to be appended to room names but have been removed. Darkness is now communicated solely through the "can't see" message when the player's net vision is <= 0. The darkness band labels below are retained only for editor/design reference.
 
-| darkness_level  | Tag            |
-|-----------------|----------------|
-| 0               | (none)         |
-| -1 to -75       | [Dim]          |
-| -76 to -150     | [Dark]         |
-| -151 to -250    | [Very Dark]    |
-| -251 to -400    | [Pitch Black]  |
-| -401 to -500    | [Abyssal]      |
+| darkness_level  | Label (editor only) |
+|-----------------|---------------------|
+| 0               | (none)              |
+| -1 to -75       | Dim                 |
+| -76 to -150     | Dark                |
+| -151 to -250    | Very Dark           |
+| -251 to -400    | Pitch Black         |
+| -401 to -500    | Abyssal             |
 
 ### Editor Changes
 
@@ -298,7 +298,7 @@ function canSee(socket: AuthenticatedSocket, roomDarkness: number): boolean {
 }
 ```
 
-**Can see (net > 0):** Normal display (no change from current behavior). Darkness band tag appended to room name if darkness < 0.
+**Can see (net > 0):** Normal display (no change from current behavior). No darkness tags on room names.
 
 **Can't see (net <= 0):**
 ```
@@ -416,7 +416,7 @@ Room: -250. Elf: +150, net -100. Can't see. Dwarf: +170, net -80. Can't see. Dwa
 
 ### Phase 3: Vision Calculation + Room Display
 
-**Goal:** Characters experience darkness. Look command shows darkness tags or "can't see" message. This is when darkness goes live.
+**Goal:** Characters experience darkness. Look command shows "can't see" message when vision fails. This is when darkness goes live.
 
 **Depends on:** Phase 1 (visionModifier wired in getEffectModifiers), Phase 2 (race base_vision values set, rooms have darkness_level).
 
@@ -430,7 +430,7 @@ Room: -250. Elf: +150, net -100. Can't see. Dwarf: +170, net -80. Can't see. Dwa
 2. **Room display:**
    - Update `getRoomData()` to include `darkness_level`
    - Modify `look` command and room entry display:
-     - Can see (net > 0): normal display, darkness band tag on room name
+     - Can see (net > 0): normal display, no darkness tags on room name
      - Can't see (net <= 0): "The room is very dark - you can't see anything!" (or "pitch black" if below -300)
    - Single line replaces room name, description, exits, "Also here"
 3. **Blind interaction rules:**

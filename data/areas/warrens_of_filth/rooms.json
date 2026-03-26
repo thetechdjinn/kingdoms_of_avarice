@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "exported_at": "2026-03-15T13:33:32.893Z",
+  "exported_at": "2026-03-26T00:18:09.823Z",
   "type": "rooms",
   "data": [
     {
@@ -9,6 +9,7 @@
       "description": "The sewer wall has been torn open from the other side, creating a ragged hole into a different world. Beyond the opening, the stone gives way to packed earth and gnawed brick. The stench is immediate and overpowering — concentrated animal filth, matted fur, and rotting food. The ceiling drops sharply, forcing a crouch. Whatever lives beyond has been here a long time.",
       "area": "Warrens of Filth",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -27,6 +28,7 @@
       "description": "A cramped burrow with a floor of compacted refuse. The air is thick with the reek of animal waste and rotting food. Small bones crunch underfoot with every step.",
       "area": "Warrens of Filth",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -49,6 +51,7 @@
       "description": "The tunnel walls are a patchwork of chewed stone and bare earth, shored up by the roots of whatever grows far above. The stench is overwhelming — concentrated animal filth in an enclosed space. A knot of pale, hairless rat pups squirms in a shallow depression, their mother nowhere in sight.",
       "area": "Warrens of Filth",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -67,6 +70,7 @@
       "description": "The passage squeezes between gnawed stonework and hard-packed dirt. Tufts of coarse grey fur cling to the rough edges where something large has pushed through repeatedly.",
       "area": "Warrens of Filth",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -85,6 +89,7 @@
       "description": "A crossroads where four tunnels meet in a cramped, low-ceilinged chamber. The floor is a churned mess of droppings, shed fur, and small bones. Claw marks radiate out along every wall, territorial markers scored deep into the stone. The chittering of rats echoes from every direction, impossible to localize. This is the heart of their territory.",
       "area": "Warrens of Filth",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -111,6 +116,7 @@
       "description": "The passage opens slightly where two burrows merge. The walls are gouged by the passage of bodies, smoothed by fur and filth. Droppings carpet the floor in layers, the older ones calcite-white beneath the fresh. The air is thick with heat and the musk of a large colony.",
       "area": "Warrens of Filth",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -129,6 +135,7 @@
       "description": "The tunnel walls are a patchwork of chewed stone and bare earth, shored up by the roots of whatever grows far above. The stench is overwhelming — concentrated animal filth in an enclosed space. A knot of pale, hairless rat pups squirms in a shallow depression, their mother nowhere in sight.",
       "area": "Warrens of Filth",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -147,6 +154,7 @@
       "description": "A narrow passage where the original sewer brickwork has been torn apart and burrowed through. The gap between the stones is packed with shredded cloth and matted fur. Something chittered and fell silent as you approached.",
       "area": "Warrens of Filth",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -165,6 +173,7 @@
       "description": "The tunnel ends at a mound of small bones — birds, cats, other rats, and things less identifiable. The pile reaches waist-height, picked perfectly clean and bleached pale by time. Newer additions sit atop the heap, still bearing scraps of dried sinew. This is the colony's charnel mound, where the remains of meals are deposited and forgotten. The smell is old death, dry and chalky.",
       "area": "Warrens of Filth",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -179,6 +188,7 @@
       "description": "A low tunnel carved through crumbling stone and packed earth. The ceiling barely clears head height, and the walls are scarred with claw marks. Rat droppings cover the uneven floor.",
       "area": "Warrens of Filth",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -197,6 +207,7 @@
       "description": "The passage squeezes between gnawed stonework and hard-packed dirt. Tufts of coarse grey fur cling to the rough edges where something large has pushed through repeatedly.",
       "area": "Warrens of Filth",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -215,6 +226,7 @@
       "description": "A cramped burrow with a floor of compacted refuse. The air is thick with the reek of animal waste and rotting food. Small bones crunch underfoot with every step.",
       "area": "Warrens of Filth",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -233,6 +245,7 @@
       "description": "The tunnel walls are a patchwork of chewed stone and bare earth, shored up by the roots of whatever grows far above. The stench is overwhelming — concentrated animal filth in an enclosed space. A knot of pale, hairless rat pups squirms in a shallow depression, their mother nowhere in sight.",
       "area": "Warrens of Filth",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -251,6 +264,7 @@
       "description": "A narrow passage where the original sewer brickwork has been torn apart and burrowed through. The gap between the stones is packed with shredded cloth and matted fur. Something chittered and fell silent as you approached.",
       "area": "Warrens of Filth",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -273,6 +287,7 @@
       "description": "The floor slopes downward through a cramped tunnel. Claw marks groove the walls at every height, layered over each other in decades of scratching. The air barely moves.",
       "area": "Warrens of Filth",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -291,6 +306,7 @@
       "description": "A low-ceilinged passage littered with gnawed bones and scraps of leather. The walls are smooth where countless bodies have brushed past, polished by fur and filth.",
       "area": "Warrens of Filth",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -309,6 +325,7 @@
       "description": "The burrow widens slightly where a section of old stonework has collapsed inward. Refuse fills the gaps — shredded cloth, matted hair, and things too decayed to identify. The reek is eye-watering. A stolen leather glove lies in the filth, chewed through at the fingers.",
       "area": "Warrens of Filth",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -323,6 +340,7 @@
       "description": "A low tunnel carved through crumbling stone and packed earth. The ceiling barely clears head height, and the walls are scarred with claw marks. Rat droppings cover the uneven floor.",
       "area": "Warrens of Filth",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -345,6 +363,7 @@
       "description": "A caved-in drainage pipe protrudes from the wall, its iron mouth buckled and split. Rubble and packed earth choke the passage beyond. Rats pour through gaps in the debris in a steady trickle — whatever lies on the other side is too collapsed to enter, but the vermin find their way through spaces no human could follow. Scratching sounds emanate from deep within the rubble.",
       "area": "Warrens of Filth",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -359,6 +378,7 @@
       "description": "The walls are scored with frantic claw marks, as if something was trying to dig through the stone itself. The deepest gouges are at shoulder height — whatever made them was no ordinary rat.",
       "area": "Warrens of Filth",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -377,6 +397,7 @@
       "description": "Parallel scratches rake the tunnel walls, some deep enough to insert a finger. The marks overlap in a frenzied tangle. Faint squeaking echoes from somewhere ahead, then dozens of tiny claws skitter across stone.",
       "area": "Warrens of Filth",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -399,6 +420,7 @@
       "description": "The corridor narrows where the walls have been clawed to rough concavity. Piles of stone dust and shredded mortar line the base of the walls. The rats are reshaping this place to suit themselves.",
       "area": "Warrens of Filth",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -417,6 +439,7 @@
       "description": "Claw marks and gnaw marks compete for space on the tunnel walls. The stone has been worried away until the passage is barely shoulder-width. Rat droppings are thick on the floor, some still fresh. A stolen leather glove lies in the filth, chewed through at the fingers.",
       "area": "Warrens of Filth",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -443,6 +466,7 @@
       "description": "Deep claw marks gouge the walls of this corridor, scoring the stone in parallel lines. The scratching is aggressive, territorial — not the idle marks of passing vermin but deliberate claims of ownership.",
       "area": "Warrens of Filth",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -461,6 +485,7 @@
       "description": "The corridor walls are shredded with claw marks from floor to ceiling. The stone is soft enough to score, and generations of rats have left their marks. Dried blood darkens some of the deeper gouges.",
       "area": "Warrens of Filth",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -483,6 +508,7 @@
       "description": "Scratches cover every surface — walls, floor, even the ceiling where something has climbed. The marks are fresh over old, layer upon layer. The stench thickens and the chittering grows louder ahead.",
       "area": "Warrens of Filth",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -505,6 +531,7 @@
       "description": "A corridor gouged with territorial markings. The scratches are deeper here, made by larger claws than the passages behind. Tufts of dark fur are caught in the rough stone. A knot of pale, hairless rat pups squirms in a shallow depression, their mother nowhere in sight.",
       "area": "Warrens of Filth",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -523,6 +550,7 @@
       "description": "The walls are scored with frantic claw marks, as if something was trying to dig through the stone itself. The deepest gouges are at shoulder height — whatever made them was no ordinary rat.",
       "area": "Warrens of Filth",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -545,6 +573,7 @@
       "description": "A low-ceilinged chamber lined with shredded cloth, matted fur, and strips of gnawed leather. Smaller nests are pressed into the walls — shallow depressions packed with nesting material, each large enough for a single animal. The warmth of massed bodies makes the air stifling. This is a nursery of sorts — the colony breeds here, sheltered from the deeper tunnels.",
       "area": "Warrens of Filth",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -563,6 +592,7 @@
       "description": "The second nesting chamber is larger and fouler than the first. The nests here are bigger — not for pups but for the mature adults of the colony. The shredded material is mixed with bones, stolen cloth, and unidentifiable organic matter. The stench of concentrated rat musk is overwhelming.",
       "area": "Warrens of Filth",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -581,6 +611,7 @@
       "description": "A low tunnel carved through crumbling stone and packed earth. The ceiling barely clears head height, and the walls are scarred with claw marks. Rat droppings cover the uneven floor.",
       "area": "Warrens of Filth",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -603,6 +634,7 @@
       "description": "The passage squeezes between gnawed stonework and hard-packed dirt. Tufts of coarse grey fur cling to the rough edges where something large has pushed through repeatedly.",
       "area": "Warrens of Filth",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -621,6 +653,7 @@
       "description": "A cramped burrow with a floor of compacted refuse. The air is thick with the reek of animal waste and rotting food. Small bones crunch underfoot with every step.",
       "area": "Warrens of Filth",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -639,6 +672,7 @@
       "description": "The tunnel walls are a patchwork of chewed stone and bare earth, shored up by the roots of whatever grows far above. The stench is overwhelming — concentrated animal filth in an enclosed space. A knot of pale, hairless rat pups squirms in a shallow depression, their mother nowhere in sight.",
       "area": "Warrens of Filth",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -661,6 +695,7 @@
       "description": "A narrow passage where the original sewer brickwork has been torn apart and burrowed through. The gap between the stones is packed with shredded cloth and matted fur. Something chittered and fell silent as you approached.",
       "area": "Warrens of Filth",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -679,6 +714,7 @@
       "description": "The floor slopes downward through a cramped tunnel. Claw marks groove the walls at every height, layered over each other in decades of scratching. The air barely moves.",
       "area": "Warrens of Filth",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -697,6 +733,7 @@
       "description": "A low-ceilinged passage littered with gnawed bones and scraps of leather. The walls are smooth where countless bodies have brushed past, polished by fur and filth.",
       "area": "Warrens of Filth",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -715,6 +752,7 @@
       "description": "The burrow widens slightly where a section of old stonework has collapsed inward. Refuse fills the gaps — shredded cloth, matted hair, and things too decayed to identify. The reek is eye-watering. A stolen leather glove lies in the filth, chewed through at the fingers.",
       "area": "Warrens of Filth",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -741,6 +779,7 @@
       "description": "A low tunnel carved through crumbling stone and packed earth. The ceiling barely clears head height, and the walls are scarred with claw marks. Rat droppings cover the uneven floor.",
       "area": "Warrens of Filth",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -759,6 +798,7 @@
       "description": "A low tunnel carved through crumbling stone and packed earth. The ceiling barely clears head height, and the walls are scarred with claw marks. Rat droppings cover the uneven floor.",
       "area": "Warrens of Filth",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -777,6 +817,7 @@
       "description": "The burrow widens slightly where a section of old stonework has collapsed inward. Refuse fills the gaps — shredded cloth, matted hair, and things too decayed to identify. The reek is eye-watering.",
       "area": "Warrens of Filth",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -799,6 +840,7 @@
       "description": "Gnawed crates and torn sacks litter this wider chamber — food stores dragged down from the city above through cracks and drains. Grain spills across the floor, mixed with droppings and rat hair. Partially eaten vegetables, strips of salted meat reduced to leather, and the wreckage of a merchant's pantry are scattered about. The colony feeds here, and the evidence of their appetite is staggering.",
       "area": "Warrens of Filth",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -813,6 +855,7 @@
       "description": "A sunken chamber filled with rotting food and waste — the colony's dump. Gnawed carcasses, decomposing vegetables stolen from the city above, and mounds of excrement fill the depression to overflowing. The smell is beyond description. Flies swarm in thick clouds despite the underground chill. The rats deposit their waste here and avoid the chamber otherwise. Nothing of value remains in this reeking pit.",
       "area": "Warrens of Filth",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -827,6 +870,7 @@
       "description": "The tunnel descends through the worst of the warren's filth. Rotting food stores, animal remains, and waste have been dragged and deposited here over months or years. The smell has layers.",
       "area": "Warrens of Filth",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -845,6 +889,7 @@
       "description": "Slick organic residue coats the floor of this tunnel, making every step a negotiation with gravity. The walls are streaked with dark matter best left unexamined. Small eyes reflect from the darkness ahead.",
       "area": "Warrens of Filth",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -863,6 +908,7 @@
       "description": "The foulest depths of the warren. The filth is so thick it has developed its own ecosystem — pale fungi sprout from the muck, and things too small to see crawl through the organic sludge. A stolen leather glove lies in the filth, chewed through at the fingers.",
       "area": "Warrens of Filth",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -881,6 +927,7 @@
       "description": "The tunnel floor is slick with layers of accumulated filth — animal waste, rotting food, and a thick organic slime that defies identification. The stench is so intense it has a physical presence, pressing against the throat.",
       "area": "Warrens of Filth",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -899,6 +946,7 @@
       "description": "A foul passage coated in grime from floor to ceiling. The walls glisten with moisture and something worse. Half-eaten carcasses of smaller creatures lie in the muck, stripped to bone and sinew.",
       "area": "Warrens of Filth",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -917,6 +965,7 @@
       "description": "The filth here is ankle-deep — a churned slurry of waste, fur, and decomposing matter. The footing is treacherous, the smell unbearable. This is the deepest, foulest part of the warren.",
       "area": "Warrens of Filth",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -935,6 +984,7 @@
       "description": "Thick organic muck coats every surface. The tunnel walls weep with condensation that runs in dark rivulets through the grime. The air is so foul it feels solid, coating the inside of the mouth. A knot of pale, hairless rat pups squirms in a shallow depression, their mother nowhere in sight.",
       "area": "Warrens of Filth",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -953,6 +1003,7 @@
       "description": "A passage so filthy the original stonework is invisible beneath layers of accumulated waste. The floor squelches with every step. Something large has been using this tunnel regularly — the grime is churned and fresh.",
       "area": "Warrens of Filth",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -975,6 +1026,7 @@
       "description": "The tunnel descends through the worst of the warren's filth. Rotting food stores, animal remains, and waste have been dragged and deposited here over months or years. The smell has layers.",
       "area": "Warrens of Filth",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -993,6 +1045,7 @@
       "description": "Thick organic muck coats every surface. The tunnel walls weep with condensation that runs in dark rivulets through the grime. The air is so foul it feels solid, coating the inside of the mouth. A knot of pale, hairless rat pups squirms in a shallow depression, their mother nowhere in sight.",
       "area": "Warrens of Filth",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -1011,6 +1064,7 @@
       "description": "A passage so filthy the original stonework is invisible beneath layers of accumulated waste. The floor squelches with every step. Something large has been using this tunnel regularly — the grime is churned and fresh.",
       "area": "Warrens of Filth",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -1029,6 +1083,7 @@
       "description": "The tunnel descends through the worst of the warren's filth. Rotting food stores, animal remains, and waste have been dragged and deposited here over months or years. The smell has layers.",
       "area": "Warrens of Filth",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -1047,6 +1102,7 @@
       "description": "Slick organic residue coats the floor of this tunnel, making every step a negotiation with gravity. The walls are streaked with dark matter best left unexamined. Small eyes reflect from the darkness ahead.",
       "area": "Warrens of Filth",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -1065,6 +1121,7 @@
       "description": "The foulest depths of the warren. The filth is so thick it has developed its own ecosystem — pale fungi sprout from the muck, and things too small to see crawl through the organic sludge. A stolen leather glove lies in the filth, chewed through at the fingers.",
       "area": "Warrens of Filth",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -1083,6 +1140,7 @@
       "description": "The tunnel floor is slick with layers of accumulated filth — animal waste, rotting food, and a thick organic slime that defies identification. The stench is so intense it has a physical presence, pressing against the throat.",
       "area": "Warrens of Filth",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -1101,6 +1159,7 @@
       "description": "A foul passage coated in grime from floor to ceiling. The walls glisten with moisture and something worse. Half-eaten carcasses of smaller creatures lie in the muck, stripped to bone and sinew.",
       "area": "Warrens of Filth",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -1119,6 +1178,7 @@
       "description": "The filth here is ankle-deep — a churned slurry of waste, fur, and decomposing matter. The footing is treacherous, the smell unbearable. This is the deepest, foulest part of the warren.",
       "area": "Warrens of Filth",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -1137,6 +1197,7 @@
       "description": "A deep passage where the walls close in and the ceiling drops. The floor is packed hard by the passage of heavy bodies. Something very large lives nearby — the tunnel is shaped by its bulk.",
       "area": "Warrens of Filth",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -1155,6 +1216,7 @@
       "description": "The burrow narrows to a tight squeeze between gnawed stone and packed earth. The heat of massed bodies warms the stale air. The sounds of the colony are louder here — chittering, gnawing, the rustle of a thousand small movements.",
       "area": "Warrens of Filth",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -1173,6 +1235,7 @@
       "description": "Deep in the warren, the tunnel walls are smooth with constant use. The air is thick enough to chew. Every surface is warm to the touch, heated by the colony packed into the surrounding chambers. A stolen leather glove lies in the filth, chewed through at the fingers.",
       "area": "Warrens of Filth",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -1191,6 +1254,7 @@
       "description": "The burrow descends into absolute darkness. The air is heavy with animal heat and the concentrated stench of the colony. The scratching of claws on stone is constant, coming from every direction.",
       "area": "Warrens of Filth",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -1209,6 +1273,7 @@
       "description": "A deep passage where the walls close in and the ceiling drops. The floor is packed hard by the passage of heavy bodies. Something very large lives nearby — the tunnel is shaped by its bulk.",
       "area": "Warrens of Filth",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -1227,6 +1292,7 @@
       "description": "The burrow narrows to a tight squeeze between gnawed stone and packed earth. The heat of massed bodies warms the stale air. The sounds of the colony are louder here — chittering, gnawing, the rustle of a thousand small movements.",
       "area": "Warrens of Filth",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -1245,6 +1311,7 @@
       "description": "Deep in the warren, the tunnel walls are smooth with constant use. The air is thick enough to chew. Every surface is warm to the touch, heated by the colony packed into the surrounding chambers. A knot of pale, hairless rat pups squirms in a shallow depression, their mother nowhere in sight.",
       "area": "Warrens of Filth",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -1263,6 +1330,7 @@
       "description": "The burrow opens into a low antechamber choked with the stench of something immense and alive. The floor is a compressed mat of refuse, fur, and bone. The walls are gouged with claw marks far deeper than any seen before — made by something the size of a large dog, or bigger. A massive opening yawns ahead, and from beyond it comes the sound of labored breathing and the rustle of something vast shifting in its nest.",
       "area": "Warrens of Filth",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {
@@ -1281,6 +1349,7 @@
       "description": "A cavernous chamber hollowed out over decades of gnawing and burrowing, its ceiling just high enough to stand. The entire floor is a massive nest — a room-sized tangle of shredded cloth, cracked bones, matted fur, stolen rope, splintered wood, and every piece of refuse the colony has accumulated. The nest crunches and shifts underfoot, unstable and treacherous. At its center, a depression the size of a bed marks where the Rat King rests. The stench is indescribable — the concentrated reek of the largest, oldest, most vicious creature in the warren. Retchtail's domain.",
       "area": "Warrens of Filth",
       "terrain": "underground",
+      "darkness_level": -120,
       "features": {},
       "exits": [
         {

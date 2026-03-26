@@ -236,6 +236,12 @@ export async function handleTrainingSubmit(
 
   // If cancelled, restore to world and acknowledge
   if (payload.cancelled) {
+    // Mark initial training complete so the form doesn't reappear on next login
+    if (socket.characterId) {
+      await characterRepo.updateCharacterStats(socket.characterId, {
+        initial_training_complete: true,
+      });
+    }
     exitTraining();
     return { type: MessageType.OUTPUT, message: 'Training cancelled.' };
   }
@@ -372,6 +378,7 @@ export async function handleTrainingSubmit(
       ...appearanceUpdates,
       unspent_cp: newUnspentCp,
       cp_spent: newCpSpent,
+      initial_training_complete: true,
     });
   } catch (error) {
     console.error('[Training] Failed to save stat changes:', error);

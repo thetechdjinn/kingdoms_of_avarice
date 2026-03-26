@@ -63,6 +63,12 @@ app.use(helmet({
   crossOriginEmbedderPolicy: false,
 }));
 
+// Prevent browsers and proxies from caching API responses
+app.use('/api', (_req, res, next) => {
+  res.set('Cache-Control', 'no-store');
+  next();
+});
+
 // Limit JSON payload size to prevent DOS attacks
 app.use(express.json({ limit: '100kb' }));
 app.use(cookieParser());

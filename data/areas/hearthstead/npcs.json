@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "exported_at": "2026-03-15T13:33:32.912Z",
+  "exported_at": "2026-03-26T00:18:09.850Z",
   "type": "npcs",
   "data": [
     {
@@ -13,8 +13,6 @@
       "respawnTime": 300,
       "level": 5,
       "experienceReward": 25,
-      "goldMin": 0,
-      "goldMax": 0,
       "maxMana": 0,
       "baseAccuracy": 50,
       "baseDefense": 50,
@@ -42,6 +40,7 @@
       "merchantEnabled": true,
       "properName": true,
       "spellPower": 0,
+      "enabled": true,
       "primaryFactionName": "Arindale Merchants Guild",
       "attacks": [
         {
@@ -51,7 +50,6 @@
           "maxDamage": 9,
           "attacksPerRound": 2,
           "percentage": 100,
-          "manaCost": 0,
           "hitMessage": null,
           "missMessage": null,
           "hitVerb": "clubs",
@@ -83,8 +81,6 @@
       "respawnTime": 300,
       "level": 5,
       "experienceReward": 0,
-      "goldMin": 0,
-      "goldMax": 0,
       "maxMana": 0,
       "baseAccuracy": 50,
       "baseDefense": 50,
@@ -112,6 +108,7 @@
       "merchantEnabled": true,
       "properName": true,
       "spellPower": 0,
+      "enabled": true,
       "primaryFactionName": "Arindale Merchants Guild",
       "attacks": [
         {
@@ -121,7 +118,6 @@
           "maxDamage": 8,
           "attacksPerRound": 2,
           "percentage": 100,
-          "manaCost": 0,
           "hitMessage": null,
           "missMessage": null,
           "hitVerb": "clubs",
@@ -167,9 +163,7 @@
       "hostile": false,
       "respawnTime": 300,
       "level": 1,
-      "experienceReward": 0,
-      "goldMin": 0,
-      "goldMax": 0,
+      "experienceReward": 20,
       "maxMana": 50,
       "baseAccuracy": 50,
       "baseDefense": 50,
@@ -196,9 +190,25 @@
       "spawnMessage": "{name} walks meekly into the room.",
       "merchantEnabled": true,
       "properName": true,
-      "spellPower": 0,
+      "spellPower": 30,
+      "enabled": true,
       "primaryFactionName": "Arindale Merchants Guild",
-      "attacks": [],
+      "attacks": [
+        {
+          "attackType": "melee",
+          "name": "quarterstaff",
+          "minDamage": 4,
+          "maxDamage": 8,
+          "attacksPerRound": 2,
+          "percentage": 100,
+          "hitMessage": null,
+          "missMessage": null,
+          "hitVerb": "smacks",
+          "hitVerb3p": "smacks",
+          "missVerb": "misses",
+          "missVerb3p": "misses"
+        }
+      ],
       "spells": [
         {
           "spellMnemonic": "mmis",

@@ -30,9 +30,11 @@
 
 ## Phase 5: Character Creation Integration
 
-- New characters receive training form on first WebSocket connect
-- isNewCharacter flag tracks first-time players
-- Training is optional - can EXIT to play with 100 unspent CP
+- New characters receive training form on their very first login only
+- `initial_training_complete` boolean column on characters table tracks whether the form has been shown
+- After submitting OR cancelling the training form, `initial_training_complete` is set to true and the form never appears again
+- Players can always use `train stats` in any training room to open the form later
+- The old heuristic (checking unspent_cp >= 100 and cp_spent all zeros) has been replaced by this explicit flag
 
 ## Phase 6: Level-Up Training
 

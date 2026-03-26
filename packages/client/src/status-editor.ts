@@ -5,6 +5,7 @@
 
 import { StatusEffectDefinition, StatusEffectCategory, StackingBehavior } from '@koa/shared';
 import { initAuth, ListPanel, setupTabs, showToast, showConfirm, showPromptFields, escapeHtml } from './components/index.js';
+import { renderNav } from './components/nav.js';
 
 interface SpellRef {
   id: number;
@@ -14,6 +15,7 @@ interface SpellRef {
 }
 
 (async function () {
+  renderNav({ activePage: 'status-editor', helpDoc: 'Spell_and_Effects_Guide.md' });
   const auth = await initAuth('developer');
   if (!auth) return;
 

@@ -1,3 +1,5 @@
+import { renderNav } from './components/nav.js';
+
 (function() {
 
 interface NpcAttack {
@@ -1462,6 +1464,7 @@ function setupTabs(): void {
 // ============================================================================
 
 document.addEventListener('DOMContentLoaded', async () => {
+  renderNav({ activePage: 'npc-editor', helpDoc: 'NPC_Creation_Guide.md' });
   const hasAccess = await checkAuth();
   if (!hasAccess) return;
 

@@ -5,8 +5,10 @@
 
 import { Action } from '@koa/shared';
 import { initAuth, ListPanel, showToast, showConfirm, escapeHtml } from './components/index.js';
+import { renderNav } from './components/nav.js';
 
 (async function () {
+  renderNav({ activePage: 'action-editor', helpDoc: 'Actions_and_Emotes_Guide.md' });
   const auth = await initAuth('developer');
   if (!auth) return;
 

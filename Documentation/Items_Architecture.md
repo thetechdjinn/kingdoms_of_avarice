@@ -80,6 +80,7 @@ CREATE TABLE IF NOT EXISTS item_templates (
     --   cursed: boolean (can't remove once equipped)
     --   two_handed: boolean (weapons)
     --   throwable: boolean
+    --   magical: boolean (blocked by no_magic_items class trait)
 
     -- Stacking
     max_stack INTEGER DEFAULT 1,            -- Max stack size (1 = not stackable)
@@ -294,6 +295,7 @@ export interface ItemFlags {
   cursed?: boolean; // Cannot be removed once equipped
   two_handed?: boolean; // Requires both hands (weapons)
   throwable?: boolean; // Can be thrown
+  magical?: boolean; // Magical item (blocked by no_magic_items trait)
 }
 
 // Weapon data
@@ -316,11 +318,14 @@ export interface ArmorData {
 
 // Consumable data
 export interface ConsumableData {
-  charges?: number; // For multi-use items (wands)
+  charges?: number; // For multi-use items (wands). 0 or undefined = single-use.
   effect_type: string; // heal, buff, damage, etc.
   effect_value: number;
   duration?: number; // Seconds (0 for instant)
 }
+// Note: When charges > 0, createInstance() auto-initializes charges_remaining
+// from the template's charges value. Each use decrements charges_remaining;
+// the item is consumed when the last charge is used.
 
 // Light source data
 export interface LightData {
@@ -476,7 +481,7 @@ export interface ItemDisplay {
 | `drop <item>`                    | Drop an item from inventory   |
 | `drop all`                       | Drop all items                |
 | `inventory` / `i`                | List carried items            |
-| `examine <item>` / `look <item>` | View item details             |
+| `examine <item>` / `look <item>` | View item name, description, and condition |
 
 ### Phase 2 Commands (Implemented)
 

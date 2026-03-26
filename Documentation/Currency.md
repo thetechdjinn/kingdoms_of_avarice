@@ -133,6 +133,10 @@ Players can deposit and withdraw currency at bank rooms. Bank balance is stored 
 | `withdraw <amount>` | Withdraw copper, auto-converts to highest denominations |
 | `withdraw <amount> <type>` | Withdraw as specific currency type |
 
+### Zero-Value Display
+
+When `formatCopperAsDenominations()` is called with a value of 0 (e.g., for free items in merchant shops), it returns "free" instead of "0 copper".
+
 ### Auto-Conversion
 
 When withdrawing currency (including `withdraw all` and `withdraw <amount>`), the bank automatically converts to the highest denominations possible. For example, withdrawing 1000 copper results in 1 platinum coin rather than 1000 copper coins, reducing inventory weight.

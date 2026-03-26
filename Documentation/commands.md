@@ -39,7 +39,7 @@ This document lists all available commands in Kingdoms of Avarice.
 | `look <direction>` | | Peek into an adjacent room |
 | `look <item>` | | Examine an item |
 | `look in <container>` | | View container contents |
-| `examine <item>` | `exa` | Examine an item in detail |
+| `examine <item>` | `exa` | Examine an item (shows name, description, and condition) |
 | `who` | | See who is online |
 | `brief` | | Toggle brief mode (hide room descriptions when moving) |
 
@@ -170,6 +170,7 @@ These commands require Moderator role or higher.
 | `@rooms` | List all rooms in the game |
 | `@roominfo [id]` | Show detailed information about a room (current room if no ID given) |
 | `@give <id\|name> [quantity]` | Give yourself an item |
+| `@currency <amount> [type]` | Give yourself currency (default: gold). Types: copper, silver, gold, platinum, runic |
 | `@hurt [amount] [player]` | Damage HP for testing (default: 10 damage to self) |
 | `@drain [amount] [player]` | Drain mana for testing (default: 10 mana from self) |
 | `@learn <mnemonic>` | Learn a spell for your character |

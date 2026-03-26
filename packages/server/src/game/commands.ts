@@ -1,4 +1,4 @@
-import { MessageType, GameMessage, Role, hasAnyRole, StatusEffectCategory, DoorType, DoorState, Door, ResourceType } from '@koa/shared';
+import { MessageType, GameMessage, Role, hasAnyRole, StatusEffectCategory, DoorType, DoorState, Door, ResourceType, getEssenceRequired } from '@koa/shared';
 import { getActiveEffectsDisplay, getEntityActiveEffects, formatDuration } from './statusEffects.js';
 import { getDelayModifierDescriptions, getStatusEffectDelayMultiplier } from './delayModifiers.js';
 import { getPlayerQueueStatus } from './tickProcessor.js';
@@ -14,7 +14,7 @@ import { handleAttack, handleFlee, handleBreak } from './combatCommands.js';
 import { isSpellMnemonic, handleSpellCommand, handleSpellbook } from './spellCommands.js';
 import { isActionCommand, handleActionCommand, handleEmoteCommand, getActionHelpList } from './actionCommands.js';
 import { handleTrain } from './trainingCommands.js';
-import { checkLevelUp, getLevelRequirements } from './progression.js';
+import { checkLevelUp, getLevelRequirements, getProgression } from './progression.js';
 import * as characterRepo from '../db/repositories/characterRepository.js';
 import * as progressionRepo from '../db/repositories/progressionRepository.js';
 import * as itemRepo from '../db/repositories/itemRepository.js';
@@ -487,7 +487,7 @@ export async function processCommand(
   // Experience command
   if (command === 'experience' || command === 'exp') {
     if (args.length > 0 && (args[0] === 'table' || args[0] === 'levels')) {
-      return handleExpTable(socket);
+      return await handleExpTable(socket);
     }
     return handleExperience(socket);
   }
@@ -2603,7 +2603,7 @@ function getHelpSections(): HelpSection[] {
       keyword: 'info', title: 'Info', aliases: ['information', 'system', 'exp', 'status'],
       lines: [
         `  ${colors.white('status')} (st)           - View your character sheet`,
-        `  ${colors.white('experience')} (exp)      - View experience and level progress`,
+        `  ${colors.white('experience')} (exp)      - View experience and essence progress`,
         `  ${colors.white('exp table')}             - Show exp requirements for next 10 levels`,
         `  ${colors.white('queue')} (q)             - Show queued commands`,
         `  ${colors.white('cooldowns')} (cd)        - Show ability cooldowns`,
@@ -2876,27 +2876,43 @@ function handleExperience(socket: AuthenticatedSocket): CommandResponse {
   const xpStr = colors.boldWhite(currentXp.toLocaleString());
   const levelStr = colors.boldWhite(actualLevel.toString());
 
+  const essCurrent = levelCheck.essence_current;
+  const essStr = colors.boldWhite(essCurrent.toLocaleString());
+
   if (!nextLevelReq) {
     return {
       type: MessageType.OUTPUT,
-      message: `Exp: ${xpStr}  Level: ${levelStr}  ${colors.yellow('Maximum level reached')}`,
+      message: [
+        `Exp: ${xpStr}  Level: ${levelStr}  ${colors.yellow('Maximum level reached')}`,
+        `Ess: ${essStr}  Level: ${levelStr}  ${colors.yellow('Maximum level reached')}`,
+      ].join('\r\n'),
     };
   }
 
   const xpRequired = nextLevelReq.std_xp_required;
   const xpNeeded = Math.max(0, xpRequired - currentXp);
-  const pct = Math.floor((currentXp / xpRequired) * 100);
-  const neededStr = colors.boldWhite(xpNeeded.toLocaleString());
-  const reqStr = xpRequired.toLocaleString();
-  const pctStr = pct >= 100 ? colors.green(`${pct}%`) : colors.yellow(`${pct}%`);
+  const xpPct = Math.floor((currentXp / xpRequired) * 100);
+  const xpNeededStr = colors.boldWhite(xpNeeded.toLocaleString());
+  const xpReqStr = xpRequired.toLocaleString();
+  const xpPctStr = xpPct >= 100 ? colors.green(`${xpPct}%`) : colors.yellow(`${xpPct}%`);
+
+  const essRequired = levelCheck.essence_required;
+  const essNeeded = Math.max(0, essRequired - essCurrent);
+  const essPct = (essRequired === Infinity || essRequired === 0) ? 0 : Math.floor((essCurrent / essRequired) * 100);
+  const essNeededStr = colors.boldWhite(essNeeded === Infinity ? '???' : essNeeded.toLocaleString());
+  const essReqStr = essRequired === Infinity ? '???' : essRequired.toLocaleString();
+  const essPctStr = essPct >= 100 ? colors.green(`${essPct}%`) : colors.yellow(`${essPct}%`);
 
   return {
     type: MessageType.OUTPUT,
-    message: `Exp: ${xpStr}  Level: ${levelStr}  Exp needed for next level: ${neededStr} (${reqStr}) [${pctStr}]`,
+    message: [
+      `Exp: ${xpStr}  Level: ${levelStr}  Exp needed for next level: ${xpNeededStr} (${xpReqStr}) [${xpPctStr}]`,
+      `Ess: ${essStr}  Level: ${levelStr}  Ess needed for next level: ${essNeededStr} (${essReqStr}) [${essPctStr}]`,
+    ].join('\r\n'),
   };
 }
 
-function handleExpTable(socket: AuthenticatedSocket): CommandResponse {
+async function handleExpTable(socket: AuthenticatedSocket): Promise<CommandResponse> {
   if (!socket.characterId) {
     return { type: MessageType.ERROR, message: 'No character selected.' };
   }
@@ -2908,11 +2924,17 @@ function handleExpTable(socket: AuthenticatedSocket): CommandResponse {
 
   const currentLevel = socket.characterLevel;
   const currentXp = levelCheck.std_xp_current;
+  const currentEss = levelCheck.essence_current;
+
+  // Get class multiplier for essence calculations
+  const character = await characterRepo.findCharacterById(socket.characterId);
+  const classDef = character ? await progressionRepo.getClassById(character.class) : null;
+  const essMultiplier = classDef?.essence_multiplier ?? 1;
 
   const lines: string[] = [
     colors.boldYellow('Experience Table:'),
     '',
-    `  ${colors.boldWhite('Level'.padEnd(8))}${colors.boldWhite('Exp Required'.padStart(14))}${colors.boldWhite('Remaining'.padStart(14))}`,
+    `  ${colors.boldWhite('Level'.padEnd(8))}${colors.boldWhite('Exp Required'.padStart(14))}${colors.boldWhite('Remaining'.padStart(14))}${colors.boldWhite('Ess Required'.padStart(14))}${colors.boldWhite('Remaining'.padStart(14))}`,
   ];
 
   let hasEntries = false;
@@ -2921,20 +2943,26 @@ function handleExpTable(socket: AuthenticatedSocket): CommandResponse {
     if (!req) break;
 
     hasEntries = true;
-    const remaining = Math.max(0, req.std_xp_required - currentXp);
-    const marker = remaining === 0 ? colors.green(' *') : '  ';
+    const xpRemaining = Math.max(0, req.std_xp_required - currentXp);
+    const essRequired = getEssenceRequired(req.base_essence_required, essMultiplier);
+    const essRemaining = Math.max(0, essRequired - currentEss);
+    const xpMet = xpRemaining === 0;
+    const essMet = essRemaining === 0;
+    const marker = (xpMet && essMet) ? colors.green(' *') : '  ';
     const lvlStr = lvl.toString().padEnd(8);
-    const reqStr = req.std_xp_required.toLocaleString().padStart(14);
-    const remStr = remaining.toLocaleString().padStart(14);
+    const xpReqStr = req.std_xp_required.toLocaleString().padStart(14);
+    const xpRemStr = xpRemaining.toLocaleString().padStart(14);
+    const essReqStr = essRequired.toLocaleString().padStart(14);
+    const essRemStr = essRemaining.toLocaleString().padStart(14);
 
-    lines.push(`${marker}${colors.white(lvlStr)}${reqStr}${remStr}`);
+    lines.push(`${marker}${colors.white(lvlStr)}${xpReqStr}${xpRemStr}${essReqStr}${essRemStr}`);
   }
 
   if (!hasEntries) {
     lines.push(`  ${colors.yellow('Maximum level reached.')}`);
   } else {
     lines.push('');
-    lines.push(`  ${colors.gray('* = experience requirement met')}`);
+    lines.push(`  ${colors.gray('* = both requirements met')}`);
   }
 
   return { type: MessageType.OUTPUT, message: lines.join('\r\n') };
@@ -3060,20 +3088,22 @@ async function handleStatus(socket: AuthenticatedSocket): Promise<CommandRespons
   const dr = Math.floor(equipmentStats.armor.damageReduction);
   const armourClass = `${ac}/${dr}`;
 
-  // Row 1: Name (spans col1+col2+gap) | Lives/CP
-  // Add extra GAP to match the space that would be between col1 and col2 in other rows
+  // Row 1: Name | Exp | Lives/CP
   const fullName = character.last_name?.trim() ? `${character.name} ${character.last_name.trim()}` : character.name;
-  lines.push(
-    cellLeft('Name:', fullName, COL1 + COL2 + GAP) +
-    cellRight('Lives/CP:', `${lives}/${cp}`, COL3)
-  );
-
-  // Row 2: Race | Exp | Perception
   const levelCheck = checkLevelUp(socket.characterId);
   const currentXp = levelCheck?.std_xp_current ?? 0;
   lines.push(
-    cellLeft('Race:', raceName, COL1) +
+    cellLeft('Name:', fullName, COL1) +
     cellRight('Exp:', currentXp.toLocaleString(), COL2) +
+    cellRight('Lives/CP:', `${lives}/${cp}`, COL3)
+  );
+
+  // Row 2: Race | Essence | Perception
+  const progression = getProgression(socket.characterId);
+  const essence = progression?.essence_wallet ?? 0;
+  lines.push(
+    cellLeft('Race:', raceName, COL1) +
+    cellRight('Essence:', essence.toLocaleString(), COL2) +
     cellRight('Perception:', perception.toString(), COL3)
   );
 

@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "exported_at": "2026-03-15T13:33:32.875Z",
+  "exported_at": "2026-03-26T00:18:09.797Z",
   "type": "items",
   "data": [
     {
@@ -49,6 +49,12 @@
       },
       "stat_modifiers": {},
       "stealth_modifier": 0,
+      "spellcasting_modifier": 0,
+      "lockpicking_modifier": 0,
+      "perception_modifier": 0,
+      "critical_chance_modifier": 0,
+      "magic_resistance_modifier": 0,
+      "trap_modifier": 0,
       "effect_slots": 0,
       "rarity": "common"
     },
@@ -98,6 +104,12 @@
       },
       "stat_modifiers": {},
       "stealth_modifier": 0,
+      "spellcasting_modifier": 0,
+      "lockpicking_modifier": 0,
+      "perception_modifier": 0,
+      "critical_chance_modifier": 0,
+      "magic_resistance_modifier": 0,
+      "trap_modifier": 0,
       "effect_slots": 0,
       "rarity": "common"
     },
@@ -143,6 +155,12 @@
       "requirements": {},
       "stat_modifiers": {},
       "stealth_modifier": 0,
+      "spellcasting_modifier": 0,
+      "lockpicking_modifier": 0,
+      "perception_modifier": 0,
+      "critical_chance_modifier": 0,
+      "magic_resistance_modifier": 0,
+      "trap_modifier": 0,
       "effect_slots": 0,
       "rarity": "common"
     },
@@ -163,15 +181,15 @@
       "flags": {
         "cursed": false,
         "hidden": false,
+        "magical": false,
         "no_drop": false,
         "takeable": true,
-        "stackable": false,
+        "stackable": true,
         "throwable": false,
         "two_handed": false
       },
       "max_stack": 1,
       "weapon_data": {
-        "range": "melee",
         "max_damage": 8,
         "min_damage": 3,
         "damage_type": "bludgeoning",
@@ -182,19 +200,46 @@
           "hit_3p": "swipes",
           "miss_3p": "swings at"
         },
-        "crit_modifier": 1
+        "crit_modifier": 1,
+        "allows_backstab": true,
+        "backstab_accuracy": 0,
+        "backstab_max_damage_bonus": 0,
+        "backstab_min_damage_bonus": 0
       },
       "requirements": {
-        "strength": 40
+        "race": [],
+        "class": [],
+        "level": 0,
+        "wisdom": 0,
+        "charisma": 0,
+        "strength": 40,
+        "dexterity": 0,
+        "constitution": 0,
+        "intelligence": 0
       },
-      "stat_modifiers": {},
+      "stat_modifiers": {
+        "wisdom": 0,
+        "charisma": 0,
+        "max_mana": 0,
+        "strength": 0,
+        "dexterity": 0,
+        "max_health": 0,
+        "constitution": 0,
+        "intelligence": 0
+      },
       "stealth_modifier": 0,
+      "spellcasting_modifier": 0,
+      "lockpicking_modifier": 0,
+      "perception_modifier": 0,
+      "critical_chance_modifier": 0,
+      "magic_resistance_modifier": 0,
+      "trap_modifier": 0,
       "effect_slots": 0,
       "rarity": "common"
     },
     {
       "name": "battle axe",
-      "short_desc": "a fearsome battle axe",
+      "short_desc": "a battle axe",
       "long_desc": "A large two-handed axe with a crescent-shaped blade. It requires both hands to wield effectively.",
       "room_desc": "A fearsome battle axe leans against the wall.",
       "keywords": [
@@ -210,15 +255,15 @@
       "flags": {
         "cursed": false,
         "hidden": false,
+        "magical": false,
         "no_drop": false,
         "takeable": true,
-        "stackable": false,
+        "stackable": true,
         "throwable": false,
         "two_handed": true
       },
       "max_stack": 1,
       "weapon_data": {
-        "range": "melee",
         "max_damage": 9,
         "min_damage": 4,
         "damage_type": "slashing",
@@ -229,14 +274,40 @@
           "hit_3p": "chops",
           "miss_3p": "swings at"
         },
-        "crit_modifier": 2
+        "crit_modifier": 2,
+        "allows_backstab": true,
+        "backstab_accuracy": 0,
+        "backstab_max_damage_bonus": 0,
+        "backstab_min_damage_bonus": 0
       },
       "requirements": {
+        "race": [],
+        "class": [],
+        "level": 0,
+        "wisdom": 0,
+        "charisma": 0,
         "strength": 5,
-        "dexterity": 5
+        "dexterity": 5,
+        "constitution": 0,
+        "intelligence": 0
       },
-      "stat_modifiers": {},
+      "stat_modifiers": {
+        "wisdom": 0,
+        "charisma": 0,
+        "max_mana": 0,
+        "strength": 0,
+        "dexterity": 0,
+        "max_health": 0,
+        "constitution": 0,
+        "intelligence": 0
+      },
       "stealth_modifier": 0,
+      "spellcasting_modifier": 0,
+      "lockpicking_modifier": 0,
+      "perception_modifier": 0,
+      "critical_chance_modifier": 0,
+      "magic_resistance_modifier": 0,
+      "trap_modifier": 0,
       "effect_slots": 0,
       "rarity": "common"
     },
@@ -256,14 +327,21 @@
       "item_type": "armor",
       "equipment_slot": "head",
       "flags": {
-        "takeable": true
+        "takeable": true,
+        "stackable": true
       },
       "max_stack": 1,
       "armor_data": {
-        "armor_class": 1,
-        "armor_type": "leather"
+        "armor_type": "leather",
+        "armor_class": 1
       },
       "stealth_modifier": 0,
+      "spellcasting_modifier": 0,
+      "lockpicking_modifier": 0,
+      "perception_modifier": 0,
+      "critical_chance_modifier": 0,
+      "magic_resistance_modifier": 0,
+      "trap_modifier": 0,
       "effect_slots": 0,
       "rarity": "common"
     },
@@ -284,14 +362,21 @@
       "item_type": "armor",
       "equipment_slot": "head",
       "flags": {
-        "takeable": true
+        "takeable": true,
+        "stackable": true
       },
       "max_stack": 1,
       "armor_data": {
-        "armor_class": 3,
-        "armor_type": "platemail"
+        "armor_type": "platemail",
+        "armor_class": 3
       },
       "stealth_modifier": 0,
+      "spellcasting_modifier": 0,
+      "lockpicking_modifier": 0,
+      "perception_modifier": 0,
+      "critical_chance_modifier": 0,
+      "magic_resistance_modifier": 0,
+      "trap_modifier": 0,
       "effect_slots": 0,
       "rarity": "common"
     },
@@ -311,14 +396,21 @@
       "item_type": "armor",
       "equipment_slot": "body",
       "flags": {
-        "takeable": true
+        "takeable": true,
+        "stackable": true
       },
       "max_stack": 1,
       "armor_data": {
-        "armor_class": 2,
-        "armor_type": "leather"
+        "armor_type": "leather",
+        "armor_class": 2
       },
       "stealth_modifier": 0,
+      "spellcasting_modifier": 0,
+      "lockpicking_modifier": 0,
+      "perception_modifier": 0,
+      "critical_chance_modifier": 0,
+      "magic_resistance_modifier": 0,
+      "trap_modifier": 0,
       "effect_slots": 0,
       "rarity": "common"
     },
@@ -339,14 +431,21 @@
       "item_type": "armor",
       "equipment_slot": "body",
       "flags": {
-        "takeable": true
+        "takeable": true,
+        "stackable": true
       },
       "max_stack": 1,
       "armor_data": {
-        "armor_class": 5,
-        "armor_type": "chainmail"
+        "armor_type": "chainmail",
+        "armor_class": 5
       },
       "stealth_modifier": 0,
+      "spellcasting_modifier": 0,
+      "lockpicking_modifier": 0,
+      "perception_modifier": 0,
+      "critical_chance_modifier": 0,
+      "magic_resistance_modifier": 0,
+      "trap_modifier": 0,
       "effect_slots": 0,
       "rarity": "common"
     },
@@ -365,14 +464,21 @@
       "item_type": "armor",
       "equipment_slot": "off_hand",
       "flags": {
-        "takeable": true
+        "takeable": true,
+        "stackable": true
       },
       "max_stack": 1,
       "armor_data": {
-        "armor_class": 2,
-        "armor_type": "chainmail"
+        "armor_type": "chainmail",
+        "armor_class": 2
       },
       "stealth_modifier": 0,
+      "spellcasting_modifier": 0,
+      "lockpicking_modifier": 0,
+      "perception_modifier": 0,
+      "critical_chance_modifier": 0,
+      "magic_resistance_modifier": 0,
+      "trap_modifier": 0,
       "effect_slots": 0,
       "rarity": "common"
     },
@@ -391,14 +497,21 @@
       "item_type": "armor",
       "equipment_slot": "hands",
       "flags": {
-        "takeable": true
+        "takeable": true,
+        "stackable": true
       },
       "max_stack": 1,
       "armor_data": {
-        "armor_class": 1,
-        "armor_type": "leather"
+        "armor_type": "leather",
+        "armor_class": 1
       },
       "stealth_modifier": 0,
+      "spellcasting_modifier": 0,
+      "lockpicking_modifier": 0,
+      "perception_modifier": 0,
+      "critical_chance_modifier": 0,
+      "magic_resistance_modifier": 0,
+      "trap_modifier": 0,
       "effect_slots": 0,
       "rarity": "common"
     },
@@ -418,14 +531,21 @@
       "item_type": "armor",
       "equipment_slot": "feet",
       "flags": {
-        "takeable": true
+        "takeable": true,
+        "stackable": true
       },
       "max_stack": 1,
       "armor_data": {
-        "armor_class": 1,
-        "armor_type": "leather"
+        "armor_type": "leather",
+        "armor_class": 1
       },
       "stealth_modifier": 0,
+      "spellcasting_modifier": 0,
+      "lockpicking_modifier": 0,
+      "perception_modifier": 0,
+      "critical_chance_modifier": 0,
+      "magic_resistance_modifier": 0,
+      "trap_modifier": 0,
       "effect_slots": 0,
       "rarity": "common"
     },
@@ -446,10 +566,17 @@
       "equipment_slot": null,
       "flags": {
         "no_drop": false,
-        "takeable": true
+        "takeable": true,
+        "stackable": true
       },
       "max_stack": 1,
       "stealth_modifier": 0,
+      "spellcasting_modifier": 0,
+      "lockpicking_modifier": 0,
+      "perception_modifier": 0,
+      "critical_chance_modifier": 0,
+      "magic_resistance_modifier": 0,
+      "trap_modifier": 0,
       "effect_slots": 0,
       "rarity": "common"
     },
@@ -468,16 +595,23 @@
       "item_type": "misc",
       "equipment_slot": null,
       "flags": {
-        "takeable": false
+        "takeable": false,
+        "stackable": true
       },
       "max_stack": 1,
       "stealth_modifier": 0,
+      "spellcasting_modifier": 0,
+      "lockpicking_modifier": 0,
+      "perception_modifier": 0,
+      "critical_chance_modifier": 0,
+      "magic_resistance_modifier": 0,
+      "trap_modifier": 0,
       "effect_slots": 0,
       "rarity": "common"
     },
     {
       "name": "healing potion",
-      "short_desc": "a red healing potion",
+      "short_desc": "a healing potion",
       "long_desc": "A small glass vial filled with a glowing red liquid. Drinking it will restore health.",
       "room_desc": "A red healing potion sits here.",
       "keywords": [
@@ -492,14 +626,49 @@
       "item_type": "consumable",
       "equipment_slot": null,
       "flags": {
-        "takeable": true
+        "cursed": false,
+        "hidden": false,
+        "magical": true,
+        "no_drop": false,
+        "takeable": true,
+        "stackable": true,
+        "throwable": false,
+        "two_handed": false
       },
       "max_stack": 1,
       "consumable_data": {
+        "charges": 0,
         "effect_type": "heal",
         "effect_value": 25
       },
+      "requirements": {
+        "race": [],
+        "class": [],
+        "level": 0,
+        "wisdom": 0,
+        "charisma": 0,
+        "strength": 0,
+        "dexterity": 0,
+        "constitution": 0,
+        "intelligence": 0
+      },
+      "stat_modifiers": {
+        "wisdom": 0,
+        "charisma": 0,
+        "max_mana": 0,
+        "strength": 0,
+        "dexterity": 0,
+        "max_health": 0,
+        "constitution": 0,
+        "intelligence": 0
+      },
       "stealth_modifier": 0,
+      "spellcasting_modifier": 0,
+      "lockpicking_modifier": 0,
+      "perception_modifier": 0,
+      "critical_chance_modifier": 0,
+      "magic_resistance_modifier": 0,
+      "trap_modifier": 0,
       "effect_slots": 0,
       "rarity": "common"
     },
@@ -512,21 +681,54 @@
         "torch",
         "light"
       ],
-      "weight": 1,
+      "weight": 40,
       "size": 1,
-      "base_value": 200,
+      "base_value": 0,
       "item_type": "light",
-      "equipment_slot": null,
+      "equipment_slot": "held",
       "flags": {
-        "takeable": true
+        "cursed": false,
+        "hidden": false,
+        "no_drop": false,
+        "takeable": true,
+        "stackable": true,
+        "throwable": false,
+        "two_handed": false
       },
       "max_stack": 1,
       "light_data": {
-        "vision_bonus": 100,
         "fuel_max": 180,
-        "fuel_rate": 1
+        "fuel_rate": 1,
+        "vision_bonus": 100
+      },
+      "requirements": {
+        "race": [],
+        "class": [],
+        "level": 0,
+        "wisdom": 0,
+        "charisma": 0,
+        "strength": 0,
+        "dexterity": 0,
+        "constitution": 0,
+        "intelligence": 0
+      },
+      "stat_modifiers": {
+        "wisdom": 0,
+        "charisma": 0,
+        "max_mana": 0,
+        "strength": 0,
+        "dexterity": 0,
+        "max_health": 0,
+        "constitution": 0,
+        "intelligence": 0
       },
       "stealth_modifier": 0,
+      "spellcasting_modifier": 0,
+      "lockpicking_modifier": 0,
+      "perception_modifier": 0,
+      "critical_chance_modifier": 0,
+      "magic_resistance_modifier": 0,
+      "trap_modifier": 0,
       "effect_slots": 0,
       "rarity": "common"
     },
@@ -540,21 +742,54 @@
         "lamp",
         "light"
       ],
-      "weight": 2,
+      "weight": 75,
       "size": 1,
-      "base_value": 1500,
+      "base_value": 400,
       "item_type": "light",
-      "equipment_slot": null,
+      "equipment_slot": "held",
       "flags": {
-        "takeable": true
+        "cursed": false,
+        "hidden": false,
+        "no_drop": false,
+        "takeable": true,
+        "stackable": true,
+        "throwable": false,
+        "two_handed": false
       },
       "max_stack": 1,
       "light_data": {
-        "vision_bonus": 175,
         "fuel_max": 720,
-        "fuel_rate": 1
+        "fuel_rate": 1,
+        "vision_bonus": 200
+      },
+      "requirements": {
+        "race": [],
+        "class": [],
+        "level": 0,
+        "wisdom": 0,
+        "charisma": 0,
+        "strength": 0,
+        "dexterity": 0,
+        "constitution": 0,
+        "intelligence": 0
+      },
+      "stat_modifiers": {
+        "wisdom": 0,
+        "charisma": 0,
+        "max_mana": 0,
+        "strength": 0,
+        "dexterity": 0,
+        "max_health": 0,
+        "constitution": 0,
+        "intelligence": 0
       },
       "stealth_modifier": 0,
+      "spellcasting_modifier": 0,
+      "lockpicking_modifier": 0,
+      "perception_modifier": 0,
+      "critical_chance_modifier": 0,
+      "magic_resistance_modifier": 0,
+      "trap_modifier": 0,
       "effect_slots": 0,
       "rarity": "common"
     },
@@ -579,7 +814,7 @@
         "hidden": false,
         "no_drop": false,
         "takeable": true,
-        "stackable": false,
+        "stackable": true,
         "throwable": false,
         "two_handed": false
       },
@@ -587,6 +822,12 @@
       "requirements": {},
       "stat_modifiers": {},
       "stealth_modifier": 0,
+      "spellcasting_modifier": 0,
+      "lockpicking_modifier": 0,
+      "perception_modifier": 0,
+      "critical_chance_modifier": 0,
+      "magic_resistance_modifier": 0,
+      "trap_modifier": 0,
       "effect_slots": 0,
       "rarity": "common"
     },
@@ -611,12 +852,18 @@
       },
       "max_stack": 1,
       "stealth_modifier": 0,
+      "spellcasting_modifier": 0,
+      "lockpicking_modifier": 0,
+      "perception_modifier": 0,
+      "critical_chance_modifier": 0,
+      "magic_resistance_modifier": 0,
+      "trap_modifier": 0,
       "effect_slots": 0,
       "rarity": "common"
     },
     {
       "name": "ebony greataxe",
-      "short_desc": "a ebony greataxe",
+      "short_desc": "an ebony greataxe",
       "long_desc": "The shaft of this large, double-bladed axe is crafted with a dark ebony wood. The wood is polished to a blackened shine, and knobs on the grip are shaped crudely in to the form of skulls. The three foot long handle is topped by a large axe head of darkened steel, sharpened to a razor edge along both blades.",
       "room_desc": "ebony greataxe",
       "keywords": [
@@ -626,19 +873,19 @@
       "size": 3,
       "base_value": 200000,
       "item_type": "weapon",
-      "equipment_slot": null,
+      "equipment_slot": "main_hand",
       "flags": {
         "cursed": false,
         "hidden": false,
+        "magical": true,
         "no_drop": false,
         "takeable": true,
-        "stackable": false,
+        "stackable": true,
         "throwable": false,
         "two_handed": true
       },
       "max_stack": 1,
       "weapon_data": {
-        "range": "melee",
         "max_damage": 23,
         "min_damage": 7,
         "damage_type": "slashing",
@@ -649,17 +896,42 @@
           "hit_3p": "cleaves",
           "miss_3p": "swings at"
         },
-        "crit_modifier": 2
+        "crit_modifier": 2,
+        "allows_backstab": false,
+        "backstab_accuracy": 0,
+        "backstab_max_damage_bonus": 0,
+        "backstab_min_damage_bonus": 0
       },
       "requirements": {
+        "race": [],
+        "class": [],
         "level": 1,
+        "wisdom": 0,
+        "charisma": 0,
         "strength": 40,
-        "dexterity": 40
+        "dexterity": 40,
+        "constitution": 0,
+        "intelligence": 0
       },
-      "stat_modifiers": {},
+      "stat_modifiers": {
+        "wisdom": 0,
+        "charisma": 0,
+        "max_mana": 0,
+        "strength": 0,
+        "dexterity": 0,
+        "max_health": 0,
+        "constitution": 0,
+        "intelligence": 0
+      },
       "stealth_modifier": 0,
+      "spellcasting_modifier": 0,
+      "lockpicking_modifier": 0,
+      "perception_modifier": 0,
+      "critical_chance_modifier": 0,
+      "magic_resistance_modifier": 0,
+      "trap_modifier": 0,
       "effect_slots": 0,
-      "rarity": "common"
+      "rarity": "rare"
     },
     {
       "name": "starsteel greatsword",
@@ -677,15 +949,15 @@
       "flags": {
         "cursed": false,
         "hidden": false,
+        "magical": true,
         "no_drop": false,
         "takeable": true,
-        "stackable": false,
+        "stackable": true,
         "throwable": false,
         "two_handed": false
       },
       "max_stack": 1,
       "weapon_data": {
-        "range": "melee",
         "max_damage": 24,
         "min_damage": 12,
         "damage_type": "slashing",
@@ -696,11 +968,40 @@
           "hit_3p": "cleaves",
           "miss_3p": "swings at"
         },
-        "crit_modifier": 3
+        "crit_modifier": 3,
+        "allows_backstab": true,
+        "backstab_accuracy": 0,
+        "backstab_max_damage_bonus": 0,
+        "backstab_min_damage_bonus": 0
       },
-      "requirements": {},
-      "stat_modifiers": {},
+      "requirements": {
+        "race": [],
+        "class": [],
+        "level": 0,
+        "wisdom": 0,
+        "charisma": 0,
+        "strength": 0,
+        "dexterity": 0,
+        "constitution": 0,
+        "intelligence": 0
+      },
+      "stat_modifiers": {
+        "wisdom": 0,
+        "charisma": 0,
+        "max_mana": 0,
+        "strength": 0,
+        "dexterity": 0,
+        "max_health": 0,
+        "constitution": 0,
+        "intelligence": 0
+      },
       "stealth_modifier": 0,
+      "spellcasting_modifier": 0,
+      "lockpicking_modifier": 0,
+      "perception_modifier": 0,
+      "critical_chance_modifier": 0,
+      "magic_resistance_modifier": 0,
+      "trap_modifier": 0,
       "effect_slots": 0,
       "rarity": "common"
     },
@@ -723,7 +1024,7 @@
         "key_tag": "crusty_key",
         "no_drop": false,
         "takeable": true,
-        "stackable": false,
+        "stackable": true,
         "throwable": false,
         "two_handed": false,
         "consumeChance": 100
@@ -732,6 +1033,12 @@
       "requirements": {},
       "stat_modifiers": {},
       "stealth_modifier": 0,
+      "spellcasting_modifier": 0,
+      "lockpicking_modifier": 0,
+      "perception_modifier": 0,
+      "critical_chance_modifier": 0,
+      "magic_resistance_modifier": 0,
+      "trap_modifier": 0,
       "effect_slots": 0,
       "rarity": "common"
     },
@@ -741,7 +1048,10 @@
       "long_desc": "A relatively cheap lockpick set made for beginners. ",
       "room_desc": "basic lockpicks",
       "keywords": [
-        "basic lockpick set"
+        "basic lockpick set",
+        "lockpick",
+        "set",
+        "basic"
       ],
       "weight": 3,
       "size": 1,
@@ -753,7 +1063,7 @@
         "hidden": false,
         "no_drop": false,
         "takeable": true,
-        "stackable": false,
+        "stackable": true,
         "throwable": false,
         "two_handed": false
       },
@@ -770,6 +1080,12 @@
       },
       "stat_modifiers": {},
       "stealth_modifier": 0,
+      "spellcasting_modifier": 0,
+      "lockpicking_modifier": 0,
+      "perception_modifier": 0,
+      "critical_chance_modifier": 0,
+      "magic_resistance_modifier": 0,
+      "trap_modifier": 0,
       "effect_slots": 0,
       "rarity": "common"
     },
@@ -789,21 +1105,47 @@
       "flags": {
         "cursed": false,
         "hidden": false,
+        "magical": true,
         "no_drop": false,
         "takeable": true,
-        "stackable": false,
+        "stackable": true,
         "throwable": false,
         "two_handed": false
       },
       "max_stack": 1,
       "armor_data": {
-        "armor_class": 75,
         "armor_type": "chainmail",
+        "armor_class": 75,
         "damage_resistance": 8
       },
-      "requirements": {},
-      "stat_modifiers": {},
+      "requirements": {
+        "race": [],
+        "class": [],
+        "level": 0,
+        "wisdom": 0,
+        "charisma": 0,
+        "strength": 0,
+        "dexterity": 0,
+        "constitution": 0,
+        "intelligence": 0
+      },
+      "stat_modifiers": {
+        "wisdom": 0,
+        "charisma": 0,
+        "max_mana": 0,
+        "strength": 0,
+        "dexterity": 0,
+        "max_health": 0,
+        "constitution": 0,
+        "intelligence": 0
+      },
       "stealth_modifier": 0,
+      "spellcasting_modifier": 0,
+      "lockpicking_modifier": 0,
+      "perception_modifier": 0,
+      "critical_chance_modifier": 0,
+      "magic_resistance_modifier": 0,
+      "trap_modifier": 0,
       "effect_slots": 0,
       "rarity": "limited",
       "max_in_world": 3
@@ -824,15 +1166,15 @@
       "flags": {
         "cursed": false,
         "hidden": false,
+        "magical": false,
         "no_drop": false,
         "takeable": true,
-        "stackable": false,
+        "stackable": true,
         "throwable": false,
         "two_handed": false
       },
       "max_stack": 1,
       "weapon_data": {
-        "range": "melee",
         "max_damage": 12,
         "min_damage": 2,
         "damage_type": "bludgeoning",
@@ -843,13 +1185,40 @@
           "hit_3p": "smacks",
           "miss_3p": "swings at"
         },
-        "crit_modifier": 1
+        "crit_modifier": 1,
+        "allows_backstab": true,
+        "backstab_accuracy": 0,
+        "backstab_max_damage_bonus": 0,
+        "backstab_min_damage_bonus": 0
       },
       "requirements": {
-        "strength": 30
+        "race": [],
+        "class": [],
+        "level": 0,
+        "wisdom": 0,
+        "charisma": 0,
+        "strength": 30,
+        "dexterity": 0,
+        "constitution": 0,
+        "intelligence": 0
       },
-      "stat_modifiers": {},
+      "stat_modifiers": {
+        "wisdom": 0,
+        "charisma": 0,
+        "max_mana": 0,
+        "strength": 0,
+        "dexterity": 0,
+        "max_health": 0,
+        "constitution": 0,
+        "intelligence": 0
+      },
       "stealth_modifier": 0,
+      "spellcasting_modifier": 0,
+      "lockpicking_modifier": 0,
+      "perception_modifier": 0,
+      "critical_chance_modifier": 0,
+      "magic_resistance_modifier": 0,
+      "trap_modifier": 0,
       "effect_slots": 0,
       "rarity": "common"
     },
@@ -873,7 +1242,7 @@
         "hidden": false,
         "no_drop": false,
         "takeable": true,
-        "stackable": false,
+        "stackable": true,
         "throwable": false,
         "two_handed": false
       },
@@ -881,6 +1250,12 @@
       "requirements": {},
       "stat_modifiers": {},
       "stealth_modifier": 0,
+      "spellcasting_modifier": 0,
+      "lockpicking_modifier": 0,
+      "perception_modifier": 0,
+      "critical_chance_modifier": 0,
+      "magic_resistance_modifier": 0,
+      "trap_modifier": 0,
       "effect_slots": 0,
       "rarity": "common"
     },
@@ -904,19 +1279,25 @@
         "hidden": false,
         "no_drop": false,
         "takeable": true,
-        "stackable": false,
+        "stackable": true,
         "throwable": false,
         "two_handed": false
       },
       "max_stack": 1,
       "armor_data": {
-        "armor_class": 10,
         "armor_type": "leather",
+        "armor_class": 10,
         "damage_resistance": 0.1
       },
       "requirements": {},
       "stat_modifiers": {},
       "stealth_modifier": 0,
+      "spellcasting_modifier": 0,
+      "lockpicking_modifier": 0,
+      "perception_modifier": 0,
+      "critical_chance_modifier": 0,
+      "magic_resistance_modifier": 0,
+      "trap_modifier": 0,
       "effect_slots": 0,
       "rarity": "common"
     },
@@ -940,19 +1321,25 @@
         "hidden": false,
         "no_drop": false,
         "takeable": true,
-        "stackable": false,
+        "stackable": true,
         "throwable": false,
         "two_handed": false
       },
       "max_stack": 1,
       "armor_data": {
-        "armor_class": 10,
         "armor_type": "leather",
+        "armor_class": 10,
         "damage_resistance": 0.1
       },
       "requirements": {},
       "stat_modifiers": {},
       "stealth_modifier": 0,
+      "spellcasting_modifier": 0,
+      "lockpicking_modifier": 0,
+      "perception_modifier": 0,
+      "critical_chance_modifier": 0,
+      "magic_resistance_modifier": 0,
+      "trap_modifier": 0,
       "effect_slots": 0,
       "rarity": "common"
     },
@@ -976,19 +1363,25 @@
         "hidden": false,
         "no_drop": false,
         "takeable": true,
-        "stackable": false,
+        "stackable": true,
         "throwable": false,
         "two_handed": false
       },
       "max_stack": 1,
       "armor_data": {
-        "armor_class": 10,
         "armor_type": "leather",
+        "armor_class": 10,
         "damage_resistance": 0.1
       },
       "requirements": {},
       "stat_modifiers": {},
       "stealth_modifier": 0,
+      "spellcasting_modifier": 0,
+      "lockpicking_modifier": 0,
+      "perception_modifier": 0,
+      "critical_chance_modifier": 0,
+      "magic_resistance_modifier": 0,
+      "trap_modifier": 0,
       "effect_slots": 0,
       "rarity": "common"
     },
@@ -1012,19 +1405,114 @@
         "hidden": false,
         "no_drop": false,
         "takeable": true,
-        "stackable": false,
+        "stackable": true,
         "throwable": false,
         "two_handed": false
       },
       "max_stack": 1,
       "armor_data": {
-        "armor_class": 10,
         "armor_type": "leather",
+        "armor_class": 10,
         "damage_resistance": 0.1
       },
       "requirements": {},
       "stat_modifiers": {},
       "stealth_modifier": 0,
+      "spellcasting_modifier": 0,
+      "lockpicking_modifier": 0,
+      "perception_modifier": 0,
+      "critical_chance_modifier": 0,
+      "magic_resistance_modifier": 0,
+      "trap_modifier": 0,
+      "effect_slots": 0,
+      "rarity": "common"
+    },
+    {
+      "name": "small bag of holding",
+      "short_desc": "a small bag of holding",
+      "long_desc": "A small modest leather satchel rests lightly in your hands, its surface worn smooth by time yet strangely untouched by age. The mouth of the bag yawns wider than it should, its interior fading into a depth that defies sight. Despite whatever it may contain, it feels nearly weightless, as if its burden is carried somewhere far beyond this world.",
+      "keywords": [
+        "small",
+        "bag",
+        "holding"
+      ],
+      "weight": 25,
+      "size": 1,
+      "base_value": 700000,
+      "item_type": "container",
+      "equipment_slot": null,
+      "flags": {
+        "cursed": false,
+        "hidden": false,
+        "magical": true,
+        "no_drop": false,
+        "takeable": true,
+        "stackable": true,
+        "throwable": false,
+        "two_handed": false
+      },
+      "max_stack": 1,
+      "container_capacity": 10,
+      "container_weight_limit": 1000,
+      "requirements": {
+        "race": [],
+        "class": [],
+        "level": 0,
+        "wisdom": 0,
+        "charisma": 0,
+        "strength": 0,
+        "dexterity": 0,
+        "constitution": 0,
+        "intelligence": 0
+      },
+      "stat_modifiers": {
+        "wisdom": 0,
+        "charisma": 0,
+        "max_mana": 0,
+        "strength": 0,
+        "dexterity": 0,
+        "max_health": 0,
+        "constitution": 0,
+        "intelligence": 0
+      },
+      "stealth_modifier": 0,
+      "spellcasting_modifier": 0,
+      "lockpicking_modifier": 0,
+      "perception_modifier": 0,
+      "critical_chance_modifier": 0,
+      "magic_resistance_modifier": 0,
+      "trap_modifier": 0,
+      "effect_slots": 0,
+      "rarity": "limited"
+    },
+    {
+      "name": "gold coins",
+      "short_desc": "gold crowns",
+      "long_desc": "The gold crowns are rustic and used.",
+      "keywords": [
+        "gold",
+        "coins",
+        "crowns",
+        "money",
+        "currency"
+      ],
+      "weight": 7,
+      "size": 1,
+      "base_value": 100,
+      "item_type": "currency",
+      "equipment_slot": null,
+      "flags": {
+        "takeable": true,
+        "stackable": true
+      },
+      "max_stack": 9999999,
+      "stealth_modifier": 0,
+      "spellcasting_modifier": 0,
+      "lockpicking_modifier": 0,
+      "perception_modifier": 0,
+      "critical_chance_modifier": 0,
+      "magic_resistance_modifier": 0,
+      "trap_modifier": 0,
       "effect_slots": 0,
       "rarity": "common"
     },
@@ -1050,6 +1538,12 @@
       },
       "max_stack": 9999999,
       "stealth_modifier": 0,
+      "spellcasting_modifier": 0,
+      "lockpicking_modifier": 0,
+      "perception_modifier": 0,
+      "critical_chance_modifier": 0,
+      "magic_resistance_modifier": 0,
+      "trap_modifier": 0,
       "effect_slots": 0,
       "rarity": "common"
     },
@@ -1075,31 +1569,12 @@
       },
       "max_stack": 9999999,
       "stealth_modifier": 0,
-      "effect_slots": 0,
-      "rarity": "common"
-    },
-    {
-      "name": "gold coins",
-      "short_desc": "gold crowns",
-      "long_desc": "The gold crowns are rustic and used.",
-      "keywords": [
-        "gold",
-        "coins",
-        "crowns",
-        "money",
-        "currency"
-      ],
-      "weight": 7,
-      "size": 1,
-      "base_value": 100,
-      "item_type": "currency",
-      "equipment_slot": null,
-      "flags": {
-        "takeable": true,
-        "stackable": true
-      },
-      "max_stack": 9999999,
-      "stealth_modifier": 0,
+      "spellcasting_modifier": 0,
+      "lockpicking_modifier": 0,
+      "perception_modifier": 0,
+      "critical_chance_modifier": 0,
+      "magic_resistance_modifier": 0,
+      "trap_modifier": 0,
       "effect_slots": 0,
       "rarity": "common"
     },
@@ -1125,6 +1600,12 @@
       },
       "max_stack": 9999999,
       "stealth_modifier": 0,
+      "spellcasting_modifier": 0,
+      "lockpicking_modifier": 0,
+      "perception_modifier": 0,
+      "critical_chance_modifier": 0,
+      "magic_resistance_modifier": 0,
+      "trap_modifier": 0,
       "effect_slots": 0,
       "rarity": "common"
     },
@@ -1149,6 +1630,131 @@
       },
       "max_stack": 9999999,
       "stealth_modifier": 0,
+      "spellcasting_modifier": 0,
+      "lockpicking_modifier": 0,
+      "perception_modifier": 0,
+      "critical_chance_modifier": 0,
+      "magic_resistance_modifier": 0,
+      "trap_modifier": 0,
+      "effect_slots": 0,
+      "rarity": "common"
+    },
+    {
+      "name": "loaf of bread",
+      "short_desc": "a loaf of bread",
+      "long_desc": "A freshly baked loaf of bread with a golden crust and a soft, warm interior. It gives off a comforting aroma that hints at simple, hearty nourishment.",
+      "keywords": [
+        "loaf",
+        "bread"
+      ],
+      "weight": 10,
+      "size": 1,
+      "base_value": 20,
+      "item_type": "consumable",
+      "equipment_slot": null,
+      "flags": {
+        "cursed": false,
+        "hidden": false,
+        "no_drop": false,
+        "takeable": true,
+        "stackable": true,
+        "throwable": false,
+        "two_handed": false
+      },
+      "max_stack": 1,
+      "consumable_data": {
+        "charges": 3,
+        "effect_type": "heal",
+        "effect_value": 5
+      },
+      "requirements": {
+        "race": [],
+        "class": [],
+        "level": 0,
+        "wisdom": 0,
+        "charisma": 0,
+        "strength": 0,
+        "dexterity": 0,
+        "constitution": 0,
+        "intelligence": 0
+      },
+      "stat_modifiers": {
+        "wisdom": 0,
+        "charisma": 0,
+        "max_mana": 0,
+        "strength": 0,
+        "dexterity": 0,
+        "max_health": 0,
+        "constitution": 0,
+        "intelligence": 0
+      },
+      "stealth_modifier": 0,
+      "spellcasting_modifier": 0,
+      "lockpicking_modifier": 0,
+      "perception_modifier": 0,
+      "critical_chance_modifier": 0,
+      "magic_resistance_modifier": 0,
+      "trap_modifier": 0,
+      "effect_slots": 0,
+      "rarity": "common"
+    },
+    {
+      "name": "loaf of rye bread",
+      "short_desc": "a loaf of rye bread",
+      "long_desc": "A dense loaf of rye bread with a dark crust and a rich, earthy scent. Its firm texture and slightly sour aroma suggest a more filling and robust meal.",
+      "keywords": [
+        "loaf",
+        "rye",
+        "bread"
+      ],
+      "weight": 15,
+      "size": 1,
+      "base_value": 35,
+      "item_type": "consumable",
+      "equipment_slot": null,
+      "flags": {
+        "cursed": false,
+        "hidden": false,
+        "no_drop": false,
+        "takeable": true,
+        "stackable": true,
+        "throwable": false,
+        "two_handed": false
+      },
+      "max_stack": 1,
+      "consumable_data": {
+        "charges": 3,
+        "effect_type": "heal",
+        "effect_value": 15
+      },
+      "requirements": {
+        "race": [],
+        "class": [],
+        "level": 0,
+        "wisdom": 0,
+        "charisma": 0,
+        "strength": 0,
+        "dexterity": 0,
+        "constitution": 0,
+        "intelligence": 0
+      },
+      "stat_modifiers": {
+        "wisdom": 0,
+        "charisma": 0,
+        "max_mana": 0,
+        "strength": 0,
+        "dexterity": 0,
+        "max_health": 0,
+        "constitution": 0,
+        "intelligence": 0
+      },
+      "stealth_modifier": 0,
+      "spellcasting_modifier": 0,
+      "lockpicking_modifier": 0,
+      "perception_modifier": 0,
+      "critical_chance_modifier": 0,
+      "magic_resistance_modifier": 0,
+      "trap_modifier": 0,
       "effect_slots": 0,
       "rarity": "common"
     }

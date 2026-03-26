@@ -1,3 +1,5 @@
+import { renderNav } from './components/nav.js';
+
 (function() {
 
 interface QuestItemReward {
@@ -870,6 +872,7 @@ function setupTabs(): void {
 // ============================================================================
 
 document.addEventListener('DOMContentLoaded', async () => {
+  renderNav({ activePage: 'quest-editor', helpDoc: 'Quest_System_Guide.md' });
   const hasAccess = await checkAuth();
   if (!hasAccess) return;
 

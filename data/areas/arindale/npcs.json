@@ -1,0 +1,155 @@
+{
+  "version": "1.0",
+  "exported_at": "2026-03-26T00:18:09.851Z",
+  "type": "npcs",
+  "data": [
+    {
+      "name": "Zifnab",
+      "description": "A gaunt, wild-eyed mage in layered, timeworn robes that shimmer faintly, as if caught between moments, with tangled hair and a beard that refuses to be tamed. His gaze burns with unsettling intensity, hinting at knowledge both ancient and impossibly out of place. Power coils around him like a barely contained storm, making it clear this is no ordinary spell merchant.",
+      "spawnRoomTag": "market_mage_spells",
+      "health": 220,
+      "maxHealth": 220,
+      "hostile": false,
+      "respawnTime": 300,
+      "level": 20,
+      "experienceReward": 350,
+      "maxMana": 250,
+      "baseAccuracy": 50,
+      "baseDefense": 50,
+      "baseCritChance": 10,
+      "baseDodge": 20,
+      "damageReduction": 5,
+      "traits": [
+        "see_hidden"
+      ],
+      "fleeEnabled": false,
+      "fleeHpPercent": 20,
+      "callForHelpChance": 20,
+      "maxActive": 1,
+      "interactable": true,
+      "allowedAreas": [],
+      "roamEnabled": false,
+      "roamInterval": 60,
+      "roamChance": 10,
+      "essenceReward": 0,
+      "essenceClass": null,
+      "leaveCorpse": true,
+      "corpseDuration": 300,
+      "augmentations": [],
+      "enterRoomMessage": "{name} drifts in from the {direction}.",
+      "exitRoomMessage": "{name} seems to float out to the room to the {direction}.",
+      "spawnMessage": "{name} appears in a puff of smoke!",
+      "merchantEnabled": true,
+      "properName": true,
+      "spellPower": 70,
+      "enabled": true,
+      "primaryFactionName": "Arindale Merchants Guild",
+      "attacks": [
+        {
+          "attackType": "melee",
+          "name": "golden dragon staff",
+          "minDamage": 12,
+          "maxDamage": 25,
+          "attacksPerRound": 4,
+          "percentage": 100,
+          "hitMessage": null,
+          "missMessage": null,
+          "hitVerb": "cracks",
+          "hitVerb3p": "cracks",
+          "missVerb": "misses",
+          "missVerb3p": "misses"
+        }
+      ],
+      "spells": [
+        {
+          "spellMnemonic": "mete",
+          "priority": 50,
+          "castChance": 100,
+          "conditionType": "any",
+          "conditionValue": 0,
+          "cooldownRounds": 0
+        }
+      ]
+    },
+    {
+      "name": "Ysabel",
+      "description": "Ysabel Venn is a wiry, sharp-eyed shopkeeper stands behind the counter, her fingers constantly sorting coins with practiced precision. Her clothes are a patchwork of fabrics from a dozen regions, each piece worn but meticulously maintained. A knowing half-smile lingers, as if she has already sized you up and priced you accordingly.",
+      "spawnRoomTag": "market_general",
+      "health": 100,
+      "maxHealth": 100,
+      "hostile": false,
+      "respawnTime": 300,
+      "level": 5,
+      "experienceReward": 100,
+      "maxMana": 0,
+      "baseAccuracy": 50,
+      "baseDefense": 50,
+      "baseCritChance": 5,
+      "baseDodge": 5,
+      "damageReduction": 0,
+      "traits": [],
+      "fleeEnabled": false,
+      "fleeHpPercent": 20,
+      "callForHelpChance": 0,
+      "maxActive": 1,
+      "interactable": true,
+      "allowedAreas": [
+        "Arindale"
+      ],
+      "roamEnabled": false,
+      "roamInterval": 60,
+      "roamChance": 10,
+      "essenceReward": 0,
+      "essenceClass": null,
+      "leaveCorpse": true,
+      "corpseDuration": 300,
+      "augmentations": [],
+      "enterRoomMessage": "{name} slips into the room from the {direction}.",
+      "exitRoomMessage": "{name} slips out of the room to the {direction}.",
+      "spawnMessage": "{name} appears behind the counter from the backroom.",
+      "merchantEnabled": true,
+      "properName": true,
+      "spellPower": 0,
+      "enabled": true,
+      "primaryFactionName": "Arindale Merchants Guild",
+      "attacks": [
+        {
+          "attackType": "melee",
+          "name": "broomstick",
+          "minDamage": 8,
+          "maxDamage": 12,
+          "attacksPerRound": 2,
+          "percentage": 100,
+          "hitMessage": null,
+          "missMessage": null,
+          "hitVerb": "smacks",
+          "hitVerb3p": "smacks",
+          "missVerb": "misses",
+          "missVerb3p": "misses"
+        }
+      ],
+      "merchantInventory": [
+        {
+          "itemName": "loaf of bread",
+          "maxStock": 10,
+          "restockChance": 100
+        },
+        {
+          "itemName": "loaf of rye bread",
+          "maxStock": 10,
+          "restockChance": 100
+        },
+        {
+          "itemName": "torch",
+          "maxStock": 10,
+          "restockChance": 100
+        },
+        {
+          "itemName": "lantern",
+          "maxStock": 10,
+          "restockChance": 100
+        }
+      ]
+    }
+  ]
+}

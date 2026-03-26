@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "exported_at": "2026-03-15T13:33:32.864Z",
+  "exported_at": "2026-03-26T00:18:09.790Z",
   "type": "classes",
   "data": [
     {
@@ -18,10 +18,18 @@
       "playable": true,
       "combat_level": 3,
       "magic_level": 2,
-      "stealth": false,
       "crit_bonus": 0,
       "dodge_bonus": 0,
-      "special_abilities": []
+      "traits": [
+        "stealth",
+        "lockpicking",
+        "pickpocket",
+        "spellcasting"
+      ],
+      "armor_type_restrictions": [
+        "robe",
+        "leather"
+      ]
     },
     {
       "class_id": "cleric",
@@ -38,10 +46,10 @@
       "playable": true,
       "combat_level": 3,
       "magic_level": 2,
-      "stealth": false,
       "crit_bonus": 0,
       "dodge_bonus": 0,
-      "special_abilities": []
+      "traits": [],
+      "armor_type_restrictions": []
     },
     {
       "class_id": "druid",
@@ -57,10 +65,10 @@
       "playable": true,
       "combat_level": 2,
       "magic_level": 3,
-      "stealth": false,
       "crit_bonus": 0,
       "dodge_bonus": 0,
-      "special_abilities": []
+      "traits": [],
+      "armor_type_restrictions": []
     },
     {
       "class_id": "gypsy",
@@ -76,10 +84,10 @@
       "playable": true,
       "combat_level": 2,
       "magic_level": 2,
-      "stealth": false,
       "crit_bonus": 0,
       "dodge_bonus": 0,
-      "special_abilities": []
+      "traits": [],
+      "armor_type_restrictions": []
     },
     {
       "class_id": "mage",
@@ -94,10 +102,10 @@
       "playable": true,
       "combat_level": 1,
       "magic_level": 3,
-      "stealth": false,
       "crit_bonus": 0,
       "dodge_bonus": 0,
-      "special_abilities": []
+      "traits": [],
+      "armor_type_restrictions": []
     },
     {
       "class_id": "missionary",
@@ -113,10 +121,10 @@
       "playable": true,
       "combat_level": 2,
       "magic_level": 2,
-      "stealth": false,
       "crit_bonus": 0,
       "dodge_bonus": 0,
-      "special_abilities": []
+      "traits": [],
+      "armor_type_restrictions": []
     },
     {
       "class_id": "mystic",
@@ -132,10 +140,10 @@
       "playable": true,
       "combat_level": 3,
       "magic_level": 2,
-      "stealth": false,
       "crit_bonus": 10,
       "dodge_bonus": 25,
-      "special_abilities": []
+      "traits": [],
+      "armor_type_restrictions": []
     },
     {
       "class_id": "ninja",
@@ -152,10 +160,13 @@
       "playable": true,
       "combat_level": 3,
       "magic_level": 0,
-      "stealth": false,
       "crit_bonus": 10,
       "dodge_bonus": 25,
-      "special_abilities": []
+      "traits": [
+        "stealth",
+        "traps"
+      ],
+      "armor_type_restrictions": []
     },
     {
       "class_id": "paladin",
@@ -172,10 +183,10 @@
       "playable": true,
       "combat_level": 4,
       "magic_level": 1,
-      "stealth": false,
       "crit_bonus": 0,
       "dodge_bonus": 0,
-      "special_abilities": []
+      "traits": [],
+      "armor_type_restrictions": []
     },
     {
       "class_id": "priest",
@@ -191,10 +202,10 @@
       "playable": true,
       "combat_level": 1,
       "magic_level": 3,
-      "stealth": false,
       "crit_bonus": 0,
       "dodge_bonus": 0,
-      "special_abilities": []
+      "traits": [],
+      "armor_type_restrictions": []
     },
     {
       "class_id": "ranger",
@@ -211,10 +222,10 @@
       "playable": true,
       "combat_level": 4,
       "magic_level": 1,
-      "stealth": false,
       "crit_bonus": 0,
       "dodge_bonus": 0,
-      "special_abilities": []
+      "traits": [],
+      "armor_type_restrictions": []
     },
     {
       "class_id": "thief",
@@ -231,14 +242,15 @@
       "playable": true,
       "combat_level": 2,
       "magic_level": 0,
-      "stealth": true,
       "crit_bonus": 0,
       "dodge_bonus": 0,
-      "special_abilities": [
+      "traits": [
         "lockpicking",
         "traps",
-        "pickpocket"
-      ]
+        "pickpocket",
+        "stealth"
+      ],
+      "armor_type_restrictions": []
     },
     {
       "class_id": "warlock",
@@ -254,10 +266,10 @@
       "playable": true,
       "combat_level": 3,
       "magic_level": 2,
-      "stealth": false,
       "crit_bonus": 0,
       "dodge_bonus": 0,
-      "special_abilities": []
+      "traits": [],
+      "armor_type_restrictions": []
     },
     {
       "class_id": "warrior",
@@ -273,10 +285,10 @@
       "playable": true,
       "combat_level": 4,
       "magic_level": 0,
-      "stealth": false,
       "crit_bonus": 0,
       "dodge_bonus": 0,
-      "special_abilities": []
+      "traits": [],
+      "armor_type_restrictions": []
     },
     {
       "class_id": "witchunter",
@@ -292,10 +304,17 @@
       "playable": true,
       "combat_level": 5,
       "magic_level": 0,
-      "stealth": false,
       "crit_bonus": 0,
       "dodge_bonus": 0,
-      "special_abilities": []
+      "traits": [
+        "no_magic_items"
+      ],
+      "armor_type_restrictions": [
+        "robe",
+        "leather",
+        "chainmail",
+        "scalemail"
+      ]
     }
   ]
 }

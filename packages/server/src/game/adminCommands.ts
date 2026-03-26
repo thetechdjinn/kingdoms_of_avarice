@@ -148,6 +148,8 @@ export async function processAdminCommand(
       return handleItemInfo(args);
     case 'give':
       return handleGive(args, socket);
+    case 'currency':
+      return handleCurrency(args, socket);
     case 'hurt':
       return await handleHurt(args, socket);
     case 'heal':
@@ -874,6 +876,43 @@ async function handleGive(
   } catch (error) {
     return { type: MessageType.ERROR, message: `Failed to give item: ${error}` };
   }
+}
+
+async function handleCurrency(
+  args: string[],
+  socket: AuthenticatedSocket
+): Promise<CommandResponse> {
+  // @currency <amount> [type] - Give yourself currency
+  // type: copper, silver, gold, platinum, runic (default: gold)
+  if (!socket.characterId) {
+    return { type: MessageType.ERROR, message: 'No character selected.' };
+  }
+
+  if (args.length < 1) {
+    return { type: MessageType.ERROR, message: 'Usage: @currency <amount> [copper|silver|gold|platinum|runic]' };
+  }
+
+  const amount = parseInt(args[0]);
+  if (isNaN(amount) || amount <= 0) {
+    return { type: MessageType.ERROR, message: 'Amount must be a positive number.' };
+  }
+
+  const type = (args[1] || 'gold').toLowerCase();
+  const validTypes = ['copper', 'silver', 'gold', 'platinum', 'runic'];
+  if (!validTypes.includes(type)) {
+    return { type: MessageType.ERROR, message: `Invalid currency type. Must be one of: ${validTypes.join(', ')}` };
+  }
+
+  await characterRepo.addCurrency(socket.characterId, type as 'copper' | 'silver' | 'gold' | 'platinum' | 'runic', amount);
+
+  // Convert to copper equivalent for display
+  const rates: Record<string, number> = { copper: 1, silver: 10, gold: 100, platinum: 1000, runic: 100000 };
+  const copperValue = amount * rates[type];
+
+  return {
+    type: MessageType.SYSTEM,
+    message: `${colors.boldGreen('Received:')} ${amount} ${type} (${formatCopperAsDenominations(copperValue)})`,
+  };
 }
 
 async function handleHurt(
@@ -1961,6 +2000,7 @@ function handleAdminHelp(userRoles: Role[]): CommandResponse {
   lines.push(`  ${colors.boldCyan('@rooms')}                  - List all rooms`);
   lines.push(`  ${colors.boldCyan('@roominfo [id]')}          - Show room details`);
   lines.push(`  ${colors.boldCyan('@give <id|name> [quantity]')} - Give yourself an item`);
+  lines.push(`  ${colors.boldCyan('@currency <amount> [type]')} - Give yourself currency (default: gold)`);
   lines.push(`  ${colors.boldCyan('@hurt [amount] [player]')} - Damage HP (for testing regen)`);
   lines.push(`  ${colors.boldCyan('@heal [amount] [player]')} - Restore HP (heals self or player)`);
   lines.push(`  ${colors.boldCyan('@drain [amount] [player]')} - Drain mana (for testing regen)`);
