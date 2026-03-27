@@ -793,18 +793,27 @@ async function handleDebuffSpell(
 }
 
 /**
- * Handle utility spell casting (placeholder)
+ * Handle utility spell casting (learned spells only, not scrolls).
+ * Utility spells with a status effect are treated as self-buffs.
+ * Teleport/portal as learned spells are not yet supported (destination data
+ * lives on scrolls, not spell definitions; see Scroll_Creation.md).
  */
 async function handleUtilitySpell(
-  _socket: AuthenticatedSocket,
+  socket: AuthenticatedSocket,
   spell: Spell,
   _args: string[],
   _connectedPlayers: Map<number, AuthenticatedSocket>
 ): Promise<CommandResponse> {
-  // Utility effects not yet implemented — refuse to cast rather than consume mana
+  // Utility spells with a status effect work through the buff pipeline
+  if (spell.statusEffect) {
+    return handleBuffSpell(socket, spell);
+  }
+
+  // Teleport/portal as learned spells require destination data on the spell itself,
+  // which is not yet part of the data model. Scrolls handle this via consumable_data.
   return {
     type: MessageType.ERROR,
-    message: `${spell.name} cannot be cast yet. (Utility effects not yet implemented)`,
+    message: `${spell.name} can only be used from a scroll.`,
   };
 }
 

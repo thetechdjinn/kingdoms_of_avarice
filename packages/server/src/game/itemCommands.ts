@@ -1,4 +1,4 @@
-import { MessageType, ItemLocationType, ItemInstance, getItemDisplayName, EquipmentSlot, ItemType, TWO_HANDED_BLOCKED_SLOTS, getAlternatePairedSlot, ItemCondition, CraftingRecipe, AppliedEnchantment, Currency, ItemTemplate, ConsumableData, SpellType } from '@koa/shared';
+import { MessageType, ItemLocationType, ItemInstance, getItemDisplayName, EquipmentSlot, ItemType, TWO_HANDED_BLOCKED_SLOTS, getAlternatePairedSlot, ItemCondition, CraftingRecipe, AppliedEnchantment, Currency, ItemTemplate, ConsumableData, SpellType, DoorType } from '@koa/shared';
 import { CommandResponse } from './commands.js';
 import { AuthenticatedSocket, broadcastToRoom, sendMessage, sendVitals } from './socket.js';
 import { getPlayerLocation } from './adminCommands.js';
@@ -2144,8 +2144,7 @@ async function handleCastScroll(
       return handleScrollDebuff(socket, spell, item, template, consumableData, currentRoomId, targetArgs, connectedPlayers, consumeScroll, broadcastScrollUse, checkFizzleAndConsume);
 
     case SpellType.UTILITY:
-      // Utility scrolls handled in Phase 3
-      return { type: MessageType.ERROR, message: `The magic in this scroll is too complex to invoke. (Utility scrolls not yet implemented)` };
+      return handleScrollUtility(socket, spell, item, template, consumableData, currentRoomId, connectedPlayers, consumeScroll, broadcastScrollUse, checkFizzleAndConsume);
 
     default:
       return { type: MessageType.ERROR, message: `The writing on this scroll is illegible.` };
@@ -2613,6 +2612,217 @@ async function handleScrollDebuff(
     : `The scroll's magic strikes ${colors.magenta(target.username)}. ${result.message} (${durationStr})`;
 
   return { type: MessageType.OUTPUT, message: selfMsg };
+}
+
+// ---- Utility Scroll: teleport, portal, or status-effect utility ----
+async function handleScrollUtility(
+  socket: AuthenticatedSocket,
+  spell: import('@koa/shared').Spell,
+  item: ItemInstance,
+  template: ItemTemplate,
+  consumableData: ConsumableData,
+  currentRoomId: number,
+  connectedPlayers: Map<number, AuthenticatedSocket> | undefined,
+  consumeScroll: () => Promise<void>,
+  broadcastScrollUse: () => void,
+  checkFizzleAndConsume: () => Promise<CommandResponse | null>,
+): Promise<CommandResponse> {
+  // Dispatch by available data: portal_door_id > destination_room_id > statusEffect
+  if (consumableData.portal_door_id) {
+    return handleScrollPortal(socket, spell, template, consumableData, currentRoomId, consumeScroll, broadcastScrollUse, checkFizzleAndConsume);
+  }
+
+  if (consumableData.destination_room_id) {
+    return handleScrollTeleport(socket, spell, template, consumableData, currentRoomId, connectedPlayers, consumeScroll, broadcastScrollUse, checkFizzleAndConsume);
+  }
+
+  // Utility spell with status effect: treat as self-buff
+  if (spell.statusEffect) {
+    return handleScrollBuff(socket, spell, item, template, consumableData, currentRoomId, consumeScroll, broadcastScrollUse, checkFizzleAndConsume);
+  }
+
+  return { type: MessageType.ERROR, message: `The scroll's magic has no discernible effect.` };
+}
+
+// ---- Teleport Scroll: one-way instant move to destination_room_id ----
+async function handleScrollTeleport(
+  socket: AuthenticatedSocket,
+  spell: import('@koa/shared').Spell,
+  template: ItemTemplate,
+  consumableData: ConsumableData,
+  currentRoomId: number,
+  connectedPlayers: Map<number, AuthenticatedSocket> | undefined,
+  consumeScroll: () => Promise<void>,
+  broadcastScrollUse: () => void,
+  checkFizzleAndConsume: () => Promise<CommandResponse | null>,
+): Promise<CommandResponse> {
+  const destRoomId = consumableData.destination_room_id!;
+  const world = getWorldRef();
+  if (!world) {
+    return { type: MessageType.ERROR, message: `The scroll's magic fizzles. The world is not ready.` };
+  }
+
+  const destRoom = world.getRoom(destRoomId);
+  if (!destRoom) {
+    return { type: MessageType.ERROR, message: `The scroll's magic pulls at you, but the destination no longer exists.` };
+  }
+
+  // Cannot teleport while dead, dropped, or in combat
+  if (isPlayerDead(socket)) {
+    return { type: MessageType.ERROR, message: `You can't do that while dead!` };
+  }
+  if (isPlayerDropped(socket)) {
+    return { type: MessageType.ERROR, message: `You can't do that while incapacitated!` };
+  }
+  if (socket.combatState?.targets?.size > 0) {
+    return { type: MessageType.ERROR, message: `You can't use that while in combat!` };
+  }
+
+  // Fizzle check (consumes scroll on fizzle)
+  const fizzleResult = await checkFizzleAndConsume();
+  if (fizzleResult) return fizzleResult;
+
+  if (isStealthing(socket)) {
+    breakStealth(socket, 'spell_cast', true);
+  }
+
+  // Consume scroll
+  await consumeScroll();
+
+  const itemNameWithArticle = withArticle(template.name);
+
+  // Departure broadcast (replaces broadcastScrollUse — teleport has its own departure message)
+  if (consumableData.use_message_room) {
+    broadcastToRoom(currentRoomId, replaceConsumablePlaceholders(consumableData.use_message_room, socket.username, itemNameWithArticle), socket.playerId);
+  } else {
+    broadcastToRoom(currentRoomId, `${socket.username} vanishes in a flash of light.`, socket.playerId);
+  }
+
+  // Persist room to database first (before in-memory update) to avoid desync on DB failure
+  if (socket.characterId) {
+    await characterRepo.updateCharacterRoom(socket.characterId, destRoomId);
+  }
+
+  // Move player in memory
+  const { setPlayerLocation } = await import('./adminCommands.js');
+  setPlayerLocation(socket.playerId, destRoomId);
+
+  // Arrival broadcast
+  broadcastToRoom(destRoomId, `${socket.username} appears in a flash of light.`, socket.playerId);
+
+  // Build room description with vision check
+  const { calculateEffectiveVision: calcVision, canSee: canSeeRoom, getBlindMessage, getDarknessTag } = await import('./vision.js');
+  const { getPlayersInRoom, getNpcDisplayNames } = await import('./commands.js');
+
+  const effectiveVision = await calcVision(socket);
+  let roomDescription: string;
+
+  if (!canSeeRoom(effectiveVision, destRoom.darkness_level)) {
+    roomDescription = getBlindMessage(destRoom.darkness_level);
+  } else {
+    const darknessTag = getDarknessTag(destRoom.darkness_level);
+    const otherPlayers = connectedPlayers
+      ? getPlayersInRoom(destRoomId, connectedPlayers, socket.canSeeHidden, socket.playerId)
+      : [];
+    const npcNames = getNpcDisplayNames(destRoomId);
+    const itemDescriptions = await getRoomItemsDescription(destRoomId);
+    roomDescription = world.formatRoomDescription(destRoom, otherPlayers, false, itemDescriptions, npcNames, darknessTag);
+  }
+
+  // Self message
+  const selfMsg = consumableData.use_message_self
+    ? replaceConsumablePlaceholders(consumableData.use_message_self, socket.username, colors.item(itemNameWithArticle))
+    : colors.boldWhite('The scroll\'s magic envelops you and the world shifts around you.');
+
+  // Defer hostile aggro check until after room description is sent
+  const { checkHostileAggro: checkAggro } = await import('./npcManager.js');
+  const { checkVisitTrigger } = await import('./questManager.js');
+  setImmediate(() => checkAggro(destRoomId, socket));
+  setImmediate(() => checkVisitTrigger(socket, destRoomId));
+
+  return { type: MessageType.OUTPUT, message: `${selfMsg}\r\n\r\n${roomDescription}` };
+}
+
+// ---- Portal Scroll: spawn a two-way TEMPORARY_PORTAL with dynamic origin ----
+async function handleScrollPortal(
+  socket: AuthenticatedSocket,
+  _spell: import('@koa/shared').Spell,
+  template: ItemTemplate,
+  consumableData: ConsumableData,
+  currentRoomId: number,
+  consumeScroll: () => Promise<void>,
+  broadcastScrollUse: () => void,
+  checkFizzleAndConsume: () => Promise<CommandResponse | null>,
+): Promise<CommandResponse> {
+  const portalDoorId = consumableData.portal_door_id!;
+  const doorStateManager = await import('../services/doorStateManager.js');
+
+  const portalDoor = doorStateManager.getDoor(portalDoorId);
+  if (!portalDoor) {
+    return { type: MessageType.ERROR, message: `The scroll's magic surges but finds no anchor. The parchment remains intact.` };
+  }
+
+  if (portalDoor.doorType !== DoorType.TEMPORARY_PORTAL) {
+    return { type: MessageType.ERROR, message: `The scroll's magic surges but finds no anchor. The parchment remains intact.` };
+  }
+
+  // Check if portal is already active
+  if (doorStateManager.isPortalActive(portalDoorId)) {
+    return { type: MessageType.ERROR, message: `A portal of this type is already open somewhere.` };
+  }
+
+  // Cannot spawn portal while dead, dropped, or in combat
+  if (isPlayerDead(socket)) {
+    return { type: MessageType.ERROR, message: `You can't do that while dead!` };
+  }
+  if (isPlayerDropped(socket)) {
+    return { type: MessageType.ERROR, message: `You can't do that while incapacitated!` };
+  }
+  if (socket.combatState?.targets?.size > 0) {
+    return { type: MessageType.ERROR, message: `You can't use that while in combat!` };
+  }
+
+  // Fizzle check (consumes scroll on fizzle)
+  const fizzleResult = await checkFizzleAndConsume();
+  if (fizzleResult) return fizzleResult;
+
+  if (isStealthing(socket)) {
+    breakStealth(socket, 'spell_cast', true);
+  }
+
+  // Spawn the portal BEFORE consuming scroll to avoid losing item on config errors
+  const spawned = doorStateManager.spawnPortal(portalDoorId, currentRoomId);
+  if (!spawned) {
+    return { type: MessageType.ERROR, message: `The scroll's magic surges but finds no anchor. The parchment remains intact.` };
+  }
+
+  // Portal spawned successfully — now consume the scroll
+  await consumeScroll();
+  broadcastScrollUse();
+
+  // Portal appearance broadcasts
+  const portalName = portalDoor.itemDisplayName || 'a shimmering portal';
+  const capitalizedName = portalName.charAt(0).toUpperCase() + portalName.slice(1);
+  const appearMsg = portalDoor.appearMessage || `${capitalizedName} materializes out of thin air!`;
+
+  // Broadcast to caster's room (origin)
+  broadcastToRoom(currentRoomId, appearMsg, socket.playerId);
+
+  // Broadcast to destination room
+  if (portalDoor.exitRoomId && portalDoor.exitRoomId !== currentRoomId) {
+    broadcastToRoom(portalDoor.exitRoomId, appearMsg);
+  }
+
+  const itemNameWithArticle = withArticle(template.name);
+  const selfMsg = consumableData.use_message_self
+    ? replaceConsumablePlaceholders(consumableData.use_message_self, socket.username, colors.item(itemNameWithArticle))
+    : colors.boldWhite(`You read the scroll and ${portalName} materializes before you!`);
+
+  const durationNote = portalDoor.durationSeconds
+    ? ` It will not remain open for long.`
+    : '';
+
+  return { type: MessageType.OUTPUT, message: `${selfMsg}${durationNote}` };
 }
 
 // ============================================================================
