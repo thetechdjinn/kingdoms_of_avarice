@@ -2533,6 +2533,8 @@ function getHelpSections(): HelpSection[] {
         `  ${colors.gray('Learning scrolls teach you a spell permanently.')}`,
         `  ${colors.gray('Casting scrolls cast a spell once and are consumed.')}`,
         `  ${colors.gray('Offensive and debuff scrolls require a target.')}`,
+        `  ${colors.gray('Teleport scrolls move you to a fixed destination.')}`,
+        `  ${colors.gray('Portal scrolls open a temporary two-way passage.')}`,
       ],
     },
     {

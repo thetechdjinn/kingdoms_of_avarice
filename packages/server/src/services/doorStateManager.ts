@@ -31,8 +31,12 @@ const doorsByRoomId = new Map<number, Door[]>();
 const autoResetTimers = new Map<number, NodeJS.Timeout>();
 
 // Active temporary portals (spawned and not yet expired)
-// Key: door ID, Value: timestamp when portal was spawned
-const activePortals = new Map<number, number>();
+// Key: door ID, Value: spawn data (timestamp + optional dynamic origin room)
+interface ActivePortalData {
+  spawnedAt: number;
+  originRoomId?: number;  // Dynamic origin for scroll-spawned portals (caster's room)
+}
+const activePortals = new Map<number, ActivePortalData>();
 
 // Expiration timers for temporary portals
 // Key: door ID, Value: NodeJS.Timeout
@@ -519,15 +523,17 @@ export function canPassThrough(
     return { allowed: false, reason: 'Door not found.' };
   }
 
-  // Check if door connects from this room
+  // Check if door connects from this room (including dynamic origin for scroll-spawned portals)
   const isEntryRoom = door.entryRoomId === fromRoomId;
   const isExitRoom = door.exitRoomId === fromRoomId;
-  if (!isEntryRoom && !isExitRoom) {
+  const portalData = activePortals.get(doorId);
+  const isDynamicOrigin = portalData?.originRoomId === fromRoomId;
+  if (!isEntryRoom && !isExitRoom && !isDynamicOrigin) {
     return { allowed: false, reason: 'This door does not lead from here.' };
   }
 
-  // For one-way doors, can only go from entry side
-  if (!door.exitRoomId && !isEntryRoom) {
+  // For one-way doors, can only go from entry side (dynamic origin counts as entry)
+  if (!door.exitRoomId && !isEntryRoom && !isDynamicOrigin) {
     return { allowed: false, reason: 'You cannot go that way.' };
   }
 
@@ -579,11 +585,26 @@ export function canPassThrough(
 
 /**
  * Get the destination room when passing through a door
+ * For scroll-spawned portals with a dynamic origin, the origin room is used
+ * instead of the door's entryRoomId (which may be null/0).
  */
 export function getDestinationRoom(doorId: number, fromRoomId: number): number | null {
   const door = doorsById.get(doorId);
   if (!door) return null;
 
+  // Check for dynamic origin (scroll-spawned portals)
+  const portalData = activePortals.get(doorId);
+  if (portalData?.originRoomId) {
+    if (fromRoomId === portalData.originRoomId) {
+      return door.exitRoomId;
+    }
+    if (fromRoomId === door.exitRoomId) {
+      return portalData.originRoomId;
+    }
+    return null;
+  }
+
+  // Standard bidirectional door logic
   if (door.entryRoomId === fromRoomId) {
     return door.exitRoomId;
   }
@@ -723,6 +744,36 @@ export function findSpecialDoorByDisplayName(
 }
 
 // ============================================================================
+// Dynamic Room Index Helpers (for scroll-spawned portals)
+// ============================================================================
+
+/**
+ * Add a door to a room's index (used when a portal spawns with a dynamic origin room)
+ */
+function addDoorToRoomIndex(door: Door, roomId: number): void {
+  let roomDoors = doorsByRoomId.get(roomId);
+  if (!roomDoors) {
+    roomDoors = [];
+    doorsByRoomId.set(roomId, roomDoors);
+  }
+  if (!roomDoors.some(d => d.id === door.id)) {
+    roomDoors.push(door);
+  }
+}
+
+/**
+ * Remove a door from a room's index (used when a dynamic-origin portal expires or despawns)
+ */
+function removeDoorFromRoomIndex(doorId: number, roomId: number): void {
+  const roomDoors = doorsByRoomId.get(roomId);
+  if (roomDoors) {
+    const idx = roomDoors.findIndex(d => d.id === doorId);
+    if (idx >= 0) roomDoors.splice(idx, 1);
+    if (roomDoors.length === 0) doorsByRoomId.delete(roomId);
+  }
+}
+
+// ============================================================================
 // Temporary Portal Functions
 // ============================================================================
 
@@ -736,9 +787,11 @@ export function isPortalActive(doorId: number): boolean {
 /**
  * Spawn a temporary portal, making it visible and usable
  * Starts the expiration timer based on the door's durationSeconds
+ * @param doorId - The door ID of the TEMPORARY_PORTAL to spawn
+ * @param originRoomId - Optional dynamic origin room (for scroll-spawned portals where the caster's room becomes one end)
  * @returns true if portal was spawned, false if door doesn't exist or isn't a temporary portal
  */
-export function spawnPortal(doorId: number): boolean {
+export function spawnPortal(doorId: number, originRoomId?: number): boolean {
   const door = doorsById.get(doorId);
   if (!door) return false;
 
@@ -750,8 +803,19 @@ export function spawnPortal(doorId: number): boolean {
   // Cancel any existing expiration timer (in case portal is being re-spawned)
   cancelPortalExpirationTimer(doorId);
 
+  // Clean up previous dynamic origin index if re-spawning
+  const prevData = activePortals.get(doorId);
+  if (prevData?.originRoomId) {
+    removeDoorFromRoomIndex(doorId, prevData.originRoomId);
+  }
+
   // Mark portal as active
-  activePortals.set(doorId, Date.now());
+  activePortals.set(doorId, { spawnedAt: Date.now(), originRoomId });
+
+  // If dynamic origin, add door to that room's index so trigger text works from the origin room
+  if (originRoomId) {
+    addDoorToRoomIndex(door, originRoomId);
+  }
 
   // Start expiration timer if duration is set
   if (door.durationSeconds && door.durationSeconds > 0) {
@@ -769,8 +833,14 @@ export function despawnPortal(doorId: number): boolean {
   const door = doorsById.get(doorId);
   if (!door) return false;
 
-  if (!activePortals.has(doorId)) {
+  const portalData = activePortals.get(doorId);
+  if (!portalData) {
     return false; // Portal wasn't active
+  }
+
+  // Clean up dynamic origin room index
+  if (portalData.originRoomId) {
+    removeDoorFromRoomIndex(doorId, portalData.originRoomId);
   }
 
   // Remove from active portals
@@ -817,27 +887,41 @@ function cancelPortalExpirationTimer(doorId: number): void {
  * Called when a portal's expiration timer fires
  */
 function expirePortal(door: Door): void {
+  const portalData = activePortals.get(door.id);
+
+  // Clean up dynamic origin room index before removing from active portals
+  if (portalData?.originRoomId) {
+    removeDoorFromRoomIndex(door.id, portalData.originRoomId);
+  }
+
   // Remove from active portals
   activePortals.delete(door.id);
 
-  // Broadcast disappearance to the room
+  // Broadcast disappearance to rooms
   if (broadcastCallback) {
     // Use custom disappear message if set, otherwise generate default
     let message: string;
     if (door.disappearMessage) {
       message = door.disappearMessage;
     } else {
-      // Use the display name as-is (it already has an article like "a whirling vortex")
-      // Capitalize first letter for sentence start
       const portalName = door.itemDisplayName || 'the portal';
       const capitalizedName = portalName.charAt(0).toUpperCase() + portalName.slice(1);
       message = `${capitalizedName} vanishes!`;
     }
-    broadcastCallback(door.entryRoomId, message);
 
-    // Also broadcast to exit room if it's a two-way portal
+    // Broadcast to static rooms (entryRoomId may be 0/null for scroll-spawned portals)
+    if (door.entryRoomId) {
+      broadcastCallback(door.entryRoomId, message);
+    }
     if (door.exitRoomId) {
       broadcastCallback(door.exitRoomId, message);
+    }
+
+    // Broadcast to dynamic origin room if different from static rooms
+    if (portalData?.originRoomId &&
+        portalData.originRoomId !== door.entryRoomId &&
+        portalData.originRoomId !== door.exitRoomId) {
+      broadcastCallback(portalData.originRoomId, message);
     }
   }
 }

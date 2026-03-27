@@ -480,6 +480,7 @@ function formatCopper(copper: number): string {
         consumableDestRoomSelect.clear();
       }
     }
+    (document.getElementById('consumable-portal-door-id') as HTMLInputElement).value = c.portal_door_id ? String(c.portal_door_id) : '';
 
     // Custom messages
     (document.getElementById('consumable-use-message-self') as HTMLInputElement).value = (c.use_message_self as string) || '';
@@ -666,6 +667,8 @@ function formatCopper(copper: number): string {
         consumableData.fizzle_chance = parseInt((document.getElementById('consumable-fizzle-chance') as HTMLInputElement).value) || 0;
         const destRoom = consumableDestRoomSelect?.getValue();
         if (destRoom) consumableData.destination_room_id = parseInt(destRoom);
+        const portalDoorId = parseInt((document.getElementById('consumable-portal-door-id') as HTMLInputElement).value);
+        if (portalDoorId > 0) consumableData.portal_door_id = portalDoorId;
       }
 
       if (!durationInput.disabled) {
@@ -786,6 +789,9 @@ function formatCopper(copper: number): string {
           if (c.destination_room_id) {
             const room = rooms.find(r => r.id === c.destination_room_id);
             html += `<div class="preview-stat">Destination: ${room ? escapeHtml(room.name) : `Room #${c.destination_room_id}`}</div>`;
+          }
+          if (c.portal_door_id) {
+            html += `<div class="preview-stat">Portal Door: #${c.portal_door_id}</div>`;
           }
         }
       } else {
