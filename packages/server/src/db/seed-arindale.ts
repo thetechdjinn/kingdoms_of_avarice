@@ -182,7 +182,7 @@ async function cleanup(client: import('pg').PoolClient): Promise<void> {
   await client.query('DELETE FROM npc_spells');
   await client.query('DELETE FROM npc_attacks');
   await client.query('DELETE FROM npc_instances');
-  await client.query('DELETE FROM merchant_responses');
+  await client.query('DELETE FROM npc_responses');
   await client.query('DELETE FROM merchant_inventory');
   await client.query('DELETE FROM npc_factions');
   await client.query('DELETE FROM npcs');

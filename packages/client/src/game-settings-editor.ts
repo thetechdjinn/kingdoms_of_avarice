@@ -60,6 +60,12 @@ function populateSettingsForm(): void {
   setInputValue('training_base_cost', settings.training_base_cost ?? 28);
   setInputValue('training_cost_multiplier', settings.training_cost_multiplier ?? 1.8);
   setInputValue('initial_character_points', settings.initial_character_points ?? 100);
+
+  // Room assignments (read-only)
+  const startingRoomId = settings.default_starting_room_id ? Number(settings.default_starting_room_id) : null;
+  const respawnRoomId = settings.default_respawn_room_id ? Number(settings.default_respawn_room_id) : null;
+  renderRoomInfo('room-starting', startingRoomId);
+  renderRoomInfo('room-respawn', respawnRoomId);
 }
 
 function setInputValue(key: string, value: unknown): void {
@@ -252,6 +258,49 @@ function showError(message: string): void {
   const loadingState = document.getElementById('loading-state');
   if (loadingState) {
     loadingState.innerHTML = `<span style="color: #ff4444;">${escapeHtml(message)}</span>`;
+  }
+}
+
+async function renderRoomInfo(containerId: string, roomId: number | null): Promise<void> {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+
+  if (!roomId) {
+    container.innerHTML = '<span class="room-not-set">Not configured</span>';
+    return;
+  }
+
+  try {
+    const res = await fetch(`/api/rooms/${roomId}`, { credentials: 'include' });
+    const data = await res.json();
+
+    if (data.success && data.room) {
+      const room = data.room;
+      container.innerHTML = `
+        <div class="room-info-row">
+          <div class="room-info-item">
+            <span class="room-info-label">ID:</span>
+            <span class="room-info-value">${room.id}</span>
+          </div>
+          <div class="room-info-item">
+            <span class="room-info-label">Name:</span>
+            <span class="room-info-value">${escapeHtml(room.name)}</span>
+          </div>
+          <div class="room-info-item">
+            <span class="room-info-label">Tag:</span>
+            <span class="room-info-value"><code>${escapeHtml(room.tag || 'none')}</code></span>
+          </div>
+          <div class="room-info-item">
+            <span class="room-info-label">Area:</span>
+            <span class="room-info-value">${escapeHtml(room.area || 'none')}</span>
+          </div>
+        </div>
+      `;
+    } else {
+      container.innerHTML = `<span class="room-not-set">Room ID ${roomId} not found</span>`;
+    }
+  } catch {
+    container.innerHTML = `<span class="room-not-set">Room ID ${roomId} (failed to load details)</span>`;
   }
 }
 

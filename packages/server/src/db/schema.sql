@@ -419,8 +419,8 @@ CREATE TABLE IF NOT EXISTS player_faction_reputation (
     UNIQUE(character_id, faction_id)
 );
 
--- Merchant responses (keyword-triggered NPC responses for directed speech)
-CREATE TABLE IF NOT EXISTS merchant_responses (
+-- NPC responses (keyword-triggered NPC responses for directed speech)
+CREATE TABLE IF NOT EXISTS npc_responses (
     id SERIAL PRIMARY KEY,
     npc_template_id INTEGER NOT NULL REFERENCES npcs(id) ON DELETE CASCADE,
     trigger_keywords TEXT[] NOT NULL,
@@ -451,4 +451,4 @@ CREATE INDEX IF NOT EXISTS idx_npc_factions_npc ON npc_factions(npc_id);
 CREATE INDEX IF NOT EXISTS idx_npc_factions_faction ON npc_factions(faction_id);
 CREATE INDEX IF NOT EXISTS idx_player_faction_rep_character ON player_faction_reputation(character_id);
 CREATE INDEX IF NOT EXISTS idx_player_faction_rep_faction ON player_faction_reputation(faction_id);
-CREATE INDEX IF NOT EXISTS idx_merchant_responses_npc ON merchant_responses(npc_template_id);
+CREATE INDEX IF NOT EXISTS idx_npc_responses_npc ON npc_responses(npc_template_id);

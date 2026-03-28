@@ -49,7 +49,7 @@ import {
   NO_LOCKPICK_BONUS,
 } from './stats/secondaryStats.js';
 import { StealthMode } from '@koa/shared';
-import { getAllNpcInstances, reloadNpcTemplates, reloadSpawnConfigs, isNpcDebugEnabled, setNpcDebug, getMerchantsInRoom, clearMerchantResponseCache, findNpcInRoom } from './npcManager.js';
+import { getAllNpcInstances, reloadNpcTemplates, reloadSpawnConfigs, isNpcDebugEnabled, setNpcDebug, getMerchantsInRoom, clearNpcResponseCache, findNpcInRoom } from './npcManager.js';
 import { evaluateSpellCondition, selectNpcSpell } from './npcSpellAI.js';
 import { resolveCombatTarget } from './combatMessaging.js';
 import * as merchantRepo from '../db/repositories/merchantRepository.js';
@@ -496,10 +496,10 @@ async function handleReload(
   args: string[],
   world: GameWorld
 ): Promise<CommandResponse> {
-  // @reload [rooms|items|mobs|effects|doors|actions|droptables|factions|merchants|merchantresponses|quests|progression|settings|spawns|all]
+  // @reload [rooms|items|mobs|effects|doors|actions|droptables|factions|merchants|npcresponses|quests|progression|settings|spawns|all]
   const target = args[0]?.toLowerCase() || 'all';
 
-  const validTargets = ['rooms', 'items', 'mobs', 'effects', 'doors', 'actions', 'droptables', 'factions', 'merchants', 'merchantresponses', 'quests', 'progression', 'settings', 'spawns', 'all'];
+  const validTargets = ['rooms', 'items', 'mobs', 'effects', 'doors', 'actions', 'droptables', 'factions', 'merchants', 'npcresponses', 'merchantresponses', 'quests', 'progression', 'settings', 'spawns', 'all'];
   if (!validTargets.includes(target)) {
     return { type: MessageType.ERROR, message: `Usage: @reload [${validTargets.join('|')}]` };
   }
@@ -559,9 +559,9 @@ async function handleReload(
       results.push(`${colors.green('✓')} Merchant restock processed (${restocked} non-common items restocked)`);
     }
 
-    if (target === 'merchantresponses' || target === 'all') {
-      clearMerchantResponseCache();
-      results.push(`${colors.green('✓')} Cleared merchant response cache`);
+    if (target === 'npcresponses' || target === 'merchantresponses' || target === 'all') {
+      clearNpcResponseCache();
+      results.push(`${colors.green('✓')} Cleared NPC response cache`);
     }
 
     if (target === 'quests' || target === 'all') {
@@ -671,8 +671,14 @@ async function handlePurge(
   if (args[0] === 'items') {
     const items = await itemRepo.getInstancesInRoom(currentRoomId);
     let count = 0;
-    
+    let skipped = 0;
+
     for (const item of items) {
+      // Skip fixture items (signs, statues, etc.) — use @purge item <id> to force-remove
+      if (item.template?.flags?.fixture) {
+        skipped++;
+        continue;
+      }
       try {
         await itemRepo.deleteInstance(item.id);
         count++;
@@ -681,10 +687,11 @@ async function handlePurge(
       }
     }
 
-    return {
-      type: MessageType.SYSTEM,
-      message: `${colors.boldYellow('Purged:')} ${count} items from room ${currentRoomId}`,
-    };
+    let msg = `${colors.boldYellow('Purged:')} ${count} items from room ${currentRoomId}`;
+    if (skipped > 0) {
+      msg += ` (${skipped} fixture${skipped > 1 ? 's' : ''} preserved)`;
+    }
+    return { type: MessageType.SYSTEM, message: msg };
   } else if (args[0] === 'item' && args[1]) {
     const instanceId = parseInt(args[1]);
     if (isNaN(instanceId)) {

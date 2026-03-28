@@ -2390,8 +2390,8 @@ async function handleDirectedSpeech(
       }
     }
 
-    // Check for merchant keyword response
-    if (npcTarget.template.merchantEnabled) {
+    // Check for NPC keyword response (interactable NPCs and merchants)
+    if (npcTarget.template.interactable || npcTarget.template.merchantEnabled) {
       const npcResponse = await getResponseForKeywords(npcTarget.template.id, message);
       if (npcResponse) {
         // Send merchant's response to speaker after their speech (via sendMessage),

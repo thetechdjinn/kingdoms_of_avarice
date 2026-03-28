@@ -47,6 +47,7 @@
               <button type="button" class="tab-btn" data-tab="appearance">Appearance</button>
               <button type="button" class="tab-btn" data-tab="attacks">Attacks</button>
               <button type="button" class="tab-btn" data-tab="spells">Spells</button>
+              <button type="button" class="tab-btn" data-tab="interaction">Interaction</button>
               <button type="button" class="tab-btn" data-tab="merchant">Merchant</button>
             </div>
 
@@ -284,7 +285,30 @@
               <p id="no-spells-hint" class="hint">No spells assigned. Add a spell to enable spell casting.</p>
             </div>
 
-            <!-- Merchant Tab -->
+            <!-- Interaction Tab -->
+            <div class="tab-content" id="tab-interaction">
+              <p class="hint">Configure keyword-triggered responses for directed speech (&gt;npc message). Active for NPCs with Interactable or Merchant enabled.</p>
+              <div id="interaction-section">
+                <h3>NPC Responses</h3>
+                <div class="merchant-inv-controls">
+                  <input type="text" id="response-keywords" placeholder="trigger,keywords" style="width: 200px;" />
+                  <input type="text" id="response-text" placeholder="Response text..." style="width: 300px;" />
+                  <button type="button" id="npc-add-response-btn" class="btn-small btn-primary">+ Add</button>
+                </div>
+                <table id="npc-responses-table" class="merchant-table">
+                  <thead>
+                    <tr>
+                      <th>Keywords</th>
+                      <th>Response</th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody id="npc-responses-body"></tbody>
+                </table>
+                <p id="no-responses-hint" class="hint">No responses configured.</p>
+              </div>
+            </div>
+
             <div class="tab-content" id="tab-merchant">
               <div class="form-row">
                 <div class="form-group">
@@ -347,23 +371,6 @@
                 <button type="button" id="test-price-btn" class="btn-small btn-secondary">Calculate</button>
                 <div id="price-test-result" class="hint"></div>
 
-                <h3>Merchant Responses</h3>
-                <div class="merchant-inv-controls">
-                  <input type="text" id="response-keywords" placeholder="trigger,keywords" style="width: 200px;" />
-                  <input type="text" id="response-text" placeholder="Response text..." style="width: 300px;" />
-                  <button type="button" id="merchant-add-response-btn" class="btn-small btn-primary">+ Add</button>
-                </div>
-                <table id="merchant-responses-table" class="merchant-table">
-                  <thead>
-                    <tr>
-                      <th>Keywords</th>
-                      <th>Response</th>
-                      <th></th>
-                    </tr>
-                  </thead>
-                  <tbody id="merchant-responses-body"></tbody>
-                </table>
-                <p id="no-responses-hint" class="hint">No responses configured.</p>
               </div>
             </div>
 

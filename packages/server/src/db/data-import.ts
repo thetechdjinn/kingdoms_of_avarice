@@ -28,7 +28,7 @@ import * as progressionRepo from './repositories/progressionRepository.js';
 import * as npcRepo from './repositories/npcRepository.js';
 import * as factionRepo from './repositories/factionRepository.js';
 import * as merchantRepo from './repositories/merchantRepository.js';
-import * as merchantResponseRepo from './repositories/merchantResponseRepository.js';
+import * as npcResponseRepo from './repositories/npcResponseRepository.js';
 import * as doorRepo from './repositories/doorRepository.js';
 import * as npcSpellRepo from './repositories/npcSpellRepository.js';
 import * as spawnConfigRepo from './repositories/spawnRepository.js';
@@ -886,18 +886,15 @@ async function importNpcs(data: unknown[]): Promise<ImportResult> {
         return id;
       });
 
-      // Merchant inventory/responses (outside transaction — repos lack client param)
-      // Only delete+recreate for merchant NPCs to avoid wiping data for non-merchants.
+      // Merchant inventory (outside transaction — repos lack client param)
+      // Only delete+recreate inventory for merchant NPCs.
       if (item.merchantEnabled) {
         try {
           await merchantRepo.deleteAllInventoryForTemplate(npcId);
-          await merchantResponseRepo.deleteAllResponsesForTemplate(npcId);
         } catch (err) {
-          result.errors.push(`NPC "${name}": failed to clear merchant data: ${(err as Error).message}`);
+          result.errors.push(`NPC "${name}": failed to clear merchant inventory: ${(err as Error).message}`);
         }
-      }
 
-      if (item.merchantEnabled) {
         const inventory = (item.merchantInventory as unknown[]) || [];
         for (const invRaw of inventory) {
           const inv = invRaw as Record<string, unknown>;
@@ -919,18 +916,28 @@ async function importNpcs(data: unknown[]): Promise<ImportResult> {
             result.errors.push(`NPC "${name}": merchant inventory "${itemName}": ${(err as Error).message}`);
           }
         }
+      }
 
-        const responses = (item.merchantResponses as unknown[]) || [];
+      // NPC responses (any NPC, not just merchants; supports both old and new key names)
+      // Always clear existing responses when a response key is present (even if empty)
+      const hasResponseKey = item.npcResponses !== undefined || item.merchantResponses !== undefined;
+      if (hasResponseKey) {
+        try {
+          await npcResponseRepo.deleteAllResponsesForTemplate(npcId);
+        } catch (err) {
+          result.errors.push(`NPC "${name}": failed to clear NPC responses: ${(err as Error).message}`);
+        }
+        const responses = (item.npcResponses as unknown[]) || (item.merchantResponses as unknown[]) || [];
         for (const respRaw of responses) {
           const resp = respRaw as Record<string, unknown>;
           try {
-            await merchantResponseRepo.createResponse({
+            await npcResponseRepo.createResponse({
               npcTemplateId: npcId,
               triggerKeywords: resp.triggerKeywords as string[],
               response: resp.response as string,
             });
           } catch (err) {
-            result.errors.push(`NPC "${name}": merchant response: ${(err as Error).message}`);
+            result.errors.push(`NPC "${name}": NPC response: ${(err as Error).message}`);
           }
         }
       }
