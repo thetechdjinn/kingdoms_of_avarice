@@ -1185,7 +1185,21 @@ export async function runMigrations(): Promise<void> {
       // Add spawn_room_id to npc_instances to track which spawn point created each instance
       await client.query(`
         ALTER TABLE npc_instances
-        ADD COLUMN IF NOT EXISTS spawn_room_id INTEGER REFERENCES rooms(id)
+        ADD COLUMN IF NOT EXISTS spawn_room_id INTEGER REFERENCES rooms(id) ON DELETE SET NULL
+      `);
+      // Ensure ON DELETE SET NULL for existing installations where column was added without it
+      await client.query(`
+        DO $$ BEGIN
+          IF EXISTS (
+            SELECT 1 FROM information_schema.referential_constraints
+            WHERE constraint_name = 'npc_instances_spawn_room_id_fkey'
+              AND delete_rule != 'SET NULL'
+          ) THEN
+            ALTER TABLE npc_instances DROP CONSTRAINT npc_instances_spawn_room_id_fkey;
+            ALTER TABLE npc_instances ADD CONSTRAINT npc_instances_spawn_room_id_fkey
+              FOREIGN KEY (spawn_room_id) REFERENCES rooms(id) ON DELETE SET NULL;
+          END IF;
+        END $$
       `);
 
       // One-time migration: copy existing NPC template spawn configs into room_spawns

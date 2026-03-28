@@ -162,7 +162,7 @@ export async function upsertSpawn(input: {
        max_active = EXCLUDED.max_active,
        respawn_seconds = EXCLUDED.respawn_seconds
      RETURNING *`,
-    [input.roomId, input.npcId, input.maxActive ?? 1, input.respawnSeconds ?? 0]
+    [input.roomId, input.npcId, input.maxActive ?? 1, input.respawnSeconds ?? 60]
   );
   return dbToRoomSpawn(result.rows[0]);
 }
