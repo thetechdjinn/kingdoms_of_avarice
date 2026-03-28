@@ -1192,9 +1192,9 @@ async function loadSpawnLocations(npcId: number): Promise<void> {
     }
 
     const rows = spawns.map(s => {
-      const roomLabel = s.roomName ? `${escapeHtml(s.roomName)} (#${s.roomId})` : `Room #${s.roomId}`;
-      const respawnLabel = s.respawnSeconds > 0 ? `${s.respawnSeconds}s` : 'No respawn';
-      return `<tr><td>${roomLabel}</td><td>${s.maxActive}</td><td>${respawnLabel}</td></tr>`;
+      const roomLabel = s.roomName ? `${escapeHtml(s.roomName)} (#${Number(s.roomId)})` : `Room #${Number(s.roomId)}`;
+      const respawnLabel = Number(s.respawnSeconds) > 0 ? `${Number(s.respawnSeconds)}s` : 'No respawn';
+      return `<tr><td>${roomLabel}</td><td>${Number(s.maxActive)}</td><td>${respawnLabel}</td></tr>`;
     }).join('');
 
     container.innerHTML = `
