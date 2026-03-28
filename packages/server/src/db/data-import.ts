@@ -700,7 +700,10 @@ async function processDeferredRoomExits(): Promise<void> {
         for (const spawnRaw of spawns) {
           const spawn = spawnRaw as Record<string, unknown>;
           const npcName = spawn.npcName as string;
-          if (!npcName) continue;
+          if (!npcName) {
+            result.errors.push(`Room "${tag}" spawn: missing npcName`);
+            continue;
+          }
 
           const npcId = npcNameToId.get(npcName.toLowerCase());
           if (!npcId) {
@@ -713,7 +716,7 @@ async function processDeferredRoomExits(): Promise<void> {
               roomId: fromId,
               npcId,
               maxActive: (spawn.maxActive as number) ?? 1,
-              respawnSeconds: (spawn.respawnSeconds as number) ?? 0,
+              respawnSeconds: (spawn.respawnSeconds as number) ?? 60,
             });
           } catch (err) {
             const msg = (err as Error).message || '';
@@ -942,7 +945,7 @@ async function importNpcs(data: unknown[]): Promise<ImportResult> {
               roomId: spawnRoomId,
               npcId,
               maxActive: (item.maxActive as number) ?? 1,
-              respawnSeconds: (item.respawnTime as number) ?? 0,
+              respawnSeconds: (item.respawnTime as number) ?? 60,
             });
             console.log(`    (legacy) Created spawn config for "${name}" in room ${item.spawnRoomTag}`);
           } catch (err) {
