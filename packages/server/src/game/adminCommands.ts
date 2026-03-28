@@ -49,7 +49,7 @@ import {
   NO_LOCKPICK_BONUS,
 } from './stats/secondaryStats.js';
 import { StealthMode } from '@koa/shared';
-import { getAllNpcInstances, reloadNpcTemplates, isNpcDebugEnabled, setNpcDebug, getMerchantsInRoom, clearMerchantResponseCache, findNpcInRoom } from './npcManager.js';
+import { getAllNpcInstances, reloadNpcTemplates, reloadSpawnConfigs, isNpcDebugEnabled, setNpcDebug, getMerchantsInRoom, clearMerchantResponseCache, findNpcInRoom } from './npcManager.js';
 import { evaluateSpellCondition, selectNpcSpell } from './npcSpellAI.js';
 import { resolveCombatTarget } from './combatMessaging.js';
 import * as merchantRepo from '../db/repositories/merchantRepository.js';
@@ -496,10 +496,10 @@ async function handleReload(
   args: string[],
   world: GameWorld
 ): Promise<CommandResponse> {
-  // @reload [rooms|items|mobs|effects|doors|actions|droptables|all]
+  // @reload [rooms|items|mobs|effects|doors|actions|droptables|factions|merchants|merchantresponses|quests|progression|settings|spawns|all]
   const target = args[0]?.toLowerCase() || 'all';
 
-  const validTargets = ['rooms', 'items', 'mobs', 'effects', 'doors', 'actions', 'droptables', 'factions', 'merchants', 'merchantresponses', 'quests', 'progression', 'settings', 'all'];
+  const validTargets = ['rooms', 'items', 'mobs', 'effects', 'doors', 'actions', 'droptables', 'factions', 'merchants', 'merchantresponses', 'quests', 'progression', 'settings', 'spawns', 'all'];
   if (!validTargets.includes(target)) {
     return { type: MessageType.ERROR, message: `Usage: @reload [${validTargets.join('|')}]` };
   }
@@ -522,6 +522,11 @@ async function handleReload(
     if (target === 'mobs' || target === 'all') {
       const count = await reloadNpcTemplates();
       results.push(`${colors.green('✓')} Reloaded ${count} NPC templates`);
+    }
+
+    if (target === 'spawns' || target === 'all') {
+      const count = await reloadSpawnConfigs();
+      results.push(`${colors.green('✓')} Reloaded ${count} spawn configs`);
     }
 
     if (target === 'effects' || target === 'all') {

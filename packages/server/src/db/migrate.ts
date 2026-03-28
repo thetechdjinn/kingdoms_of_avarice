@@ -1164,6 +1164,62 @@ export async function runMigrations(): Promise<void> {
         console.log('  Set darkness_level = -120 on underground rooms');
       }
 
+      // ================================================================
+      // Room-based NPC spawn system
+      // ================================================================
+
+      // Create room_spawns table (spawn config per room+npc pair)
+      await client.query(`
+        CREATE TABLE IF NOT EXISTS room_spawns (
+          id SERIAL PRIMARY KEY,
+          room_id INTEGER NOT NULL REFERENCES rooms(id) ON DELETE CASCADE,
+          npc_id INTEGER NOT NULL REFERENCES npcs(id) ON DELETE CASCADE,
+          max_active INTEGER NOT NULL DEFAULT 1 CHECK (max_active >= 1),
+          respawn_seconds INTEGER NOT NULL DEFAULT 60 CHECK (respawn_seconds >= 0),
+          UNIQUE(room_id, npc_id)
+        )
+      `);
+      await client.query(`CREATE INDEX IF NOT EXISTS idx_room_spawns_room ON room_spawns(room_id)`);
+      await client.query(`CREATE INDEX IF NOT EXISTS idx_room_spawns_npc ON room_spawns(npc_id)`);
+
+      // Add spawn_room_id to npc_instances to track which spawn point created each instance
+      await client.query(`
+        ALTER TABLE npc_instances
+        ADD COLUMN IF NOT EXISTS spawn_room_id INTEGER REFERENCES rooms(id)
+      `);
+
+      // One-time migration: copy existing NPC template spawn configs into room_spawns
+      const roomSpawnsMigrationFlag = await client.query(
+        `SELECT 1 FROM game_settings WHERE key = 'room_spawns_migrated'`
+      );
+      if (roomSpawnsMigrationFlag.rows.length === 0) {
+        // Migrate existing spawn_room_id / max_active / respawn_time from npcs table
+        // All NPCs with a spawn_room_id get a room_spawns entry.
+        // NULL/0 respawn_time becomes 0 (spawn once at startup, no respawn on death).
+        await client.query(`
+          INSERT INTO room_spawns (room_id, npc_id, max_active, respawn_seconds)
+          SELECT spawn_room_id, id, COALESCE(max_active, 1), COALESCE(NULLIF(respawn_time, 0), 0)
+          FROM npcs
+          WHERE spawn_room_id IS NOT NULL
+          ON CONFLICT DO NOTHING
+        `);
+
+        // Backfill spawn_room_id on existing npc_instances from their template
+        await client.query(`
+          UPDATE npc_instances ni
+          SET spawn_room_id = n.spawn_room_id
+          FROM npcs n
+          WHERE ni.npc_id = n.id
+            AND ni.spawn_room_id IS NULL
+            AND n.spawn_room_id IS NOT NULL
+        `);
+
+        await client.query(
+          `INSERT INTO game_settings (key, value) VALUES ('room_spawns_migrated', 'true') ON CONFLICT (key) DO NOTHING`
+        );
+        console.log('Migrated NPC spawn configs to room_spawns table');
+      }
+
     });
 
     console.log('Database migrations completed successfully');

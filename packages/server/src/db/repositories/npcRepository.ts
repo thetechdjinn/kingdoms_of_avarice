@@ -72,6 +72,7 @@ interface DbNpcInstance {
   current_health: number;
   current_mana: number;
   augmentation: string | null;
+  spawn_room_id: number | null;
   spawned_at: Date;
 }
 
@@ -112,11 +113,9 @@ function dbToTemplate(row: DbNpcTemplate, attacks: NpcAttack[], spells: NpcSpell
     id: row.id,
     name: row.name,
     description: row.description,
-    spawnRoomId: row.spawn_room_id,
     health: row.health,
     maxHealth: row.max_health,
     hostile: row.hostile,
-    respawnTime: row.respawn_time,
     level: row.level,
     experienceReward: row.experience_reward,
     maxMana: row.max_mana,
@@ -129,7 +128,6 @@ function dbToTemplate(row: DbNpcTemplate, attacks: NpcAttack[], spells: NpcSpell
     fleeEnabled: row.flee_enabled,
     fleeHpPercent: row.flee_hp_percent,
     callForHelpChance: row.call_for_help_chance,
-    maxActive: row.max_active,
     interactable: row.interactable,
     allowedAreas: row.allowed_areas || [],
     roamEnabled: row.roam_enabled,
@@ -233,20 +231,22 @@ export async function saveInstances(instances: {
   currentHealth: number;
   currentMana: number;
   augmentation: string | null;
+  spawnRoomId: number | null;
 }[]): Promise<void> {
   if (instances.length === 0) return;
 
   await withTransaction(async (client) => {
     for (const inst of instances) {
       await client.query(
-        `INSERT INTO npc_instances (id, npc_id, current_room_id, current_health, current_mana, augmentation)
-         VALUES ($1, $2, $3, $4, $5, $6)
+        `INSERT INTO npc_instances (id, npc_id, current_room_id, current_health, current_mana, augmentation, spawn_room_id)
+         VALUES ($1, $2, $3, $4, $5, $6, $7)
          ON CONFLICT (id) DO UPDATE SET
            current_room_id = EXCLUDED.current_room_id,
            current_health = EXCLUDED.current_health,
            current_mana = EXCLUDED.current_mana,
-           augmentation = EXCLUDED.augmentation`,
-        [inst.id, inst.npcId, inst.currentRoomId, inst.currentHealth, inst.currentMana, inst.augmentation]
+           augmentation = EXCLUDED.augmentation,
+           spawn_room_id = EXCLUDED.spawn_room_id`,
+        [inst.id, inst.npcId, inst.currentRoomId, inst.currentHealth, inst.currentMana, inst.augmentation, inst.spawnRoomId]
       );
     }
   });
@@ -267,12 +267,13 @@ export async function createInstance(
   roomId: number,
   health: number,
   mana: number = 0,
-  augmentation: string | null = null
+  augmentation: string | null = null,
+  spawnRoomId: number | null = null
 ): Promise<number> {
   const result = await query<{ id: number }>(
-    `INSERT INTO npc_instances (npc_id, current_room_id, current_health, current_mana, augmentation)
-     VALUES ($1, $2, $3, $4, $5) RETURNING id`,
-    [npcId, roomId, health, mana, augmentation]
+    `INSERT INTO npc_instances (npc_id, current_room_id, current_health, current_mana, augmentation, spawn_room_id)
+     VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`,
+    [npcId, roomId, health, mana, augmentation, spawnRoomId]
   );
   return result.rows[0].id;
 }
@@ -295,10 +296,8 @@ export async function getDropTableEntries(dropTableId: number): Promise<DbDropTa
 export interface CreateNpcTemplateInput {
   name: string;
   description?: string | null;
-  spawnRoomId?: number | null;
   maxHealth?: number;
   hostile?: boolean;
-  respawnTime?: number | null;
   level?: number;
   experienceReward?: number;
   maxMana?: number;
@@ -311,7 +310,6 @@ export interface CreateNpcTemplateInput {
   fleeEnabled?: boolean;
   fleeHpPercent?: number;
   callForHelpChance?: number;
-  maxActive?: number;
   interactable?: boolean;
   allowedAreas?: string[];
   roamEnabled?: boolean;
@@ -357,33 +355,31 @@ export async function createTemplate(input: CreateNpcTemplateInput, client?: pg.
   const maxHealth = input.maxHealth ?? 100;
   const result = await query<{ id: number }>(
     `INSERT INTO npcs (
-      name, description, spawn_room_id, health, max_health, hostile, respawn_time,
+      name, description, health, max_health, hostile,
       level, experience_reward, max_mana,
       base_accuracy, base_defense, base_crit_chance, base_dodge, damage_reduction,
       traits, flee_enabled, flee_hp_percent, call_for_help_chance,
-      max_active, interactable, allowed_areas, roam_enabled, roam_interval, roam_chance,
+      interactable, allowed_areas, roam_enabled, roam_interval, roam_chance,
       drop_table_id, essence_reward, essence_class,
       leave_corpse, corpse_duration, augmentations,
       enter_room_message, exit_room_message, spawn_message,
       primary_faction_id, merchant_enabled, proper_name, spell_power, vision_level, enabled
     ) VALUES (
-      $1, $2, $3, $4, $4, $5, $6,
-      $7, $8, $9,
-      $10, $11, $12, $13, $14,
-      $15, $16, $17, $18,
-      $19, $20, $21, $22, $23, $24,
+      $1, $2, $3, $3, $4,
+      $5, $6, $7,
+      $8, $9, $10, $11, $12,
+      $13, $14, $15, $16,
+      $17, $18, $19, $20, $21,
+      $22, $23, $24,
       $25, $26, $27,
       $28, $29, $30,
-      $31, $32, $33,
-      $34, $35, $36, $37, $38, $39
+      $31, $32, $33, $34, $35, $36
     ) RETURNING id`,
     [
       input.name,
       input.description ?? null,
-      input.spawnRoomId ?? null,
       maxHealth,
       input.hostile ?? true,
-      input.respawnTime ?? null,
       input.level ?? 1,
       input.experienceReward ?? 0,
       input.maxMana ?? 0,
@@ -396,7 +392,6 @@ export async function createTemplate(input: CreateNpcTemplateInput, client?: pg.
       input.fleeEnabled ?? false,
       input.fleeHpPercent ?? 20,
       input.callForHelpChance ?? 0,
-      input.maxActive ?? 1,
       input.interactable ?? false,
       input.allowedAreas ?? [],
       input.roamEnabled ?? false,
@@ -438,13 +433,11 @@ export async function updateTemplate(id: number, input: Partial<CreateNpcTemplat
 
   if (input.name !== undefined) fieldMap.name = { column: 'name', value: input.name };
   if (input.description !== undefined) fieldMap.description = { column: 'description', value: input.description };
-  if (input.spawnRoomId !== undefined) fieldMap.spawnRoomId = { column: 'spawn_room_id', value: input.spawnRoomId };
   if (input.maxHealth !== undefined) {
     fieldMap.maxHealth = { column: 'max_health', value: input.maxHealth };
     fieldMap.health = { column: 'health', value: input.maxHealth };
   }
   if (input.hostile !== undefined) fieldMap.hostile = { column: 'hostile', value: input.hostile };
-  if (input.respawnTime !== undefined) fieldMap.respawnTime = { column: 'respawn_time', value: input.respawnTime };
   if (input.level !== undefined) fieldMap.level = { column: 'level', value: input.level };
   if (input.experienceReward !== undefined) fieldMap.experienceReward = { column: 'experience_reward', value: input.experienceReward };
   if (input.maxMana !== undefined) fieldMap.maxMana = { column: 'max_mana', value: input.maxMana };
@@ -457,7 +450,6 @@ export async function updateTemplate(id: number, input: Partial<CreateNpcTemplat
   if (input.fleeEnabled !== undefined) fieldMap.fleeEnabled = { column: 'flee_enabled', value: input.fleeEnabled };
   if (input.fleeHpPercent !== undefined) fieldMap.fleeHpPercent = { column: 'flee_hp_percent', value: input.fleeHpPercent };
   if (input.callForHelpChance !== undefined) fieldMap.callForHelpChance = { column: 'call_for_help_chance', value: input.callForHelpChance };
-  if (input.maxActive !== undefined) fieldMap.maxActive = { column: 'max_active', value: input.maxActive };
   if (input.interactable !== undefined) fieldMap.interactable = { column: 'interactable', value: input.interactable };
   if (input.allowedAreas !== undefined) fieldMap.allowedAreas = { column: 'allowed_areas', value: input.allowedAreas };
   if (input.roamEnabled !== undefined) fieldMap.roamEnabled = { column: 'roam_enabled', value: input.roamEnabled };

@@ -402,6 +402,26 @@
   color: #888;
 }
 
+/* Spawn Locations Table */
+.spawn-locations-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+  margin-bottom: 8px;
+}
+
+.spawn-locations-table th,
+.spawn-locations-table td {
+  padding: 4px 8px;
+  text-align: left;
+  border-bottom: 1px solid #333;
+}
+
+.spawn-locations-table th {
+  color: #888;
+  font-weight: normal;
+}
+
 /* Modal Styles */
 .modal {
   position: fixed;

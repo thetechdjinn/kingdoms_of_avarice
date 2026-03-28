@@ -6,10 +6,11 @@
  * respawn queue, and periodic DB persistence.
  */
 
-import { NpcTemplate, NpcAttack, ResourceType, DeathState, PlayerRegenState, StealthMode } from '@koa/shared';
+import { NpcTemplate, NpcAttack, ResourceType, DeathState, PlayerRegenState, StealthMode, RoomSpawn } from '@koa/shared';
 import type { CombatEntity, CombatState } from './combatEntity.js';
 import { NPC_ID_OFFSET, isPlayerEntity, getEntityRoomId } from './combatEntity.js';
 import * as npcRepo from '../db/repositories/npcRepository.js';
+import * as spawnRepo from '../db/repositories/spawnRepository.js';
 import { colors } from '../utils/colors.js';
 import { withNpcNameCapitalized } from '../utils/textFormat.js';
 import { sendCombatMessage, broadcastCombatToRoom } from './combatMessaging.js';
@@ -52,6 +53,7 @@ export interface NpcCombatInstance extends CombatEntity {
   template: NpcTemplate;
   currentRoomId: number;
   currentMana: number;
+  spawnRoomId: number;   // Origin spawn room (for respawn + return-to-spawn)
   behaviorState: 'idle' | 'combat' | 'fleeing' | 'returning';
   augmentation: string | null;
   dbInstanceId: number;  // Original DB instance ID (before offset)
@@ -79,6 +81,7 @@ const npcTemplates = new Map<number, NpcTemplate>();
 const npcInstances = new Map<number, NpcCombatInstance>();  // keyed by entityId
 const npcsByRoom = new Map<number, Set<number>>();  // roomId -> Set of entityIds
 const respawnQueue: RespawnEntry[] = [];
+const spawnConfigs = new Map<string, RoomSpawn>();  // "${npcId}_${roomId}" -> spawn config
 
 let respawnInterval: NodeJS.Timeout | null = null;
 let persistInterval: NodeJS.Timeout | null = null;
@@ -195,13 +198,21 @@ export function isPlayerTargetedByAnyNpc(playerId: number): boolean {
 /**
  * Build an NpcCombatInstance from a template and DB instance data.
  */
+/**
+ * Look up spawn config for a given NPC template + room pair.
+ */
+export function getSpawnConfig(npcId: number, roomId: number): RoomSpawn | undefined {
+  return spawnConfigs.get(`${npcId}_${roomId}`);
+}
+
 function createNpcCombatEntity(
   template: NpcTemplate,
   dbInstanceId: number,
   currentRoomId: number,
   currentHealth: number,
   currentMana: number,
-  augmentation: string | null
+  augmentation: string | null,
+  spawnRoomId: number
 ): NpcCombatInstance {
   const entityId = dbInstanceId + NPC_ID_OFFSET;
 
@@ -246,6 +257,7 @@ function createNpcCombatEntity(
     template,
     currentRoomId,
     currentMana,
+    spawnRoomId,
     behaviorState: 'idle',
     augmentation,
     dbInstanceId,
@@ -293,6 +305,12 @@ export async function initializeNpcManager(): Promise<void> {
     npcTemplates.set(template.id, template);
   }
 
+  // Load spawn configs from room_spawns table
+  const spawns = await spawnRepo.getAllSpawns();
+  for (const spawn of spawns) {
+    spawnConfigs.set(`${spawn.npcId}_${spawn.roomId}`, spawn);
+  }
+
   // Load existing instances from DB
   const instances = await npcRepo.getAllInstances();
   for (const inst of instances) {
@@ -302,14 +320,18 @@ export async function initializeNpcManager(): Promise<void> {
       continue;
     }
 
+    // Determine origin spawn room from DB (or fall back to current room)
+    const instSpawnRoomId = inst.spawn_room_id ?? inst.current_room_id;
+
     // Dead instances (corpses from before restart) should be cleaned up, not loaded.
     // Corpse state is in-memory only, so these would load as broken 0-HP NPCs.
     if (inst.current_health <= 0) {
       npcRepo.deleteInstance(inst.id).catch(error => {
         console.error(`[NPC Manager] Failed to delete dead instance ${inst.id}:`, error);
       });
-      if (template.respawnTime && template.respawnTime > 0 && template.spawnRoomId) {
-        queueRespawn(template.id, template.spawnRoomId, template.respawnTime);
+      const spawnConfig = getSpawnConfig(inst.npc_id, instSpawnRoomId);
+      if (spawnConfig && spawnConfig.respawnSeconds > 0) {
+        queueRespawn(template.id, instSpawnRoomId, spawnConfig.respawnSeconds);
       }
       continue;
     }
@@ -320,24 +342,38 @@ export async function initializeNpcManager(): Promise<void> {
       inst.current_room_id,
       inst.current_health,
       inst.current_mana,
-      inst.augmentation
+      inst.augmentation,
+      instSpawnRoomId
     );
 
     npcInstances.set(npc.entityId, npc);
     addToRoomIndex(npc.entityId, npc.currentRoomId);
   }
 
-  // Spawn instances for any templates that have a spawn room but no live instance.
-  // Skip templates that already have a pending respawn (dead corpses cleaned up above).
-  const templatesWithInstances = new Set(
-    instances
-      .filter(i => i.current_health > 0)
-      .map(i => i.npc_id)
-  );
-  const templatesWithPendingRespawn = new Set(respawnQueue.map(e => e.templateId));
-  for (const template of templates) {
-    if (template.enabled && template.spawnRoomId && !templatesWithInstances.has(template.id) && !templatesWithPendingRespawn.has(template.id)) {
-      await spawnNpcFromTemplate(template, template.spawnRoomId);
+  // Spawn instances for each spawn config that doesn't have enough live instances.
+  // Track live instances per (npcId, spawnRoomId) pair for accurate counting.
+  const liveCountBySpawn = new Map<string, number>();
+  for (const npc of npcInstances.values()) {
+    const key = `${npc.templateId}_${npc.spawnRoomId}`;
+    liveCountBySpawn.set(key, (liveCountBySpawn.get(key) ?? 0) + 1);
+  }
+  const pendingBySpawn = new Map<string, number>();
+  for (const entry of respawnQueue) {
+    const key = `${entry.templateId}_${entry.spawnRoomId}`;
+    pendingBySpawn.set(key, (pendingBySpawn.get(key) ?? 0) + 1);
+  }
+
+  for (const spawn of spawns) {
+    const template = npcTemplates.get(spawn.npcId);
+    if (!template || !template.enabled) continue;
+
+    const key = `${spawn.npcId}_${spawn.roomId}`;
+    const live = liveCountBySpawn.get(key) ?? 0;
+    const pending = pendingBySpawn.get(key) ?? 0;
+    const needed = spawn.maxActive - live - pending;
+
+    for (let i = 0; i < needed; i++) {
+      await spawnNpcFromTemplate(template, spawn.roomId, spawn.roomId);
     }
   }
 
@@ -374,6 +410,7 @@ export async function initializeNpcManager(): Promise<void> {
 async function spawnNpcFromTemplate(
   template: NpcTemplate,
   roomId: number,
+  spawnRoomId: number,
   augmentation: string | null = null
 ): Promise<NpcCombatInstance> {
   // Pick augmentation if none provided and template has augmentations defined
@@ -388,7 +425,8 @@ async function spawnNpcFromTemplate(
     roomId,
     template.maxHealth,
     template.maxMana,
-    augmentation
+    augmentation,
+    spawnRoomId
   );
 
   // Create in-memory instance
@@ -398,7 +436,8 @@ async function spawnNpcFromTemplate(
     roomId,
     template.maxHealth,
     template.maxMana,
-    augmentation
+    augmentation,
+    spawnRoomId
   );
 
   npcInstances.set(npc.entityId, npc);
@@ -429,12 +468,16 @@ async function processRespawnQueue(): Promise<void> {
     const template = npcTemplates.get(entry.templateId);
     if (!template || !template.enabled) continue;
 
-    // Guard: don't exceed maxActive (live non-corpse instances)
-    const liveCount = Array.from(npcInstances.values()).filter(n => n.templateId === entry.templateId && !n.isCorpse).length;
-    if (liveCount >= (template.maxActive ?? 1)) continue;
+    // Guard: skip if spawn config was deleted, or don't exceed maxActive
+    const spawnConfig = getSpawnConfig(entry.templateId, entry.spawnRoomId);
+    if (!spawnConfig) continue;
+    const liveCount = Array.from(npcInstances.values()).filter(
+      n => n.templateId === entry.templateId && n.spawnRoomId === entry.spawnRoomId && !n.isCorpse
+    ).length;
+    if (liveCount >= spawnConfig.maxActive) continue;
 
     try {
-      const npc = await spawnNpcFromTemplate(template, entry.spawnRoomId);
+      const npc = await spawnNpcFromTemplate(template, entry.spawnRoomId, entry.spawnRoomId);
       broadcastCombatToRoom(entry.spawnRoomId, colors.cyan(buildSpawnMessage(npc)), []);
 
       // Check for hostile aggro on players in the spawn room
@@ -573,9 +616,10 @@ function processCorpseCleanup(): void {
       console.error(`[NPC Manager] Failed to delete corpse instance ${npc.dbInstanceId} (${template.name}):`, error);
     });
 
-    // Queue respawn now that corpse is gone
-    if (template.respawnTime && template.respawnTime > 0 && template.spawnRoomId) {
-      queueRespawn(template.id, template.spawnRoomId, template.respawnTime);
+    // Queue respawn now that corpse is gone (using per-spawn-point config)
+    const spawnConfig = getSpawnConfig(npc.templateId, npc.spawnRoomId);
+    if (spawnConfig && spawnConfig.respawnSeconds > 0) {
+      queueRespawn(npc.templateId, npc.spawnRoomId, spawnConfig.respawnSeconds);
     }
   }
 }
@@ -584,11 +628,15 @@ function processCorpseCleanup(): void {
  * Queue a respawn for a template.
  */
 export function queueRespawn(templateId: number, spawnRoomId: number, respawnTimeSeconds: number): void {
-  // Dedup: don't queue beyond maxActive (live instances + pending respawns)
-  const template = npcTemplates.get(templateId);
-  const maxActive = template?.maxActive ?? 1;
-  const liveCount = Array.from(npcInstances.values()).filter(n => n.templateId === templateId && !n.isCorpse).length;
-  const pendingCount = respawnQueue.filter(e => e.templateId === templateId).length;
+  // Dedup: don't queue beyond maxActive for this (template, spawnRoom) pair
+  const spawnConfig = getSpawnConfig(templateId, spawnRoomId);
+  const maxActive = spawnConfig?.maxActive ?? 1;
+  const liveCount = Array.from(npcInstances.values()).filter(
+    n => n.templateId === templateId && n.spawnRoomId === spawnRoomId && !n.isCorpse
+  ).length;
+  const pendingCount = respawnQueue.filter(
+    e => e.templateId === templateId && e.spawnRoomId === spawnRoomId
+  ).length;
   if (liveCount + pendingCount >= maxActive) return;
 
   respawnQueue.push({
@@ -610,6 +658,7 @@ export async function saveAllInstances(): Promise<void> {
       currentHealth: npc.isCorpse ? 0 : npc.vitals.hp, // Save corpses with 0 HP so startup detects them as dead
       currentMana: npc.isCorpse ? 0 : npc.currentMana,
       augmentation: npc.augmentation,
+      spawnRoomId: npc.spawnRoomId,
     }));
 
   if (instances.length === 0) return;
@@ -876,7 +925,7 @@ export async function reloadNpcTemplates(): Promise<number> {
     npcTemplates.set(template.id, template);
   }
 
-  // Update template references on live instances
+  // Update template references on live instances (before spawn reconciliation)
   for (const npc of npcInstances.values()) {
     const updatedTemplate = npcTemplates.get(npc.templateId);
     if (updatedTemplate) {
@@ -884,26 +933,60 @@ export async function reloadNpcTemplates(): Promise<number> {
     }
   }
 
-  // Spawn instances for any new templates that have a spawn room but no live instance
-  const templatesWithInstances = new Set(
-    Array.from(npcInstances.values()).map(npc => npc.templateId)
-  );
+  // Reload spawn configs and reconcile live instances
+  await reloadSpawnConfigs();
+
+  return templates.length;
+}
+
+/**
+ * Reload spawn configs from DB and reconcile live world state.
+ * Spawns new instances for any configs that don't have enough live NPCs.
+ * Used by @reload spawns and internally by reloadNpcTemplates.
+ */
+export async function reloadSpawnConfigs(): Promise<number> {
+  spawnConfigs.clear();
+  const spawns = await spawnRepo.getAllSpawns();
+  for (const spawn of spawns) {
+    spawnConfigs.set(`${spawn.npcId}_${spawn.roomId}`, spawn);
+  }
+
+  // Reconcile: spawn missing instances for new/updated configs
+  const liveCountBySpawn = new Map<string, number>();
+  for (const npc of npcInstances.values()) {
+    if (!npc.isCorpse) {
+      const key = `${npc.templateId}_${npc.spawnRoomId}`;
+      liveCountBySpawn.set(key, (liveCountBySpawn.get(key) ?? 0) + 1);
+    }
+  }
+
   let spawned = 0;
-  for (const template of templates) {
-    if (template.enabled && template.spawnRoomId && !templatesWithInstances.has(template.id)) {
+  for (const spawn of spawns) {
+    const template = npcTemplates.get(spawn.npcId);
+    if (!template || !template.enabled) continue;
+
+    const key = `${spawn.npcId}_${spawn.roomId}`;
+    const live = liveCountBySpawn.get(key) ?? 0;
+    const needed = spawn.maxActive - live;
+
+    for (let i = 0; i < needed; i++) {
       try {
-        await spawnNpcFromTemplate(template, template.spawnRoomId);
+        const npc = await spawnNpcFromTemplate(template, spawn.roomId, spawn.roomId);
+        broadcastCombatToRoom(spawn.roomId, colors.cyan(buildSpawnMessage(npc)), []);
+        if (npc.template.hostile) {
+          checkNpcAggroOnArrival(npc);
+        }
         spawned++;
       } catch (error) {
-        console.error(`[NPC Manager] Failed to spawn template ${template.id} (${template.name}) during reload:`, error);
+        console.error(`[NPC Manager] Failed to spawn template ${template.id} (${template.name}) during spawn config reload:`, error);
       }
     }
   }
   if (spawned > 0) {
-    console.log(`[NPC Manager] Spawned ${spawned} new NPC(s) from reload`);
+    console.log(`[NPC Manager] Spawned ${spawned} new NPC(s) from spawn config reload`);
   }
 
-  return templates.length;
+  return spawns.length;
 }
 
 /**
@@ -1001,7 +1084,7 @@ export function moveNpc(npc: NpcCombatInstance, direction: string, newRoomId: nu
  * Spawn an NPC instance from a template (public API for REST routes).
  */
 export async function spawnNpcPublic(template: NpcTemplate, roomId: number): Promise<NpcCombatInstance> {
-  const npc = await spawnNpcFromTemplate(template, roomId);
+  const npc = await spawnNpcFromTemplate(template, roomId, roomId);
   broadcastCombatToRoom(roomId, colors.cyan(buildSpawnMessage(npc)), []);
   if (npc.template.hostile) {
     checkNpcAggroOnArrival(npc);

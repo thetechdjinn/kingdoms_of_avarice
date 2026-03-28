@@ -58,6 +58,7 @@
               <button type="button" class="tab-btn" data-tab="features">Features</button>
               <button type="button" class="tab-btn" data-tab="exits">Exits</button>
               <button type="button" class="tab-btn" data-tab="doors">Doors</button>
+              <button type="button" class="tab-btn" data-tab="spawns">Spawns</button>
             </div>
 
             <!-- Basic Tab -->
@@ -216,6 +217,34 @@
               <div class="door-add-actions">
                 <button type="button" id="add-door-btn" class="btn-secondary">+ New Door</button>
                 <a href="/door-editor.html" target="_blank" rel="noopener noreferrer" class="btn-link">Open Door Editor</a>
+              </div>
+            </div>
+
+            <!-- Spawns Tab -->
+            <div class="tab-content" id="tab-spawns">
+              <p class="hint">NPC spawn points for this room. Each entry defines what spawns here and how many.</p>
+              <div id="spawns-list"></div>
+              <div class="spawn-add-section">
+                <h4>Add Spawn</h4>
+                <div class="form-row">
+                  <div class="form-group">
+                    <label for="spawn-npc-select">NPC</label>
+                    <select id="spawn-npc-select">
+                      <option value="">Select NPC...</option>
+                    </select>
+                  </div>
+                  <div class="form-group" style="flex: 0 0 100px;">
+                    <label for="spawn-max-active">Max Active</label>
+                    <input type="number" id="spawn-max-active" min="1" value="1" />
+                  </div>
+                  <div class="form-group" style="flex: 0 0 120px;">
+                    <label for="spawn-respawn-seconds">Respawn (s)</label>
+                    <input type="number" id="spawn-respawn-seconds" min="0" value="60" />
+                  </div>
+                </div>
+                <div class="spawn-add-actions">
+                  <button type="button" id="add-spawn-btn" class="btn-secondary">Add Spawn</button>
+                </div>
               </div>
             </div>
 

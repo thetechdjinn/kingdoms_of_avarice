@@ -361,7 +361,7 @@ function findPathDirection(
  * Returns true if the NPC successfully moved.
  */
 function processReturnMovement(npc: NpcCombatInstance): boolean {
-  const spawnRoomId = npc.template.spawnRoomId;
+  const spawnRoomId = npc.spawnRoomId;
 
   // Already at spawn or no spawn room — finalize
   if (!spawnRoomId || npc.currentRoomId === spawnRoomId) {

@@ -31,6 +31,7 @@ import * as merchantRepo from './repositories/merchantRepository.js';
 import * as merchantResponseRepo from './repositories/merchantResponseRepository.js';
 import * as doorRepo from './repositories/doorRepository.js';
 import * as npcSpellRepo from './repositories/npcSpellRepository.js';
+import * as spawnConfigRepo from './repositories/spawnRepository.js';
 
 const DATA_DIR = join(__dirname, '..', '..', '..', '..', 'data');
 
@@ -531,8 +532,15 @@ async function importRooms(data: unknown[], filePath: string): Promise<ImportRes
 async function processDeferredRoomExits(): Promise<void> {
   if (deferredRoomFiles.length === 0) return;
 
-  console.log('\n  Resolving cross-area exits and doors...');
+  console.log('\n  Resolving cross-area exits, doors, and spawns...');
   const tagToId = await roomRepo.getTagToIdMap();
+
+  // Build NPC name → ID lookup for spawn import
+  const npcTemplates = await npcRepo.getAllTemplates();
+  const npcNameToId = new Map<string, number>();
+  for (const tmpl of npcTemplates) {
+    npcNameToId.set(tmpl.name.toLowerCase(), tmpl.id);
+  }
 
   for (const { filePath, data: fileData } of deferredRoomFiles) {
     const result: ImportResult = { file: filePath, created: 0, updated: 0, skipped: 0, errors: [] };
@@ -682,6 +690,37 @@ async function processDeferredRoomExits(): Promise<void> {
           await doorRepo.deleteDoor(existing.id);
         }
       }
+
+      // Import spawns for this room (delete stale, upsert current)
+      const spawns = (item.spawns as unknown[]) || [];
+      if (spawns.length > 0) {
+        // Delete existing spawns for this room first, then recreate
+        await spawnConfigRepo.deleteSpawnsByRoom(fromId);
+
+        for (const spawnRaw of spawns) {
+          const spawn = spawnRaw as Record<string, unknown>;
+          const npcName = spawn.npcName as string;
+          if (!npcName) continue;
+
+          const npcId = npcNameToId.get(npcName.toLowerCase());
+          if (!npcId) {
+            result.errors.push(`Room "${tag}" spawn: NPC "${npcName}" not found`);
+            continue;
+          }
+
+          try {
+            await spawnConfigRepo.upsertSpawn({
+              roomId: fromId,
+              npcId,
+              maxActive: (spawn.maxActive as number) ?? 1,
+              respawnSeconds: (spawn.respawnSeconds as number) ?? 0,
+            });
+          } catch (err) {
+            const msg = (err as Error).message || '';
+            result.errors.push(`Room "${tag}" spawn "${npcName}": ${msg}`);
+          }
+        }
+      }
     }
 
     // Merge exit/door results into the original room file result
@@ -741,16 +780,6 @@ async function importNpcs(data: unknown[]): Promise<ImportResult> {
       if (!name) { result.skipped++; continue; }
 
       // Resolve FK references
-      let spawnRoomId: number | null = null;
-      if (item.spawnRoomTag) {
-        spawnRoomId = tagToId.get(item.spawnRoomTag as string) ?? null;
-        if (!spawnRoomId) {
-          result.errors.push(`NPC "${name}": spawn room tag "${item.spawnRoomTag}" not found`);
-          result.skipped++;
-          continue;
-        }
-      }
-
       let dropTableId: number | null = null;
       if (item.dropTableName) {
         dropTableId = dropTableNameToId.get((item.dropTableName as string).toLowerCase()) ?? null;
@@ -770,10 +799,8 @@ async function importNpcs(data: unknown[]): Promise<ImportResult> {
       const templateInput: Record<string, unknown> = {
         name,
         description: item.description,
-        spawnRoomId,
         maxHealth: item.maxHealth ?? item.health,
         hostile: item.hostile,
-        respawnTime: item.respawnTime,
         level: item.level,
         experienceReward: item.experienceReward,
         maxMana: item.maxMana,
@@ -786,7 +813,6 @@ async function importNpcs(data: unknown[]): Promise<ImportResult> {
         fleeEnabled: item.fleeEnabled,
         fleeHpPercent: item.fleeHpPercent,
         callForHelpChance: item.callForHelpChance,
-        maxActive: item.maxActive,
         interactable: item.interactable,
         allowedAreas: item.allowedAreas,
         roamEnabled: item.roamEnabled,
@@ -903,6 +929,27 @@ async function importNpcs(data: unknown[]): Promise<ImportResult> {
           } catch (err) {
             result.errors.push(`NPC "${name}": merchant response: ${(err as Error).message}`);
           }
+        }
+      }
+
+      // Backward compat: old NPC exports have spawnRoomTag/respawnTime/maxActive on the template.
+      // Convert these to room_spawns entries. New exports put spawns in room data instead.
+      if (item.spawnRoomTag) {
+        const spawnRoomId = tagToId.get(item.spawnRoomTag as string);
+        if (spawnRoomId) {
+          try {
+            await spawnConfigRepo.upsertSpawn({
+              roomId: spawnRoomId,
+              npcId,
+              maxActive: (item.maxActive as number) ?? 1,
+              respawnSeconds: (item.respawnTime as number) ?? 0,
+            });
+            console.log(`    (legacy) Created spawn config for "${name}" in room ${item.spawnRoomTag}`);
+          } catch (err) {
+            result.errors.push(`NPC "${name}": legacy spawn config: ${(err as Error).message}`);
+          }
+        } else {
+          result.errors.push(`NPC "${name}": legacy spawn room tag "${item.spawnRoomTag}" not found`);
         }
       }
     } catch (err) {

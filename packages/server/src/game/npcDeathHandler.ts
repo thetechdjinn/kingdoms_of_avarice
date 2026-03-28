@@ -9,7 +9,7 @@ import type { CurrencyDenomination } from '@koa/shared';
 import type { CombatEntity } from './combatEntity.js';
 import { isPlayerEntity } from './combatEntity.js';
 import type { NpcCombatInstance } from './npcManager.js';
-import { removeNpcInstance, queueRespawn, markAsCorpse } from './npcManager.js';
+import { removeNpcInstance, queueRespawn, markAsCorpse, getSpawnConfig } from './npcManager.js';
 import { sendCombatMessage, broadcastCombatToRoom } from './combatMessaging.js';
 import { colors } from '../utils/colors.js';
 import { awardEssence, awardXp } from './progression.js';
@@ -81,9 +81,10 @@ export async function processNpcDeath(
   } else {
     removeNpcInstance(npc.entityId);
 
-    // Queue respawn if template has a respawn time
-    if (template.respawnTime && template.respawnTime > 0 && template.spawnRoomId) {
-      queueRespawn(template.id, template.spawnRoomId, template.respawnTime);
+    // Queue respawn using per-spawn-point config
+    const spawnConfig = getSpawnConfig(npc.templateId, npc.spawnRoomId);
+    if (spawnConfig && spawnConfig.respawnSeconds > 0) {
+      queueRespawn(npc.templateId, npc.spawnRoomId, spawnConfig.respawnSeconds);
     }
   }
 }

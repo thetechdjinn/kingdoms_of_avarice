@@ -6,7 +6,7 @@ import type { CreateNpcAttackInput, CreateNpcTemplateInput } from '../db/reposit
 import * as npcSpellRepo from '../db/repositories/npcSpellRepository.js';
 import type { CreateNpcSpellInput } from '../db/repositories/npcSpellRepository.js';
 import { withTransaction } from '../db/index.js';
-import { reloadNpcTemplates, getTemplate, spawnNpcPublic, despawnByTemplate } from '../game/npcManager.js';
+import { reloadNpcTemplates, reloadSpawnConfigs, getTemplate, spawnNpcPublic, despawnByTemplate } from '../game/npcManager.js';
 import { requireDeveloper } from '../middleware/auth.js';
 
 /** Parse a route parameter as a positive integer, or return NaN. */
@@ -229,6 +229,7 @@ export function setupNpcRoutes(app: Express): void {
       }
 
       await reloadNpcTemplates();
+      await reloadSpawnConfigs();
       res.json({ success: true });
     } catch (error) {
       console.error('Failed to delete NPC template:', error);
