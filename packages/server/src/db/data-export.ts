@@ -307,11 +307,15 @@ async function exportRooms(
       roomData.doors = roomDoors;
     }
 
-    const roomSpawns = (spawnsByRoom.get(room.id) || []).map(spawn => ({
-      npcName: npcIdToName.get(spawn.npcId) ?? null,
-      maxActive: spawn.maxActive,
-      respawnSeconds: spawn.respawnSeconds,
-    }));
+    const roomSpawns = (spawnsByRoom.get(room.id) || []).map(spawn => {
+      const npcName = npcIdToName.get(spawn.npcId) ?? null;
+      if (!npcName) {
+        const msg = `Room "${room.tag || room.id}" spawn references unknown NPC ID ${spawn.npcId}`;
+        warnings.push(msg);
+        console.warn(`    WARNING: ${msg}`);
+      }
+      return { npcName, maxActive: spawn.maxActive, respawnSeconds: spawn.respawnSeconds };
+    });
     if (roomSpawns.length > 0) {
       roomData.spawns = roomSpawns;
     }
@@ -387,9 +391,9 @@ async function exportNpcs(
   }
 
   for (const tmpl of templates) {
-    // Determine area from spawn configs (use first area, or 'global' if no spawns)
+    // Determine area from spawn configs; use 'global' if no spawns or multiple areas
     const tmplAreas = npcIdToAreas.get(tmpl.id);
-    const area = tmplAreas ? [...tmplAreas][0] : 'global';
+    const area = (tmplAreas && tmplAreas.size === 1) ? [...tmplAreas][0] : 'global';
 
     // Build NPC export object
     const npcData: Record<string, unknown> = {
