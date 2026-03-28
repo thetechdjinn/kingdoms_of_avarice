@@ -79,6 +79,7 @@ interface RoomLayoutInfo {
   let doors: Door[] = [];
   let areas: string[] = [];
   let classDefs: ClassDef[] = [];
+  let npcTemplates: { id: number; name: string }[] = [];
   let selectedRoomId: number | null = null;
 
   // === DOM References ===
@@ -127,6 +128,12 @@ interface RoomLayoutInfo {
 
   // Doors tab
   const doorsList = document.getElementById('doors-list')!;
+
+  // Spawns tab
+  const spawnsList = document.getElementById('spawns-list')!;
+  const spawnNpcSelect = document.getElementById('spawn-npc-select') as HTMLSelectElement;
+  const spawnMaxActiveInput = document.getElementById('spawn-max-active') as HTMLInputElement;
+  const spawnRespawnInput = document.getElementById('spawn-respawn-seconds') as HTMLInputElement;
 
   // List panel
   const areaFilter = document.getElementById('area-filter') as HTMLSelectElement;
@@ -221,6 +228,27 @@ interface RoomLayoutInfo {
       classDefs = [];
       showToast('Failed to load classes', 'error');
     }
+  }
+
+  async function fetchNpcTemplates(): Promise<void> {
+    try {
+      const res = await fetch('/api/npcs', { credentials: 'include' });
+      const data = await res.json();
+      if (data.success && Array.isArray(data.templates)) {
+        npcTemplates = data.templates
+          .map((t: { id: number; name: string }) => ({ id: t.id, name: t.name }))
+          .sort((a: { name: string }, b: { name: string }) => a.name.localeCompare(b.name));
+      }
+    } catch {
+      npcTemplates = [];
+      showToast('Failed to load NPC templates', 'error');
+    }
+    populateNpcDropdown();
+  }
+
+  function populateNpcDropdown(): void {
+    spawnNpcSelect.innerHTML = '<option value="">Select NPC...</option>' +
+      npcTemplates.map(t => `<option value="${t.id}">${escapeHtml(t.name)} (#${t.id})</option>`).join('');
   }
 
   // ============================================================================
@@ -361,9 +389,10 @@ interface RoomLayoutInfo {
     respawnAreasInput.setOptions(respawnAreaOptions);
     respawnAreasInput.setValues(room.features?.respawn?.servedAreas || []);
 
-    // Exits & Doors
+    // Exits, Doors & Spawns
     renderExits(room);
     renderDoors(room);
+    loadSpawns(room.id);
 
     // Update exit target options (exclude current room)
     exitTargetSelect.setOptions(getRoomOptions());
@@ -482,6 +511,114 @@ interface RoomLayoutInfo {
       });
     });
   }
+
+  // ============================================================================
+  // Spawns Rendering & CRUD
+  // ============================================================================
+
+  interface RoomSpawnEntry {
+    id: number;
+    roomId: number;
+    npcId: number;
+    maxActive: number;
+    respawnSeconds: number;
+    npcName: string | null;
+  }
+
+  let currentSpawns: RoomSpawnEntry[] = [];
+
+  async function loadSpawns(roomId: number): Promise<void> {
+    try {
+      const res = await fetch(`/api/room-spawns?room_id=${roomId}`, { credentials: 'include' });
+      const data = await res.json();
+      currentSpawns = data.success ? (data.spawns || []) : [];
+    } catch {
+      currentSpawns = [];
+    }
+    renderSpawns();
+  }
+
+  function renderSpawns(): void {
+    if (currentSpawns.length === 0) {
+      spawnsList.innerHTML = '<p class="hint">No NPC spawns configured for this room.</p>';
+      return;
+    }
+
+    spawnsList.innerHTML = currentSpawns.map(s => {
+      const npcLabel = s.npcName ? `${escapeHtml(s.npcName)} (#${s.npcId})` : `NPC #${s.npcId}`;
+      const respawnLabel = s.respawnSeconds > 0 ? `${s.respawnSeconds}s` : 'No respawn';
+      return `
+        <div class="spawn-item">
+          <div class="spawn-info">
+            <span class="spawn-npc-name">${npcLabel}</span>
+            <span class="spawn-detail">Max: ${s.maxActive} | Respawn: ${respawnLabel}</span>
+          </div>
+          <button class="delete-spawn-btn btn-danger-small" data-spawn-id="${s.id}">Remove</button>
+        </div>
+      `;
+    }).join('');
+
+    spawnsList.querySelectorAll('.delete-spawn-btn').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const spawnId = (btn as HTMLElement).dataset.spawnId;
+        if (!spawnId) return;
+        const confirmed = await showConfirm('Remove this spawn configuration?');
+        if (!confirmed) return;
+
+        try {
+          const res = await fetch(`/api/room-spawns/${spawnId}`, {
+            method: 'DELETE',
+            credentials: 'include',
+          });
+          const data = await res.json();
+          if (data.success) {
+            showToast('Spawn removed', 'success');
+            if (selectedRoomId) await loadSpawns(selectedRoomId);
+          } else {
+            showToast(data.message || 'Failed to remove spawn', 'error');
+          }
+        } catch {
+          showToast('Failed to remove spawn', 'error');
+        }
+      });
+    });
+  }
+
+  // Add spawn button handler
+  document.getElementById('add-spawn-btn')?.addEventListener('click', async () => {
+    if (!selectedRoomId) return;
+
+    const npcId = parseInt(spawnNpcSelect.value);
+    if (!npcId || isNaN(npcId)) {
+      showToast('Select an NPC', 'error');
+      return;
+    }
+
+    const maxActive = Math.max(1, parseInt(spawnMaxActiveInput.value) || 1);
+    const parsedRespawn = parseInt(spawnRespawnInput.value);
+    const respawnSeconds = Math.max(0, isNaN(parsedRespawn) ? 60 : parsedRespawn);
+
+    try {
+      const res = await fetch('/api/room-spawns', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ roomId: selectedRoomId, npcId, maxActive, respawnSeconds }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        showToast('Spawn added', 'success');
+        spawnNpcSelect.value = '';
+        spawnMaxActiveInput.value = '1';
+        spawnRespawnInput.value = '60';
+        await loadSpawns(selectedRoomId);
+      } else {
+        showToast(data.message || 'Failed to add spawn', 'error');
+      }
+    } catch {
+      showToast('Failed to add spawn', 'error');
+    }
+  });
 
   // ============================================================================
   // Data Gathering
@@ -1719,7 +1856,7 @@ interface RoomLayoutInfo {
   // Initialize
   // ============================================================================
 
-  await Promise.all([fetchRooms(), fetchDoors(), fetchAreas(), fetchClasses()]);
+  await Promise.all([fetchRooms(), fetchDoors(), fetchAreas(), fetchClasses(), fetchNpcTemplates()]);
   initComponents();
 
   // Handle URL params (deep linking)

@@ -32,6 +32,7 @@ import * as merchantRepo from './repositories/merchantRepository.js';
 import * as merchantResponseRepo from './repositories/merchantResponseRepository.js';
 import * as doorRepo from './repositories/doorRepository.js';
 import * as npcSpellRepo from './repositories/npcSpellRepository.js';
+import * as spawnConfigRepo from './repositories/spawnRepository.js';
 
 const DATA_DIR = join(__dirname, '..', '..', '..', '..', 'data');
 
@@ -214,6 +215,21 @@ async function exportRooms(
     doorsByRoom.get(door.entryRoomId)!.push(door);
   }
 
+  // Load spawn configs and NPC templates for room spawn export
+  const allSpawns = await spawnConfigRepo.getAllSpawns();
+  const spawnsByRoom = new Map<number, typeof allSpawns>();
+  for (const spawn of allSpawns) {
+    if (!spawnsByRoom.has(spawn.roomId)) {
+      spawnsByRoom.set(spawn.roomId, []);
+    }
+    spawnsByRoom.get(spawn.roomId)!.push(spawn);
+  }
+  const npcTemplates = await npcRepo.getAllTemplates();
+  const npcIdToName = new Map<number, string>();
+  for (const tmpl of npcTemplates) {
+    npcIdToName.set(tmpl.id, tmpl.name);
+  }
+
   // Group rooms by area
   const areaRooms = new Map<string, unknown[]>();
   const areaRoomIds = new Map<string, number[]>();
@@ -291,6 +307,19 @@ async function exportRooms(
       roomData.doors = roomDoors;
     }
 
+    const roomSpawns = (spawnsByRoom.get(room.id) || []).map(spawn => {
+      const npcName = npcIdToName.get(spawn.npcId) ?? null;
+      if (!npcName) {
+        const msg = `Room "${room.tag || room.id}" spawn references unknown NPC ID ${spawn.npcId}`;
+        warnings.push(msg);
+        console.warn(`    WARNING: ${msg}`);
+      }
+      return { npcName, maxActive: spawn.maxActive, respawnSeconds: spawn.respawnSeconds };
+    });
+    if (roomSpawns.length > 0) {
+      roomData.spawns = roomSpawns;
+    }
+
     if (!areaRooms.has(area)) {
       areaRooms.set(area, []);
       areaRoomIds.set(area, []);
@@ -350,29 +379,29 @@ async function exportNpcs(
     roomIdToArea.set(room.id, area);
   }
 
-  for (const tmpl of templates) {
-    let area = 'global';
-    let spawnRoomTag: string | null = null;
-
-    if (tmpl.spawnRoomId) {
-      spawnRoomTag = idToTagMap.get(tmpl.spawnRoomId) ?? null;
-      area = roomIdToArea.get(tmpl.spawnRoomId) ?? 'global';
-      if (!spawnRoomTag) {
-        const msg = `NPC "${tmpl.name}" spawn room ID ${tmpl.spawnRoomId} has no tag`;
-        warnings.push(msg);
-        console.warn(`    WARNING: ${msg}`);
-      }
+  // Build NPC → area lookup from spawn configs
+  const npcSpawns = await spawnConfigRepo.getAllSpawns();
+  const npcIdToAreas = new Map<number, Set<string>>();
+  for (const spawn of npcSpawns) {
+    const spawnArea = roomIdToArea.get(spawn.roomId) ?? 'global';
+    if (!npcIdToAreas.has(spawn.npcId)) {
+      npcIdToAreas.set(spawn.npcId, new Set());
     }
+    npcIdToAreas.get(spawn.npcId)!.add(spawnArea);
+  }
+
+  for (const tmpl of templates) {
+    // Determine area from spawn configs; use 'global' if no spawns or multiple areas
+    const tmplAreas = npcIdToAreas.get(tmpl.id);
+    const area = (tmplAreas && tmplAreas.size === 1) ? [...tmplAreas][0] : 'global';
 
     // Build NPC export object
     const npcData: Record<string, unknown> = {
       name: tmpl.name,
       description: tmpl.description,
-      spawnRoomTag,
       health: tmpl.health,
       maxHealth: tmpl.maxHealth,
       hostile: tmpl.hostile,
-      respawnTime: tmpl.respawnTime,
       level: tmpl.level,
       experienceReward: tmpl.experienceReward,
       maxMana: tmpl.maxMana,
@@ -385,7 +414,6 @@ async function exportNpcs(
       fleeEnabled: tmpl.fleeEnabled,
       fleeHpPercent: tmpl.fleeHpPercent,
       callForHelpChance: tmpl.callForHelpChance,
-      maxActive: tmpl.maxActive,
       interactable: tmpl.interactable,
       allowedAreas: tmpl.allowedAreas,
       roamEnabled: tmpl.roamEnabled,

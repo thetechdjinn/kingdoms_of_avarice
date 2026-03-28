@@ -77,21 +77,6 @@
                 <textarea id="npc-description" rows="3" placeholder="A fearsome creature..."></textarea>
               </div>
 
-              <div class="form-row">
-                <div class="form-group">
-                  <label for="npc-spawn-room">Spawn Room ID</label>
-                  <input type="number" id="npc-spawn-room" min="1" placeholder="None" />
-                </div>
-                <div class="form-group">
-                  <label for="npc-respawn-time">Respawn Time (s)</label>
-                  <input type="number" id="npc-respawn-time" min="0" placeholder="None" />
-                </div>
-                <div class="form-group">
-                  <label for="npc-max-active">Max Active</label>
-                  <input type="number" id="npc-max-active" min="1" value="1" />
-                </div>
-              </div>
-
               <div class="toggle-row">
                 <label class="toggle-label">
                   <input type="checkbox" id="npc-hostile" checked />
@@ -108,6 +93,13 @@
                   <span class="toggle-track"></span>
                   Interactable
                 </label>
+              </div>
+
+              <div class="panel-section" id="npc-spawn-locations">
+                <h3>Spawn Locations</h3>
+                <div id="npc-spawn-locations-content">
+                  <span class="hint-inline">Select an NPC to view spawn locations.</span>
+                </div>
               </div>
             </div>
 

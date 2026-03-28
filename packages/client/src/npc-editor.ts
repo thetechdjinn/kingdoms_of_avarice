@@ -37,11 +37,9 @@ interface NpcTemplate {
   id: number;
   name: string;
   description: string | null;
-  spawnRoomId: number | null;
   health: number;
   maxHealth: number;
   hostile: boolean;
-  respawnTime: number | null;
   level: number;
   experienceReward: number;
   maxMana: number;
@@ -54,7 +52,6 @@ interface NpcTemplate {
   fleeEnabled: boolean;
   fleeHpPercent: number;
   callForHelpChance: number;
-  maxActive: number;
   interactable: boolean;
   allowedAreas: string[];
   roamEnabled: boolean;
@@ -309,9 +306,6 @@ function selectTemplate(id: number): void {
   setInputValue('npc-name', template.name);
   setInputValue('npc-level', String(template.level));
   setInputValue('npc-description', template.description || '');
-  setInputValue('npc-spawn-room', template.spawnRoomId ? String(template.spawnRoomId) : '');
-  setInputValue('npc-respawn-time', template.respawnTime !== null ? String(template.respawnTime) : '');
-  setInputValue('npc-max-active', String(template.maxActive));
   setCheckbox('npc-hostile', template.hostile);
   setCheckbox('npc-proper-name', template.properName);
   setCheckbox('npc-enabled', template.enabled !== false);
@@ -366,6 +360,9 @@ function selectTemplate(id: number): void {
   if (template.merchantEnabled) {
     loadMerchantData(template.id);
   }
+
+  // Load spawn locations (read-only display)
+  loadSpawnLocations(template.id);
 
   // Enable spawn
   const spawnBtn = getElement<HTMLButtonElement>('spawn-btn');
@@ -723,8 +720,6 @@ function gatherFormData(): Record<string, unknown> {
   const allowedAreas = getVal('npc-allowed-areas').split(',').map(s => s.trim()).filter(Boolean);
   const augmentations = getVal('npc-augmentations').split(',').map(s => s.trim()).filter(Boolean);
 
-  const spawnRoomVal = getVal('npc-spawn-room').trim();
-  const respawnTimeVal = getVal('npc-respawn-time').trim();
   const essenceClassVal = getVal('npc-essence-class').trim();
   const dropTableVal = getElement<HTMLSelectElement>('npc-drop-table')?.value || '';
 
@@ -732,9 +727,6 @@ function gatherFormData(): Record<string, unknown> {
     name: getVal('npc-name'),
     description: getVal('npc-description') || null,
     level: getNum('npc-level', 1),
-    spawnRoomId: spawnRoomVal ? parseInt(spawnRoomVal) : null,
-    respawnTime: respawnTimeVal ? parseInt(respawnTimeVal) : null,
-    maxActive: getNum('npc-max-active', 1),
     hostile: getChecked('npc-hostile'),
     properName: getChecked('npc-proper-name'),
     enabled: getChecked('npc-enabled'),
@@ -1038,7 +1030,6 @@ function updatePreview(): void {
   const accuracy = getNum('npc-base-accuracy', 50);
   const defense = getNum('npc-base-defense', 50);
   const dr = getNum('npc-damage-reduction', 0);
-  const spawnRoom = getVal('npc-spawn-room');
   const xp = getNum('npc-experience-reward', 0);
   // Balance calculations
   const effectiveHp = dr < 100 ? Math.round(maxHealth / (1 - dr / 100)) : Infinity;
@@ -1063,7 +1054,6 @@ function updatePreview(): void {
       <div class="preview-section-title">Identity</div>
       <div class="preview-stat"><span class="label">Level:</span> <span class="value">${level}</span></div>
       <div class="preview-stat"><span class="label">Hostile:</span> <span class="value ${hostile ? 'hostile' : 'peaceful'}">${hostile ? 'Yes' : 'No'}</span></div>
-      ${spawnRoom ? `<div class="preview-stat"><span class="label">Spawn Room:</span> <span class="value">${escapeHtml(spawnRoom)}</span></div>` : ''}
     </div>
     <div class="preview-section">
       <div class="preview-section-title">Combat Stats</div>
@@ -1181,6 +1171,42 @@ function populateItemDropdown(): void {
 function toggleMerchantSection(enabled: boolean): void {
   const section = document.getElementById('merchant-section');
   if (section) section.style.display = enabled ? 'block' : 'none';
+}
+
+async function loadSpawnLocations(npcId: number): Promise<void> {
+  const container = document.getElementById('npc-spawn-locations-content');
+  if (!container) return;
+
+  try {
+    const res = await fetch(`/api/room-spawns?npc_id=${npcId}`, { credentials: 'include' });
+    if (!res.ok) {
+      container.innerHTML = '<span class="hint-inline">Failed to load spawn locations.</span>';
+      return;
+    }
+    const data = await res.json();
+    const spawns: { id: number; roomId: number; roomName: string | null; maxActive: number; respawnSeconds: number }[] = data.spawns || [];
+
+    if (spawns.length === 0) {
+      container.innerHTML = '<span class="hint-inline">No spawn locations configured. Add them in the Room Editor.</span>';
+      return;
+    }
+
+    const rows = spawns.map(s => {
+      const roomLabel = s.roomName ? `${escapeHtml(s.roomName)} (#${Number(s.roomId)})` : `Room #${Number(s.roomId)}`;
+      const respawnLabel = Number(s.respawnSeconds) > 0 ? `${Number(s.respawnSeconds)}s` : 'No respawn';
+      return `<tr><td>${roomLabel}</td><td>${Number(s.maxActive)}</td><td>${respawnLabel}</td></tr>`;
+    }).join('');
+
+    container.innerHTML = `
+      <table class="spawn-locations-table">
+        <thead><tr><th>Room</th><th>Max Active</th><th>Respawn</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+      <span class="hint-inline">Manage spawn locations in the Room Editor.</span>
+    `;
+  } catch {
+    container.innerHTML = '<span class="hint-inline">Failed to load spawn locations.</span>';
+  }
 }
 
 async function loadMerchantData(npcTemplateId: number): Promise<void> {

@@ -291,16 +291,23 @@ export interface NpcSpell {
   spell: Spell;
 }
 
+// Room spawn config (per room+npc pair)
+export interface RoomSpawn {
+  id: number;
+  roomId: number;
+  npcId: number;
+  maxActive: number;
+  respawnSeconds: number;
+}
+
 // NPC template (blueprint for NPCs)
 export interface NpcTemplate {
   id: number;
   name: string;
   description: string | null;
-  spawnRoomId: number | null;
   health: number;
   maxHealth: number;
   hostile: boolean;
-  respawnTime: number | null;
   level: number;
   experienceReward: number;
   maxMana: number;
@@ -313,7 +320,6 @@ export interface NpcTemplate {
   fleeEnabled: boolean;
   fleeHpPercent: number;
   callForHelpChance: number;
-  maxActive: number;
   interactable: boolean;
   allowedAreas: string[];
   roamEnabled: boolean;
