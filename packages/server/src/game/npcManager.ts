@@ -959,6 +959,11 @@ export async function reloadSpawnConfigs(): Promise<number> {
       liveCountBySpawn.set(key, (liveCountBySpawn.get(key) ?? 0) + 1);
     }
   }
+  const pendingBySpawn = new Map<string, number>();
+  for (const entry of respawnQueue) {
+    const key = `${entry.templateId}_${entry.spawnRoomId}`;
+    pendingBySpawn.set(key, (pendingBySpawn.get(key) ?? 0) + 1);
+  }
 
   let spawned = 0;
   for (const spawn of spawns) {
@@ -967,7 +972,8 @@ export async function reloadSpawnConfigs(): Promise<number> {
 
     const key = `${spawn.npcId}_${spawn.roomId}`;
     const live = liveCountBySpawn.get(key) ?? 0;
-    const needed = spawn.maxActive - live;
+    const pending = pendingBySpawn.get(key) ?? 0;
+    const needed = spawn.maxActive - live - pending;
 
     for (let i = 0; i < needed; i++) {
       try {

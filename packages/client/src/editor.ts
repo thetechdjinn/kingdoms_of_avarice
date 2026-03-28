@@ -594,9 +594,9 @@ interface RoomLayoutInfo {
       return;
     }
 
-    const maxActive = parseInt(spawnMaxActiveInput.value) || 1;
+    const maxActive = Math.max(1, parseInt(spawnMaxActiveInput.value) || 1);
     const parsedRespawn = parseInt(spawnRespawnInput.value);
-    const respawnSeconds = isNaN(parsedRespawn) ? 60 : parsedRespawn;
+    const respawnSeconds = Math.max(0, isNaN(parsedRespawn) ? 60 : parsedRespawn);
 
     try {
       const res = await fetch('/api/room-spawns', {
