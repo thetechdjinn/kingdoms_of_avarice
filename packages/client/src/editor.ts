@@ -241,6 +241,7 @@ interface RoomLayoutInfo {
       }
     } catch {
       npcTemplates = [];
+      showToast('Failed to load NPC templates', 'error');
     }
     populateNpcDropdown();
   }
