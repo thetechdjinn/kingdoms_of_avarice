@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "exported_at": "2026-03-26T02:12:42.489Z",
+  "exported_at": "2026-03-29T03:03:59.515Z",
   "type": "rooms",
   "data": [
     {
@@ -3528,6 +3528,13 @@
           "direction": "north",
           "toTag": "ew_2_2_2"
         }
+      ],
+      "spawns": [
+        {
+          "npcName": "Ysabel",
+          "maxActive": 1,
+          "respawnSeconds": 300
+        }
       ]
     },
     {
@@ -3572,6 +3579,13 @@
         {
           "direction": "north",
           "toTag": "ew_2_1_2"
+        }
+      ],
+      "spawns": [
+        {
+          "npcName": "Zifnab",
+          "maxActive": 1,
+          "respawnSeconds": 300
         }
       ]
     },

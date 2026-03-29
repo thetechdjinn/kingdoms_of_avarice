@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "exported_at": "2026-03-26T00:18:09.827Z",
+  "exported_at": "2026-03-29T03:03:59.521Z",
   "type": "rooms",
   "data": [
     {
@@ -192,7 +192,7 @@
       "name": "Forest Crossing",
       "description": "A well-worn junction where several trails converge. The main path from the south meets a loop trail that circles Hearthstead, and a narrower track leads northeast toward the village center. The grass is trampled flat here from regular foot traffic. A weathered wooden sign points in several directions, though the paint has faded to near-illegibility.",
       "area": "Hearthstead",
-      "terrain": "outdoor",
+      "terrain": "",
       "darkness_level": 0,
       "features": {},
       "exits": [
@@ -338,13 +338,20 @@
       "name": "Hearthstead's Mission",
       "description": "A modest building with a painted sign above the door. Inside, bundles of dried herbs hang from the rafters and the scent of lavender and chamomile fills the air. A wooden counter separates the front room from shelves crowded with clay jars, glass bottles, and neatly labeled pouches. A curtained doorway leads to a back room where a cot is visible. The mission provides healing and spiritual comfort to the people of Hearthstead.",
       "area": "Hearthstead",
-      "terrain": "outdoor",
+      "terrain": "",
       "darkness_level": 0,
       "features": {},
       "exits": [
         {
           "direction": "south",
           "toTag": "hs_hamlet_st1"
+        }
+      ],
+      "spawns": [
+        {
+          "npcName": "Sister Althea",
+          "maxActive": 1,
+          "respawnSeconds": 60
         }
       ]
     },
@@ -361,6 +368,13 @@
           "direction": "east",
           "toTag": "hs_hamlet_s"
         }
+      ],
+      "spawns": [
+        {
+          "npcName": "Geelee",
+          "maxActive": 1,
+          "respawnSeconds": 300
+        }
       ]
     },
     {
@@ -376,6 +390,13 @@
           "direction": "west",
           "toTag": "hs_hamlet_s"
         }
+      ],
+      "spawns": [
+        {
+          "npcName": "Perguth",
+          "maxActive": 1,
+          "respawnSeconds": 300
+        }
       ]
     },
     {
@@ -390,6 +411,13 @@
         {
           "direction": "east",
           "toTag": "hs_hamlet_st1"
+        }
+      ],
+      "spawns": [
+        {
+          "npcName": "Zifnab's Apprentice",
+          "maxActive": 1,
+          "respawnSeconds": 300
         }
       ]
     },

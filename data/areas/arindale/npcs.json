@@ -1,16 +1,14 @@
 {
   "version": "1.0",
-  "exported_at": "2026-03-26T02:12:42.516Z",
+  "exported_at": "2026-03-29T03:03:59.542Z",
   "type": "npcs",
   "data": [
     {
       "name": "Zifnab",
       "description": "A gaunt, wild-eyed mage in layered, timeworn robes that shimmer faintly, as if caught between moments, with tangled hair and a beard that refuses to be tamed. His gaze burns with unsettling intensity, hinting at knowledge both ancient and impossibly out of place. Power coils around him like a barely contained storm, making it clear this is no ordinary spell merchant.",
-      "spawnRoomTag": "market_mage_spells",
       "health": 220,
       "maxHealth": 220,
       "hostile": false,
-      "respawnTime": 300,
       "level": 20,
       "experienceReward": 350,
       "maxMana": 250,
@@ -25,7 +23,6 @@
       "fleeEnabled": false,
       "fleeHpPercent": 20,
       "callForHelpChance": 20,
-      "maxActive": 1,
       "interactable": true,
       "allowedAreas": [],
       "roamEnabled": false,
@@ -69,16 +66,26 @@
           "conditionValue": 0,
           "cooldownRounds": 0
         }
+      ],
+      "merchantInventory": [
+        {
+          "itemName": "tome of magic missle",
+          "maxStock": 10,
+          "restockChance": 100
+        },
+        {
+          "itemName": "scroll of magic missile",
+          "maxStock": 10,
+          "restockChance": 100
+        }
       ]
     },
     {
       "name": "Ysabel",
       "description": "Ysabel Venn is a wiry, sharp-eyed shopkeeper stands behind the counter, her fingers constantly sorting coins with practiced precision. Her clothes are a patchwork of fabrics from a dozen regions, each piece worn but meticulously maintained. A knowing half-smile lingers, as if she has already sized you up and priced you accordingly.",
-      "spawnRoomTag": "market_general",
       "health": 100,
       "maxHealth": 100,
       "hostile": false,
-      "respawnTime": 300,
       "level": 5,
       "experienceReward": 100,
       "maxMana": 0,
@@ -91,7 +98,6 @@
       "fleeEnabled": false,
       "fleeHpPercent": 20,
       "callForHelpChance": 0,
-      "maxActive": 1,
       "interactable": true,
       "allowedAreas": [
         "Arindale"

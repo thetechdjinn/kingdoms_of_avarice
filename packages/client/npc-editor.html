@@ -18,6 +18,9 @@
             <button id="new-npc-btn" class="btn-primary">+ New NPC</button>
           </div>
           <div id="npc-search">
+            <select id="area-filter">
+              <option value="">All Areas</option>
+            </select>
             <input type="text" id="search-input" placeholder="Search NPCs..." />
           </div>
           <ul id="npc-list"></ul>
@@ -194,8 +197,8 @@
               </div>
 
               <div class="form-group">
-                <label for="npc-allowed-areas">Allowed Areas <span class="hint-inline">(comma-separated, empty = all)</span></label>
-                <input type="text" id="npc-allowed-areas" placeholder="e.g., Arindale, Dark Forest" />
+                <label>Allowed Areas <span class="hint-inline">(empty = all areas)</span></label>
+                <div id="npc-allowed-areas-container"></div>
               </div>
             </div>
 

@@ -59,12 +59,29 @@ export interface ArmorStats {
 }
 
 /**
+ * Modifier bonuses aggregated from all equipped items
+ */
+export interface EquipmentModifiers {
+  acBonus: number;
+  damageResistanceBonus: number;
+  dodgeBonus: number;
+  damageModifier: number;
+  energyModifier: number;
+  speedModifier: number;
+  defenseBonus: number;
+  healingModifier: number;
+  criticalChanceBonus: number;
+  magicResistanceBonus: number;
+}
+
+/**
  * All combat-relevant stats derived from equipment
  */
 export interface EquipmentCombatStats {
   weapon: WeaponStats;
   armor: ArmorStats;
   statModifiers: StatModifiers;
+  modifiers: EquipmentModifiers;
   totalWeight: number;
 }
 
@@ -190,6 +207,41 @@ function calculateStatModifiers(equippedItems: ItemInstance[]): StatModifiers {
 }
 
 /**
+ * Sum item modifier fields from all equipped items
+ */
+function calculateEquipmentModifiers(equippedItems: ItemInstance[]): EquipmentModifiers {
+  const total: EquipmentModifiers = {
+    acBonus: 0,
+    damageResistanceBonus: 0,
+    dodgeBonus: 0,
+    damageModifier: 0,
+    energyModifier: 0,
+    speedModifier: 0,
+    defenseBonus: 0,
+    healingModifier: 0,
+    criticalChanceBonus: 0,
+    magicResistanceBonus: 0,
+  };
+
+  for (const item of equippedItems) {
+    const t = item.template;
+    if (!t) continue;
+    total.acBonus += t.ac_modifier ?? 0;
+    total.damageResistanceBonus += t.damage_resistance_modifier ?? 0;
+    total.dodgeBonus += t.dodge_modifier ?? 0;
+    total.damageModifier += t.damage_modifier ?? 0;
+    total.energyModifier += t.energy_modifier ?? 0;
+    total.speedModifier += t.speed_modifier ?? 0;
+    total.defenseBonus += t.defense_modifier ?? 0;
+    total.healingModifier += t.healing_modifier ?? 0;
+    total.criticalChanceBonus += t.critical_chance_modifier ?? 0;
+    total.magicResistanceBonus += t.magic_resistance_modifier ?? 0;
+  }
+
+  return total;
+}
+
+/**
  * Calculate total weight of inventory and equipped items
  */
 function calculateTotalWeight(inventory: ItemInstance[], equipped: ItemInstance[]): number {
@@ -250,14 +302,22 @@ export async function getEquipmentCombatStats(characterId: number): Promise<Equi
   const itemWeight = calculateTotalWeight(inventory, equipped);
   const currencyWeight = await calculateCurrencyWeight(character);
 
+  const armor = calculateArmorStats(equipped);
+  const modifiers = calculateEquipmentModifiers(equipped);
+
+  // Apply equipment modifier bonuses to armor totals
+  armor.totalArmorClass += modifiers.acBonus;
+  armor.damageReduction += modifiers.damageResistanceBonus;
+
   const stats: EquipmentCombatStats = {
     weapon: getWeaponStats(
       mainHandWeapon,
       combatSettings.unarmed_speed,
       combatSettings.default_weapon_speed
     ),
-    armor: calculateArmorStats(equipped),
+    armor,
     statModifiers: calculateStatModifiers(equipped),
+    modifiers,
     totalWeight: itemWeight + currencyWeight,
   };
 

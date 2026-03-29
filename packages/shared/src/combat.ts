@@ -144,14 +144,6 @@ export const ENCUMBRANCE_CRIT_THRESHOLDS = {
  */
 export const CRIT_SOFT_CAP = 40;
 
-/**
- * Critical damage multiplier range (MajorMUD-style)
- * Crits deal between 2x and 4x the weapon's MAX damage
- */
-export const CRIT_DAMAGE_MULTIPLIER = {
-  min: 2.0,
-  max: 4.0,
-};
 
 /**
  * Default combat configuration

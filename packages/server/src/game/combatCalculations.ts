@@ -27,7 +27,6 @@ import {
   DEFAULT_COMBAT_CONFIG,
   ENCUMBRANCE_CRIT_THRESHOLDS,
   CRIT_SOFT_CAP,
-  CRIT_DAMAGE_MULTIPLIER,
   DODGE_SOFT_CAP,
   DODGE_STAT_CONTRIBUTION,
   DODGE_MIN_ATTACKER_ACCURACY,
@@ -502,7 +501,7 @@ export function resolveAttack(
  * @param minDamage - Minimum damage
  * @param maxDamage - Maximum damage
  * @param isCritical - Whether this is a critical hit
- * @param _critMultiplier - DEPRECATED: Now uses CRIT_DAMAGE_MULTIPLIER range
+ * @param _critMultiplier - DEPRECATED: unused, kept for call-site compat
  * @param damageReduction - Flat damage reduction from armor
  * @returns Final damage dealt (minimum 1)
  */
@@ -516,10 +515,10 @@ export function calculateDamage(
   let damage: number;
 
   if (isCritical) {
-    // MajorMUD-style: Crits use MAX damage × random(2.0-4.0)
-    const multiplierRange = CRIT_DAMAGE_MULTIPLIER.max - CRIT_DAMAGE_MULTIPLIER.min;
-    const critMultiplier = CRIT_DAMAGE_MULTIPLIER.min + (Math.random() * multiplierRange);
-    damage = Math.floor(maxDamage * critMultiplier);
+    // Critical: max damage + a normal roll (min-max)
+    const range = Math.max(0, maxDamage - minDamage);
+    const bonusRoll = minDamage + Math.floor(Math.random() * (range + 1));
+    damage = maxDamage + bonusRoll;
   } else {
     // Normal hit: Roll damage between min and max
     const range = Math.max(0, maxDamage - minDamage);

@@ -38,6 +38,15 @@ interface ItemTemplate {
   critical_chance_modifier?: number;
   magic_resistance_modifier?: number;
   trap_modifier?: number;
+  ac_modifier?: number;
+  damage_resistance_modifier?: number;
+  dodge_modifier?: number;
+  damage_modifier?: number;
+  energy_modifier?: number;
+  speed_modifier?: number;
+  defense_modifier?: number;
+  healing_modifier?: number;
+  vision_modifier?: number;
   effect_slots: number;
   rarity?: string;
   max_in_world?: number;
@@ -403,6 +412,15 @@ function formatCopper(copper: number): string {
     (document.getElementById('mod-critical') as HTMLInputElement).value = String(t.critical_chance_modifier || 0);
     (document.getElementById('mod-magic-resist') as HTMLInputElement).value = String(t.magic_resistance_modifier || 0);
     (document.getElementById('mod-trap') as HTMLInputElement).value = String(t.trap_modifier || 0);
+    (document.getElementById('mod-ac') as HTMLInputElement).value = String(t.ac_modifier || 0);
+    (document.getElementById('mod-dr') as HTMLInputElement).value = String(t.damage_resistance_modifier || 0);
+    (document.getElementById('mod-dodge') as HTMLInputElement).value = String(t.dodge_modifier || 0);
+    (document.getElementById('mod-damage') as HTMLInputElement).value = String(t.damage_modifier || 0);
+    (document.getElementById('mod-energy') as HTMLInputElement).value = String(t.energy_modifier || 0);
+    (document.getElementById('mod-speed') as HTMLInputElement).value = String(t.speed_modifier || 0);
+    (document.getElementById('mod-defense') as HTMLInputElement).value = String(t.defense_modifier || 0);
+    (document.getElementById('mod-healing') as HTMLInputElement).value = String(t.healing_modifier || 0);
+    (document.getElementById('mod-vision') as HTMLInputElement).value = String(t.vision_modifier || 0);
 
     // Flags
     const flags = t.flags || {};
@@ -731,6 +749,15 @@ function formatCopper(copper: number): string {
     data.critical_chance_modifier = parseInt((document.getElementById('mod-critical') as HTMLInputElement).value) || 0;
     data.magic_resistance_modifier = parseInt((document.getElementById('mod-magic-resist') as HTMLInputElement).value) || 0;
     data.trap_modifier = parseInt((document.getElementById('mod-trap') as HTMLInputElement).value) || 0;
+    data.ac_modifier = parseInt((document.getElementById('mod-ac') as HTMLInputElement).value) || 0;
+    data.damage_resistance_modifier = parseInt((document.getElementById('mod-dr') as HTMLInputElement).value) || 0;
+    data.dodge_modifier = parseInt((document.getElementById('mod-dodge') as HTMLInputElement).value) || 0;
+    data.damage_modifier = parseInt((document.getElementById('mod-damage') as HTMLInputElement).value) || 0;
+    data.energy_modifier = parseInt((document.getElementById('mod-energy') as HTMLInputElement).value) || 0;
+    data.speed_modifier = parseInt((document.getElementById('mod-speed') as HTMLInputElement).value) || 0;
+    data.defense_modifier = parseInt((document.getElementById('mod-defense') as HTMLInputElement).value) || 0;
+    data.healing_modifier = parseInt((document.getElementById('mod-healing') as HTMLInputElement).value) || 0;
+    data.vision_modifier = parseInt((document.getElementById('mod-vision') as HTMLInputElement).value) || 0;
 
     return data;
   }
@@ -831,6 +858,33 @@ function formatCopper(copper: number): string {
         html += `<div class="preview-stat">Reusable</div>`;
       }
       html += `</div>`;
+    }
+
+    // Modifiers
+    const modLines: string[] = [];
+    const mods = t.stat_modifiers || {};
+    const statNames: [string, string][] = [['strength', 'STR'], ['dexterity', 'DEX'], ['constitution', 'CON'], ['intelligence', 'INT'], ['wisdom', 'WIS'], ['charisma', 'CHA'], ['max_health', 'Max HP'], ['max_mana', 'Max Mana']];
+    for (const [key, label] of statNames) {
+      const v = Number((mods as Record<string, unknown>)[key]) || 0;
+      if (v !== 0) modLines.push(`${label}: ${v >= 0 ? '+' : ''}${v}`);
+    }
+    const flatMods: [number | undefined, string][] = [
+      [t.ac_modifier, 'AC'], [t.damage_resistance_modifier, 'Damage Resist'], [t.defense_modifier, 'Defense'], [t.dodge_modifier, 'Dodge'],
+      [t.stealth_modifier, 'Stealth'], [t.spellcasting_modifier, 'Spellcasting'], [t.lockpicking_modifier, 'Lockpicking'],
+      [t.perception_modifier, 'Perception'], [t.critical_chance_modifier, 'Critical'], [t.magic_resistance_modifier, 'Magic Resist'],
+      [t.trap_modifier, 'Traps'], [t.vision_modifier, 'Vision'],
+    ];
+    for (const [v, label] of flatMods) {
+      if (v && v !== 0) modLines.push(`${label}: ${v >= 0 ? '+' : ''}${v}`);
+    }
+    const pctMods: [number | undefined, string][] = [
+      [t.damage_modifier, 'Damage'], [t.energy_modifier, 'Energy'], [t.speed_modifier, 'Speed'], [t.healing_modifier, 'Healing'],
+    ];
+    for (const [v, label] of pctMods) {
+      if (v && v !== 0) modLines.push(`${label}: ${v >= 0 ? '+' : ''}${v}%`);
+    }
+    if (modLines.length > 0) {
+      html += `<div class="preview-section"><div class="preview-section-title">Modifiers</div>${modLines.map(l => `<div class="preview-stat">${escapeHtml(l)}</div>`).join('')}</div>`;
     }
 
     // Flags

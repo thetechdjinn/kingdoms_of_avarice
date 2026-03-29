@@ -540,12 +540,13 @@ describe('calculateDamage', () => {
     expect(dmg).toBeLessThanOrEqual(15);
   });
 
-  it('critical hits use max damage with multiplier', () => {
-    vi.spyOn(Math, 'random').mockReturnValue(0.5); // Mid-range crit multiplier
+  it('critical hits deal max damage plus a normal roll', () => {
+    vi.spyOn(Math, 'random').mockReturnValue(0.5);
     const dmg = calculateDamage(5, 20, true, 2.0, 0);
-    // Should be maxDamage * multiplier (between 2.0 and 4.0)
-    expect(dmg).toBeGreaterThanOrEqual(40); // 20 * 2.0
-    expect(dmg).toBeLessThanOrEqual(80);   // 20 * 4.0
+    // Crit = maxDamage + roll(min..max). With random=0.5: bonus = 5 + floor(0.5*16) = 13
+    // Total = 20 + 13 = 33
+    expect(dmg).toBeGreaterThanOrEqual(25); // 20 + 5
+    expect(dmg).toBeLessThanOrEqual(40);    // 20 + 20
   });
 
   it('applies damage reduction', () => {

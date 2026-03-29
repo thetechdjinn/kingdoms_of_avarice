@@ -244,6 +244,15 @@ export interface ItemTemplate {
   critical_chance_modifier?: number;    // Bonus/penalty to critical hit chance
   magic_resistance_modifier?: number;  // Bonus/penalty to magic resistance
   trap_modifier?: number;              // Bonus/penalty to trap detection/disarm
+  ac_modifier?: number;                // AC bonus (supplements armor_data.armor_class)
+  damage_resistance_modifier?: number; // Flat damage resistance (supplements armor_data.damage_resistance)
+  dodge_modifier?: number;             // Dodge chance bonus/penalty
+  damage_modifier?: number;            // Percentage damage bonus/penalty
+  energy_modifier?: number;            // Percentage energy per round modifier
+  speed_modifier?: number;             // Percentage action delay modifier
+  defense_modifier?: number;           // Flat defense bonus
+  healing_modifier?: number;           // Percentage healing received modifier
+  vision_modifier?: number;            // Vision bonus (supplements light_data.vision_bonus)
   effect_slots: number;
   base_effects?: unknown;
   rarity?: ItemRarity;        // Item rarity tier (default: common)

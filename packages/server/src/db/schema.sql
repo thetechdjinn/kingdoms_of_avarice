@@ -184,6 +184,17 @@ CREATE TABLE IF NOT EXISTS item_templates (
     -- Stealth modifier (negative for heavy armor, positive for stealth gear)
     stealth_modifier INTEGER DEFAULT 0,
 
+    -- Item modifier fields (any equippable item can provide these bonuses)
+    ac_modifier INTEGER DEFAULT 0,
+    damage_resistance_modifier INTEGER DEFAULT 0,
+    dodge_modifier INTEGER DEFAULT 0,
+    damage_modifier INTEGER DEFAULT 0,
+    energy_modifier INTEGER DEFAULT 0,
+    speed_modifier INTEGER DEFAULT 0,
+    defense_modifier INTEGER DEFAULT 0,
+    healing_modifier INTEGER DEFAULT 0,
+    vision_modifier INTEGER DEFAULT 0,
+
     -- Rarity and world limits
     rarity VARCHAR(20) DEFAULT 'common',
     max_in_world INTEGER,

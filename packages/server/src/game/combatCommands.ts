@@ -107,7 +107,7 @@ export function handleAttack(
 
     return {
       type: MessageType.OUTPUT,
-      message: isReEngaging ? colors.yellow('*COMBAT RE-ENGAGED*') : colors.yellow('*COMBAT ENGAGED*'),
+      message: colors.yellow('*COMBAT ENGAGED*'),
     };
   }
 
@@ -175,7 +175,7 @@ export function handleAttack(
 
   return {
     type: MessageType.OUTPUT,
-    message: isReEngaging ? colors.yellow('*COMBAT RE-ENGAGED*') : colors.yellow('*COMBAT ENGAGED*'),
+    message: colors.yellow('*COMBAT ENGAGED*'),
   };
 }
 

@@ -1,26 +1,26 @@
 {
   "version": "1.0",
-  "exported_at": "2026-03-26T00:18:09.781Z",
+  "exported_at": "2026-03-29T03:03:59.470Z",
   "type": "spells",
   "data": [
     {
-      "name": "Bless",
+      "name": "bless",
       "mnemonic": "bles",
       "description": "Divine favor improves your accuracy.",
       "spellType": "buff",
       "targetType": "self",
       "manaCost": 10,
-      "minDamage": null,
-      "maxDamage": null,
-      "minHealing": null,
-      "maxHealing": null,
+      "minDamage": 0,
+      "maxDamage": 0,
+      "minHealing": 0,
+      "maxHealing": 0,
       "hitsPerCast": 1,
       "statusEffect": "blessed",
       "effectDuration": 120,
       "levelRequired": 1,
       "classRestrictions": [
-        "Cleric",
-        "Paladin"
+        "cleric",
+        "paladin"
       ],
       "isAttackSpell": false,
       "scalingPerLevel": null,
@@ -73,7 +73,39 @@
       "saveDifficulty": 0
     },
     {
-      "name": "Magic Missile",
+      "name": "mageshield",
+      "mnemonic": "mshi",
+      "description": "",
+      "spellType": "offensive",
+      "targetType": "enemy",
+      "manaCost": 5,
+      "minDamage": null,
+      "maxDamage": null,
+      "minHealing": null,
+      "maxHealing": null,
+      "hitsPerCast": 1,
+      "statusEffect": null,
+      "effectDuration": null,
+      "levelRequired": 1,
+      "classRestrictions": [],
+      "isAttackSpell": true,
+      "scalingPerLevel": null,
+      "maxScalingLevel": null,
+      "damageScalingStat": null,
+      "damageScalingFactor": null,
+      "healingScalingStat": null,
+      "healingScalingFactor": null,
+      "castDifficulty": 0,
+      "fizzleMessage": null,
+      "hitMessageSelf": null,
+      "hitMessageTarget": null,
+      "hitMessageRoom": null,
+      "telegraphMessage": null,
+      "saveStat": null,
+      "saveDifficulty": 0
+    },
+    {
+      "name": "magic missile",
       "mnemonic": "mmis",
       "description": "A bolt of magical energy strikes your target.",
       "spellType": "offensive",
@@ -88,7 +120,7 @@
       "effectDuration": null,
       "levelRequired": 1,
       "classRestrictions": [
-        "Mage"
+        "mage"
       ],
       "isAttackSpell": true,
       "scalingPerLevel": 0.03,
@@ -103,27 +135,27 @@
       "hitMessageTarget": null,
       "hitMessageRoom": null,
       "telegraphMessage": null,
-      "saveStat": "none",
+      "saveStat": null,
       "saveDifficulty": 0
     },
     {
-      "name": "Minor Heal",
+      "name": "minor heal",
       "mnemonic": "mhea",
       "description": "A small amount of healing energy restores health.",
       "spellType": "healing",
       "targetType": "self",
       "manaCost": 6,
-      "minDamage": null,
-      "maxDamage": null,
-      "minHealing": 4,
-      "maxHealing": 11,
+      "minDamage": 0,
+      "maxDamage": 0,
+      "minHealing": 1,
+      "maxHealing": 1,
       "hitsPerCast": 1,
       "statusEffect": null,
       "effectDuration": null,
       "levelRequired": 1,
       "classRestrictions": [
-        "Cleric",
-        "Paladin"
+        "cleric",
+        "paladin"
       ],
       "isAttackSpell": false,
       "scalingPerLevel": null,
@@ -157,8 +189,8 @@
       "effectDuration": null,
       "levelRequired": 1,
       "classRestrictions": [
-        "Ranger",
-        "Druid"
+        "ranger",
+        "druid"
       ],
       "isAttackSpell": true,
       "scalingPerLevel": null,
@@ -177,22 +209,22 @@
       "saveDifficulty": 0
     },
     {
-      "name": "Shield",
+      "name": "shield",
       "mnemonic": "shld",
       "description": "A magical barrier protects you.",
       "spellType": "buff",
       "targetType": "self",
       "manaCost": 8,
-      "minDamage": null,
-      "maxDamage": null,
-      "minHealing": null,
-      "maxHealing": null,
+      "minDamage": 0,
+      "maxDamage": 0,
+      "minHealing": 0,
+      "maxHealing": 0,
       "hitsPerCast": 1,
       "statusEffect": "shielded",
       "effectDuration": 90,
       "levelRequired": 2,
       "classRestrictions": [
-        "Mage"
+        "mage"
       ],
       "isAttackSpell": false,
       "scalingPerLevel": null,
@@ -211,22 +243,22 @@
       "saveDifficulty": 0
     },
     {
-      "name": "Thorn Strike",
+      "name": "thorn strike",
       "mnemonic": "thor",
       "description": "Nature's thorns pierce your foe.",
       "spellType": "offensive",
       "targetType": "enemy",
       "manaCost": 6,
-      "minDamage": 5,
-      "maxDamage": 11,
-      "minHealing": null,
-      "maxHealing": null,
+      "minDamage": 1,
+      "maxDamage": 1,
+      "minHealing": 0,
+      "maxHealing": 0,
       "hitsPerCast": 1,
       "statusEffect": null,
       "effectDuration": null,
       "levelRequired": 2,
       "classRestrictions": [
-        "Ranger"
+        "ranger"
       ],
       "isAttackSpell": true,
       "scalingPerLevel": null,
@@ -245,22 +277,22 @@
       "saveDifficulty": 0
     },
     {
-      "name": "Burning Hands",
+      "name": "burning hands",
       "mnemonic": "burn",
       "description": "Flames shoot from your fingertips.",
       "spellType": "offensive",
       "targetType": "enemy",
       "manaCost": 8,
-      "minDamage": 5,
-      "maxDamage": 15,
-      "minHealing": null,
-      "maxHealing": null,
+      "minDamage": 1,
+      "maxDamage": 1,
+      "minHealing": 0,
+      "maxHealing": 0,
       "hitsPerCast": 1,
       "statusEffect": null,
       "effectDuration": null,
       "levelRequired": 3,
       "classRestrictions": [
-        "Mage"
+        "mage"
       ],
       "isAttackSpell": true,
       "scalingPerLevel": null,
@@ -279,23 +311,23 @@
       "saveDifficulty": 0
     },
     {
-      "name": "Smite",
+      "name": "smite",
       "mnemonic": "smit",
       "description": "Divine wrath strikes your enemy.",
       "spellType": "offensive",
       "targetType": "enemy",
       "manaCost": 8,
-      "minDamage": 4,
-      "maxDamage": 14,
-      "minHealing": null,
-      "maxHealing": null,
+      "minDamage": 1,
+      "maxDamage": 1,
+      "minHealing": 0,
+      "maxHealing": 0,
       "hitsPerCast": 1,
       "statusEffect": null,
       "effectDuration": null,
       "levelRequired": 3,
       "classRestrictions": [
-        "Cleric",
-        "Paladin"
+        "cleric",
+        "paladin"
       ],
       "isAttackSpell": true,
       "scalingPerLevel": null,
@@ -314,22 +346,22 @@
       "saveDifficulty": 0
     },
     {
-      "name": "Curse",
+      "name": "curse",
       "mnemonic": "curs",
       "description": "A dark curse weakens your foe.",
       "spellType": "debuff",
       "targetType": "enemy",
       "manaCost": 10,
-      "minDamage": null,
-      "maxDamage": null,
-      "minHealing": null,
-      "maxHealing": null,
+      "minDamage": 0,
+      "maxDamage": 0,
+      "minHealing": 0,
+      "maxHealing": 0,
       "hitsPerCast": 1,
       "statusEffect": "cursed",
       "effectDuration": 60,
       "levelRequired": 4,
       "classRestrictions": [
-        "Mage"
+        "mage"
       ],
       "isAttackSpell": false,
       "scalingPerLevel": null,
@@ -348,22 +380,22 @@
       "saveDifficulty": 0
     },
     {
-      "name": "Entangle",
+      "name": "entangle",
       "mnemonic": "enta",
       "description": "Vines wrap around your target.",
       "spellType": "debuff",
       "targetType": "enemy",
       "manaCost": 10,
-      "minDamage": null,
-      "maxDamage": null,
-      "minHealing": null,
-      "maxHealing": null,
+      "minDamage": 0,
+      "maxDamage": 0,
+      "minHealing": 0,
+      "maxHealing": 0,
       "hitsPerCast": 1,
       "statusEffect": "entangled",
       "effectDuration": 30,
       "levelRequired": 5,
       "classRestrictions": [
-        "Ranger"
+        "ranger"
       ],
       "isAttackSpell": false,
       "scalingPerLevel": null,
@@ -382,23 +414,23 @@
       "saveDifficulty": 0
     },
     {
-      "name": "Heal",
+      "name": "heal",
       "mnemonic": "heal",
       "description": "Healing energy restores a moderate amount of health.",
       "spellType": "healing",
       "targetType": "self",
       "manaCost": 12,
-      "minDamage": null,
-      "maxDamage": null,
-      "minHealing": 7,
-      "maxHealing": 21,
+      "minDamage": 0,
+      "maxDamage": 0,
+      "minHealing": 1,
+      "maxHealing": 1,
       "hitsPerCast": 1,
       "statusEffect": null,
       "effectDuration": null,
       "levelRequired": 5,
       "classRestrictions": [
-        "Cleric",
-        "Paladin"
+        "cleric",
+        "paladin"
       ],
       "isAttackSpell": false,
       "scalingPerLevel": null,
@@ -417,22 +449,22 @@
       "saveDifficulty": 0
     },
     {
-      "name": "Slow",
+      "name": "slow",
       "mnemonic": "slow",
       "description": "Your target's movements become sluggish.",
       "spellType": "debuff",
       "targetType": "enemy",
       "manaCost": 12,
-      "minDamage": null,
-      "maxDamage": null,
-      "minHealing": null,
-      "maxHealing": null,
+      "minDamage": 0,
+      "maxDamage": 0,
+      "minHealing": 0,
+      "maxHealing": 0,
       "hitsPerCast": 1,
       "statusEffect": "slowed",
       "effectDuration": 45,
       "levelRequired": 6,
       "classRestrictions": [
-        "Mage"
+        "mage"
       ],
       "isAttackSpell": false,
       "scalingPerLevel": null,
@@ -451,22 +483,22 @@
       "saveDifficulty": 0
     },
     {
-      "name": "Fireball",
+      "name": "fireball",
       "mnemonic": "fire",
       "description": "A ball of fire explodes on your target.",
       "spellType": "offensive",
       "targetType": "enemy",
       "manaCost": 15,
-      "minDamage": 8,
-      "maxDamage": 23,
-      "minHealing": null,
-      "maxHealing": null,
+      "minDamage": 1,
+      "maxDamage": 1,
+      "minHealing": 0,
+      "maxHealing": 0,
       "hitsPerCast": 1,
       "statusEffect": null,
       "effectDuration": null,
       "levelRequired": 7,
       "classRestrictions": [
-        "Mage"
+        "mage"
       ],
       "isAttackSpell": true,
       "scalingPerLevel": null,
@@ -485,22 +517,22 @@
       "saveDifficulty": 0
     },
     {
-      "name": "Haste",
+      "name": "haste",
       "mnemonic": "hast",
       "description": "Your movements quicken.",
       "spellType": "buff",
       "targetType": "self",
       "manaCost": 15,
-      "minDamage": null,
-      "maxDamage": null,
-      "minHealing": null,
-      "maxHealing": null,
+      "minDamage": 0,
+      "maxDamage": 0,
+      "minHealing": 0,
+      "maxHealing": 0,
       "hitsPerCast": 1,
       "statusEffect": "hasted",
       "effectDuration": 60,
       "levelRequired": 8,
       "classRestrictions": [
-        "Mage"
+        "mage"
       ],
       "isAttackSpell": false,
       "scalingPerLevel": null,
@@ -519,23 +551,23 @@
       "saveDifficulty": 0
     },
     {
-      "name": "Holy Fire",
+      "name": "holy fire",
       "mnemonic": "hfir",
       "description": "Sacred flames burn the unholy.",
       "spellType": "offensive",
       "targetType": "enemy",
       "manaCost": 14,
-      "minDamage": 6,
-      "maxDamage": 21,
-      "minHealing": null,
-      "maxHealing": null,
+      "minDamage": 1,
+      "maxDamage": 1,
+      "minHealing": 0,
+      "maxHealing": 0,
       "hitsPerCast": 1,
       "statusEffect": null,
       "effectDuration": null,
       "levelRequired": 8,
       "classRestrictions": [
-        "Cleric",
-        "Paladin"
+        "cleric",
+        "paladin"
       ],
       "isAttackSpell": true,
       "scalingPerLevel": null,
@@ -554,22 +586,22 @@
       "saveDifficulty": 0
     },
     {
-      "name": "Lightning Bolt",
+      "name": "lightning bolt",
       "mnemonic": "lbol",
       "description": "A bolt of lightning arcs toward your foe.",
       "spellType": "offensive",
       "targetType": "enemy",
       "manaCost": 20,
-      "minDamage": 8,
-      "maxDamage": 28,
-      "minHealing": null,
-      "maxHealing": null,
+      "minDamage": 1,
+      "maxDamage": 1,
+      "minHealing": 0,
+      "maxHealing": 0,
       "hitsPerCast": 1,
       "statusEffect": null,
       "effectDuration": null,
       "levelRequired": 10,
       "classRestrictions": [
-        "Mage"
+        "mage"
       ],
       "isAttackSpell": true,
       "scalingPerLevel": null,
@@ -588,23 +620,23 @@
       "saveDifficulty": 0
     },
     {
-      "name": "Greater Heal",
+      "name": "greater heal",
       "mnemonic": "ghea",
       "description": "Powerful healing energy restores significant health.",
       "spellType": "healing",
       "targetType": "self",
       "manaCost": 25,
-      "minDamage": null,
-      "maxDamage": null,
-      "minHealing": 12,
-      "maxHealing": 40,
+      "minDamage": 0,
+      "maxDamage": 0,
+      "minHealing": 1,
+      "maxHealing": 1,
       "hitsPerCast": 1,
       "statusEffect": null,
       "effectDuration": null,
       "levelRequired": 12,
       "classRestrictions": [
-        "Cleric",
-        "Paladin"
+        "cleric",
+        "paladin"
       ],
       "isAttackSpell": false,
       "scalingPerLevel": null,

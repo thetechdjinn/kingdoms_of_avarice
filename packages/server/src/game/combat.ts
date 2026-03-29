@@ -526,8 +526,8 @@ async function processAttackerCombat(
     encumbranceRatio: attackerStats.encumbranceRatio,
   };
 
-  // Apply energy modifier from status effects
-  const energyMultiplier = 1 + (attackerStats.effectModifiers.energyModifier / 100);
+  // Apply energy modifier from status effects and equipment
+  const energyMultiplier = 1 + ((attackerStats.effectModifiers.energyModifier + attackerStats.equipmentEnergyModifier) / 100);
   const roundEnergy = Math.floor(calculateRoundEnergy(energyFactors, combatConfig) * energyMultiplier);
 
   // Determine if attacker can see (room darkness + effective vision)
@@ -575,7 +575,7 @@ async function processAttackerCombat(
     dexterity: attackerStats.effectiveDex,
     classCritBonus: attackerStats.classCritBonus,
     weaponCritModifier: attackerStats.weapon.critModifier,
-    equipmentCritBonus: 0, // TODO: Add equipment crit bonuses when implemented
+    equipmentCritBonus: attackerStats.equipmentCritBonus,
     encumbranceRatio: attackerStats.encumbranceRatio,
   };
   const baseCritChance = calculateCritChance(critFactors) + attackerStats.effectModifiers.criticalChanceModifier;
@@ -611,29 +611,26 @@ async function processAttackerCombat(
       armorClass: defenderStats.armor.totalArmorClass,
       perception: DEFAULT_PERCEPTION,  // TODO: Add perception stat to characters
       shadow: DEFAULT_SHADOW,          // TODO: Add shadow stat to characters
-      equipmentBonus: defenderStats.equipmentAccuracyBonus,
+      equipmentBonus: defenderStats.equipmentDefenseBonus,
       spellModifier: defenderStats.effectModifiers.defenseModifier,
     };
 
     const targetDefense = calculateDefense(defenseFactors);
 
-    // Apply damage modifier from status effects to weapon damage range
-    const damageMultiplier = 1 + (attackerStats.effectModifiers.damageModifier / 100);
+    // Apply damage modifier from status effects and equipment to weapon damage range
+    const damageMultiplier = 1 + ((attackerStats.effectModifiers.damageModifier + attackerStats.equipmentDamageModifier) / 100);
     const minDamage = Math.max(1, Math.floor(weaponMinDamage * damageMultiplier));
     const maxDamage = Math.max(1, Math.floor(weaponMaxDamage * damageMultiplier));
 
     // Calculate defender's dodge chance (MajorMUD-style)
     let defenderDodgeChance = 0;
-    if (defenderStats.classDodgeBonus > 0 || defenderStats.raceDodgeBonus > 0) {
-      // TODO: Add equipment dodge bonus when implemented on items
-      const equipmentDodgeBonus = 0;
-
+    if (defenderStats.classDodgeBonus > 0 || defenderStats.raceDodgeBonus > 0 || defenderStats.equipmentDodgeBonus > 0) {
       const dodgeFactors = {
         classDodgeBonus: defenderStats.classDodgeBonus,
         raceDodgeBonus: defenderStats.raceDodgeBonus,
         agility: defenderStats.effectiveDex,
         charm: defenderStats.effectiveCha,
-        equipmentDodgeBonus,
+        equipmentDodgeBonus: defenderStats.equipmentDodgeBonus,
         attackerAccuracy,
       };
 
@@ -792,6 +789,21 @@ async function handleEntityDeath(
   // Initialize dead state
   initializeDeadState(victim, roomId);
 
+  // Snapshot all players who had this victim targeted BEFORE clearing combat state,
+  // because clearCombatState removes the victim from everyone's target lists.
+  // Only include players in the same room — players who left mid-fight don't get rewards.
+  const combatParticipants: CombatEntity[] = [];
+  if (!isPlayerEntity(victim)) {
+    for (const [, socket] of connectedPlayersRef) {
+      if (socket.combatState.targets.has(victim.entityId) && getEntityRoomId(socket) === roomId) {
+        combatParticipants.push(socket);
+      }
+    }
+    if (attacker && isPlayerEntity(attacker) && !combatParticipants.includes(attacker)) {
+      combatParticipants.push(attacker);
+    }
+  }
+
   // Clear combat state for victim
   clearCombatState(victim, connectedPlayersRef);
 
@@ -841,7 +853,7 @@ async function handleEntityDeath(
 
     // Process loot drops, despawn, respawn queue (XP/essence deferred)
     try {
-      await processNpcDeath(victim as NpcCombatInstance, attacker, roomId, connectedPlayersRef, deferredRewards);
+      await processNpcDeath(victim as NpcCombatInstance, attacker, roomId, connectedPlayersRef, deferredRewards, combatParticipants);
     } catch (error) {
       console.error('[Combat] Failed to process NPC death:', error);
     }
@@ -1282,17 +1294,22 @@ async function processNpcAttackerCombat(
   };
   const npcAccuracy = calculateAccuracy(accuracyFactors, combatConfig);
 
-  // Calculate crit chance
-  const critFactors = {
-    characterLevel: npc.characterLevel,
-    intelligence: npcStats.effectiveInt,
-    dexterity: npcStats.effectiveDex,
-    classCritBonus: npc.template.baseCritChance,
-    weaponCritModifier: 0,
-    equipmentCritBonus: 0,
-    encumbranceRatio: 0,
-  };
-  const baseCritChance = calculateCritChance(critFactors);
+  // NPCs only crit if the template explicitly grants a crit chance.
+  // When baseCritChance is 0, skip the full calculation (which would add
+  // level/stat/encumbrance bonuses that aren't appropriate for NPCs).
+  let baseCritChance = 0;
+  if (npc.template.baseCritChance > 0) {
+    const critFactors = {
+      characterLevel: npc.characterLevel,
+      intelligence: npcStats.effectiveInt,
+      dexterity: npcStats.effectiveDex,
+      classCritBonus: npc.template.baseCritChance,
+      weaponCritModifier: 0,
+      equipmentCritBonus: 0,
+      encumbranceRatio: 0,
+    };
+    baseCritChance = calculateCritChance(critFactors);
+  }
 
   // Apply damage modifier from status effects
   const damageMultiplier = 1 + (npcStats.effectModifiers.damageModifier / 100);
@@ -1310,109 +1327,109 @@ async function processNpcAttackerCombat(
     },
   };
 
-  // Process each target for each attack-per-round
+  // Pick a single target for this round's attacks. NPCs focus on one enemy at
+  // a time rather than splitting attacks across all targets. Prune invalid
+  // targets (disconnected, dead, left room) until we find a valid one.
+  let target: CombatEntity | null = null;
   for (const targetId of new Set(npc.combatState.targets)) {
-    const target = resolveCombatTarget(targetId);
-    if (!target) {
+    const candidate = resolveCombatTarget(targetId);
+    if (!candidate || candidate.vitals.hp <= 0) {
       npc.combatState.targets.delete(targetId);
       continue;
     }
-
-    // Skip targets already dead (killed earlier this round by another attacker)
-    if (target.vitals.hp <= 0) {
+    if (getEntityRoomId(candidate) !== npcRoomId) {
       npc.combatState.targets.delete(targetId);
       continue;
     }
+    target = candidate;
+    break;
+  }
 
-    // Check if target is still in the same room
-    const targetRoomId = getEntityRoomId(target);
-    if (targetRoomId !== npcRoomId) {
-      npc.combatState.targets.delete(targetId);
-      continue;
-    }
+  if (!target) return;
 
-    // Get defender stats
-    const defenderStats = await getCombatStatsWithDodge(target);
-    const defenseFactors = {
-      armorClass: defenderStats.armor.totalArmorClass,
-      perception: DEFAULT_PERCEPTION,
-      shadow: DEFAULT_SHADOW,
-      equipmentBonus: defenderStats.equipmentAccuracyBonus,
-      spellModifier: defenderStats.effectModifiers.defenseModifier,
+  const targetId = target.entityId;
+
+  // Get defender stats
+  const defenderStats = await getCombatStatsWithDodge(target);
+  const defenseFactors = {
+    armorClass: defenderStats.armor.totalArmorClass,
+    perception: DEFAULT_PERCEPTION,
+    shadow: DEFAULT_SHADOW,
+    equipmentBonus: defenderStats.equipmentDefenseBonus,
+    spellModifier: defenderStats.effectModifiers.defenseModifier,
+  };
+  const targetDefense = calculateDefense(defenseFactors);
+
+  // Calculate dodge chance
+  let defenderDodgeChance = 0;
+  if (defenderStats.classDodgeBonus > 0 || defenderStats.raceDodgeBonus > 0 || defenderStats.equipmentDodgeBonus > 0) {
+    const dodgeFactors = {
+      classDodgeBonus: defenderStats.classDodgeBonus,
+      raceDodgeBonus: defenderStats.raceDodgeBonus,
+      agility: defenderStats.effectiveDex,
+      charm: defenderStats.effectiveCha,
+      equipmentDodgeBonus: defenderStats.equipmentDodgeBonus,
+      attackerAccuracy: npcAccuracy,
     };
-    const targetDefense = calculateDefense(defenseFactors);
+    defenderDodgeChance = calculateDodgeChance(dodgeFactors);
+  }
 
-    // Calculate dodge chance
-    let defenderDodgeChance = 0;
-    if (defenderStats.classDodgeBonus > 0 || defenderStats.raceDodgeBonus > 0) {
-      const dodgeFactors = {
-        classDodgeBonus: defenderStats.classDodgeBonus,
-        raceDodgeBonus: defenderStats.raceDodgeBonus,
-        agility: defenderStats.effectiveDex,
-        charm: defenderStats.effectiveCha,
-        equipmentDodgeBonus: 0,
-        attackerAccuracy: npcAccuracy,
-      };
-      defenderDodgeChance = calculateDodgeChance(dodgeFactors);
+  let totalDamage = 0;
+  const attackerMessages: string[] = [];
+  const defenderMessages: string[] = [];
+  const roomMessages: string[] = [];
+
+  // Process each swing for this round
+  for (let swing = 0; swing < attack.attacksPerRound; swing++) {
+    // Stop attacking if target is already dead
+    if (target.vitals.hp <= 0) break;
+
+    const result = resolveAttack(npcAccuracy, targetDefense, baseCritChance, defenderDodgeChance);
+    let damage = 0;
+
+    if (result === AttackResult.HIT || result === AttackResult.CRITICAL) {
+      damage = calculateDamage(
+        minDamage,
+        maxDamage,
+        result === AttackResult.CRITICAL,
+        DEFAULT_CRIT_MULTIPLIER,
+        defenderStats.armor.damageReduction
+      );
+      totalDamage += damage;
     }
 
-    let totalDamage = 0;
-    const attackerMessages: string[] = [];
-    const defenderMessages: string[] = [];
-    const roomMessages: string[] = [];
+    const npcSwingEntity: SwingEntity = { name: npc.entityName, isProperName: npc.isProperName };
+    const targetSwingEntity: SwingEntity = { name: target.entityName, isProperName: target.isProperName };
+    attackerMessages.push(formatSwingMessage(result, damage, npcSwingEntity, targetSwingEntity, false, false, weaponInfo));
+    defenderMessages.push(formatSwingMessage(result, damage, npcSwingEntity, targetSwingEntity, false, true, weaponInfo));
+    roomMessages.push(formatSwingMessage(result, damage, npcSwingEntity, targetSwingEntity, false, false, weaponInfo));
+  }
 
-    // Process each swing for this round
-    for (let swing = 0; swing < attack.attacksPerRound; swing++) {
-      // Stop attacking if target is already dead
-      if (target.vitals.hp <= 0) break;
+  // Send messages to defender (player)
+  if (defenderMessages.length > 0) {
+    sendCombatMessage(target, MessageType.OUTPUT, defenderMessages.join('\r\n'));
+  }
 
-      const result = resolveAttack(npcAccuracy, targetDefense, baseCritChance, defenderDodgeChance);
-      let damage = 0;
+  // Broadcast to room (excluding defender — NPC doesn't need messages)
+  if (roomMessages.length > 0) {
+    broadcastCombatToRoom(npcRoomId, roomMessages.join('\r\n'), [targetId]);
+  }
 
-      if (result === AttackResult.HIT || result === AttackResult.CRITICAL) {
-        damage = calculateDamage(
-          minDamage,
-          maxDamage,
-          result === AttackResult.CRITICAL,
-          DEFAULT_CRIT_MULTIPLIER,
-          defenderStats.armor.damageReduction
-        );
-        totalDamage += damage;
-      }
+  // Apply damage
+  if (totalDamage > 0) {
+    const damageResult = await applyDamage(target, totalDamage, 'melee');
 
-      const npcSwingEntity: SwingEntity = { name: npc.entityName, isProperName: npc.isProperName };
-      const targetSwingEntity: SwingEntity = { name: target.entityName, isProperName: target.isProperName };
-      attackerMessages.push(formatSwingMessage(result, damage, npcSwingEntity, targetSwingEntity, false, false, weaponInfo));
-      defenderMessages.push(formatSwingMessage(result, damage, npcSwingEntity, targetSwingEntity, false, true, weaponInfo));
-      roomMessages.push(formatSwingMessage(result, damage, npcSwingEntity, targetSwingEntity, false, false, weaponInfo));
-    }
-
-    // Send messages to defender (player)
-    if (defenderMessages.length > 0) {
-      sendCombatMessage(target, MessageType.OUTPUT, defenderMessages.join('\r\n'));
-    }
-
-    // Broadcast to room (excluding defender — NPC doesn't need messages)
-    if (roomMessages.length > 0) {
-      broadcastCombatToRoom(npcRoomId, roomMessages.join('\r\n'), [targetId]);
-    }
-
-    // Apply damage
-    if (totalDamage > 0) {
-      const damageResult = await applyDamage(target, totalDamage, 'melee');
-
-      if (damageResult.stateChange === 'dropped') {
-        if (!isPlayerEntity(target)) {
-          // NPCs die immediately, skip dropped state
-          await handleEntityDeath(target, npc, npcRoomId, deferredRewards);
-        } else {
-          await handleEntityDropped(target, npc, npcRoomId);
-        }
-      } else if (damageResult.stateChange === 'death') {
+    if (damageResult.stateChange === 'dropped') {
+      if (!isPlayerEntity(target)) {
+        // NPCs die immediately, skip dropped state
         await handleEntityDeath(target, npc, npcRoomId, deferredRewards);
       } else {
-        sendEntityVitals(target);
+        await handleEntityDropped(target, npc, npcRoomId);
       }
+    } else if (damageResult.stateChange === 'death') {
+      await handleEntityDeath(target, npc, npcRoomId, deferredRewards);
+    } else {
+      sendEntityVitals(target);
     }
   }
 

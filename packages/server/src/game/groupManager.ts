@@ -66,6 +66,35 @@ export function isGroupLeader(playerId: number): boolean {
 }
 
 /**
+ * Remove a player from their group and notify remaining members.
+ * Used when a non-leader voluntarily leaves the leader's room.
+ */
+export function removePlayerFromGroup(playerId: number, reason: string): void {
+  const group = getGroupForPlayer(playerId);
+  if (!group) return;
+
+  const playerSocket = connectedPlayers.get(playerId);
+  const playerName = playerSocket?.username || 'Someone';
+
+  removeFromGroup(playerId, group);
+
+  if (playerSocket) {
+    sendMessage(playerSocket, MessageType.SYSTEM,
+      colors.yellow(reason)
+    );
+  }
+
+  for (const memberId of group.members) {
+    const memberSocket = connectedPlayers.get(memberId);
+    if (memberSocket) {
+      sendMessage(memberSocket, MessageType.SYSTEM,
+        colors.yellow(`${playerName} has left the group.`)
+      );
+    }
+  }
+}
+
+/**
  * Clean up a player's group membership on disconnect.
  * Notifies remaining group members. Handles leader succession.
  */
