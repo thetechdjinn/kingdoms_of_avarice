@@ -523,10 +523,10 @@ export async function replaceAttacks(npcId: number, attacks: CreateNpcAttackInpu
           atk.percentage ?? 100,
           atk.hitMessage ?? null,
           atk.missMessage ?? null,
-          atk.hitVerb ?? 'hits',
+          atk.hitVerb ?? 'hit',
           atk.hitVerb3p ?? 'hits',
-          atk.missVerb ?? 'misses',
-          atk.missVerb3p ?? 'misses',
+          atk.missVerb ?? 'swing at',
+          atk.missVerb3p ?? 'swings at',
         ]
       );
       results.push(dbToAttack(result.rows[0]));

@@ -579,10 +579,10 @@ function addAttack(): void {
     percentage: 100,
     hitMessage: null,
     missMessage: null,
-    hitVerb: 'hits',
+    hitVerb: 'hit',
     hitVerb3p: 'hits',
-    missVerb: 'misses',
-    missVerb3p: 'misses',
+    missVerb: 'swing at',
+    missVerb3p: 'swings at',
   });
   renderAttacks();
   updatePreview();

@@ -52,8 +52,8 @@
           "missMessage": null,
           "hitVerb": "bites",
           "hitVerb3p": "bites",
-          "missVerb": "misses",
-          "missVerb3p": "misses"
+          "missVerb": "swing at",
+          "missVerb3p": "swings at"
         }
       ]
     },
@@ -106,8 +106,8 @@
           "missMessage": null,
           "hitVerb": "bites",
           "hitVerb3p": "bites",
-          "missVerb": "misses",
-          "missVerb3p": "misses"
+          "missVerb": "swing at",
+          "missVerb3p": "swings at"
         }
       ]
     }

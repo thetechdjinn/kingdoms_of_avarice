@@ -1245,6 +1245,15 @@ export async function runMigrations(): Promise<void> {
       await client.query(`ALTER TABLE item_templates ADD COLUMN IF NOT EXISTS healing_modifier INTEGER DEFAULT 0`);
       await client.query(`ALTER TABLE item_templates ADD COLUMN IF NOT EXISTS vision_modifier INTEGER DEFAULT 0`);
 
+      // Fix NPC attack verb defaults: old defaults used 3p outcome verbs ("hits"/"misses")
+      // instead of proper 1p/3p action verbs ("hit"/"hits", "swing at"/"swings at").
+      await client.query(`UPDATE npc_attacks SET hit_verb = 'hit' WHERE hit_verb = 'hits' AND hit_verb_3p = 'hits'`);
+      await client.query(`UPDATE npc_attacks SET miss_verb = 'swing at' WHERE miss_verb = 'misses'`);
+      await client.query(`UPDATE npc_attacks SET miss_verb_3p = 'swings at' WHERE miss_verb_3p = 'misses'`);
+      await client.query(`ALTER TABLE npc_attacks ALTER COLUMN hit_verb SET DEFAULT 'hit'`);
+      await client.query(`ALTER TABLE npc_attacks ALTER COLUMN miss_verb SET DEFAULT 'swing at'`);
+      await client.query(`ALTER TABLE npc_attacks ALTER COLUMN miss_verb_3p SET DEFAULT 'swings at'`);
+
       // Rename merchant_responses → npc_responses for existing databases.
       // Note: the CREATE TABLE IF NOT EXISTS npc_responses above (line ~708) may have
       // already created an empty npc_responses table during this migration run, so we

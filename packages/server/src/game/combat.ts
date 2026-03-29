@@ -234,6 +234,8 @@ export function stopCombatLoop(): void {
 interface WeaponInfo {
   name: string;
   verbs: AttackVerbs;
+  hitMessage?: string | null;
+  missMessage?: string | null;
 }
 
 /**
@@ -273,24 +275,40 @@ function formatSwingMessage(
   const weaponName = weapon?.name || 'fists';
   const isUnarmed = weaponName === 'fists';
 
+  // Custom message helper: replace {attacker}, {defender}, {damage} placeholders
+  const applyCustomMessage = (template: string): string => {
+    const attacker = isAttacker ? 'You' : atkSubject;
+    const defender = isDefender ? 'you' : defObject;
+    return template
+      .replace(/\{attacker\}/g, attacker)
+      .replace(/\{defender\}/g, defender)
+      .replace(/\{damage\}/g, damage.toString());
+  };
+
   switch (result) {
     case AttackResult.CRITICAL:
-      if (isAttacker) {
-        return `You ${colors.combatCritical('critically')} ${colors.combatHit(hitVerb1p)} ${colors.combatDefender(defObject)} for ${colors.combatDamage(damage.toString())} damage!`;
-      } else if (isDefender) {
-        return `${colors.combatAttacker(atkSubject)} ${colors.combatCritical('critically')} ${colors.combatHit(hitVerb3p)} you for ${colors.combatDamage(damage.toString())} damage!`;
+    case AttackResult.HIT: {
+      // Custom hit message overrides the generated text
+      if (weapon?.hitMessage) {
+        const prefix = result === AttackResult.CRITICAL ? `${colors.combatCritical('*CRITICAL*')} ` : '';
+        return prefix + applyCustomMessage(weapon.hitMessage);
       }
-      return `${colors.combatAttacker(atkSubject)} ${colors.combatCritical('critically')} ${colors.combatHit(hitVerb3p)} ${colors.combatDefender(defObject)} for ${colors.combatDamage(damage.toString())} damage!`;
-
-    case AttackResult.HIT:
+      const isCrit = result === AttackResult.CRITICAL;
+      const critPrefix = isCrit ? `${colors.combatCritical('critically')} ` : '';
+      const punctuation = isCrit ? '!' : '.';
       if (isAttacker) {
-        return `You ${colors.combatHit(hitVerb1p)} ${colors.combatDefender(defObject)} for ${colors.combatDamage(damage.toString())} damage.`;
+        return `You ${critPrefix}${colors.combatHit(hitVerb1p)} ${colors.combatDefender(defObject)} for ${colors.combatDamage(damage.toString())} damage${punctuation}`;
       } else if (isDefender) {
-        return `${colors.combatAttacker(atkSubject)} ${colors.combatHit(hitVerb3p)} you for ${colors.combatDamage(damage.toString())} damage.`;
+        return `${colors.combatAttacker(atkSubject)} ${critPrefix}${colors.combatHit(hitVerb3p)} you for ${colors.combatDamage(damage.toString())} damage${punctuation}`;
       }
-      return `${colors.combatAttacker(atkSubject)} ${colors.combatHit(hitVerb3p)} ${colors.combatDefender(defObject)} for ${colors.combatDamage(damage.toString())} damage.`;
+      return `${colors.combatAttacker(atkSubject)} ${critPrefix}${colors.combatHit(hitVerb3p)} ${colors.combatDefender(defObject)} for ${colors.combatDamage(damage.toString())} damage${punctuation}`;
+    }
 
     case AttackResult.MISS:
+      // Custom miss message overrides the generated text
+      if (weapon?.missMessage) {
+        return applyCustomMessage(weapon.missMessage);
+      }
       if (isUnarmed) {
         if (isAttacker) {
           return `You ${colors.combatMiss(missVerb1p)} ${colors.combatDefender(defObject)}, but miss.`;
@@ -1325,6 +1343,8 @@ async function processNpcAttackerCombat(
       miss: attack.missVerb,
       miss_3p: attack.missVerb3p,
     },
+    hitMessage: attack.hitMessage,
+    missMessage: attack.missMessage,
   };
 
   // Pick a single target for this round's attacks. NPCs focus on one enemy at

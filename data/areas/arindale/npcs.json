@@ -53,8 +53,8 @@
           "missMessage": null,
           "hitVerb": "cracks",
           "hitVerb3p": "cracks",
-          "missVerb": "misses",
-          "missVerb3p": "misses"
+          "missVerb": "swing at",
+          "missVerb3p": "swings at"
         }
       ],
       "spells": [
@@ -130,8 +130,8 @@
           "missMessage": null,
           "hitVerb": "smacks",
           "hitVerb3p": "smacks",
-          "missVerb": "misses",
-          "missVerb3p": "misses"
+          "missVerb": "swing at",
+          "missVerb3p": "swings at"
         }
       ],
       "merchantInventory": [
