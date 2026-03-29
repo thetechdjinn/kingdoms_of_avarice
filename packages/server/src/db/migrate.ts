@@ -1234,6 +1234,17 @@ export async function runMigrations(): Promise<void> {
         console.log('Migrated NPC spawn configs to room_spawns table');
       }
 
+      // Item modifier fields: any equippable item can provide combat bonuses
+      await client.query(`ALTER TABLE item_templates ADD COLUMN IF NOT EXISTS ac_modifier INTEGER DEFAULT 0`);
+      await client.query(`ALTER TABLE item_templates ADD COLUMN IF NOT EXISTS damage_resistance_modifier INTEGER DEFAULT 0`);
+      await client.query(`ALTER TABLE item_templates ADD COLUMN IF NOT EXISTS dodge_modifier INTEGER DEFAULT 0`);
+      await client.query(`ALTER TABLE item_templates ADD COLUMN IF NOT EXISTS damage_modifier INTEGER DEFAULT 0`);
+      await client.query(`ALTER TABLE item_templates ADD COLUMN IF NOT EXISTS energy_modifier INTEGER DEFAULT 0`);
+      await client.query(`ALTER TABLE item_templates ADD COLUMN IF NOT EXISTS speed_modifier INTEGER DEFAULT 0`);
+      await client.query(`ALTER TABLE item_templates ADD COLUMN IF NOT EXISTS defense_modifier INTEGER DEFAULT 0`);
+      await client.query(`ALTER TABLE item_templates ADD COLUMN IF NOT EXISTS healing_modifier INTEGER DEFAULT 0`);
+      await client.query(`ALTER TABLE item_templates ADD COLUMN IF NOT EXISTS vision_modifier INTEGER DEFAULT 0`);
+
       // Rename merchant_responses → npc_responses for existing databases.
       // Note: the CREATE TABLE IF NOT EXISTS npc_responses above (line ~708) may have
       // already created an empty npc_responses table during this migration run, so we

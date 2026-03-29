@@ -1,16 +1,14 @@
 {
   "version": "1.0",
-  "exported_at": "2026-03-26T02:12:42.515Z",
+  "exported_at": "2026-03-29T03:03:59.541Z",
   "type": "npcs",
   "data": [
     {
       "name": "Perguth",
       "description": "Perguth is a broad-shouldered man with weathered hands and the patient eyes of someone who has watched many green adventurers take their first swings. Simple racks filled with low-end starter weapons surround him. He sizes you up with a measured glance, as if already judging your future.",
-      "spawnRoomTag": "hs_hamlet_w",
       "health": 100,
       "maxHealth": 100,
       "hostile": false,
-      "respawnTime": 300,
       "level": 5,
       "experienceReward": 25,
       "maxMana": 0,
@@ -23,7 +21,6 @@
       "fleeEnabled": false,
       "fleeHpPercent": 20,
       "callForHelpChance": 0,
-      "maxActive": 1,
       "interactable": true,
       "allowedAreas": [],
       "roamEnabled": false,
@@ -74,11 +71,9 @@
     {
       "name": "Geelee",
       "description": "Geelee is a stout woman in a leather apron, her arms strong from years of hammering dents out of battered training armor. Piles of simple helms, padded tunics, and scuffed shields are neatly stacked around her stall. She greets newcomers with a knowing smile, clearly used to outfitting adventurers who haven’t yet learned how hard the world can hit.",
-      "spawnRoomTag": "hs_hamlet_a",
       "health": 100,
       "maxHealth": 100,
       "hostile": false,
-      "respawnTime": 300,
       "level": 5,
       "experienceReward": 0,
       "maxMana": 0,
@@ -91,7 +86,6 @@
       "fleeEnabled": false,
       "fleeHpPercent": 20,
       "callForHelpChance": 0,
-      "maxActive": 1,
       "interactable": true,
       "allowedAreas": [],
       "roamEnabled": false,
@@ -157,11 +151,9 @@
     {
       "name": "Zifnab's Apprentice",
       "description": "Zifnab’s apprentice is a young mage in slightly oversized robes, clutching a bundle of beginner spell scrolls with nervous pride. The faint scent of incense and singed parchment lingers around him as sparks of minor magic occasionally flicker at his fingertips. He watches you eagerly, as though hoping you might be impressed by what he’s only just learned himself.",
-      "spawnRoomTag": "hs_hamlet_e",
       "health": 100,
       "maxHealth": 100,
       "hostile": false,
-      "respawnTime": 300,
       "level": 1,
       "experienceReward": 20,
       "maxMana": 50,
@@ -174,7 +166,6 @@
       "fleeEnabled": false,
       "fleeHpPercent": 20,
       "callForHelpChance": 0,
-      "maxActive": 1,
       "interactable": true,
       "allowedAreas": [],
       "roamEnabled": false,
@@ -217,6 +208,104 @@
           "conditionType": "any",
           "conditionValue": 0,
           "cooldownRounds": 0
+        }
+      ],
+      "merchantInventory": [
+        {
+          "itemName": "tome of magic missle",
+          "maxStock": 10,
+          "restockChance": 100
+        },
+        {
+          "itemName": "scroll of magic missile",
+          "maxStock": 10,
+          "restockChance": 100
+        }
+      ]
+    },
+    {
+      "name": "Sister Althea",
+      "description": "A calm woman in simple, well-kept robes stands before you, a soft light seeming to linger around her presence. Her gentle eyes carry both warmth and quiet resolve, as if she has seen much suffering and chosen compassion each time. Her hands rest steady and sure, bearing the quiet confidence of one who heals both body and spirit.",
+      "health": 100,
+      "maxHealth": 100,
+      "hostile": false,
+      "level": 1,
+      "experienceReward": 50,
+      "maxMana": 0,
+      "baseAccuracy": 50,
+      "baseDefense": 50,
+      "baseCritChance": 5,
+      "baseDodge": 5,
+      "damageReduction": 0,
+      "traits": [],
+      "fleeEnabled": false,
+      "fleeHpPercent": 20,
+      "callForHelpChance": 0,
+      "interactable": true,
+      "allowedAreas": [],
+      "roamEnabled": false,
+      "roamInterval": 60,
+      "roamChance": 10,
+      "essenceReward": 0,
+      "essenceClass": null,
+      "leaveCorpse": true,
+      "corpseDuration": 300,
+      "augmentations": [],
+      "enterRoomMessage": "{name} walks in from the {direction}.",
+      "exitRoomMessage": "{name} leaves to the {direction}.",
+      "spawnMessage": "{name} walks into the room.",
+      "merchantEnabled": true,
+      "properName": true,
+      "spellPower": 0,
+      "enabled": true,
+      "primaryFactionName": "Arindale Merchants Guild",
+      "attacks": [
+        {
+          "attackType": "melee",
+          "name": "quarterstaff",
+          "minDamage": 6,
+          "maxDamage": 12,
+          "attacksPerRound": 2,
+          "percentage": 100,
+          "hitMessage": null,
+          "missMessage": null,
+          "hitVerb": "smacks",
+          "hitVerb3p": "smacks",
+          "missVerb": "misses",
+          "missVerb3p": "misses"
+        }
+      ],
+      "spells": [
+        {
+          "spellMnemonic": "heal",
+          "priority": 50,
+          "castChance": 100,
+          "conditionType": "hp_below",
+          "conditionValue": 80,
+          "cooldownRounds": 0
+        }
+      ],
+      "merchantInventory": [
+        {
+          "itemName": "healing potion",
+          "maxStock": 10,
+          "restockChance": 100
+        }
+      ],
+      "npcResponses": [
+        {
+          "triggerKeywords": [
+            "hi",
+            "hello"
+          ],
+          "response": "Hello there, welcome.  I'm here to help you if you require healing or if you are learning spells of the priestly class."
+        },
+        {
+          "triggerKeywords": [
+            "heal",
+            "healing"
+          ],
+          "response": "I have healing potions that I can offer. Type 'list' to see what I have to offer."
         }
       ]
     }

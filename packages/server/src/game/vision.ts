@@ -55,13 +55,18 @@ async function getRaceBaseVision(raceId: string): Promise<number> {
 }
 
 /**
- * Get the vision bonus from a lit light source in the player's HELD slot.
- * Returns 0 if no lit light source is equipped.
+ * Get vision bonuses from equipped items (single DB query).
+ * Returns both the lit light source bonus and the sum of vision_modifier from all items.
  */
-async function getHeldLightVisionBonus(characterId: number): Promise<number> {
+async function getEquippedVisionBonuses(characterId: number): Promise<{ lightBonus: number; equipmentBonus: number }> {
   const equipped = await itemRepo.getCharacterEquipped(characterId);
+  let lightBonus = 0;
+  let equipmentBonus = 0;
+
   for (const item of equipped) {
+    // Lit light source in HELD slot
     if (
+      lightBonus === 0 &&
       item.equipped_slot === EquipmentSlot.HELD &&
       item.template?.item_type === ItemType.LIGHT &&
       item.is_lit &&
@@ -70,31 +75,37 @@ async function getHeldLightVisionBonus(characterId: number): Promise<number> {
       // Fallback: pre-migration data may still use 'radius' key
       // Convert old radius values: 2 → 100 (torch), 3 → 175 (lantern), else radius * 50
       if (item.template.light_data.vision_bonus != null) {
-        return item.template.light_data.vision_bonus;
+        lightBonus = item.template.light_data.vision_bonus;
+      } else {
+        const ld = item.template.light_data as unknown as Record<string, unknown>;
+        const radius = typeof ld.radius === 'number' ? ld.radius : 0;
+        if (radius > 0) {
+          if (radius <= 2) lightBonus = 100;
+          else if (radius <= 3) lightBonus = 175;
+          else lightBonus = radius * 50;
+        }
       }
-      const ld = item.template.light_data as unknown as Record<string, unknown>;
-      const radius = typeof ld.radius === 'number' ? ld.radius : 0;
-      if (radius <= 0) return 0;
-      if (radius <= 2) return 100;
-      if (radius <= 3) return 175;
-      return radius * 50;
     }
+
+    // vision_modifier from any equipped item
+    equipmentBonus += item.template?.vision_modifier ?? 0;
   }
-  return 0;
+
+  return { lightBonus, equipmentBonus };
 }
 
 /**
  * Calculate a player's effective vision (sum of all vision sources).
- * effectiveVision = raceBaseVision + statusEffectVisionModifier + heldLightBonus
+ * effectiveVision = raceBaseVision + statusEffectVisionModifier + heldLightBonus + equipmentVisionBonus
  */
 export async function calculateEffectiveVision(socket: AuthenticatedSocket): Promise<number> {
   const baseVision = await getRaceBaseVision(socket.characterRace);
   const effectMods = getEffectModifiers(socket);
-  const lightBonus = socket.characterId
-    ? await getHeldLightVisionBonus(socket.characterId)
-    : 0;
+  const { lightBonus, equipmentBonus } = socket.characterId
+    ? await getEquippedVisionBonuses(socket.characterId)
+    : { lightBonus: 0, equipmentBonus: 0 };
 
-  return baseVision + effectMods.visionModifier + lightBonus;
+  return baseVision + effectMods.visionModifier + lightBonus + equipmentBonus;
 }
 
 /**

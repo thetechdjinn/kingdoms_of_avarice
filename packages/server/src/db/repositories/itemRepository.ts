@@ -28,6 +28,9 @@ const TEMPLATE_COLUMNS = `it.name, it.short_desc, it.long_desc, it.room_desc, it
         it.requirements, it.stat_modifiers, it.stealth_modifier,
         it.spellcasting_modifier, it.lockpicking_modifier, it.perception_modifier,
         it.critical_chance_modifier, it.magic_resistance_modifier, it.trap_modifier,
+        it.ac_modifier, it.damage_resistance_modifier, it.dodge_modifier,
+        it.damage_modifier, it.energy_modifier, it.speed_modifier,
+        it.defense_modifier, it.healing_modifier, it.vision_modifier,
         it.effect_slots, it.base_effects, it.rarity, it.max_in_world`;
 
 // Database row types
@@ -61,6 +64,15 @@ interface DbItemTemplate {
   critical_chance_modifier: number | null;
   magic_resistance_modifier: number | null;
   trap_modifier: number | null;
+  ac_modifier: number | null;
+  damage_resistance_modifier: number | null;
+  dodge_modifier: number | null;
+  damage_modifier: number | null;
+  energy_modifier: number | null;
+  speed_modifier: number | null;
+  defense_modifier: number | null;
+  healing_modifier: number | null;
+  vision_modifier: number | null;
   effect_slots: number;
   base_effects: unknown | null;
   rarity: string | null;
@@ -117,6 +129,15 @@ function dbToTemplate(row: DbItemTemplate): ItemTemplate {
     critical_chance_modifier: row.critical_chance_modifier ?? undefined,
     magic_resistance_modifier: row.magic_resistance_modifier ?? undefined,
     trap_modifier: row.trap_modifier ?? undefined,
+    ac_modifier: row.ac_modifier ?? undefined,
+    damage_resistance_modifier: row.damage_resistance_modifier ?? undefined,
+    dodge_modifier: row.dodge_modifier ?? undefined,
+    damage_modifier: row.damage_modifier ?? undefined,
+    energy_modifier: row.energy_modifier ?? undefined,
+    speed_modifier: row.speed_modifier ?? undefined,
+    defense_modifier: row.defense_modifier ?? undefined,
+    healing_modifier: row.healing_modifier ?? undefined,
+    vision_modifier: row.vision_modifier ?? undefined,
     effect_slots: row.effect_slots,
     base_effects: row.base_effects ?? undefined,
     rarity: (row.rarity as ItemRarity) ?? undefined,
@@ -156,6 +177,15 @@ function dbJoinedToTemplate(row: DbItemInstance & DbItemTemplate): ItemTemplate 
     critical_chance_modifier: row.critical_chance_modifier ?? undefined,
     magic_resistance_modifier: row.magic_resistance_modifier ?? undefined,
     trap_modifier: row.trap_modifier ?? undefined,
+    ac_modifier: row.ac_modifier ?? undefined,
+    damage_resistance_modifier: row.damage_resistance_modifier ?? undefined,
+    dodge_modifier: row.dodge_modifier ?? undefined,
+    damage_modifier: row.damage_modifier ?? undefined,
+    energy_modifier: row.energy_modifier ?? undefined,
+    speed_modifier: row.speed_modifier ?? undefined,
+    defense_modifier: row.defense_modifier ?? undefined,
+    healing_modifier: row.healing_modifier ?? undefined,
+    vision_modifier: row.vision_modifier ?? undefined,
     effect_slots: row.effect_slots,
     base_effects: row.base_effects ?? undefined,
     rarity: (row.rarity as ItemRarity) ?? undefined,
@@ -238,6 +268,15 @@ export interface CreateTemplateInput {
   critical_chance_modifier?: number;
   magic_resistance_modifier?: number;
   trap_modifier?: number;
+  ac_modifier?: number;
+  damage_resistance_modifier?: number;
+  dodge_modifier?: number;
+  damage_modifier?: number;
+  energy_modifier?: number;
+  speed_modifier?: number;
+  defense_modifier?: number;
+  healing_modifier?: number;
+  vision_modifier?: number;
   effect_slots?: number;
   base_effects?: unknown;
   rarity?: ItemRarity;
@@ -254,6 +293,9 @@ export async function createTemplate(input: CreateTemplateInput, client?: pg.Poo
       requirements, stat_modifiers, stealth_modifier,
       spellcasting_modifier, lockpicking_modifier, perception_modifier,
       critical_chance_modifier, magic_resistance_modifier, trap_modifier,
+      ac_modifier, damage_resistance_modifier, dodge_modifier,
+      damage_modifier, energy_modifier, speed_modifier,
+      defense_modifier, healing_modifier, vision_modifier,
       effect_slots, base_effects, rarity, max_in_world
     ) VALUES (
       $1, $2, $3, $4, $5,
@@ -262,7 +304,9 @@ export async function createTemplate(input: CreateTemplateInput, client?: pg.Poo
       $15, $16, $17, $18, $19,
       $20, $21, $22,
       $23, $24, $25, $26, $27, $28,
-      $29, $30, $31, $32
+      $29, $30, $31, $32, $33, $34,
+      $35, $36, $37,
+      $38, $39, $40, $41
     ) RETURNING *`,
     [
       input.name,
@@ -293,6 +337,15 @@ export async function createTemplate(input: CreateTemplateInput, client?: pg.Poo
       input.critical_chance_modifier ?? 0,
       input.magic_resistance_modifier ?? 0,
       input.trap_modifier ?? 0,
+      input.ac_modifier ?? 0,
+      input.damage_resistance_modifier ?? 0,
+      input.dodge_modifier ?? 0,
+      input.damage_modifier ?? 0,
+      input.energy_modifier ?? 0,
+      input.speed_modifier ?? 0,
+      input.defense_modifier ?? 0,
+      input.healing_modifier ?? 0,
+      input.vision_modifier ?? 0,
       input.effect_slots ?? 0,
       input.base_effects ? JSON.stringify(input.base_effects) : null,
       input.rarity ?? 'common',
@@ -351,12 +404,21 @@ export async function updateTemplate(id: number, updates: Partial<CreateTemplate
       critical_chance_modifier = COALESCE($26, critical_chance_modifier),
       magic_resistance_modifier = COALESCE($27, magic_resistance_modifier),
       trap_modifier = COALESCE($28, trap_modifier),
-      effect_slots = COALESCE($29, effect_slots),
-      base_effects = COALESCE($30, base_effects),
-      rarity = COALESCE($31, rarity),
-      max_in_world = $32,
+      ac_modifier = COALESCE($29, ac_modifier),
+      damage_resistance_modifier = COALESCE($30, damage_resistance_modifier),
+      dodge_modifier = COALESCE($31, dodge_modifier),
+      damage_modifier = COALESCE($32, damage_modifier),
+      energy_modifier = COALESCE($33, energy_modifier),
+      speed_modifier = COALESCE($34, speed_modifier),
+      defense_modifier = COALESCE($35, defense_modifier),
+      healing_modifier = COALESCE($36, healing_modifier),
+      vision_modifier = COALESCE($37, vision_modifier),
+      effect_slots = COALESCE($38, effect_slots),
+      base_effects = COALESCE($39, base_effects),
+      rarity = COALESCE($40, rarity),
+      max_in_world = $41,
       updated_at = CURRENT_TIMESTAMP
-    WHERE id = $33
+    WHERE id = $42
     RETURNING *`,
     [
       updates.name ?? null,
@@ -387,6 +449,15 @@ export async function updateTemplate(id: number, updates: Partial<CreateTemplate
       updates.critical_chance_modifier ?? null,
       updates.magic_resistance_modifier ?? null,
       updates.trap_modifier ?? null,
+      updates.ac_modifier ?? null,
+      updates.damage_resistance_modifier ?? null,
+      updates.dodge_modifier ?? null,
+      updates.damage_modifier ?? null,
+      updates.energy_modifier ?? null,
+      updates.speed_modifier ?? null,
+      updates.defense_modifier ?? null,
+      updates.healing_modifier ?? null,
+      updates.vision_modifier ?? null,
       updates.effect_slots ?? null,
       updates.base_effects ? JSON.stringify(updates.base_effects) : null,
       updates.rarity ?? null,

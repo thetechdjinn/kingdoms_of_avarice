@@ -41,7 +41,7 @@ import {
 } from './socialCommands.js';
 import {
   handleInvite, handleJoinGroup, handleLeaveGroup, handleKick, handleGroupChat,
-  getGroupForPlayer, isGroupLeader,
+  getGroupForPlayer, isGroupLeader, removePlayerFromGroup,
 } from './groupManager.js';
 import { checkTalkTrigger, checkVisitTrigger } from './questManager.js';
 import { handleQuest } from './questCommands.js';
@@ -1395,6 +1395,17 @@ async function handleMove(
 
   // Check for quest visit triggers after room description
   setImmediate(() => checkVisitTrigger(socket, newRoom.id));
+
+  // Group departure: non-leaders who move away from the leader's room leave the group
+  if (!isGroupLeader(socket.playerId)) {
+    const group = getGroupForPlayer(socket.playerId);
+    if (group) {
+      const leaderRoomId = getPlayerLocation(group.leaderId);
+      if (leaderRoomId !== newRoom.id) {
+        removePlayerFromGroup(socket.playerId, 'You left the group by moving away from the leader.');
+      }
+    }
+  }
 
   // Auto-follow: if the mover is a group leader, move followers who are in the old room
   if (isGroupLeader(socket.playerId)) {

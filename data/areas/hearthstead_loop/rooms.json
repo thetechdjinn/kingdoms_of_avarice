@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "exported_at": "2026-03-26T02:12:42.494Z",
+  "exported_at": "2026-03-29T03:03:59.522Z",
   "type": "rooms",
   "data": [
     {
@@ -46,7 +46,7 @@
       "name": "Hearthstead Trail",
       "description": "A stretch of trail through an old orchard, the fruit trees unpruned and growing wild. Gnarled branches hang low over the path, heavy with small green apples. Fallen fruit rots in the grass, attracting wasps.",
       "area": "Hearthstead Loop",
-      "terrain": "outdoor",
+      "terrain": "indoor",
       "darkness_level": 0,
       "features": {},
       "exits": [
@@ -103,7 +103,7 @@
       "name": "Hearthstead Trail",
       "description": "The trail passes through a stand of young birch trees, their white bark peeling in papery strips. Dappled light filters through the canopy. Animal tracks cross the path. Rabbits, perhaps deer.",
       "area": "Hearthstead Loop",
-      "terrain": "outdoor",
+      "terrain": "",
       "darkness_level": 0,
       "features": {},
       "exits": [
@@ -114,6 +114,13 @@
         {
           "direction": "north",
           "toTag": "hs_loop_7"
+        }
+      ],
+      "spawns": [
+        {
+          "npcName": "rat",
+          "maxActive": 1,
+          "respawnSeconds": 300
         }
       ]
     },
@@ -141,7 +148,7 @@
       "name": "Hearthstead Trail",
       "description": "The path descends into a shallow depression where water collects after rain. The ground is soft and muddy, the grass replaced by reeds and rushes. Frogs scatter at the sound of footsteps.",
       "area": "Hearthstead Loop",
-      "terrain": "outdoor",
+      "terrain": "",
       "darkness_level": 0,
       "features": {},
       "exits": [
@@ -152,6 +159,13 @@
         {
           "direction": "north",
           "toTag": "hs_loop_9"
+        }
+      ],
+      "spawns": [
+        {
+          "npcName": "garter snake",
+          "maxActive": 1,
+          "respawnSeconds": 300
         }
       ]
     },
@@ -179,7 +193,7 @@
       "name": "Hearthstead Trail",
       "description": "Open ground with a clear view of Hearthstead below. The trail is well-trodden here, the earth packed hard by years of use. A wooden fence post marks the boundary between the trail and a farmer's field, its top worn smooth.",
       "area": "Hearthstead Loop",
-      "terrain": "outdoor",
+      "terrain": "",
       "darkness_level": 0,
       "features": {},
       "exits": [
@@ -190,6 +204,13 @@
         {
           "direction": "northeast",
           "toTag": "hs_loop_11"
+        }
+      ],
+      "spawns": [
+        {
+          "npcName": "rat",
+          "maxActive": 1,
+          "respawnSeconds": 300
         }
       ]
     },
@@ -278,7 +299,7 @@
       "name": "Overgrown Clearing",
       "description": "A wide spot on the trail where the grass grows tall and wild. The path continues south along the Hearthstead ring, but here at the northern edge, the vegetation is thicker and wilder. Tangled brush and young saplings crowd the trail's edge. Through the undergrowth to the north, a narrow, almost-hidden path disappears into denser forest. The air smells of earth and green growing things.",
       "area": "Hearthstead Loop",
-      "terrain": "outdoor",
+      "terrain": "indoor",
       "darkness_level": 0,
       "features": {},
       "exits": [
@@ -325,6 +346,13 @@
           "requiredItemTag": null,
           "denialMessage": null
         }
+      ],
+      "spawns": [
+        {
+          "npcName": "rat",
+          "maxActive": 2,
+          "respawnSeconds": 300
+        }
       ]
     },
     {
@@ -351,7 +379,7 @@
       "name": "Hearthstead Trail",
       "description": "A section of trail along a low ridge overlooking the fields around Hearthstead. The ground is rocky and uneven, with exposed tree roots snaking across the path. The breeze carries the smell of earth and growing things.",
       "area": "Hearthstead Loop",
-      "terrain": "outdoor",
+      "terrain": "indoor",
       "darkness_level": 0,
       "features": {},
       "exits": [
@@ -362,6 +390,13 @@
         {
           "direction": "east",
           "toTag": "hs_loop_17"
+        }
+      ],
+      "spawns": [
+        {
+          "npcName": "garter snake",
+          "maxActive": 1,
+          "respawnSeconds": 300
         }
       ]
     },
@@ -389,7 +424,7 @@
       "name": "Hearthstead Trail",
       "description": "A meadow clearing where the trail widens briefly before narrowing again. Wildflowers blanket the ground in patches of yellow and purple. A large flat rock beside the path looks like it has served as a rest stop for generations.",
       "area": "Hearthstead Loop",
-      "terrain": "outdoor",
+      "terrain": "indoor",
       "darkness_level": 0,
       "features": {},
       "exits": [
@@ -400,6 +435,13 @@
         {
           "direction": "south",
           "toTag": "hs_loop_19"
+        }
+      ],
+      "spawns": [
+        {
+          "npcName": "rat",
+          "maxActive": 1,
+          "respawnSeconds": 300
         }
       ]
     },
@@ -446,7 +488,7 @@
       "name": "Hearthstead Trail",
       "description": "A stretch of trail through an old orchard, the fruit trees unpruned and growing wild. Gnarled branches hang low over the path, heavy with small green apples. Fallen fruit rots in the grass, attracting wasps.",
       "area": "Hearthstead Loop",
-      "terrain": "outdoor",
+      "terrain": "indoor",
       "darkness_level": 0,
       "features": {},
       "exits": [
@@ -457,6 +499,13 @@
         {
           "direction": "southwest",
           "toTag": "hs_loop_22"
+        }
+      ],
+      "spawns": [
+        {
+          "npcName": "garter snake",
+          "maxActive": 1,
+          "respawnSeconds": 300
         }
       ]
     },

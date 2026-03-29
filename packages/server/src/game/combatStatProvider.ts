@@ -48,6 +48,14 @@ export interface CombatStatSnapshot {
   raceDodgeBonus: number;
   effectModifiers: EffectModifiers;
   totalWeight: number;
+  equipmentDodgeBonus: number;
+  equipmentCritBonus: number;
+  equipmentDamageModifier: number;
+  equipmentEnergyModifier: number;
+  equipmentSpeedModifier: number;
+  equipmentDefenseBonus: number;
+  equipmentHealingModifier: number;
+  equipmentMagicResistBonus: number;
 }
 
 /**
@@ -139,6 +147,14 @@ async function getPlayerCombatStats(entity: CombatEntity, includeDodge: boolean)
     raceDodgeBonus,
     effectModifiers,
     totalWeight: equipment.totalWeight,
+    equipmentDodgeBonus: equipment.modifiers.dodgeBonus,
+    equipmentCritBonus: equipment.modifiers.criticalChanceBonus,
+    equipmentDamageModifier: equipment.modifiers.damageModifier,
+    equipmentEnergyModifier: equipment.modifiers.energyModifier,
+    equipmentSpeedModifier: equipment.modifiers.speedModifier,
+    equipmentDefenseBonus: equipment.modifiers.defenseBonus,
+    equipmentHealingModifier: equipment.modifiers.healingModifier,
+    equipmentMagicResistBonus: equipment.modifiers.magicResistanceBonus,
   };
 }
 
@@ -195,6 +211,14 @@ function getNpcCombatStats(entity: CombatEntity): CombatStatSnapshot {
       raceDodgeBonus: 0,
       effectModifiers,
       totalWeight: 0,
+      equipmentDodgeBonus: 0,
+      equipmentCritBonus: 0,
+      equipmentDamageModifier: 0,
+      equipmentEnergyModifier: 0,
+      equipmentSpeedModifier: 0,
+      equipmentDefenseBonus: 0,
+      equipmentHealingModifier: 0,
+      equipmentMagicResistBonus: 0,
     };
   }
 
@@ -231,5 +255,13 @@ function getNpcCombatStats(entity: CombatEntity): CombatStatSnapshot {
     raceDodgeBonus: 0,
     effectModifiers,
     totalWeight: 0,
+    equipmentDodgeBonus: 0,
+    equipmentCritBonus: 0,
+    equipmentDamageModifier: 0,
+    equipmentEnergyModifier: 0,
+    equipmentSpeedModifier: 0,
+    equipmentDefenseBonus: 0,
+    equipmentHealingModifier: 0,
+    equipmentMagicResistBonus: 0,
   };
 }

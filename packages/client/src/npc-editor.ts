@@ -1,6 +1,7 @@
 import { renderNav } from './components/nav.js';
 import { initAuth } from './components/auth.js';
 import { showConfirm } from './components/modal.js';
+import { SearchableSelect } from './components/searchable-select.js';
 
 (function() {
 
@@ -117,9 +118,11 @@ let factions: Faction[] = [];
 let itemTemplates: ItemTemplateBasic[] = [];
 let merchantInventory: MerchantInventoryEntry[] = [];
 let npcResponses: NpcResponse[] = [];
+let areas: string[] = [];
 let selectedTemplateId: number | null = null;
 let editingAttacks: NpcAttack[] = [];
 let editingSpells: NpcSpell[] = [];
+let allowedAreasSelect: SearchableSelect | null = null;
 let availableSpells: Array<{
   id: number; name: string; mnemonic: string; spellType: string; manaCost: number;
   minDamage: number; maxDamage: number; minHealing: number; maxHealing: number;
@@ -233,6 +236,39 @@ async function fetchDropTables(): Promise<void> {
   }
 }
 
+async function fetchAreas(): Promise<void> {
+  try {
+    const response = await fetch('/api/areas');
+    if (!response.ok) throw new Error('Failed to fetch areas');
+    const data = await response.json();
+    areas = (data.areas || []).sort((a: string, b: string) => a.localeCompare(b));
+    populateAreaFilter();
+    updateAllowedAreasOptions();
+  } catch (error) {
+    console.error('Failed to fetch areas:', error);
+  }
+}
+
+function populateAreaFilter(): void {
+  const select = getElement<HTMLSelectElement>('area-filter');
+  if (!select) return;
+
+  const currentValue = select.value;
+  select.innerHTML = '<option value="">All Areas</option>';
+  for (const area of areas) {
+    const option = document.createElement('option');
+    option.value = area;
+    option.textContent = area;
+    select.appendChild(option);
+  }
+  select.value = currentValue;
+}
+
+function updateAllowedAreasOptions(): void {
+  if (!allowedAreasSelect) return;
+  allowedAreasSelect.setOptions(areas.map(a => ({ value: a, label: a })));
+}
+
 function populateDropTableSelect(): void {
   const select = getElement<HTMLSelectElement>('npc-drop-table');
   if (!select) return;
@@ -256,11 +292,19 @@ function renderTemplateList(): void {
   if (!list) return;
 
   const searchInput = getElement<HTMLInputElement>('search-input');
+  const areaFilter = getElement<HTMLSelectElement>('area-filter');
   const search = searchInput?.value.toLowerCase() || '';
+  const selectedArea = areaFilter?.value || '';
 
   const filtered = templates.filter(t => {
     if (search && !t.name.toLowerCase().includes(search) && !String(t.id).includes(search)) {
       return false;
+    }
+    if (selectedArea) {
+      // Show NPCs whose allowedAreas includes the selected area, or that have no area restriction (empty = all)
+      if (t.allowedAreas.length > 0 && !t.allowedAreas.includes(selectedArea)) {
+        return false;
+      }
     }
     return true;
   });
@@ -329,7 +373,9 @@ function selectTemplate(id: number): void {
   setCheckbox('npc-roam-enabled', template.roamEnabled);
   setInputValue('npc-roam-interval', String(template.roamInterval));
   setInputValue('npc-roam-chance', String(template.roamChance));
-  setInputValue('npc-allowed-areas', template.allowedAreas.join(', '));
+  if (allowedAreasSelect) {
+    allowedAreasSelect.setValues(template.allowedAreas);
+  }
 
   // Rewards tab
   setInputValue('npc-experience-reward', String(template.experienceReward));
@@ -720,7 +766,7 @@ function gatherFormData(): Record<string, unknown> {
   const getChecked = (id: string) => getElement<HTMLInputElement>(id)?.checked || false;
 
   const traits = getVal('npc-traits').split(',').map(s => s.trim()).filter(Boolean);
-  const allowedAreas = getVal('npc-allowed-areas').split(',').map(s => s.trim()).filter(Boolean);
+  const allowedAreas = allowedAreasSelect ? allowedAreasSelect.getValues() : [];
   const augmentations = getVal('npc-augmentations').split(',').map(s => s.trim()).filter(Boolean);
 
   const essenceClassVal = getVal('npc-essence-class').trim();
@@ -1444,8 +1490,19 @@ document.addEventListener('DOMContentLoaded', async () => {
   const auth = await initAuth('developer');
   if (!auth) return;
 
-  await Promise.all([fetchTemplates(), fetchDropTables(), fetchFactions(), fetchItemTemplates(), fetchAvailableSpells()]);
+  await Promise.all([fetchTemplates(), fetchDropTables(), fetchFactions(), fetchItemTemplates(), fetchAvailableSpells(), fetchAreas()]);
   setupTabs();
+
+  // Initialize allowed areas multi-select
+  const allowedAreasContainer = document.getElementById('npc-allowed-areas-container');
+  if (allowedAreasContainer) {
+    allowedAreasSelect = new SearchableSelect({
+      container: allowedAreasContainer,
+      placeholder: 'Search areas...',
+      multi: true,
+      options: areas.map(a => ({ value: a, label: a })),
+    });
+  }
 
   const addListener = (id: string, event: string, handler: EventListener) => {
     const el = document.getElementById(id);
@@ -1462,8 +1519,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   addListener('delete-npc-btn', 'click', deleteTemplate);
   addListener('duplicate-npc-btn', 'click', duplicateTemplate);
 
-  // Search
+  // Search & area filter
   addListener('search-input', 'input', renderTemplateList);
+  addListener('area-filter', 'change', renderTemplateList);
 
   // Attacks
   addListener('add-attack-btn', 'click', addAttack);

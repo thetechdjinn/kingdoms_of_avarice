@@ -1080,6 +1080,42 @@ function formatItemExamine(item: ItemInstance): CommandResponse {
     const sign = template.trap_modifier >= 0 ? '+' : '';
     lines.push(`Trap: ${colors.boldWhite(`${sign}${template.trap_modifier}`)}`);
   }
+  if (template.ac_modifier && template.ac_modifier !== 0) {
+    const sign = template.ac_modifier >= 0 ? '+' : '';
+    lines.push(`AC: ${colors.boldWhite(`${sign}${template.ac_modifier}`)}`);
+  }
+  if (template.damage_resistance_modifier && template.damage_resistance_modifier !== 0) {
+    const sign = template.damage_resistance_modifier >= 0 ? '+' : '';
+    lines.push(`Damage Resistance: ${colors.boldWhite(`${sign}${template.damage_resistance_modifier}`)}`);
+  }
+  if (template.dodge_modifier && template.dodge_modifier !== 0) {
+    const sign = template.dodge_modifier >= 0 ? '+' : '';
+    lines.push(`Dodge: ${colors.boldWhite(`${sign}${template.dodge_modifier}`)}`);
+  }
+  if (template.defense_modifier && template.defense_modifier !== 0) {
+    const sign = template.defense_modifier >= 0 ? '+' : '';
+    lines.push(`Defense: ${colors.boldWhite(`${sign}${template.defense_modifier}`)}`);
+  }
+  if (template.damage_modifier && template.damage_modifier !== 0) {
+    const sign = template.damage_modifier >= 0 ? '+' : '';
+    lines.push(`Damage: ${colors.boldWhite(`${sign}${template.damage_modifier}%`)}`);
+  }
+  if (template.energy_modifier && template.energy_modifier !== 0) {
+    const sign = template.energy_modifier >= 0 ? '+' : '';
+    lines.push(`Energy: ${colors.boldWhite(`${sign}${template.energy_modifier}%`)}`);
+  }
+  if (template.speed_modifier && template.speed_modifier !== 0) {
+    const sign = template.speed_modifier >= 0 ? '+' : '';
+    lines.push(`Speed: ${colors.boldWhite(`${sign}${template.speed_modifier}%`)}`);
+  }
+  if (template.healing_modifier && template.healing_modifier !== 0) {
+    const sign = template.healing_modifier >= 0 ? '+' : '';
+    lines.push(`Healing: ${colors.boldWhite(`${sign}${template.healing_modifier}%`)}`);
+  }
+  if (template.vision_modifier && template.vision_modifier !== 0) {
+    const sign = template.vision_modifier >= 0 ? '+' : '';
+    lines.push(`Vision: ${colors.boldWhite(`${sign}${template.vision_modifier}`)}`);
+  }
 
   return { type: MessageType.OUTPUT, message: lines.join('\r\n') };
 }

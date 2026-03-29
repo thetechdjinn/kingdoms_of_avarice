@@ -522,10 +522,17 @@ export function getNpcsInRoom(roomId: number): NpcCombatInstance[] {
 /**
  * Find an NPC in a room by name.
  * Matches: exact, prefix, base name without augmentation.
+ * By default skips dead/corpse NPCs so a living "rat" is found before a "rat" corpse.
+ * Pass includeCorpses=true to match corpses as well.
  */
-export function findNpcInRoom(targetName: string, roomId: number): NpcCombatInstance | undefined {
-  const npcs = getNpcsInRoom(roomId);
+export function findNpcInRoom(targetName: string, roomId: number, includeCorpses = false): NpcCombatInstance | undefined {
+  let npcs = getNpcsInRoom(roomId);
   if (npcs.length === 0) return undefined;
+
+  if (!includeCorpses) {
+    npcs = npcs.filter(n => n.vitals.hp > 0 && !n.isCorpse);
+    if (npcs.length === 0) return undefined;
+  }
 
   const lowerTarget = targetName.toLowerCase();
 

@@ -32,20 +32,26 @@ export async function processNpcDeath(
   attacker: CombatEntity | null,
   roomId: number,
   connectedPlayers: Map<number, AuthenticatedSocket>,
-  deferredRewards: Array<() => Promise<void>> = []
+  deferredRewards: Array<() => Promise<void>> = [],
+  preCollectedParticipants?: CombatEntity[]
 ): Promise<void> {
   const template = npc.template;
 
-  // Collect all players who had this NPC targeted (the "party")
-  const participants: CombatEntity[] = [];
-  for (const [, socket] of connectedPlayers) {
-    if (socket.combatState.targets.has(npc.entityId)) {
-      participants.push(socket);
+  // Use pre-collected participants if provided (snapshotted before clearCombatState
+  // wiped target lists), otherwise fall back to scanning current targets.
+  let participants: CombatEntity[];
+  if (preCollectedParticipants && preCollectedParticipants.length > 0) {
+    participants = preCollectedParticipants;
+  } else {
+    participants = [];
+    for (const [, socket] of connectedPlayers) {
+      if (socket.combatState.targets.has(npc.entityId)) {
+        participants.push(socket);
+      }
     }
-  }
-  // Ensure the attacker is included
-  if (attacker && isPlayerEntity(attacker) && !participants.includes(attacker)) {
-    participants.push(attacker);
+    if (attacker && isPlayerEntity(attacker) && !participants.includes(attacker)) {
+      participants.push(attacker);
+    }
   }
 
   // Merchants don't drop gold or loot — their inventory persists through death/respawn
