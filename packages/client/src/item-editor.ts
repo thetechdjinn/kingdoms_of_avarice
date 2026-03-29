@@ -414,6 +414,7 @@ function formatCopper(copper: number): string {
     (document.getElementById('flag-two-handed') as HTMLInputElement).checked = !!flags.two_handed;
     (document.getElementById('flag-magical') as HTMLInputElement).checked = !!flags.magical;
     (document.getElementById('flag-throwable') as HTMLInputElement).checked = !!flags.throwable;
+    (document.getElementById('flag-fixture') as HTMLInputElement).checked = !!flags.fixture;
 
     updateTypeSections(t.item_type);
     listPanel.setSelected(id);
@@ -610,6 +611,7 @@ function formatCopper(copper: number): string {
       two_handed: (document.getElementById('flag-two-handed') as HTMLInputElement).checked,
       magical: (document.getElementById('flag-magical') as HTMLInputElement).checked,
       throwable: (document.getElementById('flag-throwable') as HTMLInputElement).checked,
+      fixture: (document.getElementById('flag-fixture') as HTMLInputElement).checked,
     };
 
     // Key flags
@@ -837,6 +839,7 @@ function formatCopper(copper: number): string {
     if (flags.cursed) activeFlags.push('Cursed');
     if (flags.no_drop) activeFlags.push('No Drop');
     if (flags.hidden) activeFlags.push('Hidden');
+    if (flags.fixture) activeFlags.push('Fixture');
     if (activeFlags.length > 0) {
       html += `<div class="preview-section"><div class="preview-section-title">Flags</div><div class="preview-stat">${activeFlags.join(', ')}</div></div>`;
     }

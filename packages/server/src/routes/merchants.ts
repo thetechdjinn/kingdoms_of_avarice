@@ -1,9 +1,7 @@
 import { Express, Request as ExpressRequest, Response } from 'express';
 type Request = ExpressRequest<Record<string, string>>;
 import * as merchantRepo from '../db/repositories/merchantRepository.js';
-import * as merchantResponseRepo from '../db/repositories/merchantResponseRepository.js';
 import { calculateMerchantPrice } from '../game/merchantCommands.js';
-import { clearMerchantResponseCache } from '../game/npcManager.js';
 import { requireDeveloper } from '../middleware/auth.js';
 
 function parsePositiveInt(value: string): number {
@@ -181,110 +179,4 @@ export function setupMerchantRoutes(app: Express): void {
     }
   });
 
-  // ========================================================================
-  // Merchant Responses CRUD
-  // ========================================================================
-
-  // Get responses for a merchant template
-  app.get('/api/merchants/:npcTemplateId/responses', requireDeveloper, async (req: Request, res: Response) => {
-    try {
-      const npcTemplateId = parsePositiveInt(req.params.npcTemplateId);
-      if (isNaN(npcTemplateId)) {
-        res.status(400).json({ success: false, message: 'Invalid NPC template ID' });
-        return;
-      }
-      const responses = await merchantResponseRepo.getResponsesForTemplate(npcTemplateId);
-      res.json({ success: true, responses });
-    } catch (error) {
-      console.error('Failed to get merchant responses:', error);
-      res.status(500).json({ success: false, message: 'Failed to get merchant responses' });
-    }
-  });
-
-  // Add response
-  app.post('/api/merchants/:npcTemplateId/responses', requireDeveloper, async (req: Request, res: Response) => {
-    try {
-      const npcTemplateId = parsePositiveInt(req.params.npcTemplateId);
-      if (isNaN(npcTemplateId)) {
-        res.status(400).json({ success: false, message: 'Invalid NPC template ID' });
-        return;
-      }
-      const { triggerKeywords, response: responseText } = req.body;
-      if (!Array.isArray(triggerKeywords) || triggerKeywords.length === 0 ||
-          !triggerKeywords.every((k: unknown) => typeof k === 'string' && k.trim().length > 0)) {
-        res.status(400).json({ success: false, message: 'triggerKeywords must be a non-empty array of non-empty strings' });
-        return;
-      }
-      if (!responseText || typeof responseText !== 'string' || responseText.trim().length === 0) {
-        res.status(400).json({ success: false, message: 'response text is required' });
-        return;
-      }
-      const entry = await merchantResponseRepo.createResponse({
-        npcTemplateId,
-        triggerKeywords,
-        response: responseText,
-      });
-      clearMerchantResponseCache();
-      res.json({ success: true, response: entry });
-    } catch (error) {
-      console.error('Failed to create merchant response:', error);
-      res.status(500).json({ success: false, message: 'Failed to create response' });
-    }
-  });
-
-  // Update response
-  app.put('/api/merchants/responses/:id', requireDeveloper, async (req: Request, res: Response) => {
-    try {
-      const id = parsePositiveInt(req.params.id);
-      if (isNaN(id)) {
-        res.status(400).json({ success: false, message: 'Invalid response ID' });
-        return;
-      }
-      const { triggerKeywords, response: responseText } = req.body;
-      if (triggerKeywords !== undefined &&
-          (!Array.isArray(triggerKeywords) || triggerKeywords.length === 0 ||
-           !triggerKeywords.every((k: unknown) => typeof k === 'string' && k.trim().length > 0))) {
-        res.status(400).json({ success: false, message: 'triggerKeywords must be a non-empty array of non-empty strings' });
-        return;
-      }
-      if (responseText !== undefined && (typeof responseText !== 'string' || responseText.trim().length === 0)) {
-        res.status(400).json({ success: false, message: 'response must be a non-empty string' });
-        return;
-      }
-      const entry = await merchantResponseRepo.updateResponse(id, {
-        triggerKeywords,
-        response: responseText,
-      });
-      if (!entry) {
-        res.status(404).json({ success: false, message: 'Response not found' });
-        return;
-      }
-      clearMerchantResponseCache();
-      res.json({ success: true, response: entry });
-    } catch (error) {
-      console.error('Failed to update merchant response:', error);
-      res.status(500).json({ success: false, message: 'Failed to update response' });
-    }
-  });
-
-  // Delete response
-  app.delete('/api/merchants/responses/:id', requireDeveloper, async (req: Request, res: Response) => {
-    try {
-      const id = parsePositiveInt(req.params.id);
-      if (isNaN(id)) {
-        res.status(400).json({ success: false, message: 'Invalid response ID' });
-        return;
-      }
-      const deleted = await merchantResponseRepo.deleteResponse(id);
-      if (!deleted) {
-        res.status(404).json({ success: false, message: 'Response not found' });
-        return;
-      }
-      clearMerchantResponseCache();
-      res.json({ success: true });
-    } catch (error) {
-      console.error('Failed to delete merchant response:', error);
-      res.status(500).json({ success: false, message: 'Failed to delete response' });
-    }
-  });
 }

@@ -98,7 +98,7 @@ interface MerchantInventoryEntry {
   itemTemplate: ItemTemplateBasic;
 }
 
-interface MerchantResponse {
+interface NpcResponse {
   id: number;
   npcTemplateId: number;
   triggerKeywords: string[];
@@ -116,7 +116,7 @@ let dropTables: DropTable[] = [];
 let factions: Faction[] = [];
 let itemTemplates: ItemTemplateBasic[] = [];
 let merchantInventory: MerchantInventoryEntry[] = [];
-let merchantResponses: MerchantResponse[] = [];
+let npcResponses: NpcResponse[] = [];
 let selectedTemplateId: number | null = null;
 let editingAttacks: NpcAttack[] = [];
 let editingSpells: NpcSpell[] = [];
@@ -352,6 +352,9 @@ function selectTemplate(id: number): void {
   // Spells
   editingSpells = template.spells?.map(s => ({ ...s })) || [];
   renderSpells();
+
+  // Interaction tab — load responses for all NPCs
+  loadNpcResponses(template.id);
 
   // Merchant tab
   setCheckbox('npc-merchant-enabled', template.merchantEnabled);
@@ -1209,27 +1212,32 @@ async function loadSpawnLocations(npcId: number): Promise<void> {
   }
 }
 
+async function loadNpcResponses(npcTemplateId: number): Promise<void> {
+  npcResponses = [];
+  try {
+    const res = await fetch(`/api/npcs/${npcTemplateId}/responses`);
+    if (res.ok) {
+      const data = await res.json();
+      npcResponses = data.responses || [];
+    }
+  } catch (error) {
+    console.error('Failed to load NPC responses:', error);
+  }
+  renderNpcResponses();
+}
+
 async function loadMerchantData(npcTemplateId: number): Promise<void> {
   merchantInventory = [];
-  merchantResponses = [];
   try {
-    const [invRes, respRes] = await Promise.all([
-      fetch(`/api/merchants/${npcTemplateId}/inventory`),
-      fetch(`/api/merchants/${npcTemplateId}/responses`),
-    ]);
+    const invRes = await fetch(`/api/merchants/${npcTemplateId}/inventory`);
     if (invRes.ok) {
       const invData = await invRes.json();
       merchantInventory = invData.inventory || [];
-    }
-    if (respRes.ok) {
-      const respData = await respRes.json();
-      merchantResponses = respData.responses || [];
     }
   } catch (error) {
     console.error('Failed to load merchant data:', error);
   }
   renderMerchantInventory();
-  renderMerchantResponses();
 }
 
 function renderMerchantInventory(): void {
@@ -1315,14 +1323,14 @@ async function addMerchantItem(): Promise<void> {
   }
 }
 
-function renderMerchantResponses(): void {
-  const tbody = document.getElementById('merchant-responses-body');
+function renderNpcResponses(): void {
+  const tbody = document.getElementById('npc-responses-body');
   const hint = document.getElementById('no-responses-hint');
   if (!tbody) return;
   tbody.innerHTML = '';
-  if (hint) hint.style.display = merchantResponses.length === 0 ? 'block' : 'none';
+  if (hint) hint.style.display = npcResponses.length === 0 ? 'block' : 'none';
 
-  for (const resp of merchantResponses) {
+  for (const resp of npcResponses) {
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td>${escapeHtml(resp.triggerKeywords.join(', '))}</td>
@@ -1337,8 +1345,8 @@ function renderMerchantResponses(): void {
       const id = parseInt((btn as HTMLElement).dataset.id || '0');
       if (!id || !await showConfirm('Delete this response?', { dangerous: true })) return;
       try {
-        await fetch(`/api/merchants/responses/${id}`, { method: 'DELETE' });
-        if (selectedTemplateId) await loadMerchantData(selectedTemplateId);
+        await fetch(`/api/npc-responses/${id}`, { method: 'DELETE' });
+        if (selectedTemplateId) await loadNpcResponses(selectedTemplateId);
         showToast('Response deleted', 'success');
       } catch (error) {
         showToast('Failed to delete response', 'error');
@@ -1347,7 +1355,7 @@ function renderMerchantResponses(): void {
   });
 }
 
-async function addMerchantResponse(): Promise<void> {
+async function addNpcResponse(): Promise<void> {
   if (!selectedTemplateId) return;
   const keywordsInput = getElement<HTMLInputElement>('response-keywords');
   const textInput = getElement<HTMLInputElement>('response-text');
@@ -1361,7 +1369,7 @@ async function addMerchantResponse(): Promise<void> {
     return;
   }
   try {
-    const res = await fetch(`/api/merchants/${selectedTemplateId}/responses`, {
+    const res = await fetch(`/api/npcs/${selectedTemplateId}/responses`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ triggerKeywords, response: textInput.value }),
@@ -1373,7 +1381,7 @@ async function addMerchantResponse(): Promise<void> {
     }
     keywordsInput.value = '';
     textInput.value = '';
-    await loadMerchantData(selectedTemplateId);
+    await loadNpcResponses(selectedTemplateId);
     showToast('Response added', 'success');
   } catch (error) {
     showToast('Failed to add response', 'error');
@@ -1472,9 +1480,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (e.target === e.currentTarget) hideImportModal();
   });
 
+  // Interaction tab
+  addListener('npc-add-response-btn', 'click', addNpcResponse);
+
   // Merchant tab
   addListener('merchant-add-item-btn', 'click', addMerchantItem);
-  addListener('merchant-add-response-btn', 'click', addMerchantResponse);
   addListener('test-price-btn', 'click', testPrice);
   const merchantEnabledCheckbox = document.getElementById('npc-merchant-enabled') as HTMLInputElement;
   if (merchantEnabledCheckbox) {

@@ -29,7 +29,7 @@ import * as progressionRepo from './repositories/progressionRepository.js';
 import * as npcRepo from './repositories/npcRepository.js';
 import * as factionRepo from './repositories/factionRepository.js';
 import * as merchantRepo from './repositories/merchantRepository.js';
-import * as merchantResponseRepo from './repositories/merchantResponseRepository.js';
+import * as npcResponseRepo from './repositories/npcResponseRepository.js';
 import * as doorRepo from './repositories/doorRepository.js';
 import * as npcSpellRepo from './repositories/npcSpellRepository.js';
 import * as spawnConfigRepo from './repositories/spawnRepository.js';
@@ -348,7 +348,7 @@ async function exportNpcs(
   warnings: string[]
 ): Promise<Set<string>> {
   const templates = await npcRepo.getAllTemplates();
-  const allMerchantResponses = await merchantResponseRepo.getAllResponses();
+  const allNpcResponses = await npcResponseRepo.getAllResponses();
   const allMerchantInventory = new Map<number, Awaited<ReturnType<typeof merchantRepo.getInventoryForTemplate>>>();
 
   // Load merchant inventory for merchant NPCs
@@ -359,9 +359,9 @@ async function exportNpcs(
     }
   }
 
-  // Group merchant responses by NPC template ID
-  const responsesByNpc = new Map<number, typeof allMerchantResponses>();
-  for (const resp of allMerchantResponses) {
+  // Group NPC responses by NPC template ID
+  const responsesByNpc = new Map<number, typeof allNpcResponses>();
+  for (const resp of allNpcResponses) {
     if (!responsesByNpc.has(resp.npcTemplateId)) {
       responsesByNpc.set(resp.npcTemplateId, []);
     }
@@ -487,7 +487,7 @@ async function exportNpcs(
       });
     }
 
-    // Inline merchant data
+    // Inline merchant inventory (merchant-only)
     if (tmpl.merchantEnabled) {
       const inv = allMerchantInventory.get(tmpl.id) || [];
       if (inv.length > 0) {
@@ -505,14 +505,15 @@ async function exportNpcs(
           };
         });
       }
+    }
 
-      const responses = responsesByNpc.get(tmpl.id) || [];
-      if (responses.length > 0) {
-        npcData.merchantResponses = responses.map(r => ({
-          triggerKeywords: r.triggerKeywords,
-          response: r.response,
-        }));
-      }
+    // Inline NPC responses (exports all responses regardless of interactable/merchant flags)
+    const responses = responsesByNpc.get(tmpl.id) || [];
+    if (responses.length > 0) {
+      npcData.npcResponses = responses.map(r => ({
+        triggerKeywords: r.triggerKeywords,
+        response: r.response,
+      }));
     }
 
     if (!npcsByArea.has(area)) {

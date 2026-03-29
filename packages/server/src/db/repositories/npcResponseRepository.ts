@@ -1,14 +1,14 @@
 import { query } from '../index.js';
-import { MerchantResponse } from '@koa/shared';
+import { NpcResponse } from '@koa/shared';
 
-interface DbMerchantResponse {
+interface DbNpcResponse {
   id: number;
   npc_template_id: number;
   trigger_keywords: string[];
   response: string;
 }
 
-function dbToResponse(row: DbMerchantResponse): MerchantResponse {
+function dbToResponse(row: DbNpcResponse): NpcResponse {
   return {
     id: row.id,
     npcTemplateId: row.npc_template_id,
@@ -17,25 +17,25 @@ function dbToResponse(row: DbMerchantResponse): MerchantResponse {
   };
 }
 
-export async function getResponsesForTemplate(npcTemplateId: number): Promise<MerchantResponse[]> {
-  const result = await query<DbMerchantResponse>(
-    'SELECT * FROM merchant_responses WHERE npc_template_id = $1 ORDER BY id',
+export async function getResponsesForTemplate(npcTemplateId: number): Promise<NpcResponse[]> {
+  const result = await query<DbNpcResponse>(
+    'SELECT * FROM npc_responses WHERE npc_template_id = $1 ORDER BY id',
     [npcTemplateId]
   );
   return result.rows.map(dbToResponse);
 }
 
-export async function getResponseById(id: number): Promise<MerchantResponse | null> {
-  const result = await query<DbMerchantResponse>(
-    'SELECT * FROM merchant_responses WHERE id = $1',
+export async function getResponseById(id: number): Promise<NpcResponse | null> {
+  const result = await query<DbNpcResponse>(
+    'SELECT * FROM npc_responses WHERE id = $1',
     [id]
   );
   return result.rows[0] ? dbToResponse(result.rows[0]) : null;
 }
 
-export async function getAllResponses(): Promise<MerchantResponse[]> {
-  const result = await query<DbMerchantResponse>(
-    'SELECT * FROM merchant_responses ORDER BY npc_template_id, id'
+export async function getAllResponses(): Promise<NpcResponse[]> {
+  const result = await query<DbNpcResponse>(
+    'SELECT * FROM npc_responses ORDER BY npc_template_id, id'
   );
   return result.rows.map(dbToResponse);
 }
@@ -46,9 +46,9 @@ export interface CreateResponseInput {
   response: string;
 }
 
-export async function createResponse(input: CreateResponseInput): Promise<MerchantResponse> {
-  const result = await query<DbMerchantResponse>(
-    `INSERT INTO merchant_responses (npc_template_id, trigger_keywords, response)
+export async function createResponse(input: CreateResponseInput): Promise<NpcResponse> {
+  const result = await query<DbNpcResponse>(
+    `INSERT INTO npc_responses (npc_template_id, trigger_keywords, response)
      VALUES ($1, $2, $3)
      RETURNING *`,
     [input.npcTemplateId, input.triggerKeywords, input.response]
@@ -59,12 +59,12 @@ export async function createResponse(input: CreateResponseInput): Promise<Mercha
 export async function updateResponse(
   id: number,
   updates: Partial<{ triggerKeywords: string[]; response: string }>
-): Promise<MerchantResponse | null> {
+): Promise<NpcResponse | null> {
   const existing = await getResponseById(id);
   if (!existing) return null;
 
-  const result = await query<DbMerchantResponse>(
-    `UPDATE merchant_responses SET
+  const result = await query<DbNpcResponse>(
+    `UPDATE npc_responses SET
       trigger_keywords = COALESCE($1, trigger_keywords),
       response = COALESCE($2, response)
     WHERE id = $3
@@ -79,13 +79,13 @@ export async function updateResponse(
 }
 
 export async function deleteResponse(id: number): Promise<boolean> {
-  const result = await query('DELETE FROM merchant_responses WHERE id = $1', [id]);
+  const result = await query('DELETE FROM npc_responses WHERE id = $1', [id]);
   return (result.rowCount ?? 0) > 0;
 }
 
 export async function deleteAllResponsesForTemplate(npcTemplateId: number): Promise<number> {
   const result = await query(
-    'DELETE FROM merchant_responses WHERE npc_template_id = $1',
+    'DELETE FROM npc_responses WHERE npc_template_id = $1',
     [npcTemplateId]
   );
   return result.rowCount ?? 0;
@@ -98,9 +98,9 @@ export async function deleteAllResponsesForTemplate(npcTemplateId: number): Prom
  * Longer (more specific) triggers are checked first.
  */
 export function findMatchingResponse(
-  responses: MerchantResponse[],
+  responses: NpcResponse[],
   message: string
-): MerchantResponse | undefined {
+): NpcResponse | undefined {
   const lowerMessage = message.toLowerCase().replace(/[^a-z0-9' -]/g, '');
   const words = lowerMessage.split(/\s+/);
 

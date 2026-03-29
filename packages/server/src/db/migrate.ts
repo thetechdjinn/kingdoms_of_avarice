@@ -707,16 +707,16 @@ export async function runMigrations(): Promise<void> {
       `);
       await client.query(`CREATE INDEX IF NOT EXISTS idx_npc_spells_npc ON npc_spells(npc_id)`);
 
-      // Merchant Responses: keyword-triggered NPC responses for directed speech
+      // NPC Responses: keyword-triggered NPC responses for directed speech
       await client.query(`
-        CREATE TABLE IF NOT EXISTS merchant_responses (
+        CREATE TABLE IF NOT EXISTS npc_responses (
           id SERIAL PRIMARY KEY,
           npc_template_id INTEGER NOT NULL REFERENCES npcs(id) ON DELETE CASCADE,
           trigger_keywords TEXT[] NOT NULL,
           response TEXT NOT NULL
         )
       `);
-      await client.query(`CREATE INDEX IF NOT EXISTS idx_merchant_responses_npc ON merchant_responses(npc_template_id)`);
+      await client.query(`CREATE INDEX IF NOT EXISTS idx_npc_responses_npc ON npc_responses(npc_template_id)`);
 
       // Seed default factions
       await client.query(`
@@ -1232,6 +1232,25 @@ export async function runMigrations(): Promise<void> {
           `INSERT INTO game_settings (key, value) VALUES ('room_spawns_migrated', 'true') ON CONFLICT (key) DO NOTHING`
         );
         console.log('Migrated NPC spawn configs to room_spawns table');
+      }
+
+      // Rename merchant_responses → npc_responses for existing databases.
+      // Note: the CREATE TABLE IF NOT EXISTS npc_responses above (line ~708) may have
+      // already created an empty npc_responses table during this migration run, so we
+      // drop it before renaming the old table that contains the actual data.
+      const hasMerchantResponses = await client.query(
+        `SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'merchant_responses'`
+      );
+      if (hasMerchantResponses.rows.length > 0) {
+        await client.query(`DROP TABLE IF EXISTS npc_responses`);
+        await client.query(`ALTER TABLE merchant_responses RENAME TO npc_responses`);
+        const hasOldIndex = await client.query(
+          `SELECT 1 FROM pg_indexes WHERE indexname = 'idx_merchant_responses_npc'`
+        );
+        if (hasOldIndex.rows.length > 0) {
+          await client.query(`ALTER INDEX idx_merchant_responses_npc RENAME TO idx_npc_responses_npc`);
+        }
+        console.log('Renamed merchant_responses → npc_responses');
       }
 
     });

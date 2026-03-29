@@ -401,12 +401,13 @@ export interface MerchantInventoryEntry {
   restockChance: number; // 1-100 percentage
 }
 
-export interface MerchantResponse {
+export interface NpcResponse {
   id: number;
   npcTemplateId: number;
   triggerKeywords: string[];
   response: string;
 }
+
 
 // Re-export quest system
 export * from "./quest.js";

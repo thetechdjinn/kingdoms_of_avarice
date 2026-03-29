@@ -20,8 +20,8 @@ import type { GameWorld } from './world.js';
 import * as doorStateManager from '../services/doorStateManager.js';
 import * as merchantRepo from '../db/repositories/merchantRepository.js';
 import { processNpcEffectsTick, getEffectDefinition } from './statusEffects.js';
-import * as merchantResponseRepo from '../db/repositories/merchantResponseRepository.js';
-import type { MerchantResponse } from '@koa/shared';
+import * as npcResponseRepo from '../db/repositories/npcResponseRepository.js';
+import type { NpcResponse } from '@koa/shared';
 import { calculateNpcEffectiveVision, canSee } from './vision.js';
 
 // Lazy world reference for NPC movement (flee, return, roam)
@@ -1162,38 +1162,38 @@ export function getTemplateByEntityId(entityId: number): NpcTemplate | undefined
 }
 
 // ============================================================================
-// Merchant Response Cache
+// NPC Response Cache
 // ============================================================================
 
-/** Cache: npcTemplateId → MerchantResponse[] */
-const merchantResponseCache = new Map<number, MerchantResponse[]>();
+/** Cache: npcTemplateId → NpcResponse[] */
+const npcResponseCache = new Map<number, NpcResponse[]>();
 
 /**
- * Load merchant responses for a template (cached).
+ * Load NPC responses for a template (cached).
  */
-async function loadMerchantResponses(npcTemplateId: number): Promise<MerchantResponse[]> {
-  const cached = merchantResponseCache.get(npcTemplateId);
+async function loadNpcResponses(npcTemplateId: number): Promise<NpcResponse[]> {
+  const cached = npcResponseCache.get(npcTemplateId);
   if (cached) return cached;
-  const responses = await merchantResponseRepo.getResponsesForTemplate(npcTemplateId);
-  merchantResponseCache.set(npcTemplateId, responses);
+  const responses = await npcResponseRepo.getResponsesForTemplate(npcTemplateId);
+  npcResponseCache.set(npcTemplateId, responses);
   return responses;
 }
 
 /**
- * Get a response matching keywords in a message for a merchant.
+ * Get a response matching keywords in a message for an NPC.
  * Returns the response text or undefined if no match.
  */
 export async function getResponseForKeywords(npcTemplateId: number, message: string): Promise<string | undefined> {
-  const responses = await loadMerchantResponses(npcTemplateId);
-  const match = merchantResponseRepo.findMatchingResponse(responses, message);
+  const responses = await loadNpcResponses(npcTemplateId);
+  const match = npcResponseRepo.findMatchingResponse(responses, message);
   return match?.response;
 }
 
 /**
- * Clear the merchant response cache (for @reload merchantresponses).
+ * Clear the NPC response cache (for @reload npcresponses).
  */
-export function clearMerchantResponseCache(): void {
-  merchantResponseCache.clear();
+export function clearNpcResponseCache(): void {
+  npcResponseCache.clear();
 }
 
 // ============================================================================

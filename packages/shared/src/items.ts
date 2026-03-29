@@ -119,6 +119,8 @@ export interface ItemFlags {
   consumeOnUse?: boolean;
   /** Percentage chance (1-100) that key breaks after use. Only checked if consumeOnUse is false */
   consumeChance?: number;
+  /** Permanent room installation (signs, statues). Cannot be picked up or purged. */
+  fixture?: boolean;
 }
 
 // Weapon data

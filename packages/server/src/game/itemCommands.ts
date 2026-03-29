@@ -195,7 +195,7 @@ async function pickUpItem(
   currentRoomId: number
 ): Promise<CommandResponse> {
   // Check if item is takeable
-  if (item.template?.flags?.takeable === false) {
+  if (item.template?.flags?.takeable === false || item.template?.flags?.fixture) {
     return { type: MessageType.ERROR, message: `You can't pick that up.` };
   }
 
@@ -236,8 +236,8 @@ async function pickUpMultipleItems(
   currentRoomId: number,
   requestedQuantity: number
 ): Promise<CommandResponse> {
-  // Check if items are takeable
-  if (items[0].template?.flags?.takeable === false) {
+  // Check if items are takeable (fixtures are permanent room installations)
+  if (items[0].template?.flags?.takeable === false || items[0].template?.flags?.fixture) {
     return { type: MessageType.ERROR, message: `You can't pick that up.` };
   }
 
@@ -316,7 +316,7 @@ async function pickUpItemQuantity(
   quantity: number
 ): Promise<CommandResponse> {
   // Check if item is takeable
-  if (item.template?.flags?.takeable === false) {
+  if (item.template?.flags?.takeable === false || item.template?.flags?.fixture) {
     return { type: MessageType.ERROR, message: `You can't pick that up.` };
   }
 
@@ -387,8 +387,8 @@ async function handleGetAll(
 ): Promise<CommandResponse> {
   const items = await itemRepo.getInstancesInRoom(currentRoomId);
 
-  // Filter to takeable items only
-  const takeableItems = items.filter(i => i.template?.flags?.takeable !== false);
+  // Filter to takeable items only (exclude fixtures)
+  const takeableItems = items.filter(i => i.template?.flags?.takeable !== false && !i.template?.flags?.fixture);
 
   if (takeableItems.length === 0) {
     return { type: MessageType.ERROR, message: `There's nothing here to pick up.` };
@@ -1079,12 +1079,6 @@ function formatItemExamine(item: ItemInstance): CommandResponse {
   if (template.trap_modifier && template.trap_modifier !== 0) {
     const sign = template.trap_modifier >= 0 ? '+' : '';
     lines.push(`Trap: ${colors.boldWhite(`${sign}${template.trap_modifier}`)}`);
-  }
-
-  // Rarity (if not common)
-  if (template.rarity && template.rarity !== 'common') {
-    const rarityDisplay = template.rarity.charAt(0).toUpperCase() + template.rarity.slice(1);
-    lines.push(`Rarity: ${colors.boldWhite(rarityDisplay)}`);
   }
 
   return { type: MessageType.OUTPUT, message: lines.join('\r\n') };
