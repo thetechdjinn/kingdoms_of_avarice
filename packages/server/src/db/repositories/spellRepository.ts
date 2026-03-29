@@ -286,8 +286,9 @@ export async function canUseSpell(
     return { canUse: false, reason: 'Spell does not exist.' };
   }
 
-  // Check class restriction
-  if (spell.classRestrictions.length > 0 && !spell.classRestrictions.includes(characterClass)) {
+  // Check class restriction (case-insensitive: data may store IDs or display names)
+  const classLower = characterClass.toLowerCase();
+  if (spell.classRestrictions.length > 0 && !spell.classRestrictions.some(r => r.toLowerCase() === classLower)) {
     return { canUse: false, reason: `Only ${spell.classRestrictions.join(', ')} can use this spell.` };
   }
 
