@@ -9,6 +9,8 @@ import {
   LevelCheckResult,
   getEssenceRequired,
   getCpEarnedForLevel,
+  rollLevelUpHp,
+  getRaceHpPerLevelBonus,
 } from '@koa/shared';
 import * as characterRepo from '../db/repositories/characterRepository.js';
 import * as progressionRepo from '../db/repositories/progressionRepository.js';
@@ -246,27 +248,34 @@ export function checkLevelUp(characterId: number): LevelCheckResult | null {
 }
 
 /**
- * Level up result containing the new level and CP earned
+ * Level up result containing the new level, CP earned, and HP/mana gains
  */
 export interface LevelUpResult {
   success: boolean;
   newLevel: number;
   cpEarned: number;
+  hpGained: number;
+  manaGained: number;
+  newMaxHealth: number;
+  newMaxMana: number;
+  resourceType: string;
 }
 
 /**
  * Perform level up for a character
  * Awards CP based on the new level and persists to database
  */
+const FAILED_LEVEL_UP: LevelUpResult = Object.freeze({ success: false, newLevel: 0, cpEarned: 0, hpGained: 0, manaGained: 0, newMaxHealth: 0, newMaxMana: 0, resourceType: 'none' });
+
 export async function performLevelUp(characterId: number): Promise<LevelUpResult> {
   const checkResult = checkLevelUp(characterId);
   if (!checkResult || !checkResult.can_level_up) {
-    return { success: false, newLevel: 0, cpEarned: 0 };
+    return FAILED_LEVEL_UP;
   }
 
   const progression = characterProgressions.get(characterId);
   if (!progression) {
-    return { success: false, newLevel: 0, cpEarned: 0 };
+    return FAILED_LEVEL_UP;
   }
 
   // Calculate new values before modifying state
@@ -279,15 +288,43 @@ export async function performLevelUp(characterId: number): Promise<LevelUpResult
     const character = await characterRepo.findCharacterById(characterId);
     if (!character) {
       console.error(`[Progression] Character ${characterId} not found for level-up persistence`);
-      return { success: false, newLevel: 0, cpEarned: 0 };
+      return FAILED_LEVEL_UP;
     }
 
+    // Fetch class and race for HP/mana calculation
+    const classDef = classDefinitions.get(progression.class_id);
+    const raceDef = await progressionRepo.getRaceById(character.race);
+
+    // Roll HP gain
+    const hpMin = classDef?.hp_per_level_min ?? 4;
+    const hpMax = classDef?.hp_per_level_max ?? 7;
+    const raceHpBonus = getRaceHpPerLevelBonus(raceDef?.traits as Array<{ id: string; value: number | boolean }>);
+    const hpGained = rollLevelUpHp(hpMin, hpMax, character.constitution, raceHpBonus);
+
+    // Mana gain: flat per level based on magic level
+    const magicLevel = classDef?.magic_level ?? 0;
+    const resourceType = classDef?.resource_type;
+    let manaGained = 0;
+    if (resourceType === 'kai') {
+      manaGained = 1; // Mystic: +1 kai per level
+    } else if (magicLevel > 0) {
+      manaGained = magicLevel * 2; // lv1=+2, lv2=+4, lv3=+6
+    }
+
+    const newMaxHealth = character.max_health + hpGained;
+    const newHealth = character.health + hpGained;
+    const newMaxMana = character.max_mana + manaGained;
+    const newMana = character.mana + manaGained;
     const newUnspentCp = (character.unspent_cp ?? 0) + cpEarned;
 
-    // Persist level and CP to characters table
+    // Persist level, CP, and HP/mana to characters table
     await characterRepo.updateCharacterStats(characterId, {
       level: newLevel,
       unspent_cp: newUnspentCp,
+      max_health: newMaxHealth,
+      health: newHealth,
+      max_mana: newMaxMana,
+      mana: newMana,
     });
 
     // Persist XP and essence reset to character_progression table
@@ -295,22 +332,20 @@ export async function performLevelUp(characterId: number): Promise<LevelUpResult
       std_xp: newStdXp,
       essence_earned_this_level: 0,
     });
+
+    // Invalidate the DB-level progression cache immediately after DB success
+    progressionRepo.invalidateProgressionCache(characterId);
+
+    // Database succeeded, now update in-memory state
+    progression.std_xp = newStdXp;
+    progression.essence_earned_this_level = 0;
+    progression.level = newLevel;
+
+    return { success: true, newLevel, cpEarned, hpGained, manaGained, newMaxHealth, newMaxMana, resourceType: resourceType ?? 'none' };
   } catch (error) {
     console.error(`[Progression] Failed to persist level-up for character ${characterId}:`, error);
-    return { success: false, newLevel: 0, cpEarned: 0 };
+    return FAILED_LEVEL_UP;
   }
-
-  // Invalidate the DB-level progression cache immediately after DB success,
-  // before updating in-memory state, to prevent concurrent reads from
-  // returning stale cached data during the in-memory update window.
-  progressionRepo.invalidateProgressionCache(characterId);
-
-  // Database succeeded, now update in-memory state
-  progression.std_xp = newStdXp;
-  progression.essence_earned_this_level = 0;
-  progression.level = newLevel;
-
-  return { success: true, newLevel, cpEarned };
 }
 
 // ============================================================================

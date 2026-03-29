@@ -1,7 +1,8 @@
 import pg from 'pg';
 import { query } from '../index.js';
 import { Character, CharacterStats, Gender, Currency } from '@koa/shared';
-import { getClassById } from './progressionRepository.js';
+import { getClassById, getRaceById } from './progressionRepository.js';
+import { calculateStartingHp } from '@koa/shared';
 import { getDefaultStartingRoomId } from './settingsRepository.js';
 
 export interface DbCharacter {
@@ -54,45 +55,41 @@ export interface CreateCharacterInput {
   eyeColor?: string;
 }
 
-function calculateInitialHealth(constitution: number, characterClass: string): number {
-  const baseHealth: Record<string, number> = {
-    warrior: 30,
-    paladin: 28,
-    cleric: 25,
-    ranger: 25,
-    thief: 20,
-    mage: 15,
-  };
-  return (baseHealth[characterClass.toLowerCase()] || 20) + constitution * 2;
+function calculateInitialMana(magicLevel: number, resourceType: string, raceManaBonus: number): number {
+  // magic_level 0 = no mana (Warrior, Thief, Ninja, Witchunter)
+  if (magicLevel <= 0) return 0;
+  // Kai starts at 0 (Mystic gains +1 per level)
+  if (resourceType === 'kai') return 0;
+  // Base mana from magic level: lv1=8, lv2=10, lv3=12
+  const baseMana = magicLevel * 2 + 6;
+  return baseMana + raceManaBonus;
 }
 
-function calculateInitialMana(intelligence: number, wisdom: number, characterClass: string, resourceType: string): number {
-  // Classes with no resource type get 0 mana
-  if (!resourceType || resourceType === 'none') {
-    return 0;
+function getRaceManaBonus(traits?: Array<string | { id: string; value: number | boolean }>): number {
+  if (!traits || !Array.isArray(traits)) return 0;
+  for (const trait of traits) {
+    if (typeof trait === 'object' && trait.id === 'mana_bonus' && typeof trait.value === 'number') {
+      return trait.value;
+    }
   }
-
-  const baseMana: Record<string, number> = {
-    mage: 30,
-    cleric: 20,
-    paladin: 15,
-    ranger: 10,
-    thief: 5,
-  };
-  const normalized = characterClass.toLowerCase();
-  const base = baseMana[normalized] || 10;
-  // Clerics and Paladins scale with wisdom, others with intelligence
-  if (normalized === 'cleric' || normalized === 'paladin') {
-    return base + wisdom;
-  }
-  return base + intelligence;
+  return 0;
 }
 
 export async function createCharacter(input: CreateCharacterInput, client?: pg.PoolClient): Promise<DbCharacter> {
-  const maxHealth = calculateInitialHealth(input.stats.constitution, input.characterClass);
   const classDef = await getClassById(input.characterClass);
+  const raceDef = await getRaceById(input.race);
+
+  // HP: race base + class adj + CON scaling + breakpoints
+  const raceBaseHp = raceDef?.base_hp ?? 26;
+  const raceBaseCon = raceDef?.base_stats?.constitution?.min ?? 40;
+  const classHpAdj = classDef?.hp_adj ?? 0;
+  const maxHealth = calculateStartingHp(raceBaseHp, raceBaseCon, classHpAdj, input.stats.constitution);
+
+  // Mana: flat from magic level + race mana bonus (kai starts at 0)
+  const magicLevel = classDef?.magic_level ?? 0;
   const resourceType = classDef?.resource_type ?? 'none';
-  const maxMana = calculateInitialMana(input.stats.intelligence, input.stats.wisdom, input.characterClass, resourceType);
+  const raceManaBonus = getRaceManaBonus(raceDef?.traits as Array<string | { id: string; value: number | boolean }>);
+  const maxMana = calculateInitialMana(magicLevel, resourceType, raceManaBonus);
   const startingRoomId = await getDefaultStartingRoomId() ?? 1;
 
   const result = await query<DbCharacter>(

@@ -6,8 +6,8 @@
  * - train stats : Open ANSI form to allocate CP to stats
  */
 
-import { MessageType, CPStatName, CP_STAT_NAMES, getCPCostForNextPoint, getTotalCPCost, DEFAULT_STARTING_CP, TrainingFormPayload, TrainingSubmitPayload, formatCurrency, HairStyle, HairColor, EyeColor, HAIR_STYLES, HAIR_COLORS, EYE_COLORS, Gender } from '@koa/shared';
-import { AuthenticatedSocket, broadcastToAll } from './socket.js';
+import { MessageType, CPStatName, CP_STAT_NAMES, getCPCostForNextPoint, getTotalCPCost, DEFAULT_STARTING_CP, TrainingFormPayload, TrainingSubmitPayload, formatCurrency, HairStyle, HairColor, EyeColor, HAIR_STYLES, HAIR_COLORS, EYE_COLORS, Gender, calculateStartingHp } from '@koa/shared';
+import { AuthenticatedSocket, broadcastToAll, sendVitals } from './socket.js';
 import { CommandResponse } from './commands.js';
 import { colors } from '../utils/colors.js';
 import * as characterRepo from '../db/repositories/characterRepository.js';
@@ -371,20 +371,54 @@ export async function handleTrainingSubmit(
     }
   }
 
+  // Calculate HP change from CON adjustment
+  const newCon = statUpdates['constitution'] as number | undefined;
+  const oldCon = character.constitution;
+  let hpDelta = 0;
+  if (newCon !== undefined && newCon !== oldCon) {
+    const classDef = await progressionRepo.getClassById(character.class);
+    const classHpAdj = classDef?.hp_adj ?? 0;
+    const raceBaseHp = race.base_hp ?? 26;
+    const raceBaseCon = raceBaseStats['constitution']?.min ?? 40;
+    const oldHp = calculateStartingHp(raceBaseHp, raceBaseCon, classHpAdj, oldCon);
+    const newHp = calculateStartingHp(raceBaseHp, raceBaseCon, classHpAdj, newCon);
+    hpDelta = newHp - oldHp;
+  }
+
   // Apply the changes to DB before restoring player to game world
+  const dbUpdates: Record<string, unknown> = {
+    ...statUpdates,
+    ...appearanceUpdates,
+    unspent_cp: newUnspentCp,
+    cp_spent: newCpSpent,
+    initial_training_complete: true,
+  };
+  if (hpDelta !== 0) {
+    dbUpdates.max_health = character.max_health + hpDelta;
+    dbUpdates.health = Math.min(character.health + Math.max(0, hpDelta), character.max_health + hpDelta);
+  }
+
   try {
-    await characterRepo.updateCharacterStats(characterId, {
-      ...statUpdates,
-      ...appearanceUpdates,
-      unspent_cp: newUnspentCp,
-      cp_spent: newCpSpent,
-      initial_training_complete: true,
-    });
+    await characterRepo.updateCharacterStats(characterId, dbUpdates);
   } catch (error) {
     console.error('[Training] Failed to save stat changes:', error);
     exitTraining();
     return { type: MessageType.ERROR, message: 'Failed to save training changes. Please try again.' };
   }
+
+  // Update socket vitals and cached stats
+  if (hpDelta !== 0) {
+    socket.vitals.maxHp += hpDelta;
+    socket.vitals.hp = Math.min(socket.vitals.hp + Math.max(0, hpDelta), socket.vitals.maxHp);
+  }
+  // Refresh cached character stats on socket
+  for (const statName of CP_STAT_NAMES) {
+    const columnName = STAT_TO_COLUMN[statName];
+    if (statUpdates[columnName] !== undefined) {
+      (socket.characterStats as unknown as Record<string, number>)[columnName] = statUpdates[columnName] as number;
+    }
+  }
+  sendVitals(socket);
 
   // DB update succeeded — restore player to game world
   exitTraining();
@@ -535,11 +569,21 @@ async function handleImmediateLevelUp(
 
     // Update socket cache
     socket.characterLevel = result.newLevel;
+    socket.vitals.maxHp = result.newMaxHealth;
+    socket.vitals.hp = Math.min(socket.vitals.hp + result.hpGained, result.newMaxHealth);
+    socket.vitals.maxResource = result.newMaxMana;
+    socket.vitals.resource = Math.min((socket.vitals.resource ?? 0) + result.manaGained, result.newMaxMana);
+    sendVitals(socket);
 
     // Success message
     const successLines: string[] = [];
     successLines.push(colors.green(`You pay ${currencyStr} to the trainer.`));
     successLines.push(colors.green(`You have trained to level ${result.newLevel}!`));
+    successLines.push(colors.green(`You gained ${result.hpGained} hit points!`));
+    if (result.manaGained > 0) {
+      const resourceName = result.resourceType === 'kai' ? 'kai' : 'mana';
+      successLines.push(colors.green(`You gained ${result.manaGained} ${resourceName}!`));
+    }
     successLines.push(colors.green(`You gained ${result.cpEarned} CP to allocate to your stats.`));
     successLines.push('');
     successLines.push(`Type ${colors.cyan("'train stats'")} to allocate your stats.`);

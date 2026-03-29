@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "exported_at": "2026-03-29T03:03:59.481Z",
+  "exported_at": "2026-03-29T19:38:18.632Z",
   "type": "races",
   "data": [
     {
@@ -53,7 +53,8 @@
       ],
       "allowed_classes": [],
       "playable": true,
-      "dodge_bonus": 0
+      "dodge_bonus": 0,
+      "base_hp": 20
     },
     {
       "race_id": "dwarf",
@@ -101,7 +102,8 @@
       ],
       "allowed_classes": [],
       "playable": true,
-      "dodge_bonus": 0
+      "dodge_bonus": 0,
+      "base_hp": 31
     },
     {
       "race_id": "elf",
@@ -149,7 +151,8 @@
       ],
       "allowed_classes": [],
       "playable": true,
-      "dodge_bonus": 0
+      "dodge_bonus": 0,
+      "base_hp": 20
     },
     {
       "race_id": "gaunt_one",
@@ -193,7 +196,8 @@
       ],
       "allowed_classes": [],
       "playable": true,
-      "dodge_bonus": 0
+      "dodge_bonus": 0,
+      "base_hp": 20
     },
     {
       "race_id": "gnome",
@@ -237,7 +241,8 @@
       ],
       "allowed_classes": [],
       "playable": true,
-      "dodge_bonus": 0
+      "dodge_bonus": 0,
+      "base_hp": 26
     },
     {
       "race_id": "goblin",
@@ -281,7 +286,8 @@
       ],
       "allowed_classes": [],
       "playable": true,
-      "dodge_bonus": 0
+      "dodge_bonus": 0,
+      "base_hp": 26
     },
     {
       "race_id": "half_elf",
@@ -321,7 +327,8 @@
       ],
       "allowed_classes": [],
       "playable": true,
-      "dodge_bonus": 0
+      "dodge_bonus": 0,
+      "base_hp": 20
     },
     {
       "race_id": "halfling",
@@ -365,7 +372,8 @@
       ],
       "allowed_classes": [],
       "playable": true,
-      "dodge_bonus": 10
+      "dodge_bonus": 10,
+      "base_hp": 25
     },
     {
       "race_id": "half_ogre",
@@ -409,7 +417,8 @@
       ],
       "allowed_classes": [],
       "playable": true,
-      "dodge_bonus": 0
+      "dodge_bonus": 0,
+      "base_hp": 37
     },
     {
       "race_id": "half_orc",
@@ -449,7 +458,8 @@
       ],
       "allowed_classes": [],
       "playable": true,
-      "dodge_bonus": 0
+      "dodge_bonus": 0,
+      "base_hp": 31
     },
     {
       "race_id": "human",
@@ -489,7 +499,8 @@
       ],
       "allowed_classes": [],
       "playable": true,
-      "dodge_bonus": 0
+      "dodge_bonus": 0,
+      "base_hp": 26
     },
     {
       "race_id": "kang",
@@ -533,7 +544,8 @@
       ],
       "allowed_classes": [],
       "playable": true,
-      "dodge_bonus": 0
+      "dodge_bonus": 0,
+      "base_hp": 31
     },
     {
       "race_id": "nekojin",
@@ -577,7 +589,8 @@
       ],
       "allowed_classes": [],
       "playable": true,
-      "dodge_bonus": 0
+      "dodge_bonus": 0,
+      "base_hp": 20
     }
   ]
 }

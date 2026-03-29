@@ -66,7 +66,7 @@ All progression commands require Developer or Admin role.
 | `@editclass <id> <field> <value>`       | Edit a class field |
 | `@deleteclass <id>`                     | Delete a class     |
 
-**Editable fields**: `name`, `desc`, `multiplier`, `tags`, `crit_bonus`, `dodge_bonus`
+**Editable fields**: `name`, `desc`, `multiplier`, `tags`, `crit_bonus`, `dodge_bonus`, `hp_adj`, `hp_per_level_min`, `hp_per_level_max`
 
 Example:
 
@@ -82,6 +82,11 @@ Example:
 - `crit_bonus`: Flat % bonus to critical hit chance (e.g., Ninja/Mystic: +10%)
 - `dodge_bonus`: Enables dodge ability with base % (e.g., Ninja/Mystic: +25%)
 
+**HP fields:**
+- `hp_adj`: Flat HP added at character creation (e.g., Warrior: +4, Mage: +0)
+- `hp_per_level_min`: Minimum HP gained per level (e.g., Warrior: 6, Mage: 3)
+- `hp_per_level_max`: Maximum HP gained per level (e.g., Warrior: 10, Mage: 6)
+
 #### Race Commands
 
 | Command                          | Description       |
@@ -92,7 +97,7 @@ Example:
 | `@editrace <id> <field> <value>` | Edit a race field |
 | `@deleterace <id>`               | Delete a race     |
 
-**Editable fields**: `name`, `desc`, `playable`, `stats`, `traits`, `dodge_bonus`
+**Editable fields**: `name`, `desc`, `playable`, `stats`, `traits`, `dodge_bonus`, `base_hp`
 
 Example:
 
@@ -105,6 +110,9 @@ Example:
 
 **Combat bonuses:**
 - `dodge_bonus`: Racial dodge bonus % (e.g., Halfling: +10%)
+
+**HP fields:**
+- `base_hp`: Race base HP at character creation (e.g., Human: 26, Half-Ogre: 37)
 
 #### Ability Commands
 

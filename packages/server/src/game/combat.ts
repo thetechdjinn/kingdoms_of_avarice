@@ -5,7 +5,7 @@
  * Uses CombatEntity interface so both players and NPCs can participate.
  */
 
-import { MessageType, AttackResult, SpellScalingStat, SpellType, SpellTargetType, AttackVerbs } from '@koa/shared';
+import { MessageType, AttackResult, SpellScalingStat, SpellType, SpellTargetType, AttackVerbs, calculateSpellcasting } from '@koa/shared';
 import { AuthenticatedSocket, sendVitals as sendPlayerVitals } from './socket.js';
 import type { CombatEntity } from './combatEntity.js';
 import { isPlayerEntity, getEntityRoomId } from './combatEntity.js';
@@ -44,6 +44,7 @@ import {
   formatDeathMessage,
 } from './damageHandler.js';
 import { getCombatStats, getCombatStatsWithDodge } from './combatStatProvider.js';
+import { getEquipmentCombatStats } from './combatStats.js';
 import { applyEffect, applyEffectToEntity, getEffectDefinition, hasEffect, getEffectModifiers } from './statusEffects.js';
 import {
   sendCombatMessage,
@@ -76,6 +77,8 @@ export function getStatValueForScaling(
       return stats.wisdom;
     case SpellScalingStat.CHARISMA:
       return stats.charisma;
+    case SpellScalingStat.INTELLECT_WISDOM:
+      return Math.floor((stats.intelligence + stats.wisdom) / 2);
     default:
       return 0;
   }
@@ -128,41 +131,25 @@ export function calculateSpellScaling(
 }
 
 /**
- * Calculate spellcasting ability based on the caster's class magic school.
- * mage → INT, priest → WIS, druid → avg(INT, WIS), bardic → CHA, kai → WIS
- */
-export function getSpellcastingAbility(
-  stats: { intelligence: number; wisdom: number; charisma: number },
-  magicSchool: string | undefined
-): number {
-  switch (magicSchool) {
-    case 'mage': return stats.intelligence;
-    case 'priest': return stats.wisdom;
-    case 'druid': return Math.floor((stats.intelligence + stats.wisdom) / 2);
-    case 'bardic': return stats.charisma;
-    case 'kai': return stats.wisdom;
-    default: return stats.intelligence;
-  }
-}
-
-/**
  * Check if a spell fizzles. Returns true if the spell succeeds.
- * All spells have a 3% chance of automatic failure (roll 98-100).
- * Formula: random(1, 100) >= (castDifficulty - spellcastingAbility)
- * If castDifficulty is 0, only the 3% auto-fizzle applies.
+ *
+ * Formula: roll(1-100) <= (spellcastingAbility + castDifficulty)
+ * - Positive difficulty = easier (adds to SP, e.g., Magic Missile +15)
+ * - Negative difficulty = harder (subtracts from SP, e.g., DOOM -50)
+ * - Difficulty 100 = item-cast, always succeeds
+ * - 3% auto-fizzle on rolls 98-100 (unless difficulty >= 100)
  */
 export function spellCastSucceeds(castDifficulty: number, spellcastingAbility: number): boolean {
+  // Item-cast spells (difficulty 100+) never fizzle
+  if (castDifficulty >= 100) return true;
+
   const roll = Math.floor(Math.random() * 100) + 1;
 
-  // 3% automatic failure on any spell
+  // 3% automatic failure on any non-item spell
   if (roll >= 98) return false;
 
-  // If no difficulty set, spell succeeds (passed the auto-fizzle)
-  if (castDifficulty <= 0) return true;
-
-  const threshold = castDifficulty - spellcastingAbility;
-  if (threshold <= 0) return true; // spellcasting exceeds difficulty
-  return roll >= threshold;
+  const castChance = spellcastingAbility + castDifficulty;
+  return roll <= castChance;
 }
 
 /**
@@ -394,11 +381,27 @@ async function processSpellCombat(
   if (isPlayerEntity(attacker)) {
     const playerSocket = attacker as unknown as AuthenticatedSocket;
     const classDef = await progressionRepo.getClassById(playerSocket.characterClass);
-    const spellcasting = getSpellcastingAbility(attacker.characterStats, classDef?.magic_school);
+    const raceDef = await progressionRepo.getRaceById(playerSocket.characterRace);
+    const raceBaseStats = {
+      intelligence: raceDef?.base_stats?.intellect?.min ?? 40,
+      wisdom: raceDef?.base_stats?.wisdom?.min ?? 40,
+      charisma: raceDef?.base_stats?.charisma?.min ?? 40,
+    };
+    const equipment = await getEquipmentCombatStats(attacker.characterId!);
+    const effectMods = getEffectModifiers(attacker);
+    const spellcastingBonus = equipment.modifiers.spellcastingBonus + effectMods.spellcastingModifier;
+    const spellcasting = calculateSpellcasting(
+      classDef?.magic_level ?? 0, classDef?.magic_school,
+      attacker.characterStats, raceBaseStats, attacker.characterLevel,
+      spellcastingBonus,
+    );
     if (!spellCastSucceeds(spell.castDifficulty, spellcasting)) {
       const fizzleMsg = spell.fizzleMessage || `Your ${spell.spellName} fizzles!`;
       sendCombatMessage(attacker, MessageType.OUTPUT, colors.red(fizzleMsg));
-      broadcastCombatToRoom(attackerRoomId, `${withNpcNameCapitalized(attacker.entityName, attacker.isProperName)}'s spell fizzles!`, [attacker.entityId]);
+      const roomFizzle = spell.fizzleMessageRoom
+        ? spell.fizzleMessageRoom.replace(/\{name\}/g, withNpcNameCapitalized(attacker.entityName, attacker.isProperName))
+        : `${withNpcNameCapitalized(attacker.entityName, attacker.isProperName)}'s spell fizzles!`;
+      broadcastCombatToRoom(attackerRoomId, roomFizzle, [attacker.entityId]);
       return true; // combat continues, spell just failed this round
     }
   }
@@ -450,13 +453,13 @@ async function processSpellCombat(
       const dmgStr = colors.combatDamage(hitDamage.toString());
 
       const attackerMsg = spell.hitMessageSelf
-        ? spell.hitMessageSelf.replace(/\{target\}/g, defName).replace(/\{damage\}/g, hitDamage.toString())
+        ? spell.hitMessageSelf.replace(/\{target\}/g, defName).replace(/\{damage\}/g, dmgStr)
         : `You cast ${colors.cyan(spell.spellName)} at ${colors.combatDefender(defName)} for ${dmgStr} damage!`;
       const defenderMsg = spell.hitMessageTarget
-        ? spell.hitMessageTarget.replace(/\{name\}/g, atkName).replace(/\{damage\}/g, hitDamage.toString())
+        ? spell.hitMessageTarget.replace(/\{name\}/g, atkName).replace(/\{damage\}/g, dmgStr)
         : `${colors.combatAttacker(atkName)} casts ${colors.cyan(spell.spellName)} at you for ${dmgStr} damage!`;
       const roomMsg = spell.hitMessageRoom
-        ? spell.hitMessageRoom.replace(/\{name\}/g, atkName).replace(/\{target\}/g, defName).replace(/\{damage\}/g, hitDamage.toString())
+        ? spell.hitMessageRoom.replace(/\{name\}/g, atkName).replace(/\{target\}/g, defName).replace(/\{damage\}/g, dmgStr)
         : `${colors.combatAttacker(atkName)} casts ${colors.cyan(spell.spellName)} at ${colors.combatDefender(defName)} for ${dmgStr} damage!`;
 
       sendCombatMessage(attacker, MessageType.OUTPUT, attackerMsg);
@@ -997,12 +1000,8 @@ async function processNpcOffensiveSpell(
   // No damage means this offensive spell has no direct damage component — skip
   if (!spell.minDamage || !spell.maxDamage) return;
 
-  // NPC fizzle check (spellPower as spellcasting ability, includes 3% auto-fizzle)
-  if (!spellCastSucceeds(spell.castDifficulty, npc.template.spellPower)) {
-    broadcastCombatToRoom(npcRoomId,
-      `${withNpcNameCapitalized(npc.entityName, npc.isProperName)}'s spell fizzles!`, []);
-    return;
-  }
+  // NPCs never fizzle — they always cast successfully.
+  // Magic resistance (reducing effect on target) will be a separate system.
 
   // NPC scaling uses template.spellPower as the universal stat value
   const scaled = calculateSpellScaling(

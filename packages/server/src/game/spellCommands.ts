@@ -12,7 +12,8 @@ import { getPlayerLocation } from './adminCommands.js';
 import { colors } from '../utils/colors.js';
 import * as spellRepo from '../db/repositories/spellRepository.js';
 import * as characterRepo from '../db/repositories/characterRepository.js';
-import { getStatValueForScaling, calculateSpellScaling, getSpellcastingAbility, spellCastSucceeds } from './combat.js';
+import { calculateSpellcasting } from '@koa/shared';
+import { getStatValueForScaling, calculateSpellScaling, spellCastSucceeds } from './combat.js';
 import { applyEffect, getEffectDefinition, formatDuration, getEffectModifiers } from './statusEffects.js';
 import { isOnCooldown, startCooldown, getCooldownMessage } from './cooldownTracker.js';
 import { isPlayerDropped, isPlayerDead, clearDeathState } from './damageHandler.js';
@@ -41,13 +42,32 @@ async function checkInstantSpellFizzle(
   socket: AuthenticatedSocket,
   spell: Spell,
 ): Promise<CommandResponse | null> {
-  const { getClassById } = await import('../db/repositories/progressionRepository.js');
+  const { getClassById, getRaceById } = await import('../db/repositories/progressionRepository.js');
+  const { getEquipmentCombatStats } = await import('./combatStats.js');
   const classDef = await getClassById(socket.characterClass);
-  const spellcasting = getSpellcastingAbility(socket.characterStats, classDef?.magic_school);
+  const raceDef = await getRaceById(socket.characterRace);
+  const raceBaseStats = {
+    intelligence: raceDef?.base_stats?.intellect?.min ?? 40,
+    wisdom: raceDef?.base_stats?.wisdom?.min ?? 40,
+    charisma: raceDef?.base_stats?.charisma?.min ?? 40,
+  };
+  const equipment = await getEquipmentCombatStats(socket.characterId!);
+  const effectMods = getEffectModifiers(socket);
+  const spellcastingBonus = equipment.modifiers.spellcastingBonus + effectMods.spellcastingModifier;
+  const spellcasting = calculateSpellcasting(
+    classDef?.magic_level ?? 0, classDef?.magic_school,
+    socket.characterStats, raceBaseStats, socket.characterLevel,
+    spellcastingBonus,
+  );
   if (!spellCastSucceeds(spell.castDifficulty, spellcasting)) {
     socket.vitals.resource = (socket.vitals.resource ?? 0) - spell.manaCost;
     sendVitals(socket);
     startCooldown(socket, spell.mnemonic, 'use');
+    const roomId = getPlayerLocation(socket.playerId);
+    const roomFizzle = spell.fizzleMessageRoom
+      ? spell.fizzleMessageRoom.replace(/\{name\}/g, socket.entityName)
+      : `${socket.entityName}'s spell fizzles!`;
+    broadcastToRoom(roomId, roomFizzle, socket.playerId);
     return { type: MessageType.OUTPUT, message: colors.red(spell.fizzleMessage || `Your ${spell.name} fizzles!`) };
   }
   return null;
@@ -228,6 +248,7 @@ async function handleOffensiveSpell(
       damageScalingFactor: spell.damageScalingFactor,
       castDifficulty: spell.castDifficulty ?? 0,
       fizzleMessage: spell.fizzleMessage,
+      fizzleMessageRoom: spell.fizzleMessageRoom,
       hitMessageSelf: spell.hitMessageSelf,
       hitMessageTarget: spell.hitMessageTarget,
       hitMessageRoom: spell.hitMessageRoom,
@@ -306,6 +327,7 @@ async function handleOffensiveSpell(
     damageScalingFactor: spell.damageScalingFactor,
     castDifficulty: spell.castDifficulty ?? 0,
     fizzleMessage: spell.fizzleMessage,
+    fizzleMessageRoom: spell.fizzleMessageRoom,
     hitMessageSelf: spell.hitMessageSelf,
     hitMessageTarget: spell.hitMessageTarget,
     hitMessageRoom: spell.hitMessageRoom,
@@ -544,17 +566,8 @@ async function handleBuffSpell(
   }
 
   // Fizzle check
-  if (spell.castDifficulty > 0) {
-    const { getClassById } = await import('../db/repositories/progressionRepository.js');
-    const classDef = await getClassById(socket.characterClass);
-    const spellcasting = getSpellcastingAbility(socket.characterStats, classDef?.magic_school);
-    if (!spellCastSucceeds(spell.castDifficulty, spellcasting)) {
-      socket.vitals.resource = (socket.vitals.resource ?? 0) - spell.manaCost;
-      sendVitals(socket);
-      startCooldown(socket, spell.mnemonic, 'use');
-      return { type: MessageType.OUTPUT, message: colors.red(spell.fizzleMessage || `Your ${spell.name} fizzles!`) };
-    }
-  }
+  const fizzleResult = await checkInstantSpellFizzle(socket, spell);
+  if (fizzleResult) return fizzleResult;
 
   // Calculate duration in milliseconds (effectDuration is in seconds)
   const durationMs = (spell.effectDuration ?? 60) * 1000;
@@ -633,17 +646,8 @@ async function handleDebuffSpell(
   }
 
   // Fizzle check
-  if (spell.castDifficulty > 0) {
-    const { getClassById } = await import('../db/repositories/progressionRepository.js');
-    const classDef = await getClassById(socket.characterClass);
-    const spellcasting = getSpellcastingAbility(socket.characterStats, classDef?.magic_school);
-    if (!spellCastSucceeds(spell.castDifficulty, spellcasting)) {
-      socket.vitals.resource = (socket.vitals.resource ?? 0) - spell.manaCost;
-      sendVitals(socket);
-      startCooldown(socket, spell.mnemonic, 'use');
-      return { type: MessageType.OUTPUT, message: colors.red(spell.fizzleMessage || `Your ${spell.name} fizzles!`) };
-    }
-  }
+  const fizzleResult2 = await checkInstantSpellFizzle(socket, spell);
+  if (fizzleResult2) return fizzleResult2;
 
   // NPC target — apply effect and engage combat
   if (npcTarget) {

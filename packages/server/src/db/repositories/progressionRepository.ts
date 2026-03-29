@@ -50,6 +50,9 @@ interface DbClassDefinition {
   dodge_bonus: number;
   traits: string[] | null;
   armor_type_restrictions: string[] | null;
+  hp_adj: number;
+  hp_per_level_min: number;
+  hp_per_level_max: number;
   created_at: Date;
   updated_at: Date;
 }
@@ -65,6 +68,7 @@ interface DbRaceDefinition {
   allowed_classes: string[] | null;
   playable: boolean;
   dodge_bonus: number;
+  base_hp: number;
   created_at: Date;
   updated_at: Date;
 }
@@ -110,6 +114,9 @@ function dbToClassDefinition(row: DbClassDefinition): ClassDefinition {
     dodge_bonus: row.dodge_bonus ?? 0,
     traits: row.traits ?? [],
     armor_type_restrictions: row.armor_type_restrictions ?? [],
+    hp_adj: row.hp_adj ?? 0,
+    hp_per_level_min: row.hp_per_level_min ?? 4,
+    hp_per_level_max: row.hp_per_level_max ?? 7,
   };
 }
 
@@ -126,6 +133,7 @@ function dbToRaceDefinition(row: DbRaceDefinition): RaceDefinition {
     allowed_classes: row.allowed_classes ?? undefined,
     playable: row.playable,
     dodge_bonus: row.dodge_bonus ?? 0,
+    base_hp: row.base_hp ?? 26,
   };
 }
 
@@ -186,8 +194,8 @@ export async function createClass(classDef: ClassDefinition & { resource_type?: 
       class_id, display_name, description, essence_multiplier,
       subscribed_tags, talent_tree_id, resource_type, playable,
       combat_level, magic_level, magic_school, crit_bonus, dodge_bonus, traits,
-      armor_type_restrictions
-    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+      armor_type_restrictions, hp_adj, hp_per_level_min, hp_per_level_max
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
     RETURNING *`,
     [
       classDef.class_id,
@@ -205,6 +213,9 @@ export async function createClass(classDef: ClassDefinition & { resource_type?: 
       classDef.dodge_bonus ?? 0,
       classDef.traits ?? [],
       classDef.armor_type_restrictions ?? [],
+      classDef.hp_adj ?? 0,
+      classDef.hp_per_level_min ?? 4,
+      classDef.hp_per_level_max ?? 7,
     ]
   );
   const created = dbToClassDefinition(result.rows[0]);
@@ -273,6 +284,18 @@ export async function updateClass(classId: string, updates: Partial<ClassDefinit
     setClauses.push(`armor_type_restrictions = $${paramIndex++}`);
     values.push(updates.armor_type_restrictions);
   }
+  if (updates.hp_adj !== undefined) {
+    setClauses.push(`hp_adj = $${paramIndex++}`);
+    values.push(updates.hp_adj);
+  }
+  if (updates.hp_per_level_min !== undefined) {
+    setClauses.push(`hp_per_level_min = $${paramIndex++}`);
+    values.push(updates.hp_per_level_min);
+  }
+  if (updates.hp_per_level_max !== undefined) {
+    setClauses.push(`hp_per_level_max = $${paramIndex++}`);
+    values.push(updates.hp_per_level_max);
+  }
 
   if (setClauses.length === 0) return getClassById(classId);
 
@@ -329,8 +352,8 @@ export async function createRace(raceDef: RaceDefinition): Promise<RaceDefinitio
   const result = await query<DbRaceDefinition>(
     `INSERT INTO race_definitions (
       race_id, display_name, description, stat_modifiers, base_stats,
-      traits, allowed_classes, playable, dodge_bonus
-    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+      traits, allowed_classes, playable, dodge_bonus, base_hp
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
     RETURNING *`,
     [
       raceDef.race_id,
@@ -342,6 +365,7 @@ export async function createRace(raceDef: RaceDefinition): Promise<RaceDefinitio
       raceDef.allowed_classes ? JSON.stringify(raceDef.allowed_classes) : null,
       raceDef.playable ?? true,
       raceDef.dodge_bonus ?? 0,
+      raceDef.base_hp ?? 26,
     ]
   );
   const created = dbToRaceDefinition(result.rows[0]);
@@ -385,6 +409,10 @@ export async function updateRace(raceId: string, updates: Partial<RaceDefinition
   if (updates.dodge_bonus !== undefined) {
     setClauses.push(`dodge_bonus = $${paramIndex++}`);
     values.push(updates.dodge_bonus);
+  }
+  if (updates.base_hp !== undefined) {
+    setClauses.push(`base_hp = $${paramIndex++}`);
+    values.push(updates.base_hp);
   }
 
   if (setClauses.length === 0) return getRaceById(raceId);

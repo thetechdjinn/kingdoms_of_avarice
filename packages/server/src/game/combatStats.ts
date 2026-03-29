@@ -72,6 +72,7 @@ export interface EquipmentModifiers {
   healingModifier: number;
   criticalChanceBonus: number;
   magicResistanceBonus: number;
+  spellcastingBonus: number;
 }
 
 /**
@@ -221,6 +222,7 @@ function calculateEquipmentModifiers(equippedItems: ItemInstance[]): EquipmentMo
     healingModifier: 0,
     criticalChanceBonus: 0,
     magicResistanceBonus: 0,
+    spellcastingBonus: 0,
   };
 
   for (const item of equippedItems) {
@@ -236,6 +238,7 @@ function calculateEquipmentModifiers(equippedItems: ItemInstance[]): EquipmentMo
     total.healingModifier += t.healing_modifier ?? 0;
     total.criticalChanceBonus += t.critical_chance_modifier ?? 0;
     total.magicResistanceBonus += t.magic_resistance_modifier ?? 0;
+    total.spellcastingBonus += t.spellcasting_modifier ?? 0;
   }
 
   return total;

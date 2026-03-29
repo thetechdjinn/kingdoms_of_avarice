@@ -1,5 +1,5 @@
-import { MessageType, GameMessage, Role, hasAnyRole, StatusEffectCategory, DoorType, DoorState, Door, ResourceType, getEssenceRequired } from '@koa/shared';
-import { getActiveEffectsDisplay, getEntityActiveEffects, formatDuration } from './statusEffects.js';
+import { MessageType, GameMessage, Role, hasAnyRole, StatusEffectCategory, DoorType, DoorState, Door, ResourceType, getEssenceRequired, calculateSpellcasting } from '@koa/shared';
+import { getActiveEffectsDisplay, getEntityActiveEffects, formatDuration, getEffectModifiers } from './statusEffects.js';
 import { getDelayModifierDescriptions, getStatusEffectDelayMultiplier } from './delayModifiers.js';
 import { getPlayerQueueStatus } from './tickProcessor.js';
 import { getRemainingCooldown, formatAbilityName } from './cooldownTracker.js';
@@ -3145,12 +3145,30 @@ async function handleStatus(socket: AuthenticatedSocket): Promise<CommandRespons
     cellRight('Pickpocket:', pickpocket.toString(), COL3)
   );
 
-  // Row 5: Mana/Kai (if applicable) | (empty) | Traps
+  // Calculate spellcasting (only for casters)
+  const magicLevel = classDef?.magic_level ?? 0;
+  let spellcastingValue = 0;
+  if (magicLevel > 0) {
+    const raceBaseStats = {
+      intelligence: raceDef?.base_stats?.intellect?.min ?? 40,
+      wisdom: raceDef?.base_stats?.wisdom?.min ?? 40,
+      charisma: raceDef?.base_stats?.charisma?.min ?? 40,
+    };
+    const effectMods = getEffectModifiers(socket);
+    const spellcastingBonus = equipmentStats.modifiers.spellcastingBonus + effectMods.spellcastingModifier;
+    spellcastingValue = calculateSpellcasting(
+      magicLevel, classDef?.magic_school,
+      { intelligence: character.intelligence, wisdom: character.wisdom, charisma: character.charisma },
+      raceBaseStats, character.level, spellcastingBonus,
+    );
+  }
+
+  // Row 5: Mana/Kai (if applicable) | Spellcasting (if caster) | Traps
   const hasResource = socket.vitals.resourceType !== ResourceType.NONE;
   const resourceLabel = socket.vitals.resourceType === ResourceType.KAI ? 'Kai:' : 'Mana:';
   lines.push(
     (hasResource ? cellRight(resourceLabel, `${resource}/${maxResource}`, COL1) : empty(COL1)) +
-    empty(COL2) +
+    (magicLevel > 0 ? cellRight('Spellcasting:', spellcastingValue.toString(), COL2) : empty(COL2)) +
     cellRight('Traps:', traps.toString(), COL3)
   );
 

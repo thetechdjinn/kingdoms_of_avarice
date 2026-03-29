@@ -222,6 +222,71 @@
   margin-top: 0.25rem;
 }
 
+/* Scaling preview table */
+.scaling-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.scaling-table th,
+.scaling-table td {
+  padding: 2px 6px;
+  text-align: center;
+  border: 1px solid #2a2a2e;
+}
+
+.scaling-table th {
+  color: #888;
+  font-weight: 600;
+  background: #1a1a2e;
+}
+
+.scaling-table td {
+  color: #ccc;
+}
+
+.scaling-table td:first-child {
+  color: #888;
+  font-weight: 600;
+}
+
+.scaling-stat-label {
+  color: #60a5fa;
+  font-size: 0.75rem;
+  font-weight: 600;
+  margin-top: 0.4rem;
+  margin-bottom: 0.2rem;
+}
+
+/* Simulator */
+.sim-stat-row {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  padding: 0.15rem 0;
+  font-size: 0.85rem;
+  color: #ccc;
+}
+
+.sim-stat-row .label {
+  color: #888;
+  min-width: 120px;
+}
+
+.sim-good { color: #4ade80; }
+.sim-ok { color: #facc15; }
+.sim-bad { color: #f87171; }
+
+.sim-current-row {
+  background: #1a1a3e;
+}
+
+.sim-current-row td {
+  font-weight: 600;
+}
+
 /* NPC/Spell references */
 .panel-section {
   padding: 0.75rem 1rem;

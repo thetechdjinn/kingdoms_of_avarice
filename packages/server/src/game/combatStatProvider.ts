@@ -56,6 +56,7 @@ export interface CombatStatSnapshot {
   equipmentDefenseBonus: number;
   equipmentHealingModifier: number;
   equipmentMagicResistBonus: number;
+  equipmentSpellcastingBonus: number;
 }
 
 /**
@@ -155,6 +156,7 @@ async function getPlayerCombatStats(entity: CombatEntity, includeDodge: boolean)
     equipmentDefenseBonus: equipment.modifiers.defenseBonus,
     equipmentHealingModifier: equipment.modifiers.healingModifier,
     equipmentMagicResistBonus: equipment.modifiers.magicResistanceBonus,
+    equipmentSpellcastingBonus: equipment.modifiers.spellcastingBonus,
   };
 }
 
@@ -219,6 +221,7 @@ function getNpcCombatStats(entity: CombatEntity): CombatStatSnapshot {
       equipmentDefenseBonus: 0,
       equipmentHealingModifier: 0,
       equipmentMagicResistBonus: 0,
+      equipmentSpellcastingBonus: 0,
     };
   }
 
@@ -263,5 +266,6 @@ function getNpcCombatStats(entity: CombatEntity): CombatStatSnapshot {
     equipmentDefenseBonus: 0,
     equipmentHealingModifier: 0,
     equipmentMagicResistBonus: 0,
+    equipmentSpellcastingBonus: 0,
   };
 }
