@@ -275,13 +275,16 @@ function formatSwingMessage(
   const weaponName = weapon?.name || 'fists';
   const isUnarmed = weaponName === 'fists';
 
-  // Custom message helper: replace {attacker}, {defender}, {damage} placeholders
+  // Custom message helper: replace placeholders
+  // Supports: {attacker}/{name}, {defender}/{target}, {damage}
   const applyCustomMessage = (template: string): string => {
     const attacker = isAttacker ? 'You' : atkSubject;
     const defender = isDefender ? 'you' : defObject;
     return template
       .replace(/\{attacker\}/g, attacker)
+      .replace(/\{name\}/g, attacker)
       .replace(/\{defender\}/g, defender)
+      .replace(/\{target\}/g, defender)
       .replace(/\{damage\}/g, damage.toString());
   };
 

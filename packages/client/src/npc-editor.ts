@@ -514,11 +514,11 @@ function renderAttacks(): void {
           </div>
           <div class="form-group">
             <label>Hit Message</label>
-            <input type="text" data-field="hitMessage" data-index="${index}" value="${escapeHtml(atk.hitMessage || '')}" placeholder="Custom hit message" />
+            <input type="text" data-field="hitMessage" data-index="${index}" value="${escapeHtml(atk.hitMessage || '')}" placeholder="{name} bites {target} for {damage}!" />
           </div>
           <div class="form-group">
             <label>Miss Message</label>
-            <input type="text" data-field="missMessage" data-index="${index}" value="${escapeHtml(atk.missMessage || '')}" placeholder="Custom miss message" />
+            <input type="text" data-field="missMessage" data-index="${index}" value="${escapeHtml(atk.missMessage || '')}" placeholder="{name} tries to bite {target}!" />
           </div>
         </div>
       </div>
