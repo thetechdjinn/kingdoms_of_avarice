@@ -145,7 +145,7 @@ export async function processCommand(
   // Break resting only for actions that logically interrupt rest:
   // movement, stealth, combat, spellcasting, lock picking, bashing, training
   if (socket.regenState.enhancedRegen.size > 0) {
-    const isMovement = !!(DIRECTION_ALIASES[command] || isDirection(command));
+    const isMovement = args.length === 0 && !!(DIRECTION_ALIASES[command] || isDirection(command));
     const isSpell = isSpellMnemonic(command);
     if (BREAKS_REST.has(command) || isMovement || isSpell) {
       socket.regenState.enhancedRegen.clear();
@@ -380,7 +380,7 @@ export async function processCommand(
     return await handleBrief(socket);
   }
 
-  if (DIRECTION_ALIASES[command] || isDirection(command)) {
+  if (args.length === 0 && (DIRECTION_ALIASES[command] || isDirection(command))) {
     const direction = DIRECTION_ALIASES[command] || command;
     return await handleMove(socket, currentRoomId, direction, world, _connectedPlayers);
   }
