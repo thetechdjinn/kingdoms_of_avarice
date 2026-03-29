@@ -312,9 +312,9 @@ export async function performLevelUp(characterId: number): Promise<LevelUpResult
     }
 
     const newMaxHealth = character.max_health + hpGained;
-    const newHealth = character.health + hpGained;
+    const newHealth = Math.min(character.health + hpGained, newMaxHealth);
     const newMaxMana = character.max_mana + manaGained;
-    const newMana = character.mana + manaGained;
+    const newMana = Math.min(character.mana + manaGained, newMaxMana);
     const newUnspentCp = (character.unspent_cp ?? 0) + cpEarned;
 
     // Persist level, CP, and HP/mana to characters table

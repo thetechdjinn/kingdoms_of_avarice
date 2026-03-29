@@ -361,31 +361,32 @@ describe('spellCastSucceeds', () => {
     expect(anySuccess).toBe(false);
   });
 
-  it('castChance 97 succeeds most of the time (97% minus 3% auto-fizzle)', () => {
+  it('castChance 97 succeeds ~97% of the time', () => {
     // SP 82, difficulty 15 → castChance = 97
+    // Rolls 1-97 pass castChance and are below auto-fizzle threshold (98+), so all succeed.
+    // Auto-fizzle only reduces success when castChance > 97.
     let successes = 0;
     const trials = 10000;
     for (let i = 0; i < trials; i++) {
       if (spellCastSucceeds(15, 82)) successes++;
     }
     const rate = successes / trials;
-    // Expected: 97% pass the castChance check, but 3% auto-fizzle → ~94.09%
-    // Allow some statistical variance
-    expect(rate).toBeGreaterThan(0.90);
-    expect(rate).toBeLessThan(0.98);
+    expect(rate).toBeGreaterThan(0.93);
+    expect(rate).toBeLessThan(1.0);
   });
 
   it('positive difficulty makes spells easier', () => {
-    // SP 43, difficulty +15 → 58% success (minus 3% auto-fizzle)
+    // SP 43, difficulty +15 → castChance = 58
+    // Rolls 1-58 succeed. Rolls 59-97 fail castChance. Rolls 98-100 auto-fizzle.
+    // Auto-fizzle has no additional effect since 98-100 > 58 anyway. Success rate = 58%.
     let successes = 0;
     const trials = 10000;
     for (let i = 0; i < trials; i++) {
       if (spellCastSucceeds(15, 43)) successes++;
     }
     const rate = successes / trials;
-    // Expected ~56.3% (58% of rolls 1-97 pass, auto-fizzle kills 3%)
-    expect(rate).toBeGreaterThan(0.50);
-    expect(rate).toBeLessThan(0.63);
+    expect(rate).toBeGreaterThan(0.52);
+    expect(rate).toBeLessThan(0.64);
   });
 
   it('negative difficulty makes spells harder', () => {
