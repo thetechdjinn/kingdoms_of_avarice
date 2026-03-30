@@ -311,6 +311,7 @@ describe('calculateCritChance', () => {
     characterLevel: 10,
     intelligence: 60,
     dexterity: 50,
+    charisma: 50,
     classCritBonus: 0,
     weaponCritModifier: 0,
     equipmentCritBonus: 0,
@@ -329,33 +330,52 @@ describe('calculateCritChance', () => {
     expect(ninja).toBeGreaterThan(base);
   });
 
-  it('applies soft cap at 40% with diminishing returns', () => {
-    // Stack everything to exceed 40
+  it('applies soft cap at 37% with diminishing returns', () => {
+    // Stack everything to exceed 37
     const result = calculateCritChance({
       characterLevel: 100,
       intelligence: 200,
       dexterity: 200,
+      charisma: 200,
       classCritBonus: 20,
       weaponCritModifier: 10,
       equipmentCritBonus: 10,
-      encumbranceRatio: 0.0, // +20% encumbrance bonus
+      encumbranceRatio: 0.0,
     });
-    // Should be above 40 but below what it would be without diminishing returns
-    expect(result).toBeGreaterThan(40);
+    // Should be above 37 but below what it would be without diminishing returns
+    expect(result).toBeGreaterThan(37);
     expect(result).toBeLessThanOrEqual(60);
   });
 
-  it('returns 0 for minimum stats', () => {
+  it('returns base 3% for minimum stats', () => {
     const result = calculateCritChance({
       characterLevel: 1,
       intelligence: 10,
       dexterity: 10,
+      charisma: 10,
       classCritBonus: 0,
       weaponCritModifier: 0,
       equipmentCritBonus: 0,
       encumbranceRatio: 1.0,
     });
-    expect(result).toBe(0);
+    expect(result).toBe(3);
+  });
+
+  it('increases with charisma above 50 (no negative)', () => {
+    const base = calculateCritChance({ ...baseFactors, charisma: 50 });
+    const high = calculateCritChance({ ...baseFactors, charisma: 100 });
+    expect(high).toBeGreaterThan(base);
+    // Below 50 should not reduce crit below base
+    const low = calculateCritChance({ ...baseFactors, charisma: 10 });
+    expect(low).toBe(base);
+  });
+
+  it('accepts optional critSoftCap parameter', () => {
+    const factors = { ...baseFactors, classCritBonus: 30, intelligence: 100 };
+    const defaultCap = calculateCritChance(factors);
+    const customCap = calculateCritChance(factors, 20);
+    // With a lower soft cap, more diminishing returns kick in
+    expect(customCap).toBeLessThan(defaultCap);
   });
 });
 

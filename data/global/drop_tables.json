@@ -1,22 +1,66 @@
 {
   "version": "1.0",
-  "exported_at": "2026-03-29T19:38:18.641Z",
+  "exported_at": "2026-03-30T21:37:18.831Z",
   "type": "drop_tables",
   "data": [
     {
-      "name": "Sheriff Blackthorne's Drop Table",
-      "description": "Sheriff Blackthorne's drop table",
+      "name": "rat drop table",
+      "description": "Rat drop table for Heartstead area",
       "entries": [
         {
-          "dropChance": 50,
+          "dropChance": 100,
           "minQuantity": 1,
           "maxQuantity": 1,
-          "currencyMin": 350,
-          "currencyMax": 1250,
+          "currencyMin": 1,
+          "currencyMax": 10,
           "allowedDenominations": [
             "copper",
             "silver",
-            "gold"
+            "gold",
+            "platinum",
+            "runic"
+          ],
+          "itemName": null
+        }
+      ]
+    },
+    {
+      "name": "garter snake drop table",
+      "description": "garter snake drop table",
+      "entries": [
+        {
+          "dropChance": 100,
+          "minQuantity": 1,
+          "maxQuantity": 1,
+          "currencyMin": 1,
+          "currencyMax": 12,
+          "allowedDenominations": [
+            "copper",
+            "silver",
+            "gold",
+            "platinum",
+            "runic"
+          ],
+          "itemName": null
+        }
+      ]
+    },
+    {
+      "name": "Elena Doran - The Thread and Needle",
+      "description": "Drops from Merchant",
+      "entries": [
+        {
+          "dropChance": 100,
+          "minQuantity": 1,
+          "maxQuantity": 1,
+          "currencyMin": 1,
+          "currencyMax": 350,
+          "allowedDenominations": [
+            "copper",
+            "silver",
+            "gold",
+            "platinum",
+            "runic"
           ],
           "itemName": null
         }

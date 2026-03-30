@@ -268,7 +268,7 @@ async function dropCurrencyAsDenominations(
 /**
  * Process a drop table — roll for each entry, spawn items that pass the check.
  * Currency entries use the denomination system with allowed_denominations filtering.
- * Loot dropping is silent (no broadcast messages).
+ * Currency drops are announced to the room.
  */
 async function processDropTable(dropTableId: number, roomId: number): Promise<void> {
   try {
@@ -299,11 +299,18 @@ async function processDropTable(dropTableId: number, roomId: number): Promise<vo
           Math.random() * (entry.currencyMax - entry.currencyMin + 1)
         );
         if (currencyAmount > 0) {
+          // Calculate denominations before dropping so we can announce them
+          const counts = copperToDenominationCounts(currencyAmount, entry.allowedDenominations);
           await dropCurrencyAsDenominations(
             currencyAmount,
             entry.allowedDenominations,
             roomId
           );
+          // Announce each denomination dropped
+          for (const [denom, count] of counts) {
+            if (count <= 0) continue;
+            broadcastCombatToRoom(roomId, colors.gold(`${count} ${denom} drops to the ground.`), []);
+          }
         }
       }
     }

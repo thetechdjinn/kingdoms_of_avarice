@@ -43,6 +43,10 @@ export interface StatusEffectDefinition {
   speedModifier?: number;      // % change to action delays (-20 = 20% faster, +50 = 50% slower)
   affectsActions?: string[];   // Actions this speed modifier affects (empty/undefined = all actions)
 
+  // Armor modifiers
+  armorClassModifier?: number;      // +/- to armor class (affects defense)
+  damageReductionModifier?: number; // +/- to damage reduction (flat damage absorbed)
+
   // Expanded modifiers
   criticalChanceModifier?: number;  // +/- to crit chance %
   dodgeModifier?: number;           // +/- to dodge chance %
@@ -108,6 +112,8 @@ export interface EffectModifiers {
   energyModifier: number;      // Percentage (e.g., 25 means +25%)
   damageModifier: number;      // Percentage (e.g., -10 means -10%)
   speedModifier: number;       // Percentage (e.g., -20 means 20% faster, +50 means 50% slower)
+  armorClassModifier: number;
+  damageReductionModifier: number;
   criticalChanceModifier: number;
   dodgeModifier: number;
   magicResistance: number;     // % reduction to incoming spell damage

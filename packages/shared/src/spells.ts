@@ -16,6 +16,7 @@ export enum SpellType {
  */
 export enum SpellTargetType {
   SELF = 'self',
+  SELF_ALLY = 'self_ally',
   ENEMY = 'enemy',
   ALLY = 'ally',
   ROOM = 'room',

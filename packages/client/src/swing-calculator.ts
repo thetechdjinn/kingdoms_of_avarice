@@ -1,5 +1,4 @@
 import {
-  ENCUMBRANCE_CRIT_THRESHOLDS,
   CRIT_SOFT_CAP,
   COMBAT_LEVEL_ENERGY_MULTIPLIER,
   DODGE_SOFT_CAP,
@@ -105,7 +104,7 @@ interface CalculationResults {
   actualSwings: number;
   excessAttacks: number;
   statCrit: number;
-  encCrit: number;
+  chaCrit: number;
   preCap: number;
   totalCrit: number;
   carriedEnergy: number;
@@ -117,15 +116,6 @@ interface CalculationResults {
   effectiveDodge: number;
 }
 
-function calculateEncumbranceCritBonus(encRatio: number): number {
-  if (encRatio <= ENCUMBRANCE_CRIT_THRESHOLDS.LIGHT.maxRatio) {
-    return ENCUMBRANCE_CRIT_THRESHOLDS.LIGHT.bonus;
-  }
-  if (encRatio <= ENCUMBRANCE_CRIT_THRESHOLDS.MEDIUM.maxRatio) {
-    return ENCUMBRANCE_CRIT_THRESHOLDS.MEDIUM.bonus;
-  }
-  return ENCUMBRANCE_CRIT_THRESHOLDS.HEAVY.bonus;
-}
 
 // MajorMUD-style constants (from Nightmare Redux data reverse-engineering)
 const SPEED_DIVISOR_BASE = 1.558;
@@ -186,34 +176,33 @@ function calculate(inputs: CalculationInputs): CalculationResults {
   // Carried energy (using effective weapon cost)
   const carriedEnergy = effectiveEnergy - (actualSwings * safeWeaponCost);
 
-  // MajorMUD-style crit calculation
-  // Base from character level (+1% per 10 levels)
-  const levelCrit = Math.floor(inputs.characterLevel / 10);
+  // Crit calculation (matches server-side calculateCritChance)
+  const BASE_CRIT = 3;
 
-  // Intelligence bonus (+1% per 10 INT above 50)
-  const intCrit = Math.max(0, Math.floor((inputs.intelligence - 50) / 10));
+  // INT: +1% per 10 above 50, -1% per 10 below (primary)
+  const intCrit = Math.floor((inputs.intelligence - 50) / 10);
 
-  // Dexterity bonus (+1% per 25 DEX above 50)
-  const dexCrit = Math.max(0, Math.floor((inputs.dexterity - 50) / 25));
+  // DEX: +1% per 20 above 50, -1% per 20 below (secondary)
+  const dexCrit = Math.floor((inputs.dexterity - 50) / 20);
+
+  // CHA: +1% per 25 above 50, no negative (tertiary)
+  const chaCrit = Math.max(0, Math.floor((inputs.charisma - 50) / 25));
 
   // Total stat-based crit
-  const statCrit = levelCrit + intCrit + dexCrit;
+  const statCrit = intCrit + dexCrit + chaCrit;
 
-  // Encumbrance crit bonus (light armor = more crits)
-  const encCrit = calculateEncumbranceCritBonus(encRatio);
+  // Pre-cap total (no level or encumbrance bonus)
+  const preCap = BASE_CRIT + statCrit + inputs.classCritBonus + inputs.weaponCrit;
 
-  // Pre-cap total
-  const preCap = statCrit + encCrit + inputs.classCritBonus + inputs.weaponCrit;
-
-  // Apply MajorMUD-style soft cap with diminishing returns
+  // Apply soft cap with diminishing returns
   let totalCrit = preCap;
   if (totalCrit > CRIT_SOFT_CAP) {
     const excessCrit = totalCrit - CRIT_SOFT_CAP;
     totalCrit = CRIT_SOFT_CAP + Math.floor(excessCrit / 3);
   }
 
-  // Clamp to reasonable bounds
-  totalCrit = Math.max(0, Math.min(60, totalCrit));
+  // Floor at base crit, cap at 60
+  totalCrit = Math.max(BASE_CRIT, Math.min(60, totalCrit));
 
   // ============================================================================
   // Dodge Calculations (MajorMUD-style)
@@ -258,7 +247,7 @@ function calculate(inputs: CalculationInputs): CalculationResults {
     actualSwings,
     excessAttacks,
     statCrit,
-    encCrit,
+    chaCrit,
     preCap,
     totalCrit,
     carriedEnergy,
@@ -322,7 +311,7 @@ function updateDisplay(): void {
   setText('out-swings', String(results.actualSwings));
   setText('out-excess', String(results.excessAttacks));
   setText('out-stat-crit', `${results.statCrit}%`);
-  setText('out-enc-crit', `+${results.encCrit}%`);
+  setText('out-enc-crit', `+${results.chaCrit}%`);
   setText('out-precap-crit', `${results.preCap}%`);
   setText('out-total-crit', `${results.totalCrit}%`);
   setText('out-crit-damage', '2.0x - 4.0x');
@@ -354,13 +343,13 @@ function updateDisplay(): void {
     }
   }
 
-  // Color coding for encumbrance crit
+  // Color coding for charisma crit
   const encCritEl = document.getElementById('out-enc-crit');
   if (encCritEl) {
     encCritEl.className = 'output-value';
-    if (results.encCrit >= 20) {
+    if (results.chaCrit >= 2) {
       encCritEl.className = 'output-value highlight';
-    } else if (results.encCrit >= 10) {
+    } else if (results.chaCrit >= 1) {
       encCritEl.className = 'output-value warning';
     }
   }

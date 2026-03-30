@@ -354,4 +354,20 @@ export function setupSpellRoutes(app: Express): void {
       res.status(500).json({ success: false, message: 'Failed to import spells' });
     }
   });
+
+  // GET /api/spells/character/:id - Get character's learned spells (developer tool)
+  app.get('/api/spells/character/:id', requireDeveloper, async (req: Request, res: Response) => {
+    try {
+      const characterId = parseInt(req.params.id);
+      if (isNaN(characterId)) {
+        res.status(400).json({ success: false, message: 'Invalid character ID' });
+        return;
+      }
+      const spells = await spellRepo.getCharacterSpells(characterId);
+      res.json({ success: true, spells });
+    } catch (error) {
+      console.error('Failed to get character spells:', error);
+      res.status(500).json({ success: false, message: 'Failed to get character spells' });
+    }
+  });
 }

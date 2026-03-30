@@ -112,20 +112,24 @@ export interface DefenseFactors {
 }
 
 /**
- * Critical hit calculation factors (MajorMUD-style)
+ * Critical hit calculation factors
  *
- * Base formula: (Level/10) + ((INT-50)/10) + ((DEX-50)/25)
- * Plus: class bonus, encumbrance bonus, weapon/equipment modifiers
- * Soft cap at 40% with diminishing returns above
+ * Base 3% for all characters.
+ * INT: +1% per 10 above 50, -1% per 10 below 50 (primary)
+ * DEX: +1% per 20 above 50, -1% per 20 below 50 (secondary)
+ * CHA: +1% per 25 above 50, no penalty below 50 (tertiary)
+ * Plus: class bonus, weapon/equipment modifiers
+ * Soft cap with diminishing returns above threshold
  */
 export interface CriticalHitFactors {
-  characterLevel: number;      // +1% per 10 levels
-  intelligence: number;        // +1% per 10 INT above 50 (primary stat)
-  dexterity: number;           // +1% per 25 DEX above 50 (secondary stat)
+  characterLevel: number;      // No longer used for crit (kept for interface compat)
+  intelligence: number;        // +1% per 10 INT above 50, -1% per 10 below
+  dexterity: number;           // +1% per 20 DEX above 50, -1% per 20 below
+  charisma: number;            // +1% per 25 CHA above 50 (no negative)
   classCritBonus: number;      // Flat class bonus (e.g., +10 for Ninja/Mystic)
   weaponCritModifier: number;  // Weapon's crit bonus
   equipmentCritBonus: number;  // Other equipment crit bonuses
-  encumbranceRatio: number;    // 0.0-1.0, affects encumbrance crit bonus
+  encumbranceRatio: number;    // DEPRECATED - kept for interface compat, no longer used
 }
 
 /**
@@ -139,10 +143,10 @@ export const ENCUMBRANCE_CRIT_THRESHOLDS = {
 };
 
 /**
- * Critical hit soft cap (MajorMUD-style diminishing returns)
+ * Critical hit soft cap - Default 37, configurable via game settings
  * Above this threshold, excess crit is divided by 3
  */
-export const CRIT_SOFT_CAP = 40;
+export const CRIT_SOFT_CAP = 37;
 
 
 /**

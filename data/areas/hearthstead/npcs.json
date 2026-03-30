@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "exported_at": "2026-03-29T19:38:18.685Z",
+  "exported_at": "2026-03-30T21:37:18.876Z",
   "type": "npcs",
   "data": [
     {
@@ -220,6 +220,16 @@
           "itemName": "scroll of magic missile",
           "maxStock": 10,
           "restockChance": 100
+        },
+        {
+          "itemName": "tome of blur",
+          "maxStock": 10,
+          "restockChance": 100
+        },
+        {
+          "itemName": "tome of illuminate",
+          "maxStock": 10,
+          "restockChance": 100
         }
       ]
     },
@@ -278,6 +288,16 @@
       "merchantInventory": [
         {
           "itemName": "healing potion",
+          "maxStock": 10,
+          "restockChance": 100
+        },
+        {
+          "itemName": "tome of minor healing",
+          "maxStock": 10,
+          "restockChance": 100
+        },
+        {
+          "itemName": "tome of harm",
           "maxStock": 10,
           "restockChance": 100
         }

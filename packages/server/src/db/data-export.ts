@@ -427,6 +427,7 @@ async function exportNpcs(
       enterRoomMessage: tmpl.enterRoomMessage,
       exitRoomMessage: tmpl.exitRoomMessage,
       spawnMessage: tmpl.spawnMessage,
+      deathMessage: tmpl.deathMessage,
       merchantEnabled: tmpl.merchantEnabled,
       properName: tmpl.properName,
       spellPower: tmpl.spellPower,

@@ -799,6 +799,8 @@ export function getEffectModifiers(socket: CombatEntity): EffectModifiers {
     energyModifier: 0,
     damageModifier: 0,
     speedModifier: 0,
+    armorClassModifier: 0,
+    damageReductionModifier: 0,
     criticalChanceModifier: 0,
     dodgeModifier: 0,
     magicResistance: 0,
@@ -851,6 +853,8 @@ export function getEffectModifiers(socket: CombatEntity): EffectModifiers {
     modifiers.energyModifier += (definition.energyModifier ?? 0) * stackMultiplier;
     modifiers.damageModifier += (definition.damageModifier ?? 0) * stackMultiplier;
     modifiers.speedModifier += (definition.speedModifier ?? 0) * stackMultiplier;
+    modifiers.armorClassModifier += (definition.armorClassModifier ?? 0) * stackMultiplier;
+    modifiers.damageReductionModifier += (definition.damageReductionModifier ?? 0) * stackMultiplier;
     modifiers.criticalChanceModifier += (definition.criticalChanceModifier ?? 0) * stackMultiplier;
     modifiers.dodgeModifier += (definition.dodgeModifier ?? 0) * stackMultiplier;
     modifiers.magicResistance += (definition.magicResistance ?? 0) * stackMultiplier;

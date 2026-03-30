@@ -135,6 +135,12 @@ export function setupAdminRoutes(app: Express): void {
         res.status(400).json({ success: false, message: 'Blind accuracy penalty must be a whole number between 1 and 50' });
         return;
       }
+    } else if (key === 'crit_soft_cap') {
+      const numValue = Number(value);
+      if (isNaN(numValue) || !Number.isInteger(numValue) || numValue < 5 || numValue > 60) {
+        res.status(400).json({ success: false, message: 'Critical hit soft cap must be a whole number between 5 and 60' });
+        return;
+      }
     } else if (key in settingsRepo.BACKSTAB_SETTING_RANGES) {
       const numValue = Number(value);
       const range = settingsRepo.BACKSTAB_SETTING_RANGES[key as settingsRepo.BackstabSettingKey];
@@ -155,7 +161,7 @@ export function setupAdminRoutes(app: Express): void {
       await settingsRepo.setSetting(key, value);
 
       // Clear relevant caches when settings are updated
-      if (key.startsWith('combat_')) {
+      if (key.startsWith('combat_') || key === 'crit_soft_cap') {
         settingsRepo.clearCombatSettingsCache();
       }
       if (key.startsWith('currency_') && key.endsWith('_per_enc')) {

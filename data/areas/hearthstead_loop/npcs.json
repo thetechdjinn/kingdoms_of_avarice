@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "exported_at": "2026-03-29T19:38:18.686Z",
+  "exported_at": "2026-03-30T21:37:18.877Z",
   "type": "npcs",
   "data": [
     {
@@ -12,8 +12,8 @@
       "level": 1,
       "experienceReward": 8,
       "maxMana": 0,
-      "baseAccuracy": 20,
-      "baseDefense": 20,
+      "baseAccuracy": 5,
+      "baseDefense": 10,
       "baseCritChance": 0,
       "baseDodge": 0,
       "damageReduction": 0,
@@ -40,13 +40,14 @@
       "properName": false,
       "spellPower": 0,
       "enabled": true,
+      "dropTableName": "rat drop table",
       "attacks": [
         {
           "attackType": "melee",
           "name": "bite",
-          "minDamage": 1,
-          "maxDamage": 5,
-          "attacksPerRound": 1,
+          "minDamage": 2,
+          "maxDamage": 7,
+          "attacksPerRound": 2,
           "percentage": 100,
           "hitMessage": null,
           "missMessage": "{name} tries to bite you, but misses!",
@@ -66,8 +67,8 @@
       "level": 1,
       "experienceReward": 10,
       "maxMana": 0,
-      "baseAccuracy": 20,
-      "baseDefense": 20,
+      "baseAccuracy": 5,
+      "baseDefense": 10,
       "baseCritChance": 0,
       "baseDodge": 0,
       "damageReduction": 0,
@@ -94,12 +95,13 @@
       "properName": false,
       "spellPower": 0,
       "enabled": true,
+      "dropTableName": "garter snake drop table",
       "attacks": [
         {
           "attackType": "melee",
           "name": "bite",
-          "minDamage": 2,
-          "maxDamage": 6,
+          "minDamage": 3,
+          "maxDamage": 12,
           "attacksPerRound": 1,
           "percentage": 100,
           "hitMessage": null,

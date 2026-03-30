@@ -62,7 +62,7 @@ async function checkIpAllowed(clientIp: string): Promise<boolean> {
 
 // Plugin to serve additional HTML files and documentation in dev mode
 function multiPagePlugin(): Plugin {
-  const htmlFiles = ['editor.html', 'item-editor.html', 'spell-editor.html', 'status-editor.html', 'progression-editor.html', 'admin.html', 'docs.html', 'game-settings-editor.html', 'user-editor.html', 'swing-calculator.html', 'door-editor.html', 'action-editor.html', 'npc-editor.html', 'drop-table-editor.html', 'faction-editor.html', 'quest-editor.html', 'progression-table-editor.html'];
+  const htmlFiles = ['editor.html', 'item-editor.html', 'spell-editor.html', 'status-editor.html', 'progression-editor.html', 'admin.html', 'docs.html', 'game-settings-editor.html', 'user-editor.html', 'swing-calculator.html', 'door-editor.html', 'action-editor.html', 'npc-editor.html', 'drop-table-editor.html', 'faction-editor.html', 'quest-editor.html', 'progression-table-editor.html', 'combat-simulator.html'];
   const docsPath = resolve(__dirname, '..', '..', 'Documentation');
 
   return {
@@ -166,6 +166,7 @@ export default defineConfig({
         factionEditor: resolve(__dirname, 'faction-editor.html'),
         questEditor: resolve(__dirname, 'quest-editor.html'),
         progressionTableEditor: resolve(__dirname, 'progression-table-editor.html'),
+        combatSimulator: resolve(__dirname, 'combat-simulator.html'),
       },
     },
   },

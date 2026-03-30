@@ -53,7 +53,8 @@ interface SpellRef {
     ['effect-accuracy', 'accuracyModifier'], ['effect-defense', 'defenseModifier'],
     ['effect-energy', 'energyModifier'], ['effect-damage', 'damageModifier'],
     ['effect-speed', 'speedModifier'], ['effect-crit-chance', 'criticalChanceModifier'],
-    ['effect-dodge', 'dodgeModifier'], ['effect-magic-resist', 'magicResistance'],
+    ['effect-dodge', 'dodgeModifier'], ['effect-armor-class', 'armorClassModifier'],
+    ['effect-damage-reduction', 'damageReductionModifier'], ['effect-magic-resist', 'magicResistance'],
     ['effect-spellcasting', 'spellcastingModifier'], ['effect-healing-received', 'healingReceived'],
     ['effect-stealth', 'stealthModifier'], ['effect-perception', 'perceptionModifier'],
     ['effect-lockpicking', 'lockpickingModifier'], ['effect-vision', 'visionModifier'],
@@ -348,6 +349,8 @@ interface SpellRef {
       formatModifier('Speed', effect.speedModifier ?? 0, '%'),
       formatModifier('Crit', effect.criticalChanceModifier ?? 0, '%'),
       formatModifier('Dodge', effect.dodgeModifier ?? 0, '%'),
+      formatModifier('Armor Class', effect.armorClassModifier ?? 0),
+      formatModifier('Dmg Reduction', effect.damageReductionModifier ?? 0),
       formatModifier('Magic Resist', effect.magicResistance ?? 0, '%'),
       formatModifier('Spellcasting', effect.spellcastingModifier ?? 0),
       formatModifier('Healing Recv', effect.healingReceived ?? 0, '%'),
@@ -454,7 +457,7 @@ interface SpellRef {
       category: 'buff' as StatusEffectCategory,
       stackingBehavior: 'refresh' as StackingBehavior,
       maxStacks: 1,
-    });
+    }, true);
     if (saved) selectEffect(saved.id);
   });
 

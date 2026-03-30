@@ -42,6 +42,7 @@ export interface RuntimeCombatConfig {
   defaultWeaponSpeed: number;
   levelMultipliers: Record<string, number>;
   levelAccuracyBonus: Record<string, number>;
+  critSoftCap: number;
 }
 
 /**
@@ -54,6 +55,7 @@ export function toRuntimeConfig(settings: CombatSettings): RuntimeCombatConfig {
     defaultWeaponSpeed: settings.default_weapon_speed,
     levelMultipliers: settings.level_multipliers,
     levelAccuracyBonus: settings.level_accuracy_bonus,
+    critSoftCap: settings.crit_soft_cap,
   };
 }
 
@@ -70,6 +72,7 @@ export const DEFAULT_RUNTIME_CONFIG: RuntimeCombatConfig = {
   levelAccuracyBonus: Object.fromEntries(
     Object.entries(COMBAT_LEVEL_ACCURACY_BONUS).map(([k, v]) => [k, v])
   ),
+  critSoftCap: CRIT_SOFT_CAP,
 };
 
 // ============================================================================
@@ -295,51 +298,52 @@ export function calculateEncumbranceCritBonus(encumbranceRatio: number): number 
 }
 
 /**
- * Calculate critical hit chance (MajorMUD-style)
+ * Calculate critical hit chance
  *
- * Base formula: (Level/10) + ((INT-50)/10) + ((DEX-50)/25)
- * Plus: class bonus, encumbrance bonus, weapon/equipment modifiers
+ * Base 3% for all characters.
+ * INT: +1% per 10 above 50, -1% per 10 below 50 (primary crit stat)
+ * DEX: +1% per 20 above 50, -1% per 20 below 50 (secondary)
+ * CHA: +1% per 25 above 50, no penalty below 50 (tertiary)
+ * Plus: class bonus, weapon/equipment modifiers
+ * No level bonus, no encumbrance bonus.
  *
- * Applies soft cap at 40% with diminishing returns above:
- *   if (crit > 40) crit = 40 + ((crit - 40) / 3)
+ * Minimum 3% (base floor). Soft cap with diminishing returns above threshold.
  *
  * @param factors - All factors affecting crit chance
- * @returns Final crit chance percentage (typically 0-50)
+ * @param critSoftCap - Soft cap value (default from CRIT_SOFT_CAP constant)
+ * @returns Final crit chance percentage
  */
-export function calculateCritChance(factors: CriticalHitFactors): number {
-  // Base from character level (+1% per 10 levels)
-  const levelBonus = Math.floor(factors.characterLevel / 10);
+export function calculateCritChance(factors: CriticalHitFactors, critSoftCap?: number): number {
+  const BASE_CRIT = 3;
+  const softCap = critSoftCap ?? CRIT_SOFT_CAP;
 
-  // Intelligence bonus (+1% per 10 INT above 50) - primary stat for crits
-  const intBonus = Math.max(0, Math.floor((factors.intelligence - 50) / 10));
+  // Intelligence: +1% per 10 above 50, -1% per 10 below (primary)
+  const intBonus = Math.floor((factors.intelligence - 50) / 10);
 
-  // Dexterity bonus (+1% per 25 DEX above 50) - secondary stat for crits
-  const dexBonus = Math.max(0, Math.floor((factors.dexterity - 50) / 25));
+  // Dexterity: +1% per 20 above 50, -1% per 20 below (secondary)
+  const dexBonus = Math.floor((factors.dexterity - 50) / 20);
+
+  // Charisma: +1% per 25 above 50, no negative (tertiary)
+  const chaBonus = Math.max(0, Math.floor((factors.charisma - 50) / 25));
 
   // Class bonus (e.g., Ninja/Mystic get +10%)
   const classBonus = factors.classCritBonus;
 
-  // Weapon crit modifier
+  // Weapon and equipment bonuses
   const weaponBonus = factors.weaponCritModifier;
-
-  // Other equipment bonuses
   const equipBonus = factors.equipmentCritBonus;
 
-  // Encumbrance bonus (light armor = more crits)
-  const encBonus = calculateEncumbranceCritBonus(factors.encumbranceRatio);
+  // Sum all bonuses on top of base
+  let totalCrit = BASE_CRIT + intBonus + dexBonus + chaBonus + classBonus + weaponBonus + equipBonus;
 
-  // Sum all bonuses
-  let totalCrit = levelBonus + intBonus + dexBonus + classBonus + weaponBonus + equipBonus + encBonus;
-
-  // Apply MajorMUD-style soft cap with diminishing returns
-  // Above 40%, excess crit is divided by 3
-  if (totalCrit > CRIT_SOFT_CAP) {
-    const excessCrit = totalCrit - CRIT_SOFT_CAP;
-    totalCrit = CRIT_SOFT_CAP + Math.floor(excessCrit / 3);
+  // Apply soft cap with diminishing returns
+  if (totalCrit > softCap) {
+    const excessCrit = totalCrit - softCap;
+    totalCrit = softCap + Math.floor(excessCrit / 3);
   }
 
-  // Clamp to reasonable bounds (0-60% effective max due to diminishing returns)
-  return Math.max(0, Math.min(60, totalCrit));
+  // Floor at BASE_CRIT (negative stat bonuses can't go below base)
+  return Math.max(BASE_CRIT, Math.min(60, totalCrit));
 }
 
 // ============================================================================

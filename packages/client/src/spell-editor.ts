@@ -916,7 +916,7 @@ interface StatusEffectDef {
       levelRequired: 1,
       classRestrictions: [],
       isAttackSpell: true,
-    });
+    }, true);
     if (saved) selectSpell(saved.id);
   });
 

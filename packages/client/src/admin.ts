@@ -44,6 +44,7 @@ interface GameSettings {
   mana_regen_base_percent?: number;
   mana_regen_enhanced_percent?: number;
   blind_accuracy_penalty?: number;
+  crit_soft_cap?: number;
 }
 
 // ============================================================================
@@ -480,6 +481,8 @@ async function loadSettings(): Promise<void> {
       // Vision & Combat settings
       (document.getElementById('setting-blind-accuracy') as HTMLInputElement).value =
         String(settings.blind_accuracy_penalty ?? 10);
+      (document.getElementById('setting-crit-soft-cap') as HTMLInputElement).value =
+        String(settings.crit_soft_cap ?? 37);
 
       // Regen settings
       (document.getElementById('setting-health-tick') as HTMLInputElement).value =
@@ -746,6 +749,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     saveBlindAccuracyBtn.addEventListener('click', () =>
       saveNumericSetting('blind_accuracy_penalty', 'setting-blind-accuracy', 1, 50, 'Blind Accuracy Penalty'));
   }
+
+  const saveCritSoftCapBtn = document.getElementById('save-crit-soft-cap-btn');
+  saveCritSoftCapBtn?.addEventListener('click', () =>
+    saveNumericSetting('crit_soft_cap', 'setting-crit-soft-cap', 5, 60, 'Critical Hit Soft Cap'));
 
   // Regen settings
   const regenButtons: Array<[string, string, string, number, number, string]> = [

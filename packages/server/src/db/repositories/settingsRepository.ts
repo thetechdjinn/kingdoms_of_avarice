@@ -18,6 +18,7 @@ export interface GameSettings {
   mana_regen_base_percent: number;
   mana_regen_enhanced_percent: number;
   blind_accuracy_penalty: number;
+  crit_soft_cap: number;
 }
 
 // ============================================================================
@@ -76,6 +77,7 @@ export interface CombatSettings {
   unarmed_speed: number;
   level_multipliers: Record<string, number>;
   level_accuracy_bonus: Record<string, number>;
+  crit_soft_cap: number;
 }
 
 // Default combat settings (used as fallbacks if DB values missing)
@@ -87,6 +89,7 @@ const DEFAULT_COMBAT_SETTINGS: CombatSettings = {
   unarmed_speed: 4500,
   level_multipliers: { '1': 0.6, '2': 0.75, '3': 0.9, '4': 1.0, '5': 1.15 },
   level_accuracy_bonus: { '1': 0, '2': 10, '3': 20, '4': 35, '5': 50 },
+  crit_soft_cap: 37,
 };
 
 // Cache for combat settings (refreshed periodically)
@@ -250,6 +253,11 @@ export async function getAllSettings(): Promise<GameSettings> {
           settings.blind_accuracy_penalty = parsed;
         }
         break;
+      case 'crit_soft_cap':
+        if (typeof parsed === 'number' && parsed >= 5 && parsed <= 60) {
+          settings.crit_soft_cap = parsed;
+        }
+        break;
     }
   }
 
@@ -270,6 +278,7 @@ export async function getAllSettings(): Promise<GameSettings> {
     mana_regen_base_percent: settings.mana_regen_base_percent ?? DEFAULT_REGEN_SETTINGS.mana_regen_base_percent,
     mana_regen_enhanced_percent: settings.mana_regen_enhanced_percent ?? DEFAULT_REGEN_SETTINGS.mana_regen_enhanced_percent,
     blind_accuracy_penalty: settings.blind_accuracy_penalty ?? 10,
+    crit_soft_cap: settings.crit_soft_cap ?? 37,
   };
 }
 
@@ -400,6 +409,7 @@ export async function getCombatSettings(): Promise<CombatSettings> {
     unarmedSpeed,
     levelMults,
     levelAccuracy,
+    critSoftCap,
   ] = await Promise.all([
     getSetting<number>('combat_base_energy'),
     getSetting<number>('combat_default_weapon_speed'),
@@ -408,6 +418,7 @@ export async function getCombatSettings(): Promise<CombatSettings> {
     getSetting<number>('combat_unarmed_speed'),
     getSetting<Record<string, number>>('combat_level_multipliers'),
     getSetting<Record<string, number>>('combat_level_accuracy_bonus'),
+    getSetting<number>('crit_soft_cap'),
   ]);
 
   const settings: CombatSettings = { ...DEFAULT_COMBAT_SETTINGS };
@@ -432,6 +443,9 @@ export async function getCombatSettings(): Promise<CombatSettings> {
   }
   if (isValidRecordStringNumber(levelAccuracy)) {
     settings.level_accuracy_bonus = levelAccuracy;
+  }
+  if (typeof critSoftCap === 'number' && critSoftCap >= 5 && critSoftCap <= 60) {
+    settings.crit_soft_cap = critSoftCap;
   }
 
   // Update cache

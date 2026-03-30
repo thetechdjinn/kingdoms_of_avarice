@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Combat Simulator - Kingdoms of Avarice</title>
+    <link rel="stylesheet" href="/src/editor.css" />
+    <link rel="stylesheet" href="/src/combat-simulator.css" />
+  </head>
+  <body>
+    <div id="editor-app">
+      <nav id="main-nav"></nav>
+
+      <div id="editor-layout">
+        <main id="simulator-panel">
+          <div id="loading-state" class="loading-state">Loading...</div>
+
+          <div id="simulator-content" style="display: none;">
+            <div class="page-header">
+              <h1>Combat Simulator</h1>
+              <p>Balance NPCs against players. Configure a player build and select an NPC to see detailed combat projections.</p>
+            </div>
+
+            <!-- Two-panel config section -->
+            <div class="config-panels">
+
+              <!-- PLAYER PANEL -->
+              <div class="config-panel">
+                <h3 class="section-title">Player Configuration</h3>
+
+                <div class="input-row">
+                  <div class="input-group" style="flex: 1;">
+                    <label for="player-character">Load Character</label>
+                    <select id="player-character">
+                      <option value="">-- Manual Setup --</option>
+                    </select>
+                    <div class="hint">Select a character to auto-fill all stats and equipment</div>
+                  </div>
+                </div>
+
+                <div class="input-row">
+                  <div class="input-group">
+                    <label for="player-class">Class</label>
+                    <select id="player-class">
+                      <option value="">-- Select Class --</option>
+                    </select>
+                  </div>
+                  <div class="input-group">
+                    <label for="player-race">Race</label>
+                    <select id="player-race">
+                      <option value="">-- Select Race --</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div class="input-row">
+                  <div class="input-group">
+                    <label for="player-level">Level</label>
+                    <input type="number" id="player-level" value="1" min="1" max="100" />
+                  </div>
+                  <div class="input-group">
+                    <label>Combat Level</label>
+                    <input type="number" id="player-combat-level" value="1" min="1" max="5" readonly />
+                    <div class="hint">From class</div>
+                  </div>
+                </div>
+
+                <div class="input-row">
+                  <div class="input-group">
+                    <label>Magic Level</label>
+                    <input type="number" id="player-magic-level" value="0" min="0" max="3" readonly />
+                    <div class="hint">From class</div>
+                  </div>
+                  <div class="input-group">
+                    <label>Magic School</label>
+                    <input type="text" id="player-magic-school" value="none" readonly />
+                    <div class="hint">From class</div>
+                  </div>
+                </div>
+
+                <h4 class="sub-section-title">Stats</h4>
+                <div class="input-row">
+                  <div class="input-group">
+                    <label for="player-str">STR</label>
+                    <input type="number" id="player-str" value="50" min="1" max="200" />
+                  </div>
+                  <div class="input-group">
+                    <label for="player-dex">DEX</label>
+                    <input type="number" id="player-dex" value="50" min="1" max="200" />
+                  </div>
+                  <div class="input-group">
+                    <label for="player-int">INT</label>
+                    <input type="number" id="player-int" value="50" min="1" max="200" />
+                  </div>
+                </div>
+                <div class="input-row">
+                  <div class="input-group">
+                    <label for="player-con">CON</label>
+                    <input type="number" id="player-con" value="50" min="1" max="200" />
+                  </div>
+                  <div class="input-group">
+                    <label for="player-wis">WIS</label>
+                    <input type="number" id="player-wis" value="50" min="1" max="200" />
+                  </div>
+                  <div class="input-group">
+                    <label for="player-cha">CHA</label>
+                    <input type="number" id="player-cha" value="50" min="1" max="200" />
+                  </div>
+                </div>
+
+                <h4 class="sub-section-title">Weapon</h4>
+                <div class="input-row">
+                  <div class="input-group" style="flex: 1;">
+                    <label for="player-weapon-select">Select Weapon</label>
+                    <select id="player-weapon-select">
+                      <option value="">-- Manual / Fists --</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="input-row">
+                  <div class="input-group">
+                    <label for="player-wep-min">Min Damage</label>
+                    <input type="number" id="player-wep-min" value="1" min="0" max="500" />
+                  </div>
+                  <div class="input-group">
+                    <label for="player-wep-max">Max Damage</label>
+                    <input type="number" id="player-wep-max" value="6" min="1" max="500" />
+                  </div>
+                </div>
+                <div class="input-row">
+                  <div class="input-group">
+                    <label for="player-wep-speed">Speed</label>
+                    <input type="number" id="player-wep-speed" value="1500" min="100" max="100000" />
+                    <div class="hint">Lower = faster</div>
+                  </div>
+                  <div class="input-group">
+                    <label for="player-wep-acc">Accuracy Bonus</label>
+                    <input type="number" id="player-wep-acc" value="0" min="0" max="200" />
+                  </div>
+                </div>
+                <div class="input-group">
+                  <label for="player-wep-crit">Crit Modifier</label>
+                  <input type="number" id="player-wep-crit" value="0" min="0" max="50" />
+                </div>
+
+                <h4 class="sub-section-title">Armor</h4>
+                <div class="input-row">
+                  <div class="input-group" style="flex: 1;">
+                    <label for="player-armor-select">Select Armor Set</label>
+                    <select id="player-armor-select">
+                      <option value="">-- Manual / None --</option>
+                    </select>
+                    <div class="hint">Sums AC, DR, defense, and dodge from all armor pieces</div>
+                  </div>
+                </div>
+                <div class="input-row">
+                  <div class="input-group">
+                    <label for="player-ac">Armor Class</label>
+                    <input type="number" id="player-ac" value="10" min="0" max="500" />
+                  </div>
+                  <div class="input-group">
+                    <label for="player-dr">Damage Reduction</label>
+                    <input type="number" id="player-dr" value="0" min="0" max="100" />
+                  </div>
+                </div>
+                <div class="input-row">
+                  <div class="input-group">
+                    <label for="player-def-bonus">Defense Bonus</label>
+                    <input type="number" id="player-def-bonus" value="0" min="0" max="200" />
+                  </div>
+                  <div class="input-group">
+                    <label for="player-dodge-bonus">Dodge Bonus</label>
+                    <input type="number" id="player-dodge-bonus" value="0" min="0" max="100" />
+                  </div>
+                </div>
+                <h4 class="sub-section-title">Spells</h4>
+                <div id="spell-select-section" style="display:none;">
+                  <div class="input-group" style="margin-bottom: 0.5rem;">
+                    <label for="player-spell-add">Add Spell</label>
+                    <select id="player-spell-add">
+                      <option value="">-- Select spell to add --</option>
+                    </select>
+                  </div>
+                  <div id="player-active-spells"></div>
+                  <div class="hint" style="margin-top: 0.25rem;">Buff spells apply modifiers. Offensive spell sets damage mode. Healing spell adds to effective HP.</div>
+                </div>
+                <div id="spell-no-character" class="hint">Select a character to load their spells</div>
+              </div>
+
+              <!-- NPC PANEL -->
+              <div class="config-panel">
+                <h3 class="section-title">NPC Configuration</h3>
+
+                <div class="input-group">
+                  <label for="npc-select">NPC Template</label>
+                  <select id="npc-select">
+                    <option value="">-- Select NPC --</option>
+                  </select>
+                </div>
+
+                <div id="npc-details" style="display: none;">
+                  <div class="npc-stat-grid">
+                    <div class="npc-stat-row">
+                      <span class="npc-stat-label">Level</span>
+                      <input type="number" id="npc-level" class="npc-override" value="1" min="1" max="100" />
+                    </div>
+                    <div class="npc-stat-row">
+                      <span class="npc-stat-label">HP</span>
+                      <input type="number" id="npc-hp" class="npc-override" value="100" min="1" max="100000" />
+                    </div>
+                    <div class="npc-stat-row">
+                      <span class="npc-stat-label">Base Accuracy</span>
+                      <input type="number" id="npc-accuracy" class="npc-override" value="0" min="0" max="500" />
+                    </div>
+                    <div class="npc-stat-row">
+                      <span class="npc-stat-label">Base Defense</span>
+                      <input type="number" id="npc-defense" class="npc-override" value="10" min="0" max="500" />
+                    </div>
+                    <div class="npc-stat-row">
+                      <span class="npc-stat-label">Damage Reduction</span>
+                      <input type="number" id="npc-dr" class="npc-override" value="0" min="0" max="100" />
+                    </div>
+                    <div class="npc-stat-row">
+                      <span class="npc-stat-label">Crit Chance</span>
+                      <input type="number" id="npc-crit" class="npc-override" value="0" min="0" max="100" />
+                    </div>
+                    <div class="npc-stat-row">
+                      <span class="npc-stat-label">Dodge</span>
+                      <input type="number" id="npc-dodge" class="npc-override" value="0" min="0" max="100" />
+                    </div>
+                  </div>
+
+                  <h4 class="sub-section-title">Attacks</h4>
+                  <div id="npc-attacks-list" class="npc-attacks-list">
+                    <div class="npc-no-attacks">No attacks defined</div>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+
+            <!-- RESULTS SECTION -->
+            <div id="results-section" class="results-section" style="display: none;">
+
+              <!-- Player Attacking NPC -->
+              <div class="result-panel">
+                <h3 class="section-title result-title">Player Attacking NPC (Melee)</h3>
+                <div class="result-grid">
+                  <div class="result-item">
+                    <span class="result-label">Player Accuracy</span>
+                    <span class="result-value" id="res-player-acc">--</span>
+                  </div>
+                  <div class="result-item">
+                    <span class="result-label">Accuracy Breakdown</span>
+                    <span class="result-detail" id="res-player-acc-breakdown">--</span>
+                  </div>
+                  <div class="result-item">
+                    <span class="result-label">NPC Defense</span>
+                    <span class="result-value" id="res-npc-def">--</span>
+                  </div>
+                  <div class="result-item">
+                    <span class="result-label">Hit Chance</span>
+                    <span class="result-value highlight" id="res-player-hit">--</span>
+                  </div>
+                  <div class="result-item">
+                    <span class="result-label">Player Crit Chance</span>
+                    <span class="result-value" id="res-player-crit">--</span>
+                  </div>
+                  <div class="result-item">
+                    <span class="result-label">Damage Per Hit (normal)</span>
+                    <span class="result-value" id="res-player-dmg">--</span>
+                  </div>
+                  <div class="result-item">
+                    <span class="result-label">Damage Per Hit (critical)</span>
+                    <span class="result-value" id="res-player-crit-dmg">--</span>
+                  </div>
+                  <div class="result-item">
+                    <span class="result-label">Swings Per Round</span>
+                    <span class="result-value" id="res-player-swings">--</span>
+                  </div>
+                  <div class="result-item">
+                    <span class="result-label">Avg Damage Per Round</span>
+                    <span class="result-value highlight" id="res-player-dpr">--</span>
+                  </div>
+                  <div class="result-item">
+                    <span class="result-label">Rounds to Kill NPC</span>
+                    <span class="result-value highlight" id="res-player-rtk">--</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Spell Attack Section (shown when offensive spell selected) -->
+              <div class="result-panel" id="res-spell-attack-section" style="display: none;">
+                <h3 class="section-title result-title">Player Attacking NPC (Spell)</h3>
+                <div class="result-grid">
+                  <div class="result-item">
+                    <span class="result-label">Spell</span>
+                    <span class="result-value" id="res-spell-name">--</span>
+                  </div>
+                  <div class="result-item">
+                    <span class="result-label">Spellcasting (SP)</span>
+                    <span class="result-value" id="res-spell-sp">--</span>
+                  </div>
+                  <div class="result-item">
+                    <span class="result-label">Success Rate</span>
+                    <span class="result-value" id="res-spell-success">--</span>
+                  </div>
+                  <div class="result-item">
+                    <span class="result-label">Damage Per Cast</span>
+                    <span class="result-value" id="res-spell-dmg">--</span>
+                  </div>
+                  <div class="result-item">
+                    <span class="result-label">Effective Damage/Round</span>
+                    <span class="result-value highlight" id="res-spell-dpr">--</span>
+                  </div>
+                  <div class="result-item">
+                    <span class="result-label">Casts to Kill NPC</span>
+                    <span class="result-value highlight" id="res-spell-rtk">--</span>
+                  </div>
+                  <div class="result-item full-width">
+                    <span class="result-label">Mana</span>
+                    <span class="result-value" id="res-spell-mana">--</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- NPC Attacking Player -->
+              <div class="result-panel">
+                <h3 class="section-title result-title">NPC Attacking Player</h3>
+                <div id="npc-attack-results">
+                  <div class="result-placeholder">Select an NPC to see results</div>
+                </div>
+                <div class="result-grid" id="npc-attack-summary" style="display: none;">
+                  <div class="result-item">
+                    <span class="result-label">Player HP</span>
+                    <span class="result-value" id="res-player-hp">--</span>
+                  </div>
+                  <div class="result-item">
+                    <span class="result-label">Player Defense</span>
+                    <span class="result-value" id="res-player-def">--</span>
+                  </div>
+                  <div class="result-item">
+                    <span class="result-label">Total NPC Attacks/Round</span>
+                    <span class="result-value" id="res-npc-total-apr">--</span>
+                  </div>
+                  <div class="result-item">
+                    <span class="result-label">Total NPC Avg Damage/Round</span>
+                    <span class="result-value highlight" id="res-npc-total-dpr">--</span>
+                  </div>
+                  <div class="result-item">
+                    <span class="result-label">Rounds to Kill Player</span>
+                    <span class="result-value highlight" id="res-npc-rtk">--</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Magic Analysis -->
+              <div class="result-panel" id="magic-analysis-panel" style="display: none;">
+                <h3 class="section-title result-title">Magic Analysis</h3>
+                <div class="result-grid">
+                  <div class="result-item">
+                    <span class="result-label">Spellcasting (SP)</span>
+                    <span class="result-value highlight" id="res-sp-value">--</span>
+                  </div>
+                </div>
+                <h4 class="sub-section-title">Spell Success by Difficulty</h4>
+                <table class="breakdown-table">
+                  <thead>
+                    <tr>
+                      <th>Difficulty</th>
+                      <th>Cast Chance</th>
+                      <th>Success Rate</th>
+                    </tr>
+                  </thead>
+                  <tbody id="spell-difficulty-tbody">
+                  </tbody>
+                </table>
+              </div>
+
+              <!-- Summary -->
+              <div class="result-panel summary-panel">
+                <h3 class="section-title result-title">Summary</h3>
+                <div class="summary-content">
+                  <div class="summary-row">
+                    <span class="summary-label">Player Rounds to Kill NPC</span>
+                    <span class="summary-value" id="sum-player-rtk">--</span>
+                  </div>
+                  <div class="summary-row">
+                    <span class="summary-label">NPC Rounds to Kill Player</span>
+                    <span class="summary-value" id="sum-npc-rtk">--</span>
+                  </div>
+                  <div class="summary-row">
+                    <span class="summary-label">Projected Winner</span>
+                    <span class="summary-value" id="sum-winner">--</span>
+                  </div>
+                  <div class="summary-row">
+                    <span class="summary-label">Danger Rating</span>
+                    <span class="summary-value" id="sum-danger">--</span>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </main>
+      </div>
+    </div>
+    <script type="module" src="/src/combat-simulator.ts"></script>
+  </body>
+</html>
