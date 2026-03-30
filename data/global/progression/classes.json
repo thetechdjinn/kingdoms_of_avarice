@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "exported_at": "2026-03-29T03:03:59.479Z",
+  "exported_at": "2026-03-29T19:38:18.630Z",
   "type": "classes",
   "data": [
     {
@@ -29,7 +29,10 @@
       "armor_type_restrictions": [
         "robe",
         "leather"
-      ]
+      ],
+      "hp_adj": 1,
+      "hp_per_level_min": 4,
+      "hp_per_level_max": 7
     },
     {
       "class_id": "cleric",
@@ -55,7 +58,10 @@
         "chainmail",
         "scalemail",
         "platemail"
-      ]
+      ],
+      "hp_adj": 2,
+      "hp_per_level_min": 4,
+      "hp_per_level_max": 8
     },
     {
       "class_id": "druid",
@@ -74,7 +80,10 @@
       "crit_bonus": 0,
       "dodge_bonus": 0,
       "traits": [],
-      "armor_type_restrictions": []
+      "armor_type_restrictions": [],
+      "hp_adj": 0,
+      "hp_per_level_min": 3,
+      "hp_per_level_max": 6
     },
     {
       "class_id": "gypsy",
@@ -101,7 +110,10 @@
       "armor_type_restrictions": [
         "robe",
         "leather"
-      ]
+      ],
+      "hp_adj": 1,
+      "hp_per_level_min": 4,
+      "hp_per_level_max": 7
     },
     {
       "class_id": "mage",
@@ -121,7 +133,10 @@
       "traits": [],
       "armor_type_restrictions": [
         "robe"
-      ]
+      ],
+      "hp_adj": 0,
+      "hp_per_level_min": 3,
+      "hp_per_level_max": 6
     },
     {
       "class_id": "missionary",
@@ -147,7 +162,10 @@
       "armor_type_restrictions": [
         "robe",
         "leather"
-      ]
+      ],
+      "hp_adj": 1,
+      "hp_per_level_min": 4,
+      "hp_per_level_max": 7
     },
     {
       "class_id": "mystic",
@@ -173,7 +191,10 @@
       ],
       "armor_type_restrictions": [
         "robe"
-      ]
+      ],
+      "hp_adj": 2,
+      "hp_per_level_min": 4,
+      "hp_per_level_max": 8
     },
     {
       "class_id": "ninja",
@@ -202,7 +223,10 @@
       ],
       "armor_type_restrictions": [
         "robe"
-      ]
+      ],
+      "hp_adj": 2,
+      "hp_per_level_min": 4,
+      "hp_per_level_max": 8
     },
     {
       "class_id": "paladin",
@@ -228,7 +252,10 @@
         "chainmail",
         "scalemail",
         "platemail"
-      ]
+      ],
+      "hp_adj": 3,
+      "hp_per_level_min": 5,
+      "hp_per_level_max": 9
     },
     {
       "class_id": "priest",
@@ -249,7 +276,10 @@
       "traits": [],
       "armor_type_restrictions": [
         "robe"
-      ]
+      ],
+      "hp_adj": 0,
+      "hp_per_level_min": 3,
+      "hp_per_level_max": 6
     },
     {
       "class_id": "ranger",
@@ -275,7 +305,10 @@
       "armor_type_restrictions": [
         "robe",
         "leather"
-      ]
+      ],
+      "hp_adj": 3,
+      "hp_per_level_min": 5,
+      "hp_per_level_max": 9
     },
     {
       "class_id": "thief",
@@ -302,7 +335,10 @@
       "armor_type_restrictions": [
         "robe",
         "leather"
-      ]
+      ],
+      "hp_adj": 1,
+      "hp_per_level_min": 4,
+      "hp_per_level_max": 7
     },
     {
       "class_id": "warlock",
@@ -325,7 +361,10 @@
         "robe",
         "leather",
         "chainmail"
-      ]
+      ],
+      "hp_adj": 2,
+      "hp_per_level_min": 4,
+      "hp_per_level_max": 7
     },
     {
       "class_id": "warrior",
@@ -349,7 +388,10 @@
         "chainmail",
         "scalemail",
         "platemail"
-      ]
+      ],
+      "hp_adj": 4,
+      "hp_per_level_min": 6,
+      "hp_per_level_max": 10
     },
     {
       "class_id": "witchunter",
@@ -374,7 +416,10 @@
         "leather",
         "chainmail",
         "scalemail"
-      ]
+      ],
+      "hp_adj": 4,
+      "hp_per_level_min": 6,
+      "hp_per_level_max": 10
     }
   ]
 }

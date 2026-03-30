@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "exported_at": "2026-03-29T03:03:59.541Z",
+  "exported_at": "2026-03-29T19:38:18.685Z",
   "type": "npcs",
   "data": [
     {
@@ -51,8 +51,8 @@
           "missMessage": null,
           "hitVerb": "clubs",
           "hitVerb3p": "clubs",
-          "missVerb": "misses",
-          "missVerb3p": "misses"
+          "missVerb": "swing at",
+          "missVerb3p": "swings at"
         }
       ],
       "merchantInventory": [
@@ -116,8 +116,8 @@
           "missMessage": null,
           "hitVerb": "clubs",
           "hitVerb3p": "clubs",
-          "missVerb": "misses",
-          "missVerb3p": "misses"
+          "missVerb": "swing at",
+          "missVerb3p": "swings at"
         }
       ],
       "merchantInventory": [
@@ -196,8 +196,8 @@
           "missMessage": null,
           "hitVerb": "smacks",
           "hitVerb3p": "smacks",
-          "missVerb": "misses",
-          "missVerb3p": "misses"
+          "missVerb": "swing at",
+          "missVerb3p": "swings at"
         }
       ],
       "spells": [
@@ -271,18 +271,8 @@
           "missMessage": null,
           "hitVerb": "smacks",
           "hitVerb3p": "smacks",
-          "missVerb": "misses",
-          "missVerb3p": "misses"
-        }
-      ],
-      "spells": [
-        {
-          "spellMnemonic": "heal",
-          "priority": 50,
-          "castChance": 100,
-          "conditionType": "hp_below",
-          "conditionValue": 80,
-          "cooldownRounds": 0
+          "missVerb": "swing at",
+          "missVerb3p": "swings at"
         }
       ],
       "merchantInventory": [

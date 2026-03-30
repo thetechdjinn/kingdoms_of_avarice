@@ -117,6 +117,7 @@ async function importSpells(data: unknown[]): Promise<ImportResult> {
         healingScalingFactor: item.healingScalingFactor as number | undefined,
         castDifficulty: item.castDifficulty as number | undefined,
         fizzleMessage: item.fizzleMessage as string | undefined,
+        fizzleMessageRoom: item.fizzleMessageRoom as string | undefined,
         hitMessageSelf: item.hitMessageSelf as string | undefined,
         hitMessageTarget: item.hitMessageTarget as string | undefined,
         hitMessageRoom: item.hitMessageRoom as string | undefined,

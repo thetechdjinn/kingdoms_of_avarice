@@ -59,6 +59,7 @@
               <button type="button" class="tab-btn active" data-tab="basic">Basic</button>
               <button type="button" class="tab-btn" data-tab="effects">Effects</button>
               <button type="button" class="tab-btn" data-tab="requirements">Requirements</button>
+              <button type="button" class="tab-btn" data-tab="simulator">Simulator</button>
             </div>
 
             <!-- Basic Tab -->
@@ -109,13 +110,18 @@
               <div class="form-row">
                 <div class="form-group">
                   <label for="spell-cast-difficulty">Cast Difficulty</label>
-                  <input type="number" id="spell-cast-difficulty" value="0" min="0" />
-                  <span class="hint-inline">0 = always succeeds. Higher = harder to cast.</span>
+                  <input type="number" id="spell-cast-difficulty" value="0" />
+                  <span class="hint-inline">Positive = easier, negative = harder, 100 = item-cast (never fizzles)</span>
                 </div>
                 <div class="form-group">
-                  <label for="spell-fizzle-message">Fizzle Message</label>
-                  <input type="text" id="spell-fizzle-message" placeholder="Your spell fizzles..." />
-                  <span class="hint-inline">Custom message on failed cast</span>
+                  <label for="spell-fizzle-message">Fizzle (Self)</label>
+                  <input type="text" id="spell-fizzle-message" placeholder="Your fireball sputters and dies!" />
+                  <span class="hint-inline">What the caster sees on fizzle</span>
+                </div>
+                <div class="form-group">
+                  <label for="spell-fizzle-message-room">Fizzle (Room)</label>
+                  <input type="text" id="spell-fizzle-message-room" placeholder="{name}'s fireball sputters and dies!" />
+                  <span class="hint-inline">What others see. Use {name} for caster.</span>
                 </div>
               </div>
 
@@ -156,6 +162,7 @@
                       <option value="intellect">Intellect</option>
                       <option value="wisdom">Wisdom</option>
                       <option value="charisma">Charisma</option>
+                      <option value="intellect_wisdom">Intellect + Wisdom</option>
                     </select>
                   </div>
                   <div class="form-group">
@@ -190,6 +197,7 @@
                       <option value="intellect">Intellect</option>
                       <option value="wisdom">Wisdom</option>
                       <option value="charisma">Charisma</option>
+                      <option value="intellect_wisdom">Intellect + Wisdom</option>
                     </select>
                   </div>
                   <div class="form-group">
@@ -301,6 +309,67 @@
                 <p class="section-hint">Select which classes can use this spell. Empty = all classes.</p>
                 <div id="class-buttons" class="class-button-grid"></div>
               </div>
+            </div>
+
+            <!-- Simulator Tab -->
+            <div class="tab-content" id="tab-simulator">
+              <div class="form-section">
+                <h4>Caster Setup</h4>
+                <div class="form-row">
+                  <div class="form-group">
+                    <label for="sim-magic-level">Magic Level</label>
+                    <select id="sim-magic-level">
+                      <option value="1">1 (Paladin, Ranger)</option>
+                      <option value="2">2 (Cleric, Bard, Warlock, Gypsy, Missionary)</option>
+                      <option value="3" selected>3 (Mage, Priest, Druid)</option>
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label for="sim-magic-school">Magic School</label>
+                    <select id="sim-magic-school">
+                      <option value="mage">Mage (INT)</option>
+                      <option value="priest">Priest (WIS)</option>
+                      <option value="druid">Druid (INT+WIS)</option>
+                      <option value="bardic">Bardic (CHA)</option>
+                      <option value="kai">Kai (WIS)</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="form-row">
+                  <div class="form-group">
+                    <label for="sim-level">Caster Level</label>
+                    <input type="number" id="sim-level" min="1" max="100" value="1" />
+                  </div>
+                  <div class="form-group">
+                    <label for="sim-primary-stat">Primary Stat</label>
+                    <input type="number" id="sim-primary-stat" min="20" max="200" value="40" />
+                    <span class="hint-inline">INT, WIS, or CHA depending on school</span>
+                  </div>
+                  <div class="form-group" id="sim-secondary-stat-group" style="display:none;">
+                    <label for="sim-secondary-stat">Secondary Stat</label>
+                    <input type="number" id="sim-secondary-stat" min="20" max="200" value="40" />
+                    <span class="hint-inline">WIS (Druid only)</span>
+                  </div>
+                </div>
+                <div class="form-row">
+                  <div class="form-group">
+                    <label for="sim-race-base-stat">Race Base Stat</label>
+                    <input type="number" id="sim-race-base-stat" min="20" max="100" value="40" />
+                    <span class="hint-inline">Race minimum for primary stat</span>
+                  </div>
+                  <div class="form-group" id="sim-race-base-secondary-group" style="display:none;">
+                    <label for="sim-race-base-secondary">Race Base Secondary</label>
+                    <input type="number" id="sim-race-base-secondary" min="20" max="100" value="40" />
+                    <span class="hint-inline">Race minimum for WIS (Druid)</span>
+                  </div>
+                  <div class="form-group">
+                    <label for="sim-equip-bonus">Equipment SP Bonus</label>
+                    <input type="number" id="sim-equip-bonus" min="0" max="100" value="0" />
+                  </div>
+                </div>
+              </div>
+
+              <div id="sim-results"></div>
             </div>
 
             <div class="form-actions">

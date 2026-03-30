@@ -33,6 +33,7 @@ export enum SpellScalingStat {
   INTELLECT = 'intellect',
   WISDOM = 'wisdom',
   CHARISMA = 'charisma',
+  INTELLECT_WISDOM = 'intellect_wisdom',  // Druid dual-stat: avg(INT, WIS)
 }
 
 /**
@@ -68,8 +69,9 @@ export interface Spell {
   healingScalingStat: SpellScalingStat | null;  // Which stat scales healing
   healingScalingFactor: number | null;          // % increase per 10 points
   // Fizzle mechanics
-  castDifficulty: number;                       // 0 = always succeeds, higher = harder
-  fizzleMessage: string | null;                 // Custom fizzle message
+  castDifficulty: number;                       // Positive = easier, negative = harder, 100+ = item-cast (never fizzles)
+  fizzleMessage: string | null;                 // Custom fizzle message (caster sees)
+  fizzleMessageRoom: string | null;             // Custom fizzle message (room sees), supports {name}
   // Custom spell messages (override defaults when set)
   hitMessageSelf: string | null;                // Message to caster on hit
   hitMessageTarget: string | null;              // Message to target on hit
@@ -134,6 +136,7 @@ export interface SpellCastingState {
   // Fizzle
   castDifficulty: number;
   fizzleMessage: string | null;
+  fizzleMessageRoom: string | null;
   // Custom messages
   hitMessageSelf: string | null;
   hitMessageTarget: string | null;

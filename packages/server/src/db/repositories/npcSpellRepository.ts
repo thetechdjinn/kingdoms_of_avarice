@@ -101,6 +101,7 @@ function dbToNpcSpell(row: DbNpcSpellRow): NpcSpell {
     healingScalingFactor: parseDecimal(row.s_healing_scaling_factor),
     castDifficulty: row.s_cast_difficulty ?? 0,
     fizzleMessage: row.s_fizzle_message,
+    fizzleMessageRoom: null,
     hitMessageSelf: row.s_hit_message_self,
     hitMessageTarget: row.s_hit_message_target,
     hitMessageRoom: row.s_hit_message_room,

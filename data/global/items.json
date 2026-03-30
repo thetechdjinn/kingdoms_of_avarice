@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "exported_at": "2026-03-29T03:03:59.486Z",
+  "exported_at": "2026-03-29T19:38:18.637Z",
   "type": "items",
   "data": [
     {
@@ -1267,7 +1267,7 @@
         "damage_type": "bludgeoning",
         "attack_speed": 1200,
         "attack_verbs": {
-          "hit": "smacks",
+          "hit": "smack",
           "miss": "swing at",
           "hit_3p": "smacks",
           "miss_3p": "swings at"

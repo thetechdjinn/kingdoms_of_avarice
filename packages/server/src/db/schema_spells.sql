@@ -49,14 +49,15 @@ CREATE TABLE IF NOT EXISTS spells (
     max_scaling_level INTEGER,       -- Cap: scaling stops at this caster level (null = no cap)
 
     -- Stat scaling (% increase per 10 stat points)
-    damage_scaling_stat VARCHAR(20) CHECK (damage_scaling_stat IN ('none', 'strength', 'agility', 'constitution', 'intellect', 'wisdom', 'charisma')),
+    damage_scaling_stat VARCHAR(20) CHECK (damage_scaling_stat IN ('none', 'strength', 'agility', 'constitution', 'intellect', 'wisdom', 'charisma', 'intellect_wisdom')),
     damage_scaling_factor DECIMAL(4,3),  -- e.g., 0.020 = 2% per 10 points
-    healing_scaling_stat VARCHAR(20) CHECK (healing_scaling_stat IN ('none', 'strength', 'agility', 'constitution', 'intellect', 'wisdom', 'charisma')),
+    healing_scaling_stat VARCHAR(20) CHECK (healing_scaling_stat IN ('none', 'strength', 'agility', 'constitution', 'intellect', 'wisdom', 'charisma', 'intellect_wisdom')),
     healing_scaling_factor DECIMAL(4,3),  -- e.g., 0.020 = 2% per 10 points
 
     -- Fizzle mechanics
     cast_difficulty INTEGER NOT NULL DEFAULT 0,  -- 0 = always succeeds
-    fizzle_message TEXT,
+    fizzle_message TEXT,           -- Custom fizzle message (caster sees)
+    fizzle_message_room TEXT,      -- Custom fizzle message (room sees), supports {name}
 
     -- Custom spell messages (override defaults when set)
     hit_message_self TEXT,     -- Message to caster on hit
@@ -65,7 +66,7 @@ CREATE TABLE IF NOT EXISTS spells (
 
     -- NPC telegraph and save mechanics
     telegraph_message TEXT,
-    save_stat VARCHAR(20) CHECK (save_stat IN ('none', 'strength', 'agility', 'constitution', 'intellect', 'wisdom', 'charisma')),
+    save_stat VARCHAR(20) CHECK (save_stat IN ('none', 'strength', 'agility', 'constitution', 'intellect', 'wisdom', 'charisma', 'intellect_wisdom')),
     save_difficulty INTEGER DEFAULT 0,
 
     -- Metadata

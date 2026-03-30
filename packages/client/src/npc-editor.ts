@@ -514,11 +514,11 @@ function renderAttacks(): void {
           </div>
           <div class="form-group">
             <label>Hit Message</label>
-            <input type="text" data-field="hitMessage" data-index="${index}" value="${escapeHtml(atk.hitMessage || '')}" placeholder="Custom hit message" />
+            <input type="text" data-field="hitMessage" data-index="${index}" value="${escapeHtml(atk.hitMessage || '')}" placeholder="{name} hits {target} for {damage}!" />
           </div>
           <div class="form-group">
             <label>Miss Message</label>
-            <input type="text" data-field="missMessage" data-index="${index}" value="${escapeHtml(atk.missMessage || '')}" placeholder="Custom miss message" />
+            <input type="text" data-field="missMessage" data-index="${index}" value="${escapeHtml(atk.missMessage || '')}" placeholder="{name} swings at {target}!" />
           </div>
         </div>
       </div>
@@ -579,10 +579,10 @@ function addAttack(): void {
     percentage: 100,
     hitMessage: null,
     missMessage: null,
-    hitVerb: 'hits',
+    hitVerb: 'hit',
     hitVerb3p: 'hits',
-    missVerb: 'misses',
-    missVerb3p: 'misses',
+    missVerb: 'swing at',
+    missVerb3p: 'swings at',
   });
   renderAttacks();
   updatePreview();

@@ -204,16 +204,71 @@ async function seedDatabaseIfEmpty(): Promise<void> {
 }
 
 /**
+ * One-time migration: Update class HP fields (hp_adj, hp_per_level_min, hp_per_level_max)
+ * and race base_hp from seed data. Only updates rows still at defaults.
+ */
+async function migrateHpFields(): Promise<void> {
+  try {
+    const existingClasses = await progressionRepo.getAllClasses();
+    if (existingClasses.length === 0) return;
+
+    const seedClasses = loadJsonFile<ClassDefinition[]>('classes.json');
+    const seedClassMap = new Map(seedClasses.map(c => [c.class_id, c]));
+
+    let classUpdates = 0;
+    for (const cls of existingClasses) {
+      const seed = seedClassMap.get(cls.class_id);
+      if (!seed) continue;
+      // Only update if still at column defaults (hp_adj=0, min=4, max=7)
+      if (cls.hp_adj === 0 && cls.hp_per_level_min === 4 && cls.hp_per_level_max === 7) {
+        if (seed.hp_adj !== 0 || seed.hp_per_level_min !== 4 || seed.hp_per_level_max !== 7) {
+          await progressionRepo.updateClass(cls.class_id, {
+            hp_adj: seed.hp_adj,
+            hp_per_level_min: seed.hp_per_level_min,
+            hp_per_level_max: seed.hp_per_level_max,
+          });
+          classUpdates++;
+        }
+      }
+    }
+
+    const existingRaces = await progressionRepo.getAllRaces();
+    const seedRaces = loadJsonFile<RaceDefinition[]>('races.json');
+    const seedRaceMap = new Map(seedRaces.map(r => [r.race_id, r]));
+
+    let raceUpdates = 0;
+    for (const race of existingRaces) {
+      const seed = seedRaceMap.get(race.race_id);
+      if (!seed) continue;
+      // Only update if still at column default (base_hp=26)
+      if (race.base_hp === 26 && seed.base_hp !== undefined && seed.base_hp !== 26) {
+        await progressionRepo.updateRace(race.race_id, { base_hp: seed.base_hp });
+        raceUpdates++;
+      }
+    }
+
+    if (classUpdates > 0 || raceUpdates > 0) {
+      console.log(`[Progression] Migrated HP fields: ${classUpdates} class(es), ${raceUpdates} race(s)`);
+    }
+  } catch (error) {
+    console.warn('[Progression] Could not migrate HP fields:', error);
+  }
+}
+
+/**
  * Initialize all progression data
  */
 export async function initializeProgressionData(): Promise<void> {
   console.log('[Progression] Initializing progression system...');
-  
+
   // Load classes from JSON (these are static)
   loadClasses();
 
   // One-time migration: update class combat levels if they all have the old default value
   await migrateClassCombatLevels();
+
+  // One-time migration: backfill HP fields from seed data
+  await migrateHpFields();
 
   // Force reseed races if stats are outdated
   await forceReseedRaces();

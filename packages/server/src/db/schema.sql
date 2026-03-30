@@ -328,10 +328,10 @@ CREATE TABLE IF NOT EXISTS npc_attacks (
     percentage INTEGER NOT NULL DEFAULT 100 CHECK (percentage >= 0 AND percentage <= 100),
     hit_message TEXT,
     miss_message TEXT,
-    hit_verb VARCHAR(50) DEFAULT 'hits',
+    hit_verb VARCHAR(50) DEFAULT 'hit',
     hit_verb_3p VARCHAR(50) DEFAULT 'hits',
-    miss_verb VARCHAR(50) DEFAULT 'misses',
-    miss_verb_3p VARCHAR(50) DEFAULT 'misses'
+    miss_verb VARCHAR(50) DEFAULT 'swing at',
+    miss_verb_3p VARCHAR(50) DEFAULT 'swings at'
 );
 
 -- Drop tables (loot table definitions)

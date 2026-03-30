@@ -3,7 +3,7 @@
  * status effects, dynamic class buttons, NPC reverse lookup.
  */
 
-import { Spell, SpellType, SpellTargetType, SpellScalingStat } from '@koa/shared';
+import { Spell, SpellType, SpellTargetType, SpellScalingStat, calculateSpellcasting } from '@koa/shared';
 import { initAuth, ListPanel, SearchableSelect, setupTabs, showToast, showConfirm, showPromptFields, escapeHtml } from './components/index.js';
 import type { SelectOption } from './components/index.js';
 import { renderNav } from './components/nav.js';
@@ -64,6 +64,7 @@ interface StatusEffectDef {
   const manaCostInput = document.getElementById('spell-mana-cost') as HTMLInputElement;
   const castDifficultyInput = document.getElementById('spell-cast-difficulty') as HTMLInputElement;
   const fizzleMessageInput = document.getElementById('spell-fizzle-message') as HTMLInputElement;
+  const fizzleMessageRoomInput = document.getElementById('spell-fizzle-message-room') as HTMLInputElement;
   const telegraphInput = document.getElementById('spell-telegraph-message') as HTMLInputElement;
 
   // Effects - offensive
@@ -265,6 +266,7 @@ interface StatusEffectDef {
     manaCostInput.value = String(spell.manaCost);
     castDifficultyInput.value = String(spell.castDifficulty || 0);
     fizzleMessageInput.value = spell.fizzleMessage || '';
+    fizzleMessageRoomInput.value = spell.fizzleMessageRoom || '';
     telegraphInput.value = spell.telegraphMessage || '';
 
     // Offensive
@@ -317,6 +319,7 @@ interface StatusEffectDef {
     updateEffectSections(spell.spellType);
     listPanel.setSelected(id);
     updatePreview(spell);
+    updateSimulator();
     updateNpcReferences(id);
   }
 
@@ -394,6 +397,7 @@ interface StatusEffectDef {
       manaCost: parseInt(manaCostInput.value) || 0,
       castDifficulty: parseInt(castDifficultyInput.value) || 0,
       fizzleMessage: fizzleMessageInput.value.trim() || null,
+      fizzleMessageRoom: fizzleMessageRoomInput.value.trim() || null,
       telegraphMessage: telegraphInput.value.trim() || null,
       minDamage: Number.isFinite(parseInt(minDamageInput.value)) ? parseInt(minDamageInput.value) : null,
       maxDamage: Number.isFinite(parseInt(maxDamageInput.value)) ? parseInt(maxDamageInput.value) : null,
@@ -422,6 +426,297 @@ interface StatusEffectDef {
   // ============================================================================
   // Preview
   // ============================================================================
+
+  /**
+   * Replicate server-side calculateSpellScaling for preview display.
+   */
+  function calcScaling(
+    baseMin: number, baseMax: number,
+    casterLevel: number, scalingPerLevel: number | null,
+    statValue: number, scalingFactor: number | null,
+    maxScalingLevel: number | null, spellLevelRequired: number,
+  ): { min: number; max: number } {
+    let bonus = 0;
+    if (scalingPerLevel && scalingPerLevel > 0) {
+      let levelsAbove = Math.max(0, casterLevel - spellLevelRequired);
+      if (maxScalingLevel && maxScalingLevel > 0) levelsAbove = Math.min(levelsAbove, maxScalingLevel);
+      bonus += levelsAbove * scalingPerLevel;
+    }
+    if (scalingFactor && scalingFactor > 0 && statValue > 0) {
+      bonus += Math.floor(statValue / 10) * scalingFactor;
+    }
+    const multiplier = 1 + bonus;
+    return {
+      min: Math.max(1, Math.floor(baseMin * multiplier)),
+      max: Math.max(1, Math.floor(baseMax * multiplier)),
+    };
+  }
+
+  /**
+   * Build a scaling preview table showing damage/healing at various levels and stat values.
+   */
+  function buildScalingTable(spell: Spell): string {
+    const hasOffensive = spell.minDamage != null && spell.maxDamage != null && (spell.minDamage > 0 || spell.maxDamage > 0);
+    const hasHealing = spell.minHealing != null && spell.maxHealing != null && (spell.minHealing > 0 || spell.maxHealing > 0);
+    if (!hasOffensive && !hasHealing) return '';
+
+    const hasLevelScaling = spell.scalingPerLevel != null && spell.scalingPerLevel > 0;
+    const hasDmgStatScaling = hasOffensive && spell.damageScalingStat && spell.damageScalingStat !== 'none' && spell.damageScalingFactor;
+    const hasHealStatScaling = hasHealing && spell.healingScalingStat && spell.healingScalingStat !== 'none' && spell.healingScalingFactor;
+    if (!hasLevelScaling && !hasDmgStatScaling && !hasHealStatScaling) return '';
+
+    const spellLvl = spell.levelRequired || 1;
+    const maxCap = spell.maxScalingLevel || 0;
+
+    // Determine which levels to show
+    const levels: number[] = [];
+    if (hasLevelScaling) {
+      const topLevel = maxCap > 0 ? spellLvl + maxCap : spellLvl + 10;
+      for (let lv = spellLvl; lv <= topLevel; lv++) levels.push(lv);
+    } else {
+      levels.push(spellLvl);
+    }
+
+    // Determine which stat values to show and how to label them
+    const scalingStat = hasDmgStatScaling ? spell.damageScalingStat : (hasHealStatScaling ? spell.healingScalingStat : null);
+    const isDualStat = scalingStat === 'intellect_wisdom';
+    const hasStatScaling = hasDmgStatScaling || hasHealStatScaling;
+
+    // For dual-stat, show avg(INT,WIS) values; label shows the split
+    // Each entry: { statValue: number fed to calcScaling, label: string }
+    const statEntries: { statValue: number; label: string }[] = [];
+    if (hasStatScaling) {
+      if (isDualStat) {
+        // Show balanced INT/WIS splits: 40/40, 50/50, 60/60, 70/70, 80/80
+        for (let s = 40; s <= 80; s += 10) {
+          statEntries.push({ statValue: s, label: `INT ${s} / WIS ${s}` });
+        }
+      } else {
+        for (let s = 40; s <= 120; s += 20) {
+          statEntries.push({ statValue: s, label: `${scalingStat}: ${s}` });
+        }
+      }
+    } else {
+      statEntries.push({ statValue: 0, label: '' });
+    }
+
+    let html = `<div class="preview-section"><div class="preview-section-title">Scaling Preview</div>`;
+
+    // One table per stat value
+    for (const entry of statEntries) {
+      if (statEntries.length > 1) {
+        html += `<div class="scaling-stat-label">${entry.label}</div>`;
+      }
+      html += `<table class="scaling-table"><thead><tr><th>Lv</th>`;
+      if (hasOffensive) html += `<th>Damage</th>`;
+      if (hasHealing) html += `<th>Healing</th>`;
+      html += `</tr></thead><tbody>`;
+
+      for (const lv of levels) {
+        html += `<tr><td>${lv}</td>`;
+        if (hasOffensive) {
+          const s = calcScaling(spell.minDamage!, spell.maxDamage!, lv,
+            spell.scalingPerLevel, entry.statValue, spell.damageScalingFactor, maxCap, spellLvl);
+          html += `<td>${s.min}-${s.max}</td>`;
+        }
+        if (hasHealing) {
+          const s = calcScaling(spell.minHealing!, spell.maxHealing!, lv,
+            spell.scalingPerLevel, entry.statValue, spell.healingScalingFactor, maxCap, spellLvl);
+          html += `<td>${s.min}-${s.max}</td>`;
+        }
+        html += `</tr>`;
+      }
+      html += `</tbody></table>`;
+    }
+
+    html += `</div>`;
+    return html;
+  }
+
+  // ============================================================================
+  // Simulator
+  // ============================================================================
+
+  const simMagicLevel = document.getElementById('sim-magic-level') as HTMLSelectElement;
+  const simMagicSchool = document.getElementById('sim-magic-school') as HTMLSelectElement;
+  const simLevel = document.getElementById('sim-level') as HTMLInputElement;
+  const simPrimaryStat = document.getElementById('sim-primary-stat') as HTMLInputElement;
+  const simSecondaryStat = document.getElementById('sim-secondary-stat') as HTMLInputElement;
+  const simSecondaryGroup = document.getElementById('sim-secondary-stat-group') as HTMLDivElement;
+  const simRaceBaseStat = document.getElementById('sim-race-base-stat') as HTMLInputElement;
+  const simRaceBaseSecondary = document.getElementById('sim-race-base-secondary') as HTMLInputElement;
+  const simRaceBaseSecondaryGroup = document.getElementById('sim-race-base-secondary-group') as HTMLDivElement;
+  const simEquipBonus = document.getElementById('sim-equip-bonus') as HTMLInputElement;
+  const simResults = document.getElementById('sim-results') as HTMLDivElement;
+
+  // Show/hide secondary stat fields for Druid
+  simMagicSchool.addEventListener('change', () => {
+    const isDruid = simMagicSchool.value === 'druid';
+    simSecondaryGroup.style.display = isDruid ? '' : 'none';
+    simRaceBaseSecondaryGroup.style.display = isDruid ? '' : 'none';
+    updateSimulator();
+  });
+
+  // Recalculate on any input change
+  for (const el of [simMagicLevel, simMagicSchool, simLevel, simPrimaryStat, simSecondaryStat, simRaceBaseStat, simRaceBaseSecondary, simEquipBonus]) {
+    el.addEventListener('input', updateSimulator);
+    el.addEventListener('change', updateSimulator);
+  }
+
+  // Also update simulator when spell form fields change (difficulty, damage, scaling, level)
+  for (const el of [castDifficultyInput, levelRequiredInput, minDamageInput, maxDamageInput,
+    hitsPerCastInput, dmgScalingStatSelect, dmgScalingFactorInput, minHealingInput, maxHealingInput,
+    healScalingStatSelect, healScalingFactorInput, scalingPerLevelInput, maxScalingLevelInput]) {
+    el.addEventListener('input', updateSimulator);
+    el.addEventListener('change', updateSimulator);
+  }
+
+  /** Calculate effective success rate given difficulty and castChance (SP + difficulty) */
+  function getSuccessRate(difficulty: number, castChance: number): number {
+    if (difficulty >= 100) return 100;
+    if (castChance <= 0) return 0;
+    return Math.min(castChance, 97);
+  }
+
+  function updateSimulator(): void {
+    const spell = getFormSpell();
+    if (!spell) {
+      simResults.innerHTML = '';
+      return;
+    }
+
+    const magicLevel = parseInt(simMagicLevel.value) || 0;
+    const magicSchool = simMagicSchool.value;
+    const casterLevel = parseInt(simLevel.value) || 1;
+    const primaryStat = parseInt(simPrimaryStat.value) || 40;
+    const secondaryStat = parseInt(simSecondaryStat.value) || 40;
+    const raceBase = parseInt(simRaceBaseStat.value) || 40;
+    const raceBaseSecondary = parseInt(simRaceBaseSecondary.value) || 40;
+    const equipBonus = parseInt(simEquipBonus.value) || 0;
+
+    // Build stat objects for calculateSpellcasting
+    const isDruid = magicSchool === 'druid';
+    const stats = { intelligence: 40, wisdom: 40, charisma: 40 };
+    const raceBaseStats: { intelligence?: number; wisdom?: number; charisma?: number } = {
+      intelligence: 40, wisdom: 40, charisma: 40,
+    };
+
+    switch (magicSchool) {
+      case 'mage':
+        stats.intelligence = primaryStat;
+        raceBaseStats.intelligence = raceBase;
+        break;
+      case 'priest':
+      case 'kai':
+        stats.wisdom = primaryStat;
+        raceBaseStats.wisdom = raceBase;
+        break;
+      case 'bardic':
+        stats.charisma = primaryStat;
+        raceBaseStats.charisma = raceBase;
+        break;
+      case 'druid':
+        stats.intelligence = primaryStat;
+        stats.wisdom = secondaryStat;
+        raceBaseStats.intelligence = raceBase;
+        raceBaseStats.wisdom = raceBaseSecondary;
+        break;
+    }
+
+    const sp = calculateSpellcasting(magicLevel, magicSchool, stats, raceBaseStats, casterLevel, equipBonus);
+
+    // Cast success rate: roll 1-100, succeed if roll <= SP+difficulty, 3% auto-fizzle, difficulty >= 100 always succeeds
+    const difficulty = spell.castDifficulty ?? 0;
+    const castChance = sp + difficulty;
+    const successRate = getSuccessRate(difficulty, castChance);
+
+    let html = `<div class="form-section"><h4>Spellcasting</h4>`;
+    html += `<div class="sim-stat-row"><span class="label">Spellcasting (SP):</span> <strong>${sp}</strong></div>`;
+    html += `<div class="sim-stat-row"><span class="label">Cast Difficulty:</span> ${difficulty >= 0 ? '+' : ''}${difficulty}</div>`;
+    html += `<div class="sim-stat-row"><span class="label">Cast Chance:</span> ${castChance} (SP ${sp} ${difficulty >= 0 ? '+' : '-'} ${Math.abs(difficulty)} difficulty)</div>`;
+    html += `<div class="sim-stat-row"><span class="label">Success Rate:</span> <strong class="${successRate >= 70 ? 'sim-good' : successRate >= 40 ? 'sim-ok' : 'sim-bad'}">${successRate.toFixed(1)}%</strong>`;
+    if (difficulty < 100 && castChance > 97) {
+      html += ` <span class="hint-inline">(capped at 97% by 3% auto-fizzle)</span>`;
+    }
+    html += `</div></div>`;
+
+    // Determine which stat value to use for damage/healing scaling
+    const getScalingStatValue = (scalingStat: string | undefined): number => {
+      if (!scalingStat || scalingStat === 'none') return 0;
+      switch (scalingStat) {
+        case 'intellect': return stats.intelligence;
+        case 'wisdom': return stats.wisdom;
+        case 'charisma': return stats.charisma;
+        case 'strength': case 'agility': case 'constitution': return 0; // Physical stats not in simulator
+        case 'intellect_wisdom': return Math.floor((stats.intelligence + stats.wisdom) / 2);
+        default: return 0;
+      }
+    };
+
+    // Damage/healing at these settings
+    const hasOffensive = spell.minDamage != null && spell.maxDamage != null && (spell.minDamage > 0 || spell.maxDamage > 0);
+    const hasHealing = spell.minHealing != null && spell.maxHealing != null && (spell.minHealing > 0 || spell.maxHealing > 0);
+
+    if (hasOffensive || hasHealing) {
+      html += `<div class="form-section"><h4>Output at Current Settings</h4>`;
+      const spellLvl = spell.levelRequired || 1;
+      const maxCap = spell.maxScalingLevel || 0;
+
+      if (hasOffensive) {
+        const dmgStat = getScalingStatValue(spell.damageScalingStat ?? undefined);
+        const s = calcScaling(spell.minDamage!, spell.maxDamage!, casterLevel,
+          spell.scalingPerLevel ?? null, dmgStat, spell.damageScalingFactor ?? null, maxCap, spellLvl);
+        html += `<div class="sim-stat-row"><span class="label">Damage:</span> <strong>${s.min}-${s.max}</strong>`;
+        const hpc = spell.hitsPerCast ?? 1;
+        if (hpc > 1) html += ` x${hpc} hits (${s.min * hpc}-${s.max * hpc} total)`;
+        html += `</div>`;
+      }
+      if (hasHealing) {
+        const healStat = getScalingStatValue(spell.healingScalingStat ?? undefined);
+        const s = calcScaling(spell.minHealing!, spell.maxHealing!, casterLevel,
+          spell.scalingPerLevel ?? null, healStat, spell.healingScalingFactor ?? null, maxCap, spellLvl);
+        html += `<div class="sim-stat-row"><span class="label">Healing:</span> <strong>${s.min}-${s.max}</strong></div>`;
+      }
+      html += `</div>`;
+    }
+
+    // Level progression table
+    html += `<div class="form-section"><h4>Level Progression</h4>`;
+    html += `<table class="scaling-table"><thead><tr><th>Lv</th><th>SP</th><th>Success</th>`;
+    if (hasOffensive) html += `<th>Damage</th>`;
+    if (hasHealing) html += `<th>Healing</th>`;
+    html += `</tr></thead><tbody>`;
+
+    const spellLvl = spell.levelRequired || 1;
+    const maxCap = spell.maxScalingLevel || 0;
+    const topLevel = Math.max(spellLvl + 10, casterLevel + 5);
+    for (let lv = spellLvl; lv <= topLevel; lv += (lv < spellLvl + 5 ? 1 : (lv < 20 ? 2 : 5))) {
+      const lvSp = calculateSpellcasting(magicLevel, magicSchool, stats, raceBaseStats, lv, equipBonus);
+      const lvSuccess = getSuccessRate(spell.castDifficulty ?? 0, lvSp + (spell.castDifficulty ?? 0));
+      const rowClass = lv === casterLevel ? ' class="sim-current-row"' : '';
+      html += `<tr${rowClass}><td>${lv}</td><td>${lvSp}</td><td class="${lvSuccess >= 70 ? 'sim-good' : lvSuccess >= 40 ? 'sim-ok' : 'sim-bad'}">${lvSuccess.toFixed(0)}%</td>`;
+      if (hasOffensive) {
+        const dmgStat = getScalingStatValue(spell.damageScalingStat ?? undefined);
+        const s = calcScaling(spell.minDamage!, spell.maxDamage!, lv, spell.scalingPerLevel ?? null, dmgStat, spell.damageScalingFactor ?? null, maxCap, spellLvl);
+        html += `<td>${s.min}-${s.max}</td>`;
+      }
+      if (hasHealing) {
+        const healStat = getScalingStatValue(spell.healingScalingStat ?? undefined);
+        const s = calcScaling(spell.minHealing!, spell.maxHealing!, lv, spell.scalingPerLevel ?? null, healStat, spell.healingScalingFactor ?? null, maxCap, spellLvl);
+        html += `<td>${s.min}-${s.max}</td>`;
+      }
+      html += `</tr>`;
+    }
+    html += `</tbody></table></div>`;
+
+    simResults.innerHTML = html;
+  }
+
+  // Helper to get current form values for simulator
+  function getFormSpell(): Partial<Spell> | null {
+    if (!selectedSpellId && !nameInput.value) return null;
+    return gatherFormData();
+  }
 
   function updatePreview(spell: Spell): void {
     let html = `
@@ -470,6 +765,9 @@ interface StatusEffectDef {
       if (spell.maxScalingLevel) html += ` (cap: Lv ${spell.maxScalingLevel})`;
       html += `</div></div>`;
     }
+
+    // Scaling preview table
+    html += buildScalingTable(spell);
 
     // Status effect
     if (spell.statusEffect) {

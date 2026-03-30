@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "exported_at": "2026-03-29T03:03:59.522Z",
+  "exported_at": "2026-03-29T19:38:18.666Z",
   "type": "rooms",
   "data": [
     {
@@ -193,7 +193,7 @@
       "name": "Hearthstead Trail",
       "description": "Open ground with a clear view of Hearthstead below. The trail is well-trodden here, the earth packed hard by years of use. A wooden fence post marks the boundary between the trail and a farmer's field, its top worn smooth.",
       "area": "Hearthstead Loop",
-      "terrain": "",
+      "terrain": "indoor",
       "darkness_level": 0,
       "features": {},
       "exits": [
@@ -332,11 +332,11 @@
           "triggerText": "go path",
           "passageMessageSelf": "You push through the overgrown brush and find a narrow trail leading north into the forest.",
           "passageMessageRoom": "{player} pushes through the undergrowth and disappears into the forest.",
-          "passageMessageArrival": null,
+          "passageMessageArrival": "{player} appears from the undergrowth.",
           "itemDisplayName": null,
           "isTemporary": false,
           "spawnTriggerText": null,
-          "durationSeconds": null,
+          "durationSeconds": 60,
           "appearMessage": null,
           "disappearMessage": null,
           "requiredLevel": null,

@@ -34,6 +34,7 @@ interface DbSpell {
   healing_scaling_factor: string | null;
   cast_difficulty: number;
   fizzle_message: string | null;
+  fizzle_message_room: string | null;
   hit_message_self: string | null;
   hit_message_target: string | null;
   hit_message_room: string | null;
@@ -80,6 +81,7 @@ function dbToSpell(row: DbSpell): Spell {
     healingScalingFactor: row.healing_scaling_factor ? (isNaN(parseFloat(row.healing_scaling_factor)) ? null : parseFloat(row.healing_scaling_factor)) : null,
     castDifficulty: row.cast_difficulty ?? 0,
     fizzleMessage: row.fizzle_message,
+    fizzleMessageRoom: row.fizzle_message_room,
     hitMessageSelf: row.hit_message_self,
     hitMessageTarget: row.hit_message_target,
     hitMessageRoom: row.hit_message_room,
@@ -286,8 +288,9 @@ export async function canUseSpell(
     return { canUse: false, reason: 'Spell does not exist.' };
   }
 
-  // Check class restriction
-  if (spell.classRestrictions.length > 0 && !spell.classRestrictions.includes(characterClass)) {
+  // Check class restriction (case-insensitive: data may store IDs or display names)
+  const classLower = characterClass.toLowerCase();
+  if (spell.classRestrictions.length > 0 && !spell.classRestrictions.some(r => r.toLowerCase() === classLower)) {
     return { canUse: false, reason: `Only ${spell.classRestrictions.join(', ')} can use this spell.` };
   }
 
@@ -334,6 +337,7 @@ export interface CreateSpellInput {
   healingScalingFactor?: number;
   castDifficulty?: number;
   fizzleMessage?: string;
+  fizzleMessageRoom?: string;
   hitMessageSelf?: string;
   hitMessageTarget?: string;
   hitMessageRoom?: string;
@@ -354,10 +358,10 @@ export async function createSpell(input: CreateSpellInput): Promise<Spell> {
       level_required, class_restrictions, is_attack_spell,
       scaling_per_level, max_scaling_level, damage_scaling_stat, damage_scaling_factor,
       healing_scaling_stat, healing_scaling_factor,
-      cast_difficulty, fizzle_message,
+      cast_difficulty, fizzle_message, fizzle_message_room,
       hit_message_self, hit_message_target, hit_message_room,
       telegraph_message, save_stat, save_difficulty
-    ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29,$30)
+    ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29,$30,$31)
     RETURNING *`,
     [
       input.name, input.mnemonic.toLowerCase(), input.description || null,
@@ -370,7 +374,7 @@ export async function createSpell(input: CreateSpellInput): Promise<Spell> {
       input.scalingPerLevel || null, input.maxScalingLevel ?? null,
       input.damageScalingStat || null, input.damageScalingFactor || null,
       input.healingScalingStat || null, input.healingScalingFactor || null,
-      input.castDifficulty ?? 0, input.fizzleMessage || null,
+      input.castDifficulty ?? 0, input.fizzleMessage || null, input.fizzleMessageRoom || null,
       input.hitMessageSelf || null, input.hitMessageTarget || null, input.hitMessageRoom || null,
       input.telegraphMessage || null, input.saveStat || null, input.saveDifficulty ?? 0,
     ]
@@ -410,6 +414,7 @@ export async function updateSpell(id: number, input: Partial<CreateSpellInput>):
     healingScalingFactor: input.healingScalingFactor !== undefined ? input.healingScalingFactor : existing.healingScalingFactor,
     castDifficulty: input.castDifficulty !== undefined ? input.castDifficulty : existing.castDifficulty,
     fizzleMessage: input.fizzleMessage !== undefined ? input.fizzleMessage : existing.fizzleMessage,
+    fizzleMessageRoom: input.fizzleMessageRoom !== undefined ? input.fizzleMessageRoom : existing.fizzleMessageRoom,
     hitMessageSelf: input.hitMessageSelf !== undefined ? input.hitMessageSelf : existing.hitMessageSelf,
     hitMessageTarget: input.hitMessageTarget !== undefined ? input.hitMessageTarget : existing.hitMessageTarget,
     hitMessageRoom: input.hitMessageRoom !== undefined ? input.hitMessageRoom : existing.hitMessageRoom,
@@ -427,11 +432,11 @@ export async function updateSpell(id: number, input: Partial<CreateSpellInput>):
       scaling_per_level=$17, max_scaling_level=$18,
       damage_scaling_stat=$19, damage_scaling_factor=$20,
       healing_scaling_stat=$21, healing_scaling_factor=$22,
-      cast_difficulty=$23, fizzle_message=$24,
-      hit_message_self=$25, hit_message_target=$26, hit_message_room=$27,
-      telegraph_message=$28, save_stat=$29, save_difficulty=$30,
+      cast_difficulty=$23, fizzle_message=$24, fizzle_message_room=$25,
+      hit_message_self=$26, hit_message_target=$27, hit_message_room=$28,
+      telegraph_message=$29, save_stat=$30, save_difficulty=$31,
       updated_at=NOW()
-    WHERE id = $31
+    WHERE id = $32
     RETURNING *`,
     [
       u.name, u.mnemonic, u.description || null,
@@ -443,7 +448,7 @@ export async function updateSpell(id: number, input: Partial<CreateSpellInput>):
       u.scalingPerLevel || null, u.maxScalingLevel ?? null,
       u.damageScalingStat || null, u.damageScalingFactor || null,
       u.healingScalingStat || null, u.healingScalingFactor || null,
-      u.castDifficulty ?? 0, u.fizzleMessage || null,
+      u.castDifficulty ?? 0, u.fizzleMessage || null, u.fizzleMessageRoom || null,
       u.hitMessageSelf || null, u.hitMessageTarget || null, u.hitMessageRoom || null,
       u.telegraphMessage || null, u.saveStat || null, u.saveDifficulty ?? 0,
       id,

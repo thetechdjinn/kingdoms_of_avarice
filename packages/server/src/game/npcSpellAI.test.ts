@@ -64,6 +64,7 @@ function createMockSpell(overrides: Partial<Spell> = {}): Spell {
     healingScalingFactor: null,
     castDifficulty: 0,
     fizzleMessage: null,
+    fizzleMessageRoom: null,
     hitMessageSelf: null,
     hitMessageTarget: null,
     hitMessageRoom: null,

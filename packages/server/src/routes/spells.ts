@@ -110,7 +110,7 @@ export function setupSpellRoutes(app: Express): void {
         levelRequired, classRestrictions, isAttackSpell,
         scalingPerLevel, maxScalingLevel, damageScalingStat, damageScalingFactor,
         healingScalingStat, healingScalingFactor,
-        castDifficulty, fizzleMessage,
+        castDifficulty, fizzleMessage, fizzleMessageRoom,
         hitMessageSelf, hitMessageTarget, hitMessageRoom,
         telegraphMessage, saveStat, saveDifficulty
       } = req.body;
@@ -163,7 +163,7 @@ export function setupSpellRoutes(app: Express): void {
         isAttackSpell: isAttackSpell ?? false,
         scalingPerLevel, maxScalingLevel, damageScalingStat, damageScalingFactor,
         healingScalingStat, healingScalingFactor,
-        castDifficulty: castDifficulty ?? 0, fizzleMessage,
+        castDifficulty: castDifficulty ?? 0, fizzleMessage, fizzleMessageRoom,
         hitMessageSelf, hitMessageTarget, hitMessageRoom,
         telegraphMessage, saveStat, saveDifficulty,
       });

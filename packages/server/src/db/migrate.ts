@@ -688,7 +688,7 @@ export async function runMigrations(): Promise<void> {
       `);
       await client.query(`
         ALTER TABLE spells ADD CONSTRAINT spells_save_stat_check
-        CHECK (save_stat IS NULL OR save_stat IN ('none', 'strength', 'agility', 'constitution', 'intellect', 'wisdom', 'charisma'))
+        CHECK (save_stat IS NULL OR save_stat IN ('none', 'strength', 'agility', 'constitution', 'intellect', 'wisdom', 'charisma', 'intellect_wisdom'))
       `);
 
       // NPC spell assignments (junction table linking NPCs to spells with AI parameters)
@@ -1244,6 +1244,69 @@ export async function runMigrations(): Promise<void> {
       await client.query(`ALTER TABLE item_templates ADD COLUMN IF NOT EXISTS defense_modifier INTEGER DEFAULT 0`);
       await client.query(`ALTER TABLE item_templates ADD COLUMN IF NOT EXISTS healing_modifier INTEGER DEFAULT 0`);
       await client.query(`ALTER TABLE item_templates ADD COLUMN IF NOT EXISTS vision_modifier INTEGER DEFAULT 0`);
+
+      // Fix NPC attack verb defaults: old defaults used 3p outcome verbs ("hits"/"misses")
+      // instead of proper 1p/3p action verbs ("hit"/"hits", "swing at"/"swings at").
+      await client.query(`UPDATE npc_attacks SET hit_verb = 'hit' WHERE hit_verb = 'hits' AND hit_verb_3p = 'hits'`);
+      await client.query(`UPDATE npc_attacks SET miss_verb = 'swing at' WHERE miss_verb = 'misses' AND miss_verb_3p = 'misses'`);
+      await client.query(`UPDATE npc_attacks SET miss_verb_3p = 'swings at' WHERE miss_verb_3p = 'misses' AND miss_verb = 'swing at'`);
+      await client.query(`ALTER TABLE npc_attacks ALTER COLUMN hit_verb SET DEFAULT 'hit'`);
+      await client.query(`ALTER TABLE npc_attacks ALTER COLUMN miss_verb SET DEFAULT 'swing at'`);
+      await client.query(`ALTER TABLE npc_attacks ALTER COLUMN miss_verb_3p SET DEFAULT 'swings at'`);
+
+      // HP system: class HP fields for character creation and per-level gains
+      await client.query(`ALTER TABLE class_definitions ADD COLUMN IF NOT EXISTS hp_adj INTEGER DEFAULT 0`);
+      await client.query(`ALTER TABLE class_definitions ADD COLUMN IF NOT EXISTS hp_per_level_min INTEGER DEFAULT 4`);
+      await client.query(`ALTER TABLE class_definitions ADD COLUMN IF NOT EXISTS hp_per_level_max INTEGER DEFAULT 7`);
+
+      // HP system: race base HP for character creation
+      await client.query(`ALTER TABLE race_definitions ADD COLUMN IF NOT EXISTS base_hp INTEGER DEFAULT 26`);
+
+      // Backfill HP data for existing class/race definitions
+      // Only updates rows still at defaults to avoid overwriting user customizations
+      const hpClassData: Record<string, { adj: number; min: number; max: number }> = {
+        warrior: { adj: 4, min: 6, max: 10 }, witchunter: { adj: 4, min: 6, max: 10 },
+        paladin: { adj: 3, min: 5, max: 9 }, ranger: { adj: 3, min: 5, max: 9 },
+        cleric: { adj: 2, min: 4, max: 8 }, ninja: { adj: 2, min: 4, max: 8 },
+        mystic: { adj: 2, min: 4, max: 8 }, warlock: { adj: 2, min: 4, max: 7 },
+        bard: { adj: 1, min: 4, max: 7 }, thief: { adj: 1, min: 4, max: 7 },
+        gypsy: { adj: 1, min: 4, max: 7 }, missionary: { adj: 1, min: 4, max: 7 },
+        druid: { adj: 0, min: 3, max: 6 }, priest: { adj: 0, min: 3, max: 6 },
+        mage: { adj: 0, min: 3, max: 6 },
+      };
+      for (const [classId, hp] of Object.entries(hpClassData)) {
+        await client.query(
+          `UPDATE class_definitions SET hp_adj = $1, hp_per_level_min = $2, hp_per_level_max = $3
+           WHERE class_id = $4 AND hp_adj = 0 AND hp_per_level_min = 4 AND hp_per_level_max = 7`,
+          [hp.adj, hp.min, hp.max, classId]
+        );
+      }
+      const hpRaceData: Record<string, number> = {
+        dark_elf: 20, elf: 20, gaunt_one: 20, half_elf: 20, nekojin: 20,
+        halfling: 25, gnome: 26, goblin: 26, human: 26,
+        dwarf: 31, half_orc: 31, kang: 31, half_ogre: 37,
+      };
+      for (const [raceId, baseHp] of Object.entries(hpRaceData)) {
+        await client.query(
+          `UPDATE race_definitions SET base_hp = $1 WHERE race_id = $2 AND base_hp = 26`,
+          [baseHp, raceId]
+        );
+      }
+
+      // Add 'intellect_wisdom' to spell scaling stat constraints (Druid dual-stat)
+      await client.query(`ALTER TABLE spells DROP CONSTRAINT IF EXISTS spells_damage_scaling_stat_check`);
+      await client.query(`
+        ALTER TABLE spells ADD CONSTRAINT spells_damage_scaling_stat_check
+        CHECK (damage_scaling_stat IS NULL OR damage_scaling_stat IN ('none', 'strength', 'agility', 'constitution', 'intellect', 'wisdom', 'charisma', 'intellect_wisdom'))
+      `);
+      await client.query(`ALTER TABLE spells DROP CONSTRAINT IF EXISTS spells_healing_scaling_stat_check`);
+      await client.query(`
+        ALTER TABLE spells ADD CONSTRAINT spells_healing_scaling_stat_check
+        CHECK (healing_scaling_stat IS NULL OR healing_scaling_stat IN ('none', 'strength', 'agility', 'constitution', 'intellect', 'wisdom', 'charisma', 'intellect_wisdom'))
+      `);
+
+      // Fizzle room message for spells
+      await client.query(`ALTER TABLE spells ADD COLUMN IF NOT EXISTS fizzle_message_room TEXT`);
 
       // Rename merchant_responses → npc_responses for existing databases.
       // Note: the CREATE TABLE IF NOT EXISTS npc_responses above (line ~708) may have
