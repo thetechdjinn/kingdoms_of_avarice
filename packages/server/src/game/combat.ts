@@ -1335,7 +1335,8 @@ async function processNpcAttackerCombat(
   const npcAccuracy = calculateAccuracy(accuracyFactors, combatConfig);
 
   // NPC crit is set directly from template, no stat-based formula.
-  const baseCritChance = npc.template.baseCritChance;
+  // Status effects that modify crit chance still apply.
+  const baseCritChance = npc.template.baseCritChance + npcStats.effectModifiers.criticalChanceModifier;
 
   // Apply damage modifier from status effects
   const damageMultiplier = 1 + (npcStats.effectModifiers.damageModifier / 100);

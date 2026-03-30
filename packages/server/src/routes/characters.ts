@@ -381,7 +381,7 @@ export function setupCharacterRoutes(app: Express): void {
   // GET /api/characters/:id/combat-stats - Get character's calculated equipment combat stats (developer tool)
   app.get('/api/characters/:id/combat-stats', requireDeveloper, async (req: Request, res: Response) => {
     try {
-      const id = parseInt(req.params.id);
+      const id = Number(req.params.id);
       if (isNaN(id)) {
         res.status(400).json({ success: false, message: 'Invalid character ID' });
         return;

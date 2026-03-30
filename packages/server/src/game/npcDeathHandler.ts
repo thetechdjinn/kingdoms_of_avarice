@@ -309,7 +309,7 @@ async function processDropTable(dropTableId: number, roomId: number): Promise<vo
           // Announce each denomination dropped
           for (const [denom, count] of counts) {
             if (count <= 0) continue;
-            broadcastCombatToRoom(roomId, colors.gold(`${count} ${denom} drops to the ground.`), []);
+            broadcastCombatToRoom(roomId, colors.gold(`${count} ${denom} ${count === 1 ? 'drops' : 'drop'} to the ground.`), []);
           }
         }
       }
