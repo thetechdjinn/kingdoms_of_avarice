@@ -69,7 +69,7 @@ export interface Spell {
   healingScalingStat: SpellScalingStat | null;  // Which stat scales healing
   healingScalingFactor: number | null;          // % increase per 10 points
   // Fizzle mechanics
-  castDifficulty: number;                       // 0 = always succeeds, higher = harder
+  castDifficulty: number;                       // Positive = easier, negative = harder, 100+ = item-cast (never fizzles)
   fizzleMessage: string | null;                 // Custom fizzle message (caster sees)
   fizzleMessageRoom: string | null;             // Custom fizzle message (room sees), supports {name}
   // Custom spell messages (override defaults when set)
