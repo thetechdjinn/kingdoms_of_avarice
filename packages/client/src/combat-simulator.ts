@@ -1,5 +1,8 @@
 import {
   COMBAT_LEVEL_ACCURACY_BONUS,
+  DODGE_SOFT_CAP,
+  DODGE_STAT_CONTRIBUTION,
+  DODGE_MIN_ATTACKER_ACCURACY,
 } from '@koa/shared';
 import {
   calculateSpellcasting,
@@ -317,6 +320,31 @@ function calcNpcDefense(baseDefense: number): number {
 // NPC crit is set directly from template — no stat-based formula
 function calcNpcCritChance(_npcLevel: number, baseCritChance: number): number {
   return baseCritChance;
+}
+
+/**
+ * Calculate effective dodge chance using the server-side formula.
+ * Applies stat contributions, soft cap, and accuracy scaling.
+ */
+function calcEffectiveDodge(
+  classDodge: number, raceDodge: number, equipDodge: number, buffDodge: number,
+  dex: number, cha: number, attackerAccuracy: number
+): number {
+  const baseDodge = classDodge + raceDodge + equipDodge + buffDodge;
+  if (baseDodge <= 0) return 0;
+
+  const agiBonus = Math.floor(dex / 10) * DODGE_STAT_CONTRIBUTION.agilityPer10;
+  const chaBonus = Math.floor(cha / 10) * DODGE_STAT_CONTRIBUTION.charmPer10;
+  let totalDodge = baseDodge + agiBonus + chaBonus;
+
+  if (totalDodge > DODGE_SOFT_CAP) {
+    totalDodge = DODGE_SOFT_CAP + Math.floor((totalDodge - DODGE_SOFT_CAP) / 4);
+  }
+
+  if (attackerAccuracy <= DODGE_MIN_ATTACKER_ACCURACY) return 0;
+
+  const effectiveDodge = Math.floor((totalDodge * 10) / attackerAccuracy);
+  return Math.max(0, Math.min(90, effectiveDodge));
 }
 
 // ============================================================================
@@ -1038,7 +1066,6 @@ function updateNpcAttackingPlayer(player: PlayerConfig, npc: NpcConfig): void {
   const totalDefBonus = player.defenseBonus + player.buffDefenseBonus;
   const playerDef = calcDefense(totalAc, totalDefBonus);
   const totalDr = player.damageReduction + player.buffDrBonus;
-  const totalDodge = player.dodgeBonus + player.buffDodgeBonus + player.classDodgeBonus + player.raceDodgeBonus;
 
   // NPC accuracy
   const npcAcc = calcNpcAccuracy(npc.level, npc.baseAccuracy);
@@ -1059,8 +1086,11 @@ function updateNpcAttackingPlayer(player: PlayerConfig, npc: NpcConfig): void {
   let totalAttacksPerRound = 0;
   let totalWeightedDpr = 0;
 
-  // Dodge reduces effective hit chance (checked before accuracy in combat)
-  const dodgePct = Math.min(90, totalDodge);
+  // Dodge reduces effective hit chance (uses full server-side formula)
+  const dodgePct = calcEffectiveDodge(
+    player.classDodgeBonus, player.raceDodgeBonus, player.dodgeBonus, player.buffDodgeBonus,
+    player.dex, player.cha, npcAcc
+  );
   const dodgeMultiplier = 1 - (dodgePct / 100);
 
   for (const atk of npc.attacks) {
@@ -1259,9 +1289,12 @@ function updateSummary(player: PlayerConfig, npc: NpcConfig): void {
     npcDpr += atk.attacksPerRound * npcHitChance * avgDmgPerHit * weight;
   }
 
-  // Apply dodge to NPC DPR
-  const sumDodge = player.dodgeBonus + player.buffDodgeBonus + player.classDodgeBonus + player.raceDodgeBonus;
-  const sumDodgeFraction = Math.min(90, sumDodge) / 100;
+  // Apply dodge to NPC DPR (uses full server-side formula)
+  const sumDodgePct = calcEffectiveDodge(
+    player.classDodgeBonus, player.raceDodgeBonus, player.dodgeBonus, player.buffDodgeBonus,
+    player.dex, player.cha, npcAcc
+  );
+  const sumDodgeFraction = sumDodgePct / 100;
   const effectiveSumNpcDpr = npcDpr * (1 - sumDodgeFraction);
   const npcRtk = effectiveSumNpcDpr > 0 ? Math.ceil(playerHp / effectiveSumNpcDpr) : Infinity;
 
@@ -1299,7 +1332,10 @@ function updateSummary(player: PlayerConfig, npc: NpcConfig): void {
   // Danger rating based on ratio
   let danger: string;
   let dangerClass: string;
-  if (playerRtk === Infinity) {
+  if (playerRtk === Infinity && npcRtk === Infinity) {
+    danger = 'Fair';
+    dangerClass = 'summary-value fair';
+  } else if (playerRtk === Infinity) {
     danger = 'Deadly';
     dangerClass = 'summary-value deadly';
   } else if (npcRtk === Infinity) {
