@@ -8,7 +8,6 @@ import * as playerRepo from '../db/repositories/playerRepository.js';
 import * as settingsRepo from '../db/repositories/settingsRepository.js';
 import { CharacterStats } from '@koa/shared';
 import { requireDeveloper } from '../middleware/auth.js';
-import * as itemRepo from '../db/repositories/itemRepository.js';
 import { getEquipmentCombatStats } from '../game/combatStats.js';
 
 // Validation constants

@@ -59,7 +59,7 @@
                     <input type="number" id="player-level" value="1" min="1" max="100" />
                   </div>
                   <div class="input-group">
-                    <label>Combat Level</label>
+                    <label for="player-combat-level">Combat Level</label>
                     <input type="number" id="player-combat-level" value="1" min="1" max="5" readonly />
                     <div class="hint">From class</div>
                   </div>
@@ -67,12 +67,12 @@
 
                 <div class="input-row">
                   <div class="input-group">
-                    <label>Magic Level</label>
+                    <label for="player-magic-level">Magic Level</label>
                     <input type="number" id="player-magic-level" value="0" min="0" max="3" readonly />
                     <div class="hint">From class</div>
                   </div>
                   <div class="input-group">
-                    <label>Magic School</label>
+                    <label for="player-magic-school">Magic School</label>
                     <input type="text" id="player-magic-school" value="none" readonly />
                     <div class="hint">From class</div>
                   </div>
@@ -201,31 +201,31 @@
                 <div id="npc-details" style="display: none;">
                   <div class="npc-stat-grid">
                     <div class="npc-stat-row">
-                      <span class="npc-stat-label">Level</span>
+                      <label class="npc-stat-label" for="npc-level">Level</label>
                       <input type="number" id="npc-level" class="npc-override" value="1" min="1" max="100" />
                     </div>
                     <div class="npc-stat-row">
-                      <span class="npc-stat-label">HP</span>
+                      <label class="npc-stat-label" for="npc-hp">HP</label>
                       <input type="number" id="npc-hp" class="npc-override" value="100" min="1" max="100000" />
                     </div>
                     <div class="npc-stat-row">
-                      <span class="npc-stat-label">Base Accuracy</span>
+                      <label class="npc-stat-label" for="npc-accuracy">Base Accuracy</label>
                       <input type="number" id="npc-accuracy" class="npc-override" value="0" min="0" max="500" />
                     </div>
                     <div class="npc-stat-row">
-                      <span class="npc-stat-label">Base Defense</span>
+                      <label class="npc-stat-label" for="npc-defense">Base Defense</label>
                       <input type="number" id="npc-defense" class="npc-override" value="10" min="0" max="500" />
                     </div>
                     <div class="npc-stat-row">
-                      <span class="npc-stat-label">Damage Reduction</span>
+                      <label class="npc-stat-label" for="npc-dr">Damage Reduction</label>
                       <input type="number" id="npc-dr" class="npc-override" value="0" min="0" max="100" />
                     </div>
                     <div class="npc-stat-row">
-                      <span class="npc-stat-label">Crit Chance</span>
+                      <label class="npc-stat-label" for="npc-crit">Crit Chance</label>
                       <input type="number" id="npc-crit" class="npc-override" value="0" min="0" max="100" />
                     </div>
                     <div class="npc-stat-row">
-                      <span class="npc-stat-label">Dodge</span>
+                      <label class="npc-stat-label" for="npc-dodge">Dodge</label>
                       <input type="number" id="npc-dodge" class="npc-override" value="0" min="0" max="100" />
                     </div>
                   </div>
