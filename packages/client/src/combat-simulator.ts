@@ -1,5 +1,6 @@
 import {
   COMBAT_LEVEL_ACCURACY_BONUS,
+  CRIT_SOFT_CAP,
   DODGE_SOFT_CAP,
   DODGE_STAT_CONTRIBUTION,
   DODGE_MIN_ATTACKER_ACCURACY,
@@ -153,7 +154,6 @@ function calcCritChance(
   weaponCritMod: number,
 ): number {
   const BASE_CRIT = 3;
-  const SOFT_CAP = 37; // Default, not configurable on client
 
   const intBonus = Math.floor((intelligence - 50) / 10);
   const dexBonus = Math.floor((dexterity - 50) / 20);
@@ -161,9 +161,9 @@ function calcCritChance(
 
   let totalCrit = BASE_CRIT + intBonus + dexBonus + chaBonus + classCritBonus + weaponCritMod;
 
-  if (totalCrit > SOFT_CAP) {
-    const excess = totalCrit - SOFT_CAP;
-    totalCrit = SOFT_CAP + Math.floor(excess / 3);
+  if (totalCrit > CRIT_SOFT_CAP) {
+    const excess = totalCrit - CRIT_SOFT_CAP;
+    totalCrit = CRIT_SOFT_CAP + Math.floor(excess / 3);
   }
 
   return Math.max(BASE_CRIT, Math.min(60, totalCrit));

@@ -385,6 +385,11 @@ export function setupCharacterRoutes(app: Express): void {
         res.status(400).json({ success: false, message: 'Invalid character ID' });
         return;
       }
+      const character = await characterRepo.findCharacterById(id);
+      if (!character) {
+        res.status(404).json({ success: false, message: 'Character not found' });
+        return;
+      }
       const equipStats = await getEquipmentCombatStats(id);
       res.json({
         success: true,
