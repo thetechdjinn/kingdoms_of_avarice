@@ -1352,8 +1352,8 @@ function updateSummary(player: PlayerConfig, npc: NpcConfig): void {
       danger = 'Fair';
       dangerClass = 'summary-value fair';
     } else if (ratio >= 1.0) {
-      danger = 'Dangerous';
-      dangerClass = 'summary-value dangerous';
+      danger = ratio === 1.0 ? 'Fair' : 'Dangerous';
+      dangerClass = ratio === 1.0 ? 'summary-value fair' : 'summary-value dangerous';
     } else {
       danger = 'Deadly';
       dangerClass = 'summary-value deadly';
