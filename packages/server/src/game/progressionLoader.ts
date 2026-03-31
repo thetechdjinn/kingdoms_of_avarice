@@ -256,6 +256,40 @@ async function migrateHpFields(): Promise<void> {
 }
 
 /**
+ * One-time migration: Backfill magic_school and magic_level from seed data.
+ * Only updates rows where magic_school is NULL (column was added after initial seeding).
+ */
+async function migrateMagicFields(): Promise<void> {
+  try {
+    const existingClasses = await progressionRepo.getAllClasses();
+    if (existingClasses.length === 0) return;
+
+    const seedClasses = loadJsonFile<ClassDefinition[]>('classes.json');
+    const seedClassMap = new Map(seedClasses.map(c => [c.class_id, c]));
+
+    let updates = 0;
+    for (const cls of existingClasses) {
+      const seed = seedClassMap.get(cls.class_id);
+      if (!seed) continue;
+      // Only update if magic_school is missing (NULL → undefined)
+      if (!cls.magic_school && seed.magic_school) {
+        await progressionRepo.updateClass(cls.class_id, {
+          magic_school: seed.magic_school,
+          magic_level: seed.magic_level,
+        });
+        updates++;
+      }
+    }
+
+    if (updates > 0) {
+      console.log(`[Progression] Migrated magic_school for ${updates} class(es)`);
+    }
+  } catch (error) {
+    console.warn('[Progression] Could not migrate magic fields:', error);
+  }
+}
+
+/**
  * Initialize all progression data
  */
 export async function initializeProgressionData(): Promise<void> {
@@ -269,6 +303,9 @@ export async function initializeProgressionData(): Promise<void> {
 
   // One-time migration: backfill HP fields from seed data
   await migrateHpFields();
+
+  // One-time migration: backfill magic_school/magic_level from seed data
+  await migrateMagicFields();
 
   // Force reseed races if stats are outdated
   await forceReseedRaces();

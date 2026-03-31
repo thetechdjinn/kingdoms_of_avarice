@@ -19,6 +19,8 @@ interface DbStatusEffectDefinition {
   energy_modifier: number;
   damage_modifier: number;
   speed_modifier: number;
+  armor_class_modifier: number;
+  damage_reduction_modifier: number;
   critical_chance_modifier: number;
   dodge_modifier: number;
   magic_resistance: number;
@@ -67,6 +69,8 @@ function dbToDefinition(row: DbStatusEffectDefinition): StatusEffectDefinition {
     energyModifier: row.energy_modifier,
     damageModifier: row.damage_modifier,
     speedModifier: row.speed_modifier,
+    armorClassModifier: row.armor_class_modifier,
+    damageReductionModifier: row.damage_reduction_modifier,
     criticalChanceModifier: row.critical_chance_modifier,
     dodgeModifier: row.dodge_modifier,
     magicResistance: row.magic_resistance,
@@ -163,6 +167,8 @@ export interface CreateDefinitionInput {
   energyModifier?: number;
   damageModifier?: number;
   speedModifier?: number;
+  armorClassModifier?: number;
+  damageReductionModifier?: number;
   criticalChanceModifier?: number;
   dodgeModifier?: number;
   magicResistance?: number;
@@ -203,6 +209,7 @@ export async function createDefinition(input: CreateDefinitionInput): Promise<St
     `INSERT INTO status_effect_definitions (
       id, name, description, category, stacking_behavior, max_stacks,
       accuracy_modifier, defense_modifier, energy_modifier, damage_modifier, speed_modifier,
+      armor_class_modifier, damage_reduction_modifier,
       critical_chance_modifier, dodge_modifier, magic_resistance, healing_received,
       perception_modifier, stealth_modifier, spellcasting_modifier, lockpicking_modifier,
       strength_modifier, dexterity_modifier, constitution_modifier,
@@ -211,13 +218,14 @@ export async function createDefinition(input: CreateDefinitionInput): Promise<St
       tick_damage_min, tick_damage_max, tick_healing_min, tick_healing_max,
       tick_message, silent_tick, wear_off_message,
       blocks_regen, blocks_movement, is_blind, blocks_casting, blocks_combat, blocks_stealth
-    ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29,$30,$31,$32,$33,$34,$35,$36,$37,$38,$39,$40,$41)
+    ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29,$30,$31,$32,$33,$34,$35,$36,$37,$38,$39,$40,$41,$42,$43)
     RETURNING *`,
     [
       input.id.toLowerCase(), input.name, input.description || null,
       input.category, input.stackingBehavior, input.maxStacks ?? 1,
       input.accuracyModifier ?? 0, input.defenseModifier ?? 0,
       input.energyModifier ?? 0, input.damageModifier ?? 0, input.speedModifier ?? 0,
+      input.armorClassModifier ?? 0, input.damageReductionModifier ?? 0,
       input.criticalChanceModifier ?? 0, input.dodgeModifier ?? 0,
       input.magicResistance ?? 0, input.healingReceived ?? 0,
       input.perceptionModifier ?? 0, input.stealthModifier ?? 0,
@@ -254,6 +262,8 @@ export async function updateDefinition(id: string, input: Partial<CreateDefiniti
     energyModifier: input.energyModifier ?? existing.energyModifier,
     damageModifier: input.damageModifier ?? existing.damageModifier,
     speedModifier: input.speedModifier ?? existing.speedModifier,
+    armorClassModifier: input.armorClassModifier ?? existing.armorClassModifier,
+    damageReductionModifier: input.damageReductionModifier ?? existing.damageReductionModifier,
     criticalChanceModifier: input.criticalChanceModifier ?? existing.criticalChanceModifier,
     dodgeModifier: input.dodgeModifier ?? existing.dodgeModifier,
     magicResistance: input.magicResistance ?? existing.magicResistance,
@@ -290,20 +300,22 @@ export async function updateDefinition(id: string, input: Partial<CreateDefiniti
     `UPDATE status_effect_definitions SET
       name=$1, description=$2, category=$3, stacking_behavior=$4, max_stacks=$5,
       accuracy_modifier=$6, defense_modifier=$7, energy_modifier=$8, damage_modifier=$9, speed_modifier=$10,
-      critical_chance_modifier=$11, dodge_modifier=$12, magic_resistance=$13, healing_received=$14,
-      perception_modifier=$15, stealth_modifier=$16, spellcasting_modifier=$17, lockpicking_modifier=$18,
-      strength_modifier=$19, dexterity_modifier=$20, constitution_modifier=$21,
-      intelligence_modifier=$22, wisdom_modifier=$23, charisma_modifier=$24,
-      max_hp_modifier=$25, max_mana_modifier=$26, vision_modifier=$27,
-      tick_damage_min=$28, tick_damage_max=$29, tick_healing_min=$30, tick_healing_max=$31,
-      tick_message=$32, silent_tick=$33, wear_off_message=$34,
-      blocks_regen=$35, blocks_movement=$36, is_blind=$37,
-      blocks_casting=$38, blocks_combat=$39, blocks_stealth=$40, updated_at=NOW()
-    WHERE id = $41
+      armor_class_modifier=$11, damage_reduction_modifier=$12,
+      critical_chance_modifier=$13, dodge_modifier=$14, magic_resistance=$15, healing_received=$16,
+      perception_modifier=$17, stealth_modifier=$18, spellcasting_modifier=$19, lockpicking_modifier=$20,
+      strength_modifier=$21, dexterity_modifier=$22, constitution_modifier=$23,
+      intelligence_modifier=$24, wisdom_modifier=$25, charisma_modifier=$26,
+      max_hp_modifier=$27, max_mana_modifier=$28, vision_modifier=$29,
+      tick_damage_min=$30, tick_damage_max=$31, tick_healing_min=$32, tick_healing_max=$33,
+      tick_message=$34, silent_tick=$35, wear_off_message=$36,
+      blocks_regen=$37, blocks_movement=$38, is_blind=$39,
+      blocks_casting=$40, blocks_combat=$41, blocks_stealth=$42, updated_at=NOW()
+    WHERE id = $43
     RETURNING *`,
     [
       u.name, u.description || null, u.category, u.stackingBehavior, u.maxStacks,
       u.accuracyModifier, u.defenseModifier, u.energyModifier, u.damageModifier, u.speedModifier,
+      u.armorClassModifier, u.damageReductionModifier,
       u.criticalChanceModifier, u.dodgeModifier, u.magicResistance, u.healingReceived,
       u.perceptionModifier, u.stealthModifier, u.spellcastingModifier, u.lockpickingModifier,
       u.strengthModifier, u.dexterityModifier, u.constitutionModifier,
@@ -376,17 +388,19 @@ export async function importDefinitions(definitions: StatusEffectDefinition[]): 
           `UPDATE status_effect_definitions SET
             name = $1, description = $2, category = $3, stacking_behavior = $4, max_stacks = $5,
             accuracy_modifier = $6, defense_modifier = $7, energy_modifier = $8, damage_modifier = $9,
-            speed_modifier = $10, critical_chance_modifier = $11, dodge_modifier = $12,
-            magic_resistance = $13, healing_received = $14,
-            perception_modifier = $15, stealth_modifier = $16, spellcasting_modifier = $17, lockpicking_modifier = $18,
-            strength_modifier = $19, dexterity_modifier = $20, constitution_modifier = $21,
-            intelligence_modifier = $22, wisdom_modifier = $23, charisma_modifier = $24,
-            max_hp_modifier = $25, max_mana_modifier = $26, vision_modifier = $27,
-            tick_damage_min = $28, tick_damage_max = $29, tick_healing_min = $30, tick_healing_max = $31,
-            tick_message = $32, silent_tick = $33, wear_off_message = $34,
-            blocks_regen = $35, blocks_movement = $36, is_blind = $37,
-            blocks_casting = $38, blocks_combat = $39, blocks_stealth = $40, updated_at = NOW()
-          WHERE id = $41`,
+            speed_modifier = $10,
+            armor_class_modifier = $11, damage_reduction_modifier = $12,
+            critical_chance_modifier = $13, dodge_modifier = $14,
+            magic_resistance = $15, healing_received = $16,
+            perception_modifier = $17, stealth_modifier = $18, spellcasting_modifier = $19, lockpicking_modifier = $20,
+            strength_modifier = $21, dexterity_modifier = $22, constitution_modifier = $23,
+            intelligence_modifier = $24, wisdom_modifier = $25, charisma_modifier = $26,
+            max_hp_modifier = $27, max_mana_modifier = $28, vision_modifier = $29,
+            tick_damage_min = $30, tick_damage_max = $31, tick_healing_min = $32, tick_healing_max = $33,
+            tick_message = $34, silent_tick = $35, wear_off_message = $36,
+            blocks_regen = $37, blocks_movement = $38, is_blind = $39,
+            blocks_casting = $40, blocks_combat = $41, blocks_stealth = $42, updated_at = NOW()
+          WHERE id = $43`,
           [
             def.name,
             def.description || null,
@@ -398,6 +412,8 @@ export async function importDefinitions(definitions: StatusEffectDefinition[]): 
             def.energyModifier ?? 0,
             def.damageModifier ?? 0,
             def.speedModifier ?? 0,
+            def.armorClassModifier ?? 0,
+            def.damageReductionModifier ?? 0,
             def.criticalChanceModifier ?? 0,
             def.dodgeModifier ?? 0,
             def.magicResistance ?? 0,
@@ -438,7 +454,9 @@ export async function importDefinitions(definitions: StatusEffectDefinition[]): 
           `INSERT INTO status_effect_definitions (
             id, name, description, category, stacking_behavior, max_stacks,
             accuracy_modifier, defense_modifier, energy_modifier, damage_modifier,
-            speed_modifier, critical_chance_modifier, dodge_modifier,
+            speed_modifier,
+            armor_class_modifier, damage_reduction_modifier,
+            critical_chance_modifier, dodge_modifier,
             magic_resistance, healing_received,
             perception_modifier, stealth_modifier, spellcasting_modifier, lockpicking_modifier,
             strength_modifier, dexterity_modifier, constitution_modifier,
@@ -448,7 +466,7 @@ export async function importDefinitions(definitions: StatusEffectDefinition[]): 
             tick_message, silent_tick, wear_off_message,
             blocks_regen, blocks_movement, is_blind,
             blocks_casting, blocks_combat, blocks_stealth
-          ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29,$30,$31,$32,$33,$34,$35,$36,$37,$38,$39,$40,$41)`,
+          ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29,$30,$31,$32,$33,$34,$35,$36,$37,$38,$39,$40,$41,$42,$43)`,
           [
             normalizedId,
             def.name,
@@ -461,6 +479,8 @@ export async function importDefinitions(definitions: StatusEffectDefinition[]): 
             def.energyModifier ?? 0,
             def.damageModifier ?? 0,
             def.speedModifier ?? 0,
+            def.armorClassModifier ?? 0,
+            def.damageReductionModifier ?? 0,
             def.criticalChanceModifier ?? 0,
             def.dodgeModifier ?? 0,
             def.magicResistance ?? 0,

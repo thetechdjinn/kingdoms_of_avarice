@@ -154,56 +154,54 @@ Where:
 2. **Encumbrance penalties** from heavy loads
 3. **Very slow weapons** (2500+) for lower-level casters
 
-## Critical Hit System (MajorMUD-style)
+## Critical Hit System
 
-Critical hits use a stat-based formula with diminishing returns above 40%, closely matching the original MajorMUD system.
+Critical hits use a stat-based formula with a base 3% chance and diminishing returns above a configurable soft cap (default 37%).
 
 ### Crit Chance Formula
 
 ```
-statCrit = floor(level/10) + max(0, floor((INT-50)/10)) + max(0, floor((DEX-50)/25))
-encCrit = 20 if enc ≤ 32%, 10 if enc ≤ 65%, else 0
-preCap = statCrit + encCrit + classCritBonus + weaponCritModifier
+intBonus = floor((INT - 50) / 10)        // +1% per 10 above 50, -1% per 10 below
+dexBonus = floor((DEX - 50) / 20)        // +1% per 20 above 50, -1% per 20 below
+chaBonus = max(0, floor((CHA - 50) / 25)) // +1% per 25 above 50, no negative
 
-if (preCap > 40):
-    finalCrit = 40 + floor((preCap - 40) / 3)
-else:
-    finalCrit = preCap
+totalCrit = 3 + intBonus + dexBonus + chaBonus + classCritBonus + weaponCritMod + equipCritBonus
+
+if (totalCrit > softCap):
+    totalCrit = softCap + floor((totalCrit - softCap) / 3)
+
+finalCrit = max(3, min(60, totalCrit))    // Floor at base 3%, hard cap 60%
 ```
 
 ### Crit Chance Components
 
 | Source                | Contribution                                   |
 |-----------------------|------------------------------------------------|
-| Character Level       | +1% per 10 levels (Level 30 = +3%)             |
-| Intelligence          | +1% per 10 INT above 50 (INT 80 = +3%)         |
-| Dexterity             | +1% per 25 DEX above 50 (DEX 100 = +2%)        |
+| Base                  | 3% (floor, never goes below this)              |
+| Intelligence          | +1% per 10 INT above 50, -1% per 10 below      |
+| Dexterity             | +1% per 20 DEX above 50, -1% per 20 below      |
+| Charisma              | +1% per 25 CHA above 50 (no negative)           |
 | Class Bonus           | Flat bonus (e.g., Ninja: +10%)                 |
 | Weapon Crit Modifier  | From weapon's crit_modifier field              |
-| Encumbrance (light)   | ≤32%: +20%, ≤65%: +10%, >65%: +0%              |
+| Equipment Crit Bonus  | From other equipped items                      |
+
+No level bonus. No encumbrance bonus.
 
 ### Soft Cap with Diminishing Returns
 
-The 40% soft cap prevents crit stacking from becoming overpowered:
+The soft cap (default 37%, configurable in Admin > Game Settings) prevents crit stacking from becoming overpowered:
 
 | Pre-Cap Total | Final Crit |
 |---------------|------------|
 | 20%           | 20%        |
-| 40%           | 40%        |
-| 50%           | 43%        |
-| 60%           | 46%        |
-| 70%           | 50%        |
-| 100%          | 60%        |
+| 37%           | 37%        |
+| 47%           | 40%        |
+| 57%           | 43%        |
+| 67%           | 47%        |
 
-### Encumbrance Crit Bonus
+### NPC Critical Hits
 
-Light armor users gain significant crit bonuses, rewarding the risk/reward tradeoff:
-
-| Encumbrance % | Crit Bonus | Armor Type         |
-|---------------|------------|--------------------|
-| ≤32%          | +20%       | Light (leather)    |
-| ≤65%          | +10%       | Medium (chain)     |
-| >65%          | +0%        | Heavy (plate)      |
+NPCs use their `baseCritChance` template value directly. The stat-based formula is not applied to NPCs.
 
 ### Class Crit Bonuses
 
@@ -211,8 +209,7 @@ Classes can have flat crit bonuses set in the Progression Editor (`crit_bonus` f
 
 | Class Type           | Suggested Bonus |
 |----------------------|-----------------|
-| Ninja, Mystic, Monk  | +10%            |
-| Rogue, Assassin      | +5%             |
+| Ninja, Mystic        | +10%            |
 | Most classes         | +0%             |
 
 ### Critical Damage

@@ -592,17 +592,18 @@ async function processAttackerCombat(
     console.log(`[Combat Debug] ${attacker.entityName}: Level=${attacker.characterLevel}, Combat=${attacker.combatLevel}, STR=${attackerStats.effectiveStr}, DEX=${attackerStats.effectiveDex}, Weight=${attackerStats.totalWeight}, MaxCap=${attackerStats.effectiveStr * 48}, Enc=${(attackerStats.encumbranceRatio * 100).toFixed(1)}%, BaseSpeed=${baseWeaponSpeed}, EffectiveCost=${effectiveWeaponCost}, RoundEnergy=${roundEnergy}, ExpectedSwings=${Math.floor(roundEnergy / effectiveWeaponCost)}`);
   }
 
-  // Calculate crit chance using MajorMUD-style formula
+  // Calculate crit chance
   const critFactors = {
     characterLevel: attacker.characterLevel,
     intelligence: attackerStats.effectiveInt,
     dexterity: attackerStats.effectiveDex,
+    charisma: attackerStats.effectiveCha,
     classCritBonus: attackerStats.classCritBonus,
     weaponCritModifier: attackerStats.weapon.critModifier,
     equipmentCritBonus: attackerStats.equipmentCritBonus,
     encumbranceRatio: attackerStats.encumbranceRatio,
   };
-  const baseCritChance = calculateCritChance(critFactors) + attackerStats.effectModifiers.criticalChanceModifier;
+  const baseCritChance = calculateCritChance(critFactors, combatConfig.critSoftCap) + attackerStats.effectModifiers.criticalChanceModifier;
   const critMultiplier = DEFAULT_CRIT_MULTIPLIER;
 
   const attackerRoomId = getEntityRoomId(attacker);
@@ -632,7 +633,7 @@ async function processAttackerCombat(
 
     // Calculate defender's defense from equipped armor and status effects
     const defenseFactors = {
-      armorClass: defenderStats.armor.totalArmorClass,
+      armorClass: defenderStats.armor.totalArmorClass + defenderStats.effectModifiers.armorClassModifier,
       perception: DEFAULT_PERCEPTION,  // TODO: Add perception stat to characters
       shadow: DEFAULT_SHADOW,          // TODO: Add shadow stat to characters
       equipmentBonus: defenderStats.equipmentDefenseBonus,
@@ -647,18 +648,21 @@ async function processAttackerCombat(
     const maxDamage = Math.max(1, Math.floor(weaponMaxDamage * damageMultiplier));
 
     // Calculate defender's dodge chance (MajorMUD-style)
+    // Effect dodge modifier is fed into calculateDodgeChance as equipment bonus
+    // so it gets the same accuracy scaling as innate dodge sources
     let defenderDodgeChance = 0;
-    if (defenderStats.classDodgeBonus > 0 || defenderStats.raceDodgeBonus > 0 || defenderStats.equipmentDodgeBonus > 0) {
+    const hasBaseDodge = defenderStats.classDodgeBonus > 0 || defenderStats.raceDodgeBonus > 0 || defenderStats.equipmentDodgeBonus > 0;
+    const hasEffectDodge = defenderStats.effectModifiers.dodgeModifier !== 0;
+    if (hasBaseDodge || hasEffectDodge) {
       const dodgeFactors = {
         classDodgeBonus: defenderStats.classDodgeBonus,
         raceDodgeBonus: defenderStats.raceDodgeBonus,
         agility: defenderStats.effectiveDex,
         charm: defenderStats.effectiveCha,
-        equipmentDodgeBonus: defenderStats.equipmentDodgeBonus,
+        equipmentDodgeBonus: defenderStats.equipmentDodgeBonus + defenderStats.effectModifiers.dodgeModifier,
         attackerAccuracy,
       };
-
-      defenderDodgeChance = calculateDodgeChance(dodgeFactors) + defenderStats.effectModifiers.dodgeModifier;
+      defenderDodgeChance = calculateDodgeChance(dodgeFactors);
     }
 
     // Execute combat round with actual equipment stats
@@ -675,7 +679,7 @@ async function processAttackerCombat(
       minDamage,
       maxDamage,
       critMultiplier,
-      defenderStats.armor.damageReduction,
+      defenderStats.armor.damageReduction + defenderStats.effectModifiers.damageReductionModifier,
       combatConfig,
       target.vitals.hp,
       defenderDodgeChance
@@ -860,19 +864,35 @@ async function handleEntityDeath(
     }
   } else if (!isPlayerEntity(victim)) {
     // NPC death: send slain message FIRST, then process loot/rewards
+    const npcVictim = victim as NpcCombatInstance;
+    const customDeath = npcVictim.template.deathMessage;
+
     if (attacker) {
+      // Attacker always sees 2nd-person "You have slain X!" message
       sendCombatMessage(attacker, MessageType.SYSTEM, colors.boldGreen(`You have slain ${withNpcName(victim.entityName, victim.isProperName)}!`));
-      broadcastCombatToRoom(
-        roomId,
-        colors.boldRed(`${withNpcNameCapitalized(victim.entityName, victim.isProperName)} has been slain by ${withNpcName(attacker.entityName, attacker.isProperName)}!`),
-        [victim.entityId, attacker.entityId]
-      );
+      if (customDeath) {
+        const npcName = withNpcNameCapitalized(victim.entityName, victim.isProperName);
+        const atkName = withNpcName(attacker.entityName, attacker.isProperName);
+        const msg = customDeath.replace(/\{name\}/g, npcName).replace(/\{attacker\}/g, atkName);
+        broadcastCombatToRoom(roomId, colors.boldRed(msg), [victim.entityId, attacker.entityId]);
+      } else {
+        broadcastCombatToRoom(
+          roomId,
+          colors.boldRed(`${withNpcNameCapitalized(victim.entityName, victim.isProperName)} has been slain by ${withNpcName(attacker.entityName, attacker.isProperName)}!`),
+          [victim.entityId, attacker.entityId]
+        );
+      }
     } else {
-      broadcastCombatToRoom(
-        roomId,
-        colors.boldRed(`${withNpcNameCapitalized(victim.entityName, victim.isProperName)} has died!`),
-        [victim.entityId]
-      );
+      if (customDeath) {
+        const msg = customDeath.replace(/\{name\}/g, withNpcNameCapitalized(victim.entityName, victim.isProperName)).replace(/\{attacker\}/g, '');
+        broadcastCombatToRoom(roomId, colors.boldRed(msg), [victim.entityId]);
+      } else {
+        broadcastCombatToRoom(
+          roomId,
+          colors.boldRed(`${withNpcNameCapitalized(victim.entityName, victim.isProperName)} has died!`),
+          [victim.entityId]
+        );
+      }
     }
 
     // Process loot drops, despawn, respawn queue (XP/essence deferred)
@@ -1314,22 +1334,9 @@ async function processNpcAttackerCombat(
   };
   const npcAccuracy = calculateAccuracy(accuracyFactors, combatConfig);
 
-  // NPCs only crit if the template explicitly grants a crit chance.
-  // When baseCritChance is 0, skip the full calculation (which would add
-  // level/stat/encumbrance bonuses that aren't appropriate for NPCs).
-  let baseCritChance = 0;
-  if (npc.template.baseCritChance > 0) {
-    const critFactors = {
-      characterLevel: npc.characterLevel,
-      intelligence: npcStats.effectiveInt,
-      dexterity: npcStats.effectiveDex,
-      classCritBonus: npc.template.baseCritChance,
-      weaponCritModifier: 0,
-      equipmentCritBonus: 0,
-      encumbranceRatio: 0,
-    };
-    baseCritChance = calculateCritChance(critFactors);
-  }
+  // NPC crit is set directly from template, no stat-based formula.
+  // Status effects that modify crit chance still apply.
+  const baseCritChance = npc.template.baseCritChance + npcStats.effectModifiers.criticalChanceModifier;
 
   // Apply damage modifier from status effects
   const damageMultiplier = 1 + (npcStats.effectModifiers.damageModifier / 100);
@@ -1374,7 +1381,7 @@ async function processNpcAttackerCombat(
   // Get defender stats
   const defenderStats = await getCombatStatsWithDodge(target);
   const defenseFactors = {
-    armorClass: defenderStats.armor.totalArmorClass,
+    armorClass: defenderStats.armor.totalArmorClass + defenderStats.effectModifiers.armorClassModifier,
     perception: DEFAULT_PERCEPTION,
     shadow: DEFAULT_SHADOW,
     equipmentBonus: defenderStats.equipmentDefenseBonus,
@@ -1383,14 +1390,18 @@ async function processNpcAttackerCombat(
   const targetDefense = calculateDefense(defenseFactors);
 
   // Calculate dodge chance
+  // Effect dodge modifier is fed into calculateDodgeChance as equipment bonus
+  // so it gets the same accuracy scaling as innate dodge sources
   let defenderDodgeChance = 0;
-  if (defenderStats.classDodgeBonus > 0 || defenderStats.raceDodgeBonus > 0 || defenderStats.equipmentDodgeBonus > 0) {
+  const hasBaseDodge2 = defenderStats.classDodgeBonus > 0 || defenderStats.raceDodgeBonus > 0 || defenderStats.equipmentDodgeBonus > 0;
+  const hasEffectDodge2 = defenderStats.effectModifiers.dodgeModifier !== 0;
+  if (hasBaseDodge2 || hasEffectDodge2) {
     const dodgeFactors = {
       classDodgeBonus: defenderStats.classDodgeBonus,
       raceDodgeBonus: defenderStats.raceDodgeBonus,
       agility: defenderStats.effectiveDex,
       charm: defenderStats.effectiveCha,
-      equipmentDodgeBonus: defenderStats.equipmentDodgeBonus,
+      equipmentDodgeBonus: defenderStats.equipmentDodgeBonus + defenderStats.effectModifiers.dodgeModifier,
       attackerAccuracy: npcAccuracy,
     };
     defenderDodgeChance = calculateDodgeChance(dodgeFactors);
@@ -1415,7 +1426,7 @@ async function processNpcAttackerCombat(
         maxDamage,
         result === AttackResult.CRITICAL,
         DEFAULT_CRIT_MULTIPLIER,
-        defenderStats.armor.damageReduction
+        defenderStats.armor.damageReduction + defenderStats.effectModifiers.damageReductionModifier
       );
       totalDamage += damage;
     }

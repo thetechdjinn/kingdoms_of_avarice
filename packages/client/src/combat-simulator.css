@@ -1,0 +1,454 @@
+#simulator-panel {
+  flex: 1;
+  padding: 1.5rem;
+  overflow-y: auto;
+}
+
+.page-header {
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid #333;
+}
+
+.page-header h1 {
+  color: #00ff00;
+  font-size: 1.3rem;
+  margin-bottom: 0.25rem;
+}
+
+.page-header p {
+  color: #888;
+  font-size: 0.85rem;
+}
+
+.loading-state {
+  color: #888;
+  padding: 2rem;
+  text-align: center;
+}
+
+/* ============================================================================
+   Config Panels (Player + NPC side by side)
+   ============================================================================ */
+
+.config-panels {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+@media (max-width: 1000px) {
+  .config-panels {
+    grid-template-columns: 1fr;
+  }
+}
+
+.config-panel {
+  background: #16213e;
+  border: 1px solid #333;
+  border-radius: 8px;
+  padding: 1rem;
+}
+
+.section-title {
+  color: #00ff00;
+  font-size: 1rem;
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.4rem;
+  border-bottom: 1px solid #333;
+}
+
+.sub-section-title {
+  color: #00aaaa;
+  font-size: 0.85rem;
+  margin: 0.75rem 0 0.5rem 0;
+  padding-top: 0.5rem;
+  border-top: 1px solid #333;
+}
+
+/* ============================================================================
+   Input Groups
+   ============================================================================ */
+
+.input-group {
+  margin-bottom: 0.75rem;
+}
+
+.input-group label {
+  display: block;
+  color: #aaa;
+  font-size: 0.8rem;
+  margin-bottom: 0.3rem;
+}
+
+.input-group input,
+.input-group select {
+  width: 100%;
+  padding: 0.4rem 0.5rem;
+  background-color: #0f0f23;
+  color: #eee;
+  border: 1px solid #333;
+  border-radius: 4px;
+  font-size: 0.9rem;
+}
+
+.input-group input:focus,
+.input-group select:focus {
+  outline: none;
+  border-color: #00ff00;
+}
+
+.input-group input[readonly] {
+  color: #888;
+  background-color: #0a0a1a;
+}
+
+.input-group .hint {
+  color: #666;
+  font-size: 0.7rem;
+  margin-top: 0.2rem;
+}
+
+.input-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+.input-row.three-col {
+  grid-template-columns: 1fr 1fr 1fr;
+}
+
+/* ============================================================================
+   NPC Panel Specifics
+   ============================================================================ */
+
+.npc-stat-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.npc-stat-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.3rem 0;
+  border-bottom: 1px solid #222;
+}
+
+.npc-stat-row:last-child {
+  border-bottom: none;
+}
+
+.npc-stat-label {
+  color: #aaa;
+  font-size: 0.85rem;
+}
+
+.npc-override {
+  width: 80px;
+  padding: 0.3rem 0.4rem;
+  background-color: #0f0f23;
+  color: #eee;
+  border: 1px solid #333;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  text-align: right;
+}
+
+.npc-override:focus {
+  outline: none;
+  border-color: #00ff00;
+}
+
+.npc-attacks-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.npc-no-attacks {
+  color: #666;
+  font-size: 0.85rem;
+  font-style: italic;
+  padding: 0.5rem 0;
+}
+
+.npc-attack-card {
+  background: #0f0f23;
+  border: 1px solid #333;
+  border-radius: 4px;
+  padding: 0.6rem;
+}
+
+.npc-attack-card-header {
+  color: #00ffff;
+  font-size: 0.85rem;
+  font-weight: bold;
+  margin-bottom: 0.3rem;
+}
+
+.npc-attack-card-stats {
+  display: flex;
+  gap: 1rem;
+  font-size: 0.8rem;
+  color: #888;
+  flex-wrap: wrap;
+}
+
+.npc-attack-card-stats span {
+  white-space: nowrap;
+}
+
+.npc-attack-card-stats .stat-value {
+  color: #ccc;
+}
+
+/* ============================================================================
+   Results Section
+   ============================================================================ */
+
+.results-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.result-panel {
+  background: #16213e;
+  border: 1px solid #333;
+  border-radius: 8px;
+  padding: 1rem;
+}
+
+.result-title {
+  margin-bottom: 0.75rem;
+}
+
+.result-grid {
+  display: flex;
+  flex-direction: column;
+}
+
+.result-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.4rem 0;
+  border-bottom: 1px solid #222;
+}
+
+.result-item:last-child {
+  border-bottom: none;
+}
+
+.result-label {
+  color: #888;
+  font-size: 0.85rem;
+}
+
+.result-value {
+  font-size: 0.95rem;
+  font-weight: bold;
+  color: #00ff00;
+}
+
+.result-value.highlight {
+  color: #00ffff;
+}
+
+.result-value.warning {
+  color: #ffaa00;
+}
+
+.result-value.danger {
+  color: #ff4444;
+}
+
+.result-value.safe {
+  color: #00ff00;
+}
+
+.result-detail {
+  font-size: 0.75rem;
+  color: #888;
+  font-family: monospace;
+  text-align: right;
+  max-width: 60%;
+}
+
+.result-placeholder {
+  color: #666;
+  font-size: 0.85rem;
+  font-style: italic;
+  padding: 0.5rem 0;
+}
+
+/* NPC per-attack result blocks */
+.npc-attack-result {
+  margin-bottom: 0.75rem;
+  padding: 0.6rem;
+  background: #0f0f23;
+  border: 1px solid #333;
+  border-radius: 4px;
+}
+
+.npc-attack-result-header {
+  color: #00ffff;
+  font-size: 0.85rem;
+  font-weight: bold;
+  margin-bottom: 0.4rem;
+  padding-bottom: 0.3rem;
+  border-bottom: 1px solid #333;
+}
+
+.npc-attack-result .result-item {
+  padding: 0.25rem 0;
+}
+
+/* ============================================================================
+   Spell Difficulty Table
+   ============================================================================ */
+
+.breakdown-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8rem;
+  margin-top: 0.5rem;
+}
+
+.breakdown-table th,
+.breakdown-table td {
+  padding: 0.35rem 0.5rem;
+  text-align: center;
+  border: 1px solid #333;
+}
+
+.breakdown-table th {
+  background: #0f0f23;
+  color: #00ff00;
+  font-size: 0.75rem;
+}
+
+.breakdown-table td {
+  color: #ccc;
+}
+
+.breakdown-table .good {
+  color: #00ff00;
+}
+
+.breakdown-table .moderate {
+  color: #ffaa00;
+}
+
+.breakdown-table .poor {
+  color: #ff4444;
+}
+
+/* ============================================================================
+   Summary Panel
+   ============================================================================ */
+
+.summary-panel {
+  border-color: #00aaaa;
+}
+
+.summary-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.summary-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid #222;
+}
+
+.summary-row:last-child {
+  border-bottom: none;
+}
+
+.summary-label {
+  color: #aaa;
+  font-size: 0.95rem;
+}
+
+.summary-value {
+  font-size: 1.1rem;
+  font-weight: bold;
+  color: #00ff00;
+}
+
+.summary-value.safe {
+  color: #00ff00;
+}
+
+.summary-value.fair {
+  color: #ffaa00;
+}
+
+.summary-value.dangerous {
+  color: #ff6600;
+}
+
+.summary-value.deadly {
+  color: #ff4444;
+}
+
+/* Spell tags */
+#player-active-spells {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.spell-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  background: #1a1a2e;
+  border: 1px solid #333;
+}
+
+.spell-tag-type {
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 0.65rem;
+  opacity: 0.7;
+}
+
+.spell-tag-buff { border-color: #4ade80; }
+.spell-tag-buff .spell-tag-type { color: #4ade80; }
+.spell-tag-offensive { border-color: #f87171; }
+.spell-tag-offensive .spell-tag-type { color: #f87171; }
+.spell-tag-healing { border-color: #60a5fa; }
+.spell-tag-healing .spell-tag-type { color: #60a5fa; }
+.spell-tag-other { border-color: #a78bfa; }
+.spell-tag-other .spell-tag-type { color: #a78bfa; }
+
+.spell-tag-remove {
+  background: none;
+  border: none;
+  color: #888;
+  cursor: pointer;
+  font-size: 1rem;
+  line-height: 1;
+  padding: 0 0.15rem;
+}
+
+.spell-tag-remove:hover {
+  color: #f87171;
+}
+
+.result-item.full-width {
+  grid-column: 1 / -1;
+}

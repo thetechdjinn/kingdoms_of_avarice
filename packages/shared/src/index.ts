@@ -334,6 +334,7 @@ export interface NpcTemplate {
   enterRoomMessage: string | null;
   exitRoomMessage: string | null;
   spawnMessage: string | null;
+  deathMessage: string | null;        // Custom kill message, supports {name} and {attacker}
   primaryFactionId: number | null;
   merchantEnabled: boolean;
   properName: boolean;

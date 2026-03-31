@@ -17,7 +17,7 @@ CREATE TABLE IF NOT EXISTS spells (
 
     -- Classification
     spell_type VARCHAR(20) NOT NULL CHECK (spell_type IN ('offensive', 'healing', 'buff', 'debuff', 'utility')),
-    target_type VARCHAR(20) NOT NULL CHECK (target_type IN ('self', 'enemy', 'ally', 'room')),
+    target_type VARCHAR(20) NOT NULL CHECK (target_type IN ('self', 'self_ally', 'enemy', 'ally', 'room')),
 
     -- Cost
     mana_cost INTEGER NOT NULL DEFAULT 0,

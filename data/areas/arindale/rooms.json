@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "exported_at": "2026-03-29T19:38:18.662Z",
+  "exported_at": "2026-03-30T21:37:18.852Z",
   "type": "rooms",
   "data": [
     {
@@ -3498,7 +3498,7 @@
     },
     {
       "tag": "market_clothier",
-      "name": "Clothier's Shop",
+      "name": "The Thread & Needle",
       "description": "Bolts of cloth in muted earth tones fill the shelves of this tidy shop. Robes, cloaks, and traveling garments hang from a rack near the door. A measuring cord dangles from a hook on the wall.",
       "area": "Arindale",
       "terrain": "indoor",
@@ -3512,6 +3512,13 @@
         {
           "direction": "south",
           "toTag": "ew_2_2_1"
+        }
+      ],
+      "spawns": [
+        {
+          "npcName": "Elenra",
+          "maxActive": 1,
+          "respawnSeconds": 60
         }
       ]
     },

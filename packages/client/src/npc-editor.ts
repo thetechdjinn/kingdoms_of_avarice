@@ -67,6 +67,7 @@ interface NpcTemplate {
   enterRoomMessage: string | null;
   exitRoomMessage: string | null;
   spawnMessage: string | null;
+  deathMessage: string | null;
   merchantEnabled: boolean;
   primaryFactionId: number | null;
   properName: boolean;
@@ -388,6 +389,7 @@ function selectTemplate(id: number): void {
   setInputValue('npc-enter-message', template.enterRoomMessage || '');
   setInputValue('npc-exit-message', template.exitRoomMessage || '');
   setInputValue('npc-spawn-message', template.spawnMessage || '');
+  setInputValue('npc-death-message', template.deathMessage || '');
   setCheckbox('npc-leave-corpse', template.leaveCorpse);
   setInputValue('npc-corpse-duration', String(template.corpseDuration));
 
@@ -808,6 +810,7 @@ function gatherFormData(): Record<string, unknown> {
     enterRoomMessage: getVal('npc-enter-message') || null,
     exitRoomMessage: getVal('npc-exit-message') || null,
     spawnMessage: getVal('npc-spawn-message') || null,
+    deathMessage: getVal('npc-death-message') || null,
     leaveCorpse: getChecked('npc-leave-corpse'),
     corpseDuration: getNum('npc-corpse-duration', 300),
 

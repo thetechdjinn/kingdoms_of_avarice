@@ -30,6 +30,7 @@ const DEV_LINKS: Array<{ href: string; key: string; label: string }> = [
   { href: '/quest-editor.html', key: 'quest-editor', label: 'Quest Editor' },
   { href: '/progression-table-editor.html', key: 'progression-table-editor', label: 'Progression Table Editor' },
   { href: '/swing-calculator.html', key: 'swing-calculator', label: 'Swing Calculator' },
+  { href: '/combat-simulator.html', key: 'combat-simulator', label: 'Combat Simulator' },
 ];
 
 const ADMIN_LINKS: Array<{ href: string; key: string; label: string; id?: string }> = [

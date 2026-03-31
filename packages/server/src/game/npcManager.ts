@@ -558,6 +558,16 @@ export function findNpcInRoom(targetName: string, roomId: number, includeCorpses
     }
   }
 
+  // Match on any word in the display name or template name
+  for (const npc of npcs) {
+    const displayWords = npc.entityName.toLowerCase().split(/\s+/);
+    const templateWords = npc.template.name.toLowerCase().split(/\s+/);
+    const allWords = [...new Set([...displayWords, ...templateWords])];
+    if (allWords.some(word => word === lowerTarget || word.startsWith(lowerTarget))) {
+      return npc;
+    }
+  }
+
   return undefined;
 }
 

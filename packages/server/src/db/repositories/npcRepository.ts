@@ -40,6 +40,7 @@ interface DbNpcTemplate {
   enter_room_message: string | null;
   exit_room_message: string | null;
   spawn_message: string | null;
+  death_message: string | null;
   primary_faction_id: number | null;
   merchant_enabled: boolean;
   proper_name: boolean;
@@ -142,6 +143,7 @@ function dbToTemplate(row: DbNpcTemplate, attacks: NpcAttack[], spells: NpcSpell
     enterRoomMessage: row.enter_room_message,
     exitRoomMessage: row.exit_room_message,
     spawnMessage: row.spawn_message,
+    deathMessage: row.death_message,
     primaryFactionId: row.primary_faction_id,
     merchantEnabled: row.merchant_enabled,
     properName: row.proper_name,
@@ -324,6 +326,7 @@ export interface CreateNpcTemplateInput {
   enterRoomMessage?: string | null;
   exitRoomMessage?: string | null;
   spawnMessage?: string | null;
+  deathMessage?: string | null;
   primaryFactionId?: number | null;
   merchantEnabled?: boolean;
   properName?: boolean;
@@ -362,7 +365,7 @@ export async function createTemplate(input: CreateNpcTemplateInput, client?: pg.
       interactable, allowed_areas, roam_enabled, roam_interval, roam_chance,
       drop_table_id, essence_reward, essence_class,
       leave_corpse, corpse_duration, augmentations,
-      enter_room_message, exit_room_message, spawn_message,
+      enter_room_message, exit_room_message, spawn_message, death_message,
       primary_faction_id, merchant_enabled, proper_name, spell_power, vision_level, enabled
     ) VALUES (
       $1, $2, $3, $3, $4,
@@ -372,8 +375,8 @@ export async function createTemplate(input: CreateNpcTemplateInput, client?: pg.
       $17, $18, $19, $20, $21,
       $22, $23, $24,
       $25, $26, $27,
-      $28, $29, $30,
-      $31, $32, $33, $34, $35, $36
+      $28, $29, $30, $31,
+      $32, $33, $34, $35, $36, $37
     ) RETURNING id`,
     [
       input.name,
@@ -406,6 +409,7 @@ export async function createTemplate(input: CreateNpcTemplateInput, client?: pg.
       input.enterRoomMessage ?? null,
       input.exitRoomMessage ?? null,
       input.spawnMessage ?? null,
+      input.deathMessage ?? null,
       input.primaryFactionId ?? null,
       input.merchantEnabled ?? false,
       input.properName ?? false,
@@ -464,6 +468,7 @@ export async function updateTemplate(id: number, input: Partial<CreateNpcTemplat
   if (input.enterRoomMessage !== undefined) fieldMap.enterRoomMessage = { column: 'enter_room_message', value: input.enterRoomMessage };
   if (input.exitRoomMessage !== undefined) fieldMap.exitRoomMessage = { column: 'exit_room_message', value: input.exitRoomMessage };
   if (input.spawnMessage !== undefined) fieldMap.spawnMessage = { column: 'spawn_message', value: input.spawnMessage };
+  if (input.deathMessage !== undefined) fieldMap.deathMessage = { column: 'death_message', value: input.deathMessage };
   if (input.primaryFactionId !== undefined) fieldMap.primaryFactionId = { column: 'primary_faction_id', value: input.primaryFactionId };
   if (input.merchantEnabled !== undefined) fieldMap.merchantEnabled = { column: 'merchant_enabled', value: input.merchantEnabled };
   if (input.properName !== undefined) fieldMap.properName = { column: 'proper_name', value: input.properName };

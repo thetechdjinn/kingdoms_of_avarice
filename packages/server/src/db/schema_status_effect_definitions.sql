@@ -18,6 +18,10 @@ CREATE TABLE IF NOT EXISTS status_effect_definitions (
     damage_modifier INTEGER DEFAULT 0,      -- Percentage
     speed_modifier INTEGER DEFAULT 0,       -- Percentage (negative = faster, positive = slower)
 
+    -- Armor modifiers
+    armor_class_modifier INTEGER DEFAULT 0,
+    damage_reduction_modifier INTEGER DEFAULT 0,
+
     -- Expanded modifiers
     critical_chance_modifier INTEGER DEFAULT 0,
     dodge_modifier INTEGER DEFAULT 0,

@@ -183,7 +183,7 @@ export async function processAdminCommand(
     case 'testspell':
       return handleTestSpell(args, socket);
     case 'npcs':
-      return handleListNpcs();
+      return handleListNpcs(args, world);
     case 'mobbehavior':
       return handleMobBehavior();
     case 'npcdebug':
@@ -1541,15 +1541,21 @@ async function handleListSpells(): Promise<CommandResponse> {
   return { type: MessageType.OUTPUT, message: lines.join('\r\n') };
 }
 
-function handleListNpcs(): CommandResponse {
-  const npcs = getAllNpcInstances();
+function handleListNpcs(args: string[], world: GameWorld): CommandResponse {
+  let npcs = getAllNpcInstances();
+
+  // Filter by name if argument provided
+  const filter = args.join(' ').toLowerCase();
+  if (filter) {
+    npcs = npcs.filter(npc => npc.entityName.toLowerCase().includes(filter));
+  }
 
   if (npcs.length === 0) {
-    return { type: MessageType.SYSTEM, message: 'No active NPC instances.' };
+    return { type: MessageType.SYSTEM, message: filter ? `No active NPCs matching "${filter}".` : 'No active NPC instances.' };
   }
 
   const lines = [
-    colors.boldYellow(`Active NPCs (${npcs.length} total):`),
+    colors.boldYellow(`Active NPCs (${npcs.length}${filter ? ` matching "${filter}"` : ''}):`),
     '',
   ];
 
@@ -1564,7 +1570,9 @@ function handleListNpcs(): CommandResponse {
   }
 
   for (const [roomId, roomNpcs] of byRoom) {
-    lines.push(colors.boldCyan(`  Room ${roomId}:`));
+    const room = world.getRoom(roomId);
+    const roomName = room?.name || 'Unknown';
+    lines.push(colors.boldCyan(`  Room ${roomId}: ${roomName}`));
     for (const npc of roomNpcs) {
       const hpPct = Math.round((npc.vitals.hp / npc.vitals.maxHp) * 100);
       const hostileTag = npc.template.hostile ? colors.red(' [hostile]') : '';
@@ -2048,7 +2056,7 @@ function handleAdminHelp(userRoles: Role[]): CommandResponse {
     lines.push(`  ${colors.boldCyan('@reload [type]')}     - Reload data from database`);
     lines.push('');
     lines.push(colors.boldYellow('Developer Commands (NPCs):'));
-    lines.push(`  ${colors.boldCyan('@npcs')}                    - List active NPC instances`);
+    lines.push(`  ${colors.boldCyan('@npcs [name]')}              - List active NPC instances (filter by name)`);
     lines.push(`  ${colors.boldCyan('@mobbehavior')}             - Show NPC behavior states/debug info`);
     lines.push(`  ${colors.boldCyan('@npcdebug on|off')}         - Toggle NPC aggro debug messages`);
     lines.push('');

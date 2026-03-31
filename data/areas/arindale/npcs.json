@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "exported_at": "2026-03-29T19:38:18.685Z",
+  "exported_at": "2026-03-30T21:37:18.877Z",
   "type": "npcs",
   "data": [
     {
@@ -65,6 +65,11 @@
         },
         {
           "itemName": "scroll of magic missile",
+          "maxStock": 10,
+          "restockChance": 100
+        },
+        {
+          "itemName": "tome of illuminate",
           "maxStock": 10,
           "restockChance": 100
         }
@@ -142,6 +147,107 @@
         },
         {
           "itemName": "lantern",
+          "maxStock": 10,
+          "restockChance": 100
+        }
+      ]
+    },
+    {
+      "name": "Elenra",
+      "description": "A poised woman stands before you, her garments finely tailored from soft cloth and well-worked leather. Her practiced hands move with quiet precision, adjusting seams and straps as if by instinct. Her keen eyes study every detail, measuring quality and worth with effortless skill.",
+      "health": 100,
+      "maxHealth": 100,
+      "hostile": false,
+      "level": 12,
+      "experienceReward": 100,
+      "maxMana": 0,
+      "baseAccuracy": 50,
+      "baseDefense": 50,
+      "baseCritChance": 5,
+      "baseDodge": 5,
+      "damageReduction": 0,
+      "traits": [],
+      "fleeEnabled": false,
+      "fleeHpPercent": 20,
+      "callForHelpChance": 0,
+      "interactable": true,
+      "allowedAreas": [],
+      "roamEnabled": false,
+      "roamInterval": 60,
+      "roamChance": 10,
+      "essenceReward": 0,
+      "essenceClass": null,
+      "leaveCorpse": true,
+      "corpseDuration": 300,
+      "augmentations": [],
+      "enterRoomMessage": "{name} walks in from the {direction}.",
+      "exitRoomMessage": "{name} leaves to the {direction}.",
+      "spawnMessage": "{name} walks into the room.",
+      "merchantEnabled": true,
+      "properName": true,
+      "spellPower": 0,
+      "enabled": true,
+      "dropTableName": "Elena Doran - The Thread and Needle",
+      "primaryFactionName": "Arindale Merchants Guild",
+      "attacks": [
+        {
+          "attackType": "melee",
+          "name": "morningstar",
+          "minDamage": 4,
+          "maxDamage": 12,
+          "attacksPerRound": 2,
+          "percentage": 100,
+          "hitMessage": null,
+          "missMessage": null,
+          "hitVerb": "crack",
+          "hitVerb3p": "cracks",
+          "missVerb": "swing at",
+          "missVerb3p": "swings at"
+        }
+      ],
+      "merchantInventory": [
+        {
+          "itemName": "leather gloves",
+          "maxStock": 10,
+          "restockChance": 100
+        },
+        {
+          "itemName": "leather pants",
+          "maxStock": 10,
+          "restockChance": 100
+        },
+        {
+          "itemName": "leather skirt",
+          "maxStock": 10,
+          "restockChance": 100
+        },
+        {
+          "itemName": "gianthair vest",
+          "maxStock": 10,
+          "restockChance": 100
+        },
+        {
+          "itemName": "rigid leather pants",
+          "maxStock": 10,
+          "restockChance": 100
+        },
+        {
+          "itemName": "rigid leather tunic",
+          "maxStock": 10,
+          "restockChance": 100
+        },
+        {
+          "itemName": "soft leather cap",
+          "maxStock": 10,
+          "restockChance": 100
+        },
+        {
+          "itemName": "harden leather gaungtlets",
+          "maxStock": 10,
+          "restockChance": 100
+        },
+        {
+          "itemName": "harden leather boots",
           "maxStock": 10,
           "restockChance": 100
         }

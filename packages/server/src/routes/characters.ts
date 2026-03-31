@@ -7,6 +7,8 @@ import * as progressionRepo from '../db/repositories/progressionRepository.js';
 import * as playerRepo from '../db/repositories/playerRepository.js';
 import * as settingsRepo from '../db/repositories/settingsRepository.js';
 import { CharacterStats } from '@koa/shared';
+import { requireDeveloper } from '../middleware/auth.js';
+import { getEquipmentCombatStats } from '../game/combatStats.js';
 
 // Validation constants
 const MIN_NAME_LENGTH = 3;
@@ -40,6 +42,33 @@ export function setupCharacterRoutes(app: Express): void {
     } catch (error) {
       console.error('Failed to get characters:', error);
       res.status(500).json({ success: false, message: 'Failed to get characters' });
+    }
+  });
+
+  // GET /api/characters/all - List all characters (developer tool for combat simulator)
+  // Must be before /:id to avoid Express matching "all" as a character ID
+  app.get('/api/characters/all', requireDeveloper, async (_req: Request, res: Response) => {
+    try {
+      const allChars = await characterRepo.findAllCharacters();
+      const result = allChars.map(c => ({
+        id: c.id,
+        name: c.name,
+        race: c.race,
+        class: c.class,
+        level: c.level,
+        maxHealth: c.max_health,
+        maxMana: c.max_mana,
+        strength: c.strength,
+        dexterity: c.dexterity,
+        intelligence: c.intelligence,
+        constitution: c.constitution,
+        wisdom: c.wisdom,
+        charisma: c.charisma,
+      }));
+      res.json({ success: true, characters: result });
+    } catch (error) {
+      console.error('Failed to list all characters:', error);
+      res.status(500).json({ success: false, message: 'Failed to list characters' });
     }
   });
 
@@ -345,6 +374,32 @@ export function setupCharacterRoutes(app: Express): void {
     } catch (error) {
       console.error('Failed to delete character:', error);
       res.status(500).json({ success: false, message: 'Failed to delete character' });
+    }
+  });
+
+  // GET /api/characters/:id/combat-stats - Get character's calculated equipment combat stats (developer tool)
+  app.get('/api/characters/:id/combat-stats', requireDeveloper, async (req: Request, res: Response) => {
+    try {
+      const id = Number(req.params.id);
+      if (isNaN(id)) {
+        res.status(400).json({ success: false, message: 'Invalid character ID' });
+        return;
+      }
+      const character = await characterRepo.findCharacterById(id);
+      if (!character) {
+        res.status(404).json({ success: false, message: 'Character not found' });
+        return;
+      }
+      const equipStats = await getEquipmentCombatStats(id);
+      res.json({
+        success: true,
+        weapon: equipStats.weapon,
+        armor: equipStats.armor,
+        modifiers: equipStats.modifiers,
+      });
+    } catch (error) {
+      console.error('Failed to get combat stats:', error);
+      res.status(500).json({ success: false, message: 'Failed to get combat stats' });
     }
   });
 }

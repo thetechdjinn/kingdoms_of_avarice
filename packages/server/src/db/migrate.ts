@@ -518,6 +518,7 @@ export async function runMigrations(): Promise<void> {
       await client.query(`ALTER TABLE npcs ADD COLUMN IF NOT EXISTS enter_room_message TEXT`);
       await client.query(`ALTER TABLE npcs ADD COLUMN IF NOT EXISTS exit_room_message TEXT`);
       await client.query(`ALTER TABLE npcs ADD COLUMN IF NOT EXISTS spawn_message TEXT`);
+      await client.query(`ALTER TABLE npcs ADD COLUMN IF NOT EXISTS death_message TEXT`);
 
       // NPC instance columns
       await client.query(`ALTER TABLE npc_instances ADD COLUMN IF NOT EXISTS current_mana INTEGER DEFAULT 0`);
@@ -747,7 +748,8 @@ export async function runMigrations(): Promise<void> {
           ('training_base_cost', '28'),
           ('training_cost_multiplier', '1.8'),
           ('initial_character_points', '100'),
-          ('blind_accuracy_penalty', '10')
+          ('blind_accuracy_penalty', '10'),
+          ('crit_soft_cap', '37')
         ON CONFLICT (key) DO NOTHING
       `);
       // NOTE: Never update existing game_settings values - respect user configuration
@@ -1307,6 +1309,17 @@ export async function runMigrations(): Promise<void> {
 
       // Fizzle room message for spells
       await client.query(`ALTER TABLE spells ADD COLUMN IF NOT EXISTS fizzle_message_room TEXT`);
+
+      // Armor modifiers for status effects (mageshield, etc.)
+      await client.query(`ALTER TABLE status_effect_definitions ADD COLUMN IF NOT EXISTS armor_class_modifier INTEGER DEFAULT 0`);
+      await client.query(`ALTER TABLE status_effect_definitions ADD COLUMN IF NOT EXISTS damage_reduction_modifier INTEGER DEFAULT 0`);
+
+      // Add 'self_ally' to spell target_type constraint (healing/buff can target self or ally)
+      await client.query(`ALTER TABLE spells DROP CONSTRAINT IF EXISTS spells_target_type_check`);
+      await client.query(`
+        ALTER TABLE spells ADD CONSTRAINT spells_target_type_check
+        CHECK (target_type IN ('self', 'self_ally', 'enemy', 'ally', 'room'))
+      `);
 
       // Rename merchant_responses → npc_responses for existing databases.
       // Note: the CREATE TABLE IF NOT EXISTS npc_responses above (line ~708) may have

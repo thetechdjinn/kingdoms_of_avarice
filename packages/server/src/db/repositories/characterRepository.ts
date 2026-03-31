@@ -99,7 +99,7 @@ export async function createCharacter(input: CreateCharacterInput, client?: pg.P
       strength, intelligence, dexterity, constitution, wisdom, charisma,
       current_room_id, gold, unspent_cp, cp_spent,
       gender, hair, eye_color
-    ) VALUES ($1, $2, $3, $4, $5, $6, $6, $7, $7, $8, $9, $10, $11, $12, $13, $14, 100, 100, '{}', $15, $16, $17)
+    ) VALUES ($1, $2, $3, $4, $5, $6, $6, $7, $7, $8, $9, $10, $11, $12, $13, $14, 0, 100, '{}', $15, $16, $17)
     RETURNING *`,
     [
       input.playerId,
@@ -124,6 +124,13 @@ export async function createCharacter(input: CreateCharacterInput, client?: pg.P
   );
 
   return result.rows[0];
+}
+
+export async function findAllCharacters(): Promise<DbCharacter[]> {
+  const result = await query<DbCharacter>(
+    'SELECT * FROM characters ORDER BY level DESC, name ASC'
+  );
+  return result.rows;
 }
 
 export async function findCharactersByPlayerId(playerId: number): Promise<DbCharacter[]> {
