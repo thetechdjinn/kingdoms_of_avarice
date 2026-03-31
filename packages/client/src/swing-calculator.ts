@@ -188,11 +188,11 @@ function calculate(inputs: CalculationInputs): CalculationResults {
   // CHA: +1% per 25 above 50, no negative (tertiary)
   const chaCrit = Math.max(0, Math.floor((inputs.charisma - 50) / 25));
 
-  // Total stat-based crit
-  const statCrit = intCrit + dexCrit + chaCrit;
+  // Total stat-based crit (INT + DEX only; CHA shown separately)
+  const statCrit = intCrit + dexCrit;
 
   // Pre-cap total (no level or encumbrance bonus)
-  const preCap = BASE_CRIT + statCrit + inputs.classCritBonus + inputs.weaponCrit;
+  const preCap = BASE_CRIT + statCrit + chaCrit + inputs.classCritBonus + inputs.weaponCrit;
 
   // Apply soft cap with diminishing returns
   let totalCrit = preCap;

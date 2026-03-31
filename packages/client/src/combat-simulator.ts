@@ -465,12 +465,14 @@ function renderActiveSpells(): void {
     tag.className = 'spell-tag';
     const typeClass = spell.spellType === 'buff' ? 'spell-tag-buff' :
       spell.spellType === 'offensive' ? 'spell-tag-offensive' :
-      spell.spellType === 'healing' ? 'spell-tag-healing' : 'spell-tag-other';
+      spell.spellType === 'healing' ? 'spell-tag-healing' :
+      spell.spellType === 'debuff' ? 'spell-tag-debuff' : 'spell-tag-other';
     tag.classList.add(typeClass);
 
     const label = spell.spellType === 'buff' ? 'Buff' :
       spell.spellType === 'offensive' ? 'Attack' :
-      spell.spellType === 'healing' ? 'Heal' : spell.spellType;
+      spell.spellType === 'healing' ? 'Heal' :
+      spell.spellType === 'debuff' ? 'Debuff' : spell.spellType;
 
     tag.innerHTML = `<span class="spell-tag-type">${label}</span> ${escapeHtml(spell.name)} <button class="spell-tag-remove" data-id="${spell.id}">&times;</button>`;
     container.appendChild(tag);
