@@ -409,74 +409,138 @@ when dropping player items on death:
 
 ## Quest Display Format
 
-### Quest List (`quest`)
+### Designer Text Only
 
-Shows active quests with only the current objective. No step counts or totals.
+Quest event output (start, step completion, quest completion) shows **only** the dialogue text written by the quest designer. The system never injects headers, borders, labels, reward summaries, or any other chrome. The designer controls the entire player experience through their prose.
 
-```
-                        Active Quests
- ─────────────────────────────────────────────────────────
- The Lost Artifact
-   Defeat the tomb guardian in the Sunken Crypt
+Rewards (XP, essence, currency, items, faction rep) are granted silently. The designer writes the narrative to convey what the player receives (e.g., "She hands you a small pouch").
 
- Rats in the Cellar
-   Kill 3 sewer rats (1/3)
- ─────────────────────────────────────────────────────────
-```
+The `quest` and `quest log` commands are the only place where structured status information appears, and only when the player explicitly asks for it.
 
-### Quest Log (`quest log`)
+### Color Markup
 
-Shows completed steps and the current step only. Future steps are hidden.
-
-```
-                     The Lost Artifact
- ─────────────────────────────────────────────────────────
- Elder Maren has asked you to recover an ancient artifact
- from the Sunken Crypt beneath the old cathedral.
-
- [x] Spoke with Elder Maren about the artifact
- [>] Defeat the tomb guardian in the Sunken Crypt
- ─────────────────────────────────────────────────────────
-```
+All dialogue fields support inline color markup using `{color}text{/}` tags. See the **Color Markup Reference** section below for full details.
 
 ### Quest Start Message
 
-When the first step triggers, the player is told a quest has begun.
+When the first step triggers, only the step's `completionDialogue` is shown:
 
 ```
- ───── New Quest: The Lost Artifact ─────
- Elder Maren leans in close and whispers, "The artifact
- was stolen and taken to the Sunken Crypt. Beware the
- guardian that lurks within."
- ────────────────────────────────────────
+Elder Maren leans in close and whispers, "The artifact
+was stolen and taken to the Sunken Crypt. Seek out
+Bob the Builder in the Ironwood District. Tell him:
+ask about the artifact. He will know what to do."
 ```
+
+(In-game, "Bob the Builder" and "ask about the artifact" would be highlighted with color tags.)
 
 ### Step Completion Message
 
-When a step completes, the player sees the narrative dialogue (which hints at what to do next). NPC names and trigger phrases are highlighted with color.
+When a step completes, only that step's `completionDialogue` is shown:
 
 ```
- ───── Quest Update: The Lost Artifact ─────
- The tomb guardian crumbles to dust, revealing a hidden
- passage behind the altar. The artifact must be deeper
- within — search the guardian's chamber.
- ────────────────────────────────────────────
+The tomb guardian crumbles to dust, revealing a hidden
+passage behind the altar. Search the guardian's chamber
+for the artifact.
 ```
 
 ### Quest Completion Message
 
+When the final step completes, only that step's `completionDialogue` is shown. Rewards are granted silently:
+
 ```
- ════════════════════════════════════════════
-           Quest Complete!
-        The Lost Artifact
- ────────────────────────────────────────────
- Rewards:
-   500 experience points
-   150 essence
-   Ancient Ring
-   +25 Cathedral Faction reputation
- ════════════════════════════════════════════
+Elder Maren takes the artifact and holds it to the
+light. "You have done a great service to the cathedral.
+This will not be forgotten." She reaches into her robes
+and produces a small pouch. "Take this, with my
+gratitude."
 ```
+
+### Quest List (`quest`)
+
+Player-initiated command showing active quests with current objective. Format TBD.
+
+### Quest Log (`quest log`)
+
+Player-initiated command showing completed steps and current step. Future steps hidden. Format TBD.
+
+## Color Markup Reference
+
+Quest dialogue fields (`completionDialogue`, `inProgressDialogue`, `denialDialogue`, `completedDialogue`) support inline color markup.
+
+### Syntax
+
+```
+{colorName}highlighted text{/}
+```
+
+- `{color}` opens a color span. `{/}` closes it back to the base color (cyan).
+- Tags are case-insensitive: `{Cyan}` and `{cyan}` both work.
+- Nesting is not supported. Opening a new color tag implicitly closes the previous one.
+- Unclosed tags auto-close at end of text. Unrecognized tag names are left as literal text.
+
+### Available Colors
+
+| Tag | Description |
+|---|---|
+| `red` | Red |
+| `green` | Green |
+| `yellow` | Yellow |
+| `blue` | Blue |
+| `magenta` | Magenta |
+| `cyan` | Cyan |
+| `white` | White |
+| `gray` / `grey` | Gray |
+| `gold` | Bright yellow |
+| `brightRed` | Bright red |
+| `brightGreen` | Bright green |
+| `brightYellow` | Bright yellow |
+| `brightBlue` | Bright blue |
+| `brightCyan` | Bright cyan |
+| `brightWhite` | Bright white |
+| `bold` | Bold white |
+| `boldCyan` | Bold cyan |
+| `boldGreen` | Bold green |
+| `boldYellow` | Bold yellow |
+| `boldRed` | Bold red |
+| `boldWhite` | Bold white |
+| `item` | Bright blue (item highlight) |
+| `npc` | Magenta (NPC highlight) |
+| `player` | Bright cyan (player highlight) |
+| `system` | Yellow (system text) |
+| `error` | Red (error text) |
+
+### Base Color
+
+All untagged text renders in **cyan** by default. Color tags are only needed for words that should stand out from the base.
+
+### Example
+
+What the designer writes in the `completionDialogue` field:
+
+```
+Elder Maren whispers, "Seek out {boldCyan}Bob the Builder{/} in the
+Ironwood District. Tell him: {boldYellow}ask about the artifact{/}."
+```
+
+What the player sees (cyan base with bold cyan name and bold yellow trigger phrase):
+
+```
+Elder Maren whispers, "Seek out Bob the Builder in the Ironwood
+District. Tell him: ask about the artifact."
+```
+
+### Variables
+
+Use `{name}` to insert the player's character name into dialogue. Variables are replaced before color processing, so `{boldCyan}{name}{/}` renders the name in bold cyan.
+
+| Variable | Description |
+|---|---|
+| `{name}` | The player's character name |
+
+### Quest Editor
+
+The Dialogue tab in the quest editor shows a color tag legend with available colors. Each dialogue textarea has a live color preview below it that approximates the in-game output. Step completion dialogue fields also have live previews. `{name}` is shown as "PlayerName" in the preview.
 
 ## File Structure
 

@@ -191,6 +191,11 @@
   min-height: 40px;
 }
 
+.step-field-toggle .toggle-label {
+  display: inline-flex;
+  padding-top: 4px;
+}
+
 .step-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -280,4 +285,62 @@
 .preview-step .trigger-type {
   color: #888;
   font-size: 0.8rem;
+}
+
+/* Color tag legend */
+.color-tag-legend {
+  background: #161b22;
+  border: 1px solid #333;
+  border-radius: 6px;
+  padding: 10px 12px;
+  margin-bottom: 12px;
+  font-size: 0.8rem;
+}
+
+.color-tag-legend .legend-title {
+  font-weight: 700;
+  color: #e0e0e0;
+  margin-bottom: 4px;
+  font-size: 0.85rem;
+}
+
+.color-tag-legend .legend-text {
+  color: #888;
+  margin-bottom: 6px;
+}
+
+.color-tag-legend .legend-text code {
+  background: #0d1117;
+  padding: 1px 4px;
+  border-radius: 3px;
+  color: #e0e0e0;
+  font-size: 0.8rem;
+}
+
+.color-tag-legend .legend-colors {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  margin-bottom: 6px;
+}
+
+.legend-swatch {
+  font-family: monospace;
+  font-size: 0.78rem;
+}
+
+/* Color markup preview */
+.color-preview {
+  background: #0d1117;
+  border: 1px solid #333;
+  border-radius: 4px;
+  padding: 8px 10px;
+  margin-top: 4px;
+  font-family: monospace;
+  font-size: 0.82rem;
+  line-height: 1.5;
+  color: #56b6c2;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  min-height: 1.5em;
 }

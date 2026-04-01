@@ -3458,6 +3458,9 @@ async function handleRespawn(
     roomDesc = world.formatRoomDescription(room, otherPlayers, socket.briefMode, itemDescriptions, [], darknessTag);
   }
 
+  // Check for hostile NPCs at the respawn location
+  setImmediate(() => checkHostileAggro(respawnRoomId, socket));
+
   return {
     type: MessageType.OUTPUT,
     message: colors.green('You wake up at a safe location...') + '\r\n\r\n' + roomDesc,

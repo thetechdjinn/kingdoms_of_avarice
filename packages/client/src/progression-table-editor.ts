@@ -5,10 +5,22 @@ import { renderNav } from './components/nav.js';
 import { initAuth } from './components/auth.js';
 import { showConfirm } from './components/modal.js';
 
+function escapeHtml(text: string): string {
+  if (!text) return '';
+  return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
 interface LevelRow {
   level: number;
   std_xp_required: number;
   base_essence_required: number;
+}
+
+interface ClassDef {
+  class_id: string;
+  display_name: string;
+  essence_multiplier: number;
+  playable: boolean;
 }
 
 (async function () {
@@ -22,6 +34,9 @@ interface LevelRow {
   // ============================================================================
 
   let levels: LevelRow[] = [];
+  let classes: ClassDef[] = [];
+  let selectedMultiplier: number = 1.0;
+  let selectedClassName: string = 'Warrior';
 
   const tableBody = document.getElementById('table-body') as HTMLTableSectionElement;
   const statusMessage = document.getElementById('status-message') as HTMLDivElement;
@@ -47,6 +62,66 @@ interface LevelRow {
     statusTimeout = setTimeout(() => {
       statusMessage.style.display = 'none';
     }, 3000);
+  }
+
+  // ============================================================================
+  // Class Multipliers
+  // ============================================================================
+
+  async function fetchClasses(): Promise<void> {
+    try {
+      const res = await fetch('/api/progression/classes', { credentials: 'include' });
+      const data = await res.json();
+      if (data.success) {
+        classes = (data.classes as ClassDef[])
+          .filter(c => c.playable !== false)
+          .sort((a, b) => a.display_name.localeCompare(b.display_name));
+        renderMultiplierPanel();
+      }
+    } catch (error) {
+      console.error('Failed to fetch classes:', error);
+    }
+  }
+
+  function renderMultiplierPanel(): void {
+    const panel = document.getElementById('class-multipliers');
+    const list = document.getElementById('class-multiplier-list');
+    if (!panel || !list || classes.length === 0) return;
+
+    panel.style.display = 'block';
+
+    list.innerHTML = classes.map(cls => {
+      const isSelected = cls.display_name === selectedClassName;
+      const safeName = escapeHtml(cls.display_name);
+      return `<button class="multiplier-btn${isSelected ? ' active' : ''}" data-multiplier="${cls.essence_multiplier}" data-name="${safeName}">${safeName} (${cls.essence_multiplier}x)</button>`;
+    }).join('');
+
+    list.querySelectorAll('.multiplier-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const el = btn as HTMLElement;
+        selectedMultiplier = parseFloat(el.dataset.multiplier!);
+        selectedClassName = el.dataset.name!;
+
+        // Update active state
+        list.querySelectorAll('.multiplier-btn').forEach(b => b.classList.remove('active'));
+        el.classList.add('active');
+
+        // Update header and re-render computed column
+        const header = document.getElementById('computed-essence-header');
+        if (header) header.textContent = `${selectedClassName} Essence`;
+
+        const label = document.getElementById('selected-class-label');
+        if (label) label.textContent = `Showing: ${selectedClassName} (${selectedMultiplier}x)`;
+
+        renderTable();
+      });
+    });
+
+    // Set initial label
+    const header = document.getElementById('computed-essence-header');
+    if (header) header.textContent = `${selectedClassName} Essence`;
+    const label = document.getElementById('selected-class-label');
+    if (label) label.textContent = `Showing: ${selectedClassName} (${selectedMultiplier}x)`;
   }
 
   // ============================================================================
@@ -159,6 +234,8 @@ interface LevelRow {
       const totalXp = calculateTotalXp(i);
       const isMaxLevel = row.level === maxLevel;
 
+      const computedEssence = Math.floor(row.base_essence_required * selectedMultiplier);
+
       tr.innerHTML = `
         <td class="col-level">${row.level}</td>
         <td>
@@ -167,6 +244,7 @@ interface LevelRow {
         <td>
           <input type="number" class="input-essence" min="0" value="${row.base_essence_required}" data-level="${row.level}" data-field="essence" />
         </td>
+        <td class="col-calculated col-computed-essence">${formatNumber(computedEssence)}</td>
         <td class="col-calculated">${growth}</td>
         <td class="col-calculated">${formatNumber(totalXp)}</td>
         <td class="col-actions-cell">
@@ -290,5 +368,6 @@ interface LevelRow {
   // Initialize
   // ============================================================================
 
+  await fetchClasses();
   await fetchLevels();
 })();

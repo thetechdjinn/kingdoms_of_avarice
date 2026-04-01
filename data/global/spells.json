@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "exported_at": "2026-03-30T21:37:18.809Z",
+  "exported_at": "2026-04-01T02:21:29.928Z",
   "type": "spells",
   "data": [
     {
@@ -32,7 +32,7 @@
       "healingScalingFactor": null,
       "castDifficulty": 10,
       "fizzleMessage": "You attempt to cast blur, but the magic sputters and fades.",
-      "fizzleMessageRoom": "{player} attempts to cast blur, but the magic sputters and fades.",
+      "fizzleMessageRoom": "{name} attempts to cast blur, but the magic sputters and fades.",
       "hitMessageSelf": "You cast blur. Your body begins to shimmer, then shifts into a hazy, indistinct outline.",
       "hitMessageTarget": null,
       "hitMessageRoom": "{player} cast blur. Their body begins to shimmer, then shifts into a hazy, indistinct outline.",
@@ -102,10 +102,10 @@
       "healingScalingFactor": null,
       "castDifficulty": 15,
       "fizzleMessage": "Your magic missile fizzles out in a puff of smoke!",
-      "fizzleMessageRoom": "{player}'s magic missile fizzles out in a puff of smoke!",
+      "fizzleMessageRoom": "{name}'s magic missile fizzles out in a puff of smoke!",
       "hitMessageSelf": "You unleash a glowing dart that slams into the {target} for {damage} damage!",
-      "hitMessageTarget": "{player} unleash a glowing dart that slams into the you for {damage} damage!",
-      "hitMessageRoom": "{player} unleash a glowing dart that slams into the {target} for {damage} damage!",
+      "hitMessageTarget": "{name} unleash a glowing dart that slams into the you for {damage} damage!",
+      "hitMessageRoom": "{name} unleash a glowing dart that slams into the {target} for {damage} damage!",
       "telegraphMessage": null,
       "saveStat": null,
       "saveDifficulty": 0

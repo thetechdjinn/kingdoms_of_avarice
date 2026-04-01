@@ -14,6 +14,7 @@ import {
 } from '@koa/shared';
 import * as characterRepo from '../db/repositories/characterRepository.js';
 import * as progressionRepo from '../db/repositories/progressionRepository.js';
+import { getXpOvercapPercent } from '../db/repositories/settingsRepository.js';
 
 // ============================================================================
 // DATA STORES (In-memory for now, can be backed by DB/JSON files)
@@ -99,12 +100,22 @@ export function getProgression(characterId: number): CharacterProgression | unde
 /**
  * Load a character's progression from the database into the in-memory map.
  * Call this when a character enters the game.
+ *
+ * @param characterLevel - The character's actual trained level from the characters table.
+ *   This overrides the SQL-calculated level (which auto-advances based on XP alone)
+ *   because leveling requires explicit training.
  */
-export async function loadCharacterProgression(characterId: number, classId: string): Promise<CharacterProgression | null> {
+export async function loadCharacterProgression(characterId: number, classId: string, characterLevel?: number): Promise<CharacterProgression | null> {
   // Try to load from database
   const dbProgression = await progressionRepo.getCharacterProgression(characterId);
 
   if (dbProgression) {
+    // Use the character table's level as authoritative (training required to level)
+    // rather than the SQL-calculated level (which advances on XP alone)
+    if (characterLevel !== undefined) {
+      dbProgression.level = characterLevel;
+    }
+
     // Store in memory
     characterProgressions.set(characterId, dbProgression);
 
@@ -114,6 +125,9 @@ export async function loadCharacterProgression(characterId: number, classId: str
   // No progression in DB - create a new one
   const newProgression = await progressionRepo.createCharacterProgression(characterId, classId);
   if (newProgression) {
+    if (characterLevel !== undefined) {
+      newProgression.level = characterLevel;
+    }
     characterProgressions.set(characterId, newProgression);
   }
 
@@ -168,15 +182,45 @@ async function awardProgression(
 }
 
 export async function awardXp(characterId: number, amount: number): Promise<boolean> {
+  if (typeof amount !== 'number' || !isFinite(amount) || amount <= 0) return false;
+
+  const progression = characterProgressions.get(characterId);
+  if (!progression) return false;
+
+  // Cap XP so it doesn't exceed next level's requirement by more than the overcap setting
+  const nextLevelReqs = getLevelRequirements(progression.level + 1);
+  if (nextLevelReqs) {
+    const overcapPercent = await getXpOvercapPercent();
+    const maxXp = Math.floor(nextLevelReqs.std_xp_required * (1 + overcapPercent / 100));
+    const headroom = maxXp - progression.std_xp;
+    if (headroom <= 0) return false; // Already at or over cap
+    amount = Math.min(amount, headroom);
+  }
+
   return awardProgression(
     characterId, amount,
     progressionRepo.incrementStdXp,
-    (prog, result) => { prog.std_xp = result.std_xp; prog.level = result.level; },
+    (prog, result) => { prog.std_xp = result.std_xp; },
     'XP award'
   );
 }
 
 export async function awardEssence(characterId: number, amount: number): Promise<boolean> {
+  if (typeof amount !== 'number' || !isFinite(amount) || amount <= 0) return false;
+
+  const progression = characterProgressions.get(characterId);
+  if (!progression) return false;
+
+  // Cap essence at the cumulative threshold for the next level
+  const classDef = classDefinitions.get(progression.class_id);
+  const nextLevelReqs = getLevelRequirements(progression.level + 1);
+  if (classDef && nextLevelReqs) {
+    const essenceCap = getEssenceRequired(nextLevelReqs.base_essence_required, classDef.essence_multiplier);
+    const headroom = essenceCap - progression.essence_earned_this_level;
+    if (headroom <= 0) return false; // Already at cap
+    amount = Math.min(amount, headroom);
+  }
+
   return awardProgression(
     characterId, amount,
     progressionRepo.incrementEssenceWallet,
@@ -281,7 +325,6 @@ export async function performLevelUp(characterId: number): Promise<LevelUpResult
   // Calculate new values before modifying state
   const newLevel = progression.level + 1;
   const cpEarned = getCpEarnedForLevel(newLevel);
-  const newStdXp = progression.std_xp - checkResult.std_xp_required;
 
   // Persist level and CP to database FIRST
   try {
@@ -327,18 +370,10 @@ export async function performLevelUp(characterId: number): Promise<LevelUpResult
       mana: newMana,
     });
 
-    // Persist XP and essence reset to character_progression table
-    await progressionRepo.updateCharacterProgression(characterId, {
-      std_xp: newStdXp,
-      essence_earned_this_level: 0,
-    });
-
     // Invalidate the DB-level progression cache immediately after DB success
     progressionRepo.invalidateProgressionCache(characterId);
 
-    // Database succeeded, now update in-memory state
-    progression.std_xp = newStdXp;
-    progression.essence_earned_this_level = 0;
+    // Database succeeded, now update in-memory state (XP and essence stay cumulative)
     progression.level = newLevel;
 
     return { success: true, newLevel, cpEarned, hpGained, manaGained, newMaxHealth, newMaxMana, resourceType: resourceType ?? 'none' };

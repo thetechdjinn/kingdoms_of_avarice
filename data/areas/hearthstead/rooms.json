@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "exported_at": "2026-03-30T21:37:18.857Z",
+  "exported_at": "2026-04-01T02:21:29.980Z",
   "type": "rooms",
   "data": [
     {
@@ -192,7 +192,7 @@
       "name": "Forest Crossing",
       "description": "A well-worn junction where several trails converge. The main path from the south meets a loop trail that circles Hearthstead, and a narrower track leads northeast toward the village center. The grass is trampled flat here from regular foot traffic. A weathered wooden sign points in several directions, though the paint has faded to near-illegibility.",
       "area": "Hearthstead",
-      "terrain": "",
+      "terrain": "indoor",
       "darkness_level": 0,
       "features": {},
       "exits": [
@@ -426,7 +426,7 @@
       "name": "Hearthstead Inn, Common Room",
       "description": "The front room of Hearthstead's only inn. A stone fireplace dominates one wall, its mantel decorated with dried flowers and a tarnished copper mug. Rough wooden tables and benches fill the space. The bar is a plank laid across two barrels, behind which shelves hold a modest selection of drink. The room is warm and smells of woodsmoke and stew. A doorway leads east to more of the inn.",
       "area": "Hearthstead",
-      "terrain": "outdoor",
+      "terrain": "indoor",
       "darkness_level": 0,
       "features": {},
       "exits": [
@@ -457,6 +457,13 @@
           "direction": "north",
           "toTag": "hs_hamlet_i3"
         }
+      ],
+      "spawns": [
+        {
+          "npcName": "Garak",
+          "maxActive": 1,
+          "respawnSeconds": 300
+        }
       ]
     },
     {
@@ -464,13 +471,27 @@
       "name": "Hearthstead Inn, Back Room",
       "description": "A small but clean room at the back of the inn. A narrow bed with a wool blanket, a three-legged stool, and a basin on a shelf make up the furnishings. A small window looks out over Hearthstead's rooftops. The room is quiet, the sounds from the common room muffled by the thick walls. It smells faintly of lavender from a dried sprig tucked behind the basin.",
       "area": "Hearthstead",
-      "terrain": "outdoor",
+      "terrain": "indoor",
       "darkness_level": 0,
-      "features": {},
+      "features": {
+        "training": {
+          "enabled": true,
+          "maxLevel": 5,
+          "minLevel": 1,
+          "allowedClasses": null
+        }
+      },
       "exits": [
         {
           "direction": "south",
           "toTag": "hs_hamlet_i2"
+        }
+      ],
+      "spawns": [
+        {
+          "npcName": "Toren",
+          "maxActive": 1,
+          "respawnSeconds": 300
         }
       ]
     }

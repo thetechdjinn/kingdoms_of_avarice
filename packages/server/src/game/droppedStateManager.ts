@@ -21,6 +21,7 @@ import {
   formatDeathMessage,
 } from './damageHandler.js';
 import { colors } from '../utils/colors.js';
+import { checkHostileAggro } from './npcManager.js';
 
 let droppedStateTimer: NodeJS.Timeout | null = null;
 let droppedStateTickInProgress = false;
@@ -116,6 +117,9 @@ async function processDroppedStateTick(): Promise<void> {
         sendMessageRef(socket, MessageType.SYSTEM, colors.boldGreen('You regain consciousness and rise to your feet!'));
         broadcastToRoomRef(roomId, `${socket.username} regains consciousness and stands up.`, socket.playerId);
         sendVitalsRef(socket);
+
+        // Check for hostile NPCs now that the player is back on their feet
+        setImmediate(() => checkHostileAggro(roomId, socket));
       }
     } else {
       // Not aided: bleed 1 HP per tick

@@ -220,3 +220,60 @@ input[type="number"]::-webkit-outer-spin-button {
 input[type="number"] {
   -moz-appearance: textfield;
 }
+
+/* Class multiplier panel */
+.class-multipliers-panel {
+  margin-top: 2rem;
+  padding: 1rem;
+  background: #161b22;
+  border: 1px solid #333;
+  border-radius: 6px;
+}
+
+.class-multipliers-panel h3 {
+  color: var(--primary-color);
+  margin: 0 0 0.5rem 0;
+  font-size: 1rem;
+}
+
+.multiplier-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 0.5rem;
+}
+
+.multiplier-btn {
+  padding: 4px 10px;
+  font-size: 0.78rem;
+  background: #21262d;
+  border: 1px solid #444;
+  color: #ccc;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.multiplier-btn:hover {
+  background: #30363d;
+  border-color: #666;
+}
+
+.multiplier-btn.active {
+  background: #0e4429;
+  border-color: #00aa00;
+  color: #00ff00;
+}
+
+.selected-class-label {
+  font-size: 0.8rem;
+  color: #888;
+  margin-top: 4px;
+}
+
+/* Computed essence column */
+.col-computed-essence {
+  color: #e5c07b;
+  font-weight: 600;
+  font-style: normal;
+}

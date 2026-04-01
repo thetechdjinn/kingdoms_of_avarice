@@ -49,6 +49,7 @@ interface NpcTemplate {
   baseCritChance: number;
   baseDodge: number;
   damageReduction: number;
+  combatLevel: number;
   traits: string[];
   fleeEnabled: boolean;
   fleeHpPercent: number;
@@ -364,6 +365,7 @@ function selectTemplate(id: number): void {
   setInputValue('npc-base-crit-chance', String(template.baseCritChance));
   setInputValue('npc-base-dodge', String(template.baseDodge));
   setInputValue('npc-damage-reduction', String(template.damageReduction));
+  setInputValue('npc-combat-level', String(template.combatLevel));
   setInputValue('npc-spell-power', String(template.spellPower));
 
   // Behavior tab
@@ -791,6 +793,7 @@ function gatherFormData(): Record<string, unknown> {
     baseCritChance: getNum('npc-base-crit-chance', 5),
     baseDodge: getNum('npc-base-dodge', 5),
     damageReduction: getNum('npc-damage-reduction', 0),
+    combatLevel: getNum('npc-combat-level', 1),
 
     fleeEnabled: getChecked('npc-flee-enabled'),
     fleeHpPercent: getNum('npc-flee-hp-percent', 20),

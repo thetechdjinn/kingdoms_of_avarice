@@ -433,7 +433,7 @@ export function setupGameSocket(wss: WebSocketServer): void {
 
     // Load character progression into memory for level-up checks
     try {
-      await loadCharacterProgression(character.id, character.class);
+      await loadCharacterProgression(character.id, character.class, character.level);
     } catch (error) {
       console.error('Failed to load character progression:', error);
     }

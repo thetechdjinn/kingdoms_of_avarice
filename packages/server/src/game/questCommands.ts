@@ -9,7 +9,7 @@ import type { Quest, CharacterQuest } from '@koa/shared';
 import { CommandResponse } from './commands.js';
 import type { AuthenticatedSocket } from './socket.js';
 import { colors } from '../utils/colors.js';
-import { wordWrap } from '../utils/textFormat.js';
+import { wordWrap, renderColorMarkup } from '../utils/textFormat.js';
 import { getQuestById } from './questManager.js';
 import * as questRepo from '../db/repositories/questRepository.js';
 
@@ -163,9 +163,9 @@ async function formatQuestLog(
   lines.push(colors.boldCyan(centerText(quest.name, 57)));
   lines.push(colors.cyan(` ${border}`));
 
-  // Quest description
+  // Quest description (supports color markup)
   if (quest.description) {
-    lines.push(wordWrap(` ${quest.description}`, 78));
+    lines.push(wordWrap(renderColorMarkup(` ${quest.description}`, colors.white), 78));
     lines.push('');
   }
 

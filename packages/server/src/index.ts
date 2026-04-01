@@ -83,7 +83,8 @@ const authLimiter = rateLimit({
   legacyHeaders: false,
   message: { error: 'Too many requests, please try again later.' },
 });
-app.use('/api/auth', authLimiter);
+app.use('/api/login', authLimiter);
+app.use('/api/register', authLimiter);
 
 // IP access control middleware (runs on all API requests)
 app.use('/api', ipAccessMiddleware);

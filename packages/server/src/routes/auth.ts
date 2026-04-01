@@ -5,17 +5,15 @@ import { AuthResponse, Role } from '@koa/shared';
 import * as playerRepo from '../db/repositories/playerRepository.js';
 import * as roleRepo from '../db/repositories/roleRepository.js';
 
+if (!process.env.JWT_SECRET && process.env.NODE_ENV === 'production') {
+  throw new Error('[AUTH] FATAL: JWT_SECRET is not set. Refusing to start in production without a secure secret. Set JWT_SECRET in your environment.');
+}
+if (!process.env.JWT_SECRET) {
+  console.warn('[AUTH] WARNING: JWT_SECRET is not set. Using default dev secret. Do not use this in production.');
+}
+
 const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-change-in-production';
 const COOKIE_NAME = 'koa_token';
-
-// Warn at startup if JWT_SECRET is not configured
-if (!process.env.JWT_SECRET) {
-  if (process.env.NODE_ENV === 'production') {
-    console.error('[AUTH] CRITICAL: JWT_SECRET is not set! Tokens are signed with a hardcoded default. Set JWT_SECRET in your environment.');
-  } else {
-    console.warn('[AUTH] WARNING: JWT_SECRET is not set. Using default dev secret. Do not use this in production.');
-  }
-}
 
 // Fallback in-memory storage if database is unavailable
 const fallbackUsers = new Map<string, { id: number; passwordHash: string }>();

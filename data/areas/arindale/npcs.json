@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "exported_at": "2026-03-30T21:37:18.877Z",
+  "exported_at": "2026-04-01T02:21:30.001Z",
   "type": "npcs",
   "data": [
     {
@@ -36,6 +36,7 @@
       "enterRoomMessage": "{name} drifts in from the {direction}.",
       "exitRoomMessage": "{name} seems to float out to the room to the {direction}.",
       "spawnMessage": "{name} appears in a puff of smoke!",
+      "deathMessage": null,
       "merchantEnabled": true,
       "properName": true,
       "spellPower": 70,
@@ -108,6 +109,7 @@
       "enterRoomMessage": "{name} slips into the room from the {direction}.",
       "exitRoomMessage": "{name} slips out of the room to the {direction}.",
       "spawnMessage": "{name} appears behind the counter from the backroom.",
+      "deathMessage": null,
       "merchantEnabled": true,
       "properName": true,
       "spellPower": 0,
@@ -183,6 +185,7 @@
       "enterRoomMessage": "{name} walks in from the {direction}.",
       "exitRoomMessage": "{name} leaves to the {direction}.",
       "spawnMessage": "{name} walks into the room.",
+      "deathMessage": "{name} collapses on the floor!",
       "merchantEnabled": true,
       "properName": true,
       "spellPower": 0,
@@ -242,12 +245,12 @@
           "restockChance": 100
         },
         {
-          "itemName": "harden leather gaungtlets",
+          "itemName": "hardened leather gauntlets",
           "maxStock": 10,
           "restockChance": 100
         },
         {
-          "itemName": "harden leather boots",
+          "itemName": "hardened leather boots",
           "maxStock": 10,
           "restockChance": 100
         }

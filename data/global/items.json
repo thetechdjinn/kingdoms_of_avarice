@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "exported_at": "2026-03-30T21:37:18.824Z",
+  "exported_at": "2026-04-01T02:21:29.944Z",
   "type": "items",
   "data": [
     {
@@ -1048,7 +1048,7 @@
       "max_stack": 1,
       "armor_data": {
         "armor_type": "robe",
-        "armor_class": 10,
+        "armor_class": 1,
         "damage_resistance": 0.1
       },
       "requirements": {
@@ -2808,8 +2808,8 @@
       "rarity": "common"
     },
     {
-      "name": "harden leather gaungtlets",
-      "short_desc": "a harden leather gaungtlets",
+      "name": "hardened leather gauntlets",
+      "short_desc": "a hardened leather gauntlets",
       "long_desc": "A pair of hardened leather gauntlets encases the hands in thick, rigid hide, built to absorb impact and protect the knuckles. The stiff construction limits fine movement but provides strong defense in close combat. Reinforced plates and heavy stitching give them a rugged, battle-ready feel.",
       "keywords": [
         "harden",
@@ -2891,8 +2891,8 @@
       "rarity": "common"
     },
     {
-      "name": "harden leather boots",
-      "short_desc": "a harden leather boots",
+      "name": "hardened leather boots",
+      "short_desc": "a hardened leather boots",
       "long_desc": "A pair of hardened leather boots is crafted from thick, rigid hide, built to protect the feet from rough terrain and heavy impact. The sturdy soles and reinforced toes provide solid defense, though the stiffness makes them less comfortable for long wear. Heavy stitching and layered construction speak to their durability.",
       "keywords": [
         "harden",
@@ -2936,6 +2936,71 @@
           "warrior",
           "witchunter"
         ],
+        "level": 0,
+        "wisdom": 0,
+        "charisma": 0,
+        "strength": 0,
+        "dexterity": 0,
+        "constitution": 0,
+        "intelligence": 0
+      },
+      "stat_modifiers": {
+        "wisdom": 0,
+        "charisma": 0,
+        "max_mana": 0,
+        "strength": 0,
+        "dexterity": 0,
+        "max_health": 0,
+        "constitution": 0,
+        "intelligence": 0
+      },
+      "stealth_modifier": 0,
+      "spellcasting_modifier": 0,
+      "lockpicking_modifier": 0,
+      "perception_modifier": 0,
+      "critical_chance_modifier": 0,
+      "magic_resistance_modifier": 0,
+      "trap_modifier": 0,
+      "ac_modifier": 0,
+      "damage_resistance_modifier": 0,
+      "dodge_modifier": 0,
+      "damage_modifier": 0,
+      "energy_modifier": 0,
+      "speed_modifier": 0,
+      "defense_modifier": 0,
+      "healing_modifier": 0,
+      "vision_modifier": 0,
+      "effect_slots": 0,
+      "rarity": "common"
+    },
+    {
+      "name": "bulletin board",
+      "short_desc": "a bulletin board",
+      "long_desc": "Heartstead Village Bulitin Board\n- Available Rooms:  {red}SOLD OUT{/}, only camping available at this time.\n- Food and Beverage: See {magenta}Helga{/}\n- Training Services: See {magenta}Toren{/} in the Inn's back room.\n- To Any Able Soul: Opportunities await those willing.  See {magenta}Garak{/} in the back hall and ask {green}\"Opportunities\"{/}.",
+      "keywords": [
+        "builitin",
+        "board"
+      ],
+      "weight": 500,
+      "size": 0,
+      "base_value": 0,
+      "item_type": "misc",
+      "equipment_slot": null,
+      "flags": {
+        "cursed": false,
+        "hidden": false,
+        "fixture": true,
+        "magical": false,
+        "no_drop": false,
+        "takeable": false,
+        "stackable": true,
+        "throwable": false,
+        "two_handed": false
+      },
+      "max_stack": 1,
+      "requirements": {
+        "race": [],
+        "class": [],
         "level": 0,
         "wisdom": 0,
         "charisma": 0,
