@@ -16,7 +16,7 @@ import * as characterRepo from '../db/repositories/characterRepository.js';
 import * as itemRepo from '../db/repositories/itemRepository.js';
 import * as factionRepo from '../db/repositories/factionRepository.js';
 import { awardEssence, awardXp } from './progression.js';
-import { wordWrap, formatCopperAsDenominations, withArticle } from '../utils/textFormat.js';
+import { wordWrap, renderColorMarkup } from '../utils/textFormat.js';
 import { colors } from '../utils/colors.js';
 
 // ============================================================================
@@ -126,7 +126,7 @@ export async function checkTalkTrigger(
     // Already completed
     if (charQuest?.status === 'completed') {
       if (quest.completedDialogue && matchesTriggerText(quest, messageLower, npcTemplateId)) {
-        return formatNpcDialogue(quest.completedDialogue);
+        return formatNpcDialogue(quest.completedDialogue, socket);
       }
       continue;
     }
@@ -153,7 +153,7 @@ export async function checkTalkTrigger(
         if (!matchingItem) {
           // Player doesn't have the required item
           if (step.inProgressDialogue) {
-            return formatNpcDialogue(step.inProgressDialogue);
+            return formatNpcDialogue(step.inProgressDialogue, socket);
           }
           return null;
         }
@@ -194,7 +194,7 @@ export async function checkTalkTrigger(
       const prereqResult = await canStartQuest(characterId, quest);
       if (!prereqResult.allowed) {
         if (quest.denialDialogue) {
-          return formatNpcDialogue(quest.denialDialogue);
+          return formatNpcDialogue(quest.denialDialogue, socket);
         }
         return null;
       }
@@ -291,7 +291,7 @@ export async function checkKillTrigger(
       } else {
         // Progress update
         sendMessage(socket, MessageType.SYSTEM,
-          colors.cyan(wordWrap(`Quest progress: ${step.description} (${newCount}/${step.requiredCount})`, 80))
+          colors.white(wordWrap(`Quest progress: ${step.description} (${newCount}/${step.requiredCount})`, 80))
         );
       }
     }
@@ -359,14 +359,6 @@ async function advanceQuestStep(
   } else {
     // Advance to next step
     await questRepo.advanceStep(characterId, quest.id, nextStepOrder);
-
-    // Show next step description
-    const nextStep = getStepByOrder(quest, nextStepOrder);
-    if (nextStep) {
-      sendMessage(socket, MessageType.SYSTEM,
-        colors.cyan(wordWrap(`  New objective: ${nextStep.description}`, 80))
-      );
-    }
   }
 }
 
@@ -383,11 +375,11 @@ async function completeQuest(
     await questRepo.setQuestFlag(characterId, quest.questFlag);
   }
 
-  // Grant completion rewards
-  const rewardLines = await grantQuestRewards(socket, quest, characterId);
+  // Grant completion rewards silently
+  await grantQuestRewards(socket, quest, characterId);
 
-  // Send completion message
-  sendQuestCompleteMessage(socket, quest, rewardLines);
+  // Send completion message (designer's dialogue only)
+  sendQuestCompleteMessage(socket, quest);
 }
 
 // ============================================================================
@@ -542,173 +534,64 @@ async function grantStepRewards(
 ): Promise<void> {
   const characterId = socket.characterId!;
   await grantStepRewardsForCharacter(characterId, step);
-
-  // Send player messages
-  if (step.stepXpReward > 0) {
-    sendMessage(socket, MessageType.SYSTEM,
-      colors.green(`You gain ${step.stepXpReward} experience.`)
-    );
-  }
-  if (step.stepEssenceReward > 0) {
-    sendMessage(socket, MessageType.SYSTEM,
-      colors.green(`You gain ${step.stepEssenceReward} essence.`)
-    );
-  }
-  if (step.stepCurrencyReward > 0) {
-    sendMessage(socket, MessageType.SYSTEM,
-      colors.gold(`You receive ${formatCopperAsDenominations(step.stepCurrencyReward)}.`)
-    );
-  }
-  for (const reward of step.stepItemRewards) {
-    const template = await itemRepo.getTemplateById(reward.itemTemplateId);
-    if (template) {
-      const qty = reward.quantity > 1 ? ` (x${reward.quantity})` : '';
-      sendMessage(socket, MessageType.SYSTEM,
-        colors.green(`You receive ${colors.item(withArticle(template.name))}${qty}.`)
-      );
-    }
-  }
-  for (const reward of step.stepFactionRewards) {
-    const faction = await factionRepo.getFactionById(reward.factionId);
-    if (faction) {
-      const sign = reward.amount >= 0 ? '+' : '';
-      sendMessage(socket, MessageType.SYSTEM,
-        colors.cyan(`${sign}${reward.amount} ${faction.name} reputation.`)
-      );
-    }
-  }
+  // Rewards granted silently — the designer's dialogue text handles player-facing output
 }
 
 async function grantQuestRewards(
   socket: AuthenticatedSocket,
   quest: Quest,
   characterId: number
-): Promise<string[]> {
+): Promise<void> {
   await grantQuestRewardsForCharacter(characterId, quest);
-
-  // Build reward summary lines for the completion message
-  const rewardLines: string[] = [];
-  if (quest.xpReward > 0) {
-    rewardLines.push(`  ${quest.xpReward} experience points`);
-  }
-  if (quest.essenceReward > 0) {
-    rewardLines.push(`  ${quest.essenceReward} essence`);
-  }
-  if (quest.currencyReward > 0) {
-    rewardLines.push(`  ${formatCopperAsDenominations(quest.currencyReward)}`);
-  }
-  for (const reward of quest.itemRewards) {
-    const template = await itemRepo.getTemplateById(reward.itemTemplateId);
-    if (template) {
-      const qty = reward.quantity > 1 ? ` (x${reward.quantity})` : '';
-      rewardLines.push(`  ${withArticle(template.name)}${qty}`);
-    }
-  }
-  for (const reward of quest.factionRewards) {
-    const faction = await factionRepo.getFactionById(reward.factionId);
-    if (faction) {
-      const sign = reward.amount >= 0 ? '+' : '';
-      rewardLines.push(`  ${sign}${reward.amount} ${faction.name} reputation`);
-    }
-  }
-  return rewardLines;
+  // Rewards granted silently — the designer's dialogue text handles player-facing output
 }
 
 // ============================================================================
 // Message Formatting
 // ============================================================================
 
-function formatNpcDialogue(dialogue: string): string {
-  return wordWrap(dialogue, 80);
+function questVars(socket: AuthenticatedSocket): Record<string, string> {
+  return { name: socket.username };
+}
+
+function renderDialogue(dialogue: string, socket: AuthenticatedSocket): string {
+  return wordWrap(renderColorMarkup(dialogue, colors.white, questVars(socket)), 80);
+}
+
+function formatNpcDialogue(dialogue: string, socket: AuthenticatedSocket): string {
+  return renderDialogue(dialogue, socket);
 }
 
 function sendQuestStartMessage(
   socket: AuthenticatedSocket,
   quest: Quest,
   completedStep: QuestStep,
-  nextStep: QuestStep | null
+  _nextStep: QuestStep | null
 ): void {
-  const lines: string[] = [];
-  const header = ` New Quest: ${quest.name} `;
-  const prefix = '\u2500\u2500\u2500\u2500\u2500';
-  const suffix = '\u2500'.repeat(Math.max(0, 40 - header.length));
-  const topBorder = `${prefix}${header}${suffix}`;
-  const bottomBorder = '\u2500'.repeat(topBorder.length);
-
-  lines.push('');
-  lines.push(colors.boldCyan(` ${topBorder}`));
-
-  if (completedStep.completionDialogue) {
-    lines.push(wordWrap(` ${completedStep.completionDialogue}`, 78));
-  }
-
-  lines.push(colors.cyan(` ${bottomBorder}`));
-
-  if (nextStep) {
-    lines.push('');
-    lines.push(colors.cyan(`  Current objective: ${nextStep.description}`));
-  }
-
-  sendMessage(socket, MessageType.SYSTEM, lines.join('\r\n'));
+  if (!completedStep.completionDialogue) return;
+  sendMessage(socket, MessageType.SYSTEM, `\r\n${renderDialogue(completedStep.completionDialogue, socket)}`);
 }
 
 function sendStepCompleteMessage(
   socket: AuthenticatedSocket,
-  quest: Quest,
+  _quest: Quest,
   step: QuestStep
 ): void {
-  const lines: string[] = [];
-  const header = ` Quest Update: ${quest.name} `;
-  const prefix = '\u2500\u2500\u2500\u2500\u2500';
-  const suffix = '\u2500'.repeat(Math.max(0, 40 - header.length));
-  const topBorder = `${prefix}${header}${suffix}`;
-  const bottomBorder = '\u2500'.repeat(topBorder.length);
-
-  lines.push('');
-  lines.push(colors.boldCyan(` ${topBorder}`));
-
-  if (step.completionDialogue) {
-    lines.push(wordWrap(` ${step.completionDialogue}`, 78));
-  }
-
-  lines.push(colors.cyan(` ${bottomBorder}`));
-
-  sendMessage(socket, MessageType.SYSTEM, lines.join('\r\n'));
+  if (!step.completionDialogue) return;
+  sendMessage(socket, MessageType.SYSTEM, `\r\n${renderDialogue(step.completionDialogue, socket)}`);
 }
 
 function sendQuestCompleteMessage(
   socket: AuthenticatedSocket,
-  quest: Quest,
-  rewardLines: string[]
+  quest: Quest
 ): void {
-  const lines: string[] = [];
-  const width = 44;
-  const doubleBorder = '\u2550'.repeat(width);
-  const singleBorder = '\u2500'.repeat(width);
-
-  lines.push('');
-  lines.push(colors.gold(` ${doubleBorder}`));
-  lines.push(colors.gold(centerText('Quest Complete!', width)));
-  lines.push(colors.boldCyan(centerText(quest.name, width)));
-  lines.push(colors.gold(` ${singleBorder}`));
-
-  if (rewardLines.length > 0) {
-    lines.push(colors.white(' Rewards:'));
-    for (const line of rewardLines) {
-      lines.push(colors.green(line));
-    }
+  // The final step's completionDialogue is already shown by sendStepCompleteMessage.
+  // This fallback ensures the player always sees something when a quest completes,
+  // even if the designer omitted completionDialogue on the final step.
+  const lastStep = quest.steps[quest.steps.length - 1];
+  if (!lastStep?.completionDialogue) {
+    sendMessage(socket, MessageType.SYSTEM, `\r\n${colors.gold(`Quest complete: ${quest.name}`)}`);
   }
-
-  lines.push(colors.gold(` ${doubleBorder}`));
-
-  sendMessage(socket, MessageType.SYSTEM, lines.join('\r\n'));
-}
-
-function centerText(text: string, width: number): string {
-  // +1 accounts for the leading space used by border lines (` ${border}`)
-  const totalWidth = width + 1;
-  const padding = Math.max(0, Math.floor((totalWidth - text.length) / 2));
-  return ' '.repeat(padding) + text;
 }
 
 // ============================================================================
