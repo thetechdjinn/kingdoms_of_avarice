@@ -188,6 +188,17 @@
                 <p class="setting-desc">Crit chance above this value has diminishing returns. Default: 37 (range: 5-60).</p>
               </div>
 
+              <h3 style="margin-top: 2rem;">Progression</h3>
+
+              <div class="form-group">
+                <label for="setting-xp-overcap">XP Overcap (%)</label>
+                <div class="setting-row">
+                  <input type="number" id="setting-xp-overcap" min="0" max="200" step="1" />
+                  <button id="save-xp-overcap-btn" class="btn-small">Save</button>
+                </div>
+                <p class="setting-desc">How far XP can exceed the next level's requirement as a percentage. 0 = hard cap at level requirement, 50 = can exceed by 50%. Essence is always hard capped at the level requirement. Default: 50 (range: 0-200).</p>
+              </div>
+
               <h3 style="margin-top: 2rem;">Regeneration</h3>
 
               <div class="form-group">

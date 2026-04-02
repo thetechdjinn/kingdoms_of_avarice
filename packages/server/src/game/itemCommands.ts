@@ -3,7 +3,7 @@ import { CommandResponse } from './commands.js';
 import { AuthenticatedSocket, broadcastToRoom, sendMessage, sendVitals } from './socket.js';
 import { getPlayerLocation } from './adminCommands.js';
 import { colors } from '../utils/colors.js';
-import { wordWrap, withNpcName, withNpcNameCapitalized } from '../utils/textFormat.js';
+import { wordWrap, withNpcName, withNpcNameCapitalized, renderColorMarkup } from '../utils/textFormat.js';
 import * as itemRepo from '../db/repositories/itemRepository.js';
 import * as craftingRepo from '../db/repositories/craftingRepository.js';
 import * as characterRepo from '../db/repositories/characterRepository.js';
@@ -1009,9 +1009,9 @@ function formatItemExamine(item: ItemInstance): CommandResponse {
   // Name
   lines.push(colors.boldYellow(template.name));
 
-  // Long description (word wrapped)
+  // Long description (color markup + word wrapped)
   if (template.long_desc) {
-    lines.push(wordWrap(template.long_desc, 80));
+    lines.push(wordWrap(renderColorMarkup(template.long_desc, colors.white), 80));
   }
 
   // Condition (if not pristine)

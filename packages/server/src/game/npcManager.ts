@@ -245,7 +245,7 @@ function createNpcCombatEntity(
       wisdom: 10,
       charisma: 10,
     },
-    combatLevel: 3,  // NPCs use pre-computed stats, not combat level
+    combatLevel: template.combatLevel,
     activeEffects: new Map(),
     deathState: createAliveDeathState(),
     regenState: createNpcRegenState(),
@@ -751,7 +751,7 @@ function checkNpcAggroOnArrival(npc: NpcCombatInstance): void {
     // Skip dead/dropped players
     if (player.deathState?.isDead || player.deathState?.isDropped) continue;
 
-    // Skip hidden players unless NPC can see hidden
+    // Skip hidden players unless NPC can see hidden (sneaking players are visible)
     if (player.stealthMode === 'hidden' && !npc.canSeeHidden) continue;
 
     initiateAggro(npc, player, npc.currentRoomId);
@@ -919,7 +919,7 @@ export function checkHostileAggro(
 
     if (!isHostile && !isAngryMerchant) continue;
 
-    // Skip if player is hidden and NPC can't see hidden
+    // Skip hidden players unless NPC can see hidden (sneaking players are visible)
     if (player.stealthMode === 'hidden' && !npc.canSeeHidden) continue;
 
     // Reset hostility timer when merchant re-aggros

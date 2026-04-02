@@ -4,58 +4,132 @@
 
 import type { CurrencyDenomination } from '@koa/shared';
 import { CURRENCY_DENOMINATIONS } from '@koa/shared';
+import { colors } from './colors.js';
+
+/** Regex matching ANSI escape sequences (zero visual width in terminal) */
+const ANSI_REGEX = /\x1b\[[0-9;]*m/g;
+
+/**
+ * Return the visual width of a string, excluding ANSI escape codes.
+ */
+export function visualLength(text: string): number {
+  return text.replace(ANSI_REGEX, '').length;
+}
 
 /**
  * Word wrap text to a specified width without splitting words.
+ * - ANSI-aware: escape codes don't count toward line width
  * - Does not split words mid-word
  * - Does not leave leading spaces on wrapped lines
  * - Preserves intentional line breaks (\r\n or \n)
- * 
+ *
  * @param text - The text to wrap
  * @param width - Maximum line width (default 80)
  * @returns Wrapped text with \r\n line endings
  */
 export function wordWrap(text: string, width: number = 80): string {
   if (!text) return '';
-  
+
   // Split on existing line breaks first
   const paragraphs = text.split(/\r?\n/);
-  
+
   const wrappedParagraphs = paragraphs.map(paragraph => {
     // Trim the paragraph
     paragraph = paragraph.trim();
-    
-    if (paragraph.length <= width) {
+
+    if (visualLength(paragraph) <= width) {
       return paragraph;
     }
-    
-    const words = paragraph.split(/\s+/);
+
+    // Split into tokens preserving ANSI codes attached to adjacent words.
+    // We split on whitespace boundaries but keep ANSI codes glued to words.
+    const words = paragraph.split(/(\s+)/).filter(t => t.length > 0 && !/^\s+$/.test(t));
     const lines: string[] = [];
     let currentLine = '';
-    
+    let currentVisual = 0;
+
     for (const word of words) {
-      if (currentLine.length === 0) {
+      const wordVisual = visualLength(word);
+      if (currentVisual === 0) {
         // First word on line
         currentLine = word;
-      } else if (currentLine.length + 1 + word.length <= width) {
+        currentVisual = wordVisual;
+      } else if (currentVisual + 1 + wordVisual <= width) {
         // Word fits on current line
         currentLine += ' ' + word;
+        currentVisual += 1 + wordVisual;
       } else {
         // Word doesn't fit, start new line
         lines.push(currentLine);
         currentLine = word;
+        currentVisual = wordVisual;
       }
     }
-    
+
     // Don't forget the last line
     if (currentLine.length > 0) {
       lines.push(currentLine);
     }
-    
-    return lines.join('\r\n');
+
+    return fixAnsiLineBreaks(lines).join('\r\n');
   });
-  
+
   return wrappedParagraphs.join('\r\n');
+}
+
+const ANSI_RESET = '\x1b[0m';
+
+/**
+ * Ensure ANSI color codes don't bleed across wrapped lines.
+ * If a line ends with active styles, appends a reset and re-opens them
+ * on the next line so each line is self-contained.
+ * Tracks all active SGR codes (e.g., bold+cyan) not just the last one.
+ */
+function fixAnsiLineBreaks(lines: string[]): string[] {
+  if (lines.length <= 1) return lines;
+
+  const result: string[] = [];
+  let activeCodes: string[] = [];
+
+  for (const line of lines) {
+    const processedLine: string = activeCodes.length > 0 ? activeCodes.join('') + line : line;
+
+    // Walk only the ORIGINAL line's ANSI codes (not prepended ones) to update state
+    const currentCodes: string[] = [];
+    let hadReset = false;
+    const matches = Array.from(line.matchAll(ANSI_REGEX));
+    for (const match of matches) {
+      if (!match) continue;
+      const params = match[0].slice(2, -1); // strip \x1b[ and m
+      if (params === '0' || params === '') {
+        currentCodes.length = 0;
+        hadReset = true;
+      } else {
+        currentCodes.push(match[0]);
+      }
+    }
+
+    // Merge: if the line had a reset, only its new codes survive.
+    // Otherwise, carry forward previous codes plus any new ones, deduplicated.
+    let endCodes: string[];
+    if (hadReset) {
+      endCodes = currentCodes;
+    } else if (currentCodes.length === 0) {
+      endCodes = activeCodes;
+    } else {
+      // Deduplicate: new codes of the same type replace old ones
+      const merged = new Map<string, string>();
+      for (const code of activeCodes) merged.set(code, code);
+      for (const code of currentCodes) merged.set(code, code);
+      endCodes = [...merged.values()];
+    }
+
+    // If there are active styles at end of line, close them
+    result.push(endCodes.length > 0 ? processedLine + ANSI_RESET : processedLine);
+    activeCodes = endCodes;
+  }
+
+  return result;
 }
 
 /**
@@ -199,4 +273,112 @@ export function formatCopperAsDenominations(
   }
 
   return parts.length > 0 ? parts.join(', ') : '0 copper';
+}
+
+/**
+ * Map of color tag names to their ANSI color functions.
+ * Tag names are lowercase for case-insensitive matching.
+ */
+const COLOR_TAG_MAP: Record<string, (text: string) => string> = {
+  red: colors.red,
+  green: colors.green,
+  yellow: colors.yellow,
+  blue: colors.blue,
+  magenta: colors.magenta,
+  cyan: colors.cyan,
+  white: colors.white,
+  brightred: colors.brightRed,
+  brightgreen: colors.brightGreen,
+  brightyellow: colors.brightYellow,
+  brightblue: colors.brightBlue,
+  brightcyan: colors.brightCyan,
+  brightwhite: colors.brightWhite,
+  gray: colors.gray,
+  grey: colors.grey,
+  gold: colors.gold,
+  bold: colors.boldWhite,
+  boldcyan: colors.boldCyan,
+  boldgreen: colors.boldGreen,
+  boldyellow: colors.boldYellow,
+  boldred: colors.boldRed,
+  boldwhite: colors.boldWhite,
+  item: colors.item,
+  npc: colors.npc,
+  player: colors.player,
+  system: colors.system,
+  error: colors.error,
+};
+
+/** Regex matching {colorName} or {/} tags */
+const COLOR_TAG_REGEX = /\{(\/|[a-zA-Z]+)\}/g;
+
+/**
+ * Parse {color}text{/} markup into ANSI-colored output.
+ * Untagged text uses the provided base color function.
+ * Unrecognized tag names are left as literal text.
+ *
+ * Variable substitution: pass a variables map to replace {varName} tokens
+ * before color processing. Variables are checked first; if a tag matches
+ * a variable name it is replaced with the value, not treated as a color.
+ *
+ * @param text - Text with color markup tags
+ * @param baseColorFn - Color function for untagged text (default: colors.cyan)
+ * @param variables - Optional map of variable names to replacement values (e.g., { name: 'Aldric' })
+ * @returns ANSI-colored string
+ */
+export function renderColorMarkup(
+  text: string,
+  baseColorFn: (t: string) => string = colors.cyan,
+  variables?: Record<string, string>
+): string {
+  if (!text) return '';
+
+  // Variable substitution pass (before color parsing)
+  // Escape braces in values so they aren't interpreted as color tags
+  if (variables) {
+    for (const [key, value] of Object.entries(variables)) {
+      const safeValue = value.replace(/\{/g, '\u200B{');
+      text = text.split(`{${key}}`).join(safeValue);
+    }
+  }
+
+  const segments: string[] = [];
+  let lastIndex = 0;
+  let activeColorFn: ((t: string) => string) | null = null;
+
+  for (const match of text.matchAll(COLOR_TAG_REGEX)) {
+    const tagName = match[1];
+    const matchStart = match.index;
+
+    // Flush text before this tag
+    if (matchStart > lastIndex) {
+      const chunk = text.slice(lastIndex, matchStart);
+      segments.push(activeColorFn ? activeColorFn(chunk) : baseColorFn(chunk));
+    }
+
+    if (tagName === '/') {
+      // Close tag: revert to base color
+      activeColorFn = null;
+    } else {
+      const colorFn = COLOR_TAG_MAP[tagName.toLowerCase()];
+      if (colorFn) {
+        // Valid color: activate it
+        activeColorFn = colorFn;
+      } else {
+        // Unrecognized tag: leave as literal text
+        const literal = match[0];
+        segments.push(activeColorFn ? activeColorFn(literal) : baseColorFn(literal));
+      }
+    }
+
+    lastIndex = matchStart + match[0].length;
+  }
+
+  // Flush remaining text after last tag
+  if (lastIndex < text.length) {
+    const chunk = text.slice(lastIndex);
+    segments.push(activeColorFn ? activeColorFn(chunk) : baseColorFn(chunk));
+  }
+
+  return segments.join('');
 }

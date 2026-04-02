@@ -19,6 +19,7 @@ export interface GameSettings {
   mana_regen_enhanced_percent: number;
   blind_accuracy_penalty: number;
   crit_soft_cap: number;
+  xp_overcap_percent: number;
 }
 
 // ============================================================================
@@ -258,6 +259,11 @@ export async function getAllSettings(): Promise<GameSettings> {
           settings.crit_soft_cap = parsed;
         }
         break;
+      case 'xp_overcap_percent':
+        if (typeof parsed === 'number' && parsed >= 0 && parsed <= 200) {
+          settings.xp_overcap_percent = parsed;
+        }
+        break;
     }
   }
 
@@ -279,6 +285,7 @@ export async function getAllSettings(): Promise<GameSettings> {
     mana_regen_enhanced_percent: settings.mana_regen_enhanced_percent ?? DEFAULT_REGEN_SETTINGS.mana_regen_enhanced_percent,
     blind_accuracy_penalty: settings.blind_accuracy_penalty ?? 10,
     crit_soft_cap: settings.crit_soft_cap ?? 37,
+    xp_overcap_percent: settings.xp_overcap_percent ?? 50,
   };
 }
 
@@ -873,4 +880,36 @@ export async function getRegenSettings(): Promise<RegenSettings> {
 export function clearRegenSettingsCache(): void {
   regenSettingsCache = null;
   regenSettingsCacheTime = 0;
+}
+
+// ============================================================================
+// XP OVERCAP SETTINGS
+// ============================================================================
+
+const DEFAULT_XP_OVERCAP_PERCENT = 50;
+let xpOvercapCache: number | null = null;
+let xpOvercapCacheTime: number = 0;
+const XP_OVERCAP_CACHE_TTL = 60000;
+
+export async function getXpOvercapPercent(): Promise<number> {
+  const now = Date.now();
+
+  if (xpOvercapCache !== null && (now - xpOvercapCacheTime) < XP_OVERCAP_CACHE_TTL) {
+    return xpOvercapCache;
+  }
+
+  const value = await getSetting<number>('xp_overcap_percent');
+  const result = (typeof value === 'number' && value >= 0 && value <= 200)
+    ? value
+    : DEFAULT_XP_OVERCAP_PERCENT;
+
+  xpOvercapCache = result;
+  xpOvercapCacheTime = now;
+
+  return result;
+}
+
+export function clearXpOvercapCache(): void {
+  xpOvercapCache = null;
+  xpOvercapCacheTime = 0;
 }

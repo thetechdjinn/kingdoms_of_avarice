@@ -6,7 +6,9 @@ import { AuthenticatedSocket, connectedPlayers, sendVitals, sendMessage, broadca
 import { colors } from '../utils/colors.js';
 import * as itemRepo from '../db/repositories/itemRepository.js';
 import { isProgressionCommand, processProgressionCommand, getProgressionHelpText } from './progressionCommands.js';
+import { awardXp, awardEssence } from './progression.js';
 import { getNpcDisplayNames, getPlayersInRoom } from './commands.js';
+import { findOnlinePlayer } from './playerUtils.js';
 import { initializeDoorStates } from '../services/doorStateManager.js';
 import {
   applyEffect,
@@ -49,7 +51,7 @@ import {
   NO_LOCKPICK_BONUS,
 } from './stats/secondaryStats.js';
 import { StealthMode } from '@koa/shared';
-import { getAllNpcInstances, reloadNpcTemplates, reloadSpawnConfigs, isNpcDebugEnabled, setNpcDebug, getMerchantsInRoom, clearNpcResponseCache, findNpcInRoom } from './npcManager.js';
+import { getAllNpcInstances, reloadNpcTemplates, reloadSpawnConfigs, isNpcDebugEnabled, setNpcDebug, getMerchantsInRoom, clearNpcResponseCache, findNpcInRoom, checkHostileAggro } from './npcManager.js';
 import { evaluateSpellCondition, selectNpcSpell } from './npcSpellAI.js';
 import { resolveCombatTarget } from './combatMessaging.js';
 import * as merchantRepo from '../db/repositories/merchantRepository.js';
@@ -63,7 +65,7 @@ import { loadProgressionTableFromDb } from './progressionLoader.js';
 import { clearEquipmentCache } from './combatStats.js';
 import { reloadRegenSettings } from './regeneration.js';
 import { reloadFuelLoop } from './fuelManager.js';
-import { clearBlindAccuracyCache } from '../db/repositories/settingsRepository.js';
+import { clearBlindAccuracyCache, clearXpOvercapCache } from '../db/repositories/settingsRepository.js';
 
 interface CommandResponse {
   type: MessageType;
@@ -84,7 +86,7 @@ export function setPlayerLocation(playerId: number, roomId: number): void {
 const developerCommands = ['create', 'link', 'unlink', 'edit', 'delete', 'reload', 'spawn', 'purge', 'items', 'iteminfo', 'setstealth', 'testbackstab', 'testspell', 'lockpicking', 'npcs', 'mobbehavior', 'npcdebug', 'merchants', 'quest'];
 
 // Commands that any staff can use (Moderator+)
-const staffCommands = ['goto', 'rooms', 'roominfo', 'help', 'give', 'hurt', 'heal', 'drain', 'revive', 'teleport', 'learn', 'unlearn', 'spells', 'effect', 'cleareffect', 'effects', 'stealth'];
+const staffCommands = ['goto', 'rooms', 'roominfo', 'help', 'give', 'hurt', 'heal', 'drain', 'revive', 'teleport', 'learn', 'unlearn', 'spells', 'effect', 'cleareffect', 'effects', 'stealth', 'exp', 'essence', 'currency'];
 
 export async function processAdminCommand(
   input: string,
@@ -133,7 +135,7 @@ export async function processAdminCommand(
     case 'goto':
       return handleGoto(args, socket, world);
     case 'rooms':
-      return handleListRooms(world);
+      return handleListRooms(args, world);
     case 'roominfo':
       return handleRoomInfo(args, socket, world);
     case 'reload':
@@ -192,6 +194,10 @@ export async function processAdminCommand(
       return await handleMerchantsDebug(socket);
     case 'quest':
       return await handleQuestAdmin(args, socket);
+    case 'exp':
+      return await handleAwardExp(args, socket);
+    case 'essence':
+      return await handleAwardEssence(args, socket);
     case 'help':
       return handleAdminHelp(userRoles);
     default:
@@ -415,21 +421,34 @@ async function handleGoto(
   const itemDescriptions = await getRoomItemsDescription(roomId);
   const playersInRoom = getPlayersInRoom(roomId, connectedPlayers, socket.canSeeHidden, socket.playerId);
   const npcNames = getNpcDisplayNames(roomId);
+
+  // Check for hostile NPCs after teleporting into the room
+  setImmediate(() => checkHostileAggro(roomId, socket));
+
   return {
     type: MessageType.OUTPUT,
     message: `${colors.system('You teleport...')}\r\n\r\n${world.formatRoomDescription(room, playersInRoom, false, itemDescriptions, npcNames)}`,
   };
 }
 
-function handleListRooms(world: GameWorld): CommandResponse {
-  const rooms = world.getAllRooms();
-  
+function handleListRooms(args: string[], world: GameWorld): CommandResponse {
+  let rooms = world.getAllRooms();
+
+  // Filter by name or area if argument provided
+  const filter = args.join(' ').toLowerCase();
+  if (filter) {
+    rooms = rooms.filter(r =>
+      r.name.toLowerCase().includes(filter) ||
+      (r.area || '').toLowerCase().includes(filter)
+    );
+  }
+
   if (rooms.length === 0) {
-    return { type: MessageType.SYSTEM, message: 'No rooms exist.' };
+    return { type: MessageType.SYSTEM, message: filter ? `No rooms matching "${filter}".` : 'No rooms exist.' };
   }
 
   const lines = [
-    colors.boldYellow(`Rooms (${rooms.length} total):`),
+    colors.boldYellow(`Rooms (${rooms.length}${filter ? ` matching "${filter}"` : ' total'}):`),
     '',
   ];
 
@@ -580,6 +599,7 @@ async function handleReload(
       await reloadRegenSettings();
       await reloadFuelLoop();
       clearBlindAccuracyCache();
+      clearXpOvercapCache();
       results.push(`${colors.green('✓')} Reloaded settings and restarted regen/fuel loops`);
     }
 
@@ -2007,6 +2027,70 @@ async function handleQuestAdminAdvance(
   };
 }
 
+async function handleAwardExp(
+  args: string[],
+  socket: AuthenticatedSocket
+): Promise<CommandResponse> {
+  // @exp <amount> <player>
+  if (args.length < 2) {
+    return { type: MessageType.ERROR, message: 'Usage: @exp <amount> <player>' };
+  }
+
+  const amount = parseInt(args[0]);
+  if (isNaN(amount) || amount <= 0) {
+    return { type: MessageType.ERROR, message: 'Amount must be a positive number.' };
+  }
+
+  const targetSocket = findOnlinePlayer(args.slice(1).join(' '), connectedPlayers, -1);
+  if (!targetSocket || !targetSocket.characterId) {
+    return { type: MessageType.ERROR, message: `Player not found: ${args.slice(1).join(' ')}` };
+  }
+
+  const awarded = await awardXp(targetSocket.characterId, amount);
+  if (!awarded) {
+    return { type: MessageType.ERROR, message: `Failed to award XP (may be at cap).` };
+  }
+
+  sendVitals(targetSocket);
+  if (targetSocket.playerId !== socket.playerId) {
+    sendMessage(targetSocket, MessageType.SYSTEM, colors.green(`You gain ${awarded} experience from a divine blessing.`));
+  }
+
+  return { type: MessageType.OUTPUT, message: colors.green(`Awarded ${awarded} XP to ${targetSocket.username}.`) };
+}
+
+async function handleAwardEssence(
+  args: string[],
+  socket: AuthenticatedSocket
+): Promise<CommandResponse> {
+  // @essence <amount> <player>
+  if (args.length < 2) {
+    return { type: MessageType.ERROR, message: 'Usage: @essence <amount> <player>' };
+  }
+
+  const amount = parseInt(args[0]);
+  if (isNaN(amount) || amount <= 0) {
+    return { type: MessageType.ERROR, message: 'Amount must be a positive number.' };
+  }
+
+  const targetSocket = findOnlinePlayer(args.slice(1).join(' '), connectedPlayers, -1);
+  if (!targetSocket || !targetSocket.characterId) {
+    return { type: MessageType.ERROR, message: `Player not found: ${args.slice(1).join(' ')}` };
+  }
+
+  const awarded = await awardEssence(targetSocket.characterId, amount);
+  if (!awarded) {
+    return { type: MessageType.ERROR, message: `Failed to award essence (may be at cap).` };
+  }
+
+  sendVitals(targetSocket);
+  if (targetSocket.playerId !== socket.playerId) {
+    sendMessage(targetSocket, MessageType.SYSTEM, colors.green(`You gain ${awarded} essence from a divine blessing.`));
+  }
+
+  return { type: MessageType.OUTPUT, message: colors.green(`Awarded ${awarded} essence to ${targetSocket.username}.`) };
+}
+
 function handleAdminHelp(userRoles: Role[]): CommandResponse {
   const isDeveloper = hasAnyRole(userRoles, [Role.DEVELOPER, Role.ADMIN]);
   
@@ -2017,10 +2101,12 @@ function handleAdminHelp(userRoles: Role[]): CommandResponse {
 
   // Staff commands (Moderator+)
   lines.push(`  ${colors.boldCyan('@goto <id>')}              - Teleport to a room`);
-  lines.push(`  ${colors.boldCyan('@rooms')}                  - List all rooms`);
+  lines.push(`  ${colors.boldCyan('@rooms [filter]')}          - List rooms (filter by name or area)`);
   lines.push(`  ${colors.boldCyan('@roominfo [id]')}          - Show room details`);
   lines.push(`  ${colors.boldCyan('@give <id|name> [quantity]')} - Give yourself an item`);
   lines.push(`  ${colors.boldCyan('@currency <amount> [type]')} - Give yourself currency (default: gold)`);
+  lines.push(`  ${colors.boldCyan('@exp <amount> <player>')}  - Award experience to a player`);
+  lines.push(`  ${colors.boldCyan('@essence <amount> <player>')} - Award essence to a player`);
   lines.push(`  ${colors.boldCyan('@hurt [amount] [player]')} - Damage HP (for testing regen)`);
   lines.push(`  ${colors.boldCyan('@heal [amount] [player]')} - Restore HP (heals self or player)`);
   lines.push(`  ${colors.boldCyan('@drain [amount] [player]')} - Drain mana (for testing regen)`);

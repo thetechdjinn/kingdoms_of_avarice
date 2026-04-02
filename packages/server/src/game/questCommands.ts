@@ -9,7 +9,7 @@ import type { Quest, CharacterQuest } from '@koa/shared';
 import { CommandResponse } from './commands.js';
 import type { AuthenticatedSocket } from './socket.js';
 import { colors } from '../utils/colors.js';
-import { wordWrap } from '../utils/textFormat.js';
+import { wordWrap, renderColorMarkup } from '../utils/textFormat.js';
 import { getQuestById } from './questManager.js';
 import * as questRepo from '../db/repositories/questRepository.js';
 
@@ -149,13 +149,14 @@ async function handleQuestLog(
     return { type: MessageType.ERROR, message: 'Quest not found.' };
   }
 
-  return formatQuestLog(targetQuest, targetCq, characterId);
+  return formatQuestLog(targetQuest, targetCq, characterId, socket);
 }
 
 async function formatQuestLog(
   quest: Quest,
   cq: CharacterQuest,
-  characterId: number
+  characterId: number,
+  socket: AuthenticatedSocket
 ): Promise<CommandResponse> {
   const border = '\u2500'.repeat(57);
   const lines: string[] = [];
@@ -163,9 +164,9 @@ async function formatQuestLog(
   lines.push(colors.boldCyan(centerText(quest.name, 57)));
   lines.push(colors.cyan(` ${border}`));
 
-  // Quest description
+  // Quest description (supports color markup)
   if (quest.description) {
-    lines.push(wordWrap(` ${quest.description}`, 78));
+    lines.push(wordWrap(renderColorMarkup(` ${quest.description}`, colors.white, { name: socket.username }), 78));
     lines.push('');
   }
 
@@ -211,7 +212,7 @@ async function handleQuestInfo(
   for (const cq of activeQuests) {
     const quest = getQuestById(cq.questId);
     if (quest && quest.name.toLowerCase().includes(nameSearch)) {
-      return formatQuestLog(quest, cq, characterId);
+      return formatQuestLog(quest, cq, characterId, socket);
     }
   }
 

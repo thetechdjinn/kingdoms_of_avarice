@@ -141,6 +141,12 @@ export function setupAdminRoutes(app: Express): void {
         res.status(400).json({ success: false, message: 'Critical hit soft cap must be a whole number between 5 and 60' });
         return;
       }
+    } else if (key === 'xp_overcap_percent') {
+      const numValue = Number(value);
+      if (isNaN(numValue) || !Number.isInteger(numValue) || numValue < 0 || numValue > 200) {
+        res.status(400).json({ success: false, message: 'XP overcap percent must be a whole number between 0 and 200' });
+        return;
+      }
     } else if (key in settingsRepo.BACKSTAB_SETTING_RANGES) {
       const numValue = Number(value);
       const range = settingsRepo.BACKSTAB_SETTING_RANGES[key as settingsRepo.BackstabSettingKey];
@@ -185,6 +191,9 @@ export function setupAdminRoutes(app: Express): void {
       }
       if (key === 'blind_accuracy_penalty') {
         settingsRepo.clearBlindAccuracyCache();
+      }
+      if (key === 'xp_overcap_percent') {
+        settingsRepo.clearXpOvercapCache();
       }
       if (key.match(/^(health|mana)_(tick_interval_ms|regen_(base|enhanced)_percent)$/)) {
         settingsRepo.clearRegenSettingsCache();

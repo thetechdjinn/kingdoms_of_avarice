@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "exported_at": "2026-03-30T21:37:18.876Z",
+  "exported_at": "2026-04-01T02:21:30.000Z",
   "type": "npcs",
   "data": [
     {
@@ -34,6 +34,7 @@
       "enterRoomMessage": "{name} walks into the room from the {direction}.",
       "exitRoomMessage": "{name} leaves to the {direction}.",
       "spawnMessage": "{name} walks into the room.",
+      "deathMessage": null,
       "merchantEnabled": true,
       "properName": true,
       "spellPower": 0,
@@ -99,6 +100,7 @@
       "enterRoomMessage": "{name} walks in from the {direction}.",
       "exitRoomMessage": "{name} leaves to the {direction}.",
       "spawnMessage": "{name} walks into the room.",
+      "deathMessage": null,
       "merchantEnabled": true,
       "properName": true,
       "spellPower": 0,
@@ -146,6 +148,14 @@
           "maxStock": 10,
           "restockChance": 100
         }
+      ],
+      "npcResponses": [
+        {
+          "triggerKeywords": [
+            "list"
+          ],
+          "response": "Mark's a bitch!"
+        }
       ]
     },
     {
@@ -179,6 +189,7 @@
       "enterRoomMessage": "{name} walks meekly into the room from the {direction}.",
       "exitRoomMessage": "{name} walks meekly out of the room to the {direction}.",
       "spawnMessage": "{name} walks meekly into the room.",
+      "deathMessage": null,
       "merchantEnabled": true,
       "properName": true,
       "spellPower": 30,
@@ -264,6 +275,7 @@
       "enterRoomMessage": "{name} walks in from the {direction}.",
       "exitRoomMessage": "{name} leaves to the {direction}.",
       "spawnMessage": "{name} walks into the room.",
+      "deathMessage": null,
       "merchantEnabled": true,
       "properName": true,
       "spellPower": 0,
@@ -316,6 +328,120 @@
             "healing"
           ],
           "response": "I have healing potions that I can offer. Type 'list' to see what I have to offer."
+        }
+      ]
+    },
+    {
+      "name": "Garak",
+      "description": "A weathered man sits at a worn table, his cloak draped loosely around him and a mug never far from reach. A faint scar runs along his jaw, and his steady eyes seem to measure your worth in a single glance. He carries himself with quiet confidence, like someone who has survived more than most.",
+      "health": 100,
+      "maxHealth": 100,
+      "hostile": false,
+      "level": 5,
+      "experienceReward": 50,
+      "maxMana": 0,
+      "baseAccuracy": 50,
+      "baseDefense": 50,
+      "baseCritChance": 5,
+      "baseDodge": 5,
+      "damageReduction": 0,
+      "traits": [],
+      "fleeEnabled": false,
+      "fleeHpPercent": 20,
+      "callForHelpChance": 0,
+      "interactable": true,
+      "allowedAreas": [],
+      "roamEnabled": false,
+      "roamInterval": 60,
+      "roamChance": 10,
+      "essenceReward": 0,
+      "essenceClass": null,
+      "leaveCorpse": true,
+      "corpseDuration": 300,
+      "augmentations": [],
+      "enterRoomMessage": "{name} strides in from the {direction}.",
+      "exitRoomMessage": "{name} strides out from the {direction}.",
+      "spawnMessage": "{name} strides in to the room.",
+      "deathMessage": "{name} collapses with a grunt.",
+      "merchantEnabled": false,
+      "properName": true,
+      "spellPower": 0,
+      "enabled": true,
+      "attacks": [
+        {
+          "attackType": "melee",
+          "name": "dagger",
+          "minDamage": 4,
+          "maxDamage": 8,
+          "attacksPerRound": 3,
+          "percentage": 100,
+          "hitMessage": "{name} slahes {target} ripping them open for {damage} damage!",
+          "missMessage": "{name} slashes at {target}, but misses!",
+          "hitVerb": "slash",
+          "hitVerb3p": "slashes",
+          "missVerb": "swing at",
+          "missVerb3p": "swings at"
+        }
+      ]
+    },
+    {
+      "name": "Toren",
+      "description": "A broad-shouldered man stands with practiced ease, his stance balanced and ready even at rest. His arms are marked with old scars, each one a quiet lesson earned the hard way. His sharp eyes follow every movement around him, watching for flaws, hesitation, and potential alike.",
+      "health": 100,
+      "maxHealth": 100,
+      "hostile": false,
+      "level": 10,
+      "experienceReward": 10,
+      "maxMana": 0,
+      "baseAccuracy": 50,
+      "baseDefense": 50,
+      "baseCritChance": 20,
+      "baseDodge": 20,
+      "damageReduction": 25,
+      "traits": [],
+      "fleeEnabled": false,
+      "fleeHpPercent": 20,
+      "callForHelpChance": 0,
+      "interactable": true,
+      "allowedAreas": [],
+      "roamEnabled": false,
+      "roamInterval": 60,
+      "roamChance": 10,
+      "essenceReward": 0,
+      "essenceClass": null,
+      "leaveCorpse": true,
+      "corpseDuration": 300,
+      "augmentations": [],
+      "enterRoomMessage": "{name} strides into the from from the {direction}.",
+      "exitRoomMessage": "{name} strides out of the from to the {direction}.",
+      "spawnMessage": "{name} strides into the room.",
+      "deathMessage": "{name} falls to the floor....beaten.",
+      "merchantEnabled": false,
+      "properName": true,
+      "spellPower": 0,
+      "enabled": true,
+      "attacks": [
+        {
+          "attackType": "melee",
+          "name": "fists",
+          "minDamage": 4,
+          "maxDamage": 9,
+          "attacksPerRound": 4,
+          "percentage": 100,
+          "hitMessage": "{name} uppercuts {target} for {damage} damage!",
+          "missMessage": "{name} swings at {target}, but barely misses!",
+          "hitVerb": "punch",
+          "hitVerb3p": "punches",
+          "missVerb": "swing at",
+          "missVerb3p": "swings at"
+        }
+      ],
+      "npcResponses": [
+        {
+          "triggerKeywords": [
+            "train"
+          ],
+          "response": "Yes, I can train you.  Type \"train\" to train, and \"train stats\" to train your stats."
         }
       ]
     }

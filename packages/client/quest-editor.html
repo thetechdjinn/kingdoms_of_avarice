@@ -67,8 +67,8 @@
 
               <div class="form-row">
                 <div class="form-group">
-                  <label for="quest-giver-npc">Quest Giver NPC ID</label>
-                  <input type="number" id="quest-giver-npc" min="1" placeholder="None" />
+                  <label>Quest Giver NPC</label>
+                  <div id="quest-giver-npc-container"></div>
                 </div>
                 <div class="form-group">
                   <label for="quest-sort-order">Sort Order</label>
@@ -172,6 +172,30 @@
 
             <!-- Dialogue Tab -->
             <div class="tab-content" id="tab-dialogue">
+              <div class="color-tag-legend">
+                <div class="legend-title">Color Tags</div>
+                <div class="legend-text">Use <code>{color}text{/}</code> to highlight words. Available colors:</div>
+                <div class="legend-colors">
+                  <span class="legend-swatch" style="color: #e06c75;">red</span>
+                  <span class="legend-swatch" style="color: #98c379;">green</span>
+                  <span class="legend-swatch" style="color: #e5c07b;">yellow</span>
+                  <span class="legend-swatch" style="color: #61afef;">blue</span>
+                  <span class="legend-swatch" style="color: #c678dd;">magenta</span>
+                  <span class="legend-swatch" style="color: #56b6c2;">cyan</span>
+                  <span class="legend-swatch" style="color: #abb2bf;">white</span>
+                  <span class="legend-swatch" style="color: #888;">gray</span>
+                  <span class="legend-swatch" style="color: #e5c07b; font-weight: bold;">gold</span>
+                  <span class="legend-swatch" style="color: #56b6c2; font-weight: bold;">boldCyan</span>
+                  <span class="legend-swatch" style="color: #e5c07b; font-weight: bold;">boldYellow</span>
+                  <span class="legend-swatch" style="color: #98c379; font-weight: bold;">boldGreen</span>
+                  <span class="legend-swatch" style="color: #e06c75; font-weight: bold;">boldRed</span>
+                  <span class="legend-swatch" style="color: #61afef; font-weight: bold;">brightBlue</span>
+                  <span class="legend-swatch" style="color: #56b6c2; font-weight: bold;">brightCyan</span>
+                </div>
+                <div class="legend-text">Example: <code>Talk to {boldCyan}Elder Maren{/} and say {boldYellow}ask about ruby{/}</code></div>
+                <div class="legend-text">Variables: <code>{name}</code> = player's character name. E.g., <code>"Ah, {name}, I've been expecting you."</code></div>
+              </div>
+
               <div class="form-group">
                 <label for="quest-denial-dialogue">Denial Dialogue <span class="hint-inline">(NPC says this if player doesn't meet requirements)</span></label>
                 <textarea id="quest-denial-dialogue" rows="3" placeholder="I cannot help you yet..."></textarea>

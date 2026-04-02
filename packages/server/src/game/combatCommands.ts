@@ -13,7 +13,7 @@ import { colors } from '../utils/colors.js';
 import { withNpcName, withNpcNameCapitalized } from '../utils/textFormat.js';
 import { findPlayerInRoom } from './playerUtils.js';
 import { isStealthing, breakStealth } from './stealth/stealthState.js';
-import { getAllNpcInstances, findNpcInRoom, getNpcInstance, resetNpcBehaviorState, setMerchantHostile } from './npcManager.js';
+import { getAllNpcInstances, findNpcInRoom, getNpcInstance, resetNpcBehaviorState, setMerchantHostile, checkHostileAggro } from './npcManager.js';
 import type { NpcCombatInstance } from './npcManager.js';
 
 /**
@@ -172,6 +172,9 @@ export function handleAttack(
     `${colors.combatAttacker(socket.username)} moves to attack ${colors.combatDefender(withNpcName(npcTarget.entityName, npcTarget.isProperName))}.`,
     socket.playerId
   );
+
+  // Other hostile NPCs in the room notice the commotion and aggro
+  setImmediate(() => checkHostileAggro(currentRoomId, socket));
 
   return {
     type: MessageType.OUTPUT,

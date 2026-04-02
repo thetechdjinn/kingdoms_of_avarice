@@ -14,7 +14,7 @@
       <main id="progression-table-panel">
         <div class="table-header">
           <h2>Progression Table</h2>
-          <p class="hint">Define the XP and essence requirements for each character level. Level 1 is implicit (no requirements).</p>
+          <p class="hint">Define the XP and base essence requirements for each character level. Level 1 is implicit (no requirements). The actual essence a player needs is: base essence &times; class multiplier.</p>
         </div>
 
         <div id="status-message" class="status-message" style="display: none;"></div>
@@ -25,7 +25,8 @@
               <tr>
                 <th class="col-level">Level</th>
                 <th class="col-xp">XP Required</th>
-                <th class="col-essence">Essence Required</th>
+                <th class="col-essence">Base Essence</th>
+                <th class="col-computed-essence" id="computed-essence-header">Actual Essence</th>
                 <th class="col-growth">Growth</th>
                 <th class="col-total">Total XP</th>
                 <th class="col-actions">Actions</th>
@@ -44,9 +45,10 @@
                   <input type="number" id="new-xp" min="1" placeholder="XP required" class="input-xp" />
                 </td>
                 <td>
-                  <label for="new-essence" class="sr-only">Essence Required</label>
-                  <input type="number" id="new-essence" min="0" placeholder="Essence required" class="input-essence" />
+                  <label for="new-essence" class="sr-only">Base Essence</label>
+                  <input type="number" id="new-essence" min="0" placeholder="Base essence" class="input-essence" />
                 </td>
+                <td class="col-calculated">--</td>
                 <td class="col-calculated">--</td>
                 <td class="col-calculated">--</td>
                 <td>
@@ -55,6 +57,12 @@
               </tr>
             </tfoot>
           </table>
+        </div>
+        <div id="class-multipliers" class="class-multipliers-panel" style="display: none;">
+          <h3>Class Essence Multipliers</h3>
+          <p class="hint">Actual essence required = base essence &times; multiplier. Select a class to see computed values in the table.</p>
+          <div id="class-multiplier-list" class="multiplier-list"></div>
+          <div id="selected-class-label" class="selected-class-label"></div>
         </div>
       </main>
     </div>

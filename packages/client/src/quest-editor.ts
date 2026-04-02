@@ -1,6 +1,8 @@
 import { renderNav } from './components/nav.js';
 import { initAuth } from './components/auth.js';
 import { showConfirm } from './components/modal.js';
+import { SearchableSelect } from './components/searchable-select.js';
+import type { SelectOption } from './components/searchable-select.js';
 
 (function() {
 
@@ -65,6 +67,8 @@ interface Quest {
 
 let quests: Quest[] = [];
 let selectedQuestId: number | null = null;
+let npcOptions: SelectOption[] = [];
+let questGiverSelect: SearchableSelect | null = null;
 // ============================================================================
 // Toast Notifications
 // ============================================================================
@@ -121,6 +125,124 @@ function parseCommaSeparated(value: string | undefined | null): string[] | null 
 function parseCommaNumbers(value: string | undefined | null): number[] {
   if (!value || value.trim() === '') return [];
   return value.split(',').map(s => parseInt(s.trim(), 10)).filter(n => !isNaN(n));
+}
+
+// ============================================================================
+// NPC Data
+// ============================================================================
+
+async function fetchNpcs(): Promise<void> {
+  try {
+    const response = await fetch('/api/npcs', { credentials: 'include' });
+    if (!response.ok) return;
+    const data = await response.json();
+    const templates = data.templates || [];
+    npcOptions = templates.map((t: { id: number; name: string }) => ({
+      value: String(t.id),
+      label: `${t.name} (#${t.id})`,
+    }));
+  } catch (error) {
+    console.error('Failed to fetch NPCs:', error);
+  }
+}
+
+function getNpcLabel(id: number | null): string {
+  if (id === null) return '';
+  const opt = npcOptions.find(o => o.value === String(id));
+  return opt ? opt.label : `Unknown NPC #${id}`;
+}
+
+// ============================================================================
+// Color Markup Preview
+// ============================================================================
+
+const COLOR_PREVIEW_MAP: Record<string, string> = {
+  red: '#e06c75', green: '#98c379', yellow: '#e5c07b', blue: '#61afef',
+  magenta: '#c678dd', cyan: '#56b6c2', white: '#abb2bf', gray: '#888', grey: '#888',
+  gold: '#e5c07b', bold: '#fff',
+  brightred: '#e06c75', brightgreen: '#98c379', brightyellow: '#e5c07b',
+  brightblue: '#61afef', brightcyan: '#56b6c2', brightwhite: '#fff',
+  boldcyan: '#56b6c2', boldgreen: '#98c379', boldyellow: '#e5c07b',
+  boldred: '#e06c75', boldwhite: '#fff',
+  item: '#61afef', npc: '#c678dd', player: '#56b6c2', system: '#e5c07b', error: '#e06c75',
+};
+
+const BOLD_TAGS = new Set(['bold', 'boldcyan', 'boldgreen', 'boldyellow', 'boldred', 'boldwhite']);
+
+/** Variables replaced before color parsing in preview */
+const PREVIEW_VARIABLES: Record<string, string> = {
+  name: 'PlayerName',
+};
+
+function renderColorPreviewHtml(raw: string): string {
+  if (!raw) return '';
+  // Variable substitution before color parsing
+  let text = raw;
+  for (const [key, value] of Object.entries(PREVIEW_VARIABLES)) {
+    text = text.split(`{${key}}`).join(value);
+  }
+  const baseColor = '#56b6c2'; // cyan
+  let result = '';
+  let lastIndex = 0;
+  let activeColor: string | null = null;
+  let activeBold = false;
+
+  const regex = /\{(\/|[a-zA-Z]+)\}/g;
+  for (const match of text.matchAll(regex)) {
+    const tagName = match[1];
+    const matchStart = match.index;
+
+    // Flush text before this tag
+    if (matchStart > lastIndex) {
+      const chunk = escapeHtml(text.slice(lastIndex, matchStart));
+      const color = activeColor ?? baseColor;
+      const weight = activeBold ? 'font-weight:bold;' : '';
+      result += `<span style="color:${color};${weight}">${chunk}</span>`;
+    }
+
+    if (tagName === '/') {
+      activeColor = null;
+      activeBold = false;
+    } else {
+      const lower = tagName.toLowerCase();
+      const previewColor = COLOR_PREVIEW_MAP[lower];
+      if (previewColor) {
+        activeColor = previewColor;
+        activeBold = BOLD_TAGS.has(lower);
+      } else {
+        // Unrecognized tag: render as literal
+        const literal = escapeHtml(match[0]);
+        const color = activeColor ?? baseColor;
+        const weight = activeBold ? 'font-weight:bold;' : '';
+        result += `<span style="color:${color};${weight}">${literal}</span>`;
+      }
+    }
+
+    lastIndex = matchStart + match[0].length;
+  }
+
+  // Flush remaining text
+  if (lastIndex < text.length) {
+    const chunk = escapeHtml(text.slice(lastIndex));
+    const color = activeColor ?? baseColor;
+    const weight = activeBold ? 'font-weight:bold;' : '';
+    result += `<span style="color:${color};${weight}">${chunk}</span>`;
+  }
+
+  return result;
+}
+
+function attachColorPreview(textarea: HTMLTextAreaElement): void {
+  const preview = document.createElement('div');
+  preview.className = 'color-preview';
+  textarea.parentElement?.appendChild(preview);
+
+  const update = () => {
+    preview.innerHTML = renderColorPreviewHtml(textarea.value) || '<span style="color:#555;">Preview...</span>';
+  };
+
+  textarea.addEventListener('input', update);
+  update();
 }
 
 // ============================================================================
@@ -186,8 +308,9 @@ function selectQuest(id: number): void {
   if (nameInput) nameInput.value = quest.name;
   const descInput = getElement<HTMLTextAreaElement>('quest-description');
   if (descInput) descInput.value = quest.description || '';
-  const giverInput = getElement<HTMLInputElement>('quest-giver-npc');
-  if (giverInput) giverInput.value = quest.questGiverNpcId?.toString() || '';
+  if (questGiverSelect) {
+    questGiverSelect.setValue(quest.questGiverNpcId ? String(quest.questGiverNpcId) : null);
+  }
   const sortInput = getElement<HTMLInputElement>('quest-sort-order');
   if (sortInput) sortInput.value = quest.sortOrder.toString();
   const flagInput = getElement<HTMLInputElement>('quest-flag');
@@ -224,11 +347,11 @@ function selectQuest(id: number): void {
   renderItemRewards(quest.itemRewards);
   renderFactionRewards(quest.factionRewards);
 
-  // Dialogue tab
+  // Dialogue tab (dispatch input event to update color previews)
   const denialInput = getElement<HTMLTextAreaElement>('quest-denial-dialogue');
-  if (denialInput) denialInput.value = quest.denialDialogue || '';
+  if (denialInput) { denialInput.value = quest.denialDialogue || ''; denialInput.dispatchEvent(new Event('input')); }
   const completedInput = getElement<HTMLTextAreaElement>('quest-completed-dialogue');
-  if (completedInput) completedInput.value = quest.completedDialogue || '';
+  if (completedInput) { completedInput.value = quest.completedDialogue || ''; completedInput.dispatchEvent(new Event('input')); }
 
   // Steps tab
   renderSteps(quest.steps);
@@ -244,6 +367,13 @@ function selectQuest(id: number): void {
 function renderSteps(steps: QuestStep[]): void {
   const container = document.getElementById('steps-container');
   if (!container) return;
+
+  // Destroy SearchableSelect instances on existing cards to prevent listener leaks
+  container.querySelectorAll('.step-card').forEach(card => {
+    const select = (card as HTMLElement & { _npcSelect?: SearchableSelect })._npcSelect;
+    if (select) select.destroy();
+  });
+
   container.innerHTML = '';
 
   for (let i = 0; i < steps.length; i++) {
@@ -288,16 +418,16 @@ function createStepCard(step: QuestStep, index: number): HTMLElement {
     </div>
     <div class="step-row-3">
       <div class="step-field">
-        <label>NPC ID</label>
-        <input type="number" class="step-npc-id" min="1" value="${step.triggerNpcId ?? ''}" placeholder="None" />
+        <label>NPC</label>
+        <div class="step-npc-container"></div>
       </div>
       <div class="step-field">
-        <label>Room ID</label>
+        <label>Visit Room ID <span class="hint-inline">(room player must enter)</span></label>
         <input type="number" class="step-room-id" min="1" value="${step.triggerRoomId ?? ''}" placeholder="None" />
       </div>
       <div class="step-field">
-        <label>Item Template ID</label>
-        <input type="number" class="step-item-id" min="1" value="${step.triggerItemTemplateId ?? ''}" placeholder="None" />
+        <label>Required Item <span class="hint-inline">(must have when talking)</span></label>
+        <input type="number" class="step-item-id" min="1" value="${step.triggerItemTemplateId ?? ''}" placeholder="Item template ID" />
       </div>
     </div>
     <div class="step-row">
@@ -305,8 +435,9 @@ function createStepCard(step: QuestStep, index: number): HTMLElement {
         <label>Trigger Text</label>
         <input type="text" class="step-trigger-text" value="${escapeHtml(step.triggerText || '')}" placeholder="Keyword for talk trigger" />
       </div>
-      <div class="step-field">
-        <label class="toggle-label" style="margin-top: 18px;">
+      <div class="step-field step-field-toggle">
+        <label>&nbsp;</label>
+        <label class="toggle-label">
           <input type="checkbox" class="step-consume-item" ${step.consumeItem ? 'checked' : ''} />
           <span class="toggle-track"></span>
           Consume Item
@@ -314,12 +445,12 @@ function createStepCard(step: QuestStep, index: number): HTMLElement {
       </div>
     </div>
     <div class="step-field">
-      <label>Completion Dialogue</label>
-      <textarea class="step-completion-dialogue" rows="2" placeholder="NPC says on step completion...">${escapeHtml(step.completionDialogue || '')}</textarea>
+      <label>Completion Dialogue <span class="hint-inline">(shown to player when step completes, supports {color} tags)</span></label>
+      <textarea class="step-completion-dialogue" rows="5" placeholder="The narrative text the player sees when this step completes. Use {boldCyan}NPC names{/} and {boldYellow}trigger phrases{/} to highlight key info.">${escapeHtml(step.completionDialogue || '')}</textarea>
     </div>
     <div class="step-field">
-      <label>In-Progress Dialogue</label>
-      <textarea class="step-in-progress-dialogue" rows="2" placeholder="NPC says if step not yet complete...">${escapeHtml(step.inProgressDialogue || '')}</textarea>
+      <label>In-Progress Dialogue <span class="hint-inline">(NPC says if player hasn't met requirements yet)</span></label>
+      <textarea class="step-in-progress-dialogue" rows="3" placeholder="e.g., Have you found the crystal key yet?">${escapeHtml(step.inProgressDialogue || '')}</textarea>
     </div>
     <div class="step-row-3">
       <div class="step-field">
@@ -342,6 +473,27 @@ function createStepCard(step: QuestStep, index: number): HTMLElement {
   card.querySelector('.btn-move-down')?.addEventListener('click', () => moveStep(index, 1));
   card.querySelector('.btn-remove')?.addEventListener('click', () => removeStep(index));
 
+  // Initialize NPC search dropdown for this step
+  const npcContainer = card.querySelector('.step-npc-container') as HTMLElement;
+  if (npcContainer) {
+    const stepNpcSelect = new SearchableSelect({
+      container: npcContainer,
+      placeholder: 'Search NPCs...',
+      options: npcOptions,
+    });
+    if (step.triggerNpcId) {
+      stepNpcSelect.setValue(String(step.triggerNpcId));
+    }
+    // Store reference on the card for retrieval in getStepsFromForm
+    (card as HTMLElement & { _npcSelect?: SearchableSelect })._npcSelect = stepNpcSelect;
+  }
+
+  // Attach color previews to step dialogue textareas
+  const completionTextarea = card.querySelector('.step-completion-dialogue') as HTMLTextAreaElement;
+  if (completionTextarea) attachColorPreview(completionTextarea);
+  const inProgressTextarea = card.querySelector('.step-in-progress-dialogue') as HTMLTextAreaElement;
+  if (inProgressTextarea) attachColorPreview(inProgressTextarea);
+
   return card;
 }
 
@@ -359,7 +511,7 @@ function getStepsFromForm(): QuestStep[] {
       description: (el.querySelector('.step-description') as HTMLInputElement)?.value || '',
       triggerType: (el.querySelector('.step-trigger-type') as HTMLSelectElement)?.value || 'talk',
       requiredCount: parseInt((el.querySelector('.step-required-count') as HTMLInputElement)?.value) || 1,
-      triggerNpcId: parseIntOrNull((el.querySelector('.step-npc-id') as HTMLInputElement)?.value),
+      triggerNpcId: parseIntOrNull((el as HTMLElement & { _npcSelect?: SearchableSelect })._npcSelect?.getValue()),
       triggerRoomId: parseIntOrNull((el.querySelector('.step-room-id') as HTMLInputElement)?.value),
       triggerItemTemplateId: parseIntOrNull((el.querySelector('.step-item-id') as HTMLInputElement)?.value),
       triggerText: (el.querySelector('.step-trigger-text') as HTMLInputElement)?.value?.trim() || null,
@@ -557,8 +709,8 @@ function updatePreview(): void {
   const reqParts: string[] = [];
   if (quest.minLevel > 1) reqParts.push(`Level ${quest.minLevel}+`);
   if (quest.maxLevel) reqParts.push(`Level &le; ${quest.maxLevel}`);
-  if (quest.requiredRaces?.length) reqParts.push(`Races: ${quest.requiredRaces.join(', ')}`);
-  if (quest.requiredClasses?.length) reqParts.push(`Classes: ${quest.requiredClasses.join(', ')}`);
+  if (quest.requiredRaces?.length) reqParts.push(`Races: ${escapeHtml(quest.requiredRaces.join(', '))}`);
+  if (quest.requiredClasses?.length) reqParts.push(`Classes: ${escapeHtml(quest.requiredClasses.join(', '))}`);
   if (quest.requiredQuestIds.length > 0) reqParts.push(`Prereqs: ${quest.requiredQuestIds.join(', ')}`);
   if (reqParts.length > 0) {
     reqHtml = `
@@ -576,7 +728,7 @@ function updatePreview(): void {
       <div class="preview-stat"><span class="label">ID:</span> <span class="value">${quest.id}</span></div>
       <div class="preview-stat"><span class="label">Status:</span> <span class="value">${quest.enabled ? 'Enabled' : 'Disabled'}</span></div>
       <div class="preview-stat"><span class="label">Steps:</span> <span class="value">${quest.steps.length}</span></div>
-      ${quest.questGiverNpcId ? `<div class="preview-stat"><span class="label">Quest Giver:</span> <span class="value">NPC #${quest.questGiverNpcId}</span></div>` : ''}
+      ${quest.questGiverNpcId ? `<div class="preview-stat"><span class="label">Quest Giver:</span> <span class="value">${escapeHtml(getNpcLabel(quest.questGiverNpcId))}</span></div>` : ''}
       ${quest.questFlag ? `<div class="preview-stat"><span class="label">Flag:</span> <span class="value">${escapeHtml(quest.questFlag)}</span></div>` : ''}
     </div>
     ${reqHtml}
@@ -596,7 +748,7 @@ function collectFormData(): Record<string, unknown> {
     tag: getElement<HTMLInputElement>('quest-tag')?.value?.trim() || '',
     name: getElement<HTMLInputElement>('quest-name')?.value?.trim() || '',
     description: getElement<HTMLTextAreaElement>('quest-description')?.value?.trim() || null,
-    questGiverNpcId: parseIntOrNull(getElement<HTMLInputElement>('quest-giver-npc')?.value),
+    questGiverNpcId: parseIntOrNull(questGiverSelect?.getValue()),
     sortOrder: parseInt(getElement<HTMLInputElement>('quest-sort-order')?.value || '0') || 0,
     questFlag: getElement<HTMLInputElement>('quest-flag')?.value?.trim() || null,
     enabled: getElement<HTMLInputElement>('quest-enabled')?.checked ?? true,
@@ -836,6 +988,18 @@ document.addEventListener('DOMContentLoaded', async () => {
   const auth = await initAuth('developer');
   if (!auth) return;
 
+  await fetchNpcs();
+
+  // Initialize quest giver NPC search dropdown
+  const giverContainer = document.getElementById('quest-giver-npc-container');
+  if (giverContainer) {
+    questGiverSelect = new SearchableSelect({
+      container: giverContainer,
+      placeholder: 'Search NPCs...',
+      options: npcOptions,
+    });
+  }
+
   await fetchQuests();
 
   const addListener = (id: string, event: string, handler: EventListener) => {
@@ -858,6 +1022,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   setupTabs();
 
+  // Attach color previews to dialogue tab textareas
+  const denialTextarea = getElement<HTMLTextAreaElement>('quest-denial-dialogue');
+  if (denialTextarea) attachColorPreview(denialTextarea);
+  const completedTextarea = getElement<HTMLTextAreaElement>('quest-completed-dialogue');
+  if (completedTextarea) attachColorPreview(completedTextarea);
 });
 
 })();

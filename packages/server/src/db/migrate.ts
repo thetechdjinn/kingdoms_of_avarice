@@ -749,7 +749,8 @@ export async function runMigrations(): Promise<void> {
           ('training_cost_multiplier', '1.8'),
           ('initial_character_points', '100'),
           ('blind_accuracy_penalty', '10'),
-          ('crit_soft_cap', '37')
+          ('crit_soft_cap', '37'),
+          ('xp_overcap_percent', '50')
         ON CONFLICT (key) DO NOTHING
       `);
       // NOTE: Never update existing game_settings values - respect user configuration
@@ -1056,6 +1057,15 @@ export async function runMigrations(): Promise<void> {
       // Add vision_level column to npcs (how well NPCs see in darkness, default 100 = normal)
       await client.query(`
         ALTER TABLE npcs ADD COLUMN IF NOT EXISTS vision_level INTEGER DEFAULT 100
+      `);
+
+      // Add combat_level column to npcs (determines accuracy bonus from combat training, default 1)
+      await client.query(`
+        ALTER TABLE npcs ADD COLUMN IF NOT EXISTS combat_level INTEGER DEFAULT 1
+      `);
+      // Ensure existing databases use the correct default (changed from 3 to 1)
+      await client.query(`
+        ALTER TABLE npcs ALTER COLUMN combat_level SET DEFAULT 1
       `);
 
       // One-time: consolidate night_vision/dark_vision → base_vision on race_definitions

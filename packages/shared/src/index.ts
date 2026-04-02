@@ -316,6 +316,7 @@ export interface NpcTemplate {
   baseCritChance: number;
   baseDodge: number;
   damageReduction: number;
+  combatLevel: number;
   traits: string[];
   fleeEnabled: boolean;
   fleeHpPercent: number;

@@ -45,6 +45,7 @@ interface GameSettings {
   mana_regen_enhanced_percent?: number;
   blind_accuracy_penalty?: number;
   crit_soft_cap?: number;
+  xp_overcap_percent?: number;
 }
 
 // ============================================================================
@@ -484,6 +485,10 @@ async function loadSettings(): Promise<void> {
       (document.getElementById('setting-crit-soft-cap') as HTMLInputElement).value =
         String(settings.crit_soft_cap ?? 37);
 
+      // Progression settings
+      (document.getElementById('setting-xp-overcap') as HTMLInputElement).value =
+        String(settings.xp_overcap_percent ?? 50);
+
       // Regen settings
       (document.getElementById('setting-health-tick') as HTMLInputElement).value =
         String(settings.health_tick_interval_ms ?? 5000);
@@ -753,6 +758,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   const saveCritSoftCapBtn = document.getElementById('save-crit-soft-cap-btn');
   saveCritSoftCapBtn?.addEventListener('click', () =>
     saveNumericSetting('crit_soft_cap', 'setting-crit-soft-cap', 5, 60, 'Critical Hit Soft Cap'));
+
+  // Progression settings
+  const saveXpOvercapBtn = document.getElementById('save-xp-overcap-btn');
+  saveXpOvercapBtn?.addEventListener('click', () =>
+    saveNumericSetting('xp_overcap_percent', 'setting-xp-overcap', 0, 200, 'XP Overcap Percent'));
 
   // Regen settings
   const regenButtons: Array<[string, string, string, number, number, string]> = [

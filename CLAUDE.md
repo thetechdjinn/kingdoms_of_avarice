@@ -255,6 +255,8 @@ Three tabs:
   - **Base Max Multiplier**: Maximum damage multiplier for backstab (default: 4.0)
   - **Level Bonus Min**: Added to min damage per level (default: 0.5)
   - **Level Bonus Max**: Added to max damage per level (default: 1.0)
+- **Progression**:
+  - **XP Overcap (%)**: How far XP can exceed the next level's requirement as a percentage (default: 50, range: 0-200). Essence is always hard-capped at the level requirement.
 - **Vision & Combat**:
   - **Blind Accuracy Penalty**: Accuracy penalty when a combatant cannot see (default: 10, range: 1-50)
 
@@ -311,17 +313,23 @@ Players can access different help categories based on their role:
 | Command                            | Description                             |
 | ---------------------------------- | --------------------------------------- |
 | `@goto <id>`                       | Teleport to a room                      |
-| `@rooms`                           | List all rooms                          |
+| `@rooms [filter]`                  | List rooms (filter by name or area)     |
 | `@roominfo [id]`                   | Show room details                       |
 | `@give <id\|name> [qty]`           | Give yourself an item                   |
 | `@currency <amount> [type]`        | Give yourself currency (default: gold)  |
 | `@hurt [amount] [player]`          | Damage HP (testing)                     |
+| `@heal [amount] [player]`          | Heal HP (testing)                       |
 | `@drain [amount] [player]`         | Drain mana (testing)                    |
+| `@revive [player]`                 | Revive a dead or dropped player         |
+| `@teleport <player> <room_id>`     | Teleport a player to a room             |
 | `@learn <mnemonic>`                | Learn a spell                           |
+| `@unlearn <mnemonic>`              | Unlearn a spell                         |
 | `@spells`                          | List all spells                         |
 | `@effect <id> [duration] [player]` | Apply status effect (default 60s, self) |
 | `@cleareffect <id\|all>`           | Remove status effect                    |
 | `@effects`                         | List available effects                  |
+| `@exp <amount> <player>`           | Award experience to a player            |
+| `@essence <amount> <player>`       | Award essence to a player               |
 | `@stealth [player]`                | Show stealth/perception breakdown       |
 
 ### Developer Commands (DEVELOPER+)
