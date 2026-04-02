@@ -847,6 +847,7 @@ async function importNpcs(data: unknown[]): Promise<ImportResult> {
         merchantEnabled: item.merchantEnabled,
         properName: item.properName,
         spellPower: item.spellPower,
+        combatLevel: item.combatLevel as number | undefined,
         enabled: item.enabled as boolean | undefined,
       };
 

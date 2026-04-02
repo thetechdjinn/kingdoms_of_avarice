@@ -7,7 +7,7 @@
     "packages/*"
   ],
   "scripts": {
-    "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\"",
+    "dev": "npx run-p dev:server dev:client",
     "dev:client": "npm run dev --workspace=@koa/client",
     "dev:server": "npm run dev --workspace=@koa/server",
     "build": "npm run build --workspaces",
@@ -25,7 +25,7 @@
     "test:coverage": "vitest run --coverage"
   },
   "devDependencies": {
-    "concurrently": "^8.2.2",
+    "npm-run-all2": "^8.0.4",
     "typescript": "^5.3.3",
     "vitest": "^4.0.17"
   }

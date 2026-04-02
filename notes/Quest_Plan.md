@@ -458,11 +458,11 @@ gratitude."
 
 ### Quest List (`quest`)
 
-Player-initiated command showing active quests with current objective. Format TBD.
+Player-initiated command showing active quests with current objective. Displays a bordered list with quest names, current step descriptions, and kill progress where applicable.
 
 ### Quest Log (`quest log`)
 
-Player-initiated command showing completed steps and current step. Future steps hidden. Format TBD.
+Player-initiated command showing quest details for the active quest. Displays a bordered panel with quest description, completed steps (marked with checkmarks), and the current step. Future steps are hidden. Rewards are not shown.
 
 ## Color Markup Reference
 

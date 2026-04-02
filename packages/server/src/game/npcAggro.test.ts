@@ -1,8 +1,8 @@
 /**
  * Unit tests for NPC aggro stealth checks.
  *
- * Verifies that hostile NPCs do NOT aggro players who are
- * sneaking or hidden (unless the NPC has see_hidden).
+ * Sneaking players are visible and DO get aggro'd by hostile NPCs.
+ * Hidden players are invisible and do NOT get aggro'd unless the NPC has see_hidden.
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -133,14 +133,15 @@ describe('NPC aggro stealth checks', () => {
     expect(npc.combatState.targets.has(player.entityId)).toBe(true);
   });
 
-  it('hostile NPC does NOT aggro a sneaking player', () => {
+  it('hostile NPC DOES aggro a sneaking player (sneaking is visible)', () => {
     const npc = createMockNpc({ hostile: true });
     mockNpcsInRoom = [npc];
     const player = createMockPlayer('sneaking');
 
     checkHostileAggro(1, player);
 
-    expect(npc.combatState.targets.size).toBe(0);
+    expect(npc.combatState.targets.size).toBe(1);
+    expect(npc.combatState.targets.has(player.entityId)).toBe(true);
   });
 
   it('hostile NPC does NOT aggro a hidden player', () => {
@@ -153,7 +154,7 @@ describe('NPC aggro stealth checks', () => {
     expect(npc.combatState.targets.size).toBe(0);
   });
 
-  it('NPC with see_hidden DOES aggro a sneaking player', () => {
+  it('NPC with see_hidden DOES aggro a sneaking player (same as without)', () => {
     const npc = createMockNpc({ hostile: true, canSeeHidden: true });
     mockNpcsInRoom = [npc];
     const player = createMockPlayer('sneaking');
@@ -229,7 +230,7 @@ describe('NPC aggro stealth checks', () => {
     expect(npc2.combatState.targets.has(player.entityId)).toBe(true);
   });
 
-  it('multiple hostile NPCs all skip a sneaking player', () => {
+  it('multiple hostile NPCs all aggro a sneaking player', () => {
     const npc1 = createMockNpc({ hostile: true });
     const npc2 = createMockNpc({ hostile: true });
     npc2.entityId = 1_000_002;
@@ -238,18 +239,18 @@ describe('NPC aggro stealth checks', () => {
 
     checkHostileAggro(1, player);
 
-    expect(npc1.combatState.targets.size).toBe(0);
-    expect(npc2.combatState.targets.size).toBe(0);
+    expect(npc1.combatState.targets.has(player.entityId)).toBe(true);
+    expect(npc2.combatState.targets.has(player.entityId)).toBe(true);
   });
 
-  it('idle hostile NPC aggros when called again after player becomes visible', () => {
+  it('hidden player avoids aggro, then gets aggro after becoming visible', () => {
     const npc1 = createMockNpc({ hostile: true });
     const npc2 = createMockNpc({ hostile: true });
     npc2.entityId = 1_000_002;
     mockNpcsInRoom = [npc1, npc2];
 
-    // Player sneaks in — no aggro
-    const player = createMockPlayer('sneaking');
+    // Player hides — no aggro
+    const player = createMockPlayer('hidden');
     checkHostileAggro(1, player);
     expect(npc1.combatState.targets.size).toBe(0);
     expect(npc2.combatState.targets.size).toBe(0);

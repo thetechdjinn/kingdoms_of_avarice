@@ -133,7 +133,7 @@ function parseCommaNumbers(value: string | undefined | null): number[] {
 
 async function fetchNpcs(): Promise<void> {
   try {
-    const response = await fetch('/api/npcs');
+    const response = await fetch('/api/npcs', { credentials: 'include' });
     if (!response.ok) return;
     const data = await response.json();
     const templates = data.templates || [];
@@ -709,8 +709,8 @@ function updatePreview(): void {
   const reqParts: string[] = [];
   if (quest.minLevel > 1) reqParts.push(`Level ${quest.minLevel}+`);
   if (quest.maxLevel) reqParts.push(`Level &le; ${quest.maxLevel}`);
-  if (quest.requiredRaces?.length) reqParts.push(`Races: ${quest.requiredRaces.join(', ')}`);
-  if (quest.requiredClasses?.length) reqParts.push(`Classes: ${quest.requiredClasses.join(', ')}`);
+  if (quest.requiredRaces?.length) reqParts.push(`Races: ${escapeHtml(quest.requiredRaces.join(', '))}`);
+  if (quest.requiredClasses?.length) reqParts.push(`Classes: ${escapeHtml(quest.requiredClasses.join(', '))}`);
   if (quest.requiredQuestIds.length > 0) reqParts.push(`Prereqs: ${quest.requiredQuestIds.join(', ')}`);
   if (reqParts.length > 0) {
     reqHtml = `

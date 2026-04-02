@@ -1059,9 +1059,13 @@ export async function runMigrations(): Promise<void> {
         ALTER TABLE npcs ADD COLUMN IF NOT EXISTS vision_level INTEGER DEFAULT 100
       `);
 
-      // Add combat_level column to npcs (determines accuracy bonus from combat training, default 3 to match prior hardcoded value)
+      // Add combat_level column to npcs (determines accuracy bonus from combat training, default 1)
       await client.query(`
-        ALTER TABLE npcs ADD COLUMN IF NOT EXISTS combat_level INTEGER DEFAULT 3
+        ALTER TABLE npcs ADD COLUMN IF NOT EXISTS combat_level INTEGER DEFAULT 1
+      `);
+      // Ensure existing databases use the correct default (changed from 3 to 1)
+      await client.query(`
+        ALTER TABLE npcs ALTER COLUMN combat_level SET DEFAULT 1
       `);
 
       // One-time: consolidate night_vision/dark_vision → base_vision on race_definitions

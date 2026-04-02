@@ -235,10 +235,10 @@ All require DEVELOPER role or higher.
 | ------- | ----------- |
 | `@quest list` | List all quest definitions |
 | `@quest info <id/tag>` | Show quest details including all steps |
-| `@quest start <id/tag> [player]` | Force-start a quest for a player |
-| `@quest advance <id/tag> [player]` | Advance a player to the next step |
-| `@quest complete <id/tag> [player]` | Force-complete a quest for a player |
-| `@quest reset <id/tag> [player]` | Reset a quest (clear progress and flags) |
+| `@quest start <player> <quest_tag>` | Force-start a quest for a player |
+| `@quest advance <player> <quest_tag>` | Advance a player to the next step |
+| `@quest complete <player> <quest_tag>` | Force-complete a quest for a player |
+| `@quest reset <player> <quest_tag>` | Reset a quest (clear progress and flags) |
 | `@quest reload` | Reload quest cache from database |
 | `@reload quests` | Same as above (via general reload) |
 

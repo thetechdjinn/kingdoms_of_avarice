@@ -431,6 +431,7 @@ async function exportNpcs(
       merchantEnabled: tmpl.merchantEnabled,
       properName: tmpl.properName,
       spellPower: tmpl.spellPower,
+      combatLevel: tmpl.combatLevel,
       enabled: tmpl.enabled,
     };
 

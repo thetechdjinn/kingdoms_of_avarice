@@ -8,6 +8,7 @@ import * as itemRepo from '../db/repositories/itemRepository.js';
 import { isProgressionCommand, processProgressionCommand, getProgressionHelpText } from './progressionCommands.js';
 import { awardXp, awardEssence } from './progression.js';
 import { getNpcDisplayNames, getPlayersInRoom } from './commands.js';
+import { findOnlinePlayer } from './playerUtils.js';
 import { initializeDoorStates } from '../services/doorStateManager.js';
 import {
   applyEffect,
@@ -64,7 +65,7 @@ import { loadProgressionTableFromDb } from './progressionLoader.js';
 import { clearEquipmentCache } from './combatStats.js';
 import { reloadRegenSettings } from './regeneration.js';
 import { reloadFuelLoop } from './fuelManager.js';
-import { clearBlindAccuracyCache } from '../db/repositories/settingsRepository.js';
+import { clearBlindAccuracyCache, clearXpOvercapCache } from '../db/repositories/settingsRepository.js';
 
 interface CommandResponse {
   type: MessageType;
@@ -598,6 +599,7 @@ async function handleReload(
       await reloadRegenSettings();
       await reloadFuelLoop();
       clearBlindAccuracyCache();
+      clearXpOvercapCache();
       results.push(`${colors.green('✓')} Reloaded settings and restarted regen/fuel loops`);
     }
 
@@ -2039,25 +2041,22 @@ async function handleAwardExp(
     return { type: MessageType.ERROR, message: 'Amount must be a positive number.' };
   }
 
-  const playerName = args.slice(1).join(' ').toLowerCase();
-  let targetSocket: AuthenticatedSocket | null = null;
-  for (const [, ps] of connectedPlayers) {
-    if (ps.username.toLowerCase() === playerName) {
-      targetSocket = ps;
-      break;
-    }
-  }
-
+  const targetSocket = findOnlinePlayer(args.slice(1).join(' '), connectedPlayers, -1);
   if (!targetSocket || !targetSocket.characterId) {
     return { type: MessageType.ERROR, message: `Player not found: ${args.slice(1).join(' ')}` };
   }
 
-  const success = await awardXp(targetSocket.characterId, amount);
-  if (!success) {
+  const awarded = await awardXp(targetSocket.characterId, amount);
+  if (!awarded) {
     return { type: MessageType.ERROR, message: `Failed to award XP (may be at cap).` };
   }
 
-  return { type: MessageType.OUTPUT, message: colors.green(`Awarded ${amount} XP to ${targetSocket.username}.`) };
+  sendVitals(targetSocket);
+  if (targetSocket.playerId !== socket.playerId) {
+    sendMessage(targetSocket, MessageType.SYSTEM, colors.green(`You gain ${awarded} experience from a divine blessing.`));
+  }
+
+  return { type: MessageType.OUTPUT, message: colors.green(`Awarded ${awarded} XP to ${targetSocket.username}.`) };
 }
 
 async function handleAwardEssence(
@@ -2074,25 +2073,22 @@ async function handleAwardEssence(
     return { type: MessageType.ERROR, message: 'Amount must be a positive number.' };
   }
 
-  const playerName = args.slice(1).join(' ').toLowerCase();
-  let targetSocket: AuthenticatedSocket | null = null;
-  for (const [, ps] of connectedPlayers) {
-    if (ps.username.toLowerCase() === playerName) {
-      targetSocket = ps;
-      break;
-    }
-  }
-
+  const targetSocket = findOnlinePlayer(args.slice(1).join(' '), connectedPlayers, -1);
   if (!targetSocket || !targetSocket.characterId) {
     return { type: MessageType.ERROR, message: `Player not found: ${args.slice(1).join(' ')}` };
   }
 
-  const success = await awardEssence(targetSocket.characterId, amount);
-  if (!success) {
+  const awarded = await awardEssence(targetSocket.characterId, amount);
+  if (!awarded) {
     return { type: MessageType.ERROR, message: `Failed to award essence (may be at cap).` };
   }
 
-  return { type: MessageType.OUTPUT, message: colors.green(`Awarded ${amount} essence to ${targetSocket.username}.`) };
+  sendVitals(targetSocket);
+  if (targetSocket.playerId !== socket.playerId) {
+    sendMessage(targetSocket, MessageType.SYSTEM, colors.green(`You gain ${awarded} essence from a divine blessing.`));
+  }
+
+  return { type: MessageType.OUTPUT, message: colors.green(`Awarded ${awarded} essence to ${targetSocket.username}.`) };
 }
 
 function handleAdminHelp(userRoles: Role[]): CommandResponse {

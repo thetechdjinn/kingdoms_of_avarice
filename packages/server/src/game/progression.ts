@@ -181,11 +181,11 @@ async function awardProgression(
   return true;
 }
 
-export async function awardXp(characterId: number, amount: number): Promise<boolean> {
-  if (typeof amount !== 'number' || !isFinite(amount) || amount <= 0) return false;
+export async function awardXp(characterId: number, amount: number): Promise<number> {
+  if (typeof amount !== 'number' || !isFinite(amount) || amount <= 0) return 0;
 
   const progression = characterProgressions.get(characterId);
-  if (!progression) return false;
+  if (!progression) return 0;
 
   // Cap XP so it doesn't exceed next level's requirement by more than the overcap setting
   const nextLevelReqs = getLevelRequirements(progression.level + 1);
@@ -193,23 +193,24 @@ export async function awardXp(characterId: number, amount: number): Promise<bool
     const overcapPercent = await getXpOvercapPercent();
     const maxXp = Math.floor(nextLevelReqs.std_xp_required * (1 + overcapPercent / 100));
     const headroom = maxXp - progression.std_xp;
-    if (headroom <= 0) return false; // Already at or over cap
+    if (headroom <= 0) return 0; // Already at or over cap
     amount = Math.min(amount, headroom);
   }
 
-  return awardProgression(
+  const success = await awardProgression(
     characterId, amount,
     progressionRepo.incrementStdXp,
     (prog, result) => { prog.std_xp = result.std_xp; },
     'XP award'
   );
+  return success ? amount : 0;
 }
 
-export async function awardEssence(characterId: number, amount: number): Promise<boolean> {
-  if (typeof amount !== 'number' || !isFinite(amount) || amount <= 0) return false;
+export async function awardEssence(characterId: number, amount: number): Promise<number> {
+  if (typeof amount !== 'number' || !isFinite(amount) || amount <= 0) return 0;
 
   const progression = characterProgressions.get(characterId);
-  if (!progression) return false;
+  if (!progression) return 0;
 
   // Cap essence at the cumulative threshold for the next level
   const classDef = classDefinitions.get(progression.class_id);
@@ -217,16 +218,17 @@ export async function awardEssence(characterId: number, amount: number): Promise
   if (classDef && nextLevelReqs) {
     const essenceCap = getEssenceRequired(nextLevelReqs.base_essence_required, classDef.essence_multiplier);
     const headroom = essenceCap - progression.essence_earned_this_level;
-    if (headroom <= 0) return false; // Already at cap
+    if (headroom <= 0) return 0; // Already at cap
     amount = Math.min(amount, headroom);
   }
 
-  return awardProgression(
+  const success = await awardProgression(
     characterId, amount,
     progressionRepo.incrementEssenceWallet,
     (prog, result) => { prog.essence_wallet = result.essence_wallet; prog.essence_earned_this_level = result.essence_earned_this_level; prog.total_essence_earned = result.total_essence_earned; },
     'essence award'
   );
+  return success ? amount : 0;
 }
 
 // ============================================================================

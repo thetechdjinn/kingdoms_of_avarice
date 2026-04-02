@@ -149,13 +149,14 @@ async function handleQuestLog(
     return { type: MessageType.ERROR, message: 'Quest not found.' };
   }
 
-  return formatQuestLog(targetQuest, targetCq, characterId);
+  return formatQuestLog(targetQuest, targetCq, characterId, socket);
 }
 
 async function formatQuestLog(
   quest: Quest,
   cq: CharacterQuest,
-  characterId: number
+  characterId: number,
+  socket: AuthenticatedSocket
 ): Promise<CommandResponse> {
   const border = '\u2500'.repeat(57);
   const lines: string[] = [];
@@ -165,7 +166,7 @@ async function formatQuestLog(
 
   // Quest description (supports color markup)
   if (quest.description) {
-    lines.push(wordWrap(renderColorMarkup(` ${quest.description}`, colors.white), 78));
+    lines.push(wordWrap(renderColorMarkup(` ${quest.description}`, colors.white, { name: socket.username }), 78));
     lines.push('');
   }
 
@@ -211,7 +212,7 @@ async function handleQuestInfo(
   for (const cq of activeQuests) {
     const quest = getQuestById(cq.questId);
     if (quest && quest.name.toLowerCase().includes(nameSearch)) {
-      return formatQuestLog(quest, cq, characterId);
+      return formatQuestLog(quest, cq, characterId, socket);
     }
   }
 

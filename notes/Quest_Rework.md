@@ -227,8 +227,8 @@ Recommendation: **Option 2** (ANSI-aware wordWrap) since it benefits all colored
 
 None. The text fields already store plain text strings. The markup tags are embedded in the text content. No new columns or tables needed.
 
-## Open Questions
+## Resolved Questions
 
-1. **Quest command format:** The `quest` and `quest log` commands are player-initiated UI, not quest events. What format should they use? Bordered list? Simple indented text? This is separate from the event output rework.
-2. **Base color per-quest:** Should the designer be able to set a base color per quest (e.g., a dark/evil quest might use red base), or is a single system-wide base color sufficient?
-3. **Bold as a modifier vs. standalone:** Should `{bold}` work as a standalone tag (bold in the current base color), or only as combined tags like `{boldCyan}`? Both are easy to support.
+1. **Quest command format:** The `quest` command uses a bordered list showing active quests with current objectives and kill progress. The `quest log` command uses a bordered panel with description and completed/current steps. Rewards are not shown.
+2. **Base color per-quest:** A single system-wide base color is used. No per-quest override.
+3. **Bold as a modifier vs. standalone:** `{bold}` works as a standalone tag mapped to `colors.boldWhite`. Combined tags like `{boldCyan}` are also supported.

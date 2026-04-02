@@ -71,10 +71,65 @@ export function wordWrap(text: string, width: number = 80): string {
       lines.push(currentLine);
     }
 
-    return lines.join('\r\n');
+    return fixAnsiLineBreaks(lines).join('\r\n');
   });
 
   return wrappedParagraphs.join('\r\n');
+}
+
+const ANSI_RESET = '\x1b[0m';
+
+/**
+ * Ensure ANSI color codes don't bleed across wrapped lines.
+ * If a line ends with active styles, appends a reset and re-opens them
+ * on the next line so each line is self-contained.
+ * Tracks all active SGR codes (e.g., bold+cyan) not just the last one.
+ */
+function fixAnsiLineBreaks(lines: string[]): string[] {
+  if (lines.length <= 1) return lines;
+
+  const result: string[] = [];
+  let activeCodes: string[] = [];
+
+  for (const line of lines) {
+    const processedLine: string = activeCodes.length > 0 ? activeCodes.join('') + line : line;
+
+    // Walk only the ORIGINAL line's ANSI codes (not prepended ones) to update state
+    const currentCodes: string[] = [];
+    let hadReset = false;
+    const matches = Array.from(line.matchAll(ANSI_REGEX));
+    for (const match of matches) {
+      if (!match) continue;
+      const params = match[0].slice(2, -1); // strip \x1b[ and m
+      if (params === '0' || params === '') {
+        currentCodes.length = 0;
+        hadReset = true;
+      } else {
+        currentCodes.push(match[0]);
+      }
+    }
+
+    // Merge: if the line had a reset, only its new codes survive.
+    // Otherwise, carry forward previous codes plus any new ones, deduplicated.
+    let endCodes: string[];
+    if (hadReset) {
+      endCodes = currentCodes;
+    } else if (currentCodes.length === 0) {
+      endCodes = activeCodes;
+    } else {
+      // Deduplicate: new codes of the same type replace old ones
+      const merged = new Map<string, string>();
+      for (const code of activeCodes) merged.set(code, code);
+      for (const code of currentCodes) merged.set(code, code);
+      endCodes = [...merged.values()];
+    }
+
+    // If there are active styles at end of line, close them
+    result.push(endCodes.length > 0 ? processedLine + ANSI_RESET : processedLine);
+    activeCodes = endCodes;
+  }
+
+  return result;
 }
 
 /**
@@ -279,9 +334,11 @@ export function renderColorMarkup(
   if (!text) return '';
 
   // Variable substitution pass (before color parsing)
+  // Escape braces in values so they aren't interpreted as color tags
   if (variables) {
     for (const [key, value] of Object.entries(variables)) {
-      text = text.split(`{${key}}`).join(value);
+      const safeValue = value.replace(/\{/g, '\u200B{');
+      text = text.split(`{${key}}`).join(safeValue);
     }
   }
 
