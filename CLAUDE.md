@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository. See also [AGENTS.md](AGENTS.md) for cross-agent shared instructions and `.skills/` for reusable agent skills.
 
 ## Project Overview
 
@@ -112,7 +112,8 @@ Vite serves multiple pages: `index.html` (game), `editor.html` (rooms), `item-ed
 ### Text Output
 
 - Use `\r\n` for line endings in MUD output
-- Word-wrap to 80 characters using `wordWrap()` from `utils/textFormat.js`
+- Word-wrap to 80 characters using `wordWrap()` from `utils/textFormat.js` for standard game output (room descriptions, system messages, combat text, quest log objectives)
+- Quest/NPC dialogue (completion, in-progress, denial) uses `dialogueWrap()` (70 chars, 4-space indent) for a visually distinct "quoted speech" block
 - Use `.join('\r\n')` when combining lines
 - **Never use em dashes (`—`) in player-visible text** (room descriptions, item descriptions, NPC dialogue, system messages). Use periods, commas, colons, or semicolons instead. Em dashes in code comments are fine.
 
@@ -373,6 +374,7 @@ Players can access different help categories based on their role:
 - Characters need a race or class with the `stealth` trait to use stealth commands
 - Hidden players are invisible in the room unless searched
 - Sneaking players are visible but don't trigger entrance/exit announcements
+- Both sneaking and hidden players are protected from NPC aggro (NPCs with `see_hidden` bypass this for both modes)
 - Stealth breaks when entering combat, casting spells, or using actions on others
 
 **Backstab Mechanics:**

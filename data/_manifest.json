@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "exported_at": "2026-04-01T02:21:30.006Z",
+  "exported_at": "2026-04-04T16:30:52.983Z",
   "import_order": [
     "global/spells.json",
     "global/status_effects.json",
@@ -19,10 +19,12 @@
     "areas/hearthstead_loop/rooms.json",
     "areas/hearthstead_loop/npcs.json",
     "areas/hearthstead_wilds/rooms.json",
+    "areas/hearthstead_wilds/npcs.json",
     "areas/sanctum_of_the_damned/rooms.json",
     "areas/the_iridescent_menagerie/rooms.json",
     "areas/the_thieves_guild/rooms.json",
-    "areas/warrens_of_filth/rooms.json"
+    "areas/warrens_of_filth/rooms.json",
+    "global/quests.json"
   ],
   "warnings": []
 }

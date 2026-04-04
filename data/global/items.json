@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "exported_at": "2026-04-01T02:21:29.944Z",
+  "exported_at": "2026-04-04T16:30:52.921Z",
   "type": "items",
   "data": [
     {
@@ -3037,6 +3037,51 @@
       "vision_modifier": 0,
       "effect_slots": 0,
       "rarity": "common"
+    },
+    {
+      "name": "torn journal",
+      "short_desc": "a torn journal",
+      "long_desc": "A battered leather journal, its pages water-stained and torn. The last entry is scrawled in a shaking hand, describing green-skinned creatures with yellow eyes lurking in a cave to the north.",
+      "room_desc": "A torn journal lies here.",
+      "keywords": [
+        "journal",
+        "torn journal",
+        "book",
+        "diary"
+      ],
+      "weight": 1,
+      "size": 1,
+      "base_value": 0,
+      "item_type": "misc",
+      "equipment_slot": null,
+      "flags": {
+        "cursed": false,
+        "hidden": false,
+        "no_drop": true,
+        "takeable": true,
+        "stackable": false,
+        "throwable": false,
+        "two_handed": false
+      },
+      "max_stack": 1,
+      "stealth_modifier": 0,
+      "spellcasting_modifier": 0,
+      "lockpicking_modifier": 0,
+      "perception_modifier": 0,
+      "critical_chance_modifier": 0,
+      "magic_resistance_modifier": 0,
+      "trap_modifier": 0,
+      "ac_modifier": 0,
+      "damage_resistance_modifier": 0,
+      "dodge_modifier": 0,
+      "damage_modifier": 0,
+      "energy_modifier": 0,
+      "speed_modifier": 0,
+      "defense_modifier": 0,
+      "healing_modifier": 0,
+      "vision_modifier": 0,
+      "effect_slots": 0,
+      "rarity": "quest"
     }
   ]
 }

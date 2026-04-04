@@ -19,7 +19,7 @@ Quests are linear sequences of **steps**, each triggered by a specific in-game e
 
 Quest event output (starting a quest, completing a step, finishing a quest) shows **only the dialogue text you write**. The system never injects headers, borders, labels, reward summaries, or any other formatting around your text. You control the entire player experience through your prose.
 
-When a step completes, the player sees exactly what you put in the **Completion Dialogue** field, rendered with color markup and word-wrapped to 80 characters. Nothing else.
+When a step completes, the player sees exactly what you put in the **Completion Dialogue** field, rendered with color markup, indented 4 spaces from the left, and word-wrapped to 70 characters. This creates a visually distinct "dialogue block" that stands out from normal game output. Nothing else is added.
 
 Rewards (XP, essence, currency, items, faction reputation) are granted silently behind the scenes. If you want the player to know an NPC handed them a pouch of gold, you write that into the narrative. The player can always check their inventory or use the `quest` command to see status.
 
@@ -31,19 +31,29 @@ All dialogue fields support inline color tags to highlight key words. The syntax
 {colorName}highlighted text{/}
 ```
 
-Untagged text renders in **cyan** by default. Use tags only for words that need to stand out.
+Untagged text renders in **green** by default (MajorMUD style). Use tags only for words that need to stand out. Dialogue is rendered with a 4-space left indent and 70-character wrap width, visually distinct from standard game output.
 
-**Available colors:** `red`, `green`, `yellow`, `blue`, `magenta`, `cyan`, `white`, `gray`, `gold`, `boldCyan`, `boldGreen`, `boldYellow`, `boldRed`, `boldWhite`, `brightRed`, `brightGreen`, `brightYellow`, `brightBlue`, `brightCyan`, `brightWhite`, `bold`, `item`, `npc`, `player`, `system`, `error`
+**Available colors:** `red`, `green`, `yellow`, `blue`, `magenta`, `cyan`, `white`, `gray`, `gold`, `boldCyan`, `boldGreen`, `boldYellow`, `boldRed`, `boldWhite`, `brightRed`, `brightGreen`, `brightYellow`, `brightBlue`, `brightCyan`, `brightWhite`, `bold`, `item`, `npc`, `player`, `system`, `error`, `location`
+
+**Standard quest dialogue colors:**
+
+| Element | Tag | Color | Purpose |
+|---------|-----|-------|---------|
+| Base text | (none) | Green | Narration, default dialogue |
+| NPC/mob names | `{npc}` | Magenta | Who the player interacts with |
+| Keywords/triggers | `{yellow}` | Yellow | Action phrases, things to say/do |
+| Locations | `{location}` | Cyan | Places to go |
+| Items | `{item}` | Bright blue | Item names |
 
 **Example** (what you write in the Completion Dialogue field):
 
 ```
 Elder Maren whispers, "The ruby was stolen from the cathedral
-vault. Seek out {boldCyan}Bob the Builder{/} in the Ironwood
-District. Tell him: {boldYellow}ask about the ruby{/}."
+vault. Seek out {npc}Bob the Builder{/} in the {location}Ironwood
+District{/}. Tell him: {yellow}ask about the ruby{/}."
 ```
 
-The player sees this in cyan with "Bob the Builder" in bold cyan and "ask about the ruby" in bold yellow, so they know the NPC to find and the phrase to say.
+The player sees this in green with "Bob the Builder" in magenta, "Ironwood District" in cyan, and "ask about the ruby" in yellow, so they know who to find, where to go, and what to say.
 
 ### Variables
 
@@ -63,13 +73,14 @@ Variables are replaced before color processing, so you can combine them with col
 | `{name}` | The player's character name |
 
 **Tips:**
-- Use `{boldCyan}` for NPC names the player needs to find
-- Use `{boldYellow}` for trigger phrases the player needs to say
-- Use `{item}` for item names
+- Use `{npc}` for NPC/mob names (magenta)
+- Use `{yellow}` for trigger phrases and keywords (what to say/do)
+- Use `{location}` for place names (cyan, where to go)
+- Use `{item}` for item names (bright blue)
 - Use `{gold}` for currency references
 - Use `{name}` to address the player by name
-- Tags are case-insensitive: `{BoldCyan}` and `{boldcyan}` both work
-- `{/}` closes the current color and returns to cyan
+- Tags are case-insensitive: `{NPC}` and `{npc}` both work
+- `{/}` closes the current color and returns to green
 - The Dialogue tab and step Completion Dialogue fields have a live color preview below the text area
 
 ## Quest Editor
@@ -106,6 +117,7 @@ Prerequisites the player must meet before the quest can be started. All conditio
 | Required Faction ID | A faction the player must have reputation with |
 | Min/Max Reputation | The reputation range required with the above faction |
 | Prerequisite Quest IDs | Comma-separated quest IDs that must ALL be completed first |
+| Prerequisite Quest Tags | Comma-separated quest tags that must ALL be completed first (preferred over IDs) |
 
 If the player doesn't meet requirements and talks to the quest giver, the NPC responds with the **Denial Dialogue** from the Dialogue tab.
 
@@ -212,12 +224,13 @@ The player must enter a specific room.
 The Completion Dialogue is the entire player experience. There are no system-generated headers like "New Quest:" or "Quest Complete!" and no automatic reward summaries. You write everything the player reads.
 
 **Design tips:**
-- Use `{boldCyan}NPC Name{/}` to highlight NPCs the player needs to find
-- Use `{boldYellow}trigger phrase{/}` to highlight what the player needs to say
-- Some quests can be explicit ("Go tell {boldCyan}Bob{/}: {boldYellow}ask about the crystal{/}"); others can be vague for exploration
+- Use `{npc}NPC Name{/}` to highlight NPCs the player needs to find
+- Use `{yellow}trigger phrase{/}` to highlight what the player needs to say
+- Use `{location}place name{/}` to highlight locations
+- Some quests can be explicit ("Go tell {npc}Bob{/}: {yellow}ask about the crystal{/}"); others can be vague for exploration
 - Players never see future steps, so the completion dialogue is their only guide to what comes next
 - For the final step, write a satisfying conclusion. If the quest grants items or gold, describe the NPC giving them something. The actual reward is granted silently.
-- Test your quest in-game to see how the color markup and word wrapping look at 80 characters
+- Test your quest in-game to see how the color markup and word wrapping look (dialogue wraps at 70 characters with a 4-space indent)
 
 ## Player Commands
 
@@ -260,7 +273,8 @@ When a quest has a **Quest Flag** set (e.g., `sewer_access`), completing the que
 | `min_level` / `max_level` | INTEGER | Level requirements |
 | `required_races` / `required_classes` | TEXT[] | Race/class requirements |
 | `required_faction_id` | INTEGER | Faction requirement |
-| `required_quest_ids` | INTEGER[] | Prerequisite quests |
+| `required_quest_ids` | INTEGER[] | Prerequisite quests (by ID) |
+| `required_quest_tags` | TEXT[] | Prerequisite quests (by tag, preferred over IDs) |
 | `xp_reward` / `essence_reward` / `currency_reward` | INTEGER/BIGINT | Completion rewards |
 | `item_rewards` / `faction_rewards` | JSONB | Structured reward data |
 | `quest_flag` | VARCHAR | Flag granted on completion |

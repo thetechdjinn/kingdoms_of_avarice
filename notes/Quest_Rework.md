@@ -41,7 +41,7 @@ Quest text fields (completion_dialogue, description, in_progress_dialogue, denia
 ```
 
 - `{color}` opens a color span. `{/}` closes it back to the base color.
-- Supported color names match the existing `colors.ts` palette: `red`, `green`, `yellow`, `blue`, `magenta`, `cyan`, `white`, `brightRed`, `brightGreen`, `brightYellow`, `brightBlue`, `brightCyan`, `brightWhite`, `gray`, `gold`, `bold`, `boldCyan`, `boldGreen`, `boldYellow`, `boldRed`, `boldWhite`.
+- Supported color names match the existing `colors.ts` palette: `red`, `green`, `yellow`, `blue`, `magenta`, `cyan`, `white`, `brightRed`, `brightGreen`, `brightYellow`, `brightBlue`, `brightCyan`, `brightWhite`, `gray`, `gold`, `bold`, `boldCyan`, `boldGreen`, `boldYellow`, `boldRed`, `boldWhite`, `item`, `npc`, `player`, `system`, `error`, `location`.
 - Tags are case-insensitive: `{Cyan}` and `{cyan}` both work.
 - Nesting is not supported. Opening a new color tag implicitly closes the previous one.
 - Unclosed tags auto-close at end of text. Unrecognized tag names are left as literal text.
@@ -52,33 +52,41 @@ Each quest output context has a **base color** that applies to all untagged text
 
 | Context | Base Color |
 |---|---|
-| Quest start / step completion dialogue | `cyan` |
-| Quest complete summary | `cyan` |
-| In-progress dialogue | `cyan` |
-| Denial dialogue | `cyan` |
-| Quest log objective text | `white` |
+| Quest start / step completion dialogue | `green` |
+| Quest complete summary | `green` |
+| In-progress dialogue | `green` |
+| Denial dialogue | `green` |
+| Quest log objective text | `green` |
 | Kill progress updates | `white` |
 
 The base color is applied automatically. The designer only uses tags to highlight specific words that differ from the base.
+
+**Quest Dialogue Color Conventions:**
+- NPC/mob names: `{npc}` (magenta)
+- Keywords/trigger phrases: `{yellow}` (what to say/do)
+- Locations: `{location}` (cyan, where to go)
+- Items: `{item}` (bright blue)
+
+Dialogue is rendered with a 4-space left indent and 70-character wrap width.
 
 ### Example: Quest Start
 
 **What the designer writes** (in the completion_dialogue field of step 1):
 
 ```
-Elder Maren leans in close and whispers, "The ruby was stolen from the cathedral vault. Seek out {boldCyan}Bob the Builder{/} in the Ironwood District. Tell him: {boldYellow}ask about the ruby{/}. He will know what to do."
+Elder Maren leans in close and whispers, "The ruby was stolen from the cathedral vault. Seek out {npc}Bob the Builder{/} in the {location}Ironwood District{/}. Tell him: {yellow}ask about the ruby{/}. He will know what to do."
 ```
 
-**What the player sees** (all in cyan base, with Bob's name in bold cyan and the trigger phrase in bold yellow):
+**What the player sees** (green base with magenta NPC name, cyan location, yellow trigger phrase, indented 4 spaces):
 
 ```
-Elder Maren leans in close and whispers, "The ruby was stolen
-from the cathedral vault. Seek out Bob the Builder in the
-Ironwood District. Tell him: ask about the ruby. He will know
-what to do."
+    Elder Maren leans in close and whispers, "The ruby was
+    stolen from the cathedral vault. Seek out Bob the Builder
+    in the Ironwood District. Tell him: ask about the ruby.
+    He will know what to do."
 ```
 
-No borders. No "New Quest:" header. No "Current objective:" label. Just the narrative text, word-wrapped to 80 characters, with color highlighting where the designer placed it.
+No borders. No "New Quest:" header. No "Current objective:" label. Just the narrative text, indented 4 spaces and word-wrapped to 70 characters, with color highlighting where the designer placed it.
 
 ## Core Rule: Designer Text Only
 

@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "exported_at": "2026-04-01T02:21:30.000Z",
+  "exported_at": "2026-04-04T16:30:52.981Z",
   "type": "npcs",
   "data": [
     {
@@ -38,6 +38,7 @@
       "merchantEnabled": true,
       "properName": true,
       "spellPower": 0,
+      "combatLevel": 1,
       "enabled": true,
       "primaryFactionName": "Arindale Merchants Guild",
       "attacks": [
@@ -104,6 +105,7 @@
       "merchantEnabled": true,
       "properName": true,
       "spellPower": 0,
+      "combatLevel": 1,
       "enabled": true,
       "primaryFactionName": "Arindale Merchants Guild",
       "attacks": [
@@ -193,6 +195,7 @@
       "merchantEnabled": true,
       "properName": true,
       "spellPower": 30,
+      "combatLevel": 1,
       "enabled": true,
       "primaryFactionName": "Arindale Merchants Guild",
       "attacks": [
@@ -279,6 +282,7 @@
       "merchantEnabled": true,
       "properName": true,
       "spellPower": 0,
+      "combatLevel": 1,
       "enabled": true,
       "primaryFactionName": "Arindale Merchants Guild",
       "attacks": [
@@ -366,6 +370,7 @@
       "merchantEnabled": false,
       "properName": true,
       "spellPower": 0,
+      "combatLevel": 1,
       "enabled": true,
       "attacks": [
         {
@@ -419,6 +424,7 @@
       "merchantEnabled": false,
       "properName": true,
       "spellPower": 0,
+      "combatLevel": 1,
       "enabled": true,
       "attacks": [
         {

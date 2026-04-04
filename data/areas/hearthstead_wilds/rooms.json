@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "exported_at": "2026-04-01T02:21:29.981Z",
+  "exported_at": "2026-04-04T16:30:52.966Z",
   "type": "rooms",
   "data": [
     {
@@ -61,6 +61,13 @@
         {
           "direction": "northeast",
           "toTag": "hs_wilds_5"
+        }
+      ],
+      "spawns": [
+        {
+          "npcName": "timber rat",
+          "maxActive": 1,
+          "respawnSeconds": 300
         }
       ]
     },
@@ -123,6 +130,13 @@
           "direction": "northwest",
           "toTag": "hs_wilds_9"
         }
+      ],
+      "spawns": [
+        {
+          "npcName": "forest viper",
+          "maxActive": 1,
+          "respawnSeconds": 300
+        }
       ]
     },
     {
@@ -172,6 +186,13 @@
         {
           "direction": "northeast",
           "toTag": "hs_wilds_12"
+        }
+      ],
+      "spawns": [
+        {
+          "npcName": "timber rat",
+          "maxActive": 1,
+          "respawnSeconds": 300
         }
       ]
     },
@@ -238,6 +259,13 @@
           "direction": "northwest",
           "toTag": "hs_wilds_14"
         }
+      ],
+      "spawns": [
+        {
+          "npcName": "forest viper",
+          "maxActive": 1,
+          "respawnSeconds": 300
+        }
       ]
     },
     {
@@ -275,6 +303,13 @@
         {
           "direction": "north",
           "toTag": "hs_wilds_17"
+        }
+      ],
+      "spawns": [
+        {
+          "npcName": "timber rat",
+          "maxActive": 1,
+          "respawnSeconds": 300
         }
       ]
     },
@@ -360,6 +395,13 @@
           "direction": "northeast",
           "toTag": "hs_wilds_21"
         }
+      ],
+      "spawns": [
+        {
+          "npcName": "timber rat",
+          "maxActive": 1,
+          "respawnSeconds": 300
+        }
       ]
     },
     {
@@ -417,6 +459,13 @@
         {
           "direction": "northwest",
           "toTag": "hs_wilds_22"
+        }
+      ],
+      "spawns": [
+        {
+          "npcName": "forest viper",
+          "maxActive": 1,
+          "respawnSeconds": 300
         }
       ]
     },
@@ -483,6 +532,13 @@
           "direction": "northwest",
           "toTag": "hs_wilds_24"
         }
+      ],
+      "spawns": [
+        {
+          "npcName": "timber rat",
+          "maxActive": 1,
+          "respawnSeconds": 300
+        }
       ]
     },
     {
@@ -532,6 +588,13 @@
         {
           "direction": "east",
           "toTag": "hs_wilds_26"
+        }
+      ],
+      "spawns": [
+        {
+          "npcName": "forest viper",
+          "maxActive": 1,
+          "respawnSeconds": 300
         }
       ]
     },
@@ -628,6 +691,13 @@
           "direction": "north",
           "toTag": "hs_cave_3"
         }
+      ],
+      "spawns": [
+        {
+          "npcName": "cave spider",
+          "maxActive": 1,
+          "respawnSeconds": 300
+        }
       ]
     },
     {
@@ -693,6 +763,13 @@
           "direction": "northeast",
           "toTag": "hs_cave_17"
         }
+      ],
+      "spawns": [
+        {
+          "npcName": "cave spider",
+          "maxActive": 1,
+          "respawnSeconds": 300
+        }
       ]
     },
     {
@@ -749,6 +826,13 @@
         {
           "direction": "southeast",
           "toTag": "hs_cave_9"
+        }
+      ],
+      "spawns": [
+        {
+          "npcName": "cave spider",
+          "maxActive": 1,
+          "respawnSeconds": 300
         }
       ]
     },
@@ -811,6 +895,13 @@
           "direction": "northwest",
           "toTag": "hs_cave_12"
         }
+      ],
+      "spawns": [
+        {
+          "npcName": "cave spider",
+          "maxActive": 1,
+          "respawnSeconds": 300
+        }
       ]
     },
     {
@@ -871,6 +962,13 @@
         {
           "direction": "north",
           "toTag": "hs_cave_15"
+        }
+      ],
+      "spawns": [
+        {
+          "npcName": "cave spider",
+          "maxActive": 1,
+          "respawnSeconds": 300
         }
       ]
     },
@@ -944,6 +1042,13 @@
           "direction": "west",
           "toTag": "hs_cave_13"
         }
+      ],
+      "spawns": [
+        {
+          "npcName": "corrupted goblin",
+          "maxActive": 1,
+          "respawnSeconds": 600
+        }
       ]
     },
     {
@@ -958,6 +1063,13 @@
         {
           "direction": "southwest",
           "toTag": "hs_cave_6"
+        }
+      ],
+      "spawns": [
+        {
+          "npcName": "cave bear",
+          "maxActive": 1,
+          "respawnSeconds": 600
         }
       ]
     }

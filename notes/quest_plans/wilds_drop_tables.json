@@ -1,0 +1,81 @@
+{
+  "version": "1.0",
+  "type": "drop_tables",
+  "data": [
+    {
+      "name": "timber rat drop table",
+      "description": "Drops for timber rat (Hearthstead Wilds forest)",
+      "entries": [
+        {
+          "dropChance": 75,
+          "minQuantity": 1,
+          "maxQuantity": 1,
+          "currencyMin": 1,
+          "currencyMax": 12,
+          "allowedDenominations": ["copper"],
+          "itemName": null
+        }
+      ]
+    },
+    {
+      "name": "forest viper drop table",
+      "description": "Drops for forest viper (Hearthstead Wilds forest)",
+      "entries": [
+        {
+          "dropChance": 75,
+          "minQuantity": 1,
+          "maxQuantity": 1,
+          "currencyMin": 1,
+          "currencyMax": 12,
+          "allowedDenominations": ["copper"],
+          "itemName": null
+        }
+      ]
+    },
+    {
+      "name": "cave spider drop table",
+      "description": "Drops for cave spider (Hearthstead Wilds cave)",
+      "entries": [
+        {
+          "dropChance": 80,
+          "minQuantity": 1,
+          "maxQuantity": 1,
+          "currencyMin": 5,
+          "currencyMax": 20,
+          "allowedDenominations": ["copper", "silver"],
+          "itemName": null
+        }
+      ]
+    },
+    {
+      "name": "corrupted goblin drop table",
+      "description": "Drops for corrupted goblin elite (Goblin's Den)",
+      "entries": [
+        {
+          "dropChance": 100,
+          "minQuantity": 1,
+          "maxQuantity": 1,
+          "currencyMin": 15,
+          "currencyMax": 30,
+          "allowedDenominations": ["copper", "silver"],
+          "itemName": null
+        }
+      ]
+    },
+    {
+      "name": "cave bear drop table",
+      "description": "Drops for cave bear boss (Bone-Littered Burrow)",
+      "entries": [
+        {
+          "dropChance": 100,
+          "minQuantity": 1,
+          "maxQuantity": 1,
+          "currencyMin": 20,
+          "currencyMax": 50,
+          "allowedDenominations": ["copper", "silver"],
+          "itemName": null
+        }
+      ]
+    }
+  ]
+}

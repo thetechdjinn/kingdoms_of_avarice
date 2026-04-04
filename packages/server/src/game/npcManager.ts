@@ -350,8 +350,33 @@ export async function initializeNpcManager(): Promise<void> {
     addToRoomIndex(npc.entityId, npc.currentRoomId);
   }
 
-  // Spawn instances for each spawn config that doesn't have enough live instances.
-  // Track live instances per (npcId, spawnRoomId) pair for accurate counting.
+  // Track live (non-corpse) instances per (npcId, spawnRoomId) pair for accurate counting.
+  const liveBySpawn = new Map<string, NpcCombatInstance[]>();
+  for (const npc of npcInstances.values()) {
+    if (npc.isCorpse) continue;
+    const key = `${npc.templateId}_${npc.spawnRoomId}`;
+    if (!liveBySpawn.has(key)) liveBySpawn.set(key, []);
+    liveBySpawn.get(key)!.push(npc);
+  }
+
+  // Remove excess instances that exceed maxActive (e.g. from stale dual-process state)
+  for (const spawn of spawns) {
+    const key = `${spawn.npcId}_${spawn.roomId}`;
+    const instances = liveBySpawn.get(key);
+    if (!instances || instances.length <= spawn.maxActive) continue;
+
+    const excess = instances.slice(spawn.maxActive);
+    for (const npc of excess) {
+      console.log(`[NPC Manager] Removing excess instance of "${npc.entityName}" (maxActive=${spawn.maxActive}, found=${instances.length})`);
+      removeFromRoomIndex(npc.entityId, npc.currentRoomId);
+      npcInstances.delete(npc.entityId);
+      npcRepo.deleteInstance(npc.dbInstanceId).catch(error => {
+        console.error(`[NPC Manager] Failed to delete excess instance ${npc.dbInstanceId}:`, error);
+      });
+    }
+  }
+
+  // Rebuild counts after cleanup
   const liveCountBySpawn = new Map<string, number>();
   for (const npc of npcInstances.values()) {
     const key = `${npc.templateId}_${npc.spawnRoomId}`;
@@ -363,6 +388,7 @@ export async function initializeNpcManager(): Promise<void> {
     pendingBySpawn.set(key, (pendingBySpawn.get(key) ?? 0) + 1);
   }
 
+  // Spawn instances for each spawn config that doesn't have enough live instances.
   for (const spawn of spawns) {
     const template = npcTemplates.get(spawn.npcId);
     if (!template || !template.enabled) continue;
@@ -580,11 +606,23 @@ export function getAllNpcInstances(): NpcCombatInstance[] {
 
 /**
  * Remove an NPC instance from memory + room index.
- * Called on NPC death.
+ * Called on NPC death and @mobdespawn.
  */
 export function removeNpcInstance(entityId: number): void {
   const npc = npcInstances.get(entityId);
   if (!npc) return;
+
+  // Clean up combat state: remove this NPC from any player's targets
+  if (connectedPlayersRef) {
+    for (const player of connectedPlayersRef.values()) {
+      if (player.combatState.targets.has(entityId)) {
+        player.combatState.targets.delete(entityId);
+        if (player.combatState.targets.size === 0) {
+          player.regenState.inCombat = false;
+        }
+      }
+    }
+  }
 
   removeFromRoomIndex(entityId, npc.currentRoomId);
   npcInstances.delete(entityId);
@@ -751,8 +789,8 @@ function checkNpcAggroOnArrival(npc: NpcCombatInstance): void {
     // Skip dead/dropped players
     if (player.deathState?.isDead || player.deathState?.isDropped) continue;
 
-    // Skip hidden players unless NPC can see hidden (sneaking players are visible)
-    if (player.stealthMode === 'hidden' && !npc.canSeeHidden) continue;
+    // Skip stealthed players unless NPC can see hidden
+    if (player.stealthMode !== 'none' && !npc.canSeeHidden) continue;
 
     initiateAggro(npc, player, npc.currentRoomId);
   }
@@ -891,6 +929,29 @@ async function handleNpcDotDeath(npc: NpcCombatInstance): Promise<void> {
 /**
  * Check for hostile NPCs in a room and initiate aggro on a player.
  */
+/**
+ * Pure decision function: should this NPC aggro this player?
+ * Exported for unit testing. Does not mutate state.
+ */
+export function shouldNpcAggro(
+  npc: NpcCombatInstance,
+  player: CombatEntity,
+  isAngryMerchant: boolean,
+): boolean {
+  // Skip already-in-combat, dead, fleeing, or returning NPCs
+  if (npc.combatState.targets.size > 0) return false;
+  if (npc.vitals.hp <= 0) return false;
+  if (npc.behaviorState === 'fleeing' || npc.behaviorState === 'returning') return false;
+
+  // Must be hostile or an angry merchant
+  if (!npc.template.hostile && !isAngryMerchant) return false;
+
+  // Skip stealthed players unless NPC can see hidden
+  if (player.stealthMode !== 'none' && !npc.canSeeHidden) return false;
+
+  return true;
+}
+
 export function checkHostileAggro(
   roomId: number,
   player: CombatEntity,
@@ -902,25 +963,14 @@ export function checkHostileAggro(
   if (npcs.length === 0) return;
 
   for (const npc of npcs) {
-    // Skip already-in-combat, dead, fleeing, or returning NPCs
-    if (npc.combatState.targets.size > 0) continue;
-    if (npc.vitals.hp <= 0) continue;
-    if (npc.behaviorState === 'fleeing' || npc.behaviorState === 'returning') continue;
-
     // Skip if NPC can't see in this room's darkness
     if (!canNpcSeeInRoom(npc, roomId)) continue;
 
-    // Determine if this NPC should aggro: either naturally hostile,
-    // or a merchant that was previously attacked by this player
-    const isHostile = npc.template.hostile;
     const isAngryMerchant = npc.template.merchantEnabled
       && isPlayerEntity(player)
       && isMerchantHostileToPlayer((player as AuthenticatedSocket).characterId!, npc.templateId);
 
-    if (!isHostile && !isAngryMerchant) continue;
-
-    // Skip hidden players unless NPC can see hidden (sneaking players are visible)
-    if (player.stealthMode === 'hidden' && !npc.canSeeHidden) continue;
+    if (!shouldNpcAggro(npc, player, isAngryMerchant)) continue;
 
     // Reset hostility timer when merchant re-aggros
     if (isAngryMerchant) {
@@ -966,6 +1016,30 @@ export async function reloadSpawnConfigs(): Promise<number> {
   const spawns = await spawnRepo.getAllSpawns();
   for (const spawn of spawns) {
     spawnConfigs.set(`${spawn.npcId}_${spawn.roomId}`, spawn);
+  }
+
+  // Remove excess instances that exceed maxActive
+  const liveBySpawn = new Map<string, NpcCombatInstance[]>();
+  for (const npc of npcInstances.values()) {
+    if (!npc.isCorpse) {
+      const key = `${npc.templateId}_${npc.spawnRoomId}`;
+      if (!liveBySpawn.has(key)) liveBySpawn.set(key, []);
+      liveBySpawn.get(key)!.push(npc);
+    }
+  }
+  for (const spawn of spawns) {
+    const key = `${spawn.npcId}_${spawn.roomId}`;
+    const instances = liveBySpawn.get(key);
+    if (!instances || instances.length <= spawn.maxActive) continue;
+    const excess = instances.slice(spawn.maxActive);
+    for (const npc of excess) {
+      console.log(`[NPC Manager] Removing excess instance of "${npc.entityName}" (maxActive=${spawn.maxActive}, found=${instances.length})`);
+      removeFromRoomIndex(npc.entityId, npc.currentRoomId);
+      npcInstances.delete(npc.entityId);
+      npcRepo.deleteInstance(npc.dbInstanceId).catch(error => {
+        console.error(`[NPC Manager] Failed to delete excess instance ${npc.dbInstanceId}:`, error);
+      });
+    }
   }
 
   // Reconcile: spawn missing instances for new/updated configs

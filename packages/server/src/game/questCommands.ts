@@ -73,9 +73,9 @@ async function handleQuestList(
     // For kill steps, show progress
     if (step.triggerType === 'kill' && step.requiredCount > 1) {
       const progress = await questRepo.getQuestProgress(characterId, step.id);
-      lines.push(colors.cyan(`   ${step.description} (${progress}/${step.requiredCount})`));
+      lines.push(renderColorMarkup(`   ${step.description} (${progress}/${step.requiredCount})`, colors.cyan, { name: socket.username }));
     } else {
-      lines.push(colors.cyan(`   ${step.description}`));
+      lines.push(renderColorMarkup(`   ${step.description}`, colors.cyan, { name: socket.username }));
     }
 
     lines.push('');
@@ -166,7 +166,7 @@ async function formatQuestLog(
 
   // Quest description (supports color markup)
   if (quest.description) {
-    lines.push(wordWrap(renderColorMarkup(` ${quest.description}`, colors.white, { name: socket.username }), 78));
+    lines.push(wordWrap(renderColorMarkup(` ${quest.description}`, colors.green, { name: socket.username }), 78));
     lines.push('');
   }
 
@@ -174,14 +174,14 @@ async function formatQuestLog(
   for (const step of quest.steps) {
     if (step.stepOrder < cq.currentStep) {
       // Completed step
-      lines.push(colors.green(` [x] ${step.description}`));
+      lines.push(renderColorMarkup(` [x] ${step.description}`, colors.green, { name: socket.username }));
     } else if (step.stepOrder === cq.currentStep) {
       // Current step
       if (step.triggerType === 'kill' && step.requiredCount > 1) {
         const progress = await questRepo.getQuestProgress(characterId, step.id);
-        lines.push(colors.white(` [>] ${step.description} (${progress}/${step.requiredCount})`));
+        lines.push(renderColorMarkup(` [>] ${step.description} (${progress}/${step.requiredCount})`, colors.green, { name: socket.username }));
       } else {
-        lines.push(colors.white(` [>] ${step.description}`));
+        lines.push(renderColorMarkup(` [>] ${step.description}`, colors.green, { name: socket.username }));
       }
     }
     // Future steps: hidden
@@ -221,14 +221,14 @@ async function handleQuestInfo(
   for (const questId of completedIds) {
     const quest = getQuestById(questId);
     if (quest && quest.name.toLowerCase().includes(nameSearch)) {
-      return formatCompletedQuest(quest);
+      return formatCompletedQuest(quest, socket);
     }
   }
 
   return { type: MessageType.ERROR, message: `No quest matching "${args.join(' ')}".` };
 }
 
-function formatCompletedQuest(quest: Quest): CommandResponse {
+function formatCompletedQuest(quest: Quest, socket: AuthenticatedSocket): CommandResponse {
   const border = '\u2500'.repeat(57);
   const lines: string[] = [];
 
@@ -236,12 +236,12 @@ function formatCompletedQuest(quest: Quest): CommandResponse {
   lines.push(colors.cyan(` ${border}`));
 
   if (quest.description) {
-    lines.push(wordWrap(` ${quest.description}`, 78));
+    lines.push(wordWrap(renderColorMarkup(` ${quest.description}`, colors.green, { name: socket.username }), 78));
     lines.push('');
   }
 
   for (const step of quest.steps) {
-    lines.push(colors.green(` [x] ${step.description}`));
+    lines.push(renderColorMarkup(` [x] ${step.description}`, colors.green, { name: socket.username }));
   }
 
   lines.push('');

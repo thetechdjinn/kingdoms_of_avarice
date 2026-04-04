@@ -5,6 +5,7 @@ import { GameWorld, Room } from './world.js';
 import { AuthenticatedSocket, connectedPlayers, sendVitals, sendMessage, broadcastToRoom } from './socket.js';
 import { colors } from '../utils/colors.js';
 import * as itemRepo from '../db/repositories/itemRepository.js';
+import * as npcRepo from '../db/repositories/npcRepository.js';
 import { isProgressionCommand, processProgressionCommand, getProgressionHelpText } from './progressionCommands.js';
 import { awardXp, awardEssence } from './progression.js';
 import { getNpcDisplayNames, getPlayersInRoom } from './commands.js';
@@ -51,7 +52,7 @@ import {
   NO_LOCKPICK_BONUS,
 } from './stats/secondaryStats.js';
 import { StealthMode } from '@koa/shared';
-import { getAllNpcInstances, reloadNpcTemplates, reloadSpawnConfigs, isNpcDebugEnabled, setNpcDebug, getMerchantsInRoom, clearNpcResponseCache, findNpcInRoom, checkHostileAggro } from './npcManager.js';
+import { getAllNpcInstances, reloadNpcTemplates, reloadSpawnConfigs, isNpcDebugEnabled, setNpcDebug, getMerchantsInRoom, clearNpcResponseCache, findNpcInRoom, checkHostileAggro, spawnNpcPublic, despawnByTemplate, removeNpcInstance, getNpcInstance } from './npcManager.js';
 import { evaluateSpellCondition, selectNpcSpell } from './npcSpellAI.js';
 import { resolveCombatTarget } from './combatMessaging.js';
 import * as merchantRepo from '../db/repositories/merchantRepository.js';
@@ -83,7 +84,7 @@ export function setPlayerLocation(playerId: number, roomId: number): void {
 }
 
 // Commands that require Developer role
-const developerCommands = ['create', 'link', 'unlink', 'edit', 'delete', 'reload', 'spawn', 'purge', 'items', 'iteminfo', 'setstealth', 'testbackstab', 'testspell', 'lockpicking', 'npcs', 'mobbehavior', 'npcdebug', 'merchants', 'quest'];
+const developerCommands = ['create', 'link', 'unlink', 'edit', 'delete', 'reload', 'spawn', 'purge', 'items', 'iteminfo', 'setstealth', 'testbackstab', 'testspell', 'lockpicking', 'npcs', 'mobbehavior', 'npcdebug', 'merchants', 'quest', 'mobspawn', 'mobdespawn'];
 
 // Commands that any staff can use (Moderator+)
 const staffCommands = ['goto', 'rooms', 'roominfo', 'help', 'give', 'hurt', 'heal', 'drain', 'revive', 'teleport', 'learn', 'unlearn', 'spells', 'effect', 'cleareffect', 'effects', 'stealth', 'exp', 'essence', 'currency'];
@@ -142,6 +143,10 @@ export async function processAdminCommand(
       return handleReload(args, world);
     case 'spawn':
       return handleSpawn(args, socket);
+    case 'mobspawn':
+      return handleMobSpawn(args, socket);
+    case 'mobdespawn':
+      return handleMobDespawn(args, socket);
     case 'purge':
       return handlePurge(args, socket);
     case 'items':
@@ -674,6 +679,86 @@ async function handleSpawn(
   } catch (error) {
     return { type: MessageType.ERROR, message: `Failed to spawn item: ${error}` };
   }
+}
+
+// @mobspawn <template_id|name> — spawn an NPC in current room
+async function handleMobSpawn(
+  args: string[],
+  socket: AuthenticatedSocket
+): Promise<CommandResponse> {
+  if (args.length === 0) {
+    return { type: MessageType.ERROR, message: 'Usage: @mobspawn <template_id|name>' };
+  }
+
+  const search = args.join(' ');
+  const templates = await npcRepo.getAllTemplates();
+
+  // Try ID first, then name match
+  let template = templates.find(t => t.id === parseInt(search));
+  if (!template) {
+    const lower = search.toLowerCase();
+    template = templates.find(t => t.name.toLowerCase() === lower)
+      || templates.find(t => t.name.toLowerCase().includes(lower));
+  }
+
+  if (!template) {
+    return { type: MessageType.ERROR, message: `No NPC template found matching "${search}".` };
+  }
+
+  const roomId = getPlayerLocation(socket.playerId);
+  const npc = await spawnNpcPublic(template, roomId);
+  return {
+    type: MessageType.SYSTEM,
+    message: `${colors.boldGreen('Spawned:')} ${colors.npc(npc.entityName)} (template ${template.id}) in room ${roomId}`,
+  };
+}
+
+// @mobdespawn <template_id|name|"here"> — despawn NPCs
+async function handleMobDespawn(
+  args: string[],
+  socket: AuthenticatedSocket
+): Promise<CommandResponse> {
+  if (args.length === 0) {
+    return { type: MessageType.ERROR, message: 'Usage: @mobdespawn <template_id|name|here>' };
+  }
+
+  const search = args.join(' ').toLowerCase();
+
+  // "here" — despawn all NPCs in current room
+  if (search === 'here') {
+    const roomId = getPlayerLocation(socket.playerId);
+    const allNpcs = getAllNpcInstances();
+    const inRoom = allNpcs.filter(n => n.currentRoomId === roomId && !n.isCorpse);
+    for (const npc of inRoom) {
+      removeNpcInstance(npc.entityId);
+    }
+    return {
+      type: MessageType.SYSTEM,
+      message: inRoom.length > 0
+        ? `${colors.boldGreen('Despawned:')} ${inRoom.length} NPC(s) from this room`
+        : 'No NPCs in this room.',
+    };
+  }
+
+  // By template ID or name
+  const templates = await npcRepo.getAllTemplates();
+  let template = templates.find(t => t.id === parseInt(search));
+  if (!template) {
+    template = templates.find(t => t.name.toLowerCase() === search)
+      || templates.find(t => t.name.toLowerCase().includes(search));
+  }
+
+  if (!template) {
+    return { type: MessageType.ERROR, message: `No NPC template found matching "${search}".` };
+  }
+
+  const count = despawnByTemplate(template.id);
+  return {
+    type: MessageType.SYSTEM,
+    message: count > 0
+      ? `${colors.boldGreen('Despawned:')} ${count} instance(s) of ${colors.npc(template.name)}`
+      : `No active instances of ${colors.npc(template.name)} found.`,
+  };
 }
 
 async function handlePurge(
@@ -2135,6 +2220,9 @@ function handleAdminHelp(userRoles: Role[]): CommandResponse {
     lines.push(`  ${colors.boldCyan('@items')}                  - List all item templates`);
     lines.push(`  ${colors.boldCyan('@iteminfo <id|name>')}     - Show item template details`);
     lines.push(`  ${colors.boldCyan('@spawn <id|name> [qty]')}  - Spawn item in your inventory`);
+    lines.push(`  ${colors.boldCyan('@mobspawn <id|name>')}    - Spawn NPC in current room`);
+    lines.push(`  ${colors.boldCyan('@mobdespawn <id|name>')}  - Despawn all instances of NPC`);
+    lines.push(`  ${colors.boldCyan('@mobdespawn here')}       - Despawn all NPCs in current room`);
     lines.push(`  ${colors.boldCyan('@purge items')}            - Remove all items from room`);
     lines.push(`  ${colors.boldCyan('@purge item <id>')}        - Remove specific item instance`);
     lines.push('');

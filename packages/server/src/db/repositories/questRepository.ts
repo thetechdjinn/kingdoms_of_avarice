@@ -26,6 +26,7 @@ interface DbQuest {
   required_faction_min: number | null;
   required_faction_max: number | null;
   required_quest_ids: number[];
+  required_quest_tags: string[];
   xp_reward: number;
   essence_reward: number;
   currency_reward: string; // BIGINT comes as string from pg
@@ -130,6 +131,7 @@ function dbToQuest(row: DbQuest, steps: QuestStep[]): Quest {
     requiredFactionMin: row.required_faction_min,
     requiredFactionMax: row.required_faction_max,
     requiredQuestIds: row.required_quest_ids ?? [],
+    requiredQuestTags: row.required_quest_tags ?? [],
     xpReward: row.xp_reward,
     essenceReward: row.essence_reward,
     currencyReward: Number(row.currency_reward),
@@ -181,14 +183,14 @@ export async function getAllQuests(): Promise<Quest[]> {
   );
 }
 
-export async function getQuestById(id: number): Promise<Quest | null> {
+export async function getQuestById(id: number, client?: pg.PoolClient): Promise<Quest | null> {
   const questResult = await query<DbQuest>(
-    'SELECT * FROM quests WHERE id = $1', [id]
+    'SELECT * FROM quests WHERE id = $1', [id], client
   );
   if (!questResult.rows[0]) return null;
 
   const stepResult = await query<DbQuestStep>(
-    'SELECT * FROM quest_steps WHERE quest_id = $1 ORDER BY step_order', [id]
+    'SELECT * FROM quest_steps WHERE quest_id = $1 ORDER BY step_order', [id], client
   );
 
   return dbToQuest(questResult.rows[0], stepResult.rows.map(dbToStep));
@@ -229,6 +231,16 @@ export async function getCompletedQuestIds(characterId: number): Promise<number[
     [characterId]
   );
   return result.rows.map(row => row.quest_id);
+}
+
+export async function getCompletedQuestTags(characterId: number): Promise<string[]> {
+  const result = await query<{ tag: string }>(
+    `SELECT q.tag FROM character_quests cq
+     JOIN quests q ON q.id = cq.quest_id
+     WHERE cq.character_id = $1 AND cq.status = 'completed'`,
+    [characterId]
+  );
+  return result.rows.map(row => row.tag.toLowerCase());
 }
 
 export async function getCharacterQuest(
@@ -394,6 +406,7 @@ export interface CreateQuestInput {
   requiredFactionMin?: number | null;
   requiredFactionMax?: number | null;
   requiredQuestIds?: number[];
+  requiredQuestTags?: string[];
   xpReward?: number;
   essenceReward?: number;
   currencyReward?: number;
@@ -435,16 +448,17 @@ export async function createQuest(
       tag, name, description, quest_giver_npc_id,
       min_level, max_level, required_races, required_classes,
       required_faction_id, required_faction_min, required_faction_max,
-      required_quest_ids, xp_reward, essence_reward, currency_reward,
+      required_quest_ids, required_quest_tags, xp_reward, essence_reward, currency_reward,
       item_rewards, faction_rewards, quest_flag,
       denial_dialogue, completed_dialogue, enabled, sort_order
-    ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22)
+    ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23)
     RETURNING *`,
     [
       input.tag, input.name, input.description ?? null, input.questGiverNpcId ?? null,
       input.minLevel ?? 1, input.maxLevel ?? null, input.requiredRaces ?? null, input.requiredClasses ?? null,
       input.requiredFactionId ?? null, input.requiredFactionMin ?? null, input.requiredFactionMax ?? null,
-      input.requiredQuestIds ?? [], input.xpReward ?? 0, input.essenceReward ?? 0, input.currencyReward ?? 0,
+      input.requiredQuestIds ?? [], input.requiredQuestTags ?? [],
+      input.xpReward ?? 0, input.essenceReward ?? 0, input.currencyReward ?? 0,
       JSON.stringify(input.itemRewards ?? []), JSON.stringify(input.factionRewards ?? []), input.questFlag ?? null,
       input.denialDialogue ?? null, input.completedDialogue ?? null, input.enabled ?? true, input.sortOrder ?? 0,
     ],
@@ -458,7 +472,7 @@ export async function updateQuest(
   input: Partial<CreateQuestInput>,
   client?: pg.PoolClient
 ): Promise<Quest | null> {
-  const existing = await getQuestById(id);
+  const existing = await getQuestById(id, client);
   if (!existing) return null;
 
   const result = await query<DbQuest>(
@@ -475,18 +489,19 @@ export async function updateQuest(
       required_faction_min = $10,
       required_faction_max = $11,
       required_quest_ids = COALESCE($12, required_quest_ids),
-      xp_reward = COALESCE($13, xp_reward),
-      essence_reward = COALESCE($14, essence_reward),
-      currency_reward = COALESCE($15, currency_reward),
-      item_rewards = COALESCE($16, item_rewards),
-      faction_rewards = COALESCE($17, faction_rewards),
-      quest_flag = $18,
-      denial_dialogue = $19,
-      completed_dialogue = $20,
-      enabled = COALESCE($21, enabled),
-      sort_order = COALESCE($22, sort_order),
+      required_quest_tags = COALESCE($13, required_quest_tags),
+      xp_reward = COALESCE($14, xp_reward),
+      essence_reward = COALESCE($15, essence_reward),
+      currency_reward = COALESCE($16, currency_reward),
+      item_rewards = COALESCE($17, item_rewards),
+      faction_rewards = COALESCE($18, faction_rewards),
+      quest_flag = $19,
+      denial_dialogue = $20,
+      completed_dialogue = $21,
+      enabled = COALESCE($22, enabled),
+      sort_order = COALESCE($23, sort_order),
       updated_at = CURRENT_TIMESTAMP
-    WHERE id = $23
+    WHERE id = $24
     RETURNING *`,
     [
       input.tag ?? null, input.name ?? null,
@@ -498,7 +513,9 @@ export async function updateQuest(
       input.requiredFactionId !== undefined ? input.requiredFactionId : existing.requiredFactionId,
       input.requiredFactionMin !== undefined ? input.requiredFactionMin : existing.requiredFactionMin,
       input.requiredFactionMax !== undefined ? input.requiredFactionMax : existing.requiredFactionMax,
-      input.requiredQuestIds ?? null, input.xpReward ?? null, input.essenceReward ?? null, input.currencyReward ?? null,
+      input.requiredQuestIds !== undefined ? input.requiredQuestIds : existing.requiredQuestIds,
+      input.requiredQuestTags !== undefined ? input.requiredQuestTags : existing.requiredQuestTags,
+      input.xpReward ?? null, input.essenceReward ?? null, input.currencyReward ?? null,
       input.itemRewards ? JSON.stringify(input.itemRewards) : null,
       input.factionRewards ? JSON.stringify(input.factionRewards) : null,
       input.questFlag !== undefined ? input.questFlag : existing.questFlag,

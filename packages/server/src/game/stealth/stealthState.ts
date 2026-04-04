@@ -189,6 +189,7 @@ export type StealthBreakReason =
   | 'movement_failed'// Player failed a sneak movement check
   | 'searched'       // Player was found by search
   | 'aoe_hit'        // Player was hit by an AoE spell
+  | 'rest'           // Player sat down to rest
   | 'manual';        // Player manually exited stealth
 
 /**
@@ -229,6 +230,9 @@ function getBreakStealthMessage(reason: StealthBreakReason): BreakStealthMessage
     case 'aoe_hit':
       // Warning - external spell effect
       return { text: 'The spell reveals your position!', isWarning: true };
+    case 'rest':
+      // Neutral - voluntary action
+      return { text: 'You settle down to rest, abandoning your stealth.', isWarning: false };
     case 'manual':
       // Neutral - voluntary exit
       return { text: 'You step out of the shadows.', isWarning: false };

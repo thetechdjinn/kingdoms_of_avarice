@@ -1115,6 +1115,11 @@ function handleRest(socket: AuthenticatedSocket): CommandResponse {
     return { type: MessageType.ERROR, message: 'You cannot rest while poisoned!' };
   }
 
+  // Break stealth when resting (can't hide while sitting down)
+  if (isStealthing(socket)) {
+    breakStealth(socket, 'rest', true);
+  }
+
   // Enable enhanced regeneration for mana and health
   socket.regenState.enhancedRegen.add('mana');
   socket.regenState.enhancedRegen.add('health');
@@ -2585,8 +2590,9 @@ function getHelpSections(): HelpSection[] {
       ],
     },
     {
-      keyword: 'chat', title: 'Chat', aliases: ['gossip', 'tell', 'broadcast', 'channels'],
+      keyword: 'chat', title: 'Chat', aliases: ['gossip', 'tell', 'broadcast', 'channels', 'say'],
       lines: [
+        `  ${colors.white('>name msg')}             - Say something to a player or NPC`,
         `  ${colors.white('gossip <msg>')} (gos)    - Send to gossip channel`,
         `  ${colors.white('gossip on/off')}         - Toggle gossip channel`,
         `  ${colors.white('auction <msg>')} (auc)   - Send to auction channel`,
@@ -2617,6 +2623,7 @@ function getHelpSections(): HelpSection[] {
     {
       keyword: 'social', title: 'Social', aliases: ['emote', 'emotes', 'actions'],
       lines: [
+        `  ${colors.white('>name msg')}             - Say something to a player or NPC`,
         `  ${colors.white('/me <text>')}            - Custom emote (e.g., /me waves)`,
         `  ${colors.white('<action>')}              - Social actions (dance, bow, wave, etc.)`,
         `  ${colors.white('<action> <player>')}     - Target a player (e.g., wave bob)`,

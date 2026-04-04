@@ -87,6 +87,11 @@ export async function handleHide(socket: AuthenticatedSocket): Promise<CommandRe
     return { type: MessageType.ERROR, message: 'Character not found.' };
   }
 
+  // Cannot hide while resting
+  if (socket.regenState.enhancedRegen.has('mana') && socket.regenState.enhancedRegen.has('health')) {
+    return { type: MessageType.ERROR, message: 'You cannot hide while resting!' };
+  }
+
   // Check if a status effect blocks stealth
   if (getEffectModifiers(socket).blocksStealth) {
     return { type: MessageType.ERROR, message: 'You cannot enter stealth right now!' };
@@ -171,6 +176,11 @@ export async function handleSneak(socket: AuthenticatedSocket): Promise<CommandR
   const character = await characterRepo.findCharacterById(socket.characterId!);
   if (!character) {
     return { type: MessageType.ERROR, message: 'Character not found.' };
+  }
+
+  // Cannot sneak while resting
+  if (socket.regenState.enhancedRegen.has('mana') && socket.regenState.enhancedRegen.has('health')) {
+    return { type: MessageType.ERROR, message: 'You cannot sneak while resting!' };
   }
 
   // Check if a status effect blocks stealth
