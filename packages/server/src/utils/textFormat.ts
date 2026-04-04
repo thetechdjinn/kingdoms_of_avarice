@@ -133,6 +133,23 @@ function fixAnsiLineBreaks(lines: string[]): string[] {
 }
 
 /**
+ * Word wrap text for quest/NPC dialogue with left indent.
+ * Creates a visually distinct "quoted speech" block, narrower than standard
+ * output and indented from the left margin.
+ *
+ * @param text - The text to wrap (may contain ANSI codes)
+ * @param indent - Number of spaces to indent from left (default 4)
+ * @param contentWidth - Max width of text content (default 70)
+ * @returns Wrapped and indented text with \r\n line endings
+ */
+export function dialogueWrap(text: string, indent: number = 4, contentWidth: number = 70): string {
+  if (!text) return '';
+  const wrapped = wordWrap(text, contentWidth);
+  const pad = ' '.repeat(indent);
+  return wrapped.split('\r\n').map(line => pad + line).join('\r\n');
+}
+
+/**
  * Format item name to lowercase
  * @param name - Item name
  * @returns Lowercase name
@@ -282,7 +299,7 @@ export function formatCopperAsDenominations(
 const COLOR_TAG_MAP: Record<string, (text: string) => string> = {
   red: colors.red,
   green: colors.green,
-  yellow: colors.yellow,
+  yellow: colors.brightYellow,
   blue: colors.blue,
   magenta: colors.magenta,
   cyan: colors.cyan,
@@ -307,6 +324,7 @@ const COLOR_TAG_MAP: Record<string, (text: string) => string> = {
   player: colors.player,
   system: colors.system,
   error: colors.error,
+  location: colors.cyan,
 };
 
 /** Regex matching {colorName} or {/} tags */
@@ -322,13 +340,13 @@ const COLOR_TAG_REGEX = /\{(\/|[a-zA-Z]+)\}/g;
  * a variable name it is replaced with the value, not treated as a color.
  *
  * @param text - Text with color markup tags
- * @param baseColorFn - Color function for untagged text (default: colors.cyan)
+ * @param baseColorFn - Color function for untagged text (default: colors.green)
  * @param variables - Optional map of variable names to replacement values (e.g., { name: 'Aldric' })
  * @returns ANSI-colored string
  */
 export function renderColorMarkup(
   text: string,
-  baseColorFn: (t: string) => string = colors.cyan,
+  baseColorFn: (t: string) => string = colors.green,
   variables?: Record<string, string>
 ): string {
   if (!text) return '';

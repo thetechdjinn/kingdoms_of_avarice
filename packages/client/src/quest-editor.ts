@@ -51,6 +51,7 @@ interface Quest {
   requiredFactionMin: number | null;
   requiredFactionMax: number | null;
   requiredQuestIds: number[];
+  requiredQuestTags: string[];
   xpReward: number;
   essenceReward: number;
   currencyReward: number;
@@ -165,6 +166,7 @@ const COLOR_PREVIEW_MAP: Record<string, string> = {
   boldcyan: '#56b6c2', boldgreen: '#98c379', boldyellow: '#e5c07b',
   boldred: '#e06c75', boldwhite: '#fff',
   item: '#61afef', npc: '#c678dd', player: '#56b6c2', system: '#e5c07b', error: '#e06c75',
+  location: '#56b6c2',
 };
 
 const BOLD_TAGS = new Set(['bold', 'boldcyan', 'boldgreen', 'boldyellow', 'boldred', 'boldwhite']);
@@ -181,7 +183,7 @@ function renderColorPreviewHtml(raw: string): string {
   for (const [key, value] of Object.entries(PREVIEW_VARIABLES)) {
     text = text.split(`{${key}}`).join(value);
   }
-  const baseColor = '#56b6c2'; // cyan
+  const baseColor = '#3fb950'; // green (MajorMUD dialogue style)
   let result = '';
   let lastIndex = 0;
   let activeColor: string | null = null;
@@ -335,6 +337,8 @@ function selectQuest(id: number): void {
   if (reqFactionMaxInput) reqFactionMaxInput.value = quest.requiredFactionMax?.toString() || '';
   const reqQuestsInput = getElement<HTMLInputElement>('quest-required-quests');
   if (reqQuestsInput) reqQuestsInput.value = quest.requiredQuestIds.length > 0 ? quest.requiredQuestIds.join(', ') : '';
+  const reqQuestTagsInput = getElement<HTMLInputElement>('quest-required-quest-tags');
+  if (reqQuestTagsInput) reqQuestTagsInput.value = quest.requiredQuestTags?.length > 0 ? quest.requiredQuestTags.join(', ') : '';
 
   // Rewards tab
   const xpInput = getElement<HTMLInputElement>('quest-xp-reward');
@@ -385,8 +389,7 @@ function createStepCard(step: QuestStep, index: number): HTMLElement {
   const card = document.createElement('div');
   card.className = 'step-card';
   card.dataset.index = index.toString();
-  // Preserve step-level rewards that have no UI fields
-  card.dataset.stepItemRewards = JSON.stringify(step.stepItemRewards || []);
+  // Preserve step-level faction rewards that have no UI fields
   card.dataset.stepFactionRewards = JSON.stringify(step.stepFactionRewards || []);
 
   card.innerHTML = `
@@ -446,7 +449,7 @@ function createStepCard(step: QuestStep, index: number): HTMLElement {
     </div>
     <div class="step-field">
       <label>Completion Dialogue <span class="hint-inline">(shown to player when step completes, supports {color} tags)</span></label>
-      <textarea class="step-completion-dialogue" rows="5" placeholder="The narrative text the player sees when this step completes. Use {boldCyan}NPC names{/} and {boldYellow}trigger phrases{/} to highlight key info.">${escapeHtml(step.completionDialogue || '')}</textarea>
+      <textarea class="step-completion-dialogue" rows="5" placeholder="The narrative text the player sees when this step completes. Use {npc}NPC names{/} and {yellow}trigger phrases{/} to highlight key info.">${escapeHtml(step.completionDialogue || '')}</textarea>
     </div>
     <div class="step-field">
       <label>In-Progress Dialogue <span class="hint-inline">(NPC says if player hasn't met requirements yet)</span></label>
@@ -466,12 +469,31 @@ function createStepCard(step: QuestStep, index: number): HTMLElement {
         <input type="number" class="step-currency" min="0" value="${step.stepCurrencyReward}" />
       </div>
     </div>
+    <div class="step-field">
+      <label>Item Rewards <span class="hint-inline">(granted when step completes)</span></label>
+      <div class="step-item-rewards-container"></div>
+      <button type="button" class="btn-add-step-item-reward">+ Add Item Reward</button>
+    </div>
   `;
 
   // Event listeners
   card.querySelector('.btn-move-up')?.addEventListener('click', () => moveStep(index, -1));
   card.querySelector('.btn-move-down')?.addEventListener('click', () => moveStep(index, 1));
   card.querySelector('.btn-remove')?.addEventListener('click', () => removeStep(index));
+
+  // Step item rewards
+  const stepItemContainer = card.querySelector('.step-item-rewards-container') as HTMLElement;
+  if (stepItemContainer) {
+    renderStepItemRewards(stepItemContainer, step.stepItemRewards || []);
+  }
+  card.querySelector('.btn-add-step-item-reward')?.addEventListener('click', () => {
+    const container = card.querySelector('.step-item-rewards-container') as HTMLElement;
+    if (container) {
+      const rewards = getStepItemRewardsFromCard(container);
+      rewards.push({ itemTemplateId: 1, quantity: 1 });
+      renderStepItemRewards(container, rewards);
+    }
+  });
 
   // Initialize NPC search dropdown for this step
   const npcContainer = card.querySelector('.step-npc-container') as HTMLElement;
@@ -521,7 +543,7 @@ function getStepsFromForm(): QuestStep[] {
       stepXpReward: parseInt((el.querySelector('.step-xp') as HTMLInputElement)?.value) || 0,
       stepEssenceReward: parseInt((el.querySelector('.step-essence') as HTMLInputElement)?.value) || 0,
       stepCurrencyReward: parseInt((el.querySelector('.step-currency') as HTMLInputElement)?.value) || 0,
-      stepItemRewards: JSON.parse(el.dataset.stepItemRewards || '[]'),
+      stepItemRewards: getStepItemRewardsFromCard(el.querySelector('.step-item-rewards-container') as HTMLElement),
       stepFactionRewards: JSON.parse(el.dataset.stepFactionRewards || '[]'),
     });
   });
@@ -564,6 +586,47 @@ function moveStep(index: number, direction: number): void {
   if (newIndex < 0 || newIndex >= steps.length) return;
   [steps[index], steps[newIndex]] = [steps[newIndex], steps[index]];
   renderSteps(steps);
+}
+
+// ============================================================================
+// Step Item Reward Management
+// ============================================================================
+
+function renderStepItemRewards(container: HTMLElement, rewards: QuestItemReward[]): void {
+  if (!container) return;
+  container.innerHTML = '';
+
+  for (const reward of rewards) {
+    const row = document.createElement('div');
+    row.className = 'step-row step-item-reward-row';
+    row.innerHTML = `
+      <div class="step-field">
+        <input type="number" class="step-reward-item-id" min="1" value="${reward.itemTemplateId}" placeholder="Item template ID" />
+      </div>
+      <div class="step-field">
+        <input type="number" class="step-reward-item-qty" min="1" value="${reward.quantity}" placeholder="Qty" />
+      </div>
+      <div class="step-field step-actions" style="flex: 0; align-self: start;">
+        <button type="button" class="btn-remove-step-reward btn-remove" style="padding: 4px 8px;">Remove</button>
+      </div>
+    `;
+    row.querySelector('.btn-remove-step-reward')?.addEventListener('click', () => {
+      row.remove();
+    });
+    container.appendChild(row);
+  }
+}
+
+function getStepItemRewardsFromCard(container: HTMLElement | null): QuestItemReward[] {
+  if (!container) return [];
+  const rows = container.querySelectorAll('.step-item-reward-row');
+  const rewards: QuestItemReward[] = [];
+  rows.forEach(row => {
+    const id = parseInt((row.querySelector('.step-reward-item-id') as HTMLInputElement)?.value);
+    const qty = Math.max(1, parseInt((row.querySelector('.step-reward-item-qty') as HTMLInputElement)?.value) || 1);
+    if (!isNaN(id) && id > 0) rewards.push({ itemTemplateId: id, quantity: qty });
+  });
+  return rewards;
 }
 
 // ============================================================================
@@ -711,7 +774,8 @@ function updatePreview(): void {
   if (quest.maxLevel) reqParts.push(`Level &le; ${quest.maxLevel}`);
   if (quest.requiredRaces?.length) reqParts.push(`Races: ${escapeHtml(quest.requiredRaces.join(', '))}`);
   if (quest.requiredClasses?.length) reqParts.push(`Classes: ${escapeHtml(quest.requiredClasses.join(', '))}`);
-  if (quest.requiredQuestIds.length > 0) reqParts.push(`Prereqs: ${quest.requiredQuestIds.join(', ')}`);
+  if (quest.requiredQuestIds.length > 0) reqParts.push(`Prereq IDs: ${quest.requiredQuestIds.join(', ')}`);
+  if (quest.requiredQuestTags?.length > 0) reqParts.push(`Prereq Tags: ${escapeHtml(quest.requiredQuestTags.join(', '))}`);
   if (reqParts.length > 0) {
     reqHtml = `
       <div class="preview-section">
@@ -759,7 +823,8 @@ function collectFormData(): Record<string, unknown> {
     requiredFactionId: parseIntOrNull(getElement<HTMLInputElement>('quest-required-faction')?.value),
     requiredFactionMin: parseIntOrNull(getElement<HTMLInputElement>('quest-required-faction-min')?.value),
     requiredFactionMax: parseIntOrNull(getElement<HTMLInputElement>('quest-required-faction-max')?.value),
-    requiredQuestIds: parseCommaNumbers(getElement<HTMLInputElement>('quest-required-quests')?.value),
+    requiredQuestIds: parseCommaNumbers(getElement<HTMLInputElement>('quest-required-quests')?.value) ?? [],
+    requiredQuestTags: parseCommaSeparated(getElement<HTMLInputElement>('quest-required-quest-tags')?.value) ?? [],
     xpReward: parseInt(getElement<HTMLInputElement>('quest-xp-reward')?.value || '0') || 0,
     essenceReward: parseInt(getElement<HTMLInputElement>('quest-essence-reward')?.value || '0') || 0,
     currencyReward: parseInt(getElement<HTMLInputElement>('quest-currency-reward')?.value || '0') || 0,

@@ -4,11 +4,24 @@
   flex: 1;
   overflow-y: auto;
   max-height: calc(100vh - 60px);
+  min-width: 0;
 }
 
 #quest-list-panel {
   width: 280px;
   min-width: 200px;
+}
+
+#preview-panel {
+  width: 300px;
+  min-width: 250px;
+  background: #16213e;
+  border-left: 1px solid #333;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  max-height: calc(100vh - 60px);
+  flex-shrink: 0;
 }
 
 #quest-list {
@@ -225,6 +238,28 @@
   color: #e0e0e0;
 }
 
+.btn-add-step-item-reward {
+  padding: 4px 10px;
+  font-size: 0.75rem;
+  background: #21262d;
+  border: 1px dashed #444;
+  color: #8b949e;
+  cursor: pointer;
+  border-radius: 4px;
+  margin-top: 4px;
+}
+
+.btn-add-step-item-reward:hover {
+  background: #30363d;
+  color: #e0e0e0;
+}
+
+.step-item-reward-row {
+  grid-template-columns: 1fr 80px auto;
+  align-items: start;
+  margin-bottom: 4px;
+}
+
 /* Inline form rows */
 .form-row {
   display: grid;
@@ -339,7 +374,7 @@
   font-family: monospace;
   font-size: 0.82rem;
   line-height: 1.5;
-  color: #56b6c2;
+  color: #3fb950;
   white-space: pre-wrap;
   word-wrap: break-word;
   min-height: 1.5em;

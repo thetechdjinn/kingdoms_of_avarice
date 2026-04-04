@@ -32,6 +32,8 @@ import * as npcResponseRepo from './repositories/npcResponseRepository.js';
 import * as doorRepo from './repositories/doorRepository.js';
 import * as npcSpellRepo from './repositories/npcSpellRepository.js';
 import * as spawnConfigRepo from './repositories/spawnRepository.js';
+import * as questRepo from './repositories/questRepository.js';
+import type { QuestTriggerType } from '@koa/shared';
 
 const DATA_DIR = join(__dirname, '..', '..', '..', '..', 'data');
 
@@ -986,6 +988,306 @@ async function importNpcs(data: unknown[]): Promise<ImportResult> {
 }
 
 // ============================================================================
+// Quest Import
+// ============================================================================
+
+async function importQuests(data: unknown[]): Promise<ImportResult> {
+  const result: ImportResult = { file: 'quests.json', created: 0, updated: 0, skipped: 0, errors: [] };
+
+  // Build FK lookup maps
+  const npcNameToId = new Map<string, number>();
+  const npcTemplates = await npcRepo.getAllTemplates();
+  for (const tmpl of npcTemplates) {
+    npcNameToId.set(tmpl.name.toLowerCase(), tmpl.id);
+  }
+
+  const itemNameToId = new Map<string, number>();
+  const itemTemplates = await itemRepo.getAllTemplates();
+  for (const item of itemTemplates) {
+    itemNameToId.set(item.name.toLowerCase(), item.id);
+  }
+
+  const tagToId = await roomRepo.getTagToIdMap();
+
+  const factionNameToId = new Map<string, number>();
+  const factions = await factionRepo.getAllFactions();
+  for (const f of factions) {
+    factionNameToId.set(f.name.toLowerCase(), f.id);
+  }
+
+  for (const raw of data) {
+    const item = raw as Record<string, unknown>;
+    try {
+      const tag = item.tag as string;
+      const name = item.name as string;
+      if (!tag || !name) {
+        result.errors.push(`Quest entry missing required field: ${!tag ? 'tag' : 'name'}`);
+        result.skipped++;
+        continue;
+      }
+
+      // Resolve quest giver NPC
+      let questGiverNpcId: number | null = null;
+      if (item.questGiverNpcName) {
+        questGiverNpcId = npcNameToId.get((item.questGiverNpcName as string).toLowerCase()) ?? null;
+        if (!questGiverNpcId) {
+          result.errors.push(`Quest "${tag}": quest giver NPC "${item.questGiverNpcName}" not found, skipping`);
+          result.skipped++;
+          continue;
+        }
+      }
+
+      // Resolve required faction
+      let requiredFactionId: number | null = null;
+      if (item.requiredFactionName) {
+        requiredFactionId = factionNameToId.get((item.requiredFactionName as string).toLowerCase()) ?? null;
+        if (!requiredFactionId) {
+          result.errors.push(`Quest "${tag}": required faction "${item.requiredFactionName}" not found, skipping`);
+          result.skipped++;
+          continue;
+        }
+      }
+
+      // Resolve item rewards
+      const itemRewards: { itemTemplateId: number; quantity: number }[] = [];
+      if (Array.isArray(item.itemRewards)) {
+        for (const r of item.itemRewards as Record<string, unknown>[]) {
+          if (r.itemName != null && typeof r.itemName !== 'string') {
+            result.errors.push(`Quest "${tag}": item reward has non-string itemName`);
+            continue;
+          }
+          const itemId = r.itemName ? itemNameToId.get((r.itemName as string).toLowerCase()) : null;
+          if (r.itemName && !itemId) {
+            result.errors.push(`Quest "${tag}": item reward "${r.itemName}" not found`);
+            continue;
+          }
+          if (itemId) {
+            const qty = Number(r.quantity);
+            if (!Number.isFinite(qty) || qty < 1) {
+              result.errors.push(`Quest "${tag}": item reward "${r.itemName}" has invalid quantity "${r.quantity}"`);
+              continue;
+            }
+            itemRewards.push({ itemTemplateId: itemId, quantity: Math.floor(qty) });
+          }
+        }
+      }
+
+      // Resolve faction rewards
+      const factionRewards: { factionId: number; amount: number }[] = [];
+      if (Array.isArray(item.factionRewards)) {
+        for (const r of item.factionRewards as Record<string, unknown>[]) {
+          if (r.factionName != null && typeof r.factionName !== 'string') {
+            result.errors.push(`Quest "${tag}": faction reward has non-string factionName`);
+            continue;
+          }
+          const fId = r.factionName ? factionNameToId.get((r.factionName as string).toLowerCase()) : null;
+          if (r.factionName && !fId) {
+            result.errors.push(`Quest "${tag}": faction reward "${r.factionName}" not found`);
+            continue;
+          }
+          if (fId) {
+            const amt = Number(r.amount);
+            if (!Number.isFinite(amt)) {
+              result.errors.push(`Quest "${tag}": faction reward "${r.factionName}" has invalid amount "${r.amount}"`);
+              continue;
+            }
+            factionRewards.push({ factionId: fId, amount: Math.floor(amt) });
+          }
+        }
+      }
+
+      // Validate numeric fields (reject empty strings and non-numeric values)
+      const toNum = (v: unknown): number | undefined => {
+        if (v == null || v === '') return undefined;
+        const n = Number(v);
+        return Number.isFinite(n) ? n : undefined;
+      };
+
+      // Validate string arrays
+      const toStringArray = (v: unknown): string[] | undefined =>
+        Array.isArray(v) && v.every((s: unknown) => typeof s === 'string') ? v as string[] : undefined;
+
+      const questInput: questRepo.CreateQuestInput = {
+        tag,
+        name,
+        description: typeof item.description === 'string' ? item.description : undefined,
+        questGiverNpcId: questGiverNpcId ?? undefined,
+        minLevel: toNum(item.minLevel),
+        maxLevel: toNum(item.maxLevel),
+        requiredRaces: toStringArray(item.requiredRaces),
+        requiredClasses: toStringArray(item.requiredClasses),
+        requiredFactionId: requiredFactionId ?? undefined,
+        requiredFactionMin: toNum(item.requiredFactionMin),
+        requiredFactionMax: toNum(item.requiredFactionMax),
+        requiredQuestIds: Array.isArray(item.requiredQuestIds) && item.requiredQuestIds.every((id: unknown) => typeof id === 'number' && Number.isInteger(id) && id > 0) ? item.requiredQuestIds as number[] : undefined,
+        requiredQuestTags: toStringArray(item.requiredQuestTags) ? (toStringArray(item.requiredQuestTags)!).map(t => t.trim().toLowerCase()).filter(t => t.length > 0) : undefined,
+        xpReward: toNum(item.xpReward),
+        essenceReward: toNum(item.essenceReward),
+        currencyReward: toNum(item.currencyReward),
+        itemRewards: itemRewards.length > 0 || Array.isArray(item.itemRewards) ? itemRewards : undefined,
+        factionRewards: factionRewards.length > 0 || Array.isArray(item.factionRewards) ? factionRewards : undefined,
+        questFlag: typeof item.questFlag === 'string' ? item.questFlag : undefined,
+        denialDialogue: typeof item.denialDialogue === 'string' ? item.denialDialogue : undefined,
+        completedDialogue: typeof item.completedDialogue === 'string' ? item.completedDialogue : undefined,
+        enabled: typeof item.enabled === 'boolean' ? item.enabled : undefined,
+        sortOrder: toNum(item.sortOrder),
+      };
+
+      // Resolve steps
+      const steps: Parameters<typeof questRepo.replaceSteps>[1] = [];
+      if (Array.isArray(item.steps)) {
+        for (const rawStep of item.steps as Record<string, unknown>[]) {
+          // Resolve step NPC
+          let triggerNpcId: number | null = null;
+          let stepSkipped = false;
+          if (rawStep.triggerNpcName) {
+            triggerNpcId = npcNameToId.get((rawStep.triggerNpcName as string).toLowerCase()) ?? null;
+            if (!triggerNpcId) {
+              result.errors.push(`Quest "${tag}" step ${rawStep.stepOrder}: trigger NPC "${rawStep.triggerNpcName}" not found, skipping step`);
+              stepSkipped = true;
+            }
+          }
+
+          // Resolve step item
+          let triggerItemTemplateId: number | null = null;
+          if (rawStep.triggerItemName) {
+            triggerItemTemplateId = itemNameToId.get((rawStep.triggerItemName as string).toLowerCase()) ?? null;
+            if (!triggerItemTemplateId) {
+              result.errors.push(`Quest "${tag}" step ${rawStep.stepOrder}: trigger item "${rawStep.triggerItemName}" not found, skipping step`);
+              stepSkipped = true;
+            }
+          }
+
+          // Resolve step room
+          let triggerRoomId: number | null = null;
+          if (rawStep.triggerRoomTag) {
+            triggerRoomId = tagToId.get(rawStep.triggerRoomTag as string) ?? null;
+            if (!triggerRoomId) {
+              result.errors.push(`Quest "${tag}" step ${rawStep.stepOrder}: trigger room tag "${rawStep.triggerRoomTag}" not found, skipping step`);
+              stepSkipped = true;
+            }
+          }
+
+          if (stepSkipped) continue;
+
+          // Validate trigger type
+          const triggerType = String(rawStep.triggerType ?? 'talk');
+          const validTriggerTypes: QuestTriggerType[] = ['talk', 'kill', 'visit'];
+          if (!validTriggerTypes.includes(triggerType as QuestTriggerType)) {
+            result.errors.push(`Quest "${tag}" step ${rawStep.stepOrder}: invalid triggerType "${triggerType}", skipping step`);
+            continue;
+          }
+
+          // Enforce required trigger references per type
+          if ((triggerType === 'talk' || triggerType === 'kill') && !triggerNpcId) {
+            result.errors.push(`Quest "${tag}" step ${rawStep.stepOrder}: ${triggerType} trigger requires an NPC, skipping step`);
+            continue;
+          }
+          if (triggerType === 'visit' && !triggerRoomId) {
+            result.errors.push(`Quest "${tag}" step ${rawStep.stepOrder}: visit trigger requires a room, skipping step`);
+            continue;
+          }
+
+          // Resolve step item rewards
+          const stepItemRewards: { itemTemplateId: number; quantity: number }[] = [];
+          if (Array.isArray(rawStep.stepItemRewards)) {
+            for (const r of rawStep.stepItemRewards as Record<string, unknown>[]) {
+              const itemId = r.itemName ? itemNameToId.get((r.itemName as string).toLowerCase()) : null;
+              if (r.itemName && !itemId) {
+                result.errors.push(`Quest "${tag}" step ${rawStep.stepOrder}: step item reward "${r.itemName}" not found`);
+                continue;
+              }
+              if (itemId) {
+                const qty = Number(r.quantity);
+                if (!Number.isFinite(qty) || qty < 1) {
+                  result.errors.push(`Quest "${tag}" step ${rawStep.stepOrder}: step item reward "${r.itemName}" has invalid quantity "${r.quantity}"`);
+                  continue;
+                }
+                stepItemRewards.push({ itemTemplateId: itemId, quantity: Math.floor(qty) });
+              }
+            }
+          }
+
+          // Resolve step faction rewards
+          const stepFactionRewards: { factionId: number; amount: number }[] = [];
+          if (Array.isArray(rawStep.stepFactionRewards)) {
+            for (const r of rawStep.stepFactionRewards as Record<string, unknown>[]) {
+              const fId = r.factionName ? factionNameToId.get((r.factionName as string).toLowerCase()) : null;
+              if (r.factionName && !fId) {
+                result.errors.push(`Quest "${tag}" step ${rawStep.stepOrder}: step faction reward "${r.factionName}" not found`);
+                continue;
+              }
+              if (fId) {
+                const amt = Number(r.amount);
+                if (!Number.isFinite(amt)) {
+                  result.errors.push(`Quest "${tag}" step ${rawStep.stepOrder}: step faction reward "${r.factionName}" has invalid amount "${r.amount}"`);
+                  continue;
+                }
+                stepFactionRewards.push({ factionId: fId, amount: Math.floor(amt) });
+              }
+            }
+          }
+
+          steps.push({
+            questId: 0, // placeholder, set after quest create/update
+            stepOrder: Number(rawStep.stepOrder) || steps.length + 1,
+            triggerType: triggerType as QuestTriggerType,
+            triggerNpcId,
+            triggerItemTemplateId,
+            triggerRoomId,
+            triggerText: typeof rawStep.triggerText === 'string' ? rawStep.triggerText : null,
+            requiredCount: Number(rawStep.requiredCount) || 1,
+            consumeItem: rawStep.consumeItem !== false,
+            description: String(rawStep.description ?? ''),
+            completionDialogue: typeof rawStep.completionDialogue === 'string' ? rawStep.completionDialogue : null,
+            inProgressDialogue: typeof rawStep.inProgressDialogue === 'string' ? rawStep.inProgressDialogue : null,
+            stepXpReward: Number(rawStep.stepXpReward) || 0,
+            stepEssenceReward: Number(rawStep.stepEssenceReward) || 0,
+            stepCurrencyReward: Number(rawStep.stepCurrencyReward) || 0,
+            stepItemRewards,
+            stepFactionRewards,
+          });
+        }
+      }
+
+      // If steps were defined but all failed resolution, skip the quest entirely
+      const stepsKeyPresent = Array.isArray(item.steps);
+      const inputHadSteps = stepsKeyPresent && (item.steps as unknown[]).length > 0;
+      if (inputHadSteps && steps.length === 0) {
+        result.errors.push(`Quest "${tag}": all steps failed FK resolution, skipping quest`);
+        result.skipped++;
+        continue;
+      }
+
+      const existing = await questRepo.getQuestByTag(tag);
+
+      await withTransaction(async (client) => {
+        if (existing) {
+          await questRepo.updateQuest(existing.id, questInput, client);
+          if (stepsKeyPresent) {
+            const stepsWithId = steps.map(s => ({ ...s, questId: existing.id }));
+            await questRepo.replaceSteps(existing.id, stepsWithId, client);
+          }
+          result.updated++;
+        } else {
+          const quest = await questRepo.createQuest(questInput, client);
+          if (steps.length > 0) {
+            const stepsWithId = steps.map(s => ({ ...s, questId: quest.id }));
+            await questRepo.replaceSteps(quest.id, stepsWithId, client);
+          }
+          result.created++;
+        }
+      });
+    } catch (err) {
+      result.errors.push(`Quest "${item.tag}": ${(err as Error).message}`);
+      result.skipped++;
+    }
+  }
+
+  return result;
+}
+
+// ============================================================================
 // File → importer dispatch
 // ============================================================================
 
@@ -1036,6 +1338,9 @@ async function importFile(relativePath: string): Promise<void> {
       break;
     case 'npcs':
       importResult = await importNpcs(file.data);
+      break;
+    case 'quests':
+      importResult = await importQuests(file.data);
       break;
     default:
       importResult = { file: relativePath, created: 0, updated: 0, skipped: 0, errors: [`Unknown type: ${file.type}`] };

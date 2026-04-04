@@ -33,6 +33,7 @@ import * as npcResponseRepo from './repositories/npcResponseRepository.js';
 import * as doorRepo from './repositories/doorRepository.js';
 import * as npcSpellRepo from './repositories/npcSpellRepository.js';
 import * as spawnConfigRepo from './repositories/spawnRepository.js';
+import * as questRepo from './repositories/questRepository.js';
 
 const DATA_DIR = join(__dirname, '..', '..', '..', '..', 'data');
 
@@ -340,6 +341,7 @@ async function exportRooms(
 }
 
 async function exportNpcs(
+  npcTemplates: Awaited<ReturnType<typeof npcRepo.getAllTemplates>>,
   idToTagMap: Map<number, string>,
   itemIdToName: Map<number, string>,
   spellIdToMnemonic: Map<number, string>,
@@ -347,12 +349,11 @@ async function exportNpcs(
   factionIdToName: Map<number, string>,
   warnings: string[]
 ): Promise<Set<string>> {
-  const templates = await npcRepo.getAllTemplates();
   const allNpcResponses = await npcResponseRepo.getAllResponses();
   const allMerchantInventory = new Map<number, Awaited<ReturnType<typeof merchantRepo.getInventoryForTemplate>>>();
 
   // Load merchant inventory for merchant NPCs
-  for (const tmpl of templates) {
+  for (const tmpl of npcTemplates) {
     if (tmpl.merchantEnabled) {
       const inv = await merchantRepo.getInventoryForTemplate(tmpl.id);
       allMerchantInventory.set(tmpl.id, inv);
@@ -390,7 +391,7 @@ async function exportNpcs(
     npcIdToAreas.get(spawn.npcId)!.add(spawnArea);
   }
 
-  for (const tmpl of templates) {
+  for (const tmpl of npcTemplates) {
     // Determine area from spawn configs; use 'global' if no spawns or multiple areas
     const tmplAreas = npcIdToAreas.get(tmpl.id);
     const area = (tmplAreas && tmplAreas.size === 1) ? [...tmplAreas][0] : 'global';
@@ -536,6 +537,182 @@ async function exportNpcs(
   return areasWithNpcs;
 }
 
+async function exportQuests(
+  npcIdToName: Map<number, string>,
+  itemIdToName: Map<number, string>,
+  roomIdToTag: Map<number, string>,
+  factionIdToName: Map<number, string>,
+  warnings: string[]
+): Promise<number> {
+  const quests = await questRepo.getAllQuests();
+  const data: unknown[] = [];
+
+  // Build quest ID → tag map for converting requiredQuestIds to tags
+  const questIdToTag = new Map<number, string>();
+  for (const q of quests) {
+    questIdToTag.set(q.id, q.tag);
+  }
+
+  for (const quest of quests) {
+    // Merge requiredQuestIds into requiredQuestTags (tags are portable, IDs are not)
+    const mergedTags = [...(quest.requiredQuestTags ?? [])];
+    if (quest.requiredQuestIds.length > 0) {
+      for (const reqId of quest.requiredQuestIds) {
+        const reqTag = questIdToTag.get(reqId);
+        if (reqTag) {
+          if (!mergedTags.includes(reqTag)) mergedTags.push(reqTag);
+        } else {
+          const msg = `Quest "${quest.tag}" has requiredQuestId ${reqId} that could not be resolved to a tag`;
+          warnings.push(msg);
+          console.warn(`    WARNING: ${msg}`);
+        }
+      }
+    }
+
+    const questData: Record<string, unknown> = {
+      tag: quest.tag,
+      name: quest.name,
+      description: quest.description,
+      minLevel: quest.minLevel,
+      maxLevel: quest.maxLevel,
+      requiredRaces: quest.requiredRaces,
+      requiredClasses: quest.requiredClasses,
+      requiredFactionMin: quest.requiredFactionMin,
+      requiredFactionMax: quest.requiredFactionMax,
+      requiredQuestTags: mergedTags,
+      xpReward: quest.xpReward,
+      essenceReward: quest.essenceReward,
+      currencyReward: quest.currencyReward,
+      questFlag: quest.questFlag,
+      denialDialogue: quest.denialDialogue,
+      completedDialogue: quest.completedDialogue,
+      enabled: quest.enabled,
+      sortOrder: quest.sortOrder,
+    };
+
+    // FK references → portable names
+    if (quest.questGiverNpcId) {
+      questData.questGiverNpcName = npcIdToName.get(quest.questGiverNpcId) ?? null;
+      if (!questData.questGiverNpcName) {
+        const msg = `Quest "${quest.tag}" references unknown NPC ID ${quest.questGiverNpcId}`;
+        warnings.push(msg);
+        console.warn(`    WARNING: ${msg}`);
+      }
+    }
+    if (quest.requiredFactionId) {
+      questData.requiredFactionName = factionIdToName.get(quest.requiredFactionId) ?? null;
+      if (!questData.requiredFactionName) {
+        const msg = `Quest "${quest.tag}" references unknown faction ID ${quest.requiredFactionId}`;
+        warnings.push(msg);
+        console.warn(`    WARNING: ${msg}`);
+      }
+    }
+
+    // Item rewards → portable names
+    questData.itemRewards = quest.itemRewards.map(r => {
+      const itemName = itemIdToName.get(r.itemTemplateId) ?? null;
+      if (!itemName) {
+        const msg = `Quest "${quest.tag}" item reward references unknown item ID ${r.itemTemplateId}`;
+        warnings.push(msg);
+        console.warn(`    WARNING: ${msg}`);
+      }
+      return { itemName, quantity: r.quantity };
+    });
+
+    // Faction rewards → portable names
+    questData.factionRewards = quest.factionRewards.map(r => {
+      const factionName = factionIdToName.get(r.factionId) ?? null;
+      if (!factionName) {
+        const msg = `Quest "${quest.tag}" faction reward references unknown faction ID ${r.factionId}`;
+        warnings.push(msg);
+        console.warn(`    WARNING: ${msg}`);
+      }
+      return { factionName, amount: r.amount };
+    });
+
+    // Steps
+    questData.steps = quest.steps.map(step => {
+      const stepData: Record<string, unknown> = {
+        stepOrder: step.stepOrder,
+        triggerType: step.triggerType,
+        triggerText: step.triggerText,
+        requiredCount: step.requiredCount,
+        consumeItem: step.consumeItem,
+        description: step.description,
+        completionDialogue: step.completionDialogue,
+        inProgressDialogue: step.inProgressDialogue,
+        stepXpReward: step.stepXpReward,
+        stepEssenceReward: step.stepEssenceReward,
+        stepCurrencyReward: step.stepCurrencyReward,
+      };
+
+      // Step FK references → portable names
+      if (step.triggerNpcId) {
+        stepData.triggerNpcName = npcIdToName.get(step.triggerNpcId) ?? null;
+        if (!stepData.triggerNpcName) {
+          const msg = `Quest "${quest.tag}" step ${step.stepOrder} references unknown NPC ID ${step.triggerNpcId}`;
+          warnings.push(msg);
+          console.warn(`    WARNING: ${msg}`);
+        }
+      }
+      if (step.triggerItemTemplateId) {
+        stepData.triggerItemName = itemIdToName.get(step.triggerItemTemplateId) ?? null;
+        if (!stepData.triggerItemName) {
+          const msg = `Quest "${quest.tag}" step ${step.stepOrder} references unknown item ID ${step.triggerItemTemplateId}`;
+          warnings.push(msg);
+          console.warn(`    WARNING: ${msg}`);
+        }
+      }
+      if (step.triggerRoomId) {
+        stepData.triggerRoomTag = roomIdToTag.get(step.triggerRoomId) ?? null;
+        if (!stepData.triggerRoomTag) {
+          const msg = `Quest "${quest.tag}" step ${step.stepOrder} references unknown room ID ${step.triggerRoomId}`;
+          warnings.push(msg);
+          console.warn(`    WARNING: ${msg}`);
+        }
+      }
+
+      // Step item rewards → portable names
+      if (step.stepItemRewards.length > 0) {
+        stepData.stepItemRewards = step.stepItemRewards.map(r => {
+          const itemName = itemIdToName.get(r.itemTemplateId) ?? null;
+          if (!itemName) {
+            const msg = `Quest "${quest.tag}" step ${step.stepOrder} item reward references unknown item ID ${r.itemTemplateId}`;
+            warnings.push(msg);
+            console.warn(`    WARNING: ${msg}`);
+          }
+          return { itemName, quantity: r.quantity };
+        });
+      } else {
+        stepData.stepItemRewards = [];
+      }
+
+      // Step faction rewards → portable names
+      if (step.stepFactionRewards.length > 0) {
+        stepData.stepFactionRewards = step.stepFactionRewards.map(r => {
+          const factionName = factionIdToName.get(r.factionId) ?? null;
+          if (!factionName) {
+            const msg = `Quest "${quest.tag}" step ${step.stepOrder} faction reward references unknown faction ID ${r.factionId}`;
+            warnings.push(msg);
+            console.warn(`    WARNING: ${msg}`);
+          }
+          return { factionName, amount: r.amount };
+        });
+      } else {
+        stepData.stepFactionRewards = [];
+      }
+
+      return stepData;
+    });
+
+    data.push(questData);
+  }
+
+  writeJson(join(DATA_DIR, 'global', 'quests.json'), envelope('quests', data));
+  console.log(`  quests: ${data.length} exported`);
+  return data.length;
+}
+
 /**
  * Run the full game data export. Writes JSON files to data/.
  * Can be called from CLI or from an API route.
@@ -571,6 +748,12 @@ export async function runExport(): Promise<ExportResult> {
     factionIdToName.set(f.id, f.name);
   }
 
+  const npcTemplates = await npcRepo.getAllTemplates();
+  const npcIdToName = new Map<number, string>();
+  for (const tmpl of npcTemplates) {
+    npcIdToName.set(tmpl.id, tmpl.name);
+  }
+
   // Ensure output directories
   ensureDir(join(DATA_DIR, 'global'));
 
@@ -583,18 +766,17 @@ export async function runExport(): Promise<ExportResult> {
   counts.items = await exportItems();
   counts.factions = await exportFactions();
   counts.drop_tables = await exportDropTables(itemIdToName);
+  counts.quests = await exportQuests(npcIdToName, itemIdToName, idToTagMap, factionIdToName, warnings);
 
   console.log('\nExporting area data...');
   const areaRoomIds = await exportRooms(idToTagMap, warnings);
-  const areasWithNpcs = await exportNpcs(idToTagMap, itemIdToName, spellIdToMnemonic, dropTableIdToName, factionIdToName, warnings);
+  const areasWithNpcs = await exportNpcs(npcTemplates, idToTagMap, itemIdToName, spellIdToMnemonic, dropTableIdToName, factionIdToName, warnings);
 
   // Count rooms and NPCs
   let totalRooms = 0;
   for (const ids of areaRoomIds.values()) totalRooms += ids.length;
   counts.rooms = totalRooms;
-
-  const templates = await npcRepo.getAllTemplates();
-  counts.npcs = templates.length;
+  counts.npcs = npcTemplates.length;
 
   // Build manifest
   const importOrder: string[] = [
@@ -620,6 +802,9 @@ export async function runExport(): Promise<ExportResult> {
       importOrder.push(`areas/${area}/npcs.json`);
     }
   }
+
+  // Quests reference NPCs and rooms, so must come after area data
+  importOrder.push('global/quests.json');
 
   const manifest = {
     version: '1.0',

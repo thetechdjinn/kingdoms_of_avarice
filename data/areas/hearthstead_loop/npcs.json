@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "exported_at": "2026-04-01T02:21:30.002Z",
+  "exported_at": "2026-04-04T16:30:52.982Z",
   "type": "npcs",
   "data": [
     {
@@ -40,6 +40,7 @@
       "merchantEnabled": false,
       "properName": false,
       "spellPower": 0,
+      "combatLevel": 1,
       "enabled": true,
       "dropTableName": "rat drop table",
       "attacks": [
@@ -96,6 +97,7 @@
       "merchantEnabled": false,
       "properName": false,
       "spellPower": 0,
+      "combatLevel": 1,
       "enabled": true,
       "dropTableName": "garter snake drop table",
       "attacks": [

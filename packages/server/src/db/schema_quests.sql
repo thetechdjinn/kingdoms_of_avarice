@@ -18,6 +18,7 @@ CREATE TABLE IF NOT EXISTS quests (
     required_faction_min INTEGER,
     required_faction_max INTEGER,
     required_quest_ids INTEGER[] DEFAULT '{}',
+    required_quest_tags TEXT[] DEFAULT '{}',
 
     -- Completion rewards
     xp_reward INTEGER DEFAULT 0,

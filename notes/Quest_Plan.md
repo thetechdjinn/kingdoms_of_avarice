@@ -34,7 +34,7 @@ When a step completes, the `completion_dialogue` tells the player what happened 
    deep in the Ironwood Forest. Seek out Bob the Builder — he knows
    the old paths. Tell him: ask about crystal key"
    ```
-   In the actual output, `Bob the Builder` would be highlighted (e.g., cyan/bold) and `ask about crystal key` would be highlighted differently (e.g., yellow) so the player knows those are actionable phrases to use with directed speech.
+   In the actual output, `Bob the Builder` would be highlighted in magenta (`{npc}`) and `ask about crystal key` would be highlighted in yellow (`{yellow}`) so the player knows those are actionable phrases to use with directed speech.
 3. The player's quest journal updates to show only: the completed step and the current objective.
 
 The quest designer controls exactly how much or how little guidance to give. Some quests may spell it out explicitly; others may give only a vague hint and let the player figure it out.
@@ -78,6 +78,7 @@ A quest can require any combination of:
 | `required_faction_min` | Minimum reputation with the required faction |
 | `required_faction_max` | Maximum reputation with the required faction (NULL = no cap) |
 | `required_quest_ids` | Array of quest IDs that must ALL be completed first (AND logic) |
+| `required_quest_tags` | Array of quest tags that must ALL be completed first (AND logic, preferred over IDs) |
 
 Prerequisites are checked when a player attempts to **start** the quest (i.e., triggers the first step). If they don't meet the requirements, the quest giver NPC responds with a `denial_dialogue` (e.g., "You are not yet experienced enough for this task.").
 
@@ -213,6 +214,7 @@ CREATE TABLE IF NOT EXISTS quests (
     required_faction_min INTEGER,              -- NULL = no minimum
     required_faction_max INTEGER,              -- NULL = no maximum
     required_quest_ids INTEGER[] DEFAULT '{}', -- Quest IDs that must be completed first (AND logic)
+    required_quest_tags TEXT[] DEFAULT '{}',    -- Quest tags that must be completed first (AND logic)
 
     -- Completion rewards
     xp_reward INTEGER DEFAULT 0,
@@ -474,7 +476,7 @@ Quest dialogue fields (`completionDialogue`, `inProgressDialogue`, `denialDialog
 {colorName}highlighted text{/}
 ```
 
-- `{color}` opens a color span. `{/}` closes it back to the base color (cyan).
+- `{color}` opens a color span. `{/}` closes it back to the base color (green).
 - Tags are case-insensitive: `{Cyan}` and `{cyan}` both work.
 - Nesting is not supported. Opening a new color tag implicitly closes the previous one.
 - Unclosed tags auto-close at end of text. Unrecognized tag names are left as literal text.
@@ -505,29 +507,42 @@ Quest dialogue fields (`completionDialogue`, `inProgressDialogue`, `denialDialog
 | `boldRed` | Bold red |
 | `boldWhite` | Bold white |
 | `item` | Bright blue (item highlight) |
-| `npc` | Magenta (NPC highlight) |
+| `npc` | Magenta (NPC/mob names) |
 | `player` | Bright cyan (player highlight) |
 | `system` | Yellow (system text) |
 | `error` | Red (error text) |
+| `location` | Cyan (location/place names) |
 
 ### Base Color
 
-All untagged text renders in **cyan** by default. Color tags are only needed for words that should stand out from the base.
+All untagged text renders in **green** by default (MajorMUD style). Color tags are only needed for words that should stand out from the base.
+
+### Quest Dialogue Color Conventions
+
+| Element | Tag | Color | Purpose |
+|---------|-----|-------|---------|
+| Base text | (none) | Green | Narration, default dialogue |
+| NPC/mob names | `{npc}` | Magenta | Who the player interacts with |
+| Keywords/triggers | `{yellow}` | Yellow | Action phrases, things to say/do |
+| Locations | `{location}` | Cyan | Places to go |
+| Items | `{item}` | Bright blue | Item names |
+
+Dialogue is rendered with a 4-space left indent and 70-character wrap width, visually distinct from standard game output.
 
 ### Example
 
 What the designer writes in the `completionDialogue` field:
 
 ```
-Elder Maren whispers, "Seek out {boldCyan}Bob the Builder{/} in the
-Ironwood District. Tell him: {boldYellow}ask about the artifact{/}."
+Elder Maren whispers, "Seek out {npc}Bob the Builder{/} in the
+{location}Ironwood District{/}. Tell him: {yellow}ask about the artifact{/}."
 ```
 
-What the player sees (cyan base with bold cyan name and bold yellow trigger phrase):
+What the player sees (green base with magenta NPC name, cyan location, yellow trigger phrase, indented 4 spaces):
 
 ```
-Elder Maren whispers, "Seek out Bob the Builder in the Ironwood
-District. Tell him: ask about the artifact."
+    Elder Maren whispers, "Seek out Bob the Builder in the
+    Ironwood District. Tell him: ask about the artifact."
 ```
 
 ### Variables
@@ -582,6 +597,7 @@ export interface Quest {
   requiredFactionMin: number | null;
   requiredFactionMax: number | null;
   requiredQuestIds: number[];
+  requiredQuestTags: string[];
   xpReward: number;
   essenceReward: number;
   currencyReward: number;
@@ -591,6 +607,7 @@ export interface Quest {
   denialDialogue: string | null;
   completedDialogue: string | null;
   enabled: boolean;
+  sortOrder: number;
   steps: QuestStep[];
 }
 

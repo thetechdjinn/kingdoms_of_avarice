@@ -48,6 +48,7 @@ export interface Quest {
   requiredFactionMin: number | null;
   requiredFactionMax: number | null;
   requiredQuestIds: number[];
+  requiredQuestTags: string[];
   xpReward: number;
   essenceReward: number;
   currencyReward: number;

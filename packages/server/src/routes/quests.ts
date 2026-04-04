@@ -54,6 +54,18 @@ function validateSteps(steps: Record<string, unknown>[]): string | null {
     if (step.triggerType === 'talk' && !step.triggerNpcId) {
       return `Step ${i + 1}: talk trigger requires an NPC ID`;
     }
+    if (Array.isArray(step.stepItemRewards)) {
+      for (const reward of step.stepItemRewards as Record<string, unknown>[]) {
+        const itemId = Number(reward.itemTemplateId);
+        if (!Number.isInteger(itemId) || itemId < 1) {
+          return `Step ${i + 1}: item reward itemTemplateId must be a positive integer`;
+        }
+        const qty = Number(reward.quantity);
+        if (!Number.isInteger(qty) || qty < 1) {
+          return `Step ${i + 1}: item reward quantity must be a positive integer`;
+        }
+      }
+    }
   }
   return null;
 }
@@ -107,11 +119,38 @@ export function setupQuestRoutes(app: Express): void {
         return;
       }
 
-      const quest = await questRepo.createQuest({
-        ...req.body,
-        tag: questTag,
-        name: name.trim(),
-      });
+      // Whitelist allowed fields to prevent mass assignment
+      const createAllowedFields = [
+        'description', 'questGiverNpcId', 'minLevel', 'maxLevel',
+        'requiredRaces', 'requiredClasses', 'requiredFactionId',
+        'requiredFactionMin', 'requiredFactionMax', 'requiredQuestIds', 'requiredQuestTags',
+        'xpReward', 'essenceReward', 'currencyReward', 'itemRewards',
+        'factionRewards', 'questFlag', 'denialDialogue', 'completedDialogue',
+        'enabled', 'sortOrder',
+      ] as const;
+      const createFields: Record<string, unknown> = { tag: questTag, name: name.trim() };
+      for (const field of createAllowedFields) {
+        if (req.body[field] !== undefined) {
+          createFields[field] = req.body[field];
+        }
+      }
+
+      // Validate array fields and element types
+      if (createFields.requiredQuestTags !== undefined) {
+        if (!Array.isArray(createFields.requiredQuestTags) || !(createFields.requiredQuestTags as unknown[]).every(t => typeof t === 'string' && (t as string).trim().length > 0)) {
+          res.status(400).json({ success: false, message: 'requiredQuestTags must be an array of non-empty strings' });
+          return;
+        }
+        createFields.requiredQuestTags = (createFields.requiredQuestTags as string[]).map(t => t.trim().toLowerCase());
+      }
+      if (createFields.requiredQuestIds !== undefined) {
+        if (!Array.isArray(createFields.requiredQuestIds) || !(createFields.requiredQuestIds as unknown[]).every(id => typeof id === 'number' && Number.isInteger(id) && id > 0)) {
+          res.status(400).json({ success: false, message: 'requiredQuestIds must be an array of positive integers' });
+          return;
+        }
+      }
+
+      const quest = await questRepo.createQuest(createFields as unknown as questRepo.CreateQuestInput);
 
       await reloadQuests();
       res.json({ success: true, quest });
@@ -150,7 +189,7 @@ export function setupQuestRoutes(app: Express): void {
       const allowedFields = [
         'tag', 'description', 'questGiverNpcId', 'minLevel', 'maxLevel',
         'requiredRaces', 'requiredClasses', 'requiredFactionId',
-        'requiredFactionMin', 'requiredFactionMax', 'requiredQuestIds',
+        'requiredFactionMin', 'requiredFactionMax', 'requiredQuestIds', 'requiredQuestTags',
         'xpReward', 'essenceReward', 'currencyReward', 'itemRewards',
         'factionRewards', 'questFlag', 'denialDialogue', 'completedDialogue',
         'enabled', 'sortOrder',
@@ -159,6 +198,21 @@ export function setupQuestRoutes(app: Express): void {
       for (const field of allowedFields) {
         if (req.body[field] !== undefined) {
           updateFields[field] = req.body[field];
+        }
+      }
+
+      // Validate array fields and element types
+      if (updateFields.requiredQuestTags !== undefined) {
+        if (!Array.isArray(updateFields.requiredQuestTags) || !(updateFields.requiredQuestTags as unknown[]).every(t => typeof t === 'string' && (t as string).trim().length > 0)) {
+          res.status(400).json({ success: false, message: 'requiredQuestTags must be an array of non-empty strings' });
+          return;
+        }
+        updateFields.requiredQuestTags = (updateFields.requiredQuestTags as string[]).map(t => t.trim().toLowerCase());
+      }
+      if (updateFields.requiredQuestIds !== undefined) {
+        if (!Array.isArray(updateFields.requiredQuestIds) || !(updateFields.requiredQuestIds as unknown[]).every(id => typeof id === 'number' && Number.isInteger(id) && id > 0)) {
+          res.status(400).json({ success: false, message: 'requiredQuestIds must be an array of positive integers' });
+          return;
         }
       }
 
@@ -249,6 +303,35 @@ export function setupQuestRoutes(app: Express): void {
             if (stepError) { skipped++; continue; }
           }
 
+          // Validate array fields
+          if (item.requiredQuestTags !== undefined && item.requiredQuestTags !== null) {
+            if (!Array.isArray(item.requiredQuestTags) || !item.requiredQuestTags.every((t: unknown) => typeof t === 'string' && (t as string).trim().length > 0)) {
+              skipped++; continue;
+            }
+            item.requiredQuestTags = item.requiredQuestTags.map((t: string) => t.trim().toLowerCase());
+          }
+          if (item.requiredQuestIds !== undefined && item.requiredQuestIds !== null) {
+            if (!Array.isArray(item.requiredQuestIds) || !item.requiredQuestIds.every((id: unknown) => typeof id === 'number' && Number.isInteger(id) && id > 0)) {
+              skipped++; continue;
+            }
+          }
+
+          // Whitelist allowed fields to prevent mass assignment
+          const importAllowedFields = [
+            'tag', 'description', 'questGiverNpcId', 'minLevel', 'maxLevel',
+            'requiredRaces', 'requiredClasses', 'requiredFactionId',
+            'requiredFactionMin', 'requiredFactionMax', 'requiredQuestIds', 'requiredQuestTags',
+            'xpReward', 'essenceReward', 'currencyReward', 'itemRewards',
+            'factionRewards', 'questFlag', 'denialDialogue', 'completedDialogue',
+            'enabled', 'sortOrder',
+          ] as const;
+          const safeFields: Record<string, unknown> = { name: item.name };
+          for (const field of importAllowedFields) {
+            if (item[field] !== undefined) {
+              safeFields[field] = item[field];
+            }
+          }
+
           const existing = await questRepo.getQuestByTag(tag);
 
           if (existing && merge) {
@@ -260,7 +343,7 @@ export function setupQuestRoutes(app: Express): void {
                 continue;
               }
             }
-            await questRepo.updateQuest(existing.id, item, client);
+            await questRepo.updateQuest(existing.id, safeFields as unknown as questRepo.CreateQuestInput, client);
             if (item.steps && Array.isArray(item.steps)) {
               await questRepo.replaceSteps(existing.id, item.steps.map((s: Record<string, unknown>, i: number) =>
                 mapStepInput(existing.id, s, i)
@@ -268,7 +351,7 @@ export function setupQuestRoutes(app: Express): void {
             }
             updated++;
           } else if (!existing) {
-            const quest = await questRepo.createQuest(item, client);
+            const quest = await questRepo.createQuest(safeFields as unknown as questRepo.CreateQuestInput, client);
             if (item.steps && Array.isArray(item.steps)) {
               await questRepo.replaceSteps(quest.id, item.steps.map((s: Record<string, unknown>, i: number) =>
                 mapStepInput(quest.id, s, i)

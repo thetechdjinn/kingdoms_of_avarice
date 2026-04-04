@@ -441,6 +441,11 @@ export async function runMigrations(): Promise<void> {
       await client.query(`
         ALTER TABLE doors ADD COLUMN IF NOT EXISTS required_quest_flag VARCHAR(100)
       `);
+
+      // Add required_quest_tags to quests (tag-based prerequisites alongside ID-based)
+      await client.query(`
+        ALTER TABLE quests ADD COLUMN IF NOT EXISTS required_quest_tags TEXT[] DEFAULT '{}'
+      `);
       await client.query(`
         ALTER TABLE doors ADD COLUMN IF NOT EXISTS required_item_tag VARCHAR(100)
       `);

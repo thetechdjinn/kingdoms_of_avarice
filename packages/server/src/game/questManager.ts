@@ -16,7 +16,7 @@ import * as characterRepo from '../db/repositories/characterRepository.js';
 import * as itemRepo from '../db/repositories/itemRepository.js';
 import * as factionRepo from '../db/repositories/factionRepository.js';
 import { awardEssence, awardXp } from './progression.js';
-import { wordWrap, renderColorMarkup } from '../utils/textFormat.js';
+import { wordWrap, renderColorMarkup, dialogueWrap } from '../utils/textFormat.js';
 import { colors } from '../utils/colors.js';
 
 // ============================================================================
@@ -291,7 +291,7 @@ export async function checkKillTrigger(
       } else {
         // Progress update
         sendMessage(socket, MessageType.SYSTEM,
-          colors.white(wordWrap(`Quest progress: ${step.description} (${newCount}/${step.requiredCount})`, 80))
+          wordWrap(renderColorMarkup(`Quest progress: ${step.description} (${newCount}/${step.requiredCount})`, colors.white, questVars(socket)), 80)
         );
       }
     }
@@ -428,12 +428,23 @@ export async function canStartQuest(
     }
   }
 
-  // Prerequisite quests
+  // Prerequisite quests (by ID)
   if (quest.requiredQuestIds.length > 0) {
     const completedIds = await questRepo.getCompletedQuestIds(characterId);
     const completedSet = new Set(completedIds);
     for (const reqId of quest.requiredQuestIds) {
       if (!completedSet.has(reqId)) {
+        return { allowed: false, reason: 'You have not completed a required quest.' };
+      }
+    }
+  }
+
+  // Prerequisite quests (by tag)
+  if (quest.requiredQuestTags.length > 0) {
+    const completedTags = await questRepo.getCompletedQuestTags(characterId);
+    const completedSet = new Set(completedTags);
+    for (const reqTag of quest.requiredQuestTags) {
+      if (!completedSet.has(reqTag)) {
         return { allowed: false, reason: 'You have not completed a required quest.' };
       }
     }
@@ -555,7 +566,7 @@ function questVars(socket: AuthenticatedSocket): Record<string, string> {
 }
 
 function renderDialogue(dialogue: string, socket: AuthenticatedSocket): string {
-  return wordWrap(renderColorMarkup(dialogue, colors.white, questVars(socket)), 80);
+  return dialogueWrap(renderColorMarkup(dialogue, colors.green, questVars(socket)));
 }
 
 function formatNpcDialogue(dialogue: string, socket: AuthenticatedSocket): string {
