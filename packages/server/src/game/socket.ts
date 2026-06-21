@@ -609,8 +609,15 @@ export function setupGameSocket(wss: WebSocketServer): void {
         await handleDroppedDisconnect(authWs);
       }
 
-      // Save character vitals (HP, mana) and room location on disconnect
-      // If dead/dropped, save with 0 HP so they auto-respawn on reconnect
+      // Save character vitals (HP, mana) and room location on disconnect.
+      // If dead/dropped, save with 0 HP so they auto-respawn on reconnect.
+      //
+      // INVARIANT (memory-first architecture):
+      // This flush — like every flush (save tick, shutdown hook, quest
+      // completion, level-up, etc.) — MUST drain the player's entire dirty
+      // state in a single transaction via the central `flushPlayer(socket)`
+      // helper. Writing one field without flushing everything else dirty
+      // creates torn-state risk on crash. See notes/Memory_First_Architecture.md.
       if (authWs.characterId) {
         try {
           const hpToSave = isPlayerDead(authWs) ? 0 : authWs.vitals.hp;

@@ -1,8 +1,20 @@
 # Memory-First Refactor — Write Site Checklist
 
-Every DB write site found in the audit, grouped by what they touch. For each row, the recommendation is **MEMORY-FIRST** (cache + flush via save tick) or **DIRECT** (synchronous DB write). Reason and frequency are listed so the trade-off is explicit.
+Every DB write site found in the audit, grouped by what they touch. For each row, the recommendation is **MEMORY-FIRST** (cache + flush via `flushPlayer`) or **DIRECT** (synchronous DB write — but still routes through `flushPlayer` to drain everything else dirty alongside).
 
-Review and override any recommendation before implementation begins.
+## Core invariant (applies to every row below)
+
+**Every flush — periodic save tick, logout, graceful shutdown, quest completion, level-up, or any direct-write trigger — drains the player's entire dirty state in a single transaction.** See [[Memory_First_Architecture]] for the full rule. This means a "DIRECT" classification below does NOT mean "writes ONLY its own field" — it means "triggers `flushPlayer` immediately rather than waiting for the next save tick." Either way, all dirty state lands together atomically.
+
+The practical difference between MEM and DIR is just *when* the flush fires:
+- **MEM** = flush waits for the next save tick (or whichever DIR/logout/shutdown trigger happens first)
+- **DIR** = flush fires immediately at the event itself (low-latency durability for milestones)
+
+## Decisions locked in
+
+1. **XP / essence awards**: Hybrid. Accumulate in memory; flush on level-up, quest step/completion, save tick, or logout.
+2. **Status effects**: persist current state and time-remaining on logout. Restored on next login.
+3. **Inventory writes**: default MEM (atomic flush handles consolidation/destruction safely). DIR reserved for player-perceived milestones (quest rewards, rare drops worth distinguishing).
 
 Legend:
 - **Freq** = rough rate during 50-player typical play
@@ -67,39 +79,39 @@ Note: bank deposit/withdraw is currently wrapped in `withTransaction` because po
 
 ## Inventory — creation (new item instances)
 
-| Site | File:Line | Freq | Stakes | Rec |
-|---|---|---|---|---|
-| `get` split creates remainder stack | `itemCommands.ts:290, 365` | rare | New stack vanishes — confusing for player | **DIR** |
-| `drop` split creates new stack | `itemCommands.ts:564` | rare | Same | **DIR** |
-| Merchant purchase (item to player) | `merchantCommands.ts:371` | ~0.3/sec | Spent money for a vanishing item — feel-bad | **DIR** |
-| NPC death loot drop | `npcDeathHandler.ts:258, 288` | ~0.5/sec | Loot vanishes on crash — feel-bad | **DIR** |
-| Quest step item reward | `questManager.ts:484` | rare | Irreversible milestone | **DIR** |
-| Quest completion item reward | `questManager.ts:525` | rare | Same | **DIR** |
+Atomic flush handles rollback safely (a crash rolls back the create AND the linked currency/quantity change together). DIR remains for milestones the player will remember even after a crash — losing them feels broken.
+
+| Site | File:Line | Freq | Rec |
+|---|---|---|---|
+| `get` split creates remainder stack | `itemCommands.ts:290, 365` | rare | **MEM** (rollback returns ground stack untouched) |
+| `drop` split creates new stack | `itemCommands.ts:564` | rare | **MEM** |
+| Merchant purchase (item to player) | `merchantCommands.ts:371` | ~0.3/sec | **MEM** (paired with currency loss in same tx) |
+| NPC death loot drop | `npcDeathHandler.ts:258, 288` | ~0.5/sec | **MEM** (rollback returns NPC alive too) |
+| Quest step item reward | `questManager.ts:484` | rare | **DIR** (milestone — player remembers the reward) |
+| Quest completion item reward | `questManager.ts:525` | rare | **DIR** (milestone) |
 
 ## Inventory — destruction (item instance deletes)
 
-| Site | File:Line | Freq | Stakes | Rec |
-|---|---|---|---|---|
-| `drop` consumes entire stack from inventory | `itemCommands.ts:213, 419` | ~0.3/sec | Item reappears on crash — duplication exploit | **DIR** |
-| `get` consumes entire stack from room | `itemCommands.ts:268, 339, 542` | ~0.3/sec | Same — players could re-pick up | **DIR** |
-| Merchant purchase (consume player's item) | `merchantCommands.ts:474` | ~0.3/sec | Same | **DIR** |
-| Quest step consumes item | `questManager.ts:172` | rare | Quest mechanics break | **DIR** |
+Atomic flush handles consolidation/destruction safely (a crash rolls back the delete AND its paired update together).
 
-**Decision needed**: inventory deletes are the duplication-exploit risk if deferred. Recommend keeping them DIR. Alternative: queue deletes in memory but write the delete log to a small append-only "ledger" table — still serializes, but is one batch per save tick.
+| Site | File:Line | Freq | Rec |
+|---|---|---|---|
+| Stack consolidation on pickup | `itemCommands.ts:213, 339, 419` | ~0.5/sec | **MEM** (paired with `addToInstanceQuantity`) |
+| Stack consolidation on drop | `itemCommands.ts:268, 542` | rare | **MEM** (paired with `addToInstanceQuantity`) |
+| Consumable use (potion/food) | various | ~0.5/sec | **MEM** (paired with vitals change) |
+| Merchant purchase consumes player's item | `merchantCommands.ts:474` | ~0.3/sec | **MEM** (paired with currency gain) |
+| Quest step consumes item | `questManager.ts:172` | rare | **DIR** (milestone — quest step completing) |
 
-## Progression — XP and essence
+The atomic transaction invariant means duplication is impossible: any code path that writes a `deleteInstance` flushes its paired update in the same transaction. Either both land or both roll back.
 
-| Site | File:Line | Freq | Stakes | Rec |
-|---|---|---|---|---|
-| `awardXp` (called by NPC kills, quest steps/completion) | `progression.ts:200-206`, callers in `npcDeathHandler.ts:137`, `questManager.ts:469, 510` | ~3/sec | Crash loses up to 60s of XP — annoying but recoverable | **? — see below** |
-| `awardEssence` | `progression.ts:225-231`, callers in `npcDeathHandler.ts:181`, `questManager.ts` | ~1/sec | Same | **? — see below** |
+## Progression — XP and essence (Hybrid)
 
-**Decision needed**: the audit recommended DIR because quest triggers and level-up checks read XP synchronously. But those reads already come from the in-memory `characterProgressions` map (`progression.ts:25`), not the DB — so deferring the DB write doesn't actually break them. Going MEM here would cut ~4 writes/sec to one batched write per tick.
+| Site | File:Line | Freq | Rec |
+|---|---|---|---|
+| `awardXp` (NPC kills, quest steps/completion) | `progression.ts:200-206`, callers in `npcDeathHandler.ts:137`, `questManager.ts:469, 510` | ~3/sec | **HYBRID** |
+| `awardEssence` | `progression.ts:225-231`, callers in `npcDeathHandler.ts:181`, `questManager.ts` | ~1/sec | **HYBRID** |
 
-Possible paths:
-- **A: All MEM** — XP/essence flushes with the save tick. Crash loses up to 60s of progression.
-- **B: DIR** — keep today's behavior. Simple and safe.
-- **C: Hybrid** — XP/essence accumulates in memory; flush on level-up, quest completion, save tick, or logout. Best of both but more code.
+XP and essence accumulate in the in-memory `characterProgressions` map. The DB flush fires on any of: level-up, quest step completion, quest final completion, save tick, logout, shutdown. Routine kill-XP defers to the save tick; meaningful milestones flush immediately.
 
 ## Progression — level changes
 
@@ -111,12 +123,15 @@ Level-ups are once-per-many-kills. Direct write is fine.
 
 ## Status effects (poison, regen buffs, etc.)
 
-| Site | File:Line | Freq | Stakes | Rec |
-|---|---|---|---|---|
-| Apply effect | `schema_status_effects.sql` writes via repo | ~1/sec | Effect doesn't carry over crash — already happens on restart | **? — see below** |
-| Expire effect | repo delete | ~1/sec | Same | **? — see below** |
+Persist current state and time-remaining on logout. Effects resume on next login from the persisted timestamp.
 
-**Decision needed**: most MUDs clear effects on logout. Do we want persisted effects across sessions, or are they purely session-scoped? If session-scoped: stop writing them to DB at all. If session-scoped is acceptable, this is a free win (~2 writes/sec eliminated).
+| Site | File:Line | Freq | Rec |
+|---|---|---|---|
+| Apply effect | `schema_status_effects.sql` writes via repo | ~1/sec | **MEM** (flushes on tick/logout with `expires_at`) |
+| Expire effect | repo delete | ~1/sec | **MEM** (atomic with the apply/cleanup it pairs with) |
+| Effect tick (in-memory only) | n/a | ~1/sec per effect | **no DB write** — in-memory ticking; only flushed state matters |
+
+Session-state extension: add `socket.statusEffects: ActiveEffect[]` with `expires_at` timestamps. Tick locally; the save tick / logout flush snapshots the current list.
 
 ## Quests — progression state
 
@@ -154,30 +169,33 @@ NPC instances already live in memory (`npcManager`); DB writes are for cold-star
 
 ---
 
-## Summary of decisions needed
+## Final scope summary
 
-Three areas have an open question rather than a clear recommendation:
-
-1. **XP / essence awards**: A (all MEM), B (DIR), or C (hybrid — flush on level-up, quest completion, save tick, logout)?
-2. **Status effects**: session-scoped (stop persisting) or persistent across sessions?
-3. **Inventory destruction (`deleteInstance`)**: keep DIR (safest, prevents dup exploits) or move to MEM with append-only delete ledger?
-
-Everything else has a clear recommendation; flag any individual row you want to override.
-
-## What gets touched if recommendations stand
-
-**Memory-first refactor scope**:
-- Movement: 6 sites refactored, 4 kept direct
-- Pocket currency: 5 sites refactored, 3 kept direct
+**Memory-first refactor scope** (after decisions locked in):
+- Movement: 6 sites refactored, 4 kept direct (admin commands + dead-login respawn)
+- Pocket currency: 5 sites refactored, 3 kept direct (quest rewards + admin)
 - Bank balance: 6 sites refactored
 - Inventory location/quantity: 11 sites refactored
-- Inventory create/destroy: 0 refactored (all stay direct under current recommendation)
+- Inventory create: 4 sites refactored, 2 kept direct (quest rewards)
+- Inventory destroy: 4 sites refactored, 1 kept direct (quest turn-in)
 - Fuel ticks: 2 sites refactored
-- Quest step progress: 1 site refactored
+- Status effects: all writes refactored to session-state with logout snapshot
+- XP/essence: hybrid (memory + opportunistic flush at milestones)
+- Quest step progress increment: 1 site refactored (final step completion stays direct)
 
-Plus the cross-cutting changes:
-- `AuthenticatedSocket` interface (cached state + dirty flags)
-- `sessionState.ts` (new — mutation helpers)
-- `characterSaveLoop.ts` (extended tick)
-- `socket.ts` close handler (extended flush)
-- New graceful-shutdown hook
+**Always direct** (milestone or audit):
+- Quest step/final completion
+- Level-up
+- Character create/delete
+- Training (CP spend)
+- All admin commands
+- Logout flush itself
+- Auto-respawn on dead login
+
+Cross-cutting changes:
+- `AuthenticatedSocket` interface (cached state + dirty flags + status effects)
+- `sessionState.ts` (new — mutation helpers + `flushPlayer`)
+- `characterSaveLoop.ts` (extended tick — calls `flushPlayer` per socket)
+- `socket.ts` close handler (calls `flushPlayer` once)
+- New graceful-shutdown hook (calls `flushPlayer` for every socket)
+- Every direct-write trigger (quest completion, level-up, etc.) calls `flushPlayer` opportunistically to drain everything else dirty alongside its own write

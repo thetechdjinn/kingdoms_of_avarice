@@ -38,6 +38,20 @@ Writes that must survive a crash are kept synchronous to the database. These are
 - It removes most of the multi-statement transaction surface (`withTransaction` is needed less often), simplifying any future DB driver swap.
 - It makes the choice of DB engine almost orthogonal — SQLite, libSQL, Postgres, or even an embedded KV store would all comfortably handle the resulting write volume.
 
+## Core invariant: atomic full-state flushes
+
+**Every flush — periodic save tick, logout, graceful shutdown, quest completion, level-up, or any direct-write trigger — drains the player's entire dirty state in a single transaction.**
+
+This invariant is what prevents inconsistent DB state. It means:
+
+- At any point in time the DB is either at a sync point (matches memory) or matches the last sync point. There is no third "partially updated" state.
+- A crash mid-flush rolls back the entire transaction — the player loses in-flight work but the world stays consistent. No item duplication, no orphan currency, no torn inventory.
+- A direct-write trigger (quest completion, level-up, etc.) opportunistically flushes everything else dirty alongside its own write — not just its specific field. A quest completion at T=30 with pending pocket changes from T=10 writes both in the same transaction.
+
+There is one `flushPlayer(socket)` helper. Every code path that needs to persist anything calls it. The save tick calls it for each connected player; the logout close handler calls it once; direct-write triggers wrap their write inside it.
+
+**Rule for future code**: any new feature that writes to the database during gameplay MUST route through `flushPlayer` (or call it alongside its write). Bypassing it creates the torn-state risk this architecture exists to prevent. Code review should treat a raw `repo.update*` call from a game-loop code path as a defect.
+
 ## Trade-off to acknowledge
 
 A crash loses up to N seconds of in-memory state. Already accepted for HP/mana (N=60s). Extending to bank/movement/inventory accepts the same window for those.

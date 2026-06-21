@@ -122,7 +122,17 @@ export function restartCharacterSaveLoopWithNewInterval(newIntervalMs: number): 
 
 /**
  * Process a single save tick.
- * Iterates through all connected players and saves their vitals to the database.
+ *
+ * INVARIANT (memory-first architecture):
+ * Every flush — this tick, logout close handler, graceful shutdown, quest
+ * completion, level-up, or any other direct-write trigger — MUST drain the
+ * player's entire dirty state in a single transaction via the central
+ * `flushPlayer(socket)` helper. A direct-write code path that writes one
+ * field without also flushing everything else dirty creates torn-state risk
+ * on crash and breaks the atomicity guarantee.
+ *
+ * See notes/Memory_First_Architecture.md for the full rule.
+ *
  * Errors are isolated per-player so one failure doesn't stop other saves.
  */
 async function processSaveTick(): Promise<void> {
