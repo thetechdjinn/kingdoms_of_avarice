@@ -3,13 +3,14 @@ import { IncomingMessage } from 'http';
 import { URL } from 'url';
 import { parse as parseCookie } from 'cookie';
 import { MessageType, GameMessage, Role, VitalsData, ResourceType, PlayerRegenState, ActiveStatusEffect, PlayerQueueState, createPlayerQueueState, PlayerStatus, DeathState, StealthMode } from '@koa/shared';
-import type { CharacterStats } from '@koa/shared';
+import type { CharacterStats, Currency, ItemInstance } from '@koa/shared';
 import { verifyToken, COOKIE_NAME } from '../routes/auth.js';
 import { GameWorld } from './world.js';
 import { processCommand } from './commands.js';
 import { getPlayerLocation, setPlayerLocation } from './adminCommands.js';
 import * as playerRepo from '../db/repositories/playerRepository.js';
 import * as characterRepo from '../db/repositories/characterRepository.js';
+import * as itemRepo from '../db/repositories/itemRepository.js';
 import * as progressionRepo from '../db/repositories/progressionRepository.js';
 import { initializeProgressionData } from './progressionLoader.js';
 import { loadCharacterProgression, unloadCharacterProgression } from './progression.js';
@@ -83,7 +84,17 @@ interface AuthenticatedSocket extends WebSocket {
   broadcastChannel: string | null;
   groupId: string | null;
   pendingGroupInvite: { groupId: string; leaderId: number; leaderName: string; expiresAt: number } | null;
+  // Memory-first session cache (see notes/Memory_First_Architecture.md)
+  // Mutations to these fields must go through sessionState helpers, which
+  // mark the corresponding entry in `dirty` so the next flush picks them up.
+  pocket: Currency;
+  bankBalance: number;
+  inventory: ItemInstance[];
+  dirty: Set<DirtyField>;
+  dirtyItems: Set<number>; // item instance IDs needing flush
 }
+
+type DirtyField = 'vitals' | 'room' | 'pocket' | 'bank' | 'inventory' | 'effects';
 
 const connectedPlayers = new Map<number, AuthenticatedSocket>();
 const gameWorld = new GameWorld();
@@ -343,6 +354,27 @@ export function setupGameSocket(wss: WebSocketServer): void {
       maxResource: character.max_mana,
       resourceType: resourceType,
     };
+
+    // Initialize memory-first session cache (see notes/Memory_First_Architecture.md).
+    // The cache is loaded once at login and mutated in-place by gameplay code.
+    // Mutations go through sessionState helpers which mark these entries dirty;
+    // flushPlayer drains all dirty state in a single transaction at every flush point.
+    authWs.pocket = {
+      copper: character.copper ?? 0,
+      silver: character.silver ?? 0,
+      gold: character.gold ?? 0,
+      platinum: character.platinum ?? 0,
+      runic: character.runic ?? 0,
+    };
+    authWs.bankBalance = character.bank_balance ?? 0;
+    try {
+      authWs.inventory = await itemRepo.getCharacterInventory(character.id);
+    } catch (error) {
+      console.error('Failed to load character inventory:', error);
+      authWs.inventory = [];
+    }
+    authWs.dirty = new Set();
+    authWs.dirtyItems = new Set();
 
     // Initialize regeneration state
     authWs.regenState = {

@@ -181,6 +181,7 @@ export async function updateCharacterRoom(characterId: number, roomId: number): 
 type UpdatableCharacterFields =
   | 'health' | 'mana' | 'experience' | 'level' | 'gold'
   | 'copper' | 'silver' | 'platinum' | 'runic'
+  | 'bank_balance'
   | 'strength' | 'intelligence' | 'dexterity' | 'constitution' | 'wisdom' | 'charisma'
   | 'unspent_cp' | 'cp_spent' | 'max_health' | 'max_mana'
   | 'last_name' | 'hair' | 'eye_color'
@@ -189,7 +190,8 @@ type UpdatableCharacterFields =
 
 export async function updateCharacterStats(
   characterId: number,
-  updates: Partial<Record<UpdatableCharacterFields, unknown>>
+  updates: Partial<Record<UpdatableCharacterFields, unknown>>,
+  client?: pg.PoolClient
 ): Promise<void> {
   const setClauses: string[] = [];
   const values: unknown[] = [];
@@ -214,7 +216,8 @@ export async function updateCharacterStats(
   values.push(characterId);
   await query(
     `UPDATE characters SET ${setClauses.join(', ')} WHERE id = $${paramIndex}`,
-    values
+    values,
+    client
   );
 }
 
