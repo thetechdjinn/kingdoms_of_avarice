@@ -399,7 +399,7 @@ async function handleGetAll(
 
   for (const item of takeableItems) {
     // Check if this is a currency item - add to wallet instead of inventory
-    const currencyDisplay = await handleCurrencyPickup(item, socket.characterId!);
+    const currencyDisplay = await handleCurrencyPickup(item, socket);
     if (currencyDisplay) {
       currencyPickedUp.push(currencyDisplay);
       continue;
@@ -1716,7 +1716,7 @@ export async function handleGetFrom(
   const containerName = container.template?.name ?? 'something';
 
   // Check if this is a currency item - add to wallet instead of inventory
-  const currencyDisplay = await handleCurrencyPickup(item, socket.characterId!);
+  const currencyDisplay = await handleCurrencyPickup(item, socket);
   if (currencyDisplay) {
     broadcastToRoom(currentRoomId, `${socket.username} gets ${currencyDisplay} from ${withArticle(containerName)}.`, socket.playerId);
     return { type: MessageType.OUTPUT, message: `You get ${colors.gold(currencyDisplay)} from ${colors.item(withArticle(containerName))}.` };
@@ -1749,7 +1749,7 @@ async function handleGetAllFromContainer(
 
   for (const item of items) {
     // Check if this is a currency item - add to wallet instead of inventory
-    const currencyDisplay = await handleCurrencyPickup(item, socket.characterId!);
+    const currencyDisplay = await handleCurrencyPickup(item, socket);
     if (currencyDisplay) {
       currencyPickedUp.push(currencyDisplay);
       continue;
@@ -3655,7 +3655,7 @@ function detectCurrencyType(templateName: string | undefined | null): string | n
  */
 async function handleCurrencyPickup(
   item: ItemInstance,
-  characterId: number
+  socket: AuthenticatedSocket
 ): Promise<string | null> {
   if (item.template?.item_type !== ItemType.CURRENCY) return null;
 
@@ -3663,11 +3663,20 @@ async function handleCurrencyPickup(
   if (!currencyType) return null;
 
   const currencyInfo = CURRENCY_TYPES[currencyType];
-  return await withTransaction(async (client) => {
-    await characterRepo.addCurrency(characterId, currencyInfo.field, item.quantity, client);
+
+  // Hybrid memory-first pattern: item delete is still a direct DB write, so
+  // currency stays atomic with it inside this transaction. Cache sync happens
+  // after commit. Phase 1.5 moves item writes to the cache; at that point
+  // this collapses to a flushPlayer call.
+  await withTransaction(async (client) => {
+    await characterRepo.addCurrency(socket.characterId!, currencyInfo.field, item.quantity, client);
     await itemRepo.deleteInstance(item.id, client);
-    return item.quantity === 1 ? `1 ${currencyType} coin` : `${item.quantity} ${currencyType} coins`;
   });
+
+  // Sync cache to mirror the persisted state. Don't mark dirty.
+  socket.pocket[currencyInfo.field] += item.quantity;
+
+  return item.quantity === 1 ? `1 ${currencyType} coin` : `${item.quantity} ${currencyType} coins`;
 }
 
 /**

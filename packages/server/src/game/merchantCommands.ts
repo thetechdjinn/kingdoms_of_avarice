@@ -362,7 +362,12 @@ export async function handleBuy(
         }
       }
 
-      // Deduct currency from player
+      // Deduct currency from player.
+      // Hybrid memory-first pattern: the item create is still a direct DB
+      // write, so the currency write stays in the same transaction to keep
+      // both sides atomic. The cache is synced AFTER the transaction commits.
+      // Full memory-first (currency + item both via flushPlayer) lands when
+      // inventory writes move to the cache in Phase 1.5.
       for (const [field, qty] of deductions) {
         await characterRepo.addCurrency(socket.characterId!, field, -qty, client);
       }
@@ -381,6 +386,12 @@ export async function handleBuy(
         throw new Error('Item is out of stock.');
       }
     });
+
+    // Sync cache to mirror the persisted state. Don't mark dirty — the DB is
+    // already current. See notes/Memory_First_Architecture.md.
+    for (const [field, qty] of deductions) {
+      socket.pocket[field] -= qty;
+    }
   } catch (err: unknown) {
     if (err instanceof Error && err.message === 'WORLD_LIMIT') {
       return { type: MessageType.ERROR, message: `That item is no longer available.` };
@@ -473,7 +484,11 @@ export async function handleSell(
     // Remove item from player inventory
     await itemRepo.deleteInstance(item.id, client);
 
-    // Add currency to player
+    // Add currency to player.
+    // Hybrid memory-first pattern: item delete is still a direct DB write,
+    // so currency stays atomic with it inside this transaction. Cache sync
+    // happens after commit. Phase 1.5 moves item writes to the cache; at
+    // that point this collapses to a flushPlayer call.
     for (const [denom, count] of denomCounts) {
       const currencyInfo = CURRENCY_TYPES[denom];
       if (currencyInfo) {
@@ -487,6 +502,14 @@ export async function handleSell(
       await merchantRepo.incrementStock(catalogEntry.id, client);
     }
   });
+
+  // Sync cache to mirror the persisted state. Don't mark dirty.
+  for (const [denom, count] of denomCounts) {
+    const currencyInfo = CURRENCY_TYPES[denom];
+    if (currencyInfo) {
+      socket.pocket[currencyInfo.field] += count;
+    }
+  }
 
   const priceStr = formatCopperAsDenominations(price);
   broadcastToRoom(roomId, `${socket.username} sells ${withArticle(template.name)} to ${withNpcName(merchant.entityName, merchant.isProperName)}.`, socket.playerId);
