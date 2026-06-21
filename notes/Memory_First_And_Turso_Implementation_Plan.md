@@ -89,6 +89,46 @@ The biggest piece. Items have identity (instance IDs), can change quantity, can 
 
 When a direct create/delete happens, ALSO update `socket.inventory` to keep memory in sync.
 
+#### 1.5 — Implementation status (for review)
+
+Scoped down from the original plan after investigating the write surface. The
+"safe slice" was chosen deliberately (see decision below): defer only the writes
+that don't change item ownership, and keep get/drop/equip/unequip and
+create/destroy as direct DB writes so an item can never cross an uncached
+boundary while dirty (no item-loss risk).
+
+**1.5a — DONE (commit `2d67efc`): defer the per-tick fuel write.**
+- The fuel tick (`fuelManager.processFuelTick`) was the only *periodic* gameplay
+  item write — it wrote `fuel_remaining` once per lit player per tick (default 5s).
+  That is exactly the write Phase 1's goal targets ("no periodic gameplay writes").
+- Now fuel burns in memory (`fuelManager.liveFuel: Map<characterId, {instanceId, fuel}>`)
+  and is persisted to the DB only on a burn-ending transition: extinguish,
+  unequip, drop, fuel depletion, or logout.
+- `untrackLitCharacter` became `async` and performs that flush; every call site
+  now awaits it (`itemCommands.ts`, `socket.ts` close handler).
+- `is_lit` deliberately stays a direct, event-driven write. is_lit's readers
+  (vision `getEquippedVisionBonuses`, examine "(lit)" tag) therefore never see a
+  stale value. `fuel_remaining`'s only readers are `light` (relight), `refuel`,
+  and the tick itself — all of which read the correct value under this scheme.
+- The tick still re-derives the held light from the DB each tick (cheap read), so
+  a missed untrack can never burn fuel on the wrong instance. Only the WRITE moved.
+- Tradeoff: a crash mid-burn loses the unsaved portion of the current burn (the
+  torch relights with its light-time fuel). No item is lost. Acceptable for dev.
+
+**1.5b — DEFERRED / NOT DONE: charges, condition, quantity.**
+- Decision: not implemented. These are low-frequency, *event-driven* writes
+  (triggered by discrete player commands: casting a charged scroll, durability
+  loss on a hit, consuming one from a stack), not periodic ticks. They do not
+  violate Phase 1's stated goal the way the fuel tick did.
+- Deferring them safely would require the broad read-cache rework the safe slice
+  was chosen to avoid: `examine` reads `condition`/`charges_remaining`, inventory
+  display and stacking lookups read `quantity`. Every such reader would have to
+  move off the DB and onto a `socket.inventory` + `socket.equipped` cache kept in
+  sync at all ~67 mutation sites — the high-risk path.
+- Revisit only if profiling shows these event-driven writes are a real bottleneck,
+  or as part of Phase 2 if the cache is wanted for other reasons. Until then,
+  Phase 1.5 is considered complete with 1.5a.
+
 ### 1.6 — Extend the save tick
 
 **File**: `packages/server/src/game/characterSaveLoop.ts:128-173`.

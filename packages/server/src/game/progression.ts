@@ -151,6 +151,14 @@ export function unloadCharacterProgression(characterId: number): void {
  *
  * Updates in-memory state and persists to DB.
  * Returns false if progression not loaded or amount <= 0.
+ *
+ * MEMORY-FIRST (stays a direct write — do NOT defer to the save tick):
+ * Level-up checks and quest triggers read XP/essence synchronously right after
+ * an award. Deferring the write would let `checkLevelUp` and quest progress run
+ * against stale totals, creating races (e.g. a kill that should level the player
+ * not registering until the next tick). The DB row is the authoritative value
+ * and the in-memory copy is synced from the returned row, so it is always
+ * consistent. See notes/Memory_First_Architecture.md.
  */
 async function awardProgression(
   characterId: number,

@@ -367,7 +367,12 @@ async function completeQuest(
   quest: Quest,
   characterId: number
 ): Promise<void> {
-  // Mark quest as completed in DB
+  // MEMORY-FIRST: quest completion and flags stay direct, synchronous DB writes.
+  // They are irreversible milestones that gate prerequisites and tag checks read
+  // synchronously by other quests; deferring them to the save tick would let a
+  // follow-up quest see a not-yet-persisted completion (or miss it on crash).
+  // Currency/XP/essence rewards granted below are likewise direct (see
+  // grantQuestRewardsForCharacter / awardProgression).
   await questRepo.completeQuest(characterId, quest.id);
 
   // Grant quest flag
@@ -458,6 +463,31 @@ export async function canStartQuest(
 // ============================================================================
 
 /**
+ * Mirror a direct currency award into a connected recipient's memory-first
+ * pocket cache.
+ *
+ * MEMORY-FIRST: quest currency is written straight to the DB (an irreversible
+ * milestone, kept synchronous), but `socket.pocket` is the in-memory source of
+ * truth for an online player. Without this sync the reward would be invisible
+ * until reload AND the next pocket flush would overwrite the DB value with the
+ * stale cache, silently destroying the reward. The DB is already authoritative,
+ * so we mirror the value WITHOUT marking the pocket dirty (same hybrid pattern
+ * as the currency-pickup and merchant paths). No-op if the recipient is offline.
+ */
+function syncRecipientPocket(
+  characterId: number,
+  field: 'copper' | 'silver' | 'gold' | 'platinum' | 'runic',
+  delta: number
+): void {
+  for (const socket of connectedPlayers.values()) {
+    if (socket.characterId === characterId) {
+      socket.pocket[field] += delta;
+      return;
+    }
+  }
+}
+
+/**
  * Grant step rewards to a character (DB only, no messaging).
  * Exported for use by admin commands.
  */
@@ -473,6 +503,7 @@ export async function grantStepRewardsForCharacter(
   }
   if (step.stepCurrencyReward > 0) {
     await characterRepo.addCurrency(characterId, 'copper', step.stepCurrencyReward);
+    syncRecipientPocket(characterId, 'copper', step.stepCurrencyReward);
   }
   for (const reward of step.stepItemRewards) {
     const template = await itemRepo.getTemplateById(reward.itemTemplateId);
@@ -514,6 +545,7 @@ export async function grantQuestRewardsForCharacter(
   }
   if (quest.currencyReward > 0) {
     await characterRepo.addCurrency(characterId, 'copper', quest.currencyReward);
+    syncRecipientPocket(characterId, 'copper', quest.currencyReward);
   }
   for (const reward of quest.itemRewards) {
     const template = await itemRepo.getTemplateById(reward.itemTemplateId);
