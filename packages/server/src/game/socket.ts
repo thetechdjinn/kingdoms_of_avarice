@@ -11,6 +11,7 @@ import { getPlayerLocation, setPlayerLocation } from './adminCommands.js';
 import * as playerRepo from '../db/repositories/playerRepository.js';
 import * as characterRepo from '../db/repositories/characterRepository.js';
 import * as itemRepo from '../db/repositories/itemRepository.js';
+import { markVitalsDirty, markRoomDirty, flushPlayer } from './sessionState.js';
 import * as progressionRepo from '../db/repositories/progressionRepository.js';
 import { initializeProgressionData } from './progressionLoader.js';
 import { loadCharacterProgression, unloadCharacterProgression } from './progression.js';
@@ -641,26 +642,27 @@ export function setupGameSocket(wss: WebSocketServer): void {
         await handleDroppedDisconnect(authWs);
       }
 
-      // Save character vitals (HP, mana) and room location on disconnect.
+      // Flush all dirty cached state on disconnect via the central helper.
       // If dead/dropped, save with 0 HP so they auto-respawn on reconnect.
       //
       // INVARIANT (memory-first architecture):
       // This flush — like every flush (save tick, shutdown hook, quest
-      // completion, level-up, etc.) — MUST drain the player's entire dirty
-      // state in a single transaction via the central `flushPlayer(socket)`
-      // helper. Writing one field without flushing everything else dirty
-      // creates torn-state risk on crash. See notes/Memory_First_Architecture.md.
+      // completion, level-up, etc.) — drains the player's entire dirty
+      // state in a single transaction via flushPlayer. See
+      // notes/Memory_First_Architecture.md.
       if (authWs.characterId) {
         try {
-          const hpToSave = isPlayerDead(authWs) ? 0 : authWs.vitals.hp;
-          await characterRepo.updateCharacterStats(authWs.characterId, {
-            health: hpToSave,
-            mana: authWs.vitals.resource ?? 0,
-          });
-          const currentRoomId = getPlayerLocation(authWs.playerId);
-          await characterRepo.updateCharacterRoom(authWs.characterId, currentRoomId);
+          if (isPlayerDead(authWs)) {
+            // Override hp to 0 so the auto-respawn path triggers on next
+            // login. Mutating the cache directly is safe here because the
+            // socket is about to be GC'd.
+            authWs.vitals.hp = 0;
+          }
+          markVitalsDirty(authWs);
+          markRoomDirty(authWs);
+          await flushPlayer(authWs);
         } catch (error) {
-          console.error(`Failed to save vitals/room for character ${authWs.characterId}:`, error);
+          console.error(`Failed to flush state for character ${authWs.characterId}:`, error);
         }
 
         // Unload character progression from memory
