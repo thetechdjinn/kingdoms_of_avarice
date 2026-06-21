@@ -7,6 +7,7 @@ import { GameWorld } from './world.js';
 import { AuthenticatedSocket, broadcastToRoom, sendVitals, sendMessage } from './socket.js';
 import { colors } from '../utils/colors.js';
 import { processAdminCommand, getPlayerLocation, setPlayerLocation } from './adminCommands.js';
+import { markVitalsDirty, markRoomDirty, flushPlayer } from './sessionState.js';
 import * as doorStateManager from '../services/doorStateManager.js';
 import * as playerRepo from '../db/repositories/playerRepository.js';
 import { handleGet, handleDrop, handleInventory, handleExamine, getRoomItemsDescription, handleWield, handleWear, handleRemove, handleEquipment, handlePut, handleGetFrom, handleLookIn, handleUse, handleRead, handleLight, handleExtinguish, handleRefuel, handleRepair, handleSearch, handleRecipes, handleCraft, handleEnchantments, handleEnchant, handleDropCurrency, handleGetCurrency } from './itemCommands.js';
@@ -1193,14 +1194,9 @@ async function moveFollower(
   const newRoom = world.getRoomInDirection(oldRoomId, direction);
   if (!newRoom) return; // Should never happen since leader already moved
 
-  // Save to DB
-  try {
-    await characterRepo.updateCharacterRoom(follower.characterId!, newRoom.id);
-  } catch (error) {
-    console.error('Failed to save follower room location:', error);
-    sendMessage(follower, MessageType.ERROR, 'Something prevents you from following.');
-    return;
-  }
+  // Movement is memory-first: the room change lives in the in-memory
+  // playerLocations map (via setPlayerLocation below); flushPlayer at the
+  // next save tick / logout persists it. See notes/Memory_First_Architecture.md.
 
   // Handle stealth: hidden → sneaking for movement
   if (isHidden(follower)) {
@@ -1214,8 +1210,9 @@ async function moveFollower(
     broadcastToRoom(oldRoomId, colors.green(`${colors.red(follower.username)} left to the ${direction}.`), follower.playerId);
   }
 
-  // Update in-memory location
+  // Update in-memory location and mark dirty for next flush
   setPlayerLocation(follower.playerId, newRoom.id);
+  markRoomDirty(follower);
 
   // Entry announcement
   const oppositeDir = OPPOSITE_DIRECTIONS[direction] || direction;
@@ -1304,15 +1301,10 @@ async function handleMove(
     return { type: MessageType.OUTPUT, message: colors.yellow(`You cannot go ${fullDirection}.`) };
   }
 
-  // Save room location to database first
-  try {
-    await characterRepo.updateCharacterRoom(socket.characterId!, newRoom.id);
-  } catch (error) {
-    console.error('Failed to save room location:', error);
-    return { type: MessageType.ERROR, message: 'Something prevents you from moving.' };
-  }
-
-  // Database succeeded, now update in-memory state
+  // Movement is memory-first: the room change is reflected immediately in
+  // the in-memory playerLocations map (setPlayerLocation below). flushPlayer
+  // at the next save tick / logout persists it via the central drain helper.
+  // See notes/Memory_First_Architecture.md.
 
   // Handle stealth movement
   const wasStealthing = isStealthing(socket);
@@ -1332,8 +1324,9 @@ async function handleMove(
     broadcastToRoom(currentRoomId, colors.green(`${colors.red(socket.username)} left to the ${fullDirection}.`), socket.playerId);
   }
 
-  // Update player location
+  // Update player location and mark dirty for next flush
   setPlayerLocation(socket.playerId, newRoom.id);
+  markRoomDirty(socket);
 
   // Handle entry room announcement based on stealth state
   const oppositeDir = OPPOSITE_DIRECTIONS[fullDirection] || fullDirection;
@@ -2202,15 +2195,8 @@ async function handleSpecialDoorTrigger(
     return { type: MessageType.ERROR, message: 'Something prevents you from passing through.' };
   }
 
-  // Save room location to database first
-  try {
-    await characterRepo.updateCharacterRoom(socket.characterId!, newRoom.id);
-  } catch (error) {
-    console.error('Failed to save room location:', error);
-    return { type: MessageType.ERROR, message: 'Something prevents you from moving.' };
-  }
-
-  // Database succeeded, now update in-memory state and broadcast
+  // Portal movement is memory-first. flushPlayer at next tick / logout
+  // persists the room change. See notes/Memory_First_Architecture.md.
 
   // Broadcast departure message to current room (custom or default)
   const coloredName = colors.red(socket.username);
@@ -2219,8 +2205,9 @@ async function handleSpecialDoorTrigger(
     : `${coloredName} passes through ${door.itemDisplayName || door.name}.`;
   broadcastToRoom(currentRoomId, colors.green(wordWrap(departureMsg, 80)), socket.playerId);
 
-  // Update player location
+  // Update player location and mark dirty for next flush
   setPlayerLocation(socket.playerId, newRoom.id);
+  markRoomDirty(socket);
 
   // Broadcast arrival to new room (custom or default)
   const arrivalMsg = door.passageMessageArrival
@@ -3426,17 +3413,22 @@ async function handleRespawn(
     socket.vitals.resource = socket.vitals.maxResource;
   }
 
-  // Update character in database
-  if (socket.characterId) {
-    await characterRepo.updateCharacterStats(socket.characterId, {
-      health: socket.vitals.hp,
-      mana: socket.vitals.resource ?? 0,
-    });
-    await characterRepo.updateCharacterRoom(socket.characterId, respawnRoomId);
-  }
-
   // Update player location
   setPlayerLocation(socket.playerId, respawnRoomId);
+
+  // Respawn is a player-perceived milestone — flush immediately rather than
+  // waiting for the next save tick. flushPlayer drains vitals (HP/mana
+  // already mutated above), the new room, and any other dirty state in one
+  // transaction. See notes/Memory_First_Architecture.md.
+  if (socket.characterId) {
+    markVitalsDirty(socket);
+    markRoomDirty(socket);
+    try {
+      await flushPlayer(socket);
+    } catch (error) {
+      console.error('Failed to flush respawn state:', error);
+    }
+  }
 
   // Send vitals
   sendVitals(socket);

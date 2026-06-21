@@ -2728,14 +2728,12 @@ async function handleScrollTeleport(
     broadcastToRoom(currentRoomId, `${socket.username} vanishes in a flash of light.`, socket.playerId);
   }
 
-  // Persist room to database first (before in-memory update) to avoid desync on DB failure
-  if (socket.characterId) {
-    await characterRepo.updateCharacterRoom(socket.characterId, destRoomId);
-  }
-
-  // Move player in memory
+  // Move player in memory. Room is memory-first; flushPlayer at next tick /
+  // logout persists. See notes/Memory_First_Architecture.md.
   const { setPlayerLocation } = await import('./adminCommands.js');
+  const { markRoomDirty } = await import('./sessionState.js');
   setPlayerLocation(socket.playerId, destRoomId);
+  markRoomDirty(socket);
 
   // Arrival broadcast
   broadcastToRoom(destRoomId, `${socket.username} appears in a flash of light.`, socket.playerId);

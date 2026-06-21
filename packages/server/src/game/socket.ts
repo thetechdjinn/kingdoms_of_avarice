@@ -473,15 +473,10 @@ export function setupGameSocket(wss: WebSocketServer): void {
 
     connectedPlayers.set(payload.playerId, authWs);
 
-    // Use character's room location (default to room 1 if invalid)
+    // Use character's room location (default to room 1 if invalid).
+    // No direct persist needed: the default-room assignment flows through
+    // setPlayerLocation below; the close handler / next save tick flushes it.
     const startRoomId = character.current_room_id || 1;
-
-    // Persist the room if we had to default
-    if (!character.current_room_id) {
-      characterRepo.updateCharacterRoom(characterId, startRoomId).catch((err) => {
-        console.error('Failed to persist default room:', err);
-      });
-    }
 
     setPlayerLocation(payload.playerId, startRoomId);
 
