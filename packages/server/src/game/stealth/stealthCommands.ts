@@ -29,8 +29,10 @@ import { calculateBackstabDamage, calculateStrengthDamageBonus } from '../combat
 import { applyDamage, initializeDroppedState, initializeDeadState, formatDroppedMessage, formatDeathMessage } from '../damageHandler.js';
 import { getEquipmentCombatStats } from '../combatStats.js';
 import { getEffectModifiers } from '../statusEffects.js';
-import { calculateEffectiveVision, canSee } from '../vision.js';
-import { getWorldRef } from '../npcManager.js';
+import { calculateEffectiveVision, calculateNpcEffectiveVision, canSee } from '../vision.js';
+import { getWorldRef, findNpcInRoom, NpcCombatInstance, checkHostileAggro, setMerchantHostile } from '../npcManager.js';
+import { withNpcName, withNpcNameCapitalized } from '../../utils/textFormat.js';
+import { handleActualDeath } from '../combat.js';
 
 // ============================================================================
 // STEALTH ROLL
@@ -385,23 +387,33 @@ export async function handleBackstab(
     }
   }
 
-  // Find the target - only see hidden players if attacker has canSeeHidden
+  // Find the target - try players first, then NPCs
   const target = findPlayerInRoom(targetName, currentRoomId, connectedPlayers, socket.playerId, socket.canSeeHidden);
-  if (!target) {
+  const npcTarget = !target ? findNpcInRoom(targetName, currentRoomId) : null;
+
+  if (!target && !npcTarget) {
     return { type: MessageType.ERROR, message: `You don't see ${targetName} here.` };
   }
 
-  // Cannot backstab dead players
-  if (target.deathState?.isDead) {
-    return { type: MessageType.ERROR, message: `${target.username} is already dead.` };
+  // Validate target state before the expensive equipment fetch
+  if (target) {
+    if (target.deathState?.isDead) {
+      return { type: MessageType.ERROR, message: `${target.username} is already dead.` };
+    }
+    if (socket.combatState.targets.has(target.playerId)) {
+      return { type: MessageType.ERROR, message: `You are already in combat with ${target.username}!` };
+    }
+  }
+  if (npcTarget) {
+    if (npcTarget.vitals.hp <= 0) {
+      return { type: MessageType.ERROR, message: `${withNpcNameCapitalized(npcTarget.entityName, npcTarget.isProperName)} is already dead.` };
+    }
+    if (socket.combatState.targets.has(npcTarget.entityId)) {
+      return { type: MessageType.ERROR, message: `You are already in combat with ${withNpcName(npcTarget.entityName, npcTarget.isProperName)}!` };
+    }
   }
 
-  // Cannot backstab someone we're already in combat with
-  if (socket.combatState.targets.has(target.playerId)) {
-    return { type: MessageType.ERROR, message: `You are already in combat with ${target.username}!` };
-  }
-
-  // Get equipped weapon
+  // Fetch equipment once — shared by both player and NPC paths
   const equipped = await itemRepo.getCharacterEquipped(socket.characterId!);
   const mainHandWeapon = equipped.find(item => item.equipped_slot === EquipmentSlot.MAIN_HAND);
 
@@ -464,6 +476,17 @@ export async function handleBackstab(
     stealthBreakdown.total,
     weaponBackstabAccuracy
   );
+
+  // NPC target path
+  if (npcTarget) {
+    return handleBackstabNpc(
+      socket, npcTarget, character, currentRoomId, bsRoomDarkness,
+      weaponData, { hitVerb, hitVerb3p, missVerb, missVerb3p },
+      backstabDmgBonuses, attackerAccuracy
+    );
+  }
+
+  if (target == null) throw new Error('unreachable');
 
   // Get target's stats for defense calculation
   const targetCharacter = await characterRepo.findCharacterById(target.characterId!);
@@ -605,5 +628,106 @@ export async function handleBackstab(
       type: MessageType.OUTPUT,
       message: attackerMsg,
     };
+  }
+}
+
+async function handleBackstabNpc(
+  socket: AuthenticatedSocket,
+  npcTarget: NpcCombatInstance,
+  character: { strength: number; dexterity: number; intelligence: number; wisdom: number; charisma: number; level: number; race: string; class: string },
+  currentRoomId: number,
+  roomDarkness: number,
+  weaponData: WeaponData,
+  verbs: { hitVerb: string; hitVerb3p: string; missVerb: string; missVerb3p: string },
+  backstabDmgBonuses: { minBonus: number; maxBonus: number },
+  attackerAccuracy: number
+): Promise<CommandResponse> {
+  const { hitVerb, hitVerb3p, missVerb, missVerb3p } = verbs;
+
+  // NPC defense: use baseDefense as AC, level-derived perception
+  const npcAC = npcTarget.template.baseDefense;
+  // TODO: NPC templates do not yet have a perception attribute. This is a level-based
+  // approximation until the full NPC perception system is built out. When perception
+  // is added to NPC templates, replace this with npcTarget.template.perception.
+  const npcPerception = Math.floor(npcTarget.template.level * 2.5);
+  const defenderDefense = calculateBackstabDefense(npcAC, npcPerception);
+
+  // NPC vision check: use canonical vision calculation, and treat see_hidden as always able to perceive the attacker
+  const npcCanSee = npcTarget.canSeeHidden || canSee(calculateNpcEffectiveVision(npcTarget), roomDarkness);
+
+  const hitResult = npcCanSee
+    ? rollBackstabHit(attackerAccuracy, defenderDefense)
+    : { hit: true, attackerAccuracy, defenderDefense, roll: 0 };
+
+  // Break stealth regardless of hit/miss
+  breakStealth(socket, 'attack', true);
+
+  // Engage combat (mirrors combatCommands.ts attack flow)
+  socket.combatState.targets.add(npcTarget.entityId);
+  npcTarget.combatState.targets.add(socket.playerId);
+  socket.regenState.inCombat = true;
+  npcTarget.regenState.inCombat = true;
+  npcTarget.behaviorState = 'combat';
+
+  // If attacking a merchant, mark them as hostile
+  if (npcTarget.template.merchantEnabled && socket.characterId) {
+    setMerchantHostile(socket.characterId, npcTarget.template.id);
+  }
+
+  // Clear resting state
+  socket.regenState.enhancedRegen.clear();
+  if (socket.exitTimer) {
+    clearTimeout(socket.exitTimer);
+    socket.exitTimer = undefined;
+  }
+
+  sendVitals(socket);
+
+  const npcDisplayName = withNpcName(npcTarget.entityName, npcTarget.isProperName);
+
+  if (hitResult.hit) {
+    const strengthBonus = calculateStrengthDamageBonus(character.strength);
+    const damageResult = calculateBackstabDamage(
+      weaponData.max_damage,
+      strengthBonus,
+      character.level,
+      {
+        minDamageBonus: backstabDmgBonuses.minBonus,
+        maxDamageBonus: backstabDmgBonuses.maxBonus,
+      }
+    );
+
+    // Apply damage
+    const damageApplied = await applyDamage(npcTarget, damageResult.damage, 'melee');
+
+    const flavorTextThem = getBackstabFlavorText(damageResult.damage, damageResult.backstabMin, damageResult.backstabMax, 'them');
+    const attackerMsg = `You surprise ${hitVerb} ${colors.combatDefender(npcDisplayName)}${flavorTextThem} for ${colors.combatDamage(damageResult.damage.toString())} damage!`;
+    const roomMsg = `${colors.combatAttacker(socket.username)} surprise ${hitVerb3p} ${colors.combatDefender(npcDisplayName)}${flavorTextThem} for ${colors.combatDamage(damageResult.damage.toString())} damage!`;
+
+    broadcastToRoom(currentRoomId, roomMsg, [socket.playerId]);
+
+    // NPCs have no bleed-out phase — treat both dropped and death as immediate death
+    if (damageApplied.stateChange === 'dropped' || damageApplied.stateChange === 'death') {
+      const deferredRewards: Array<() => Promise<void>> = [];
+      await handleActualDeath(npcTarget, socket, currentRoomId, deferredRewards);
+      for (const reward of deferredRewards) {
+        await reward();
+      }
+    }
+
+    // Other hostile NPCs notice
+    setImmediate(() => checkHostileAggro(currentRoomId, socket));
+
+    return { type: MessageType.OUTPUT, message: attackerMsg };
+  } else {
+    const attackerMsg = `You ${missVerb} ${colors.combatDefender(npcDisplayName)}, but miss!`;
+    const roomMsg = `${colors.combatAttacker(socket.username)} ${missVerb3p} ${colors.combatDefender(npcDisplayName)} from the shadows, but misses!`;
+
+    broadcastToRoom(currentRoomId, roomMsg, [socket.playerId]);
+
+    // Other hostile NPCs notice
+    setImmediate(() => checkHostileAggro(currentRoomId, socket));
+
+    return { type: MessageType.OUTPUT, message: attackerMsg };
   }
 }

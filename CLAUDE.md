@@ -366,7 +366,7 @@ Players can access different help categories based on their role:
 | ------------------------ | --------------------------------------------------------- |
 | `hide`                   | Attempt to hide in the shadows (requires stealth ability) |
 | `sneak` (sn)             | Attempt to move stealthily (requires stealth ability)     |
-| `backstab <player>` (bs) | Surprise attack from stealth (requires one-handed weapon) |
+| `backstab <target>` (bs) | Surprise attack from stealth (requires one-handed weapon) |
 | `visible` (vis)          | Stop hiding or sneaking                                   |
 
 **Stealth Mechanics:**
@@ -384,6 +384,11 @@ Players can access different help categories based on their role:
 - Deals high damage using multiplier: 2-4x weapon max damage + level bonuses
 - Accuracy based on DEX, INT, CHA, stealth, and weapon/class bonuses
 - Always breaks stealth and engages combat (hit or miss)
+- Can target both players and NPCs
+
+**NPC Perception (Placeholder):**
+
+NPC perception for backstab defense is currently approximated as `floor(level * 2.5)`. NPC templates do not yet have a `perception` attribute. When the perception system is built out, this formula in `stealthCommands.ts:handleBackstabNpc` should be replaced with the actual NPC perception value.
 
 ### Chat Commands
 
