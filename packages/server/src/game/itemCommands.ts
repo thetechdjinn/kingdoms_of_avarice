@@ -599,7 +599,7 @@ async function dropItem(
   // Auto-extinguish lit light sources when dropped
   if (item.is_lit && item.template?.item_type === ItemType.LIGHT) {
     await itemRepo.updateInstanceLitState(item.id, false);
-    untrackLitCharacter(socket.characterId!);
+    await untrackLitCharacter(socket.characterId!);
     messages.push(`You extinguish ${colors.item(itemName)}.`);
     broadcastToRoom(currentRoomId, `${socket.username} extinguishes ${itemName}.`, socket.playerId);
   }
@@ -726,7 +726,7 @@ async function handleDropAll(
     // Extinguish lit light sources when dropped
     if (item.is_lit && item.template?.item_type === ItemType.LIGHT) {
       await itemRepo.updateInstanceLitState(item.id, false);
-      untrackLitCharacter(socket.characterId!);
+      await untrackLitCharacter(socket.characterId!);
       const litName = getItemName(item);
       extinguished.push(litName);
       broadcastToRoom(currentRoomId, `${socket.username} extinguishes ${litName}.`, socket.playerId);
@@ -1285,7 +1285,7 @@ export async function handleWield(
         // Extinguish lit light sources being displaced
         if (equippedItem.is_lit && equippedItem.template?.item_type === ItemType.LIGHT) {
           await itemRepo.updateInstanceLitState(equippedItem.id, false);
-          untrackLitCharacter(socket.characterId!);
+          await untrackLitCharacter(socket.characterId!);
           const litName = getItemName(equippedItem);
           messages.push(`You extinguish ${colors.item(litName)}.`);
           broadcastToRoom(currentRoomId, `${socket.username} extinguishes ${litName}.`, socket.playerId);
@@ -1467,7 +1467,7 @@ export async function handleRemove(
   const wasLit = item.is_lit && template?.item_type === ItemType.LIGHT;
   if (wasLit) {
     await itemRepo.updateInstanceLitState(item.id, false);
-    untrackLitCharacter(socket.characterId!);
+    await untrackLitCharacter(socket.characterId!);
   }
 
   // Move to inventory
@@ -2935,7 +2935,7 @@ export async function handleLight(
       let wasExtinguished = false;
       if (currentHeld.is_lit && currentHeld.template?.item_type === ItemType.LIGHT) {
         await itemRepo.updateInstanceLitState(currentHeld.id, false);
-        untrackLitCharacter(characterId);
+        await untrackLitCharacter(characterId);
         const heldName = getItemName(currentHeld);
         messages.push(`You extinguish ${colors.item(heldName)}.`);
         broadcastToRoom(currentRoomId, `${socket.username} extinguishes ${heldName}.`, socket.playerId);
@@ -3010,7 +3010,7 @@ export async function handleExtinguish(
 
   // Mark as unlit - fuel_remaining is preserved for relighting
   await itemRepo.updateInstanceLitState(item.id, false);
-  untrackLitCharacter(characterId);
+  await untrackLitCharacter(characterId);
 
   const itemName = template.name;
   broadcastToRoom(currentRoomId, `${socket.username} extinguishes ${itemName}.`, socket.playerId);
@@ -3943,7 +3943,7 @@ export async function dropAllItemsOnDeath(characterId: number, roomId: number): 
     // Extinguish lit light sources on death
     if (item.is_lit && item.template?.item_type === ItemType.LIGHT) {
       await itemRepo.updateInstanceLitState(item.id, false);
-      untrackLitCharacter(characterId);
+      await untrackLitCharacter(characterId);
     }
 
     // Move item to room (unequip if equipped)

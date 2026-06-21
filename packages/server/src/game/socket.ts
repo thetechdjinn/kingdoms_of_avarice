@@ -675,7 +675,7 @@ export function setupGameSocket(wss: WebSocketServer): void {
         if (authWs.characterId) {
           clearHaggleState(authWs.characterId);
           clearMerchantHostility(authWs.characterId);
-          untrackLitCharacter(authWs.characterId);
+          await untrackLitCharacter(authWs.characterId);
         }
 
         // Broadcast appropriate message based on how they disconnected.

@@ -9,6 +9,17 @@
  *
  * Maintains an in-memory set of character IDs with lit light sources to avoid
  * querying the DB for every connected player each tick.
+ *
+ * MEMORY-FIRST (Phase 1.5a):
+ * Fuel burns down in memory (`liveFuel`); the per-tick fuel value is NOT written
+ * to the DB. The live value is persisted only on a state transition that ends the
+ * burn: extinguish, unequip, drop, fuel depletion, or logout. This removes the
+ * highest-volume periodic item write in the game (one per lit player per tick).
+ * The only direct fuel write is `fuel_remaining` at light time (seeds the burn)
+ * plus these transition flushes. Cost: a server crash mid-burn loses the unsaved
+ * portion of the current burn (the torch relights with its light-time fuel) —
+ * acceptable, as no item is lost, only fuel progress. is_lit stays a direct,
+ * event-driven write so vision/examine readers never see stale lit state.
  */
 
 import { MessageType, EquipmentSlot, ItemType } from '@koa/shared';
@@ -30,13 +41,37 @@ let worldRef: GameWorld;
 // In-memory set of character IDs that have a lit fuel-burning light source
 const litCharacters = new Set<number>();
 
-/** Register a character as having a lit fuel-burning light source. */
+// In-memory authoritative fuel for each tracked character's held light source.
+// Burns down here every tick; only flushed to the DB on a burn-ending transition
+// (see untrackLitCharacter and the depletion branch in processFuelTick).
+const liveFuel = new Map<number, { instanceId: number; fuel: number }>();
+
+/**
+ * Register a character as having a lit fuel-burning light source.
+ * Clears any stale live-fuel entry so the next tick re-seeds from the DB value
+ * the light command just wrote (the start-of-burn fuel).
+ */
 export function trackLitCharacter(characterId: number): void {
   litCharacters.add(characterId);
+  liveFuel.delete(characterId);
 }
 
-/** Unregister a character (extinguished, fuel depleted, disconnected). */
-export function untrackLitCharacter(characterId: number): void {
+/**
+ * Unregister a character (extinguished, fuel depleted, disconnected).
+ * Flushes the in-memory live fuel to the DB so the burn that just ended is
+ * persisted (e.g. a torch extinguished mid-burn keeps its remaining fuel for
+ * relighting). Async because it performs that final write.
+ */
+export async function untrackLitCharacter(characterId: number): Promise<void> {
+  const state = liveFuel.get(characterId);
+  if (state) {
+    liveFuel.delete(characterId);
+    try {
+      await itemRepo.updateInstanceFuel(state.instanceId, state.fuel);
+    } catch (error) {
+      console.error(`[FuelManager] Failed to persist fuel for character ${characterId}:`, error);
+    }
+  }
   litCharacters.delete(characterId);
 }
 
@@ -121,10 +156,13 @@ async function processFuelTick(): Promise<void> {
     if (!socket) {
       // Player disconnected but wasn't cleaned up
       litCharacters.delete(characterId);
+      liveFuel.delete(characterId);
       continue;
     }
 
     try {
+      // Re-derive the held light from the DB each tick (cheap read) so a missed
+      // untrack can never burn fuel on the wrong item. Only the WRITE is deferred.
       const equipped = await itemRepo.getCharacterEquipped(characterId);
       const heldLight = equipped.find(
         e => e.equipped_slot === EquipmentSlot.HELD &&
@@ -135,6 +173,7 @@ async function processFuelTick(): Promise<void> {
       if (!heldLight) {
         // No longer has a lit light source
         litCharacters.delete(characterId);
+        liveFuel.delete(characterId);
         continue;
       }
 
@@ -142,17 +181,25 @@ async function processFuelTick(): Promise<void> {
       if (!lightData || lightData.fuel_max === undefined) {
         // Permanent light source - no fuel to burn
         litCharacters.delete(characterId);
+        liveFuel.delete(characterId);
         continue;
       }
 
       const fuelRate = lightData.fuel_rate ?? 1;
-      const currentFuel = heldLight.fuel_remaining ?? 0;
+      // Burn from the in-memory value; seed from the DB on the first tick of a
+      // burn (the light command wrote the start fuel before tracking).
+      const state = liveFuel.get(characterId);
+      const currentFuel = state?.instanceId === heldLight.id
+        ? state.fuel
+        : (heldLight.fuel_remaining ?? 0);
       const newFuel = Math.max(0, currentFuel - fuelRate);
-
-      await itemRepo.updateInstanceFuel(heldLight.id, newFuel);
+      liveFuel.set(characterId, { instanceId: heldLight.id, fuel: newFuel });
 
       if (newFuel <= 0) {
-        // Fuel exhausted - extinguish
+        // Fuel exhausted - extinguish. Persist the final fuel + lit state now;
+        // this is a burn-ending transition, so a direct write is correct here.
+        liveFuel.delete(characterId);
+        await itemRepo.updateInstanceFuel(heldLight.id, 0);
         await itemRepo.updateInstanceLitState(heldLight.id, false);
         litCharacters.delete(characterId);
 
