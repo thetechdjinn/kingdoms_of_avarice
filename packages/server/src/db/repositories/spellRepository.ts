@@ -144,8 +144,7 @@ export async function getSpellsForClass(className: string): Promise<Spell[]> {
   const result = await query<DbSpell>(
     `SELECT * FROM spells
      WHERE class_restrictions IS NULL
-        OR array_length(class_restrictions, 1) IS NULL
-        OR $1 = ANY(class_restrictions)
+        OR class_restrictions IS NULL OR class_restrictions = '[]' OR json_array_length(class_restrictions) = 0 OR EXISTS (SELECT 1 FROM json_each(class_restrictions) WHERE value = $1)
      ORDER BY level_required, name`,
     [className]
   );
@@ -262,8 +261,7 @@ export async function getAvailableSpells(
     `SELECT s.* FROM spells s
      WHERE s.level_required <= $1
        AND (s.class_restrictions IS NULL
-            OR array_length(s.class_restrictions, 1) IS NULL
-            OR $2 = ANY(s.class_restrictions))
+            OR s.class_restrictions IS NULL OR s.class_restrictions = '[]' OR json_array_length(s.class_restrictions) = 0 OR EXISTS (SELECT 1 FROM json_each(s.class_restrictions) WHERE value = $2))
        AND NOT EXISTS (
          SELECT 1 FROM character_spells cs
          WHERE cs.character_id = $3 AND cs.spell_id = s.id
@@ -435,7 +433,7 @@ export async function updateSpell(id: number, input: Partial<CreateSpellInput>):
       cast_difficulty=$23, fizzle_message=$24, fizzle_message_room=$25,
       hit_message_self=$26, hit_message_target=$27, hit_message_room=$28,
       telegraph_message=$29, save_stat=$30, save_difficulty=$31,
-      updated_at=NOW()
+      updated_at=CURRENT_TIMESTAMP
     WHERE id = $32
     RETURNING *`,
     [

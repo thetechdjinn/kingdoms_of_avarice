@@ -451,9 +451,9 @@ export async function getDoorsByRoomIds(roomIds: number[]): Promise<Map<number, 
 
   const result = await query<DbDoor>(
     `SELECT * FROM doors
-     WHERE entry_room_id = ANY($1) OR exit_room_id = ANY($1)
+     WHERE entry_room_id IN (SELECT value FROM json_each($1)) OR exit_room_id IN (SELECT value FROM json_each($1))
      ORDER BY id`,
-    [roomIds]
+    [JSON.stringify(roomIds)]
   );
 
   // Group doors by room ID (a door may appear for both entry and exit rooms)

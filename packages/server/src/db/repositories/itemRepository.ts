@@ -964,7 +964,7 @@ export async function findHiddenItemsInRoom(roomId: number): Promise<ItemInstanc
 export async function revealItem(instanceId: number): Promise<boolean> {
   const result = await query(
     `UPDATE item_instances 
-     SET custom_data = COALESCE(custom_data, '{}'::jsonb) || '{"revealed": true}'::jsonb, updated_at = CURRENT_TIMESTAMP
+     SET custom_data = json_patch(COALESCE(custom_data, '{}'), '{"revealed":true}'), updated_at = CURRENT_TIMESTAMP
      WHERE id = $1`,
     [instanceId]
   );
@@ -1038,7 +1038,7 @@ export async function findBestLockpickInInventory(characterId: number): Promise<
        AND ii.location_id = $1
        AND it.item_type = 'tool'
        AND it.tool_data->>'toolType' = 'lockpick'
-     ORDER BY (it.tool_data->>'quality')::int DESC
+     ORDER BY CAST(it.tool_data->>'quality' AS INTEGER) DESC
      LIMIT 1`,
     [characterId]
   );

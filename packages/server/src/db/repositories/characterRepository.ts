@@ -201,7 +201,7 @@ export async function updateCharacterStats(
     if (value !== undefined) {
       // Handle JSONB fields specially
       if (key === 'cp_spent') {
-        setClauses.push(`${key} = $${paramIndex}::jsonb`);
+        setClauses.push(`${key} = $${paramIndex}`);
         values.push(JSON.stringify(value));
       } else {
         setClauses.push(`${key} = $${paramIndex}`);

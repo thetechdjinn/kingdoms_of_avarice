@@ -415,12 +415,13 @@ export async function getRespawnRoomForArea(area: string): Promise<number | null
   // 2. Room's servedAreas array contains this area
   const result = await query<{ id: number; features: RoomFeatures }>(
     `SELECT id, features FROM rooms
-     WHERE (features->>'respawn')::jsonb->>'enabled' = 'true'
+     WHERE features->'respawn'->>'enabled' = 'true'
      AND (
        area = $1
-       OR (features->'respawn'->'servedAreas') ? $1
+       OR (features->'respawn'->'servedAreas' IS NOT NULL
+           AND EXISTS (SELECT 1 FROM json_each(features->'respawn'->'servedAreas') WHERE value = $1))
      )
-     ORDER BY COALESCE(((features->>'respawn')::jsonb->>'priority')::int, 0) ASC
+     ORDER BY COALESCE(CAST(features->'respawn'->>'priority' AS INTEGER), 0) ASC
      LIMIT 1`,
     [area]
   );
@@ -439,8 +440,8 @@ export async function getRespawnRoomForArea(area: string): Promise<number | null
 export async function getAllRespawnRooms(): Promise<Array<{ id: number; name: string; area: string | null; respawn: RoomRespawnConfig }>> {
   const result = await query<{ id: number; name: string; area: string | null; features: RoomFeatures }>(
     `SELECT id, name, area, features FROM rooms
-     WHERE (features->>'respawn')::jsonb->>'enabled' = 'true'
-     ORDER BY area, COALESCE(((features->>'respawn')::jsonb->>'priority')::int, 0) ASC`
+     WHERE features->'respawn'->>'enabled' = 'true'
+     ORDER BY area, COALESCE(CAST(features->'respawn'->>'priority' AS INTEGER), 0) ASC`
   );
 
   return result.rows.map(row => ({

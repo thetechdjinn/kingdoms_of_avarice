@@ -176,7 +176,7 @@ export async function getAllPlayersWithDetails(): Promise<PlayerWithDetails[]> {
     created_at: Date;
     last_login: Date | null;
     character_count: string;
-    roles: string[];
+    roles: string;
   }>(
     `SELECT
       p.id,
@@ -187,11 +187,15 @@ export async function getAllPlayersWithDetails(): Promise<PlayerWithDetails[]> {
       p.last_login,
       (SELECT COUNT(*) FROM characters WHERE player_id = p.id) as character_count,
       COALESCE(
-        (SELECT array_agg(r.name ORDER BY r.priority DESC)
-         FROM player_roles pr
-         JOIN roles r ON pr.role_id = r.id
-         WHERE pr.player_id = p.id),
-        '{}'::text[]
+        (SELECT json_group_array(name)
+         FROM (
+           SELECT r.name
+           FROM player_roles pr
+           JOIN roles r ON pr.role_id = r.id
+           WHERE pr.player_id = p.id
+           ORDER BY r.priority DESC
+         )),
+        '[]'
       ) as roles
     FROM players p
     ORDER BY p.username`
@@ -200,6 +204,7 @@ export async function getAllPlayersWithDetails(): Promise<PlayerWithDetails[]> {
   return result.rows.map(row => ({
     ...row,
     character_count: parseInt(row.character_count, 10),
+    roles: JSON.parse(row.roles) as string[],
   }));
 }
 
@@ -215,7 +220,7 @@ export async function getPlayerWithRoles(playerId: number): Promise<PlayerWithDe
     created_at: Date;
     last_login: Date | null;
     character_count: string;
-    roles: string[];
+    roles: string;
   }>(
     `SELECT
       p.id,
@@ -226,11 +231,15 @@ export async function getPlayerWithRoles(playerId: number): Promise<PlayerWithDe
       p.last_login,
       (SELECT COUNT(*) FROM characters WHERE player_id = p.id) as character_count,
       COALESCE(
-        (SELECT array_agg(r.name ORDER BY r.priority DESC)
-         FROM player_roles pr
-         JOIN roles r ON pr.role_id = r.id
-         WHERE pr.player_id = p.id),
-        '{}'::text[]
+        (SELECT json_group_array(name)
+         FROM (
+           SELECT r.name
+           FROM player_roles pr
+           JOIN roles r ON pr.role_id = r.id
+           WHERE pr.player_id = p.id
+           ORDER BY r.priority DESC
+         )),
+        '[]'
       ) as roles
     FROM players p
     WHERE p.id = $1`,
@@ -243,6 +252,7 @@ export async function getPlayerWithRoles(playerId: number): Promise<PlayerWithDe
   return {
     ...row,
     character_count: parseInt(row.character_count, 10),
+    roles: JSON.parse(row.roles) as string[],
   };
 }
 
