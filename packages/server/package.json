@@ -12,7 +12,7 @@
   },
   "dependencies": {
     "@koa/shared": "*",
-    "@libsql/client": "^0.17.4",
+    "@tursodatabase/database": "^0.6.1",
     "bcryptjs": "^3.0.3",
     "cookie": "^1.1.1",
     "cookie-parser": "^1.4.7",

@@ -309,7 +309,7 @@ export async function updateDefinition(id: string, input: Partial<CreateDefiniti
       tick_damage_min=$30, tick_damage_max=$31, tick_healing_min=$32, tick_healing_max=$33,
       tick_message=$34, silent_tick=$35, wear_off_message=$36,
       blocks_regen=$37, blocks_movement=$38, is_blind=$39,
-      blocks_casting=$40, blocks_combat=$41, blocks_stealth=$42, updated_at=NOW()
+      blocks_casting=$40, blocks_combat=$41, blocks_stealth=$42, updated_at=CURRENT_TIMESTAMP
     WHERE id = $43
     RETURNING *`,
     [
@@ -399,7 +399,7 @@ export async function importDefinitions(definitions: StatusEffectDefinition[]): 
             tick_damage_min = $30, tick_damage_max = $31, tick_healing_min = $32, tick_healing_max = $33,
             tick_message = $34, silent_tick = $35, wear_off_message = $36,
             blocks_regen = $37, blocks_movement = $38, is_blind = $39,
-            blocks_casting = $40, blocks_combat = $41, blocks_stealth = $42, updated_at = NOW()
+            blocks_casting = $40, blocks_combat = $41, blocks_stealth = $42, updated_at = CURRENT_TIMESTAMP
           WHERE id = $43`,
           [
             def.name,
