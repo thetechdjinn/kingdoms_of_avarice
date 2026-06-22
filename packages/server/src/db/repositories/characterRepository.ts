@@ -162,7 +162,7 @@ export async function findCharacterByName(name: string): Promise<DbCharacter | n
 
 export async function characterNameExists(name: string, client?: DbClient): Promise<boolean> {
   const result = await query<{ exists: boolean }>(
-    'SELECT EXISTS(SELECT 1 FROM characters WHERE LOWER(name) = LOWER($1)) as exists',
+    'SELECT EXISTS(SELECT 1 FROM characters WHERE LOWER(name) = LOWER($1)) as "exists"',
     [name],
     client
   );

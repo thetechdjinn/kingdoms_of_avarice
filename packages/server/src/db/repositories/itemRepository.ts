@@ -673,7 +673,7 @@ export async function findStackableInstance(
      WHERE ii.template_id = $1
        AND ii.location_type = $2
        AND ii.location_id = $3
-       AND (it.flags->>'stackable')::boolean = true
+       AND it.flags->>'stackable' IN (1, 'true')
        AND (it.max_stack IS NULL OR it.max_stack <= 0 OR ii.quantity < it.max_stack)
        ${conditionClause}
      ORDER BY ii.id
@@ -950,7 +950,7 @@ export async function findHiddenItemsInRoom(roomId: number): Promise<ItemInstanc
      JOIN item_templates it ON ii.template_id = it.id
      WHERE ii.location_type = 'room' 
        AND ii.location_id = $1
-       AND (it.flags->>'hidden')::boolean = true
+       AND it.flags->>'hidden' IN (1, 'true')
      ORDER BY ii.id`,
     [roomId]
   );

@@ -49,7 +49,7 @@ export async function hasEffect(characterId: number, effectId: string): Promise<
     `SELECT EXISTS(
       SELECT 1 FROM character_status_effects
       WHERE character_id = $1 AND effect_id = $2 AND datetime(expires_at) > datetime('now')
-    ) as exists`,
+    ) as "exists"`,
     [characterId, effectId]
   );
   return result.rows[0]?.exists ?? false;

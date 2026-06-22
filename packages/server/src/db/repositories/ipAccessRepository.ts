@@ -90,7 +90,7 @@ export async function isIpAllowed(ip: string): Promise<boolean> {
            SELECT 1 FROM json_each($1) a JOIN json_each(resolved_ips) b ON a.value = b.value
          ))
        )
-     ) as exists`,
+     ) as "exists"`,
     [JSON.stringify(ipsToCheck)]
   );
   return result.rows[0].exists;
@@ -115,7 +115,7 @@ export async function isIpBlocked(ip: string): Promise<boolean> {
            SELECT 1 FROM json_each($1) a JOIN json_each(resolved_ips) b ON a.value = b.value
          ))
        )
-     ) as exists`,
+     ) as "exists"`,
     [JSON.stringify(ipsToCheck)]
   );
   return result.rows[0].exists;
@@ -182,7 +182,7 @@ export async function deleteEntry(id: number): Promise<boolean> {
  */
 export async function entryExists(entry: string): Promise<boolean> {
   const result = await query<{ exists: boolean }>(
-    'SELECT EXISTS(SELECT 1 FROM ip_access WHERE LOWER(entry) = LOWER($1)) as exists',
+    'SELECT EXISTS(SELECT 1 FROM ip_access WHERE LOWER(entry) = LOWER($1)) as "exists"',
     [entry]
   );
   return result.rows[0].exists;

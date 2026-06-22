@@ -66,7 +66,7 @@ export async function updateLastLogin(playerId: number): Promise<void> {
 
 export async function playerExists(username: string): Promise<boolean> {
   const result = await query<{ exists: boolean }>(
-    'SELECT EXISTS(SELECT 1 FROM players WHERE LOWER(username) = LOWER($1)) as exists',
+    'SELECT EXISTS(SELECT 1 FROM players WHERE LOWER(username) = LOWER($1)) as "exists"',
     [username]
   );
   
