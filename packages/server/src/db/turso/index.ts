@@ -14,11 +14,14 @@
  * NOT YET WIRED INTO THE APP. Importing this module has no effect until the
  * Phase 2.7 cutover (or a feature-flag dispatch added in a later 2.x step).
  *
- * Known items to validate in Phase 2.5/2.6 (do not assume these work yet):
- *  - Parameter placeholders: pg uses `$1, $2`. SQLite/libSQL treats `$1` as a
- *    NAMED parameter, while an array of positional `args` binds `?` parameters.
- *    The repo audit must confirm each query's placeholders bind correctly
- *    (this is the single biggest source of silent breakage in the port).
+ * VERIFIED (local libSQL spike, Phase 2.1):
+ *  - pg-style `$1, $2` placeholders bind correctly when given a positional
+ *    `args` array (libSQL maps `$N` positionally). Repos do NOT need a
+ *    placeholder rewrite. `RETURNING` works. The result mapping below is
+ *    correct for SELECT (rows.length), INSERT...RETURNING (rows present,
+ *    rowsAffected 0), and UPDATE/DELETE (rowsAffected).
+ *
+ * Still to validate in Phase 2.5/2.6:
  *  - JSONB/array operators, casts, and other pg-isms (see the 2.5 table in
  *    notes/Memory_First_And_Turso_Implementation_Plan.md).
  */

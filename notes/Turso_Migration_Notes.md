@@ -100,6 +100,26 @@ Given the memory-first architecture direction (see [[Memory_First_Architecture]]
 - **`BEGIN CONCURRENT` / MVCC mode**: only available in the newer Rust "Turso Database" product, accessed via a different SDK than `@libsql/client`. Not needed given memory-first direction, but worth knowing it exists if write contention ever becomes a real concern.
 - **Embedded replicas**: documented but not tested. Could be useful for local dev (one file) vs. production (managed Turso Cloud).
 
+## Phase 2.1 spike findings (verified against @libsql/client 0.17.4)
+
+Ran a local file-based libSQL spike to retire the biggest feared risk before
+the repo audit:
+
+- **pg-style `$1, $2` placeholders bind correctly with a positional `args`
+  array.** Both `?` and `$1`/`$2` returned correct rows. libSQL maps `$N`
+  positionally, so the ~22 repositories do **NOT** need a placeholder rewrite.
+  This was the single largest potential blocker; it is a non-issue.
+- **`RETURNING` works** (`INSERT ... RETURNING id` → `[{id:3}]`). Note
+  `rowsAffected` is `0` and `lastInsertRowid` is `undefined` when RETURNING is
+  used — fine, callers read the returned row.
+- **Result-shape mapping confirmed** for the pg-like wrapper in
+  `db/turso/index.ts`: SELECT → `rows.length`; INSERT…RETURNING → rows present;
+  UPDATE/DELETE → `rowsAffected` (rows empty). The `rowCount` mapping
+  (`rows.length > 0 ? rows.length : rowsAffected`) covers all three.
+
+Net effect: Phase 2 is "swap the driver + translate JSONB/array/cast pg-isms,"
+not a mechanical rewrite of every query.
+
 ## Bottom line
 
 The migration is feasible. The two genuine gotchas are the `@>` and `||` rewrites in `migrate.ts`; everything else is either a one-line function rename or a free pass.
