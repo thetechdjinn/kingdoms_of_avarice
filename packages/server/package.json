@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@koa/shared": "*",
+    "@libsql/client": "^0.17.4",
     "bcryptjs": "^3.0.3",
     "cookie": "^1.1.1",
     "cookie-parser": "^1.4.7",
