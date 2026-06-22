@@ -1,5 +1,6 @@
-import type pg from 'pg';
+import type { DbClient } from '../index.js';
 import { query, withTransaction } from '../index.js';
+import { parseArrayColumn } from '../arrayColumn.js';
 import type {
   Quest,
   QuestStep,
@@ -125,13 +126,13 @@ function dbToQuest(row: DbQuest, steps: QuestStep[]): Quest {
     questGiverNpcId: row.quest_giver_npc_id,
     minLevel: row.min_level,
     maxLevel: row.max_level,
-    requiredRaces: row.required_races,
-    requiredClasses: row.required_classes,
+    requiredRaces: parseArrayColumn(row.required_races),
+    requiredClasses: parseArrayColumn(row.required_classes),
     requiredFactionId: row.required_faction_id,
     requiredFactionMin: row.required_faction_min,
     requiredFactionMax: row.required_faction_max,
-    requiredQuestIds: row.required_quest_ids ?? [],
-    requiredQuestTags: row.required_quest_tags ?? [],
+    requiredQuestIds: parseArrayColumn<number>(row.required_quest_ids),
+    requiredQuestTags: parseArrayColumn(row.required_quest_tags),
     xpReward: row.xp_reward,
     essenceReward: row.essence_reward,
     currencyReward: Number(row.currency_reward),
@@ -183,7 +184,7 @@ export async function getAllQuests(): Promise<Quest[]> {
   );
 }
 
-export async function getQuestById(id: number, client?: pg.PoolClient): Promise<Quest | null> {
+export async function getQuestById(id: number, client?: DbClient): Promise<Quest | null> {
   const questResult = await query<DbQuest>(
     'SELECT * FROM quests WHERE id = $1', [id], client
   );
@@ -441,7 +442,7 @@ export interface CreateStepInput {
 
 export async function createQuest(
   input: CreateQuestInput,
-  client?: pg.PoolClient
+  client?: DbClient
 ): Promise<Quest> {
   const result = await query<DbQuest>(
     `INSERT INTO quests (
@@ -470,7 +471,7 @@ export async function createQuest(
 export async function updateQuest(
   id: number,
   input: Partial<CreateQuestInput>,
-  client?: pg.PoolClient
+  client?: DbClient
 ): Promise<Quest | null> {
   const existing = await getQuestById(id, client);
   if (!existing) return null;
@@ -542,7 +543,7 @@ export async function deleteQuest(id: number): Promise<boolean> {
 export async function replaceSteps(
   questId: number,
   steps: CreateStepInput[],
-  client?: pg.PoolClient
+  client?: DbClient
 ): Promise<QuestStep[]> {
   await query('DELETE FROM quest_steps WHERE quest_id = $1', [questId], client);
 

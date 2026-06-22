@@ -1,4 +1,5 @@
-import pg from 'pg';
+import { parseArrayColumn } from '../arrayColumn.js';
+import type { DbClient } from '../index.js';
 import crypto from 'node:crypto';
 import { query } from '../index.js';
 import bcrypt from 'bcryptjs';
@@ -117,7 +118,7 @@ export async function updatePassword(playerId: number, newPassword: string): Pro
   );
 }
 
-export async function getMaxCharacters(playerId: number, client?: pg.PoolClient): Promise<number | null> {
+export async function getMaxCharacters(playerId: number, client?: DbClient): Promise<number | null> {
   const result = await query<{ max_characters: number | null }>(
     'SELECT max_characters FROM players WHERE id = $1',
     [playerId],
@@ -204,7 +205,7 @@ export async function getAllPlayersWithDetails(): Promise<PlayerWithDetails[]> {
   return result.rows.map(row => ({
     ...row,
     character_count: parseInt(row.character_count, 10),
-    roles: JSON.parse(row.roles) as string[],
+    roles: parseArrayColumn(row.roles),
   }));
 }
 
@@ -252,7 +253,7 @@ export async function getPlayerWithRoles(playerId: number): Promise<PlayerWithDe
   return {
     ...row,
     character_count: parseInt(row.character_count, 10),
-    roles: JSON.parse(row.roles) as string[],
+    roles: parseArrayColumn(row.roles),
   };
 }
 

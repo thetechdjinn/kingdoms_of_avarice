@@ -1,3 +1,4 @@
+import { parseArrayColumn } from '../arrayColumn.js';
 import { query } from '../index.js';
 
 export type EntryType = 'ip' | 'hostname';
@@ -192,10 +193,7 @@ function toIpAccessEntry(row: DbIpAccess): IpAccessEntry {
     id: row.id,
     entry: row.entry,
     entry_type: row.entry_type as EntryType,
-    resolved_ips:
-      typeof row.resolved_ips === 'string'
-        ? (JSON.parse(row.resolved_ips) as string[])
-        : row.resolved_ips,
+    resolved_ips: row.resolved_ips == null ? null : parseArrayColumn(row.resolved_ips),
     resolved_at: row.resolved_at,
     list_type: row.list_type as ListType,
     reason: row.reason,

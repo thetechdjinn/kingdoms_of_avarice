@@ -1,4 +1,5 @@
 import { query } from '../index.js';
+import { parseArrayColumn } from '../arrayColumn.js';
 import {
   Spell,
   CharacterSpell,
@@ -71,7 +72,7 @@ function dbToSpell(row: DbSpell): Spell {
     statusEffect: row.status_effect,
     effectDuration: row.effect_duration,
     levelRequired: row.level_required,
-    classRestrictions: row.class_restrictions ?? [],
+    classRestrictions: parseArrayColumn(row.class_restrictions),
     isAttackSpell: row.is_attack_spell,
     scalingPerLevel: row.scaling_per_level ? (isNaN(parseFloat(row.scaling_per_level)) ? null : parseFloat(row.scaling_per_level)) : null,
     maxScalingLevel: row.max_scaling_level,

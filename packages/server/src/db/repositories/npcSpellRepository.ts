@@ -1,6 +1,7 @@
+import type { DbClient } from '../index.js';
 import { query, withTransaction } from '../index.js';
+import { parseArrayColumn } from '../arrayColumn.js';
 import { NpcSpell, Spell, SpellType, SpellTargetType, SpellScalingStat } from '@koa/shared';
-import type pg from 'pg';
 
 // Database row from JOIN of npc_spells + spells
 interface DbNpcSpellRow {
@@ -91,7 +92,7 @@ function dbToNpcSpell(row: DbNpcSpellRow): NpcSpell {
     statusEffect: row.s_status_effect,
     effectDuration: row.s_effect_duration,
     levelRequired: row.s_level_required,
-    classRestrictions: row.s_class_restrictions ?? [],
+    classRestrictions: parseArrayColumn(row.s_class_restrictions),
     isAttackSpell: row.s_is_attack_spell,
     scalingPerLevel: parseDecimal(row.s_scaling_per_level),
     maxScalingLevel: row.s_max_scaling_level,
@@ -126,7 +127,7 @@ function dbToNpcSpell(row: DbNpcSpellRow): NpcSpell {
 /**
  * Get all spells assigned to a specific NPC template.
  */
-export async function getSpellsForNpc(npcId: number, client?: pg.PoolClient): Promise<NpcSpell[]> {
+export async function getSpellsForNpc(npcId: number, client?: DbClient): Promise<NpcSpell[]> {
   const result = await query<DbNpcSpellRow>(
     `${NPC_SPELL_JOIN_SQL} WHERE ns.npc_id = $1 ORDER BY ns.priority DESC, ns.id`,
     [npcId],
@@ -169,8 +170,8 @@ export interface CreateNpcSpellInput {
  * Deletes existing and inserts new within a transaction.
  * When an external client is provided, uses it directly (caller manages the transaction).
  */
-export async function replaceSpells(npcId: number, spells: CreateNpcSpellInput[], externalClient?: pg.PoolClient): Promise<NpcSpell[]> {
-  const doWork = async (client: pg.PoolClient) => {
+export async function replaceSpells(npcId: number, spells: CreateNpcSpellInput[], externalClient?: DbClient): Promise<NpcSpell[]> {
+  const doWork = async (client: DbClient) => {
     await client.query('DELETE FROM npc_spells WHERE npc_id = $1', [npcId]);
 
     for (const sp of spells) {

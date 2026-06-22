@@ -48,17 +48,22 @@ export function getClient(): Promise<Database> {
   return dbPromise;
 }
 
-/**
- * The threaded transaction client is just the (single) connection: statements
- * prepared on it during an open BEGIN..COMMIT run inside that transaction.
- */
-export type TursoExecutor = Database;
-
 /** pg.QueryResult-like shape so existing callers keep using `.rows` / `.rowCount`. */
 export interface QueryResultLike<T> {
   rows: T[];
   rowCount: number;
   lastInsertRowid?: number | bigint;
+}
+
+/**
+ * The threaded transaction client. It exposes a pg-style `.query()` so the two
+ * call patterns in the codebase both work unchanged:
+ *   - `query(sql, params, client)` — module function, client threaded (most repos)
+ *   - `client.query(sql, params)`  — direct pg-style on the client (legacy sites)
+ * Both run on the same open transaction.
+ */
+export interface TursoExecutor {
+  query<T = Record<string, unknown>>(text: string, params?: unknown[]): Promise<QueryResultLike<T>>;
 }
 
 // In-process mutex used to keep transactions from overlapping on the shared
@@ -74,12 +79,39 @@ function withTxLock<T>(fn: () => Promise<T>): Promise<T> {
   return run;
 }
 
+/**
+ * Mirror what the pg driver did for jsonb/array columns: parse JSON-looking
+ * string values back into objects/arrays on read. We only attempt strings that
+ * begin with `{` or `[` (object/array JSON); scalar-jsonb (numbers, quoted
+ * strings like game_settings.value) is left as-is for callers that parse it
+ * themselves (e.g. settingsRepository.parseJsonbValue). Non-JSON text (names,
+ * descriptions) is returned untouched.
+ */
+function maybeParseJson(value: unknown): unknown {
+  if (typeof value !== 'string' || value.length === 0) return value;
+  const c = value.charCodeAt(0);
+  if (c !== 0x7b /* { */ && c !== 0x5b /* [ */) return value;
+  try {
+    return JSON.parse(value);
+  } catch {
+    return value;
+  }
+}
+
 async function execOn<T>(db: Database, text: string, params?: unknown[]): Promise<QueryResultLike<T>> {
   const stmt = await db.prepare(text);
-  const args = (params ?? []) as unknown[];
+  // Former Postgres array columns (text[]) are stored as JSON TEXT. SQLite can't
+  // bind a JS array, so JSON-encode any array param here (a single, uniform seam
+  // for every write path). Already-stringified JSON args pass through untouched.
+  const args = (params ?? []).map((p) => (Array.isArray(p) ? JSON.stringify(p) : p));
   if (stmt.reader) {
-    const rows = (await stmt.all(...args)) as T[];
-    return { rows, rowCount: rows.length };
+    const rows = (await stmt.all(...args)) as Record<string, unknown>[];
+    // Deserialize jsonb/array columns (pg auto-parsed these; the Turso driver
+    // returns raw TEXT, so do it here uniformly).
+    for (const row of rows) {
+      for (const key in row) row[key] = maybeParseJson(row[key]);
+    }
+    return { rows: rows as T[], rowCount: rows.length };
   }
   const info = await stmt.run(...args);
   return { rows: [], rowCount: info.changes ?? 0, lastInsertRowid: info.lastInsertRowid };
@@ -96,11 +128,11 @@ export async function query<T = Record<string, unknown>>(
   params?: unknown[],
   txClient?: TursoExecutor
 ): Promise<QueryResultLike<T>> {
-  const start = Date.now();
-  const result = txClient
-    ? await execOn<T>(txClient, text, params)
-    : await execOn<T>(await getClient(), text, params);
+  // Inside a transaction: delegate to the threaded client (same open tx).
+  if (txClient) return txClient.query<T>(text, params);
 
+  const start = Date.now();
+  const result = await execOn<T>(await getClient(), text, params);
   if (process.env.NODE_ENV === 'development') {
     console.log('Executed query (turso)', { text: text.substring(0, 50), duration: Date.now() - start, rows: result.rowCount });
   }
@@ -142,8 +174,12 @@ export async function withTransaction<T>(
   return withTxLock(async () => {
     const db = await getClient();
     await db.exec('BEGIN');
+    // Adapter exposing pg-style .query() that runs on this open transaction.
+    const client: TursoExecutor = {
+      query: <T = Record<string, unknown>>(text: string, params?: unknown[]) => execOn<T>(db, text, params),
+    };
     try {
-      const result = await fn(db);
+      const result = await fn(client);
       await db.exec('COMMIT');
       return result;
     } catch (error) {

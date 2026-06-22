@@ -1,5 +1,5 @@
+import type { DbClient } from '../index.js';
 import { query, withTransaction } from '../index.js';
-import type pg from 'pg';
 import {
   StatusEffectDefinition,
   StatusEffectCategory,
@@ -368,7 +368,7 @@ export async function exportDefinitions(): Promise<StatusEffectDefinition[]> {
  * Import definitions from JSON (upsert) - wrapped in a transaction for atomicity
  */
 export async function importDefinitions(definitions: StatusEffectDefinition[]): Promise<{ created: number; updated: number }> {
-  return withTransaction(async (client: pg.PoolClient) => {
+  return withTransaction(async (client: DbClient) => {
     let created = 0;
     let updated = 0;
 

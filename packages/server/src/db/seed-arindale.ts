@@ -14,7 +14,7 @@ const __dirname = dirname(__filename);
 
 dotenv.config({ path: join(__dirname, '..', '..', '..', '..', '.env') });
 
-import { pool as getPool, withTransaction } from './index.js';
+import { closePool, withTransaction, type DbClient } from './index.js';
 import { RoomDef, ExitDef, DoorDef, Direction } from './arindale/types.js';
 import { generateGrid } from './arindale/grid.js';
 import { getMarketDistrict } from './arindale/districts/market.js';
@@ -172,7 +172,7 @@ function validate(rooms: RoomDef[], exits: ExitDef[], doors: DoorDef[]): void {
 
 // ── Cleanup ──────────────────────────────────────────────────────────
 
-async function cleanup(client: import('pg').PoolClient): Promise<void> {
+async function cleanup(client: DbClient): Promise<void> {
   console.log('Cleaning up old data...');
 
   // NPCs must be deleted because they have spawn_room_id FK to rooms,
@@ -192,13 +192,10 @@ async function cleanup(client: import('pg').PoolClient): Promise<void> {
   await client.query(`DELETE FROM item_instances WHERE location_type = 'room'`);
   await client.query('DELETE FROM rooms');
 
-  // Reset sequences
-  await client.query("SELECT setval('rooms_id_seq', 1, false)");
-  await client.query("SELECT setval('room_exits_id_seq', 1, false)");
-  await client.query("SELECT setval('doors_id_seq', 1, false)");
-  await client.query("SELECT setval('npcs_id_seq', 1, false)");
-  await client.query("SELECT setval('npc_attacks_id_seq', 1, false)");
-  await client.query("SELECT setval('npc_instances_id_seq', 1, false)");
+  // Reset AUTOINCREMENT counters so re-seeded ids restart at 1.
+  await client.query(
+    "DELETE FROM sqlite_sequence WHERE name IN ('rooms','room_exits','doors','npcs','npc_attacks','npc_instances')"
+  );
 
   console.log('  Old data cleaned.');
 }
@@ -206,7 +203,7 @@ async function cleanup(client: import('pg').PoolClient): Promise<void> {
 // ── Insert ───────────────────────────────────────────────────────────
 
 async function insertAll(
-  client: import('pg').PoolClient,
+  client: DbClient,
   rooms: RoomDef[],
   exits: ExitDef[],
   doors: DoorDef[]
@@ -238,7 +235,7 @@ async function insertAll(
       );
     }
 
-    const result = await client.query(
+    const result = await client.query<{ id: number }>(
       `INSERT INTO rooms (name, description, area, terrain, darkness_level, features, tag)
        VALUES ${placeholders.join(', ')}
        RETURNING id`,
@@ -377,7 +374,7 @@ async function insertAll(
 
 // ── Post-insert verification ─────────────────────────────────────────
 
-async function verify(client: import('pg').PoolClient): Promise<void> {
+async function verify(client: DbClient): Promise<void> {
   console.log('\n=== Post-insert verification ===');
 
   const roomCount = await client.query('SELECT COUNT(*) FROM rooms');
@@ -419,9 +416,9 @@ async function verify(client: import('pg').PoolClient): Promise<void> {
   }
 
   // Verify features
-  const respawn = await client.query(`SELECT id, name FROM rooms WHERE features->'respawn'->>'enabled' = 'true'`);
-  const bank = await client.query(`SELECT id, name FROM rooms WHERE features->'bank'->>'enabled' = 'true'`);
-  const training = await client.query(`SELECT id, name FROM rooms WHERE features->'training'->>'enabled' = 'true'`);
+  const respawn = await client.query(`SELECT id, name FROM rooms WHERE features->'respawn'->>'enabled' IN (1, 'true')`);
+  const bank = await client.query(`SELECT id, name FROM rooms WHERE features->'bank'->>'enabled' IN (1, 'true')`);
+  const training = await client.query(`SELECT id, name FROM rooms WHERE features->'training'->>'enabled' IN (1, 'true')`);
 
   console.log(`  Respawn rooms: ${respawn.rows.map(r => `${r.id} (${r.name})`).join(', ')}`);
   console.log(`  Bank rooms: ${bank.rows.map(r => `${r.id} (${r.name})`).join(', ')}`);
@@ -453,8 +450,7 @@ async function main(): Promise<void> {
     await verify(client);
   });
 
-  const pool = getPool();
-  await pool.end();
+  await closePool();
 }
 
 main().catch((err) => {

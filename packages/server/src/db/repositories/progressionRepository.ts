@@ -1,5 +1,6 @@
-import pg from 'pg';
+import type { DbClient } from '../index.js';
 import { query } from '../index.js';
+import { parseArrayColumn } from '../arrayColumn.js';
 import {
   ClassDefinition,
   RaceDefinition,
@@ -103,7 +104,7 @@ function dbToClassDefinition(row: DbClassDefinition): ClassDefinition {
     display_name: row.display_name,
     description: row.description ?? undefined,
     essence_multiplier: parseFloat(row.essence_multiplier),
-    subscribed_tags: row.subscribed_tags as ThematicTag[],
+    subscribed_tags: parseArrayColumn<ThematicTag>(row.subscribed_tags),
     talent_tree_id: row.talent_tree_id ?? undefined,
     resource_type: row.resource_type ?? undefined,
     playable: row.playable,
@@ -112,8 +113,8 @@ function dbToClassDefinition(row: DbClassDefinition): ClassDefinition {
     magic_school: row.magic_school ?? undefined,
     crit_bonus: row.crit_bonus ?? 0,
     dodge_bonus: row.dodge_bonus ?? 0,
-    traits: row.traits ?? [],
-    armor_type_restrictions: row.armor_type_restrictions ?? [],
+    traits: parseArrayColumn(row.traits),
+    armor_type_restrictions: parseArrayColumn(row.armor_type_restrictions),
     hp_adj: row.hp_adj ?? 0,
     hp_per_level_min: row.hp_per_level_min ?? 4,
     hp_per_level_max: row.hp_per_level_max ?? 7,
@@ -129,8 +130,8 @@ function dbToRaceDefinition(row: DbRaceDefinition): RaceDefinition {
     // Cast base_stats to RaceBaseStats - DB stores as JSONB which comes back as Record
     base_stats: row.base_stats as unknown as RaceDefinition['base_stats'],
     // Cast traits - can be string[] or RacialTrait[] depending on data
-    traits: row.traits as unknown as RaceDefinition['traits'],
-    allowed_classes: row.allowed_classes ?? undefined,
+    traits: parseArrayColumn(row.traits) as unknown as RaceDefinition['traits'],
+    allowed_classes: parseArrayColumn(row.allowed_classes),
     playable: row.playable,
     dodge_bonus: row.dodge_bonus ?? 0,
     base_hp: row.base_hp ?? 26,
@@ -506,7 +507,7 @@ export async function getCharacterProgression(characterId: number): Promise<Char
 export async function createCharacterProgression(
   characterId: number,
   classId: string,
-  client?: pg.PoolClient
+  client?: DbClient
 ): Promise<CharacterProgression> {
   const result = await query<DbCharacterProgression & { calculated_level: number }>(
     `WITH inserted AS (

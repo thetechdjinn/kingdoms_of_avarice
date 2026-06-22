@@ -1,4 +1,5 @@
 import { query } from '../index.js';
+import { parseArrayColumn } from '../arrayColumn.js';
 import {
   CraftingRecipe,
   RecipeIngredient,
@@ -66,7 +67,7 @@ function dbToEnchantment(row: DbEnchantment): Enchantment {
     description: row.description ?? undefined,
     skill_type: row.skill_type,
     skill_level: row.skill_level,
-    applicable_types: row.applicable_types as ItemType[],
+    applicable_types: parseArrayColumn<ItemType>(row.applicable_types),
     stat_modifiers: row.stat_modifiers ?? undefined,
     special_effects: row.special_effects ?? undefined,
     mana_cost: row.mana_cost,

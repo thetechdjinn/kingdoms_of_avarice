@@ -1,87 +1,28 @@
-import pg from 'pg';
+/**
+ * Database module — Turso (local embedded) backed.
+ *
+ * Phase 2.7 cutover: this module now delegates to the new Rust Turso engine in
+ * ./turso/index.js (local file, no cloud). The historical PostgreSQL (pg)
+ * implementation has been removed. The public surface
+ * (query / getClient / withTransaction / closePool / testConnection) is
+ * unchanged, so repositories need no changes beyond using the neutral
+ * `DbClient` type for the threaded transaction client.
+ */
 
-const { Pool } = pg;
+export {
+  query,
+  getClient,
+  withTransaction,
+  closePool,
+  testConnection,
+} from './turso/index.js';
 
-let pool: pg.Pool | null = null;
+import type { TursoExecutor } from './turso/index.js';
+export type { TursoExecutor, QueryResultLike } from './turso/index.js';
 
-function getPool(): pg.Pool {
-  if (!pool) {
-    pool = new Pool({
-      host: process.env.DB_HOST || 'localhost',
-      port: parseInt(process.env.DB_PORT || '5432'),
-      database: process.env.DB_NAME || 'kingdoms_of_avarice',
-      user: process.env.DB_USER || 'postgres',
-      password: process.env.DB_PASSWORD || '',
-      max: 20,
-      idleTimeoutMillis: 30000,
-      connectionTimeoutMillis: 2000,
-    });
-
-    pool.on('error', (err) => {
-      console.error('Unexpected error on idle client', err);
-    });
-  }
-  return pool;
-}
-
-export async function query<T extends pg.QueryResultRow = pg.QueryResultRow>(
-  text: string,
-  params?: unknown[],
-  client?: pg.PoolClient
-): Promise<pg.QueryResult<T>> {
-  const executor = client || getPool();
-  const start = Date.now();
-  const result = await executor.query<T>(text, params);
-  const duration = Date.now() - start;
-
-  if (process.env.NODE_ENV === 'development') {
-    console.log('Executed query', { text: text.substring(0, 50), duration, rows: result.rowCount });
-  }
-
-  return result;
-}
-
-export async function getClient(): Promise<pg.PoolClient> {
-  return getPool().connect();
-}
-
-export async function testConnection(): Promise<boolean> {
-  try {
-    await getPool().query('SELECT NOW()');
-    console.log('Database connection successful');
-    return true;
-  } catch (error) {
-    console.error('Database connection failed:', error);
-    return false;
-  }
-}
-
-export async function closePool(): Promise<void> {
-  if (pool) {
-    await pool.end();
-  }
-}
-
-// Execute a function within a transaction
-export async function withTransaction<T>(
-  fn: (client: pg.PoolClient) => Promise<T>
-): Promise<T> {
-  const client = await getClient();
-  try {
-    await client.query('BEGIN');
-    const result = await fn(client);
-    await client.query('COMMIT');
-    return result;
-  } catch (error) {
-    try {
-      await client.query('ROLLBACK');
-    } catch {
-      // Ignore rollback errors to avoid masking the original error
-    }
-    throw error;
-  } finally {
-    client.release();
-  }
-}
-
-export { getPool as pool };
+/**
+ * The transaction-client type threaded through repository functions
+ * (replaces the former `pg.PoolClient`). It is the Turso connection; statements
+ * prepared on it during an open transaction run inside that transaction.
+ */
+export type DbClient = TursoExecutor;
