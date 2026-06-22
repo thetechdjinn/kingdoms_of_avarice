@@ -724,7 +724,7 @@ export async function findItemsInRoomByKeyword(
        AND ii.location_id = $1
        AND (
          LOWER(it.name) LIKE $2
-         OR EXISTS (SELECT 1 FROM unnest(it.keywords) kw WHERE LOWER(kw) LIKE $2)
+         OR EXISTS (SELECT 1 FROM json_each(it.keywords) WHERE LOWER(value) LIKE $2)
        )
      ORDER BY ii.id`,
     [roomId, `${searchTerm}%`]
@@ -749,7 +749,7 @@ export async function findItemsInCharacterInventoryByKeyword(
        AND ii.location_id = $1
        AND (
          LOWER(it.name) LIKE $2
-         OR EXISTS (SELECT 1 FROM unnest(it.keywords) kw WHERE LOWER(kw) LIKE $2)
+         OR EXISTS (SELECT 1 FROM json_each(it.keywords) WHERE LOWER(value) LIKE $2)
        )
      ORDER BY ii.id`,
     [characterId, `${searchTerm}%`]
@@ -830,7 +830,7 @@ export async function findItemsInContainerByKeyword(
        AND ii.location_id = $1
        AND (
          LOWER(it.name) LIKE $2
-         OR EXISTS (SELECT 1 FROM unnest(it.keywords) kw WHERE LOWER(kw) LIKE $2)
+         OR EXISTS (SELECT 1 FROM json_each(it.keywords) WHERE LOWER(value) LIKE $2)
        )
      ORDER BY ii.id`,
     [containerId, `${searchTerm}%`]

@@ -217,7 +217,7 @@ export async function decrementStock(id: number, client?: DbClient): Promise<boo
  */
 export async function incrementStock(id: number, client?: DbClient): Promise<boolean> {
   const result = await query(
-    `UPDATE merchant_inventory SET current_stock = LEAST(current_stock + 1, max_stock)
+    `UPDATE merchant_inventory SET current_stock = MIN(current_stock + 1, max_stock)
      WHERE id = $1`,
     [id],
     client
@@ -251,14 +251,15 @@ export async function findInventoryEntry(
  */
 export async function processRestock(): Promise<number> {
   return await withTransaction(async (client) => {
-    // Auto-restock common rarity items to max
+    // Auto-restock common rarity items to max. (SQLite-compatible: no UPDATE..FROM
+    // with a target-table alias; use a subquery filter instead.)
     await client.query(`
-      UPDATE merchant_inventory mi
-      SET current_stock = mi.max_stock
-      FROM item_templates it
-      WHERE mi.item_template_id = it.id
-        AND mi.current_stock < mi.max_stock
-        AND (it.rarity IS NULL OR it.rarity = 'common')
+      UPDATE merchant_inventory
+      SET current_stock = max_stock
+      WHERE current_stock < max_stock
+        AND item_template_id IN (
+          SELECT id FROM item_templates WHERE rarity IS NULL OR rarity = 'common'
+        )
     `);
 
     // Roll for non-common items
@@ -276,7 +277,7 @@ export async function processRestock(): Promise<number> {
       const roll = Math.floor(Math.random() * 100) + 1;
       if (roll <= row.restock_chance) {
         await client.query(
-          `UPDATE merchant_inventory SET current_stock = LEAST(current_stock + 1, max_stock) WHERE id = $1`,
+          `UPDATE merchant_inventory SET current_stock = MIN(current_stock + 1, max_stock) WHERE id = $1`,
           [row.id]
         );
         restocked++;
