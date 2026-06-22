@@ -35,7 +35,7 @@ import { setupProgressionTableRoutes } from './routes/progression-table.js';
 import { setupDataExportRoutes } from './routes/dataExport.js';
 import { setupSpawnRoutes } from './routes/spawns.js';
 import { setupGameSocket, initializeGameWorld } from './game/socket.js';
-import { stopCharacterSaveLoop } from './game/characterSaveLoop.js';
+import { stopCharacterSaveLoop, flushAllConnectedPlayers } from './game/characterSaveLoop.js';
 import { stopCombatLoop } from './game/combat.js';
 import { stopGameLoop } from './game/gameLoop.js';
 import { stopRegenLoops } from './game/regeneration.js';
@@ -143,10 +143,20 @@ async function start() {
 start().catch(console.error);
 
 // Graceful shutdown handler
-function shutdown(signal: string) {
+let isShuttingDown = false;
+async function shutdown(signal: string) {
+  if (isShuttingDown) return; // ignore repeated signals
+  isShuttingDown = true;
   console.log(`\n${signal} received, shutting down gracefully...`);
 
-  // Stop all game loops and services
+  // Force exit after 10 seconds if graceful shutdown hangs
+  const forceTimer = setTimeout(() => {
+    console.error('Forced shutdown after timeout');
+    process.exit(1);
+  }, 10000);
+  forceTimer.unref();
+
+  // Stop all game loops and services first so nothing races the final flush.
   stopCharacterSaveLoop();
   stopCombatLoop();
   stopGameLoop();
@@ -155,18 +165,22 @@ function shutdown(signal: string) {
   stopFuelLoop();
   stopDnsResolver();
 
+  // MEMORY-FIRST: drain every connected player's dirty cached state (pocket,
+  // bank, vitals, room) before exit so a clean shutdown never loses changes
+  // accrued since the last save tick.
+  try {
+    const flushed = await flushAllConnectedPlayers();
+    console.log(`[Shutdown] Flushed ${flushed} connected player(s)`);
+  } catch (error) {
+    console.error('[Shutdown] Error flushing connected players:', error);
+  }
+
   // Close HTTP server (stops accepting new connections)
   server.close(() => {
     console.log('HTTP server closed');
     process.exit(0);
   });
-
-  // Force exit after 10 seconds if graceful shutdown fails
-  setTimeout(() => {
-    console.error('Forced shutdown after timeout');
-    process.exit(1);
-  }, 10000);
 }
 
-process.on('SIGTERM', () => shutdown('SIGTERM'));
-process.on('SIGINT', () => shutdown('SIGINT'));
+process.on('SIGTERM', () => { void shutdown('SIGTERM'); });
+process.on('SIGINT', () => { void shutdown('SIGINT'); });

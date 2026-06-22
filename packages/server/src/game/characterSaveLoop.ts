@@ -115,6 +115,37 @@ export function restartCharacterSaveLoopWithNewInterval(newIntervalMs: number): 
 }
 
 /**
+ * Flush every connected player's dirty state once, immediately.
+ *
+ * Used by the graceful-shutdown hook (SIGTERM/SIGINT): the periodic loop is
+ * stopped first, then this drains whatever accrued since the last tick so a
+ * clean shutdown never loses pocket/bank/vitals/room changes. Mirrors the
+ * per-player flush in processSaveTick (marks vitals + room dirty for parity).
+ * Errors are isolated per-player so one failure doesn't block the rest.
+ *
+ * Returns the number of players successfully flushed.
+ */
+export async function flushAllConnectedPlayers(): Promise<number> {
+  if (!connectedPlayersRef || connectedPlayersRef.size === 0) {
+    return 0;
+  }
+
+  let flushed = 0;
+  for (const [playerId, socket] of connectedPlayersRef) {
+    if (!socket.characterId) continue;
+    try {
+      markVitalsDirty(socket);
+      markRoomDirty(socket);
+      await flushPlayer(socket);
+      flushed++;
+    } catch (error) {
+      console.error(`[CharacterSave] Shutdown flush failed for player ${playerId}:`, error);
+    }
+  }
+  return flushed;
+}
+
+/**
  * Process a single save tick.
  *
  * INVARIANT (memory-first architecture):

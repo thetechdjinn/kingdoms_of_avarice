@@ -2,6 +2,55 @@
 
 Every DB write site found in the audit, grouped by what they touch. For each row, the recommendation is **MEMORY-FIRST** (cache + flush via `flushPlayer`) or **DIRECT** (synchronous DB write — but still routes through `flushPlayer` to drain everything else dirty alongside).
 
+## Phase 1 — what actually shipped (verification, 1.9)
+
+> The tables further down describe the *aspirational* full plan. This section is
+> the source of truth for what landed. Several MEM rows below were intentionally
+> **not** implemented (see 1.5b deferral and XP note).
+
+**Memory-first and verified (static review + type-check + 339 unit tests green):**
+- **Vitals (HP/mana)** — MEM. Marked dirty every save tick; flushed by `flushPlayer`.
+- **Room/location** — MEM (1.4). Movement updates the in-memory `playerLocations`
+  map; `updateCharacterRoom` direct calls removed from the gameplay paths.
+- **Pocket currency** — MEM (1.3) via `sessionState.addPocket`. Direct writers
+  (currency pickup, merchant) use the hybrid pattern (direct DB write + cache
+  mirror, no dirty mark).
+- **Bank balance** — MEM (1.3) via `sessionState.addBank`.
+- **Fuel (lit torches)** — DEFERRED-IN-MEMORY (1.5a), but localized in
+  `fuelManager`, NOT via `socket.inventory`/`flushPlayer`. Per-tick fuel writes
+  eliminated; live fuel persisted only on burn-ending transitions. `is_lit`
+  stays a direct write. See the 1.5 implementation-status block in
+  [[Memory_First_And_Turso_Implementation_Plan]].
+
+**Stays DIRECT, verified correct (1.8):**
+- XP/essence (`awardProgression`) — direct; read synchronously by level-up and
+  quest triggers. NOT the deferred "hybrid" the table below imagines.
+- Quest completion / flags / step completion — direct milestones.
+- Quest + admin currency rewards — direct DB write **plus** cache mirror via
+  `syncRecipientPocket` / `socket.pocket` write. **This was a bug fixed in 1.8**:
+  before the fix these clobbered an online player's pocket on the next flush.
+- Admin commands, character create/delete, training — direct.
+
+**Flush trigger points, verified wired:**
+- Periodic save tick → `flushPlayer` per player (`characterSaveLoop`).
+- Logout (WebSocket close) → `flushPlayer` (`socket.ts`).
+- **Graceful shutdown (SIGTERM/SIGINT) → `flushAllConnectedPlayers` (1.9)** —
+  was MISSING; added in 1.9 so a clean shutdown drains pocket/bank/vitals/room.
+
+**NOT implemented (deferred / out of scope for Phase 1):**
+- Inventory location/quantity/create/destroy memory-first (1.5b) — items remain
+  fully DB-backed. `socket.inventory` is loaded on login but not yet a write path.
+- Status-effects memory-first — `markEffectsDirty` exists but is unused; effects
+  still persist via their repo. `flushPlayer` does not drain an 'effects' field.
+
+**Live smoke tests still to run against a dev server (Postgres required; not
+runnable in this environment):** login shows cached pocket/bank; move N rooms and
+confirm one batched write per tick; bank deposit/withdraw reflects immediately;
+quest currency reward shows immediately AND survives a later pocket change;
+`@currency` grant survives a later pocket change; light a torch, confirm no
+per-tick fuel writes, extinguish persists remaining fuel; SIGTERM flushes all
+connected players (watch for the `[Shutdown] Flushed N` log line).
+
 ## Core invariant (applies to every row below)
 
 **Every flush — periodic save tick, logout, graceful shutdown, quest completion, level-up, or any direct-write trigger — drains the player's entire dirty state in a single transaction.** See [[Memory_First_Architecture]] for the full rule. This means a "DIRECT" classification below does NOT mean "writes ONLY its own field" — it means "triggers `flushPlayer` immediately rather than waiting for the next save tick." Either way, all dirty state lands together atomically.
