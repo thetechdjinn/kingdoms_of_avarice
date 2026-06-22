@@ -5,3 +5,7 @@ dist/
 .DS_Store
 *.tsbuildinfo
 .claude/
+
+# Local Turso database
+data.db
+data.db-*

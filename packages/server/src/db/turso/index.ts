@@ -27,17 +27,34 @@
  * DB writes infrequent and batched; contention is minimal for a local dev DB.
  */
 
+import { fileURLToPath } from 'url';
+import { dirname, join, isAbsolute } from 'path';
 import { connect, type Database } from '@tursodatabase/database';
 
 let dbPromise: Promise<Database> | null = null;
 
 /**
+ * Resolve the database file path. Defaults to `<repoRoot>/data.db` computed from
+ * this module's location, so every entry point (server, migrate, data:import)
+ * hits the SAME file regardless of the cwd they were launched from. A relative
+ * `TURSO_PATH` is likewise anchored to the repo root; an absolute one is used
+ * as-is. Always a LOCAL file — never a cloud URL.
+ */
+function resolveDbPath(): string {
+  // src/db/turso (tsx) or dist/db/turso (compiled) -> up 5 to the repo root.
+  const here = dirname(fileURLToPath(import.meta.url));
+  const repoRoot = join(here, '..', '..', '..', '..', '..');
+  const configured = process.env.TURSO_PATH;
+  if (!configured) return join(repoRoot, 'data.db');
+  return isAbsolute(configured) ? configured : join(repoRoot, configured);
+}
+
+/**
  * Lazily open (and memoize) the local Turso database connection.
- * Path is a LOCAL FILE — `TURSO_PATH` env or `./data.db`. Never a cloud URL.
  */
 export function getClient(): Promise<Database> {
   if (!dbPromise) {
-    const path = process.env.TURSO_PATH ?? './data.db';
+    const path = resolveDbPath();
     dbPromise = (async () => {
       const db = await connect(path);
       await db.exec('PRAGMA journal_mode = WAL');
