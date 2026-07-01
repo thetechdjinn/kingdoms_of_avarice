@@ -6,7 +6,7 @@ import * as characterRepo from '../db/repositories/characterRepository.js';
 import * as progressionRepo from '../db/repositories/progressionRepository.js';
 import * as playerRepo from '../db/repositories/playerRepository.js';
 import * as settingsRepo from '../db/repositories/settingsRepository.js';
-import { CharacterStats } from '@koa/shared';
+import { CharacterStats, HAIR_STYLES, HAIR_COLORS, EYE_COLORS, HairStyle, HairColor, EyeColor } from '@koa/shared';
 import { requireDeveloper } from '../middleware/auth.js';
 import { getEquipmentCombatStats } from '../game/combatStats.js';
 
@@ -186,21 +186,30 @@ export function setupCharacterRoutes(app: Express): void {
       }
     }
 
-    // Validate and trim hair if provided (max 100 chars per schema)
+    // Validate hair against the shared enums (single source of truth). Stored
+    // as the canonical "style color" pair, e.g. "long red". A lone style word
+    // (bald with style "none", or a style-only value) is also accepted.
     let trimmedHair: string | undefined;
     if (hair !== undefined && hair !== null && hair !== '') {
       if (typeof hair !== 'string') {
         res.status(400).json({ success: false, message: 'Invalid hair selection' });
         return;
       }
-      trimmedHair = hair.trim();
-      if (trimmedHair.length > 100) {
-        res.status(400).json({ success: false, message: 'Hair description must be 100 characters or less' });
+      const parts = hair.trim().split(/\s+/);
+      const style = parts[0];
+      const color = parts.slice(1).join(' ');
+      if (!HAIR_STYLES.includes(style as HairStyle)) {
+        res.status(400).json({ success: false, message: 'Invalid hair style' });
         return;
       }
+      if (color && !HAIR_COLORS.includes(color as HairColor)) {
+        res.status(400).json({ success: false, message: 'Invalid hair color' });
+        return;
+      }
+      trimmedHair = color ? `${style} ${color}` : style;
     }
 
-    // Validate and trim eyeColor if provided (max 50 chars per schema)
+    // Validate eyeColor against the shared enum (single source of truth).
     let trimmedEyeColor: string | undefined;
     if (eyeColor !== undefined && eyeColor !== null && eyeColor !== '') {
       if (typeof eyeColor !== 'string') {
@@ -208,8 +217,8 @@ export function setupCharacterRoutes(app: Express): void {
         return;
       }
       trimmedEyeColor = eyeColor.trim();
-      if (trimmedEyeColor.length > 50) {
-        res.status(400).json({ success: false, message: 'Eye color description must be 50 characters or less' });
+      if (!EYE_COLORS.includes(trimmedEyeColor as EyeColor)) {
+        res.status(400).json({ success: false, message: 'Invalid eye color' });
         return;
       }
     }

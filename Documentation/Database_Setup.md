@@ -44,6 +44,29 @@ The migrate step is idempotent and skipped automatically if the database is alre
 
 ---
 
+## Game Content: Export / Import
+
+Game content lives in two places that are kept in sync:
+
+- **Canonical source of truth:** the JSON files in `data/` (committed to the repo).
+- **Working copy:** the database, seeded from those JSON files.
+
+The intended authoring loop is: edit content in the in-game editors (writes to the DB) → `npm run data:export` (writes the DB back out to `data/*.json`) → commit the JSON. A change is only permanent once it has been exported and committed; the repo JSON is what new builds are created from.
+
+### Re-importing is safe for player data
+
+`npm run data:import` is **content-only**. It writes exclusively to content tables (item **templates**, spells, status effects, rooms, room exits, NPCs, factions, drop tables, actions, classes, races, progression, quests). It does **not** touch any player state: characters, item instances, bank balances, and progression are never read or written by the importer.
+
+Because of this, `data:import` is **safe to re-run on a live server** to pick up new content after pulling an update. New records are created; every character, their inventory, and their currency are left exactly as they were.
+
+### What re-import *does* overwrite
+
+Import uses upsert (merge) semantics: existing content records are **updated in place** to match the repo's canonical values, and new ones are created. This means any content edits made directly in a live database (via the editors) that were **not** exported back to `data/` will be overwritten on the next import.
+
+This is intentional. Content edits are meant to be persisted through the editor → `data:export` → commit loop, which makes them canonical. An un-exported edit is an un-versioned local change and is expected to be replaced by a content update. Keeping upsert (rather than an "add new only" mode) also guarantees content stays consistent with the code that expects it; skipping updates to existing records could leave stale definitions behind and break the game.
+
+---
+
 ## First Admin Account (bootstrap)
 
 A brand-new database has no users, so the startup migration creates the **first admin** automatically. This happens only once, when the `players` table is empty, and is a no-op on any existing database. There are two modes:

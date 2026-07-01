@@ -196,6 +196,8 @@ JWT_SECRET=<secret>
 EMERGENCY_ACCESS_TOKEN=<optional-secret>  # For emergency IP bypass
 BOOTSTRAP_ADMIN_USERNAME=<optional>       # First-admin bootstrap (fresh DB only); both must be set
 BOOTSTRAP_ADMIN_PASSWORD=<optional>       # If unset, a random 'admin' password is logged on first boot
+TRUST_PROXY=<true|false>                  # Behind a reverse proxy: trust X-Forwarded-For for client IP (needed for IP access control). Default false
+TRUST_PROXY_TLS=<true|false>              # Behind a TLS proxy: emit HSTS header. Default false (container serves plain HTTP)
 ```
 
 **Key tables:** `players`, `rooms`, `room_exits`, `item_templates`, `item_instances`, `characters` (includes `bank_balance`), `character_progression`, `talent_unlocks`, `game_settings`, `ip_access`, `actions`
@@ -281,6 +283,8 @@ The server supports allowlist/blocklist modes for IP access control:
 - Localhost IPs are always bypassed regardless of mode:
   - `127.0.0.1`, `::1`, `::ffff:127.0.0.1`
   - Any IP starting with `127.`
+
+**Behind a reverse proxy:** client IP is taken from the socket by default. The `X-Forwarded-For` header is only trusted when `TRUST_PROXY=true` (`middleware/ipAccess.ts`). Set it when deployed behind a proxy, or IP access rules and logging will see the proxy's IP instead of the real client.
 
 **Emergency access:** If locked out, set `EMERGENCY_ACCESS_TOKEN` in .env and pass it via:
 

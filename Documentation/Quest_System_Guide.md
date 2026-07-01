@@ -276,7 +276,7 @@ When a quest has a **Quest Flag** set (e.g., `sewer_access`), completing the que
 | `required_quest_ids` | INTEGER[] | Prerequisite quests (by ID) |
 | `required_quest_tags` | TEXT[] | Prerequisite quests (by tag, preferred over IDs) |
 | `xp_reward` / `essence_reward` / `currency_reward` | INTEGER/BIGINT | Completion rewards |
-| `item_rewards` / `faction_rewards` | JSONB | Structured reward data |
+| `item_rewards` / `faction_rewards` | TEXT (JSON) | Structured reward data |
 | `quest_flag` | VARCHAR | Flag granted on completion |
 | `enabled` | BOOLEAN | Whether quest is active |
 | `sort_order` | INTEGER | Priority ordering |
@@ -298,7 +298,7 @@ When a quest has a **Quest Flag** set (e.g., `sewer_access`), completing the que
 | `description` | TEXT | Journal text |
 | `completion_dialogue` / `in_progress_dialogue` | TEXT | NPC dialogue |
 | `step_xp_reward` / `step_essence_reward` / `step_currency_reward` | INTEGER/BIGINT | Step rewards |
-| `step_item_rewards` / `step_faction_rewards` | JSONB | Step reward data |
+| `step_item_rewards` / `step_faction_rewards` | TEXT (JSON) | Step reward data |
 
 ## API Endpoints
 

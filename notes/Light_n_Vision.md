@@ -185,6 +185,14 @@ Update the item editor to show this as "Vision Bonus" instead of "Radius", remov
 
 ## Spells
 
+> **Status: implemented.** The four spells and their status effects below now
+> exist in `data/global/spells.json` and `data/global/status_effects.json`
+> (`darkvision`/`dvis`, `magical_light`/`lite`, `magical_darkness`/`dark`,
+> `blinded`/`blnd`). `visionModifier` is wired into `getEffectModifiers`, so the
+> mechanics are live. Mana/duration/level values below were the original
+> proposals; the shipped values may differ. Note an existing `illuminate` (+100)
+> light buff also predates these.
+
 ### New Spell: Darkvision (Buff)
 
 | Field          | Value                                   |

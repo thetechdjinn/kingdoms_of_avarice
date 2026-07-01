@@ -237,6 +237,9 @@ function calculateEquipmentModifiers(equippedItems: ItemInstance[]): EquipmentMo
     total.defenseBonus += t.defense_modifier ?? 0;
     total.healingModifier += t.healing_modifier ?? 0;
     total.criticalChanceBonus += t.critical_chance_modifier ?? 0;
+    // TODO(magic-resistance): aggregated but not yet consumed to reduce magic
+    // damage. Adding a magic-resistance item/enchant requires wiring mitigation
+    // in combat.ts — grep `TODO(magic-resistance)`.
     total.magicResistanceBonus += t.magic_resistance_modifier ?? 0;
     total.spellcastingBonus += t.spellcasting_modifier ?? 0;
   }

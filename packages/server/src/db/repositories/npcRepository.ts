@@ -79,17 +79,6 @@ interface DbNpcInstance {
   spawned_at: Date;
 }
 
-export interface DbDropTableEntry {
-  id: number;
-  drop_table_id: number;
-  item_template_id: number | null;
-  drop_chance: number;
-  min_quantity: number;
-  max_quantity: number;
-  currency_min: number;
-  currency_max: number;
-}
-
 // Convert DB row to shared NpcAttack
 function dbToAttack(row: DbNpcAttack): NpcAttack {
   return {
@@ -281,17 +270,6 @@ export async function createInstance(
     [npcId, roomId, health, mana, augmentation, spawnRoomId]
   );
   return result.rows[0].id;
-}
-
-/**
- * Get drop table entries for a drop table.
- */
-export async function getDropTableEntries(dropTableId: number): Promise<DbDropTableEntry[]> {
-  const result = await query<DbDropTableEntry>(
-    'SELECT * FROM drop_table_entries WHERE drop_table_id = $1 ORDER BY id',
-    [dropTableId]
-  );
-  return result.rows;
 }
 
 // ============================================================================
