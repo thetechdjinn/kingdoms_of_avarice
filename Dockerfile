@@ -61,7 +61,13 @@ COPY --from=builder /app/Documentation ./Documentation
 COPY docker-entrypoint.sh ./docker-entrypoint.sh
 
 # An empty .env keeps the dotenv preload quiet; real config comes from -e / compose.
-RUN touch .env && chmod +x docker-entrypoint.sh && mkdir -p /data
+# Strip any CR from the entrypoint so a CRLF checkout on a Windows/WSL host (where
+# git core.autocrlf rewrote line endings) can't break the shebang and cause
+# "exec ./docker-entrypoint.sh: no such file or directory" at container start.
+RUN sed -i 's/\r$//' docker-entrypoint.sh \
+ && chmod +x docker-entrypoint.sh \
+ && touch .env \
+ && mkdir -p /data
 
 EXPOSE 3001
 VOLUME ["/data"]

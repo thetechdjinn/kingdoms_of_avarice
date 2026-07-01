@@ -1,0 +1,6 @@
+# Shell scripts must use LF line endings so they run in Linux containers
+# regardless of the host OS. Without this, core.autocrlf on Windows/WSL rewrites
+# them to CRLF on checkout, which breaks the shebang (`#!/bin/sh\r`) and produces
+# "exec ./docker-entrypoint.sh: no such file or directory" at container start.
+*.sh text eol=lf
+docker-entrypoint.sh text eol=lf
