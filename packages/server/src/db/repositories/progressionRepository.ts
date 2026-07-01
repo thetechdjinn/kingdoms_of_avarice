@@ -1,5 +1,6 @@
-import pg from 'pg';
+import type { DbClient } from '../index.js';
 import { query } from '../index.js';
+import { parseArrayColumn } from '../arrayColumn.js';
 import {
   ClassDefinition,
   RaceDefinition,
@@ -103,7 +104,7 @@ function dbToClassDefinition(row: DbClassDefinition): ClassDefinition {
     display_name: row.display_name,
     description: row.description ?? undefined,
     essence_multiplier: parseFloat(row.essence_multiplier),
-    subscribed_tags: row.subscribed_tags as ThematicTag[],
+    subscribed_tags: parseArrayColumn<ThematicTag>(row.subscribed_tags),
     talent_tree_id: row.talent_tree_id ?? undefined,
     resource_type: row.resource_type ?? undefined,
     playable: row.playable,
@@ -112,8 +113,8 @@ function dbToClassDefinition(row: DbClassDefinition): ClassDefinition {
     magic_school: row.magic_school ?? undefined,
     crit_bonus: row.crit_bonus ?? 0,
     dodge_bonus: row.dodge_bonus ?? 0,
-    traits: row.traits ?? [],
-    armor_type_restrictions: row.armor_type_restrictions ?? [],
+    traits: parseArrayColumn(row.traits),
+    armor_type_restrictions: parseArrayColumn(row.armor_type_restrictions),
     hp_adj: row.hp_adj ?? 0,
     hp_per_level_min: row.hp_per_level_min ?? 4,
     hp_per_level_max: row.hp_per_level_max ?? 7,
@@ -129,8 +130,8 @@ function dbToRaceDefinition(row: DbRaceDefinition): RaceDefinition {
     // Cast base_stats to RaceBaseStats - DB stores as JSONB which comes back as Record
     base_stats: row.base_stats as unknown as RaceDefinition['base_stats'],
     // Cast traits - can be string[] or RacialTrait[] depending on data
-    traits: row.traits as unknown as RaceDefinition['traits'],
-    allowed_classes: row.allowed_classes ?? undefined,
+    traits: parseArrayColumn(row.traits) as unknown as RaceDefinition['traits'],
+    allowed_classes: parseArrayColumn(row.allowed_classes),
     playable: row.playable,
     dodge_bonus: row.dodge_bonus ?? 0,
     base_hp: row.base_hp ?? 26,
@@ -503,27 +504,44 @@ export async function getCharacterProgression(characterId: number): Promise<Char
   return progression;
 }
 
+/**
+ * Compute the level implied by a std_xp total. Replaces the per-query
+ * COALESCE((SELECT MAX(level)...)) that rode along in pg data-modifying CTEs,
+ * which SQLite does not support.
+ */
+async function calcLevel(stdXp: number, client?: DbClient): Promise<number> {
+  const r = await query<{ calculated_level: number }>(
+    `SELECT COALESCE((SELECT MAX(level) FROM progression_table WHERE std_xp_required <= $1), 1) as calculated_level`,
+    [stdXp ?? 0],
+    client
+  );
+  return r.rows[0].calculated_level;
+}
+
 export async function createCharacterProgression(
   characterId: number,
   classId: string,
-  client?: pg.PoolClient
+  client?: DbClient
 ): Promise<CharacterProgression> {
-  const result = await query<DbCharacterProgression & { calculated_level: number }>(
-    `WITH inserted AS (
-      INSERT INTO character_progression (character_id, class_id)
-      VALUES ($1, $2)
-      RETURNING *
-    )
-    SELECT inserted.*,
-      COALESCE(
-        (SELECT MAX(level) FROM progression_table WHERE std_xp_required <= inserted.std_xp),
-        1
-      ) as calculated_level
-    FROM inserted`,
+  // SQLite (unlike Postgres) does not support data-modifying CTEs, so insert
+  // first, then compute the level from the new row's std_xp in a second step.
+  const inserted = await query<DbCharacterProgression>(
+    `INSERT INTO character_progression (character_id, class_id)
+     VALUES ($1, $2)
+     RETURNING *`,
     [characterId, classId],
     client
   );
-  return dbToCharacterProgressionWithLevel(result.rows[0]);
+  const row = inserted.rows[0];
+  const levelResult = await query<{ calculated_level: number }>(
+    `SELECT COALESCE(
+       (SELECT MAX(level) FROM progression_table WHERE std_xp_required <= $1),
+       1
+     ) as calculated_level`,
+    [row.std_xp ?? 0],
+    client
+  );
+  return dbToCharacterProgressionWithLevel({ ...row, calculated_level: levelResult.rows[0].calculated_level });
 }
 
 export async function updateCharacterProgression(
@@ -560,19 +578,14 @@ export async function updateCharacterProgression(
   setClauses.push(`updated_at = CURRENT_TIMESTAMP`);
   values.push(characterId);
 
-  const result = await query<DbCharacterProgression & { calculated_level: number }>(
-    `WITH updated AS (
-      UPDATE character_progression SET ${setClauses.join(', ')} WHERE character_id = $${paramIndex} RETURNING *
-    )
-    SELECT updated.*,
-      COALESCE(
-        (SELECT MAX(level) FROM progression_table WHERE std_xp_required <= updated.std_xp),
-        1
-      ) as calculated_level
-    FROM updated`,
+  const updated = await query<DbCharacterProgression>(
+    `UPDATE character_progression SET ${setClauses.join(', ')} WHERE character_id = $${paramIndex} RETURNING *`,
     values
   );
-  const progression = result.rows[0] ? dbToCharacterProgressionWithLevel(result.rows[0]) : null;
+  const row = updated.rows[0];
+  const progression = row
+    ? dbToCharacterProgressionWithLevel({ ...row, calculated_level: await calcLevel(row.std_xp) })
+    : null;
   // Update cache with fresh data from the write (prevents stale reads)
   if (progression) {
     progressionCache.set(characterId, { data: progression, cachedAt: Date.now() });
@@ -590,25 +603,20 @@ export async function incrementEssenceWallet(
   characterId: number,
   amount: number
 ): Promise<CharacterProgression | null> {
-  const result = await query<DbCharacterProgression & { calculated_level: number }>(
-    `WITH updated AS (
-      UPDATE character_progression
-      SET essence_wallet = essence_wallet + $1,
-          essence_earned_this_level = essence_earned_this_level + $1,
-          total_essence_earned = total_essence_earned + $1,
-          updated_at = CURRENT_TIMESTAMP
-      WHERE character_id = $2
-      RETURNING *
-    )
-    SELECT updated.*,
-      COALESCE(
-        (SELECT MAX(level) FROM progression_table WHERE std_xp_required <= updated.std_xp),
-        1
-      ) as calculated_level
-    FROM updated`,
+  const updated = await query<DbCharacterProgression>(
+    `UPDATE character_progression
+     SET essence_wallet = essence_wallet + $1,
+         essence_earned_this_level = essence_earned_this_level + $1,
+         total_essence_earned = total_essence_earned + $1,
+         updated_at = CURRENT_TIMESTAMP
+     WHERE character_id = $2
+     RETURNING *`,
     [amount, characterId]
   );
-  return result.rows[0] ? dbToCharacterProgressionWithLevel(result.rows[0]) : null;
+  const row = updated.rows[0];
+  return row
+    ? dbToCharacterProgressionWithLevel({ ...row, calculated_level: await calcLevel(row.std_xp) })
+    : null;
 }
 
 /**
@@ -619,23 +627,18 @@ export async function incrementStdXp(
   characterId: number,
   amount: number
 ): Promise<CharacterProgression | null> {
-  const result = await query<DbCharacterProgression & { calculated_level: number }>(
-    `WITH updated AS (
-      UPDATE character_progression
-      SET std_xp = std_xp + $1,
-          updated_at = CURRENT_TIMESTAMP
-      WHERE character_id = $2
-      RETURNING *
-    )
-    SELECT updated.*,
-      COALESCE(
-        (SELECT MAX(level) FROM progression_table WHERE std_xp_required <= updated.std_xp),
-        1
-      ) as calculated_level
-    FROM updated`,
+  const updated = await query<DbCharacterProgression>(
+    `UPDATE character_progression
+     SET std_xp = std_xp + $1,
+         updated_at = CURRENT_TIMESTAMP
+     WHERE character_id = $2
+     RETURNING *`,
     [amount, characterId]
   );
-  const progression = result.rows[0] ? dbToCharacterProgressionWithLevel(result.rows[0]) : null;
+  const row = updated.rows[0];
+  const progression = row
+    ? dbToCharacterProgressionWithLevel({ ...row, calculated_level: await calcLevel(row.std_xp) })
+    : null;
   if (progression) {
     progressionCache.set(characterId, { data: progression, cachedAt: Date.now() });
   }

@@ -47,6 +47,8 @@ npm run migrate                                    # Run migrations and seed dat
 cd packages/server && npx tsx src/db/create-admin.ts <username>  # Grant admin role
 ```
 
+**First admin bootstrap:** On a fresh DB (empty `players` table), `runMigrations()` seeds the first admin automatically via `seedBootstrapAdmin()` in `migrate.ts` (no-op once any player exists). If `BOOTSTRAP_ADMIN_USERNAME` + `BOOTSTRAP_ADMIN_PASSWORD` are set, it seeds that admin; otherwise it creates `admin` with a random password printed to the server logs (for ephemeral `docker run`). The account gets `player` + `admin` (skips PENDING). `create-admin.ts` remains for promoting an existing account.
+
 **Area Data:**
 
 ```bash
@@ -74,7 +76,7 @@ npm run data:import      # Import game content from data/ (merge/upsert)
 ### Communication Flow
 
 ```
-Client (xterm.js) <--WebSocket--> Server (Express/ws) <--pg--> PostgreSQL
+Client (xterm.js) <--WebSocket--> Server (Express/ws) <--Turso--> SQLite (local embedded file)
 ```
 
 - **WebSocket**: Player commands sent as `COMMAND` messages, responses as `OUTPUT`/`ERROR`/`SYSTEM`
@@ -184,16 +186,16 @@ Use `broadcastToRoom(roomId, message, excludePlayerId)` for room-visible actions
 
 ## Database
 
+The database is **Turso / libSQL** (the `@tursodatabase/database` engine) backed by a **local embedded file** (not Turso Cloud). The schema is a single consolidated, idempotent script (`packages/server/src/db/turso/schema.sql`) applied by `npm run migrate`; game content loads separately via `npm run data:import`.
+
 **Environment variables (.env):**
 
 ```
-DB_NAME=kingdoms_of_avarice
-DB_USER=koa
-DB_PASSWORD=<password>
-DB_HOST=localhost
-DB_PORT=5432
+TURSO_PATH=./data.db                      # Optional — local DB file, defaults to ./data.db (LOCAL, not cloud)
 JWT_SECRET=<secret>
 EMERGENCY_ACCESS_TOKEN=<optional-secret>  # For emergency IP bypass
+BOOTSTRAP_ADMIN_USERNAME=<optional>       # First-admin bootstrap (fresh DB only); both must be set
+BOOTSTRAP_ADMIN_PASSWORD=<optional>       # If unset, a random 'admin' password is logged on first boot
 ```
 
 **Key tables:** `players`, `rooms`, `room_exits`, `item_templates`, `item_instances`, `characters` (includes `bank_balance`), `character_progression`, `talent_unlocks`, `game_settings`, `ip_access`, `actions`

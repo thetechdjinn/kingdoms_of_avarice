@@ -1020,7 +1020,14 @@ async function handleCurrency(
     return { type: MessageType.ERROR, message: `Invalid currency type. Must be one of: ${validTypes.join(', ')}` };
   }
 
-  await characterRepo.addCurrency(socket.characterId, type as 'copper' | 'silver' | 'gold' | 'platinum' | 'runic', amount);
+  // MEMORY-FIRST: admin currency stays a direct, synchronous DB write (audit
+  // clarity), but socket.pocket is the in-memory source of truth. Mirror the
+  // award into the cache WITHOUT marking it dirty so the next pocket flush
+  // can't overwrite the DB value with a stale cache. Same hybrid pattern as the
+  // currency-pickup and merchant paths.
+  const currencyField = type as 'copper' | 'silver' | 'gold' | 'platinum' | 'runic';
+  await characterRepo.addCurrency(socket.characterId, currencyField, amount);
+  socket.pocket[currencyField] += amount;
 
   // Convert to copper equivalent for display
   const rates: Record<string, number> = { copper: 1, silver: 10, gold: 100, platinum: 1000, runic: 100000 };

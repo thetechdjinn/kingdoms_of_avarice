@@ -1,4 +1,5 @@
 import { query } from '../index.js';
+import { parseArrayColumn } from '../arrayColumn.js';
 import {
   CraftingRecipe,
   RecipeIngredient,
@@ -66,7 +67,7 @@ function dbToEnchantment(row: DbEnchantment): Enchantment {
     description: row.description ?? undefined,
     skill_type: row.skill_type,
     skill_level: row.skill_level,
-    applicable_types: row.applicable_types as ItemType[],
+    applicable_types: parseArrayColumn<ItemType>(row.applicable_types),
     stat_modifiers: row.stat_modifiers ?? undefined,
     special_effects: row.special_effects ?? undefined,
     mana_cost: row.mana_cost,
@@ -148,8 +149,8 @@ export async function getEnchantmentByName(name: string): Promise<Enchantment | 
 
 export async function getEnchantmentsForItemType(itemType: ItemType): Promise<Enchantment[]> {
   const result = await query<DbEnchantment>(
-    `SELECT * FROM enchantments 
-     WHERE $1 = ANY(applicable_types) OR array_length(applicable_types, 1) IS NULL
+    `SELECT * FROM enchantments
+     WHERE NULLIF(applicable_types, '') IS NULL OR json_array_length(NULLIF(applicable_types, '')) = 0 OR EXISTS (SELECT 1 FROM json_each(NULLIF(applicable_types, '')) WHERE value = $1)
      ORDER BY skill_level, name`,
     [itemType]
   );

@@ -1,31 +1,25 @@
 /**
  * Periodic Character Save Loop
  *
- * Automatically saves connected players' vitals (HP, mana) to the database
- * at a configurable interval to protect against data loss from server crashes.
+ * Drains connected players' dirty cached state to the database at a
+ * configurable interval. Each tick calls flushPlayer for every connected
+ * socket, which writes only fields marked dirty (vitals/room/pocket/bank,
+ * later inventory and effects) in a single transaction per player.
  *
- * What gets saved each tick:
- * - health: Current HP from socket.vitals.hp
- * - mana: Current mana from socket.vitals.resource
- * - room: Current room from in-memory player location
- *
- * Room location is also saved immediately on movement, but persisting it here
- * acts as a safety net for any code path that updates the in-memory location
- * without a corresponding DB write.
+ * For the duration of the memory-first refactor transition, this tick
+ * explicitly marks vitals and room dirty on every player so they save
+ * every tick (preserving prior behavior). Later phases move vitals and
+ * room to event-driven dirty marking, at which point these explicit
+ * marks can be removed and the tick will only write when something has
+ * actually changed.
  */
 
-import type { WebSocket } from 'ws';
-import type { VitalsData } from '@koa/shared';
-import * as characterRepo from '../db/repositories/characterRepository.js';
 import { getCharacterSaveIntervalMs } from '../db/repositories/settingsRepository.js';
-import { getPlayerLocation } from './adminCommands.js';
+import { markVitalsDirty, markRoomDirty, flushPlayer, type SessionSocket } from './sessionState.js';
 
-// Minimal socket interface needed for saving
-interface SaveCapableSocket extends WebSocket {
-  playerId: number;
-  characterId?: number;
-  vitals: VitalsData;
-}
+// Save loop accepts any socket that satisfies the SessionSocket shape
+// (AuthenticatedSocket structurally fits).
+type SaveCapableSocket = SessionSocket;
 
 // Module state
 let saveInterval: NodeJS.Timeout | null = null;
@@ -121,8 +115,49 @@ export function restartCharacterSaveLoopWithNewInterval(newIntervalMs: number): 
 }
 
 /**
+ * Flush every connected player's dirty state once, immediately.
+ *
+ * Used by the graceful-shutdown hook (SIGTERM/SIGINT): the periodic loop is
+ * stopped first, then this drains whatever accrued since the last tick so a
+ * clean shutdown never loses pocket/bank/vitals/room changes. Mirrors the
+ * per-player flush in processSaveTick (marks vitals + room dirty for parity).
+ * Errors are isolated per-player so one failure doesn't block the rest.
+ *
+ * Returns the number of players successfully flushed.
+ */
+export async function flushAllConnectedPlayers(): Promise<number> {
+  if (!connectedPlayersRef || connectedPlayersRef.size === 0) {
+    return 0;
+  }
+
+  let flushed = 0;
+  for (const [playerId, socket] of connectedPlayersRef) {
+    if (!socket.characterId) continue;
+    try {
+      markVitalsDirty(socket);
+      markRoomDirty(socket);
+      await flushPlayer(socket);
+      flushed++;
+    } catch (error) {
+      console.error(`[CharacterSave] Shutdown flush failed for player ${playerId}:`, error);
+    }
+  }
+  return flushed;
+}
+
+/**
  * Process a single save tick.
- * Iterates through all connected players and saves their vitals to the database.
+ *
+ * INVARIANT (memory-first architecture):
+ * Every flush — this tick, logout close handler, graceful shutdown, quest
+ * completion, level-up, or any other direct-write trigger — MUST drain the
+ * player's entire dirty state in a single transaction via the central
+ * `flushPlayer(socket)` helper. A direct-write code path that writes one
+ * field without also flushing everything else dirty creates torn-state risk
+ * on crash and breaks the atomicity guarantee.
+ *
+ * See notes/Memory_First_Architecture.md for the full rule.
+ *
  * Errors are isolated per-player so one failure doesn't stop other saves.
  */
 async function processSaveTick(): Promise<void> {
@@ -149,13 +184,13 @@ async function processSaveTick(): Promise<void> {
       }
 
       try {
-        // Save vitals and room location in a single query as a safety net
-        const currentRoomId = getPlayerLocation(socket.playerId);
-        await characterRepo.updateCharacterStats(socket.characterId, {
-          health: socket.vitals.hp,
-          mana: socket.vitals.resource ?? 0,
-          current_room_id: currentRoomId,
-        });
+        // Transition: mark vitals + room dirty unconditionally so they save
+        // every tick (matching the prior behavior). Cached fields that the
+        // gameplay code now marks dirty itself (pocket, bank) are picked up
+        // automatically by flushPlayer.
+        markVitalsDirty(socket);
+        markRoomDirty(socket);
+        await flushPlayer(socket);
         savedCount++;
       } catch (error) {
         errorCount++;

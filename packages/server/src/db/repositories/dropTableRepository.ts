@@ -1,4 +1,5 @@
 import { query } from '../index.js';
+import { parseArrayColumn } from '../arrayColumn.js';
 import type { DropTable, DropTableEntry, CurrencyDenomination } from '@koa/shared';
 import { CURRENCY_DENOMINATIONS } from '@koa/shared';
 
@@ -49,7 +50,10 @@ function dbToEntry(row: DbDropTableEntry): DropTableEntry {
     maxQuantity: row.max_quantity,
     currencyMin: row.currency_min,
     currencyMax: row.currency_max,
-    allowedDenominations: (row.allowed_denominations || [...CURRENCY_DENOMINATIONS]) as CurrencyDenomination[],
+    allowedDenominations: (() => {
+      const parsed = parseArrayColumn<CurrencyDenomination>(row.allowed_denominations);
+      return parsed.length > 0 ? parsed : [...CURRENCY_DENOMINATIONS];
+    })(),
   };
 }
 

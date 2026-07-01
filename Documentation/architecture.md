@@ -10,7 +10,7 @@ This document provides a technical overview of the Kingdoms of Avarice codebase.
 | ------------ | --------------------------------------- |
 | Frontend     | Vite + TypeScript + xterm.js            |
 | Backend      | Node.js + Express + WebSocket           |
-| Database     | PostgreSQL                              |
+| Database     | Turso / libSQL (local embedded SQLite)  |
 | Shared Types | TypeScript monorepo with shared package |
 
 ## Package Structure
@@ -39,15 +39,15 @@ Backend application:
 - **Express** - HTTP API for authentication and admin functions
 - **WebSocket** - Real-time game communication
 - **Game Engine** - Command processing, room management, player state
-- **Database** - PostgreSQL with repository pattern
+- **Database** - Turso / libSQL (local embedded SQLite file) with repository pattern
 
 ## Communication Flow
 
 ```
-+----------+    WebSocket    +----------+     SQL     +------------+
-|  Client  | <-------------> |  Server  | <---------> | PostgreSQL |
-| (xterm)  |                 |  (Node)  |             |            |
-+----------+                 +----------+             +------------+
++----------+    WebSocket    +----------+     SQL     +-------------+
+|  Client  | <-------------> |  Server  | <---------> | Turso/libSQL|
+| (xterm)  |                 |  (Node)  |             | (local file)|
++----------+                 +----------+             +-------------+
 ```
 
 1. Player types command in terminal
@@ -104,7 +104,7 @@ room_exits:
 ### Player State
 
 - Location tracked in memory (`playerLocations` map)
-- Persisted to database on movement
+- Memory-first: location, pocket currency, bank balance, and vitals are cached on the socket and flushed to the database on a periodic save tick, on logout, and on graceful shutdown (not on every movement)
 - Brief mode preference saved
 
 ### Banking

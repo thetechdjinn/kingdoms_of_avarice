@@ -1,5 +1,6 @@
-import pg from 'pg';
+import type { DbClient } from '../index.js';
 import { query, withTransaction } from '../index.js';
+import { parseArrayColumn } from '../arrayColumn.js';
 import { MerchantInventoryEntry, ItemTemplate, ItemRarity } from '@koa/shared';
 
 // Database row types
@@ -102,7 +103,7 @@ export async function getInventoryWithTemplates(npcTemplateId: number): Promise<
       name: row.item_name,
       short_desc: row.item_short_desc,
       long_desc: row.item_long_desc ?? undefined,
-      keywords: row.item_keywords,
+      keywords: parseArrayColumn(row.item_keywords),
       weight: row.item_weight,
       size: row.item_size,
       base_value: row.item_base_value,
@@ -201,7 +202,7 @@ export async function deleteAllInventoryForTemplate(npcTemplateId: number): Prom
  * Decrement stock by 1 for a merchant inventory entry.
  * Returns false if out of stock.
  */
-export async function decrementStock(id: number, client?: pg.PoolClient): Promise<boolean> {
+export async function decrementStock(id: number, client?: DbClient): Promise<boolean> {
   const result = await query(
     `UPDATE merchant_inventory SET current_stock = current_stock - 1
      WHERE id = $1 AND current_stock > 0`,
@@ -214,9 +215,9 @@ export async function decrementStock(id: number, client?: pg.PoolClient): Promis
 /**
  * Increment stock by 1, up to max_stock.
  */
-export async function incrementStock(id: number, client?: pg.PoolClient): Promise<boolean> {
+export async function incrementStock(id: number, client?: DbClient): Promise<boolean> {
   const result = await query(
-    `UPDATE merchant_inventory SET current_stock = LEAST(current_stock + 1, max_stock)
+    `UPDATE merchant_inventory SET current_stock = MIN(current_stock + 1, max_stock)
      WHERE id = $1`,
     [id],
     client
@@ -230,7 +231,7 @@ export async function incrementStock(id: number, client?: pg.PoolClient): Promis
 export async function findInventoryEntry(
   npcTemplateId: number,
   itemTemplateId: number,
-  client?: pg.PoolClient
+  client?: DbClient
 ): Promise<MerchantInventoryEntry | null> {
   const result = await query<DbMerchantInventory>(
     'SELECT * FROM merchant_inventory WHERE npc_template_id = $1 AND item_template_id = $2',
@@ -250,14 +251,15 @@ export async function findInventoryEntry(
  */
 export async function processRestock(): Promise<number> {
   return await withTransaction(async (client) => {
-    // Auto-restock common rarity items to max
+    // Auto-restock common rarity items to max. (SQLite-compatible: no UPDATE..FROM
+    // with a target-table alias; use a subquery filter instead.)
     await client.query(`
-      UPDATE merchant_inventory mi
-      SET current_stock = mi.max_stock
-      FROM item_templates it
-      WHERE mi.item_template_id = it.id
-        AND mi.current_stock < mi.max_stock
-        AND (it.rarity IS NULL OR it.rarity = 'common')
+      UPDATE merchant_inventory
+      SET current_stock = max_stock
+      WHERE current_stock < max_stock
+        AND item_template_id IN (
+          SELECT id FROM item_templates WHERE rarity IS NULL OR rarity = 'common'
+        )
     `);
 
     // Roll for non-common items
@@ -275,7 +277,7 @@ export async function processRestock(): Promise<number> {
       const roll = Math.floor(Math.random() * 100) + 1;
       if (roll <= row.restock_chance) {
         await client.query(
-          `UPDATE merchant_inventory SET current_stock = LEAST(current_stock + 1, max_stock) WHERE id = $1`,
+          `UPDATE merchant_inventory SET current_stock = MIN(current_stock + 1, max_stock) WHERE id = $1`,
           [row.id]
         );
         restocked++;

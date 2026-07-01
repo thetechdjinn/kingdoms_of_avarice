@@ -1,7 +1,8 @@
+import type { DbClient } from '../index.js';
 import { query, withTransaction } from '../index.js';
+import { parseArrayColumn } from '../arrayColumn.js';
 import { NpcTemplate, NpcAttack, NpcSpell } from '@koa/shared';
 import * as npcSpellRepo from './npcSpellRepository.js';
-import type pg from 'pg';
 
 // Database row types
 interface DbNpcTemplate {
@@ -126,12 +127,12 @@ function dbToTemplate(row: DbNpcTemplate, attacks: NpcAttack[], spells: NpcSpell
     baseCritChance: row.base_crit_chance,
     baseDodge: row.base_dodge,
     damageReduction: row.damage_reduction,
-    traits: row.traits || [],
+    traits: parseArrayColumn(row.traits),
     fleeEnabled: row.flee_enabled,
     fleeHpPercent: row.flee_hp_percent,
     callForHelpChance: row.call_for_help_chance,
     interactable: row.interactable,
-    allowedAreas: row.allowed_areas || [],
+    allowedAreas: parseArrayColumn(row.allowed_areas),
     roamEnabled: row.roam_enabled,
     roamInterval: row.roam_interval,
     roamChance: row.roam_chance,
@@ -140,7 +141,7 @@ function dbToTemplate(row: DbNpcTemplate, attacks: NpcAttack[], spells: NpcSpell
     essenceClass: row.essence_class,
     leaveCorpse: row.leave_corpse,
     corpseDuration: row.corpse_duration,
-    augmentations: row.augmentations || [],
+    augmentations: parseArrayColumn(row.augmentations),
     enterRoomMessage: row.enter_room_message,
     exitRoomMessage: row.exit_room_message,
     spawnMessage: row.spawn_message,
@@ -187,7 +188,7 @@ export async function getAllTemplates(): Promise<NpcTemplate[]> {
  * Load a single NPC template by ID.
  * Optional client parameter for use within an existing transaction.
  */
-export async function getTemplateById(id: number, client?: pg.PoolClient): Promise<NpcTemplate | null> {
+export async function getTemplateById(id: number, client?: DbClient): Promise<NpcTemplate | null> {
   const templateResult = await query<DbNpcTemplate>('SELECT * FROM npcs WHERE id = $1', [id], client);
   if (templateResult.rows.length === 0) return null;
 
@@ -357,7 +358,7 @@ export interface CreateNpcAttackInput {
  * Create a new NPC template.
  * Optional client parameter for use within an existing transaction.
  */
-export async function createTemplate(input: CreateNpcTemplateInput, client?: pg.PoolClient): Promise<NpcTemplate> {
+export async function createTemplate(input: CreateNpcTemplateInput, client?: DbClient): Promise<NpcTemplate> {
   const maxHealth = input.maxHealth ?? 100;
   const result = await query<{ id: number }>(
     `INSERT INTO npcs (
@@ -432,7 +433,7 @@ export async function createTemplate(input: CreateNpcTemplateInput, client?: pg.
  * Update an NPC template. Only provided fields are updated.
  * Optional client parameter for use within an existing transaction.
  */
-export async function updateTemplate(id: number, input: Partial<CreateNpcTemplateInput>, client?: pg.PoolClient): Promise<NpcTemplate | null> {
+export async function updateTemplate(id: number, input: Partial<CreateNpcTemplateInput>, client?: DbClient): Promise<NpcTemplate | null> {
   const existing = await getTemplateById(id, client);
   if (!existing) return null;
 
@@ -510,8 +511,8 @@ export async function deleteTemplate(id: number): Promise<boolean> {
  * Deletes existing attacks and inserts new ones within a transaction.
  * When an external client is provided, uses it directly (caller manages the transaction).
  */
-export async function replaceAttacks(npcId: number, attacks: CreateNpcAttackInput[], externalClient?: pg.PoolClient): Promise<NpcAttack[]> {
-  const doWork = async (client: pg.PoolClient) => {
+export async function replaceAttacks(npcId: number, attacks: CreateNpcAttackInput[], externalClient?: DbClient): Promise<NpcAttack[]> {
+  const doWork = async (client: DbClient) => {
     await client.query('DELETE FROM npc_attacks WHERE npc_id = $1', [npcId]);
 
     const results: NpcAttack[] = [];

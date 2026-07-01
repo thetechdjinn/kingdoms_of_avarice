@@ -22,7 +22,7 @@ function dbToActiveEffect(row: DbStatusEffect): ActiveStatusEffect {
 export async function getActiveEffects(characterId: number): Promise<ActiveStatusEffect[]> {
   const result = await query<DbStatusEffect>(
     `SELECT * FROM character_status_effects
-     WHERE character_id = $1 AND expires_at > NOW()
+     WHERE character_id = $1 AND datetime(expires_at) > datetime('now')
      ORDER BY applied_at`,
     [characterId]
   );
@@ -48,8 +48,8 @@ export async function hasEffect(characterId: number, effectId: string): Promise<
   const result = await query<{ exists: boolean }>(
     `SELECT EXISTS(
       SELECT 1 FROM character_status_effects
-      WHERE character_id = $1 AND effect_id = $2 AND expires_at > NOW()
-    ) as exists`,
+      WHERE character_id = $1 AND effect_id = $2 AND datetime(expires_at) > datetime('now')
+    ) as "exists"`,
     [characterId, effectId]
   );
   return result.rows[0]?.exists ?? false;
@@ -70,7 +70,7 @@ export async function saveEffect(
   const result = await query<DbStatusEffect>(
     `INSERT INTO character_status_effects (
       character_id, effect_id, stacks, applied_at, expires_at, source_spell_id
-    ) VALUES ($1, $2, $3, to_timestamp($4 / 1000.0), to_timestamp($5 / 1000.0), $6)
+    ) VALUES ($1, $2, $3, $4, $5, $6)
     ON CONFLICT (character_id, effect_id)
     DO UPDATE SET
       stacks = EXCLUDED.stacks,
@@ -82,8 +82,8 @@ export async function saveEffect(
       characterId,
       effect.definitionId,
       effect.stacks,
-      effect.appliedAt,
-      effect.expiresAt,
+      new Date(effect.appliedAt).toISOString(),
+      new Date(effect.expiresAt).toISOString(),
       effect.sourceSpellId ?? null,
     ]
   );
@@ -108,8 +108,8 @@ export async function updateEffect(
   }
 
   if (updates.expiresAt !== undefined) {
-    setClauses.push(`expires_at = to_timestamp($${paramIndex++} / 1000.0)`);
-    values.push(updates.expiresAt);
+    setClauses.push(`expires_at = $${paramIndex++}`);
+    values.push(new Date(updates.expiresAt).toISOString());
   }
 
   if (setClauses.length === 0) {
@@ -144,7 +144,7 @@ export async function removeEffect(characterId: number, effectId: string): Promi
 export async function removeExpiredEffects(characterId: number): Promise<number> {
   const result = await query(
     `DELETE FROM character_status_effects
-     WHERE character_id = $1 AND expires_at <= NOW()`,
+     WHERE character_id = $1 AND datetime(expires_at) <= datetime('now')`,
     [characterId]
   );
   return result.rowCount ?? 0;

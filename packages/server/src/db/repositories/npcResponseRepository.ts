@@ -1,4 +1,5 @@
 import { query } from '../index.js';
+import { parseArrayColumn } from '../arrayColumn.js';
 import { NpcResponse } from '@koa/shared';
 
 interface DbNpcResponse {
@@ -12,7 +13,7 @@ function dbToResponse(row: DbNpcResponse): NpcResponse {
   return {
     id: row.id,
     npcTemplateId: row.npc_template_id,
-    triggerKeywords: row.trigger_keywords,
+    triggerKeywords: parseArrayColumn(row.trigger_keywords),
     response: row.response,
   };
 }

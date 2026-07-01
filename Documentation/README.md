@@ -5,7 +5,8 @@ Welcome to the Kingdoms of Avarice documentation. This guide covers all aspects 
 ## Table of Contents
 
 - [Getting Started](getting-started.md) - How to set up and run the game
-- [Database Setup](Database_Setup.md) - PostgreSQL configuration (existing install or Docker)
+- [Docker Deployment](Docker_Deployment.md) - Run the published image: demo (ephemeral) and persistent game server
+- [Database Setup](Database_Setup.md) - Turso / libSQL (local embedded file) setup
 - [Commands](commands.md) - Complete list of in-game commands
 - [Architecture](architecture.md) - Technical overview of the codebase
 
@@ -46,4 +47,4 @@ Kingdoms of Avarice is a web-based MUD (Multi-User Dungeon) inspired by classic 
 - Terminal-style interface using xterm.js
 - Room-based exploration with multiple areas
 - Role-based access control (Player, Moderator, Admin, Developer)
-- Persistent world with PostgreSQL database
+- Persistent world backed by a local Turso / libSQL database

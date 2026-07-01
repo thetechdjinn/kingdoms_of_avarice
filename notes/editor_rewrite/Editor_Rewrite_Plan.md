@@ -1007,8 +1007,9 @@ These are things identified during analysis that may be addressed later:
 
 - **Virtual scrolling for list panels** - If entity counts exceed ~2000, even filtered DOM
   lists will be slow. At that point, consider virtual scrolling or server-side pagination.
-- **Database abstraction layer** - If multi-DB support (PostgreSQL + SQLite) is desired,
-  evaluate Drizzle ORM or Knex. See conversation notes from 2026-03-20.
+- **Database abstraction layer** - If multi-DB support beyond the current Turso / libSQL
+  (SQLite) backend is ever desired, evaluate Drizzle ORM or Knex. See conversation notes
+  from 2026-03-20.
 - **Cache combat stat DB lookups** - `combatStatProvider.ts` reads class/race dodge bonuses
   from DB on every defender hit. Should be cached at login/level-up. (Also tracked in TODO.md.)
 

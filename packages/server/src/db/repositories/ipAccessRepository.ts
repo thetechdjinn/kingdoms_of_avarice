@@ -1,3 +1,4 @@
+import { parseArrayColumn } from '../arrayColumn.js';
 import { query } from '../index.js';
 
 export type EntryType = 'ip' | 'hostname';
@@ -30,7 +31,7 @@ interface DbIpAccess {
   id: number;
   entry: string;
   entry_type: string;
-  resolved_ips: string[] | null;
+  resolved_ips: string | string[] | null;
   resolved_at: Date | null;
   list_type: string;
   reason: string | null;
@@ -84,13 +85,13 @@ export async function isIpAllowed(ip: string): Promise<boolean> {
        SELECT 1 FROM ip_access
        WHERE list_type = 'allow'
        AND (
-         (entry_type = 'ip' AND entry = ANY($1))
-         OR (entry_type = 'hostname' AND (
-           $1 && resolved_ips
+         (entry_type = 'ip' AND entry IN (SELECT value FROM json_each($1)))
+         OR (entry_type = 'hostname' AND resolved_ips IS NOT NULL AND EXISTS (
+           SELECT 1 FROM json_each($1) a JOIN json_each(resolved_ips) b ON a.value = b.value
          ))
        )
-     ) as exists`,
-    [ipsToCheck]
+     ) as "exists"`,
+    [JSON.stringify(ipsToCheck)]
   );
   return result.rows[0].exists;
 }
@@ -109,13 +110,13 @@ export async function isIpBlocked(ip: string): Promise<boolean> {
        SELECT 1 FROM ip_access
        WHERE list_type = 'block'
        AND (
-         (entry_type = 'ip' AND entry = ANY($1))
-         OR (entry_type = 'hostname' AND (
-           $1 && resolved_ips
+         (entry_type = 'ip' AND entry IN (SELECT value FROM json_each($1)))
+         OR (entry_type = 'hostname' AND resolved_ips IS NOT NULL AND EXISTS (
+           SELECT 1 FROM json_each($1) a JOIN json_each(resolved_ips) b ON a.value = b.value
          ))
        )
-     ) as exists`,
-    [ipsToCheck]
+     ) as "exists"`,
+    [JSON.stringify(ipsToCheck)]
   );
   return result.rows[0].exists;
 }
@@ -144,7 +145,7 @@ export async function createEntry(
 ): Promise<IpAccessEntry> {
   const result = await query<DbIpAccess>(
     `INSERT INTO ip_access (entry, entry_type, list_type, reason, created_by, resolved_ips, resolved_at)
-     VALUES ($1, $2, $3, $4, $5, $6::TEXT[], CASE WHEN $6 IS NOT NULL THEN NOW() ELSE NULL END)
+     VALUES ($1, $2, $3, $4, $5, $6, CASE WHEN $6 IS NOT NULL THEN CURRENT_TIMESTAMP ELSE NULL END)
      RETURNING *`,
     [
       entry,
@@ -152,7 +153,7 @@ export async function createEntry(
       listType,
       reason || null,
       createdBy || null,
-      resolvedIps || null,
+      resolvedIps ? JSON.stringify(resolvedIps) : null,
     ]
   );
   return toIpAccessEntry(result.rows[0]);
@@ -163,8 +164,8 @@ export async function createEntry(
  */
 export async function updateResolvedIps(id: number, resolvedIps: string[]): Promise<void> {
   await query(
-    `UPDATE ip_access SET resolved_ips = $1, resolved_at = NOW() WHERE id = $2`,
-    [resolvedIps, id]
+    `UPDATE ip_access SET resolved_ips = $1, resolved_at = CURRENT_TIMESTAMP WHERE id = $2`,
+    [resolvedIps ? JSON.stringify(resolvedIps) : null, id]
   );
 }
 
@@ -181,7 +182,7 @@ export async function deleteEntry(id: number): Promise<boolean> {
  */
 export async function entryExists(entry: string): Promise<boolean> {
   const result = await query<{ exists: boolean }>(
-    'SELECT EXISTS(SELECT 1 FROM ip_access WHERE LOWER(entry) = LOWER($1)) as exists',
+    'SELECT EXISTS(SELECT 1 FROM ip_access WHERE LOWER(entry) = LOWER($1)) as "exists"',
     [entry]
   );
   return result.rows[0].exists;
@@ -192,7 +193,7 @@ function toIpAccessEntry(row: DbIpAccess): IpAccessEntry {
     id: row.id,
     entry: row.entry,
     entry_type: row.entry_type as EntryType,
-    resolved_ips: row.resolved_ips,
+    resolved_ips: row.resolved_ips == null ? null : parseArrayColumn(row.resolved_ips),
     resolved_at: row.resolved_at,
     list_type: row.list_type as ListType,
     reason: row.reason,

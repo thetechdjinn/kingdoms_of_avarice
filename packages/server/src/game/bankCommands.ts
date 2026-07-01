@@ -6,9 +6,8 @@ import { colors } from '../utils/colors.js';
 import { copperToDenominationCounts, formatCopperAsDenominations } from '../utils/textFormat.js';
 import { DENOMINATION_COPPER_VALUE, deductCopperFromWallet } from '../utils/currency.js';
 import { parseCurrencyType, calculateTotalWealth, CURRENCY_TYPES } from './itemCommands.js';
-import * as characterRepo from '../db/repositories/characterRepository.js';
 import * as roomRepo from '../db/repositories/roomRepository.js';
-import { withTransaction } from '../db/index.js';
+import { addPocket, addBank } from './sessionState.js';
 
 /** Strict integer parse — rejects partial matches like "10abc" */
 function parseStrictInt(value: string): number {
@@ -31,7 +30,10 @@ export async function handleBank(socket: AuthenticatedSocket): Promise<CommandRe
   const charError = requireCharacter(socket);
   if (charError) return charError;
 
-  const balance = await characterRepo.getBankBalance(socket.characterId!);
+  // Read from memory-first cache (see notes/Memory_First_Architecture.md).
+  // The cache is the source of truth; flushPlayer persists changes at the
+  // next save tick or any other flush trigger.
+  const balance = socket.bankBalance;
 
   if (balance === 0) {
     return {
@@ -71,18 +73,10 @@ export async function handleDeposit(
     return { type: MessageType.ERROR, message: 'Deposit what? Try "deposit all", "deposit <amount>", or "deposit <amount> <currency>".' };
   }
 
-  const character = await characterRepo.findCharacterById(socket.characterId!);
-  if (!character) {
-    return { type: MessageType.ERROR, message: 'Character not found.' };
-  }
-
-  const currency: Currency = {
-    copper: character.copper ?? 0,
-    silver: character.silver ?? 0,
-    gold: character.gold ?? 0,
-    platinum: character.platinum ?? 0,
-    runic: character.runic ?? 0,
-  };
+  // Read from memory-first cache. Atomicity between pocket and bank is now
+  // in-memory (synchronous mutation); the save tick flushes both via
+  // flushPlayer in one transaction. See notes/Memory_First_Architecture.md.
+  const currency: Currency = { ...socket.pocket };
 
   // deposit all
   if (args[0].toLowerCase() === 'all') {
@@ -91,14 +85,12 @@ export async function handleDeposit(
       return { type: MessageType.ERROR, message: 'You have no currency to deposit.' };
     }
 
-    await withTransaction(async (client) => {
-      await characterRepo.addCurrency(socket.characterId!, 'copper', -(currency.copper), client);
-      await characterRepo.addCurrency(socket.characterId!, 'silver', -(currency.silver), client);
-      await characterRepo.addCurrency(socket.characterId!, 'gold', -(currency.gold), client);
-      await characterRepo.addCurrency(socket.characterId!, 'platinum', -(currency.platinum), client);
-      await characterRepo.addCurrency(socket.characterId!, 'runic', -(currency.runic), client);
-      await characterRepo.addBankBalance(socket.characterId!, total, client);
-    });
+    addPocket(socket, 'copper', -currency.copper);
+    addPocket(socket, 'silver', -currency.silver);
+    addPocket(socket, 'gold', -currency.gold);
+    addPocket(socket, 'platinum', -currency.platinum);
+    addPocket(socket, 'runic', -currency.runic);
+    addBank(socket, total);
 
     const denomStr = formatCopperAsDenominations(total);
     return {
@@ -129,10 +121,8 @@ export async function handleDeposit(
 
     const copperValue = amount * DENOMINATION_COPPER_VALUE[currencyType];
 
-    await withTransaction(async (client) => {
-      await characterRepo.addCurrency(socket.characterId!, currencyInfo.field, -amount, client);
-      await characterRepo.addBankBalance(socket.characterId!, copperValue, client);
-    });
+    addPocket(socket, currencyInfo.field, -amount);
+    addBank(socket, copperValue);
 
     return {
       type: MessageType.OUTPUT,
@@ -149,13 +139,11 @@ export async function handleDeposit(
   // Deduct from wallet starting with lowest denominations first
   const deductions = deductCopperFromWallet(currency, amount);
 
-  await withTransaction(async (client) => {
-    for (const [field, qty] of deductions) {
-      // qty > 0 means deduct coins, qty < 0 means give change back
-      await characterRepo.addCurrency(socket.characterId!, field, -qty, client);
-    }
-    await characterRepo.addBankBalance(socket.characterId!, amount, client);
-  });
+  for (const [field, qty] of deductions) {
+    // qty > 0 means deduct coins, qty < 0 means give change back
+    addPocket(socket, field, -qty);
+  }
+  addBank(socket, amount);
 
   const denomStr = formatCopperAsDenominations(amount);
   return {
@@ -185,7 +173,10 @@ export async function handleWithdraw(
     return { type: MessageType.ERROR, message: 'Withdraw what? Try "withdraw all", "withdraw <amount>", or "withdraw <amount> <currency>".' };
   }
 
-  const balance = await characterRepo.getBankBalance(socket.characterId!);
+  // Read from memory-first cache. Sufficient-funds checks are done against
+  // socket.bankBalance; mutation is synchronous so pocket↔bank atomicity is
+  // in-process. flushPlayer drains both via one transaction at the next tick.
+  const balance = socket.bankBalance;
 
   if (balance === 0) {
     return { type: MessageType.ERROR, message: 'You have no funds on deposit.' };
@@ -195,18 +186,13 @@ export async function handleWithdraw(
   if (args[0].toLowerCase() === 'all') {
     const denomCounts = copperToDenominationCounts(balance);
 
-    await withTransaction(async (client) => {
-      const success = await characterRepo.addBankBalance(socket.characterId!, -balance, client);
-      if (!success) {
-        throw new Error('Insufficient bank balance');
+    addBank(socket, -balance);
+    for (const [denom, count] of denomCounts) {
+      const currencyInfo = CURRENCY_TYPES[denom];
+      if (currencyInfo) {
+        addPocket(socket, currencyInfo.field, count);
       }
-      for (const [denom, count] of denomCounts) {
-        const currencyInfo = CURRENCY_TYPES[denom];
-        if (currencyInfo) {
-          await characterRepo.addCurrency(socket.characterId!, currencyInfo.field, count, client);
-        }
-      }
-    });
+    }
 
     const denomStr = formatCopperAsDenominations(balance);
     return {
@@ -235,13 +221,8 @@ export async function handleWithdraw(
 
     const currencyInfo = CURRENCY_TYPES[currencyType];
 
-    await withTransaction(async (client) => {
-      const success = await characterRepo.addBankBalance(socket.characterId!, -copperValue, client);
-      if (!success) {
-        throw new Error('Insufficient bank balance');
-      }
-      await characterRepo.addCurrency(socket.characterId!, currencyInfo.field, amount, client);
-    });
+    addBank(socket, -copperValue);
+    addPocket(socket, currencyInfo.field, amount);
 
     return {
       type: MessageType.OUTPUT,
@@ -256,18 +237,13 @@ export async function handleWithdraw(
 
   const denomCounts = copperToDenominationCounts(amount);
 
-  await withTransaction(async (client) => {
-    const success = await characterRepo.addBankBalance(socket.characterId!, -amount, client);
-    if (!success) {
-      throw new Error('Insufficient bank balance');
+  addBank(socket, -amount);
+  for (const [denom, count] of denomCounts) {
+    const currencyInfo = CURRENCY_TYPES[denom];
+    if (currencyInfo) {
+      addPocket(socket, currencyInfo.field, count);
     }
-    for (const [denom, count] of denomCounts) {
-      const currencyInfo = CURRENCY_TYPES[denom];
-      if (currencyInfo) {
-        await characterRepo.addCurrency(socket.characterId!, currencyInfo.field, count, client);
-      }
-    }
-  });
+  }
 
   const denomStr = formatCopperAsDenominations(amount);
   return {

@@ -128,7 +128,7 @@ export async function updateAction(id: number, input: Partial<CreateActionInput>
     `UPDATE actions SET
       command = $1, description = $2, first_person_no_target = $3, room_no_target = $4,
       first_person_with_target = $5, target_perspective = $6, room_with_target = $7,
-      updated_at = NOW()
+      updated_at = CURRENT_TIMESTAMP
     WHERE id = $8
     RETURNING *`,
     [

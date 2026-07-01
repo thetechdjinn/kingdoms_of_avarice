@@ -17,7 +17,7 @@ const __dirname = dirname(__filename);
 
 dotenv.config({ path: join(__dirname, '..', '..', '..', '..', '.env') });
 
-import { pool as getPool, query, withTransaction } from './index.js';
+import { closePool, query, withTransaction } from './index.js';
 import * as roomRepo from './repositories/roomRepository.js';
 import * as itemRepo from './repositories/itemRepository.js';
 import * as spellRepo from './repositories/spellRepository.js';
@@ -1447,8 +1447,7 @@ async function main(): Promise<void> {
 
   console.log('\n=== Import Complete ===');
 
-  const pool = getPool();
-  await pool.end();
+  await closePool();
 }
 
 main().catch(err => {

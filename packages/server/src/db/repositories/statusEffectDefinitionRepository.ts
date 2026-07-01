@@ -1,5 +1,5 @@
+import type { DbClient } from '../index.js';
 import { query, withTransaction } from '../index.js';
-import type pg from 'pg';
 import {
   StatusEffectDefinition,
   StatusEffectCategory,
@@ -309,7 +309,7 @@ export async function updateDefinition(id: string, input: Partial<CreateDefiniti
       tick_damage_min=$30, tick_damage_max=$31, tick_healing_min=$32, tick_healing_max=$33,
       tick_message=$34, silent_tick=$35, wear_off_message=$36,
       blocks_regen=$37, blocks_movement=$38, is_blind=$39,
-      blocks_casting=$40, blocks_combat=$41, blocks_stealth=$42, updated_at=NOW()
+      blocks_casting=$40, blocks_combat=$41, blocks_stealth=$42, updated_at=CURRENT_TIMESTAMP
     WHERE id = $43
     RETURNING *`,
     [
@@ -368,7 +368,7 @@ export async function exportDefinitions(): Promise<StatusEffectDefinition[]> {
  * Import definitions from JSON (upsert) - wrapped in a transaction for atomicity
  */
 export async function importDefinitions(definitions: StatusEffectDefinition[]): Promise<{ created: number; updated: number }> {
-  return withTransaction(async (client: pg.PoolClient) => {
+  return withTransaction(async (client: DbClient) => {
     let created = 0;
     let updated = 0;
 
@@ -399,7 +399,7 @@ export async function importDefinitions(definitions: StatusEffectDefinition[]): 
             tick_damage_min = $30, tick_damage_max = $31, tick_healing_min = $32, tick_healing_max = $33,
             tick_message = $34, silent_tick = $35, wear_off_message = $36,
             blocks_regen = $37, blocks_movement = $38, is_blind = $39,
-            blocks_casting = $40, blocks_combat = $41, blocks_stealth = $42, updated_at = NOW()
+            blocks_casting = $40, blocks_combat = $41, blocks_stealth = $42, updated_at = CURRENT_TIMESTAMP
           WHERE id = $43`,
           [
             def.name,

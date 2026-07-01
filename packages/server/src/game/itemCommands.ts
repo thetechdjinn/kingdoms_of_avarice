@@ -167,6 +167,11 @@ export async function handleGet(
         }
       });
 
+      // Sync cache to mirror the persisted addition (memory-first: socket.pocket
+      // is the source of truth). Without this the picked-up coins are invisible
+      // until reload and the next pocket flush overwrites them with the stale cache.
+      socket.pocket[currencyInfo.field] += pickupAmount;
+
       const coinWord = pickupAmount === 1 ? 'coin' : 'coins';
       const displayAmount = `${pickupAmount} ${currencyType} ${coinWord}`;
       broadcastToRoom(currentRoomId, colors.green(`${colors.red(socket.username)} picks up ${displayAmount}.`), socket.playerId);
@@ -399,7 +404,7 @@ async function handleGetAll(
 
   for (const item of takeableItems) {
     // Check if this is a currency item - add to wallet instead of inventory
-    const currencyDisplay = await handleCurrencyPickup(item, socket.characterId!);
+    const currencyDisplay = await handleCurrencyPickup(item, socket);
     if (currencyDisplay) {
       currencyPickedUp.push(currencyDisplay);
       continue;
@@ -599,7 +604,7 @@ async function dropItem(
   // Auto-extinguish lit light sources when dropped
   if (item.is_lit && item.template?.item_type === ItemType.LIGHT) {
     await itemRepo.updateInstanceLitState(item.id, false);
-    untrackLitCharacter(socket.characterId!);
+    await untrackLitCharacter(socket.characterId!);
     messages.push(`You extinguish ${colors.item(itemName)}.`);
     broadcastToRoom(currentRoomId, `${socket.username} extinguishes ${itemName}.`, socket.playerId);
   }
@@ -726,7 +731,7 @@ async function handleDropAll(
     // Extinguish lit light sources when dropped
     if (item.is_lit && item.template?.item_type === ItemType.LIGHT) {
       await itemRepo.updateInstanceLitState(item.id, false);
-      untrackLitCharacter(socket.characterId!);
+      await untrackLitCharacter(socket.characterId!);
       const litName = getItemName(item);
       extinguished.push(litName);
       broadcastToRoom(currentRoomId, `${socket.username} extinguishes ${litName}.`, socket.playerId);
@@ -864,15 +869,10 @@ export async function handleInventory(
   const items = await itemRepo.getCharacterInventory(socket.characterId!);
   const equipped = await itemRepo.getCharacterEquipped(socket.characterId!);
 
-  // Fetch character data for currency
-  const character = await characterRepo.findCharacterById(socket.characterId!);
-  const currency: Currency = character ? {
-    copper: character.copper ?? 0,
-    silver: character.silver ?? 0,
-    gold: character.gold ?? 0,
-    platinum: character.platinum ?? 0,
-    runic: character.runic ?? 0,
-  } : { copper: 0, silver: 0, gold: 0, platinum: 0, runic: 0 };
+  // Currency is memory-first: read from the session cache (socket.pocket),
+  // the source of truth, not the DB (which lags until the next flush and would
+  // show stale coins right after a bank deposit/withdraw).
+  const currency: Currency = { ...socket.pocket };
 
   const lines: string[] = [];
 
@@ -1285,7 +1285,7 @@ export async function handleWield(
         // Extinguish lit light sources being displaced
         if (equippedItem.is_lit && equippedItem.template?.item_type === ItemType.LIGHT) {
           await itemRepo.updateInstanceLitState(equippedItem.id, false);
-          untrackLitCharacter(socket.characterId!);
+          await untrackLitCharacter(socket.characterId!);
           const litName = getItemName(equippedItem);
           messages.push(`You extinguish ${colors.item(litName)}.`);
           broadcastToRoom(currentRoomId, `${socket.username} extinguishes ${litName}.`, socket.playerId);
@@ -1467,7 +1467,7 @@ export async function handleRemove(
   const wasLit = item.is_lit && template?.item_type === ItemType.LIGHT;
   if (wasLit) {
     await itemRepo.updateInstanceLitState(item.id, false);
-    untrackLitCharacter(socket.characterId!);
+    await untrackLitCharacter(socket.characterId!);
   }
 
   // Move to inventory
@@ -1716,7 +1716,7 @@ export async function handleGetFrom(
   const containerName = container.template?.name ?? 'something';
 
   // Check if this is a currency item - add to wallet instead of inventory
-  const currencyDisplay = await handleCurrencyPickup(item, socket.characterId!);
+  const currencyDisplay = await handleCurrencyPickup(item, socket);
   if (currencyDisplay) {
     broadcastToRoom(currentRoomId, `${socket.username} gets ${currencyDisplay} from ${withArticle(containerName)}.`, socket.playerId);
     return { type: MessageType.OUTPUT, message: `You get ${colors.gold(currencyDisplay)} from ${colors.item(withArticle(containerName))}.` };
@@ -1749,7 +1749,7 @@ async function handleGetAllFromContainer(
 
   for (const item of items) {
     // Check if this is a currency item - add to wallet instead of inventory
-    const currencyDisplay = await handleCurrencyPickup(item, socket.characterId!);
+    const currencyDisplay = await handleCurrencyPickup(item, socket);
     if (currencyDisplay) {
       currencyPickedUp.push(currencyDisplay);
       continue;
@@ -2728,14 +2728,12 @@ async function handleScrollTeleport(
     broadcastToRoom(currentRoomId, `${socket.username} vanishes in a flash of light.`, socket.playerId);
   }
 
-  // Persist room to database first (before in-memory update) to avoid desync on DB failure
-  if (socket.characterId) {
-    await characterRepo.updateCharacterRoom(socket.characterId, destRoomId);
-  }
-
-  // Move player in memory
+  // Move player in memory. Room is memory-first; flushPlayer at next tick /
+  // logout persists. See notes/Memory_First_Architecture.md.
   const { setPlayerLocation } = await import('./adminCommands.js');
+  const { markRoomDirty } = await import('./sessionState.js');
   setPlayerLocation(socket.playerId, destRoomId);
+  markRoomDirty(socket);
 
   // Arrival broadcast
   broadcastToRoom(destRoomId, `${socket.username} appears in a flash of light.`, socket.playerId);
@@ -2937,7 +2935,7 @@ export async function handleLight(
       let wasExtinguished = false;
       if (currentHeld.is_lit && currentHeld.template?.item_type === ItemType.LIGHT) {
         await itemRepo.updateInstanceLitState(currentHeld.id, false);
-        untrackLitCharacter(characterId);
+        await untrackLitCharacter(characterId);
         const heldName = getItemName(currentHeld);
         messages.push(`You extinguish ${colors.item(heldName)}.`);
         broadcastToRoom(currentRoomId, `${socket.username} extinguishes ${heldName}.`, socket.playerId);
@@ -3012,7 +3010,7 @@ export async function handleExtinguish(
 
   // Mark as unlit - fuel_remaining is preserved for relighting
   await itemRepo.updateInstanceLitState(item.id, false);
-  untrackLitCharacter(characterId);
+  await untrackLitCharacter(characterId);
 
   const itemName = template.name;
   broadcastToRoom(currentRoomId, `${socket.username} extinguishes ${itemName}.`, socket.playerId);
@@ -3655,7 +3653,7 @@ function detectCurrencyType(templateName: string | undefined | null): string | n
  */
 async function handleCurrencyPickup(
   item: ItemInstance,
-  characterId: number
+  socket: AuthenticatedSocket
 ): Promise<string | null> {
   if (item.template?.item_type !== ItemType.CURRENCY) return null;
 
@@ -3663,11 +3661,20 @@ async function handleCurrencyPickup(
   if (!currencyType) return null;
 
   const currencyInfo = CURRENCY_TYPES[currencyType];
-  return await withTransaction(async (client) => {
-    await characterRepo.addCurrency(characterId, currencyInfo.field, item.quantity, client);
+
+  // Hybrid memory-first pattern: item delete is still a direct DB write, so
+  // currency stays atomic with it inside this transaction. Cache sync happens
+  // after commit. Phase 1.5 moves item writes to the cache; at that point
+  // this collapses to a flushPlayer call.
+  await withTransaction(async (client) => {
+    await characterRepo.addCurrency(socket.characterId!, currencyInfo.field, item.quantity, client);
     await itemRepo.deleteInstance(item.id, client);
-    return item.quantity === 1 ? `1 ${currencyType} coin` : `${item.quantity} ${currencyType} coins`;
   });
+
+  // Sync cache to mirror the persisted state. Don't mark dirty.
+  socket.pocket[currencyInfo.field] += item.quantity;
+
+  return item.quantity === 1 ? `1 ${currencyType} coin` : `${item.quantity} ${currencyType} coins`;
 }
 
 /**
@@ -3729,14 +3736,10 @@ export async function handleDropCurrency(
     return null; // Not a valid currency type, let normal drop handle it
   }
 
-  // Get character's current currency
-  const character = await characterRepo.findCharacterById(socket.characterId!);
-  if (!character) {
-    return { type: MessageType.ERROR, message: 'Character not found.' };
-  }
-
   const currencyInfo = CURRENCY_TYPES[currencyType];
-  const currentAmount = character[currencyInfo.field] ?? 0;
+  // Currency is memory-first: socket.pocket is the source of truth, so the
+  // affordability check reads the cache (the DB lags until the next flush).
+  const currentAmount = socket.pocket[currencyInfo.field] ?? 0;
 
   if (currentAmount < amount) {
     return { type: MessageType.ERROR, message: `You don't have that much ${currencyType}.` };
@@ -3784,6 +3787,11 @@ export async function handleDropCurrency(
     console.error('Failed to drop currency:', error);
     return { type: MessageType.ERROR, message: 'Failed to drop currency. Please try again.' };
   }
+
+  // Sync cache to mirror the persisted deduction. Don't mark dirty: the DB is
+  // already current. Without this, the next pocket flush would write the stale
+  // (un-deducted) cache back over the DB and duplicate the dropped currency.
+  socket.pocket[currencyInfo.field] -= amount;
 
   const displayName = amount === 1 ? `1 ${currencyType} coin` : `${amount} ${currencyType} coins`;
   broadcastToRoom(currentRoomId, colors.green(`${colors.red(socket.username)} drops ${displayName}.`), socket.playerId);
@@ -3894,6 +3902,11 @@ export async function handleGetCurrency(
     return { type: MessageType.ERROR, message: 'Failed to pick up currency. Please try again.' };
   }
 
+  // Sync cache to mirror the persisted addition. Don't mark dirty: the DB is
+  // already current. Without this, the picked-up coins are invisible until
+  // reload and the next pocket flush would overwrite them with the stale cache.
+  socket.pocket[currencyInfo.field] += pickupAmount;
+
   const displayName = pickupAmount === 1 ? `1 ${currencyType} coin` : `${pickupAmount} ${currencyType} coins`;
   broadcastToRoom(currentRoomId, colors.green(`${colors.red(socket.username)} picks up ${displayName}.`), socket.playerId);
 
@@ -3936,7 +3949,7 @@ export async function dropAllItemsOnDeath(characterId: number, roomId: number): 
     // Extinguish lit light sources on death
     if (item.is_lit && item.template?.item_type === ItemType.LIGHT) {
       await itemRepo.updateInstanceLitState(item.id, false);
-      untrackLitCharacter(characterId);
+      await untrackLitCharacter(characterId);
     }
 
     // Move item to room (unequip if equipped)

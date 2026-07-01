@@ -3,13 +3,15 @@ import { IncomingMessage } from 'http';
 import { URL } from 'url';
 import { parse as parseCookie } from 'cookie';
 import { MessageType, GameMessage, Role, VitalsData, ResourceType, PlayerRegenState, ActiveStatusEffect, PlayerQueueState, createPlayerQueueState, PlayerStatus, DeathState, StealthMode } from '@koa/shared';
-import type { CharacterStats } from '@koa/shared';
+import type { CharacterStats, Currency, ItemInstance } from '@koa/shared';
 import { verifyToken, COOKIE_NAME } from '../routes/auth.js';
 import { GameWorld } from './world.js';
 import { processCommand } from './commands.js';
 import { getPlayerLocation, setPlayerLocation } from './adminCommands.js';
 import * as playerRepo from '../db/repositories/playerRepository.js';
 import * as characterRepo from '../db/repositories/characterRepository.js';
+import * as itemRepo from '../db/repositories/itemRepository.js';
+import { markVitalsDirty, markRoomDirty, flushPlayer } from './sessionState.js';
 import * as progressionRepo from '../db/repositories/progressionRepository.js';
 import { initializeProgressionData } from './progressionLoader.js';
 import { loadCharacterProgression, unloadCharacterProgression } from './progression.js';
@@ -83,7 +85,17 @@ interface AuthenticatedSocket extends WebSocket {
   broadcastChannel: string | null;
   groupId: string | null;
   pendingGroupInvite: { groupId: string; leaderId: number; leaderName: string; expiresAt: number } | null;
+  // Memory-first session cache (see notes/Memory_First_Architecture.md)
+  // Mutations to these fields must go through sessionState helpers, which
+  // mark the corresponding entry in `dirty` so the next flush picks them up.
+  pocket: Currency;
+  bankBalance: number;
+  inventory: ItemInstance[];
+  dirty: Set<DirtyField>;
+  dirtyItems: Set<number>; // item instance IDs needing flush
 }
+
+type DirtyField = 'vitals' | 'room' | 'pocket' | 'bank' | 'inventory' | 'effects';
 
 const connectedPlayers = new Map<number, AuthenticatedSocket>();
 const gameWorld = new GameWorld();
@@ -344,6 +356,27 @@ export function setupGameSocket(wss: WebSocketServer): void {
       resourceType: resourceType,
     };
 
+    // Initialize memory-first session cache (see notes/Memory_First_Architecture.md).
+    // The cache is loaded once at login and mutated in-place by gameplay code.
+    // Mutations go through sessionState helpers which mark these entries dirty;
+    // flushPlayer drains all dirty state in a single transaction at every flush point.
+    authWs.pocket = {
+      copper: character.copper ?? 0,
+      silver: character.silver ?? 0,
+      gold: character.gold ?? 0,
+      platinum: character.platinum ?? 0,
+      runic: character.runic ?? 0,
+    };
+    authWs.bankBalance = character.bank_balance ?? 0;
+    try {
+      authWs.inventory = await itemRepo.getCharacterInventory(character.id);
+    } catch (error) {
+      console.error('Failed to load character inventory:', error);
+      authWs.inventory = [];
+    }
+    authWs.dirty = new Set();
+    authWs.dirtyItems = new Set();
+
     // Initialize regeneration state
     authWs.regenState = {
       enhancedRegen: new Set<string>(),
@@ -440,15 +473,10 @@ export function setupGameSocket(wss: WebSocketServer): void {
 
     connectedPlayers.set(payload.playerId, authWs);
 
-    // Use character's room location (default to room 1 if invalid)
+    // Use character's room location (default to room 1 if invalid).
+    // No direct persist needed: the default-room assignment flows through
+    // setPlayerLocation below; the close handler / next save tick flushes it.
     const startRoomId = character.current_room_id || 1;
-
-    // Persist the room if we had to default
-    if (!character.current_room_id) {
-      characterRepo.updateCharacterRoom(characterId, startRoomId).catch((err) => {
-        console.error('Failed to persist default room:', err);
-      });
-    }
 
     setPlayerLocation(payload.playerId, startRoomId);
 
@@ -609,19 +637,27 @@ export function setupGameSocket(wss: WebSocketServer): void {
         await handleDroppedDisconnect(authWs);
       }
 
-      // Save character vitals (HP, mana) and room location on disconnect
-      // If dead/dropped, save with 0 HP so they auto-respawn on reconnect
+      // Flush all dirty cached state on disconnect via the central helper.
+      // If dead/dropped, save with 0 HP so they auto-respawn on reconnect.
+      //
+      // INVARIANT (memory-first architecture):
+      // This flush — like every flush (save tick, shutdown hook, quest
+      // completion, level-up, etc.) — drains the player's entire dirty
+      // state in a single transaction via flushPlayer. See
+      // notes/Memory_First_Architecture.md.
       if (authWs.characterId) {
         try {
-          const hpToSave = isPlayerDead(authWs) ? 0 : authWs.vitals.hp;
-          await characterRepo.updateCharacterStats(authWs.characterId, {
-            health: hpToSave,
-            mana: authWs.vitals.resource ?? 0,
-          });
-          const currentRoomId = getPlayerLocation(authWs.playerId);
-          await characterRepo.updateCharacterRoom(authWs.characterId, currentRoomId);
+          if (isPlayerDead(authWs)) {
+            // Override hp to 0 so the auto-respawn path triggers on next
+            // login. Mutating the cache directly is safe here because the
+            // socket is about to be GC'd.
+            authWs.vitals.hp = 0;
+          }
+          markVitalsDirty(authWs);
+          markRoomDirty(authWs);
+          await flushPlayer(authWs);
         } catch (error) {
-          console.error(`Failed to save vitals/room for character ${authWs.characterId}:`, error);
+          console.error(`Failed to flush state for character ${authWs.characterId}:`, error);
         }
 
         // Unload character progression from memory
@@ -639,7 +675,7 @@ export function setupGameSocket(wss: WebSocketServer): void {
         if (authWs.characterId) {
           clearHaggleState(authWs.characterId);
           clearMerchantHostility(authWs.characterId);
-          untrackLitCharacter(authWs.characterId);
+          await untrackLitCharacter(authWs.characterId);
         }
 
         // Broadcast appropriate message based on how they disconnected.

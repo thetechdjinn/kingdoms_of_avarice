@@ -18,7 +18,7 @@ const __dirname = dirname(__filename);
 
 dotenv.config({ path: join(__dirname, '..', '..', '..', '..', '.env') });
 
-import { pool as getPool } from './index.js';
+import { closePool } from './index.js';
 import * as roomRepo from './repositories/roomRepository.js';
 import * as itemRepo from './repositories/itemRepository.js';
 import * as spellRepo from './repositories/spellRepository.js';
@@ -841,8 +841,7 @@ if (isCli) {
         console.log(`\n${result.warnings.length} warning(s) recorded in manifest.`);
       }
     } finally {
-      const pool = getPool();
-      await pool.end();
+      await closePool();
     }
   })().catch(err => {
     console.error('Export failed:', err);

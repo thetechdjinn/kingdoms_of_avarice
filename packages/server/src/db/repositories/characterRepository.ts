@@ -1,4 +1,4 @@
-import pg from 'pg';
+import type { DbClient } from '../index.js';
 import { query } from '../index.js';
 import { Character, CharacterStats, Gender, Currency } from '@koa/shared';
 import { getClassById, getRaceById } from './progressionRepository.js';
@@ -75,7 +75,7 @@ function getRaceManaBonus(traits?: Array<string | { id: string; value: number | 
   return 0;
 }
 
-export async function createCharacter(input: CreateCharacterInput, client?: pg.PoolClient): Promise<DbCharacter> {
+export async function createCharacter(input: CreateCharacterInput, client?: DbClient): Promise<DbCharacter> {
   const classDef = await getClassById(input.characterClass);
   const raceDef = await getRaceById(input.race);
 
@@ -160,9 +160,9 @@ export async function findCharacterByName(name: string): Promise<DbCharacter | n
   return result.rows[0] || null;
 }
 
-export async function characterNameExists(name: string, client?: pg.PoolClient): Promise<boolean> {
+export async function characterNameExists(name: string, client?: DbClient): Promise<boolean> {
   const result = await query<{ exists: boolean }>(
-    'SELECT EXISTS(SELECT 1 FROM characters WHERE LOWER(name) = LOWER($1)) as exists',
+    'SELECT EXISTS(SELECT 1 FROM characters WHERE LOWER(name) = LOWER($1)) as "exists"',
     [name],
     client
   );
@@ -181,6 +181,7 @@ export async function updateCharacterRoom(characterId: number, roomId: number): 
 type UpdatableCharacterFields =
   | 'health' | 'mana' | 'experience' | 'level' | 'gold'
   | 'copper' | 'silver' | 'platinum' | 'runic'
+  | 'bank_balance'
   | 'strength' | 'intelligence' | 'dexterity' | 'constitution' | 'wisdom' | 'charisma'
   | 'unspent_cp' | 'cp_spent' | 'max_health' | 'max_mana'
   | 'last_name' | 'hair' | 'eye_color'
@@ -189,7 +190,8 @@ type UpdatableCharacterFields =
 
 export async function updateCharacterStats(
   characterId: number,
-  updates: Partial<Record<UpdatableCharacterFields, unknown>>
+  updates: Partial<Record<UpdatableCharacterFields, unknown>>,
+  client?: DbClient
 ): Promise<void> {
   const setClauses: string[] = [];
   const values: unknown[] = [];
@@ -199,7 +201,7 @@ export async function updateCharacterStats(
     if (value !== undefined) {
       // Handle JSONB fields specially
       if (key === 'cp_spent') {
-        setClauses.push(`${key} = $${paramIndex}::jsonb`);
+        setClauses.push(`${key} = $${paramIndex}`);
         values.push(JSON.stringify(value));
       } else {
         setClauses.push(`${key} = $${paramIndex}`);
@@ -214,7 +216,8 @@ export async function updateCharacterStats(
   values.push(characterId);
   await query(
     `UPDATE characters SET ${setClauses.join(', ')} WHERE id = $${paramIndex}`,
-    values
+    values,
+    client
   );
 }
 
@@ -225,7 +228,7 @@ export async function addCurrency(
   characterId: number,
   currencyField: keyof Currency,
   amount: number,
-  client?: pg.PoolClient
+  client?: DbClient
 ): Promise<void> {
   await query(
     `UPDATE characters SET ${currencyField} = COALESCE(${currencyField}, 0) + $1 WHERE id = $2`,
@@ -239,7 +242,7 @@ export async function addCurrency(
  * Note: BIGINT is returned as string by pg; parseInt is safe up to Number.MAX_SAFE_INTEGER
  * (~9 quadrillion copper). All arithmetic stays in Postgres BIGINT space.
  */
-export async function getBankBalance(characterId: number, client?: pg.PoolClient): Promise<number> {
+export async function getBankBalance(characterId: number, client?: DbClient): Promise<number> {
   const result = await query<{ bank_balance: string }>(
     'SELECT COALESCE(bank_balance, 0) AS bank_balance FROM characters WHERE id = $1',
     [characterId],
@@ -255,7 +258,7 @@ export async function getBankBalance(characterId: number, client?: pg.PoolClient
 export async function addBankBalance(
   characterId: number,
   amount: number,
-  client?: pg.PoolClient
+  client?: DbClient
 ): Promise<boolean> {
   if (amount >= 0) {
     // Deposit: always succeeds
@@ -284,13 +287,14 @@ export async function deleteCharacter(characterId: number): Promise<boolean> {
   return (result.rowCount ?? 0) > 0;
 }
 
-export async function getCharacterCount(playerId: number, client?: pg.PoolClient): Promise<number> {
+export async function getCharacterCount(playerId: number, client?: DbClient): Promise<number> {
   const result = await query<{ count: string }>(
-    'SELECT COUNT(*) FROM characters WHERE player_id = $1',
+    'SELECT COUNT(*) AS count FROM characters WHERE player_id = $1',
     [playerId],
     client
   );
-  return parseInt(result.rows[0].count, 10);
+  const count = parseInt(result.rows[0]?.count as string, 10);
+  return Number.isNaN(count) ? 0 : count;
 }
 
 export function toSharedCharacter(dbChar: DbCharacter): Character {

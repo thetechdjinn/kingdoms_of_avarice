@@ -45,7 +45,7 @@ This structure allows shared TypeScript types between frontend and backend, prev
 
 ### Database
 
-- PostgreSQL
+- Turso / libSQL (local embedded SQLite file)
 
 ### Initial Database Schema
 
@@ -139,7 +139,7 @@ graph LR
     A -->|3. WebSocket Upgrade| C[Game Engine]
     C -->|4. Real-time Game State| A
     C -->|5. Process Commands| D[Game World State]
-    D -->|6. Persist Data| E[PostgreSQL]
+    D -->|6. Persist Data| E[Turso/libSQL]
 ```
 
 ## Step by Step Setup
@@ -150,7 +150,7 @@ graph LR
    - Create a Node.js project for the backend using ts-node-dev for hot-reload (`/packages/server`)
    - Set up shared types package (`/packages/shared`)
    - Install dependencies:
-     - **Server:** `ws`, `express`, `pg`, `bcrypt`, `jsonwebtoken`, `cookie-parser`
+     - **Server:** `ws`, `express`, `@tursodatabase/database`, `bcrypt`, `jsonwebtoken`, `cookie-parser`
      - **Client:** `xterm`, `xterm-addon-fit`
 2. **Frontend:**
    - Build a login form (HTTP POST to backend)
@@ -166,7 +166,7 @@ graph LR
    - On message: Parse command, update in-memory state, broadcast results to relevant players.
    - Implement basic `go`, `look`, `say` commands.
 4. **Persistence:**
-   - Set up PostgreSQL with initial schema (see above).
+   - Set up the Turso / libSQL database with the initial schema (see above).
    - Store player credentials (bcrypt hashed passwords).
    - Persist critical player data (location, inventory, stats) on login, logout, or periodic intervals.
 5. **Character Creation:**

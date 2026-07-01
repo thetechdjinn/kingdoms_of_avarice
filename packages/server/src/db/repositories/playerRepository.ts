@@ -1,4 +1,5 @@
-import pg from 'pg';
+import { parseArrayColumn } from '../arrayColumn.js';
+import type { DbClient } from '../index.js';
 import crypto from 'node:crypto';
 import { query } from '../index.js';
 import bcrypt from 'bcryptjs';
@@ -19,6 +20,15 @@ export interface CreatePlayerInput {
   username: string;
   password: string;
   email?: string;
+}
+
+/**
+ * Total number of registered players. Used by the startup admin bootstrap to
+ * decide whether this is a fresh database (count === 0) that needs a first admin.
+ */
+export async function getPlayerCount(): Promise<number> {
+  const result = await query<{ count: number }>('SELECT COUNT(*) AS count FROM players');
+  return Number(result.rows[0]?.count ?? 0);
 }
 
 export async function createPlayer(input: CreatePlayerInput): Promise<Player> {
@@ -65,7 +75,7 @@ export async function updateLastLogin(playerId: number): Promise<void> {
 
 export async function playerExists(username: string): Promise<boolean> {
   const result = await query<{ exists: boolean }>(
-    'SELECT EXISTS(SELECT 1 FROM players WHERE LOWER(username) = LOWER($1)) as exists',
+    'SELECT EXISTS(SELECT 1 FROM players WHERE LOWER(username) = LOWER($1)) as "exists"',
     [username]
   );
   
@@ -117,7 +127,7 @@ export async function updatePassword(playerId: number, newPassword: string): Pro
   );
 }
 
-export async function getMaxCharacters(playerId: number, client?: pg.PoolClient): Promise<number | null> {
+export async function getMaxCharacters(playerId: number, client?: DbClient): Promise<number | null> {
   const result = await query<{ max_characters: number | null }>(
     'SELECT max_characters FROM players WHERE id = $1',
     [playerId],
@@ -176,7 +186,7 @@ export async function getAllPlayersWithDetails(): Promise<PlayerWithDetails[]> {
     created_at: Date;
     last_login: Date | null;
     character_count: string;
-    roles: string[];
+    roles: string;
   }>(
     `SELECT
       p.id,
@@ -187,11 +197,15 @@ export async function getAllPlayersWithDetails(): Promise<PlayerWithDetails[]> {
       p.last_login,
       (SELECT COUNT(*) FROM characters WHERE player_id = p.id) as character_count,
       COALESCE(
-        (SELECT array_agg(r.name ORDER BY r.priority DESC)
-         FROM player_roles pr
-         JOIN roles r ON pr.role_id = r.id
-         WHERE pr.player_id = p.id),
-        '{}'::text[]
+        (SELECT json_group_array(name)
+         FROM (
+           SELECT r.name
+           FROM player_roles pr
+           JOIN roles r ON pr.role_id = r.id
+           WHERE pr.player_id = p.id
+           ORDER BY r.priority DESC
+         )),
+        '[]'
       ) as roles
     FROM players p
     ORDER BY p.username`
@@ -200,6 +214,7 @@ export async function getAllPlayersWithDetails(): Promise<PlayerWithDetails[]> {
   return result.rows.map(row => ({
     ...row,
     character_count: parseInt(row.character_count, 10),
+    roles: parseArrayColumn(row.roles),
   }));
 }
 
@@ -215,7 +230,7 @@ export async function getPlayerWithRoles(playerId: number): Promise<PlayerWithDe
     created_at: Date;
     last_login: Date | null;
     character_count: string;
-    roles: string[];
+    roles: string;
   }>(
     `SELECT
       p.id,
@@ -226,11 +241,15 @@ export async function getPlayerWithRoles(playerId: number): Promise<PlayerWithDe
       p.last_login,
       (SELECT COUNT(*) FROM characters WHERE player_id = p.id) as character_count,
       COALESCE(
-        (SELECT array_agg(r.name ORDER BY r.priority DESC)
-         FROM player_roles pr
-         JOIN roles r ON pr.role_id = r.id
-         WHERE pr.player_id = p.id),
-        '{}'::text[]
+        (SELECT json_group_array(name)
+         FROM (
+           SELECT r.name
+           FROM player_roles pr
+           JOIN roles r ON pr.role_id = r.id
+           WHERE pr.player_id = p.id
+           ORDER BY r.priority DESC
+         )),
+        '[]'
       ) as roles
     FROM players p
     WHERE p.id = $1`,
@@ -243,6 +262,7 @@ export async function getPlayerWithRoles(playerId: number): Promise<PlayerWithDe
   return {
     ...row,
     character_count: parseInt(row.character_count, 10),
+    roles: parseArrayColumn(row.roles),
   };
 }
 

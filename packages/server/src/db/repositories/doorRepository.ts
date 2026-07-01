@@ -1,4 +1,5 @@
 import { query } from '../index.js';
+import { parseArrayColumn } from '../arrayColumn.js';
 import { Door, DoorType, DoorState, DoorData } from '@koa/shared';
 
 // Database row type (snake_case from PostgreSQL)
@@ -72,7 +73,7 @@ function dbToDoor(row: DbDoor): Door {
     disappearMessage: row.disappear_message,
     requiredLevel: row.required_level,
     maxLevel: row.max_level,
-    requiredClasses: row.required_classes,
+    requiredClasses: parseArrayColumn(row.required_classes),
     requiredQuestFlag: row.required_quest_flag,
     requiredItemTag: row.required_item_tag,
     denialMessage: row.denial_message,
@@ -451,9 +452,9 @@ export async function getDoorsByRoomIds(roomIds: number[]): Promise<Map<number, 
 
   const result = await query<DbDoor>(
     `SELECT * FROM doors
-     WHERE entry_room_id = ANY($1) OR exit_room_id = ANY($1)
+     WHERE entry_room_id IN (SELECT value FROM json_each($1)) OR exit_room_id IN (SELECT value FROM json_each($1))
      ORDER BY id`,
-    [roomIds]
+    [JSON.stringify(roomIds)]
   );
 
   // Group doors by room ID (a door may appear for both entry and exit rooms)
