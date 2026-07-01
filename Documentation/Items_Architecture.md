@@ -5,7 +5,7 @@ This document outlines the architecture for the item system in Kingdoms of Avari
 ## Design Principles
 
 1. **Template + Instance Pattern** - Item templates define base properties; instances track actual objects in the game world
-2. **Extensibility** - JSONB fields allow future features (enchanting, glyphs, enhancements) without schema changes
+2. **Extensibility** - JSON fields (stored as `TEXT` in the libSQL/SQLite database; there is no `JSONB` type) allow future features (enchanting, glyphs, enhancements) without schema changes
 3. **Persistence** - All items persist across server restarts
 4. **Flexible Location** - Items can exist in rooms, inventories, equipped, inside containers, or on NPCs
 
@@ -70,8 +70,8 @@ CREATE TABLE IF NOT EXISTS item_templates (
     item_type VARCHAR(50) NOT NULL,         -- weapon, armor, container, consumable, misc, key, light
     equipment_slot VARCHAR(50),             -- Which slot this equips to (NULL if not equippable)
 
-    -- Flags (JSONB for flexibility)
-    flags JSONB NOT NULL DEFAULT '{}',
+    -- Flags (TEXT for flexibility)
+    flags TEXT NOT NULL DEFAULT '{}',
     -- Possible flags:
     --   takeable: boolean (default true)
     --   hidden: boolean (requires search to find)
@@ -89,8 +89,8 @@ CREATE TABLE IF NOT EXISTS item_templates (
     container_capacity INTEGER,             -- Max items it can hold
     container_weight_limit INTEGER,         -- Max weight it can hold
 
-    -- Weapon Properties (JSONB for flexibility)
-    weapon_data JSONB,
+    -- Weapon Properties (TEXT for flexibility)
+    weapon_data TEXT,
     -- Structure:
     --   damage_dice: string (e.g., "1d8", "2d6")
     --   damage_type: string (slashing, piercing, bludgeoning, fire, ice, etc.)
@@ -99,16 +99,16 @@ CREATE TABLE IF NOT EXISTS item_templates (
     --   range: string (melee, ranged, thrown)
     --   skill_type: string (swords, axes, bludgeons, etc.)
 
-    -- Armor Properties (JSONB for flexibility)
-    armor_data JSONB,
+    -- Armor Properties (TEXT for flexibility)
+    armor_data TEXT,
     -- Structure:
     --   armor_class: integer
     --   damage_resistance: number (flat damage reduction)
     --   weight_class: string (light, medium, heavy)
     --   resistances: object (fire: 10, ice: 5, etc.)
 
-    -- Consumable Properties (JSONB for flexibility)
-    consumable_data JSONB,
+    -- Consumable Properties (TEXT for flexibility)
+    consumable_data TEXT,
     -- Structure:
     --   charges: integer (for wands/staffs, NULL for single-use)
     --   effect_type: string (heal, buff, damage, etc.)
@@ -116,14 +116,14 @@ CREATE TABLE IF NOT EXISTS item_templates (
     --   duration: integer (seconds, 0 for instant)
 
     -- Light Source Properties
-    light_data JSONB,
+    light_data TEXT,
     -- Structure:
     --   radius: integer
     --   fuel_max: integer (NULL for permanent)
     --   fuel_rate: integer (fuel consumed per minute)
 
     -- Requirements
-    requirements JSONB,
+    requirements TEXT,
     -- Structure:
     --   level: integer
     --   strength: integer
@@ -132,7 +132,7 @@ CREATE TABLE IF NOT EXISTS item_templates (
     --   race: string[]
 
     -- Stat Modifications when equipped
-    stat_modifiers JSONB,
+    stat_modifiers TEXT,
     -- Structure:
     --   strength: integer
     --   dexterity: integer
@@ -143,7 +143,7 @@ CREATE TABLE IF NOT EXISTS item_templates (
 
     -- Future extensibility for enchanting/glyphs/enhancements
     effect_slots INTEGER DEFAULT 0,         -- Number of enchantment slots
-    base_effects JSONB,                     -- Built-in magical effects
+    base_effects TEXT,                     -- Built-in magical effects
 
     -- Metadata
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -178,7 +178,7 @@ CREATE TABLE IF NOT EXISTS item_instances (
     fuel_remaining INTEGER,                 -- Current fuel (for light sources)
 
     -- Custom modifications (for future enchanting/glyphs/enhancements)
-    custom_data JSONB DEFAULT '{}',
+    custom_data TEXT DEFAULT '{}',
     -- Structure:
     --   enchantments: array of enchantment objects
     --   glyphs: array of glyph objects
@@ -448,10 +448,10 @@ export interface ItemDisplay {
 
 ### Phase 4: Consumables & Light
 
-- [ ] `use`, `eat`, `drink`, `quaff` commands
+- [x] `use`, `eat`, `drink`, `quaff` commands
 - [ ] Charge tracking for wands/staffs
-- [ ] Light source fuel tracking
-- [ ] Room darkness system
+- [x] Light source fuel tracking
+- [x] Room darkness system (rooms.darkness_level + race base_vision + light/vision status effects)
 
 ### Phase 5: Advanced Features
 

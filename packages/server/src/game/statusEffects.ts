@@ -128,7 +128,7 @@ let definitionsInitialized = false;
  * | Effect      | What It Does                                        |
  * |-------------|-----------------------------------------------------|
  * | blessed     | +10 accuracy (better hit chance)                    |
- * | shielded    | +15 defense (harder to hit)                         |
+ * | shielded    | +15 armor class (harder to hit in melee)            |
  * | hasted      | -20% action delay (faster), +25% attack energy      |
  * | strengthened| +15% damage dealt                                   |
  *
@@ -199,7 +199,9 @@ export const EFFECT_REGISTRY: Record<string, StatusEffectDefinition> = {
     category: StatusEffectCategory.BUFF,
     stackingBehavior: StackingBehavior.REFRESH,
     maxStacks: 1,
-    defenseModifier: 15,
+    // A shield is physical armour class (melee defense), not spell defense/magic
+    // resistance. Use armorClassModifier so it feeds the AC term in combat.
+    armorClassModifier: 15,
     wearOffMessage: 'Your magical shield dissipates.',
   },
 
@@ -857,6 +859,9 @@ export function getEffectModifiers(socket: CombatEntity): EffectModifiers {
     modifiers.damageReductionModifier += (definition.damageReductionModifier ?? 0) * stackMultiplier;
     modifiers.criticalChanceModifier += (definition.criticalChanceModifier ?? 0) * stackMultiplier;
     modifiers.dodgeModifier += (definition.dodgeModifier ?? 0) * stackMultiplier;
+    // TODO(magic-resistance): accumulated but not yet consumed to reduce magic
+    // damage. A magical-shield spell that sets magicResistance needs mitigation
+    // wired in combat.ts — grep `TODO(magic-resistance)`.
     modifiers.magicResistance += (definition.magicResistance ?? 0) * stackMultiplier;
     modifiers.healingReceived += (definition.healingReceived ?? 0) * stackMultiplier;
     modifiers.perceptionModifier += (definition.perceptionModifier ?? 0) * stackMultiplier;

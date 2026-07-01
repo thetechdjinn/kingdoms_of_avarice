@@ -449,6 +449,9 @@ async function processSpellCombat(
     for (let hit = 0; hit < hitsPerCast; hit++) {
       if (target.vitals.hp <= 0) break;
 
+      // TODO(magic-resistance): player spell damage is applied raw. When the
+      // magical-defense system is built, reduce hitDamage by the target's magic
+      // resistance here (see the authoritative note on processNpcOffensiveSpell).
       const hitDamage = Math.floor(Math.random() * (scaled.max - scaled.min + 1)) + scaled.min;
       const dmgStr = colors.combatDamage(hitDamage.toString());
 
@@ -1021,7 +1024,15 @@ async function processNpcOffensiveSpell(
   if (!spell.minDamage || !spell.maxDamage) return;
 
   // NPCs never fizzle — they always cast successfully.
-  // Magic resistance (reducing effect on target) will be a separate system.
+  //
+  // TODO(magic-resistance): magic resistance is NOT yet consumed here. It is
+  // collected from two sources but currently does nothing:
+  //   - equipment `magic_resistance_modifier` -> equipmentStats.modifiers.magicResistanceBonus
+  //   - status effects `magicResistance`       -> effectModifiers.magicResistance
+  // (the score sheet's MagicRes stat displays their sum, but it is cosmetic).
+  // When wiring the magical-defense system, mitigate incoming magic damage HERE
+  // (NPC spell dmg), at the player spell dmg site (search this tag in combat.ts),
+  // and any DoT/tick magic damage. Grep `TODO(magic-resistance)` for all sites.
 
   // NPC scaling uses template.spellPower as the universal stat value
   const scaled = calculateSpellScaling(

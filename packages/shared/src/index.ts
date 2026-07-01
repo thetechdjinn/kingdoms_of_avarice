@@ -131,7 +131,7 @@ export const HAIR_COLORS = ['black', 'brown', 'blonde', 'red', 'white', 'gray', 
 export type HairColor = (typeof HAIR_COLORS)[number];
 
 // Eye color options
-export const EYE_COLORS = ['brown', 'blue', 'green', 'hazel', 'gray', 'amber', 'black'] as const;
+export const EYE_COLORS = ['brown', 'blue', 'green', 'hazel', 'gray', 'amber', 'black', 'violet', 'red'] as const;
 export type EyeColor = (typeof EYE_COLORS)[number];
 
 // Training form data sent from server to client

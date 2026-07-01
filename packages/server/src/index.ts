@@ -52,7 +52,14 @@ const app = express();
 const PORT = Number(process.env.PORT) || 3001;
 
 // Security headers with CSP configured for game client (inline scripts, WebSocket, same-origin)
+//
+// HSTS is OFF by default: the container serves plain HTTP on PORT, so emitting
+// Strict-Transport-Security would tell browsers to force HTTPS for this host
+// (for up to a year) against a server that has no TLS, breaking access. Enable
+// it only when a real HTTPS-terminating reverse proxy sits in front by setting
+// TRUST_PROXY_TLS=true.
 app.use(helmet({
+  strictTransportSecurity: process.env.TRUST_PROXY_TLS === 'true',
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],

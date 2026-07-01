@@ -33,6 +33,14 @@ services:
       # Set to "production" ONLY when serving behind an HTTPS-terminating reverse
       # proxy. It enables Secure cookies, which break login over plain HTTP.
       # NODE_ENV: "production"
+
+      # Reverse-proxy settings (uncomment when fronted by a proxy):
+      #   TRUST_PROXY=true      trust X-Forwarded-For for the real client IP
+      #                         (required for IP access control behind a proxy)
+      #   TRUST_PROXY_TLS=true  emit the HSTS header (only when TLS terminates
+      #                         at the proxy; off by default for plain HTTP)
+      # TRUST_PROXY: "true"
+      # TRUST_PROXY_TLS: "true"
     volumes:
       - koa-data:/data
     restart: unless-stopped

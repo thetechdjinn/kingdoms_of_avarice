@@ -3098,13 +3098,27 @@ async function handleStatus(socket: AuthenticatedSocket): Promise<CommandRespons
   const traps = 0;
   const tracking = 0;
   const martialArts = 0;
-  const magicRes = 0;
 
-  // Get actual armor stats from equipped items
+  // Get actual armor stats from equipped items, then fold in status-effect
+  // armor-class modifiers so shield-type buffs raise the displayed Armour Class
+  // (e.g. ethereal_shield +5). This mirrors combat, which uses
+  // armorClass = totalArmorClass + armorClassModifier (see combat.ts). Spell
+  // defense (defenseModifier) is deliberately excluded: it is magical mitigation,
+  // not physical armour class.
   const equipmentStats = await getEquipmentCombatStats(socket.characterId);
-  const ac = equipmentStats.armor.totalArmorClass;
-  const dr = Math.floor(equipmentStats.armor.damageReduction);
+  const effectMods = getEffectModifiers(socket);
+  const ac = equipmentStats.armor.totalArmorClass + effectMods.armorClassModifier;
+  // Combat applies damageReduction + effect damageReductionModifier (combat.ts),
+  // so the displayed DR must include it too (e.g. ethereal_shield +1 DR).
+  const dr = Math.floor(equipmentStats.armor.damageReduction + effectMods.damageReductionModifier);
   const armourClass = `${ac}/${dr}`;
+
+  // Magic resistance = magical defense from item/weapon enchantments plus
+  // status effects (e.g. a magical-shield spell).
+  // TODO(magic-resistance): DISPLAY ONLY. This value is not yet consumed to
+  // reduce incoming magic damage; mitigation must be wired in combat.ts before
+  // this stat is functional. Grep `TODO(magic-resistance)`.
+  const magicRes = equipmentStats.modifiers.magicResistanceBonus + effectMods.magicResistance;
 
   // Row 1: Name | Exp | Lives/CP
   const fullName = character.last_name?.trim() ? `${character.name} ${character.last_name.trim()}` : character.name;
@@ -3148,7 +3162,6 @@ async function handleStatus(socket: AuthenticatedSocket): Promise<CommandRespons
       wisdom: raceDef?.base_stats?.wisdom?.min ?? 40,
       charisma: raceDef?.base_stats?.charisma?.min ?? 40,
     };
-    const effectMods = getEffectModifiers(socket);
     const spellcastingBonus = equipmentStats.modifiers.spellcastingBonus + effectMods.spellcastingModifier;
     spellcastingValue = calculateSpellcasting(
       magicLevel, classDef?.magic_school,

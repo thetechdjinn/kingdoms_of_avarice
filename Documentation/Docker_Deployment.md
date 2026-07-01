@@ -142,9 +142,13 @@ Serving over plain HTTP works out of the box (the default). Only when you put th
 
 ```
 NODE_ENV=production
+TRUST_PROXY=true
+TRUST_PROXY_TLS=true
 ```
 
-This enables **Secure cookies** (sent only over HTTPS) and enforces that `JWT_SECRET` is set. Do **not** set `NODE_ENV=production` for a plain-HTTP deployment — Secure cookies would prevent login.
+- `NODE_ENV=production` enables **Secure cookies** (sent only over HTTPS) and enforces that `JWT_SECRET` is set. Do **not** set it for a plain-HTTP deployment — Secure cookies would prevent login.
+- `TRUST_PROXY=true` makes the server trust the `X-Forwarded-For` header for client-IP detection. **Required behind a proxy** so IP access control (allow/block lists) and logging see the real client IP instead of the proxy's. Without it, the forwarded header is ignored and every request appears to come from the proxy.
+- `TRUST_PROXY_TLS=true` emits the HSTS (`Strict-Transport-Security`) header. Leave it **off** unless a TLS proxy fronts the app — the container serves plain HTTP, and HSTS would tell browsers to force HTTPS against a server that has none.
 
 At the proxy, forward the client IP (`X-Forwarded-For`) and allow WebSocket upgrades for the `/game` path so real-time gameplay works.
 
@@ -159,6 +163,8 @@ At the proxy, forward the client IP (`X-Forwarded-For`) and allow WebSocket upgr
 | `BOOTSTRAP_ADMIN_USERNAME` | *(unset)* | First admin's username, created only on a fresh database. Must be set together with the password. |
 | `BOOTSTRAP_ADMIN_PASSWORD` | *(unset)* | First admin's password. If both bootstrap vars are unset, a random `admin` password is printed to the logs instead. |
 | `NODE_ENV` | *(unset)* | Set to `production` **only** behind an HTTPS reverse proxy (enables Secure cookies). Leave unset for plain HTTP. |
+| `TRUST_PROXY` | `false` | Set to `true` behind a reverse proxy so `X-Forwarded-For` is trusted for client-IP detection. Required for IP access control and correct logging behind a proxy. |
+| `TRUST_PROXY_TLS` | `false` | Set to `true` only behind a TLS-terminating proxy to emit the HSTS header. Off by default because the container serves plain HTTP. |
 | `PORT` | `3001` | Port the server listens on inside the container. |
 | `EMERGENCY_ACCESS_TOKEN` | *(unset)* | Optional token to bypass IP access rules if you lock yourself out. |
 

@@ -10,7 +10,7 @@
     <div id="app" class="login-view">
       <div id="login-container">
         <h1>Kingdoms of Avarice</h1>
-        <form id="login-form">
+        <form id="login-form" method="post">
           <div class="form-group">
             <label for="username">Username</label>
             <input type="text" id="username" name="username" required />
@@ -28,7 +28,7 @@
       </div>
       <div id="register-container" style="display: none">
         <h1>Create Account</h1>
-        <form id="register-form">
+        <form id="register-form" method="post">
           <div class="form-group">
             <label for="reg-username">Username</label>
             <input
@@ -126,7 +126,7 @@
         </div>
         <div class="profile-section">
           <h2>Change Password</h2>
-          <form id="change-password-form">
+          <form id="change-password-form" method="post">
             <div class="form-group">
               <label for="current-password">Current Password</label>
               <input type="password" id="current-password" required />
@@ -285,41 +285,20 @@
                   <option value="female">Female</option>
                 </select>
               </div>
+              <!-- Appearance options are populated from the @koa/shared enums
+                   (HAIR_STYLES / HAIR_COLORS / EYE_COLORS) in main.ts so this
+                   form and the training screen share a single source of truth. -->
               <div class="form-group">
-                <label for="char-hair">Hair</label>
-                <select id="char-hair">
-                  <option value="">None/Bald</option>
-                  <option value="short black hair">Short Black</option>
-                  <option value="short brown hair">Short Brown</option>
-                  <option value="short blonde hair">Short Blonde</option>
-                  <option value="short red hair">Short Red</option>
-                  <option value="short gray hair">Short Gray</option>
-                  <option value="short white hair">Short White</option>
-                  <option value="long black hair">Long Black</option>
-                  <option value="long brown hair">Long Brown</option>
-                  <option value="long blonde hair">Long Blonde</option>
-                  <option value="long red hair">Long Red</option>
-                  <option value="long gray hair">Long Gray</option>
-                  <option value="long white hair">Long White</option>
-                  <option value="braided black hair">Braided Black</option>
-                  <option value="braided brown hair">Braided Brown</option>
-                  <option value="braided blonde hair">Braided Blonde</option>
-                </select>
+                <label for="char-hair-style">Hair Style</label>
+                <select id="char-hair-style"></select>
+              </div>
+              <div class="form-group">
+                <label for="char-hair-color">Hair Color</label>
+                <select id="char-hair-color"></select>
               </div>
               <div class="form-group">
                 <label for="char-eye-color">Eye Color</label>
-                <select id="char-eye-color">
-                  <option value="brown">Brown</option>
-                  <option value="blue">Blue</option>
-                  <option value="green">Green</option>
-                  <option value="gray">Gray</option>
-                  <option value="hazel">Hazel</option>
-                  <option value="amber">Amber</option>
-                  <option value="violet">Violet</option>
-                  <option value="red">Red</option>
-                  <option value="golden">Golden</option>
-                  <option value="silver">Silver</option>
-                </select>
+                <select id="char-eye-color"></select>
               </div>
             </div>
           </div>

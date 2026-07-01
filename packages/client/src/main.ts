@@ -1,5 +1,5 @@
 import { Terminal } from '@xterm/xterm';
-import { MessageType, GameMessage, VitalsData, ResourceType, Character, TrainingFormPayload, TrainingSubmitPayload } from '@koa/shared';
+import { MessageType, GameMessage, VitalsData, ResourceType, Character, TrainingFormPayload, TrainingSubmitPayload, HAIR_STYLES, HAIR_COLORS, EYE_COLORS } from '@koa/shared';
 import { TrainingForm, TrainingFormResult } from './forms/TrainingForm.js';
 import { attachExportHandler } from './components/nav.js';
 import { showConfirm } from './components/modal.js';
@@ -639,6 +639,24 @@ async function showCharacterSelect(): Promise<void> {
   await showEnterGame();
 }
 
+// Fill the hair-style, hair-color, and eye-color dropdowns from the shared
+// enums so adding/removing an option in @koa/shared updates both character
+// creation and the training screen from one place.
+function populateAppearanceOptions(): void {
+  const label = (v: string) =>
+    v === 'none' ? 'None / Bald' : v.charAt(0).toUpperCase() + v.slice(1);
+  const fill = (id: string, values: readonly string[]) => {
+    const select = document.getElementById(id) as HTMLSelectElement | null;
+    if (!select) return;
+    select.innerHTML = values
+      .map(v => `<option value="${escapeHtml(v)}">${escapeHtml(label(v))}</option>`)
+      .join('');
+  };
+  fill('char-hair-style', HAIR_STYLES);
+  fill('char-hair-color', HAIR_COLORS);
+  fill('char-eye-color', EYE_COLORS);
+}
+
 async function showCharacterCreate(): Promise<void> {
   hideAllContainers();
   document.getElementById('character-create-container')!.style.display = 'block';
@@ -649,7 +667,11 @@ async function showCharacterCreate(): Promise<void> {
   (document.getElementById('char-race') as HTMLSelectElement).value = '';
   (document.getElementById('char-class') as HTMLSelectElement).value = '';
   (document.getElementById('char-gender') as HTMLSelectElement).value = 'male';
-  (document.getElementById('char-hair') as HTMLSelectElement).value = '';
+  // Populate appearance dropdowns from the shared enums (single source of truth)
+  // and set sensible defaults.
+  populateAppearanceOptions();
+  (document.getElementById('char-hair-style') as HTMLSelectElement).value = 'short';
+  (document.getElementById('char-hair-color') as HTMLSelectElement).value = 'black';
   (document.getElementById('char-eye-color') as HTMLSelectElement).value = 'brown';
   document.getElementById('create-error')!.textContent = '';
   document.getElementById('race-description')!.textContent = '';
@@ -905,7 +927,11 @@ async function handleCharacterCreate(event: Event): Promise<void> {
   const raceId = (document.getElementById('char-race') as HTMLSelectElement).value;
   const classId = (document.getElementById('char-class') as HTMLSelectElement).value;
   const gender = (document.getElementById('char-gender') as HTMLSelectElement).value;
-  const hair = (document.getElementById('char-hair') as HTMLSelectElement).value;
+  const hairStyle = (document.getElementById('char-hair-style') as HTMLSelectElement).value;
+  const hairColor = (document.getElementById('char-hair-color') as HTMLSelectElement).value;
+  // Stored as the canonical "style color" pair (e.g. "long red"); the training
+  // screen and player description both parse/render this format.
+  const hair = `${hairStyle} ${hairColor}`;
   const eyeColor = (document.getElementById('char-eye-color') as HTMLSelectElement).value;
   const errorEl = document.getElementById('create-error')!;
 
