@@ -2,13 +2,16 @@
 
 [← Back to Documentation](README.md)
 
-This guide will help you set up and run Kingdoms of Avarice.
+This guide covers setting up the project **from source** for local development.
+
+> **Just want to run the game?** You don't need a source checkout. Use the prebuilt Docker image instead — see the **[Docker Deployment guide](Docker_Deployment.md)** for the demo (ephemeral) and persistent game-server setups.
 
 ## Prerequisites
 
 - **Node.js** 18 or higher
 - **npm** 9 or higher
-- **PostgreSQL** 14 or higher
+
+The database is a local embedded file (Turso / libSQL). There is no database server to install or run.
 
 ## Installation
 
@@ -19,27 +22,18 @@ git clone <repository-url>
 cd Kingdoms_of_Avarice
 ```
 
-### 2. Set Up PostgreSQL
+### 2. Configure Environment
 
-You need a running PostgreSQL server with a database and user for the game. See the **[Database Setup Guide](Database_Setup.md)** for full instructions, including:
-
-- **[Docker quick start](Database_Setup.md#option-a-docker-quick-start)** - Fastest option, no PostgreSQL installation needed
-- **[Existing PostgreSQL](Database_Setup.md#option-b-existing-postgresql-installation)** - Configure an already-installed server (includes `pg_hba.conf` setup)
-
-### 3. Configure Environment
-
-After setting up the database, create a `.env` file in the project root:
+Create a `.env` file in the project root. The database path is optional and defaults to `./data.db`:
 
 ```env
-DB_NAME=kingdoms_of_avarice
-DB_USER=koa
-DB_PASSWORD=your_password
-DB_HOST=localhost
-DB_PORT=5432
+TURSO_PATH=./data.db   # Optional — local DB file (LOCAL, not Turso Cloud)
 JWT_SECRET=pick-a-random-secret-string
 ```
 
-### 4. Run Setup
+See the **[Database Setup Guide](Database_Setup.md)** for details. The database file is created automatically on first setup.
+
+### 3. Run Setup
 
 ```bash
 npm run setup
@@ -51,7 +45,7 @@ This single command runs the full installation process:
 3. Runs database migrations - creates all tables and seeds infrastructure settings (`npm run migrate`)
 4. Imports all game data - rooms, NPCs, items, spells, doors, factions, etc. (`npm run data:import`)
 
-### 5. Start the Game
+### 4. Start the Game
 
 ```bash
 npm run dev
@@ -76,17 +70,23 @@ npm run data:import      # Import all game data
 npm run dev              # Start development servers
 ```
 
-## Creating an Admin Account
+## Admin Account
 
-1. Register a new account through the game interface at http://localhost:3000
-2. Run the admin creation script:
+A fresh database creates the **first admin automatically** on startup:
+
+- If `BOOTSTRAP_ADMIN_USERNAME` + `BOOTSTRAP_ADMIN_PASSWORD` are set in `.env`, log in with those.
+- Otherwise, an `admin` account is created with a **random password printed to the server logs** on first boot (look for the "no admin configured" banner; in Docker use `docker logs <container>`).
+
+Log in as that admin, then register your own account at http://localhost:3000 and promote it from **Admin > Users**. See [Database Setup → First Admin Account](Database_Setup.md#first-admin-account-bootstrap) for the full explanation.
+
+To grant the Admin role to an already-registered account from the CLI (recovery, or adding more admins):
 
 ```bash
 cd packages/server
 npx tsx src/db/create-admin.ts <username>
 ```
 
-This grants the Admin role to the specified account, giving access to admin tools, developer editors, and staff commands.
+The Admin role gives access to admin tools, developer editors, and staff commands.
 
 ## Game Data Management
 
@@ -112,13 +112,12 @@ npm run data:import    # Import game content from data/ into database
 
 ### Resetting Game Data
 
-To reset your database to the baseline game state:
+To reset your database to the baseline game state, delete the local database file and re-run the schema and import (the database is a single Turso/libSQL file, default `./data.db`):
 
 ```bash
-dropdb kingdoms_of_avarice
-createdb -O koa kingdoms_of_avarice
-npm run migrate
-npm run data:import
+rm -f data.db          # delete the local database file (path = TURSO_PATH)
+npm run migrate        # recreate the schema + seed infrastructure data
+npm run data:import    # reimport all game content from data/
 ```
 
 ## Project Structure

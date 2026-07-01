@@ -446,8 +446,9 @@ consistency/robustness improvements that can be addressed opportunistically.
 
 1. **Integer validation on NPC spell fields** (`routes/npcs.ts`)
    `validateNpcSpell()` doesn't enforce `Number.isInteger()` on priority, castChance,
-   cooldownRounds, or conditionValue (only spellId gets the check). Postgres silently
-   truncates floats to integers, so harmless in practice.
+   cooldownRounds, or conditionValue (only spellId gets the check). SQLite / libSQL uses
+   type affinity and may store a non-integer value as-is rather than coercing it to an
+   integer, so adding `Number.isInteger()` checks is worthwhile hardening.
 
 2. **Import handler: empty spells array doesn't clear** (`routes/npcs.ts`)
    The import handler only replaces spells when `spells.length > 0`. An import with

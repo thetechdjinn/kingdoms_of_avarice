@@ -5,6 +5,7 @@ import './env.js';
 import './utils/logger.js';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
+import { existsSync } from 'fs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -92,6 +93,16 @@ app.use('/api', ipAccessMiddleware);
 // Serve documentation files
 const docsPath = join(__dirname, '..', '..', '..', 'Documentation');
 app.use('/docs', express.static(docsPath));
+
+// Serve the built client (production / single-container Docker image). In dev,
+// Vite serves the client instead and this directory does not exist, so the
+// guard skips it. The client uses relative URLs and window.location.host for
+// the game WebSocket, so serving it same-origin from the API server Just Works.
+const clientDist = join(__dirname, '..', '..', 'client', 'dist');
+if (existsSync(clientDist)) {
+  app.use(express.static(clientDist));
+  console.log(`Serving built client from ${clientDist}`);
+}
 
 setupAuthRoutes(app);
 setupRoomRoutes(app);

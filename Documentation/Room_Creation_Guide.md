@@ -308,7 +308,7 @@ Content-Type: application/json
 
 ## Direct Database Import
 
-For bulk imports, you can insert directly into the PostgreSQL database.
+For bulk imports, you can insert directly into the database (the local Turso / libSQL SQLite file, `data.db`).
 
 ### Database Schema
 

@@ -33,8 +33,11 @@ dotenv.config({ path: envPath });
 // Resolve the SQL dir whether running from src (tsx) or dist (compiled)
 const sqlDir = __dirname.replace(/dist[\\/]db$/, 'src/db');
 
+import { randomBytes } from 'node:crypto';
+import { Role } from '@koa/shared';
 import { query, getClient, testConnection } from './index.js';
 import * as roleRepo from './repositories/roleRepository.js';
+import * as playerRepo from './repositories/playerRepository.js';
 
 export async function runMigrations(): Promise<void> {
   const connected = await testConnection();
@@ -54,6 +57,107 @@ export async function runMigrations(): Promise<void> {
   console.log('Roles initialized');
   await seedGameSettings();
   await seedCurrencyTemplates();
+  await seedBootstrapAdmin();
+}
+
+/**
+ * Tiered first-admin bootstrap. Runs once, only when the players table is empty
+ * (a fresh database), so an operator is never locked out of a new install.
+ *
+ *   - Configured mode: BOOTSTRAP_ADMIN_USERNAME + BOOTSTRAP_ADMIN_PASSWORD set
+ *     (the docker-compose / persistent path) -> seed exactly that admin.
+ *   - Zero-config mode: neither set (the `docker run` ephemeral path) -> create
+ *     `admin` with a RANDOM password printed to the logs. No land-grab window
+ *     and no baked-in default credential; even if the port is exposed, the
+ *     secret only exists in the operator's container logs.
+ *
+ * Either way the account gets PLAYER + ADMIN (skipping the PENDING approval
+ * gate) so the operator can log in immediately and provision their own named
+ * admin via Admin > Users. On a populated DB this is a no-op.
+ */
+async function seedBootstrapAdmin(): Promise<void> {
+  const playerCount = await playerRepo.getPlayerCount();
+  if (playerCount > 0) return; // Existing install — never touch it.
+
+  const envUser = process.env.BOOTSTRAP_ADMIN_USERNAME?.trim();
+  const envPass = process.env.BOOTSTRAP_ADMIN_PASSWORD;
+
+  // Partial config is almost certainly a mistake — warn and fall back.
+  if (Boolean(envUser) !== Boolean(envPass)) {
+    console.warn(
+      '[Bootstrap] Both BOOTSTRAP_ADMIN_USERNAME and BOOTSTRAP_ADMIN_PASSWORD are ' +
+        'required to set a configured admin; only one was provided. Falling back to a generated admin.'
+    );
+  }
+
+  const configured = Boolean(envUser && envPass);
+  const username = configured ? (envUser as string) : 'admin';
+  const password = configured ? (envPass as string) : generateAdminPassword();
+
+  try {
+    const player = await playerRepo.createPlayer({ username, password });
+    // assignRole returns false (rather than throwing) on failure, so check both:
+    // an admin created without the ADMIN role would lock the operator out while
+    // the success banner below still prints.
+    const playerOk = await roleRepo.assignRole(player.id, Role.PLAYER);
+    const adminOk = await roleRepo.assignRole(player.id, Role.ADMIN);
+    if (!playerOk || !adminOk) {
+      console.error(
+        `[Bootstrap] Created '${username}' but failed to grant roles (player=${playerOk}, admin=${adminOk}). ` +
+          'Grant admin manually with: npx tsx src/db/create-admin.ts ' + username
+      );
+      return;
+    }
+  } catch (err) {
+    console.error(`[Bootstrap] Failed to create the first admin account '${username}':`, err);
+    return;
+  }
+
+  if (configured) {
+    console.log(`[Bootstrap] Created configured admin account '${username}' from BOOTSTRAP_ADMIN_USERNAME.`);
+    if (password.length < 8) {
+      console.warn(
+        '[Bootstrap] BOOTSTRAP_ADMIN_PASSWORD is shorter than 8 characters. ' +
+          'Use a stronger password and rotate it after first login.'
+      );
+    }
+  } else {
+    printGeneratedAdminBanner(username, password);
+  }
+}
+
+/** Random, readable password (unambiguous alphabet, dash-grouped) for the generated admin. */
+function generateAdminPassword(): string {
+  const alphabet = 'abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // no 0/O/1/l/I
+  const bytes = randomBytes(16);
+  let out = '';
+  for (let i = 0; i < bytes.length; i++) {
+    out += alphabet[bytes[i] % alphabet.length];
+    if ((i + 1) % 4 === 0 && i < bytes.length - 1) out += '-';
+  }
+  return out; // e.g. "x7Qf-Lp9k-Rm3t-w8Hd"
+}
+
+/** Print the generated admin credentials prominently so they're visible in `docker logs`. */
+function printGeneratedAdminBanner(username: string, password: string): void {
+  const line = '='.repeat(70);
+  console.log(
+    [
+      '',
+      line,
+      '  Kingdoms of Avarice - no admin configured, so one was generated:',
+      '',
+      `      username: ${username}`,
+      `      password: ${password}`,
+      '',
+      '  Log in with these, then create your own admin account (any name) via',
+      '  Admin > Users. For a persistent/production server, set the env vars',
+      '  BOOTSTRAP_ADMIN_USERNAME and BOOTSTRAP_ADMIN_PASSWORD instead; this',
+      '  generated account is recreated with a new password on every fresh DB.',
+      line,
+      '',
+    ].join('\n')
+  );
 }
 
 /** Seed default game settings (config). Existing values are never overwritten. */

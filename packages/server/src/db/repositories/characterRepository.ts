@@ -289,11 +289,12 @@ export async function deleteCharacter(characterId: number): Promise<boolean> {
 
 export async function getCharacterCount(playerId: number, client?: DbClient): Promise<number> {
   const result = await query<{ count: string }>(
-    'SELECT COUNT(*) FROM characters WHERE player_id = $1',
+    'SELECT COUNT(*) AS count FROM characters WHERE player_id = $1',
     [playerId],
     client
   );
-  return parseInt(result.rows[0].count, 10);
+  const count = parseInt(result.rows[0]?.count as string, 10);
+  return Number.isNaN(count) ? 0 : count;
 }
 
 export function toSharedCharacter(dbChar: DbCharacter): Character {

@@ -1,0 +1,41 @@
+# Configured / persistent deployment of Kingdoms of Avarice.
+#
+#   docker compose up -d        # build (if needed) and start
+#   docker compose logs -f      # watch logs
+#   docker compose down         # stop (data persists in the named volume)
+#
+# For a throwaway instance with zero config instead, skip compose and run:
+#   docker run --rm -p 3001:3001 kingdoms-of-avarice
+# (ephemeral DB, random admin password printed to the logs, wiped on exit).
+
+services:
+  koa:
+    image: dcbrown73/kingdoms-of-avarice:latest
+    # End users pull the published image above. To build from source instead
+    # (developers), uncomment the next line; it tags the build as that image.
+    # build: .
+    container_name: kingdoms-of-avarice
+    ports:
+      - "3001:3001"
+    environment:
+      # REQUIRED for stable sessions: a long random secret. If omitted, a new
+      # one is generated each start and existing logins are invalidated.
+      JWT_SECRET: "change-me-to-a-long-random-secret"
+
+      # First admin, created only on a fresh database. Comment both out to
+      # instead get a generated 'admin' password printed to the logs on first boot.
+      BOOTSTRAP_ADMIN_USERNAME: "admin"
+      BOOTSTRAP_ADMIN_PASSWORD: "change-me-to-a-strong-password"
+
+      # The DB lives at /data/data.db by default (see the volume below).
+      # TURSO_PATH: "/data/data.db"
+
+      # Set to "production" ONLY when serving behind an HTTPS-terminating reverse
+      # proxy. It enables Secure cookies, which break login over plain HTTP.
+      # NODE_ENV: "production"
+    volumes:
+      - koa-data:/data
+    restart: unless-stopped
+
+volumes:
+  koa-data:

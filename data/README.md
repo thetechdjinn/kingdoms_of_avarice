@@ -1,6 +1,6 @@
 # Game Data
 
-Portable JSON data files that populate the game database. These files are the distributable game content. Anyone setting up a new server loads these into their PostgreSQL instance via `npm run data:import`.
+Portable JSON data files that populate the game database. These files are the distributable game content. Anyone setting up a new server loads these into their local Turso / libSQL database via `npm run data:import`.
 
 ## Structure
 

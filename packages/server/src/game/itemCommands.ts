@@ -167,6 +167,11 @@ export async function handleGet(
         }
       });
 
+      // Sync cache to mirror the persisted addition (memory-first: socket.pocket
+      // is the source of truth). Without this the picked-up coins are invisible
+      // until reload and the next pocket flush overwrites them with the stale cache.
+      socket.pocket[currencyInfo.field] += pickupAmount;
+
       const coinWord = pickupAmount === 1 ? 'coin' : 'coins';
       const displayAmount = `${pickupAmount} ${currencyType} ${coinWord}`;
       broadcastToRoom(currentRoomId, colors.green(`${colors.red(socket.username)} picks up ${displayAmount}.`), socket.playerId);
@@ -864,15 +869,10 @@ export async function handleInventory(
   const items = await itemRepo.getCharacterInventory(socket.characterId!);
   const equipped = await itemRepo.getCharacterEquipped(socket.characterId!);
 
-  // Fetch character data for currency
-  const character = await characterRepo.findCharacterById(socket.characterId!);
-  const currency: Currency = character ? {
-    copper: character.copper ?? 0,
-    silver: character.silver ?? 0,
-    gold: character.gold ?? 0,
-    platinum: character.platinum ?? 0,
-    runic: character.runic ?? 0,
-  } : { copper: 0, silver: 0, gold: 0, platinum: 0, runic: 0 };
+  // Currency is memory-first: read from the session cache (socket.pocket),
+  // the source of truth, not the DB (which lags until the next flush and would
+  // show stale coins right after a bank deposit/withdraw).
+  const currency: Currency = { ...socket.pocket };
 
   const lines: string[] = [];
 
@@ -3736,14 +3736,10 @@ export async function handleDropCurrency(
     return null; // Not a valid currency type, let normal drop handle it
   }
 
-  // Get character's current currency
-  const character = await characterRepo.findCharacterById(socket.characterId!);
-  if (!character) {
-    return { type: MessageType.ERROR, message: 'Character not found.' };
-  }
-
   const currencyInfo = CURRENCY_TYPES[currencyType];
-  const currentAmount = character[currencyInfo.field] ?? 0;
+  // Currency is memory-first: socket.pocket is the source of truth, so the
+  // affordability check reads the cache (the DB lags until the next flush).
+  const currentAmount = socket.pocket[currencyInfo.field] ?? 0;
 
   if (currentAmount < amount) {
     return { type: MessageType.ERROR, message: `You don't have that much ${currencyType}.` };
@@ -3791,6 +3787,11 @@ export async function handleDropCurrency(
     console.error('Failed to drop currency:', error);
     return { type: MessageType.ERROR, message: 'Failed to drop currency. Please try again.' };
   }
+
+  // Sync cache to mirror the persisted deduction. Don't mark dirty: the DB is
+  // already current. Without this, the next pocket flush would write the stale
+  // (un-deducted) cache back over the DB and duplicate the dropped currency.
+  socket.pocket[currencyInfo.field] -= amount;
 
   const displayName = amount === 1 ? `1 ${currencyType} coin` : `${amount} ${currencyType} coins`;
   broadcastToRoom(currentRoomId, colors.green(`${colors.red(socket.username)} drops ${displayName}.`), socket.playerId);
@@ -3900,6 +3901,11 @@ export async function handleGetCurrency(
     console.error('Failed to pick up currency:', error);
     return { type: MessageType.ERROR, message: 'Failed to pick up currency. Please try again.' };
   }
+
+  // Sync cache to mirror the persisted addition. Don't mark dirty: the DB is
+  // already current. Without this, the picked-up coins are invisible until
+  // reload and the next pocket flush would overwrite them with the stale cache.
+  socket.pocket[currencyInfo.field] += pickupAmount;
 
   const displayName = pickupAmount === 1 ? `1 ${currencyType} coin` : `${pickupAmount} ${currencyType} coins`;
   broadcastToRoom(currentRoomId, colors.green(`${colors.red(socket.username)} picks up ${displayName}.`), socket.playerId);

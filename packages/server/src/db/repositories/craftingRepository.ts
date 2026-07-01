@@ -149,8 +149,8 @@ export async function getEnchantmentByName(name: string): Promise<Enchantment | 
 
 export async function getEnchantmentsForItemType(itemType: ItemType): Promise<Enchantment[]> {
   const result = await query<DbEnchantment>(
-    `SELECT * FROM enchantments 
-     WHERE EXISTS (SELECT 1 FROM json_each(applicable_types) WHERE value = $1) OR applicable_types IS NULL OR applicable_types = '[]' OR json_array_length(applicable_types) = 0
+    `SELECT * FROM enchantments
+     WHERE NULLIF(applicable_types, '') IS NULL OR json_array_length(NULLIF(applicable_types, '')) = 0 OR EXISTS (SELECT 1 FROM json_each(NULLIF(applicable_types, '')) WHERE value = $1)
      ORDER BY skill_level, name`,
     [itemType]
   );

@@ -43,8 +43,8 @@ Every DB write site found in the audit, grouped by what they touch. For each row
 - Status-effects memory-first — `markEffectsDirty` exists but is unused; effects
   still persist via their repo. `flushPlayer` does not drain an 'effects' field.
 
-**Live smoke tests still to run against a dev server (Postgres required; not
-runnable in this environment):** login shows cached pocket/bank; move N rooms and
+**Live smoke tests to run against a dev server (local Turso / libSQL dev DB):**
+login shows cached pocket/bank; move N rooms and
 confirm one batched write per tick; bank deposit/withdraw reflects immediately;
 quest currency reward shows immediately AND survives a later pocket change;
 `@currency` grant survives a later pocket change; light a torch, confirm no

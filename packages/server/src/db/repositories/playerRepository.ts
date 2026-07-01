@@ -22,6 +22,15 @@ export interface CreatePlayerInput {
   email?: string;
 }
 
+/**
+ * Total number of registered players. Used by the startup admin bootstrap to
+ * decide whether this is a fresh database (count === 0) that needs a first admin.
+ */
+export async function getPlayerCount(): Promise<number> {
+  const result = await query<{ count: number }>('SELECT COUNT(*) AS count FROM players');
+  return Number(result.rows[0]?.count ?? 0);
+}
+
 export async function createPlayer(input: CreatePlayerInput): Promise<Player> {
   const passwordHash = await bcrypt.hash(input.password, 10);
   

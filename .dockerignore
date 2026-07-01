@@ -1,0 +1,36 @@
+# Dependencies and build output (reinstalled / rebuilt inside the image)
+node_modules
+**/node_modules
+dist
+**/dist
+*.tsbuildinfo
+**/*.tsbuildinfo
+
+# Local database files (the image ships no data; a fresh DB is created at runtime)
+*.db
+*.db-shm
+*.db-wal
+data.db
+
+# Secrets and local env (provided at runtime via -e / compose, never baked in)
+.env
+.env.*
+!.env.example
+
+# VCS, CI, editor, and agent scaffolding
+.git
+.gitignore
+.github
+.claude
+.vscode
+.idea
+
+# Docs/build artifacts not needed in the image
+maps
+coverage
+*.log
+
+# Docker files themselves
+Dockerfile
+.dockerignore
+docker-compose*.yml

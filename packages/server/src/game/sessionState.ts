@@ -163,6 +163,13 @@ export async function flushPlayer(socket: SessionSocket): Promise<void> {
     updates.bank_balance = socket.bankBalance;
   }
 
+  // Snapshot the flags we are about to persist BEFORE awaiting. A command
+  // handler running during the transaction's awaits (same event loop) can
+  // re-dirty a field; clearing only the captured flags afterward avoids
+  // dropping that write. (A blanket .clear() after the await would wipe it.)
+  const flushedFields = new Set(socket.dirty);
+  const flushedItems = new Set(socket.dirtyItems);
+
   await withTransaction(async (client) => {
     if (Object.keys(updates).length > 0) {
       await characterRepo.updateCharacterStats(socket.characterId!, updates, client);
@@ -171,8 +178,8 @@ export async function flushPlayer(socket: SessionSocket): Promise<void> {
     // share the same transaction with the character update above.
   });
 
-  socket.dirty.clear();
-  socket.dirtyItems.clear();
+  for (const field of flushedFields) socket.dirty.delete(field);
+  for (const item of flushedItems) socket.dirtyItems.delete(item);
 }
 
 // Type-only re-exports so callers don't have to import from shared individually

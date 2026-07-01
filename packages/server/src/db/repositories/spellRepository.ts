@@ -144,8 +144,7 @@ export async function getAllSpells(): Promise<Spell[]> {
 export async function getSpellsForClass(className: string): Promise<Spell[]> {
   const result = await query<DbSpell>(
     `SELECT * FROM spells
-     WHERE class_restrictions IS NULL
-        OR class_restrictions IS NULL OR class_restrictions = '[]' OR json_array_length(class_restrictions) = 0 OR EXISTS (SELECT 1 FROM json_each(class_restrictions) WHERE value = $1)
+     WHERE NULLIF(class_restrictions, '') IS NULL OR json_array_length(NULLIF(class_restrictions, '')) = 0 OR EXISTS (SELECT 1 FROM json_each(NULLIF(class_restrictions, '')) WHERE value = $1)
      ORDER BY level_required, name`,
     [className]
   );
@@ -261,8 +260,7 @@ export async function getAvailableSpells(
   const result = await query<DbSpell>(
     `SELECT s.* FROM spells s
      WHERE s.level_required <= $1
-       AND (s.class_restrictions IS NULL
-            OR s.class_restrictions IS NULL OR s.class_restrictions = '[]' OR json_array_length(s.class_restrictions) = 0 OR EXISTS (SELECT 1 FROM json_each(s.class_restrictions) WHERE value = $2))
+       AND (NULLIF(s.class_restrictions, '') IS NULL OR json_array_length(NULLIF(s.class_restrictions, '')) = 0 OR EXISTS (SELECT 1 FROM json_each(NULLIF(s.class_restrictions, '')) WHERE value = $2))
        AND NOT EXISTS (
          SELECT 1 FROM character_spells cs
          WHERE cs.character_id = $3 AND cs.spell_id = s.id

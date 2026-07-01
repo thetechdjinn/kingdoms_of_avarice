@@ -2,7 +2,7 @@
 
 ## Vision
 
-Build an AI-assisted tool for generating complete game areas — rooms, NPCs, items, doors, factions, and drop tables — that match a defined theme. The generated content is exported as portable data files that can be loaded into any PostgreSQL instance, replacing all hardcoded seed data. When the game is distributed, it ships with data files rather than embedded SQL. Anyone setting up their own server configures their database and loads the provided data files to populate the world.
+Build an AI-assisted tool for generating complete game areas — rooms, NPCs, items, doors, factions, and drop tables — that match a defined theme. The generated content is exported as portable data files that can be loaded into the local Turso / libSQL database, replacing all hardcoded seed data. When the game is distributed, it ships with data files rather than embedded SQL. Anyone setting up their own server configures their database and loads the provided data files to populate the world.
 
 ---
 
@@ -14,7 +14,7 @@ Build an AI-assisted tool for generating complete game areas — rooms, NPCs, it
 
 3. **Eliminate Hardcoded Seed Data** — All current seed data (rooms, NPCs, items, spells, actions, status effects) will eventually be replaced by curated game data generated through this tool and the existing editors. The `migrate.ts` seed functions become a thing of the past.
 
-4. **Portable Data Files** — Game content lives in JSON files that are loaded into PostgreSQL at setup time. The schema (tables, indexes, constraints) remains in code. The content (rooms, items, NPCs) lives in data files. Anyone distributing or self-hosting the game provides the data files separately from the application.
+4. **Portable Data Files** — Game content lives in JSON files that are loaded into the database at setup time. The schema (tables, indexes, constraints) remains in code. The content (rooms, items, NPCs) lives in data files. Anyone distributing or self-hosting the game provides the data files separately from the application.
 
 5. **Iterative Workflow** — The tool should support generating a rough draft, reviewing and editing in the existing web editors, then exporting the polished result. AI gets you 80% of the way; human curation finishes it.
 
@@ -876,7 +876,7 @@ kingdoms-of-avarice/
 ### Setup Flow
 
 1. Clone the repository
-2. Set up PostgreSQL and configure `.env`
+2. Configure `.env` (optional `TURSO_PATH`; defaults to `./data.db`)
 3. Run `npm run migrate` — Creates tables, indexes, constraints (no content)
 4. Run `npm run load-data` — Reads `data/_manifest.json`, loads all data files into the database
 5. Run `npm run dev` — Start the game
