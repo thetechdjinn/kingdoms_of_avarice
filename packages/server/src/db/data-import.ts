@@ -617,6 +617,24 @@ async function processDeferredRoomExits(): Promise<void> {
 
         // Check if a door already exists for this room + direction
         const existingDoor = await doorRepo.getDoorByRoomAndDirection(fromId, entryDir);
+
+        // A door defined in BOTH of its rooms (a bidirectional passage listed
+        // under each room's `doors`) is a single physical door. When we reach
+        // the second room's copy, getDoorByRoomAndDirection reverse-matches the
+        // door already created from the first room (its exit side is this room +
+        // direction). That door already connects both rooms correctly, and doors
+        // are indexed under both rooms at runtime, so the reverse copy is
+        // redundant. Skipping it prevents the update below from overwriting the
+        // door's destination back to this room and corrupting it into a
+        // self-reference (which silently broke the passage).
+        if (
+          existingDoor &&
+          existingDoor.entryRoomId === exitRoomId &&
+          existingDoor.exitRoomId === fromId
+        ) {
+          continue;
+        }
+
         if (existingDoor) {
           // Update existing door
           try {
