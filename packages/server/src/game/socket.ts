@@ -1,7 +1,7 @@
 import { WebSocketServer, WebSocket } from 'ws';
 import { IncomingMessage } from 'http';
 import { URL } from 'url';
-import { parse as parseCookie } from 'cookie';
+import { parseCookie } from 'cookie';
 import { MessageType, GameMessage, Role, VitalsData, ResourceType, PlayerRegenState, ActiveStatusEffect, PlayerQueueState, createPlayerQueueState, PlayerStatus, DeathState, StealthMode } from '@koa/shared';
 import type { CharacterStats, Currency, ItemInstance } from '@koa/shared';
 import { verifyToken, COOKIE_NAME } from '../routes/auth.js';

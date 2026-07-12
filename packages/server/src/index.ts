@@ -45,6 +45,8 @@ import { stopFuelLoop } from './game/fuelManager.js';
 import { stopDnsResolver } from './services/dnsResolver.js';
 import { testConnection } from './db/index.js';
 import { runMigrations, seedInitialData, ensureCopperConversion } from './db/migrate.js';
+import { runImport } from './db/data-import.js';
+import { getRoomCount } from './db/repositories/roomRepository.js';
 import { ipAccessMiddleware } from './middleware/ipAccess.js';
 import { startDnsResolver } from './services/dnsResolver.js';
 
@@ -145,6 +147,22 @@ async function start() {
     await seedInitialData();
     await ensureCopperConversion();
     setDatabaseMode(true);
+
+    // Auto-seed game content on an empty database (0 rooms). Mirrors the Docker
+    // entrypoint's first-boot import, but for every startup path (notably
+    // `npm run dev`, which otherwise migrates the schema without importing
+    // content). Runs in-process because Turso is single-connection: a separate
+    // import process can't open the DB while the server holds it. No-op once
+    // content exists, so it adds nothing to a normal restart.
+    if ((await getRoomCount()) === 0) {
+      console.log('[Startup] Empty database detected (0 rooms) - importing game content...');
+      try {
+        await runImport();
+      } catch (err) {
+        console.error('[Startup] Auto content import failed; continuing with current data:', err);
+      }
+    }
+
     await initializeGameWorld();
     // Start DNS resolver for hostname-based IP access rules
     startDnsResolver();
