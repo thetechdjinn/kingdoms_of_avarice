@@ -8,7 +8,7 @@
  * Or:  npm run data:import
  */
 import dotenv from 'dotenv';
-import { fileURLToPath } from 'url';
+import { fileURLToPath, pathToFileURL } from 'url';
 import { dirname, join } from 'path';
 import { readFileSync, existsSync } from 'fs';
 
@@ -1407,21 +1407,21 @@ async function configureGameSettings(): Promise<void> {
   }
 }
 
-async function main(): Promise<void> {
+export async function runImport(): Promise<void> {
   console.log('=== Game Data Import ===\n');
 
   const manifestPath = join(DATA_DIR, '_manifest.json');
   if (!existsSync(manifestPath)) {
-    console.error('No _manifest.json found in data/. Run npm run data:export first.');
-    process.exit(1);
+    // Throw (not process.exit) so in-process callers (the server's auto-seed)
+    // can catch it and keep running. The CLI wrapper converts throws to exit(1).
+    throw new Error('No _manifest.json found in data/. Run npm run data:export first.');
   }
 
   let manifest: { version: string; import_order: string[] };
   try {
     manifest = JSON.parse(readFileSync(manifestPath, 'utf-8'));
   } catch (err) {
-    console.error(`Failed to parse _manifest.json: ${(err as Error).message}`);
-    process.exit(1);
+    throw new Error(`Failed to parse _manifest.json: ${(err as Error).message}`);
   }
   const importOrder: string[] = manifest.import_order;
 
@@ -1464,11 +1464,20 @@ async function main(): Promise<void> {
   await configureGameSettings();
 
   console.log('\n=== Import Complete ===');
-
-  await closePool();
 }
 
-main().catch(err => {
-  console.error('Import failed:', err);
-  process.exit(1);
-});
+// CLI entry point. Only runs when this file is executed directly
+// (`npm run data:import` / the Docker entrypoint), NOT when imported in-process
+// by the server's auto-seed path — which reuses the shared DB connection and
+// must not close the pool.
+const invokedDirectly =
+  process.argv[1] != null && import.meta.url === pathToFileURL(process.argv[1]).href;
+
+if (invokedDirectly) {
+  runImport()
+    .then(() => closePool())
+    .catch((err) => {
+      console.error('Import failed:', err);
+      process.exit(1);
+    });
+}
