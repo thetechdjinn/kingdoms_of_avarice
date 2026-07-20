@@ -12,16 +12,16 @@
   },
   "dependencies": {
     "@koa/shared": "*",
-    "@tursodatabase/database": "^0.6.1",
+    "@tursodatabase/database": "^0.7.0",
     "bcryptjs": "^3.0.3",
     "cookie": "^2.0.1",
     "cookie-parser": "^1.4.7",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
-    "express-rate-limit": "^8.3.1",
+    "express-rate-limit": "^8.6.0",
     "helmet": "^8.2.0",
     "jsonwebtoken": "^9.0.2",
-    "ws": "^8.16.0"
+    "ws": "^8.21.1"
   },
   "devDependencies": {
     "@types/cookie-parser": "^1.4.10",
