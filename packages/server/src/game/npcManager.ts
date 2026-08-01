@@ -183,17 +183,7 @@ export function resetNpcBehaviorState(npc: NpcCombatInstance): void {
   npc.hasCalledForHelp = false;
   npc.regenState.inCombat = false;
   npc.combatRoundCount = 0;
-}
-
-/**
- * Check if any NPC is currently targeting a given player.
- * Used to determine whether a player should remain in combat after an NPC drops them.
- */
-export function isPlayerTargetedByAnyNpc(playerId: number): boolean {
-  for (const npc of npcInstances.values()) {
-    if (npc.combatState.targets.has(playerId)) return true;
-  }
-  return false;
+  npc.combatState.roundSkipUntil = 0;
 }
 
 /**
@@ -620,6 +610,7 @@ export function removeNpcInstance(entityId: number): void {
         player.combatState.targets.delete(entityId);
         if (player.combatState.targets.size === 0) {
           player.regenState.inCombat = false;
+          player.combatState.roundSkipUntil = 0;
         }
       }
     }
@@ -945,8 +936,14 @@ async function handleNpcDotDeath(npc: NpcCombatInstance): Promise<void> {
   clearCombatState(npc, connectedPlayersRef);
 
   // Process death (XP, loot, despawn, respawn) with the pre-collected
-  // participants, since the target lists are already cleared.
-  await processNpcDeath(npc, null, roomId, connectedPlayersRef, [], participants);
+  // participants, since the target lists are already cleared. processNpcDeath
+  // only QUEUES XP/essence/quest-kill rewards into deferredRewards — executing
+  // them is the caller's job (same as the normal and backstab kill paths).
+  const deferredRewards: Array<() => Promise<void>> = [];
+  await processNpcDeath(npc, null, roomId, connectedPlayersRef, deferredRewards, participants);
+  for (const reward of deferredRewards) {
+    await reward();
+  }
 }
 
 /**

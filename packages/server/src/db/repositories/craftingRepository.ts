@@ -1,4 +1,4 @@
-import { query } from '../index.js';
+import { jsonParam, query } from '../index.js';
 import { parseArrayColumn } from '../arrayColumn.js';
 import {
   CraftingRecipe,
@@ -157,13 +157,6 @@ export interface UpsertEnchantmentInput {
   special_effects: EnchantmentEffect[] | null;
   mana_cost: number;
   reagents: RecipeIngredient[] | null;
-}
-
-/** JSON-encode plain objects for binding; arrays are handled by the driver seam. */
-function jsonParam(value: unknown): unknown {
-  if (value == null) return null;
-  if (typeof value === 'object' && !Array.isArray(value)) return JSON.stringify(value);
-  return value;
 }
 
 /** Upsert an enchantment by case-insensitive name. Returns true if it already existed. */

@@ -538,6 +538,7 @@ async function processAttackerCombat(
     // If no targets remain after spell combat, end combat
     if (attacker.combatState.targets.size === 0) {
       attacker.regenState.inCombat = false;
+      attacker.combatState.roundSkipUntil = 0;
       attacker.combatState.combatAction = 'melee';
       attacker.combatState.activeSpell = null;
       sendCombatMessage(attacker, MessageType.SYSTEM, colors.yellow('*COMBAT OFF*'));
@@ -641,6 +642,7 @@ async function processAttackerCombat(
           && !isTargetedByAnyEnemy(target.entityId, null, connectedPlayersRef)) {
         target.regenState.inCombat = false;
         target.combatState.combatOrderPosition = 0;
+        target.combatState.roundSkipUntil = 0;
       }
       continue;
     }

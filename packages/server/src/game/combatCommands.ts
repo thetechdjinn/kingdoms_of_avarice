@@ -213,6 +213,7 @@ export function handleBreak(
   if (!isTargetedByAnyEnemy(socket.playerId, socket, connectedPlayers)) {
     socket.regenState.inCombat = false;
     socket.combatState.combatOrderPosition = 0;
+    socket.combatState.roundSkipUntil = 0;
   }
 
   // Broadcast to room
@@ -297,6 +298,7 @@ export async function handleFlee(
   if (!isTargetedByAnyEnemy(socket.playerId, socket, connectedPlayers)) {
     socket.regenState.inCombat = false;
     socket.combatState.combatOrderPosition = 0;
+    socket.combatState.roundSkipUntil = 0;
   }
 
   // Return a message indicating successful flee
@@ -353,6 +355,7 @@ export function clearCombatState(
   entity.combatState.combatAction = 'melee';
   entity.combatState.activeSpell = null;
   entity.combatState.combatOrderPosition = 0;
+  entity.combatState.roundSkipUntil = 0;
 
   // Check if any other players were targeting this entity
   // and update their combat state
@@ -364,6 +367,7 @@ export function clearCombatState(
       if (otherSocket.combatState.targets.size === 0) {
         otherSocket.regenState.inCombat = false;
         otherSocket.combatState.combatOrderPosition = 0;
+        otherSocket.combatState.roundSkipUntil = 0;
       }
     }
   }
@@ -424,6 +428,7 @@ function releaseFormerTargets(
       if (!stillTargeted && targetSocket.combatState.targets.size === 0) {
         targetSocket.regenState.inCombat = false;
         targetSocket.combatState.combatOrderPosition = 0;
+        targetSocket.combatState.roundSkipUntil = 0;
       }
       continue;
     }

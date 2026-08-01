@@ -13,6 +13,7 @@ export {
   query,
   getClient,
   withTransaction,
+  jsonParam,
   closePool,
   testConnection,
 } from './turso/index.js';

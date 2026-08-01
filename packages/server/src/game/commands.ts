@@ -35,7 +35,7 @@ import { calculateStealth, calculatePerception, characterHasStealth, getEncumbra
 import { calculateEncumbranceRatio, getEquipmentCombatStats } from './combatStats.js';
 import { getRespawnRoomId } from '../services/respawnService.js';
 import { findPlayerInRoom } from './playerUtils.js';
-import { getNpcsInRoom, findNpcInRoom, checkHostileAggro, isPlayerTargetedByAnyNpc, getResponseForKeywords } from './npcManager.js';
+import { getNpcsInRoom, findNpcInRoom, checkHostileAggro, getResponseForKeywords } from './npcManager.js';
 import {
   handleGossip, handleAuction, handleTelepath, handleBlock, handleUnblock,
   handleShout, handleBroadcastCreate, handleJoinBroadcast, handleLeaveBroadcast, handleBroadcast,
@@ -1112,6 +1112,7 @@ function handleRest(
     if (socket.combatState.targets.size === 0
         && !isTargetedByAnyEnemy(socket.playerId, null, connectedPlayers)) {
       socket.regenState.inCombat = false;
+      socket.combatState.roundSkipUntil = 0;
     } else {
       return { type: MessageType.ERROR, message: 'You cannot rest while in combat!' };
     }

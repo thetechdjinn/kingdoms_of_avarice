@@ -17,7 +17,6 @@ import {
   isRoomInAllowedArea,
   canNpcPassDirection,
   getWorldRef,
-  isPlayerTargetedByAnyNpc,
   isNpcDebugEnabled,
 } from './npcManager.js';
 import { getPlayerLocation } from './adminCommands.js';
@@ -491,6 +490,7 @@ function processCombatBehavior(
         && !isTargetedByAnyEnemy(playerId, null, connectedPlayers)) {
       player.regenState.inCombat = false;
       player.combatState.combatOrderPosition = 0;
+      player.combatState.roundSkipUntil = 0;
     }
   }
 

@@ -34,6 +34,7 @@ import * as doorRepo from './repositories/doorRepository.js';
 import * as npcSpellRepo from './repositories/npcSpellRepository.js';
 import * as spawnConfigRepo from './repositories/spawnRepository.js';
 import * as questRepo from './repositories/questRepository.js';
+import { isExportableSetting } from './repositories/settingsRepository.js';
 
 const DATA_DIR = join(__dirname, '..', '..', '..', '..', 'data');
 
@@ -171,22 +172,6 @@ async function exportEnchantments(itemIdToName: Map<number, string>, warnings: s
   writeJson(join(DATA_DIR, 'global', 'enchantments.json'), envelope('enchantments', data));
   console.log(`  enchantments: ${data.length} exported`);
   return data.length;
-}
-
-// Settings that are environment- or database-specific and must not travel
-// between installs: room IDs are re-derived from tags by the importer,
-// ip_access_mode could lock a fresh install out, and migration/seed flags
-// describe the state of one particular database.
-const SETTING_EXPORT_EXCLUDED_KEYS = new Set([
-  'default_starting_room_id',
-  'default_respawn_room_id',
-  'ip_access_mode',
-]);
-const SETTING_EXPORT_EXCLUDED_PATTERNS = [/_migrated$/, /_seeded$/, /^migration_/, /^phase\d+_/];
-
-export function isExportableSetting(key: string): boolean {
-  if (SETTING_EXPORT_EXCLUDED_KEYS.has(key)) return false;
-  return !SETTING_EXPORT_EXCLUDED_PATTERNS.some(p => p.test(key));
 }
 
 async function exportSettings(): Promise<number> {

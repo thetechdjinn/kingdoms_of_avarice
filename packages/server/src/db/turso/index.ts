@@ -118,6 +118,18 @@ function maybeParseJson(value: unknown): unknown {
   }
 }
 
+/**
+ * JSON-encode a plain-object parameter for binding. Companion to the array
+ * seam in execOn(): the driver cannot bind JS objects, arrays are JSON-encoded
+ * automatically by execOn, and objects must be encoded by the caller via this
+ * helper so the encoding rule lives in one place.
+ */
+export function jsonParam(value: unknown): unknown {
+  if (value == null) return null;
+  if (typeof value === 'object' && !Array.isArray(value)) return JSON.stringify(value);
+  return value;
+}
+
 async function execOn<T>(db: Database, text: string, params?: unknown[]): Promise<QueryResultLike<T>> {
   const stmt = await db.prepare(text);
   // Former Postgres array columns (text[]) are stored as JSON TEXT. SQLite can't

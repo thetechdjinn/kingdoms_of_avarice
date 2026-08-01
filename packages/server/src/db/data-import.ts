@@ -36,7 +36,6 @@ import * as questRepo from './repositories/questRepository.js';
 import * as settingsRepo from './repositories/settingsRepository.js';
 import type { QuestTriggerType, ItemCondition } from '@koa/shared';
 import { ItemLocationType } from '@koa/shared';
-import { isExportableSetting } from './data-export.js';
 import * as craftingRepo from './repositories/craftingRepository.js';
 
 const DATA_DIR = join(__dirname, '..', '..', '..', '..', 'data');
@@ -1108,13 +1107,6 @@ async function importNpcs(data: unknown[]): Promise<ImportResult> {
   return result;
 }
 
-/** JSON-encode plain objects for binding; arrays are handled by the driver seam. */
-function jsonParam(value: unknown): unknown {
-  if (value == null) return null;
-  if (typeof value === 'object' && !Array.isArray(value)) return JSON.stringify(value);
-  return value;
-}
-
 async function importEssenceEvents(data: unknown[]): Promise<ImportResult> {
   const result: ImportResult = { file: 'essence_events.json', created: 0, updated: 0, skipped: 0, errors: [] };
 
@@ -1255,7 +1247,7 @@ async function importSettings(data: unknown[]): Promise<ImportResult> {
       // hand-edited file must not smuggle in installation-specific keys
       // (ip_access_mode could lock a deployment out; room-ID settings are
       // derived from tags by configureGameSettings).
-      if (!isExportableSetting(key)) {
+      if (!settingsRepo.isExportableSetting(key)) {
         result.errors.push(`Setting "${key}" is installation-specific and not importable, skipping`);
         result.skipped++;
         continue;
@@ -1277,11 +1269,7 @@ async function importSettings(data: unknown[]): Promise<ImportResult> {
         continue;
       }
       const existing = await query<{ key: string }>('SELECT key FROM game_settings WHERE key = $1', [key]);
-      await query(
-        `INSERT INTO game_settings (key, value) VALUES ($1, $2)
-         ON CONFLICT (key) DO UPDATE SET value = $2, updated_at = CURRENT_TIMESTAMP`,
-        [key, value]
-      );
+      await settingsRepo.setSettingRaw(key, value);
       if (existing.rows.length > 0) {
         result.updated++;
       } else {

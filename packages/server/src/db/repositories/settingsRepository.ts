@@ -70,6 +70,37 @@ const DEFAULT_REGEN_SETTINGS: RegenSettings = {
  * Combat-related settings stored in the database
  * These can be tweaked without code changes for balance tuning
  */
+// Settings that are environment- or database-specific and must not travel
+// between installs: room IDs are re-derived from tags by the importer,
+// ip_access_mode could lock a fresh install out, and migration/seed flags
+// describe the state of one particular database. Shared by the data exporter
+// (which skips them) and the data importer (which refuses them).
+const SETTING_EXPORT_EXCLUDED_KEYS = new Set([
+  'default_starting_room_id',
+  'default_respawn_room_id',
+  'ip_access_mode',
+]);
+const SETTING_EXPORT_EXCLUDED_PATTERNS = [/_migrated$/, /_seeded$/, /^migration_/, /^phase\d+_/];
+
+export function isExportableSetting(key: string): boolean {
+  if (SETTING_EXPORT_EXCLUDED_KEYS.has(key)) return false;
+  return !SETTING_EXPORT_EXCLUDED_PATTERNS.some(p => p.test(key));
+}
+
+/**
+ * Write a setting value VERBATIM as stored jsonb-style text. Unlike
+ * setSetting() (which JSON-stringifies its input), this preserves the exact
+ * textual representation — used by the data importer, whose files carry the
+ * stored text form ('10', '"runic"', '{...}') and must round-trip unchanged.
+ */
+export async function setSettingRaw(key: string, rawValue: string): Promise<void> {
+  await query(
+    `INSERT INTO game_settings (key, value) VALUES ($1, $2)
+     ON CONFLICT (key) DO UPDATE SET value = $2, updated_at = CURRENT_TIMESTAMP`,
+    [key, rawValue]
+  );
+}
+
 /**
  * Validate a setting value for a given key. Returns an error message, or null
  * if the value is acceptable. Shared by the admin settings API and the data
