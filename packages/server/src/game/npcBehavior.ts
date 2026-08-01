@@ -23,7 +23,7 @@ import {
 import { getPlayerLocation } from './adminCommands.js';
 import { isPlayerEntity } from './combatEntity.js';
 import { sendCombatMessage, broadcastCombatToRoom, resolveCombatTarget } from './combatMessaging.js';
-import { clearCombatState } from './combatCommands.js';
+import { clearCombatState, isTargetedByAnyEnemy } from './combatCommands.js';
 import { colors } from '../utils/colors.js';
 import { withNpcNameCapitalized } from '../utils/textFormat.js';
 import { selectNpcSpell } from './npcSpellAI.js';
@@ -482,12 +482,15 @@ function processCombatBehavior(
     }
   }
 
-  // For players removed from this NPC's targets: if no other NPC targets them
-  // and they have no targets of their own, take them out of combat.
+  // For players removed from this NPC's targets: if nothing else (NPC or
+  // player) targets them and they have no targets of their own, take them
+  // out of combat.
   for (const playerId of droppedPlayerIds) {
     const player = connectedPlayers.get(playerId);
-    if (player && player.combatState.targets.size === 0 && !isPlayerTargetedByAnyNpc(playerId)) {
+    if (player && player.combatState.targets.size === 0
+        && !isTargetedByAnyEnemy(playerId, null, connectedPlayers)) {
       player.regenState.inCombat = false;
+      player.combatState.combatOrderPosition = 0;
     }
   }
 

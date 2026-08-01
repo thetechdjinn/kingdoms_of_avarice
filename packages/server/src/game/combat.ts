@@ -35,7 +35,7 @@ import {
 } from './combatCalculations.js';
 import { getCombatSettings, getBlindAccuracyPenalty } from '../db/repositories/settingsRepository.js';
 import { entityCanSee } from './vision.js';
-import { clearCombatState, breakCasterCombat } from './combatCommands.js';
+import { clearCombatState, breakCasterCombat, isTargetedByAnyEnemy } from './combatCommands.js';
 import {
   applyDamage,
   initializeDroppedState,
@@ -626,6 +626,15 @@ async function processAttackerCombat(
       // Target left the room, remove from targets
       targets.delete(targetId);
       sendCombatMessage(attacker, MessageType.SYSTEM, `${withNpcNameCapitalized(target.entityName, target.isProperName)} is no longer here.`);
+      // Dropping them may have been the last engagement holding them in
+      // combat — release them if nothing else targets them and they have no
+      // targets of their own (e.g. they broke off, then escaped the room).
+      if (isPlayerEntity(target) && connectedPlayersRef
+          && target.combatState.targets.size === 0
+          && !isTargetedByAnyEnemy(target.entityId, null, connectedPlayersRef)) {
+        target.regenState.inCombat = false;
+        target.combatState.combatOrderPosition = 0;
+      }
       continue;
     }
 

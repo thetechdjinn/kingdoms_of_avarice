@@ -210,22 +210,7 @@ export function handleBreak(
   releaseFormerTargets(previousTargets, socket, connectedPlayers);
 
   // Drop out of combat entirely only if nothing is still attacking us
-  let stillTargeted = false;
-  for (const [, otherSocket] of connectedPlayers) {
-    if (otherSocket !== socket && otherSocket.combatState.targets.has(socket.playerId)) {
-      stillTargeted = true;
-      break;
-    }
-  }
-  if (!stillTargeted) {
-    for (const npc of getAllNpcInstances()) {
-      if (npc.combatState.targets.has(socket.playerId)) {
-        stillTargeted = true;
-        break;
-      }
-    }
-  }
-  if (!stillTargeted) {
+  if (!isTargetedByAnyEnemy(socket.playerId, socket, connectedPlayers)) {
     socket.regenState.inCombat = false;
     socket.combatState.combatOrderPosition = 0;
   }
@@ -241,6 +226,29 @@ export function handleBreak(
     type: MessageType.OUTPUT,
     message: colors.yellow('*COMBAT OFF*'),
   };
+}
+
+/**
+ * Is this entity currently targeted by any player or NPC (other than itself /
+ * the excluded entity)? Used to decide whether an entity may fully leave
+ * combat: as long as someone is still attacking you, you are in combat.
+ */
+export function isTargetedByAnyEnemy(
+  entityId: number,
+  exclude: CombatEntity | null,
+  connectedPlayers: Map<number, AuthenticatedSocket>
+): boolean {
+  for (const [, otherSocket] of connectedPlayers) {
+    if (otherSocket !== exclude && otherSocket.combatState.targets.has(entityId)) {
+      return true;
+    }
+  }
+  for (const npc of getAllNpcInstances()) {
+    if (npc !== exclude && npc.combatState.targets.has(entityId)) {
+      return true;
+    }
+  }
+  return false;
 }
 
 /**
@@ -279,8 +287,17 @@ export async function handleFlee(
   // Pick a random exit
   const randomExit = exits[Math.floor(Math.random() * exits.length)];
 
-  // Clear combat state
-  clearCombatState(socket, connectedPlayers);
+  // ONE-SIDED disengage, same as break: fleeing stops YOUR attacks only.
+  // Enemies keep their targeting — when they lose you (you left the room)
+  // their round/behavior cleanup drops you and releases you from combat.
+  // (When pursuit is implemented, they will chase instead of giving up.)
+  const previousTargets = new Set(socket.combatState.targets);
+  breakCasterCombat(socket);
+  releaseFormerTargets(previousTargets, socket, connectedPlayers);
+  if (!isTargetedByAnyEnemy(socket.playerId, socket, connectedPlayers)) {
+    socket.regenState.inCombat = false;
+    socket.combatState.combatOrderPosition = 0;
+  }
 
   // Return a message indicating successful flee
   // The actual movement will be handled by the command processor
