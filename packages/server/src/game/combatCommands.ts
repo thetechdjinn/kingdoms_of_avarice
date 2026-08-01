@@ -200,8 +200,35 @@ export function handleBreak(
 
   const currentRoomId = getPlayerLocation(socket.playerId);
 
-  // Clear combat state
-  clearCombatState(socket, connectedPlayers);
+  // ONE-SIDED disengage: stop this player's attacks without breaking combat
+  // for anyone else. Enemies keep their targeting and keep attacking, so the
+  // player stays flagged in-combat (no regen, no stealth) until every enemy
+  // disengages or dies — those paths run clearCombatState on the enemy, whose
+  // former-target release then frees this player.
+  const previousTargets = new Set(socket.combatState.targets);
+  breakCasterCombat(socket);
+  releaseFormerTargets(previousTargets, socket, connectedPlayers);
+
+  // Drop out of combat entirely only if nothing is still attacking us
+  let stillTargeted = false;
+  for (const [, otherSocket] of connectedPlayers) {
+    if (otherSocket !== socket && otherSocket.combatState.targets.has(socket.playerId)) {
+      stillTargeted = true;
+      break;
+    }
+  }
+  if (!stillTargeted) {
+    for (const npc of getAllNpcInstances()) {
+      if (npc.combatState.targets.has(socket.playerId)) {
+        stillTargeted = true;
+        break;
+      }
+    }
+  }
+  if (!stillTargeted) {
+    socket.regenState.inCombat = false;
+    socket.combatState.combatOrderPosition = 0;
+  }
 
   // Broadcast to room
   broadcastToRoom(
@@ -338,8 +365,25 @@ export function clearCombatState(
     }
   }
 
-  // Also check entities we were targeting - if no one else is targeting them,
-  // they should exit combat too (fixes backstab victim staying in combat)
+  // Release entities we were targeting that are no longer fighting anyone
+  releaseFormerTargets(previousTargets, entity, connectedPlayers);
+
+  // This entity is no longer in combat
+  entity.regenState.inCombat = false;
+}
+
+/**
+ * Release former combat targets that are no longer fighting anyone.
+ * For each entity in `previousTargets`: if nothing else targets it and it has
+ * no targets of its own, it exits combat (players get inCombat cleared, NPCs
+ * get their behavior reset). Pure recheck of current state — safe after either
+ * a full disengage (clearCombatState) or a one-sided one (handleBreak).
+ */
+function releaseFormerTargets(
+  previousTargets: Set<number>,
+  entity: CombatEntity,
+  connectedPlayers: Map<number, AuthenticatedSocket>
+): void {
   for (const targetId of previousTargets) {
     // Check players
     const targetSocket = connectedPlayers.get(targetId);
@@ -393,9 +437,6 @@ export function clearCombatState(
       }
     }
   }
-
-  // This entity is no longer in combat
-  entity.regenState.inCombat = false;
 }
 
 /**
