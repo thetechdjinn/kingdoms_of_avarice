@@ -20,6 +20,7 @@ import { calculateTrainingCost } from '@koa/shared';
 import { calculateTotalWealth } from './itemCommands.js';
 import { deductCopperFromWallet } from '../utils/currency.js';
 import { withTransaction } from '../db/index.js';
+import { flushPlayer } from './sessionState.js';
 
 // Map from internal stat names to character DB column names
 const STAT_TO_COLUMN: Record<CPStatName, string> = {
@@ -529,6 +530,12 @@ async function handleImmediateLevelUp(
   } else {
     return { type: MessageType.ERROR, message: 'Unable to check level requirements.' };
   }
+
+  // Flush any dirty session state first so the relative currency deductions
+  // below run against a database row that matches the pocket. Without this, a
+  // bank withdrawal (dirty-cached) followed immediately by training could
+  // persist transiently negative denominations until the next flush.
+  await flushPlayer(socket);
 
   // Currency check — memory-first: socket.pocket is the source of truth for an
   // online player's money and the check counts total wealth across ALL

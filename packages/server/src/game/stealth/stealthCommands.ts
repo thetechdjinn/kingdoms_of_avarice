@@ -31,10 +31,9 @@ import { getEquipmentCombatStats } from '../combatStats.js';
 import { getEffectModifiers } from '../statusEffects.js';
 import { calculateEffectiveVision, calculateNpcEffectiveVision, canSee } from '../vision.js';
 import { getWorldRef, findNpcInRoom, NpcCombatInstance, checkHostileAggro, setMerchantHostile } from '../npcManager.js';
-import { withNpcName, withNpcNameCapitalized } from '../../utils/textFormat.js';
-import { handleActualDeath } from '../combat.js';
+import { withNpcName, withNpcNameCapitalized, wordWrap } from '../../utils/textFormat.js';
+import { handleActualDeath, getCombatRoundIntervalMs } from '../combat.js';
 import { handleAttack } from '../combatCommands.js';
-import { getCombatSettings } from '../../db/repositories/settingsRepository.js';
 
 /**
  * Mark a backstab's surprise round. The backstab is the attacker's action for
@@ -49,8 +48,9 @@ async function applySurpriseRound(
   attacker: AuthenticatedSocket,
   victim: { combatState: { roundSkipUntil: number } } | null
 ): Promise<number> {
-  const settings = await getCombatSettings();
-  const skipUntil = Date.now() + settings.round_interval_ms + 1000;
+  // Window must cover exactly one tick of the ACTUAL combat scheduler — the
+  // DB round-interval setting is not what drives the loop cadence.
+  const skipUntil = Date.now() + getCombatRoundIntervalMs() + 1000;
   attacker.combatState.roundSkipUntil = skipUntil;
   if (victim) {
     victim.combatState.roundSkipUntil = skipUntil;
@@ -445,9 +445,9 @@ export async function handleBackstab(
     ? target.combatState.targets.has(socket.playerId)
     : npcTarget!.combatState.targets.has(socket.playerId);
   if (targetEngagedAttacker) {
-    const engagedName = target ? target.username : withNpcName(npcTarget!.entityName, npcTarget!.isProperName);
+    const engagedName = target ? target.username : withNpcNameCapitalized(npcTarget!.entityName, npcTarget!.isProperName);
     sendMessage(socket, MessageType.OUTPUT,
-      colors.yellow(`${engagedName} is already attacking you - there is no chance for surprise! You attack instead.`));
+      colors.yellow(wordWrap(`${engagedName} is already attacking you - there is no chance for surprise! You attack instead.`, 80)));
     breakStealth(socket, 'attack', true);
     return handleAttack(socket, args, connectedPlayers);
   }

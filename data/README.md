@@ -99,6 +99,13 @@ authoring content in them):**
 `ip_access`, `ip_access_mode`, and the `default_*_room_id` settings (re-derived
 from room tags at import).
 
+**Room item placement caveat:** the exporter treats every non-currency
+`item_instances` row with `location_type='room'` as an authored placement.
+Currency stacks on the floor (death drops) are excluded automatically, but an
+ordinary item a player dropped in a room at export time cannot be
+distinguished from authored content yet — export from a clean/quiesced world,
+or add an authored-placement flag before exporting from a live server.
+
 **When adding any new content table:** add an exporter in
 `packages/server/src/db/data-export.ts`, an importer + dispatch case in
 `packages/server/src/db/data-import.ts`, and the file in the manifest

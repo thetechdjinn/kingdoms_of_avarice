@@ -600,7 +600,9 @@ export function setupGameSocket(wss: WebSocketServer): void {
               gameWorld,
               connectedPlayers
             );
-            sendMessage(authWs, response.type, response.message);
+            if (response.message) {
+              sendMessage(authWs, response.type, response.message);
+            }
             sendVitals(authWs);
           } catch (fallbackError) {
             console.error('Fallback command processing also failed:', fallbackError);

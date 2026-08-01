@@ -148,13 +148,29 @@ async function exportEssenceEvents(): Promise<number> {
   return result.rows.length;
 }
 
-async function exportEnchantments(): Promise<number> {
+async function exportEnchantments(itemIdToName: Map<number, string>, warnings: string[]): Promise<number> {
   const result = await query<Record<string, unknown>>(
     'SELECT name, description, skill_type, skill_level, applicable_types, stat_modifiers, special_effects, mana_cost, reagents FROM enchantments ORDER BY name'
   );
-  writeJson(join(DATA_DIR, 'global', 'enchantments.json'), envelope('enchantments', result.rows));
-  console.log(`  enchantments: ${result.rows.length} exported`);
-  return result.rows.length;
+  // Reagents reference item templates by DB-local ID ({template_id, quantity});
+  // export them as portable item names so a fresh database re-resolves them.
+  const data = result.rows.map(row => {
+    const reagents = row.reagents as Array<{ template_id: number; quantity: number }> | null;
+    if (!Array.isArray(reagents) || reagents.length === 0) return row;
+    const portable = reagents.map(r => {
+      const itemName = itemIdToName.get(r.template_id) ?? null;
+      if (!itemName) {
+        const msg = `Enchantment "${row.name}" reagent references unknown item ID ${r.template_id}`;
+        warnings.push(msg);
+        console.warn(`    WARNING: ${msg}`);
+      }
+      return { itemName, quantity: r.quantity };
+    });
+    return { ...row, reagents: portable };
+  });
+  writeJson(join(DATA_DIR, 'global', 'enchantments.json'), envelope('enchantments', data));
+  console.log(`  enchantments: ${data.length} exported`);
+  return data.length;
 }
 
 // Settings that are environment- or database-specific and must not travel
@@ -168,7 +184,7 @@ const SETTING_EXPORT_EXCLUDED_KEYS = new Set([
 ]);
 const SETTING_EXPORT_EXCLUDED_PATTERNS = [/_migrated$/, /_seeded$/, /^migration_/, /^phase\d+_/];
 
-function isExportableSetting(key: string): boolean {
+export function isExportableSetting(key: string): boolean {
   if (SETTING_EXPORT_EXCLUDED_KEYS.has(key)) return false;
   return !SETTING_EXPORT_EXCLUDED_PATTERNS.some(p => p.test(key));
 }
@@ -270,8 +286,15 @@ async function exportRooms(
     `SELECT template_id, location_id, quantity, condition FROM item_instances WHERE location_type = 'room' ORDER BY id`
   );
   const itemsByRoom = new Map<number, Array<{ itemName: string | null; quantity: number; condition: string }>>();
+  // Currency stacks on the floor are transient (death drops, player drops),
+  // never authored placements — exclude them. NOTE: non-currency player drops
+  // in rooms at export time CANNOT be distinguished from authored placements
+  // yet; export from a quiesced/clean world, or an authored-placement flag is
+  // needed (see data/README.md pipeline notes).
+  const currencyTemplateNames = new Set(['copper coins', 'silver coins', 'gold coins', 'platinum coins', 'runic coins']);
   for (const inst of roomItemsResult.rows) {
     const itemName = itemIdToName.get(inst.template_id) ?? null;
+    if (itemName && currencyTemplateNames.has(itemName)) continue;
     if (!itemName) {
       const msg = `Room item instance references unknown item template ID ${inst.template_id}`;
       warnings.push(msg);
@@ -859,7 +882,7 @@ export async function runExport(): Promise<ExportResult> {
   counts.factions = await exportFactions();
   counts.drop_tables = await exportDropTables(itemIdToName);
   counts.essence_events = await exportEssenceEvents();
-  counts.enchantments = await exportEnchantments();
+  counts.enchantments = await exportEnchantments(itemIdToName, warnings);
   counts.settings = await exportSettings();
   counts.quests = await exportQuests(npcIdToName, itemIdToName, idToTagMap, factionIdToName, warnings);
 

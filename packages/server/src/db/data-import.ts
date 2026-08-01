@@ -34,6 +34,7 @@ import * as npcSpellRepo from './repositories/npcSpellRepository.js';
 import * as spawnConfigRepo from './repositories/spawnRepository.js';
 import * as questRepo from './repositories/questRepository.js';
 import type { QuestTriggerType } from '@koa/shared';
+import { isExportableSetting } from './data-export.js';
 
 const DATA_DIR = join(__dirname, '..', '..', '..', '..', 'data');
 
@@ -1128,11 +1129,45 @@ async function importEssenceEvents(data: unknown[]): Promise<ImportResult> {
 async function importEnchantments(data: unknown[]): Promise<ImportResult> {
   const result: ImportResult = { file: 'enchantments.json', created: 0, updated: 0, skipped: 0, errors: [] };
 
+  // Item lookup for portable reagent references
+  const allItems = await itemRepo.getAllTemplates();
+  const itemNameToId = new Map<string, number>();
+  for (const tmpl of allItems) {
+    itemNameToId.set(tmpl.name.toLowerCase(), tmpl.id);
+  }
+
   for (const raw of data) {
     const item = raw as Record<string, unknown>;
     try {
       const name = item.name as string;
       if (!name) { result.skipped++; continue; }
+
+      // Resolve portable reagents ({itemName, quantity}) to this database's
+      // template IDs. Raw template_id values from old exports are DB-local and
+      // cannot be trusted across databases — refuse them.
+      let reagents: unknown = item.reagents ?? null;
+      if (Array.isArray(reagents) && reagents.length > 0) {
+        const resolved: Array<{ template_id: number; quantity: number }> = [];
+        let failed = false;
+        for (const rRaw of reagents) {
+          const r = rRaw as Record<string, unknown>;
+          if (r.itemName) {
+            const templateId = itemNameToId.get((r.itemName as string).toLowerCase());
+            if (!templateId) {
+              result.errors.push(`Enchantment "${name}": reagent item "${r.itemName}" not found, skipping enchantment`);
+              failed = true;
+              break;
+            }
+            resolved.push({ template_id: templateId, quantity: (r.quantity as number) ?? 1 });
+          } else if (r.template_id != null) {
+            result.errors.push(`Enchantment "${name}": reagent has a raw template_id (${r.template_id}) from an old export; re-export to get itemName. Skipping enchantment`);
+            failed = true;
+            break;
+          }
+        }
+        if (failed) { result.skipped++; continue; }
+        reagents = resolved;
+      }
 
       const existing = await query<{ id: number }>('SELECT id FROM enchantments WHERE LOWER(name) = LOWER($1)', [name]);
       const params = [
@@ -1144,7 +1179,7 @@ async function importEnchantments(data: unknown[]): Promise<ImportResult> {
         jsonParam(item.stat_modifiers ?? item.statModifiers),
         jsonParam(item.special_effects ?? item.specialEffects),
         ((item.mana_cost ?? item.manaCost) as number) ?? 0,
-        jsonParam(item.reagents),
+        jsonParam(reagents),
       ];
       if (existing.rows.length > 0) {
         await query(
@@ -1178,6 +1213,16 @@ async function importSettings(data: unknown[]): Promise<ImportResult> {
     try {
       const key = item.key as string;
       if (!key) { result.skipped++; continue; }
+
+      // Enforce the exporter's exclusion filter on import too: a legacy or
+      // hand-edited file must not smuggle in installation-specific keys
+      // (ip_access_mode could lock a deployment out; room-ID settings are
+      // derived from tags by configureGameSettings).
+      if (!isExportableSetting(key)) {
+        result.errors.push(`Setting "${key}" is installation-specific and not importable, skipping`);
+        result.skipped++;
+        continue;
+      }
 
       // Values are stored as jsonb-style TEXT. Scalars export as raw strings
       // ('10', '"runic"'); objects/arrays were parsed on read, re-encode them.

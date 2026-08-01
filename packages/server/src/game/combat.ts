@@ -182,6 +182,13 @@ let connectedPlayersRef: Map<number, AuthenticatedSocket>;
  * Start the global combat loop
  * Called during server initialization
  */
+/** The actual cadence the combat loop is scheduled at. Surprise-round windows
+ * must be derived from THIS value — the combat_round_interval_ms DB setting is
+ * not what drives the scheduler. */
+export function getCombatRoundIntervalMs(): number {
+  return COMBAT_ROUND_MS;
+}
+
 export function startCombatLoop(connectedPlayers: Map<number, AuthenticatedSocket>): void {
   if (combatInterval) {
     console.log('[Combat] Combat loop already running');
