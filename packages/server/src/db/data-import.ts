@@ -316,11 +316,41 @@ async function importProgressionTable(data: unknown[]): Promise<ImportResult> {
 async function importItems(data: unknown[]): Promise<ImportResult> {
   const result: ImportResult = { file: 'items.json', created: 0, updated: 0, skipped: 0, errors: [] };
 
+  // Spell lookup for consumable_data.spell_mnemonic → local spell ID resolution
+  const allSpells = await spellRepo.getAllSpells();
+  const spellMnemonicToId = new Map<string, number>();
+  for (const spell of allSpells) {
+    spellMnemonicToId.set(spell.mnemonic.toLowerCase(), spell.id);
+  }
+
   for (const raw of data) {
     const item = raw as Record<string, unknown>;
     try {
       const name = item.name as string;
       if (!name) { result.skipped++; continue; }
+
+      // Resolve portable spell mnemonic in consumable_data to this database's
+      // spell ID. Raw spell_id values from old exports are DB-local and cannot
+      // be trusted across databases — imported as-is but flagged.
+      let consumableData = (item.consumable_data ?? item.consumableData) as Record<string, unknown> | undefined;
+      if (consumableData && typeof consumableData === 'object') {
+        const mnemonic = consumableData.spell_mnemonic as string | null | undefined;
+        if (mnemonic) {
+          const spellId = spellMnemonicToId.get(mnemonic.toLowerCase());
+          if (!spellId) {
+            result.errors.push(`Item "${name}": consumable spell mnemonic "${mnemonic}" not found, skipping item`);
+            result.skipped++;
+            continue;
+          }
+          consumableData = { ...consumableData, spell_id: spellId };
+          delete consumableData.spell_mnemonic;
+        } else if (consumableData.spell_id != null) {
+          result.errors.push(
+            `Item "${name}": consumable_data has a raw spell_id (${consumableData.spell_id}) from an old export; ` +
+            `it may point at the wrong spell in this database. Re-export from the source database to get spell_mnemonic.`
+          );
+        }
+      }
 
       const existing = await itemRepo.getTemplateByName(name);
 
@@ -342,7 +372,7 @@ async function importItems(data: unknown[]): Promise<ImportResult> {
         container_weight_limit: (item.container_weight_limit ?? item.containerWeightLimit) as number | undefined,
         weapon_data: (item.weapon_data ?? item.weaponData) as Record<string, unknown> | undefined,
         armor_data: migrateArmorData((item.armor_data ?? item.armorData) as Record<string, unknown> | undefined),
-        consumable_data: (item.consumable_data ?? item.consumableData) as Record<string, unknown> | undefined,
+        consumable_data: consumableData,
         light_data: (item.light_data ?? item.lightData) as Record<string, unknown> | undefined,
         tool_data: (item.tool_data ?? item.toolData) as Record<string, unknown> | undefined,
         requirements: item.requirements as Record<string, unknown> | undefined,
@@ -1005,6 +1035,131 @@ async function importNpcs(data: unknown[]): Promise<ImportResult> {
   return result;
 }
 
+/** JSON-encode plain objects for binding; arrays are handled by the driver seam. */
+function jsonParam(value: unknown): unknown {
+  if (value == null) return null;
+  if (typeof value === 'object' && !Array.isArray(value)) return JSON.stringify(value);
+  return value;
+}
+
+async function importEssenceEvents(data: unknown[]): Promise<ImportResult> {
+  const result: ImportResult = { file: 'essence_events.json', created: 0, updated: 0, skipped: 0, errors: [] };
+
+  for (const raw of data) {
+    const item = raw as Record<string, unknown>;
+    try {
+      const eventId = (item.event_id ?? item.eventId) as string;
+      if (!eventId) { result.skipped++; continue; }
+
+      const existing = await query<{ id: number }>('SELECT id FROM essence_events WHERE event_id = $1', [eventId]);
+      const params = [
+        eventId,
+        (item.display_name ?? item.displayName) as string | null,
+        item.description as string | null,
+        (item.emitted_tags ?? item.emittedTags ?? []) as string[],
+        (item.base_essence_value ?? item.baseEssenceValue ?? 0) as number,
+        (item.base_xp_value ?? item.baseXpValue ?? 0) as number,
+      ];
+      if (existing.rows.length > 0) {
+        await query(
+          `UPDATE essence_events SET display_name = $2, description = $3, emitted_tags = $4,
+             base_essence_value = $5, base_xp_value = $6, updated_at = CURRENT_TIMESTAMP
+           WHERE event_id = $1`,
+          params
+        );
+        result.updated++;
+      } else {
+        await query(
+          `INSERT INTO essence_events (event_id, display_name, description, emitted_tags, base_essence_value, base_xp_value)
+           VALUES ($1, $2, $3, $4, $5, $6)`,
+          params
+        );
+        result.created++;
+      }
+    } catch (err) {
+      result.errors.push(`Essence event "${item.event_id}": ${(err as Error).message}`);
+      result.skipped++;
+    }
+  }
+  return result;
+}
+
+async function importEnchantments(data: unknown[]): Promise<ImportResult> {
+  const result: ImportResult = { file: 'enchantments.json', created: 0, updated: 0, skipped: 0, errors: [] };
+
+  for (const raw of data) {
+    const item = raw as Record<string, unknown>;
+    try {
+      const name = item.name as string;
+      if (!name) { result.skipped++; continue; }
+
+      const existing = await query<{ id: number }>('SELECT id FROM enchantments WHERE LOWER(name) = LOWER($1)', [name]);
+      const params = [
+        name,
+        item.description as string | null,
+        ((item.skill_type ?? item.skillType) as string) || 'enchanting',
+        ((item.skill_level ?? item.skillLevel) as number) ?? 0,
+        (item.applicable_types ?? item.applicableTypes ?? []) as string[],
+        jsonParam(item.stat_modifiers ?? item.statModifiers),
+        jsonParam(item.special_effects ?? item.specialEffects),
+        ((item.mana_cost ?? item.manaCost) as number) ?? 0,
+        jsonParam(item.reagents),
+      ];
+      if (existing.rows.length > 0) {
+        await query(
+          `UPDATE enchantments SET name = $1, description = $2, skill_type = $3, skill_level = $4,
+             applicable_types = $5, stat_modifiers = $6, special_effects = $7, mana_cost = $8, reagents = $9
+           WHERE id = $10`,
+          [...params, existing.rows[0].id]
+        );
+        result.updated++;
+      } else {
+        await query(
+          `INSERT INTO enchantments (name, description, skill_type, skill_level, applicable_types, stat_modifiers, special_effects, mana_cost, reagents)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+          params
+        );
+        result.created++;
+      }
+    } catch (err) {
+      result.errors.push(`Enchantment "${item.name}": ${(err as Error).message}`);
+      result.skipped++;
+    }
+  }
+  return result;
+}
+
+async function importSettings(data: unknown[]): Promise<ImportResult> {
+  const result: ImportResult = { file: 'settings.json', created: 0, updated: 0, skipped: 0, errors: [] };
+
+  for (const raw of data) {
+    const item = raw as Record<string, unknown>;
+    try {
+      const key = item.key as string;
+      if (!key) { result.skipped++; continue; }
+
+      // Values are stored as jsonb-style TEXT. Scalars export as raw strings
+      // ('10', '"runic"'); objects/arrays were parsed on read, re-encode them.
+      const value = typeof item.value === 'string' ? item.value : JSON.stringify(item.value);
+      const existing = await query<{ key: string }>('SELECT key FROM game_settings WHERE key = $1', [key]);
+      await query(
+        `INSERT INTO game_settings (key, value) VALUES ($1, $2)
+         ON CONFLICT (key) DO UPDATE SET value = $2, updated_at = CURRENT_TIMESTAMP`,
+        [key, value]
+      );
+      if (existing.rows.length > 0) {
+        result.updated++;
+      } else {
+        result.created++;
+      }
+    } catch (err) {
+      result.errors.push(`Setting "${item.key}": ${(err as Error).message}`);
+      result.skipped++;
+    }
+  }
+  return result;
+}
+
 // ============================================================================
 // Quest Import
 // ============================================================================
@@ -1350,6 +1505,15 @@ async function importFile(relativePath: string): Promise<void> {
       break;
     case 'drop_tables':
       importResult = await importDropTables(file.data);
+      break;
+    case 'essence_events':
+      importResult = await importEssenceEvents(file.data);
+      break;
+    case 'enchantments':
+      importResult = await importEnchantments(file.data);
+      break;
+    case 'settings':
+      importResult = await importSettings(file.data);
       break;
     case 'rooms':
       importResult = await importRooms(file.data, relativePath);

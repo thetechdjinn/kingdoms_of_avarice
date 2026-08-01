@@ -1,0 +1,119 @@
+{
+  "version": "1.0",
+  "exported_at": "2026-08-01T14:42:59.092Z",
+  "type": "settings",
+  "data": [
+    {
+      "key": "blind_accuracy_penalty",
+      "value": "10"
+    },
+    {
+      "key": "combat_base_energy",
+      "value": "20000"
+    },
+    {
+      "key": "combat_default_weapon_speed",
+      "value": "7500"
+    },
+    {
+      "key": "combat_level_accuracy_bonus",
+      "value": {
+        "1": 0,
+        "2": 10,
+        "3": 20,
+        "4": 35,
+        "5": 50
+      }
+    },
+    {
+      "key": "combat_level_multipliers",
+      "value": {
+        "1": 0.6,
+        "2": 0.75,
+        "3": 0.9,
+        "4": 1,
+        "5": 1.15
+      }
+    },
+    {
+      "key": "combat_max_attacks_per_round",
+      "value": "6"
+    },
+    {
+      "key": "combat_round_interval_ms",
+      "value": "4000"
+    },
+    {
+      "key": "combat_unarmed_speed",
+      "value": "4500"
+    },
+    {
+      "key": "crit_soft_cap",
+      "value": "37"
+    },
+    {
+      "key": "currency_copper_per_enc",
+      "value": "25"
+    },
+    {
+      "key": "currency_gold_per_enc",
+      "value": "15"
+    },
+    {
+      "key": "currency_platinum_per_enc",
+      "value": "10"
+    },
+    {
+      "key": "currency_runic_name",
+      "value": "\"runic\""
+    },
+    {
+      "key": "currency_runic_per_enc",
+      "value": "4"
+    },
+    {
+      "key": "currency_silver_per_enc",
+      "value": "25"
+    },
+    {
+      "key": "dropped_tick_interval_ms",
+      "value": "10000"
+    },
+    {
+      "key": "health_regen_enhanced_percent",
+      "value": "5"
+    },
+    {
+      "key": "health_tick_interval_ms",
+      "value": "10000"
+    },
+    {
+      "key": "initial_character_points",
+      "value": "100"
+    },
+    {
+      "key": "mana_tick_interval_ms",
+      "value": "10000"
+    },
+    {
+      "key": "max_characters_per_player",
+      "value": "3"
+    },
+    {
+      "key": "max_negative_hp_percent",
+      "value": "20"
+    },
+    {
+      "key": "training_base_cost",
+      "value": "28"
+    },
+    {
+      "key": "training_cost_multiplier",
+      "value": "1.8"
+    },
+    {
+      "key": "xp_overcap_percent",
+      "value": "50"
+    }
+  ]
+}
