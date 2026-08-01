@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "exported_at": "2026-08-01T15:31:48.996Z",
+  "exported_at": "2026-08-01T18:41:31.117Z",
   "type": "quests",
   "data": [
     {
@@ -15,7 +15,7 @@
       "requiredFactionMax": null,
       "requiredQuestTags": [],
       "xpReward": 150,
-      "essenceReward": 60,
+      "essenceReward": 70,
       "currencyReward": 50,
       "questFlag": "fresh_start",
       "denialDialogue": null,
