@@ -257,11 +257,30 @@ async function exportProgression(): Promise<Record<string, number>> {
 
 async function exportRooms(
   idToTagMap: Map<number, string>,
+  itemIdToName: Map<number, string>,
   warnings: string[]
 ): Promise<Map<string, number[]>> {
   const rooms = await roomRepo.getAllRooms();
   const allExits = await roomRepo.getAllExits();
   const allDoors = await doorRepo.getAllDoors();
+
+  // Room-placed item instances (furniture, signs, placed loot) — content that
+  // lives in item_instances rather than a template/config table.
+  const roomItemsResult = await query<{ template_id: number; location_id: number; quantity: number; condition: string }>(
+    `SELECT template_id, location_id, quantity, condition FROM item_instances WHERE location_type = 'room' ORDER BY id`
+  );
+  const itemsByRoom = new Map<number, Array<{ itemName: string | null; quantity: number; condition: string }>>();
+  for (const inst of roomItemsResult.rows) {
+    const itemName = itemIdToName.get(inst.template_id) ?? null;
+    if (!itemName) {
+      const msg = `Room item instance references unknown item template ID ${inst.template_id}`;
+      warnings.push(msg);
+      console.warn(`    WARNING: ${msg}`);
+      continue;
+    }
+    if (!itemsByRoom.has(inst.location_id)) itemsByRoom.set(inst.location_id, []);
+    itemsByRoom.get(inst.location_id)!.push({ itemName, quantity: inst.quantity, condition: inst.condition });
+  }
 
   // Group exits by from_room_id
   const exitsByRoom = new Map<number, Array<{ direction: string; toRoomId: number }>>();
@@ -374,6 +393,11 @@ async function exportRooms(
     };
     if (roomDoors.length > 0) {
       roomData.doors = roomDoors;
+    }
+
+    const roomItems = itemsByRoom.get(room.id) || [];
+    if (roomItems.length > 0) {
+      roomData.items = roomItems;
     }
 
     const roomSpawns = (spawnsByRoom.get(room.id) || []).map(spawn => {
@@ -840,7 +864,7 @@ export async function runExport(): Promise<ExportResult> {
   counts.quests = await exportQuests(npcIdToName, itemIdToName, idToTagMap, factionIdToName, warnings);
 
   console.log('\nExporting area data...');
-  const areaRoomIds = await exportRooms(idToTagMap, warnings);
+  const areaRoomIds = await exportRooms(idToTagMap, itemIdToName, warnings);
   const areasWithNpcs = await exportNpcs(npcTemplates, idToTagMap, itemIdToName, spellIdToMnemonic, dropTableIdToName, factionIdToName, warnings);
 
   // Count rooms and NPCs

@@ -576,7 +576,7 @@ async function importRooms(data: unknown[], filePath: string): Promise<ImportRes
 async function processDeferredRoomExits(): Promise<void> {
   if (deferredRoomFiles.length === 0) return;
 
-  console.log('\n  Resolving cross-area exits, doors, and spawns...');
+  console.log('\n  Resolving cross-area exits, doors, spawns, and room items...');
   const tagToId = await roomRepo.getTagToIdMap();
 
   // Build NPC name → ID lookup for spawn import
@@ -584,6 +584,13 @@ async function processDeferredRoomExits(): Promise<void> {
   const npcNameToId = new Map<string, number>();
   for (const tmpl of npcTemplates) {
     npcNameToId.set(tmpl.name.toLowerCase(), tmpl.id);
+  }
+
+  // Item name → ID lookup for room item placement import
+  const allItemTemplates = await itemRepo.getAllTemplates();
+  const itemTemplateNameToId = new Map<string, number>();
+  for (const tmpl of allItemTemplates) {
+    itemTemplateNameToId.set(tmpl.name.toLowerCase(), tmpl.id);
   }
 
   for (const { filePath, data: fileData } of deferredRoomFiles) {
@@ -750,6 +757,40 @@ async function processDeferredRoomExits(): Promise<void> {
       for (const existing of existingDoors) {
         if (!importedDoorDirections.has(existing.entryDirection.toLowerCase())) {
           await doorRepo.deleteDoor(existing.id);
+        }
+      }
+
+      // Import room item placements (furniture, signs, placed loot).
+      // MERGE-ONLY: create an instance when the room has none of that template.
+      // Never delete unlisted instances — players drop items into rooms at
+      // runtime and those must survive a reimport.
+      const roomItems = (item.items as unknown[]) || [];
+      for (const riRaw of roomItems) {
+        const ri = riRaw as Record<string, unknown>;
+        const itemName = ri.itemName as string;
+        if (!itemName) {
+          result.errors.push(`Room "${tag}" item placement: missing itemName`);
+          continue;
+        }
+        const templateId = itemTemplateNameToId.get(itemName.toLowerCase());
+        if (!templateId) {
+          result.errors.push(`Room "${tag}" item placement: item "${itemName}" not found`);
+          continue;
+        }
+        try {
+          const existingInst = await query<{ id: number }>(
+            `SELECT id FROM item_instances WHERE location_type = 'room' AND location_id = $1 AND template_id = $2 LIMIT 1`,
+            [fromId, templateId]
+          );
+          if (existingInst.rows.length === 0) {
+            await query(
+              `INSERT INTO item_instances (template_id, location_type, location_id, quantity, condition)
+               VALUES ($1, 'room', $2, $3, $4)`,
+              [templateId, fromId, (ri.quantity as number) ?? 1, (ri.condition as string) ?? 'pristine']
+            );
+          }
+        } catch (err) {
+          result.errors.push(`Room "${tag}" item placement "${itemName}": ${(err as Error).message}`);
         }
       }
 

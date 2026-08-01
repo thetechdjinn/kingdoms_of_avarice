@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "exported_at": "2026-08-01T14:42:59.134Z",
+  "exported_at": "2026-08-01T15:31:49.030Z",
   "type": "rooms",
   "data": [
     {
@@ -269,6 +269,13 @@
           "direction": "north",
           "toTag": "hs_hamlet_st1"
         }
+      ],
+      "items": [
+        {
+          "itemName": "a signpost",
+          "quantity": 1,
+          "condition": "pristine"
+        }
       ]
     },
     {
@@ -402,6 +409,13 @@
         {
           "direction": "east",
           "toTag": "hs_hamlet_i2"
+        }
+      ],
+      "items": [
+        {
+          "itemName": "bulletin board",
+          "quantity": 1,
+          "condition": "pristine"
         }
       ]
     },

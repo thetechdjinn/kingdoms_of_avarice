@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "exported_at": "2026-08-01T14:42:59.151Z",
+  "exported_at": "2026-08-01T15:31:49.042Z",
   "type": "rooms",
   "data": [
     {
@@ -1219,6 +1219,13 @@
         {
           "direction": "north",
           "toTag": "sd_office"
+        }
+      ],
+      "items": [
+        {
+          "itemName": "steel longsword",
+          "quantity": 1,
+          "condition": "worn"
         }
       ]
     },

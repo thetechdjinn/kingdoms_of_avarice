@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "exported_at": "2026-08-01T14:42:59.198Z",
+  "exported_at": "2026-08-01T15:31:49.084Z",
   "import_order": [
     "global/spells.json",
     "global/status_effects.json",
