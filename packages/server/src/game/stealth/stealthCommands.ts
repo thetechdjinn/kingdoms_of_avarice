@@ -33,25 +33,26 @@ import { calculateEffectiveVision, calculateNpcEffectiveVision, canSee } from '.
 import { getWorldRef, findNpcInRoom, NpcCombatInstance, checkHostileAggro, setMerchantHostile } from '../npcManager.js';
 import { withNpcName, withNpcNameCapitalized } from '../../utils/textFormat.js';
 import { handleActualDeath } from '../combat.js';
+import { handleAttack } from '../combatCommands.js';
 import { getCombatSettings } from '../../db/repositories/settingsRepository.js';
 
 /**
- * Mark a backstab's surprise round on both combatants. The backstab is the
- * attacker's action for the upcoming combat round, so their normal swings are
- * forfeited. The victim also loses its round (it was ambushed) — unless it had
- * already engaged in combat before the backstab landed, in which case it was
- * alert and keeps its swings. The window covers exactly the next combat tick
- * and then expires on its own.
+ * Mark a backstab's surprise round. The backstab is the attacker's action for
+ * the upcoming combat round, so their normal swings are forfeited. Pass the
+ * victim to suppress its round too (an ambushed NPC loses its swings), or null
+ * to leave it alone: an NPC that was already fighting is alert and keeps its
+ * round, and a PLAYER victim is never suppressed — they only swing if they
+ * actively engage, and reacting before the round tick earns them their swings.
+ * The window covers exactly the next combat tick and then expires on its own.
  */
 async function applySurpriseRound(
   attacker: AuthenticatedSocket,
-  victim: { combatState: { roundSkipUntil: number } },
-  victimWasInCombat: boolean
+  victim: { combatState: { roundSkipUntil: number } } | null
 ): Promise<void> {
   const settings = await getCombatSettings();
   const skipUntil = Date.now() + settings.round_interval_ms + 1000;
   attacker.combatState.roundSkipUntil = skipUntil;
-  if (!victimWasInCombat) {
+  if (victim) {
     victim.combatState.roundSkipUntil = skipUntil;
   }
 }
@@ -435,6 +436,21 @@ export async function handleBackstab(
     }
   }
 
+  // You cannot backstab someone who already engaged you: they are watching you,
+  // so there is no surprise. Fall through to a normal attack instead. (Being
+  // attacked normally breaks stealth, so this mostly covers see_hidden NPCs
+  // that aggroed a hidden player without breaking their stealth.)
+  const targetEngagedAttacker = target
+    ? target.combatState.targets.has(socket.playerId)
+    : npcTarget!.combatState.targets.has(socket.playerId);
+  if (targetEngagedAttacker) {
+    const engagedName = target ? target.username : withNpcName(npcTarget!.entityName, npcTarget!.isProperName);
+    sendMessage(socket, MessageType.OUTPUT,
+      colors.yellow(`${engagedName} is already attacking you - there is no chance for surprise! You attack instead.`));
+    breakStealth(socket, 'attack', true);
+    return handleAttack(socket, args, connectedPlayers);
+  }
+
   // Fetch equipment once — shared by both player and NPC paths
   const equipped = await itemRepo.getCharacterEquipped(socket.characterId!);
   const mainHandWeapon = equipped.find(item => item.equipped_slot === EquipmentSlot.MAIN_HAND);
@@ -554,17 +570,15 @@ export async function handleBackstab(
     breakStealth(target, 'attacked', true);
   }
 
-  // Was the target already fighting before the backstab landed? An engaged
-  // player is alert and keeps their swings in the surprise round.
-  const targetWasInCombat = target.combatState.targets.size > 0;
-
   // Engage combat
   socket.combatState.targets.add(target.playerId);
   socket.regenState.inCombat = true;
   target.regenState.inCombat = true;
 
-  // Backstab is a surprise attack: it is the only attack of this combat round
-  await applySurpriseRound(socket, target, targetWasInCombat);
+  // Backstab is the attacker's action for this combat round. The player victim
+  // is never round-suppressed: if they engage before the next round tick, they
+  // get their swings even though the backstab landed.
+  await applySurpriseRound(socket, null);
 
   // Clear resting state for both players
   socket.regenState.enhancedRegen.clear();
@@ -703,8 +717,9 @@ async function handleBackstabNpc(
   npcTarget.regenState.inCombat = true;
   npcTarget.behaviorState = 'combat';
 
-  // Backstab is a surprise attack: it is the only attack of this combat round
-  await applySurpriseRound(socket, npcTarget, npcWasInCombat);
+  // Backstab is a surprise attack: it is the only attack of this combat round.
+  // An NPC already fighting (someone else) is alert and keeps its swings.
+  await applySurpriseRound(socket, npcWasInCombat ? null : npcTarget);
 
   // If attacking a merchant, mark them as hostile
   if (npcTarget.template.merchantEnabled && socket.characterId) {
