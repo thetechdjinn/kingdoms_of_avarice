@@ -852,7 +852,7 @@ async function handleEntityDeath(
     // Drop all items on death
     try {
       const { dropAllItemsOnDeath } = await import('./itemCommands.js');
-      await dropAllItemsOnDeath(victim.characterId, roomId);
+      await dropAllItemsOnDeath(victim as AuthenticatedSocket, roomId);
     } catch (error) {
       console.error('[Combat] Failed to drop items on death:', error);
     }

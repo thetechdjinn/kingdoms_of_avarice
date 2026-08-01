@@ -1103,7 +1103,7 @@ async function handleHurt(
     // Drop all items on death
     try {
       const { dropAllItemsOnDeath } = await import('./itemCommands.js');
-      await dropAllItemsOnDeath(targetSocket.characterId!, roomId);
+      await dropAllItemsOnDeath(targetSocket, roomId);
     } catch (error) {
       console.error('[AdminCommands] Failed to drop items on death:', error);
     }

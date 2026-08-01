@@ -3929,10 +3929,11 @@ export function isCurrencyItem(item: ItemInstance): boolean {
  * Items with no_drop flag are kept in inventory.
  * Currency is converted to ground item stacks.
  *
- * @param characterId - The character ID of the dead player
+ * @param socket - The dead player's socket (pocket is the currency source of truth)
  * @param roomId - The room where items should be dropped
  */
-export async function dropAllItemsOnDeath(characterId: number, roomId: number): Promise<void> {
+export async function dropAllItemsOnDeath(socket: AuthenticatedSocket, roomId: number): Promise<void> {
+  const characterId = socket.characterId!;
   // Get all inventory items (including equipped)
   const inventoryItems = await itemRepo.getCharacterInventory(characterId);
   const equippedItems = await itemRepo.getPlayerEquipped(characterId);
@@ -3959,15 +3960,17 @@ export async function dropAllItemsOnDeath(characterId: number, roomId: number): 
   // Invalidate equipment cache since all gear was dropped
   invalidateEquipmentCache(characterId);
 
-  // Get character currency and drop it
-  const character = await characterRepo.findCharacterById(characterId);
-  if (character) {
+  // Drop currency. Memory-first: socket.pocket is the source of truth for an
+  // online player's money — the DB row can lag behind between flushes. Reading
+  // the DB here dropped stale amounts, and leaving the pocket uncleared meant
+  // the next flush wrote the dead player's money BACK (duplicating it).
+  {
     const currencyTypes: Array<{ type: string; amount: number }> = [
-      { type: 'copper', amount: character.copper ?? 0 },
-      { type: 'silver', amount: character.silver ?? 0 },
-      { type: 'gold', amount: character.gold ?? 0 },
-      { type: 'platinum', amount: character.platinum ?? 0 },
-      { type: 'runic', amount: character.runic ?? 0 },
+      { type: 'copper', amount: socket.pocket.copper ?? 0 },
+      { type: 'silver', amount: socket.pocket.silver ?? 0 },
+      { type: 'gold', amount: socket.pocket.gold ?? 0 },
+      { type: 'platinum', amount: socket.pocket.platinum ?? 0 },
+      { type: 'runic', amount: socket.pocket.runic ?? 0 },
     ];
 
     for (const currency of currencyTypes) {
@@ -3991,7 +3994,9 @@ export async function dropAllItemsOnDeath(characterId: number, roomId: number): 
       }
     }
 
-    // Clear character's currency
+    // Clear character's currency — DB and pocket cache together, so the next
+    // flush cannot resurrect the dropped coins. Don't mark dirty: the DB is
+    // already current.
     await characterRepo.updateCharacterStats(characterId, {
       copper: 0,
       silver: 0,
@@ -3999,6 +4004,11 @@ export async function dropAllItemsOnDeath(characterId: number, roomId: number): 
       platinum: 0,
       runic: 0,
     });
+    socket.pocket.copper = 0;
+    socket.pocket.silver = 0;
+    socket.pocket.gold = 0;
+    socket.pocket.platinum = 0;
+    socket.pocket.runic = 0;
   }
 }
 

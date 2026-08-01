@@ -138,7 +138,7 @@ async function processDroppedStateTick(): Promise<void> {
         // Drop all items on death
         try {
           const { dropAllItemsOnDeath } = await import('./itemCommands.js');
-          await dropAllItemsOnDeath(socket.characterId!, roomId);
+          await dropAllItemsOnDeath(socket, roomId);
         } catch (error) {
           console.error('[DroppedState] Failed to drop items on death:', error);
         }
@@ -167,7 +167,7 @@ export async function handleDroppedDisconnect(socket: AuthenticatedSocket): Prom
   // Drop items
   try {
     const { dropAllItemsOnDeath } = await import('./itemCommands.js');
-    await dropAllItemsOnDeath(socket.characterId!, roomId);
+    await dropAllItemsOnDeath(socket, roomId);
   } catch (error) {
     console.error('[DroppedState] Failed to drop items on disconnect death:', error);
   }
