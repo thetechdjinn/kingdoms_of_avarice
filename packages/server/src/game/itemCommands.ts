@@ -3994,21 +3994,23 @@ export async function dropAllItemsOnDeath(socket: AuthenticatedSocket, roomId: n
       }
     }
 
-    // Clear character's currency — DB and pocket cache together, so the next
-    // flush cannot resurrect the dropped coins. Don't mark dirty: the DB is
-    // already current.
-    await characterRepo.updateCharacterStats(characterId, {
-      copper: 0,
-      silver: 0,
-      gold: 0,
-      platinum: 0,
-      runic: 0,
+    // Remove exactly the snapshotted coins — DB and pocket cache together, so
+    // the next flush cannot resurrect the dropped money. Relative deductions
+    // (not an absolute zero) so currency credited concurrently during death
+    // processing is kept rather than erased; same pattern as the merchant and
+    // training flows. Don't mark dirty: the DB is already current.
+    await withTransaction(async (client) => {
+      for (const currency of currencyTypes) {
+        if (currency.amount > 0) {
+          await characterRepo.addCurrency(characterId, currency.type as keyof Currency, -currency.amount, client);
+        }
+      }
     });
-    socket.pocket.copper = 0;
-    socket.pocket.silver = 0;
-    socket.pocket.gold = 0;
-    socket.pocket.platinum = 0;
-    socket.pocket.runic = 0;
+    for (const currency of currencyTypes) {
+      if (currency.amount > 0) {
+        socket.pocket[currency.type as keyof Currency] -= currency.amount;
+      }
+    }
   }
 }
 

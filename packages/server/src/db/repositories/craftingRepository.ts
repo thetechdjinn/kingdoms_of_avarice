@@ -147,6 +147,56 @@ export async function getEnchantmentByName(name: string): Promise<Enchantment | 
   return result.rows[0] ? dbToEnchantment(result.rows[0]) : null;
 }
 
+export interface UpsertEnchantmentInput {
+  name: string;
+  description: string | null;
+  skill_type: string;
+  skill_level: number;
+  applicable_types: string[];
+  stat_modifiers: StatModifiers | null;
+  special_effects: EnchantmentEffect[] | null;
+  mana_cost: number;
+  reagents: RecipeIngredient[] | null;
+}
+
+/** JSON-encode plain objects for binding; arrays are handled by the driver seam. */
+function jsonParam(value: unknown): unknown {
+  if (value == null) return null;
+  if (typeof value === 'object' && !Array.isArray(value)) return JSON.stringify(value);
+  return value;
+}
+
+/** Upsert an enchantment by case-insensitive name. Returns true if it already existed. */
+export async function upsertEnchantment(input: UpsertEnchantmentInput): Promise<boolean> {
+  const existing = await getEnchantmentByName(input.name);
+  const params = [
+    input.name,
+    input.description,
+    input.skill_type,
+    input.skill_level,
+    input.applicable_types,
+    jsonParam(input.stat_modifiers),
+    jsonParam(input.special_effects),
+    input.mana_cost,
+    jsonParam(input.reagents),
+  ];
+  if (existing) {
+    await query(
+      `UPDATE enchantments SET name = $1, description = $2, skill_type = $3, skill_level = $4,
+         applicable_types = $5, stat_modifiers = $6, special_effects = $7, mana_cost = $8, reagents = $9
+       WHERE id = $10`,
+      [...params, existing.id]
+    );
+    return true;
+  }
+  await query(
+    `INSERT INTO enchantments (name, description, skill_type, skill_level, applicable_types, stat_modifiers, special_effects, mana_cost, reagents)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+    params
+  );
+  return false;
+}
+
 export async function getEnchantmentsForItemType(itemType: ItemType): Promise<Enchantment[]> {
   const result = await query<DbEnchantment>(
     `SELECT * FROM enchantments

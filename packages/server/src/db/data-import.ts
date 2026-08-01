@@ -33,8 +33,10 @@ import * as doorRepo from './repositories/doorRepository.js';
 import * as npcSpellRepo from './repositories/npcSpellRepository.js';
 import * as spawnConfigRepo from './repositories/spawnRepository.js';
 import * as questRepo from './repositories/questRepository.js';
-import type { QuestTriggerType } from '@koa/shared';
+import type { QuestTriggerType, ItemCondition } from '@koa/shared';
+import { ItemLocationType } from '@koa/shared';
 import { isExportableSetting } from './data-export.js';
+import * as craftingRepo from './repositories/craftingRepository.js';
 
 const DATA_DIR = join(__dirname, '..', '..', '..', '..', 'data');
 
@@ -336,6 +338,13 @@ async function importItems(data: unknown[]): Promise<ImportResult> {
       let consumableData = (item.consumable_data ?? item.consumableData) as Record<string, unknown> | undefined;
       if (consumableData && typeof consumableData === 'object') {
         const mnemonic = consumableData.spell_mnemonic as string | null | undefined;
+        if ('spell_mnemonic' in consumableData && !mnemonic) {
+          // The exporter writes spell_mnemonic: null when it could not resolve
+          // the spell — the item is known-broken; refuse it loudly.
+          result.errors.push(`Item "${name}": consumable spell reference is unresolved (spell_mnemonic is null), skipping item`);
+          result.skipped++;
+          continue;
+        }
         if (mnemonic) {
           const spellId = spellMnemonicToId.get(mnemonic.toLowerCase());
           if (!spellId) {
@@ -762,10 +771,13 @@ async function processDeferredRoomExits(): Promise<void> {
       }
 
       // Import room item placements (furniture, signs, placed loot).
-      // MERGE-ONLY: create an instance when the room has none of that template.
-      // Never delete unlisted instances — players drop items into rooms at
+      // MERGE-ONLY and count-aware: the export writes one entry per authored
+      // instance, so a room may legitimately list the same template twice.
+      // Create only the deficit between listed and existing instances, and
+      // never delete unlisted instances — players drop items into rooms at
       // runtime and those must survive a reimport.
       const roomItems = (item.items as unknown[]) || [];
+      const placementsByTemplate = new Map<number, { itemName: string; entries: Array<{ quantity: number; condition: string }> }>();
       for (const riRaw of roomItems) {
         const ri = riRaw as Record<string, unknown>;
         const itemName = ri.itemName as string;
@@ -778,20 +790,34 @@ async function processDeferredRoomExits(): Promise<void> {
           result.errors.push(`Room "${tag}" item placement: item "${itemName}" not found`);
           continue;
         }
+        if (!placementsByTemplate.has(templateId)) {
+          placementsByTemplate.set(templateId, { itemName, entries: [] });
+        }
+        placementsByTemplate.get(templateId)!.entries.push({
+          quantity: (ri.quantity as number) ?? 1,
+          condition: (ri.condition as string) ?? 'pristine',
+        });
+      }
+      for (const [templateId, placement] of placementsByTemplate) {
         try {
-          const existingInst = await query<{ id: number }>(
-            `SELECT id FROM item_instances WHERE location_type = 'room' AND location_id = $1 AND template_id = $2 LIMIT 1`,
+          const existing = await query<{ n: number }>(
+            `SELECT COUNT(*) AS n FROM item_instances WHERE location_type = 'room' AND location_id = $1 AND template_id = $2`,
             [fromId, templateId]
           );
-          if (existingInst.rows.length === 0) {
-            await query(
-              `INSERT INTO item_instances (template_id, location_type, location_id, quantity, condition)
-               VALUES ($1, 'room', $2, $3, $4)`,
-              [templateId, fromId, (ri.quantity as number) ?? 1, (ri.condition as string) ?? 'pristine']
-            );
+          const existingCount = Number(existing.rows[0]?.n ?? 0);
+          // The repository initializes template-driven fields (consumable
+          // charges, custom_data) that a raw INSERT would miss.
+          for (let i = existingCount; i < placement.entries.length; i++) {
+            await itemRepo.createInstance({
+              template_id: templateId,
+              location_type: ItemLocationType.ROOM,
+              location_id: fromId,
+              quantity: placement.entries[i].quantity,
+              condition: placement.entries[i].condition as ItemCondition,
+            });
           }
         } catch (err) {
-          result.errors.push(`Room "${tag}" item placement "${itemName}": ${(err as Error).message}`);
+          result.errors.push(`Room "${tag}" item placement "${placement.itemName}": ${(err as Error).message}`);
         }
       }
 
@@ -1163,38 +1189,33 @@ async function importEnchantments(data: unknown[]): Promise<ImportResult> {
             result.errors.push(`Enchantment "${name}": reagent has a raw template_id (${r.template_id}) from an old export; re-export to get itemName. Skipping enchantment`);
             failed = true;
             break;
+          } else {
+            // The exporter writes itemName: null when it could not resolve the
+            // reagent — importing without it would silently weaken the
+            // enchantment's requirements.
+            result.errors.push(`Enchantment "${name}": reagent item reference is unresolved (itemName is null), skipping enchantment`);
+            failed = true;
+            break;
           }
         }
         if (failed) { result.skipped++; continue; }
         reagents = resolved;
       }
 
-      const existing = await query<{ id: number }>('SELECT id FROM enchantments WHERE LOWER(name) = LOWER($1)', [name]);
-      const params = [
+      const existed = await craftingRepo.upsertEnchantment({
         name,
-        item.description as string | null,
-        ((item.skill_type ?? item.skillType) as string) || 'enchanting',
-        ((item.skill_level ?? item.skillLevel) as number) ?? 0,
-        (item.applicable_types ?? item.applicableTypes ?? []) as string[],
-        jsonParam(item.stat_modifiers ?? item.statModifiers),
-        jsonParam(item.special_effects ?? item.specialEffects),
-        ((item.mana_cost ?? item.manaCost) as number) ?? 0,
-        jsonParam(reagents),
-      ];
-      if (existing.rows.length > 0) {
-        await query(
-          `UPDATE enchantments SET name = $1, description = $2, skill_type = $3, skill_level = $4,
-             applicable_types = $5, stat_modifiers = $6, special_effects = $7, mana_cost = $8, reagents = $9
-           WHERE id = $10`,
-          [...params, existing.rows[0].id]
-        );
+        description: (item.description as string | null) ?? null,
+        skill_type: ((item.skill_type ?? item.skillType) as string) || 'enchanting',
+        skill_level: ((item.skill_level ?? item.skillLevel) as number) ?? 0,
+        applicable_types: (item.applicable_types ?? item.applicableTypes ?? []) as string[],
+        stat_modifiers: (item.stat_modifiers ?? item.statModifiers ?? null) as craftingRepo.UpsertEnchantmentInput['stat_modifiers'],
+        special_effects: (item.special_effects ?? item.specialEffects ?? null) as craftingRepo.UpsertEnchantmentInput['special_effects'],
+        mana_cost: ((item.mana_cost ?? item.manaCost) as number) ?? 0,
+        reagents: reagents as craftingRepo.UpsertEnchantmentInput['reagents'],
+      });
+      if (existed) {
         result.updated++;
       } else {
-        await query(
-          `INSERT INTO enchantments (name, description, skill_type, skill_level, applicable_types, stat_modifiers, special_effects, mana_cost, reagents)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
-          params
-        );
         result.created++;
       }
     } catch (err) {

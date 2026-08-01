@@ -10,7 +10,7 @@ The following PostgreSQL features work in libSQL with no rewriting:
 - `ON CONFLICT (col) DO UPDATE SET col = excluded.col` (use `excluded.` not `EXCLUDED.`)
 - CTEs, partial indexes, CHECK constraints, foreign keys (requires `PRAGMA foreign_keys = ON`)
 - Window functions (`ROW_NUMBER() OVER (PARTITION BY …)`)
-- **Positional placeholders `$1`, `$2`, `$3`** — libSQL accepts these alongside `?` and `:name`. Existing pg-style queries can run as-is.
+- **Positional placeholders `$1`, `$2`, `$3`** — ⚠️ **SUPERSEDED**: this held for the old `@libsql/client` spike only. The driver actually shipped (`@tursodatabase/database`) treats `$N` as NAMED parameters indexed by first-occurrence order in the SQL, ignoring N — spreading positional args silently mis-binds any out-of-numeric-order query. `db/turso/index.ts` `execOn()` therefore binds a named-args object keyed by number (`{'1': v1, ...}`); never spread positional args.
 
 ## Required rewrites
 
@@ -93,7 +93,7 @@ Given the memory-first architecture direction (see [[Memory_First_Architecture]]
 
 - `pg.Pool` → `@libsql/client` `createClient({ url, authToken? })`
 - `pg.PoolClient` callback in `withTransaction` → libSQL's `db.transaction()` API has a different shape; the wrapper in `db/index.ts:67` needs reshaping but its callers (which receive a `client` they pass to `query()`) can keep their signatures if the wrapper translates.
-- Placeholder syntax: keep `$1, $2, $3` — libSQL accepts it.
+- Placeholder syntax: keep `$1, $2, $3` in the SQL, but see the ⚠️ warning above — the shipped driver requires named-object binding in the wrapper (`db/turso/index.ts`), not positional spread.
 
 ## Still unverified
 
@@ -106,9 +106,14 @@ Ran a local file-based libSQL spike to retire the biggest feared risk before
 the repo audit:
 
 - **pg-style `$1, $2` placeholders bind correctly with a positional `args`
-  array.** Both `?` and `$1`/`$2` returned correct rows. libSQL maps `$N`
-  positionally, so the ~22 repositories do **NOT** need a placeholder rewrite.
-  This was the single largest potential blocker; it is a non-issue.
+  array** — ⚠️ **TRUE ONLY FOR `@libsql/client` 0.17.4, WHICH WAS NOT SHIPPED.**
+  The production driver `@tursodatabase/database` binds `$N` by first-occurrence
+  order, not by number (verified: `SELECT $2, $1` spread with `[a, b]` gives
+  `$2=a, $1=b`), which silently corrupted out-of-order queries (quest step
+  advancement, faction updates) until fixed on 2026-08-01. The repositories
+  keep their `$N` SQL, but the wrapper (`db/turso/index.ts`) must bind a
+  named-args object keyed by number. This section is retained as a record of
+  why the wrong conclusion was reached: the spike tested a different driver.
 - **`RETURNING` works** (`INSERT ... RETURNING id` → `[{id:3}]`). Note
   `rowsAffected` is `0` and `lastInsertRowid` is `undefined` when RETURNING is
   used — fine, callers read the returned row.

@@ -928,15 +928,12 @@ async function handleNpcDotDeath(npc: NpcCombatInstance): Promise<void> {
   // Process death (XP, loot, despawn, respawn)
   await processNpcDeath(npc, null, roomId, connectedPlayersRef);
 
-  // Clear combat state for all players who were fighting this NPC
-  for (const [, socket] of connectedPlayersRef) {
-    if (socket.combatState.targets.has(npc.entityId)) {
-      socket.combatState.targets.delete(npc.entityId);
-      if (socket.combatState.targets.size === 0) {
-        socket.regenState.inCombat = false;
-      }
-    }
-  }
+  // Full combat-state cleanup, same as the normal kill path: removes this NPC
+  // from everyone's target lists AND releases players the NPC was targeting
+  // (a player who broke off one-sidedly stays flagged in-combat until every
+  // enemy disengages — this NPC dying may be that release).
+  const { clearCombatState } = await import('./combatCommands.js');
+  clearCombatState(npc, connectedPlayersRef);
 }
 
 /**

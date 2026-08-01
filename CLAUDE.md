@@ -393,6 +393,13 @@ Players can access different help categories based on their role:
 - Accuracy based on DEX, INT, CHA, stealth, and weapon/class bonuses
 - Always breaks stealth and engages combat (hit or miss)
 - Can target both players and NPCs
+- **Surprise round**: the backstab is the attacker's entire action for that combat round (no normal swings). An ambushed NPC victim loses its round too, as do bystander hostile NPCs that aggro off the reveal; an NPC already fighting keeps its swings, and a player victim is never round-suppressed (if they engage before the next round tick, they get their swings)
+- **No surprise on an engaged target**: you cannot backstab someone who already has you in their combat targets; the attempt breaks stealth and converts to a normal attack
+
+**Breaking Off Combat:**
+
+- `break` and `flee` are ONE-SIDED: they stop only your attacks. Enemies keep their targeting and keep attacking, and you stay flagged in-combat (no regen, no stealth) until every enemy disengages, dies, or loses you when you leave the room
+- You cannot sneak or hide while any player or NPC is still engaged with you
 
 **NPC Perception (Placeholder):**
 

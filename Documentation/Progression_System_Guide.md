@@ -321,15 +321,18 @@ All endpoints require Developer role authentication.
 
 ## Sample Data
 
-The system includes sample JSON data files in `packages/server/src/game/data/`:
+Bootstrap JSON data files live in `packages/server/src/game/data/`:
 
 - `classes.json` - 15 classes with combat levels, magic schools, and bonuses
 - `races.json` - 14 races with stat ranges, traits, and combat bonuses
 - `progression_table.json` - Level 1-10 requirements
-- `essence_events.json` - Combat, exploration, and social events
-- `talents.json` - Sample talents for each class
 
-This data is loaded on server startup for testing.
+This data is loaded on server startup as a fallback; the database (seeded from
+`data/global/progression/` via `npm run data:import`) is authoritative.
+
+Essence event definitions are canonical game content, not sample data: they
+ship in `data/global/essence_events.json` and load through the standard
+`npm run data:import` pipeline.
 
 ### Classes with Combat Bonuses
 
