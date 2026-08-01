@@ -48,13 +48,14 @@ import { getCombatSettings } from '../../db/repositories/settingsRepository.js';
 async function applySurpriseRound(
   attacker: AuthenticatedSocket,
   victim: { combatState: { roundSkipUntil: number } } | null
-): Promise<void> {
+): Promise<number> {
   const settings = await getCombatSettings();
   const skipUntil = Date.now() + settings.round_interval_ms + 1000;
   attacker.combatState.roundSkipUntil = skipUntil;
   if (victim) {
     victim.combatState.roundSkipUntil = skipUntil;
   }
+  return skipUntil;
 }
 
 // ============================================================================
@@ -719,7 +720,7 @@ async function handleBackstabNpc(
 
   // Backstab is a surprise attack: it is the only attack of this combat round.
   // An NPC already fighting (someone else) is alert and keeps its swings.
-  await applySurpriseRound(socket, npcWasInCombat ? null : npcTarget);
+  const surpriseUntil = await applySurpriseRound(socket, npcWasInCombat ? null : npcTarget);
 
   // If attacking a merchant, mark them as hostile
   if (npcTarget.template.merchantEnabled && socket.characterId) {
@@ -772,8 +773,9 @@ async function handleBackstabNpc(
       }
     }
 
-    // Other hostile NPCs notice
-    setImmediate(() => checkHostileAggro(currentRoomId, socket));
+    // Other hostile NPCs notice — but they only learned the player is here
+    // when the backstab landed, too late to act in this combat round.
+    setImmediate(() => checkHostileAggro(currentRoomId, socket, surpriseUntil));
 
     return { type: MessageType.OUTPUT, message: '' }; // Backstab message already sent
   } else {
@@ -782,8 +784,9 @@ async function handleBackstabNpc(
 
     broadcastToRoom(currentRoomId, roomMsg, [socket.playerId]);
 
-    // Other hostile NPCs notice
-    setImmediate(() => checkHostileAggro(currentRoomId, socket));
+    // Other hostile NPCs notice — but they only learned the player is here
+    // when the backstab landed, too late to act in this combat round.
+    setImmediate(() => checkHostileAggro(currentRoomId, socket, surpriseUntil));
 
     return { type: MessageType.OUTPUT, message: attackerMsg };
   }

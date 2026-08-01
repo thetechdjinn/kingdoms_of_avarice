@@ -730,10 +730,22 @@ export async function saveAllInstances(): Promise<void> {
  * Initiate mutual aggro between an NPC and a player.
  * Shared helper used by both checkNpcAggroOnArrival and checkHostileAggro.
  */
-function initiateAggro(npc: NpcCombatInstance, player: CombatEntity, roomId: number): void {
+function initiateAggro(
+  npc: NpcCombatInstance,
+  player: CombatEntity,
+  roomId: number,
+  surpriseRoundUntil?: number
+): void {
   npc.combatState.targets.add(player.entityId);
   npc.regenState.inCombat = true;
   npc.behaviorState = 'combat';
+
+  // The NPC only just learned the player is here (e.g. a stealthed player
+  // revealed themselves by backstabbing someone else in the room) — too late
+  // to act in the current combat round.
+  if (surpriseRoundUntil !== undefined) {
+    npc.combatState.roundSkipUntil = surpriseRoundUntil;
+  }
 
   // Mark the player as in combat (stops regen) but do NOT add the NPC to
   // the player's targets — players must manually choose to attack back.
@@ -956,6 +968,7 @@ export function shouldNpcAggro(
 export function checkHostileAggro(
   roomId: number,
   player: CombatEntity,
+  surpriseRoundUntil?: number,
 ): void {
   // Skip players in training form
   if (isPlayerEntity(player) && (player as AuthenticatedSocket).isTraining) return;
@@ -978,7 +991,7 @@ export function checkHostileAggro(
       setMerchantHostile((player as AuthenticatedSocket).characterId!, npc.templateId);
     }
 
-    initiateAggro(npc, player, roomId);
+    initiateAggro(npc, player, roomId, surpriseRoundUntil);
   }
 }
 
