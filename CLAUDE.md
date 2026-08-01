@@ -63,6 +63,8 @@ npm run data:export      # Export all game content to data/ as JSON
 npm run data:import      # Import game content from data/ (merge/upsert)
 ```
 
+**Before adding a NEW content table** (or authoring content in `crafting_recipes` or `npc_factions`, which have no pipeline support yet): extend `data-export.ts` + `data-import.ts` first, or the content will silently not ship to new deployments. See "Pipeline coverage" in [data/README.md](data/README.md). Portable references only (names/tags/mnemonics) — never export raw numeric IDs.
+
 **Test account:** `testuser` / `password`
 
 ## Architecture
