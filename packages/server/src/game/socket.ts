@@ -392,6 +392,7 @@ export function setupGameSocket(wss: WebSocketServer): void {
       combatAction: 'melee',
       activeSpell: null,
       combatOrderPosition: 0,
+      roundSkipUntil: 0,
     };
 
     // Cache character stats for combat (avoid DB lookups during combat rounds)

@@ -25,6 +25,12 @@ export interface CombatState {
   combatAction: CombatActionType;  // 'melee' or 'spell'
   activeSpell: SpellCastingState | null;  // If casting, the spell being cast
   combatOrderPosition: number;  // 0 = normal, higher = swings later (re-engage penalty)
+  // Surprise round (backstab): while Date.now() < roundSkipUntil, this entity's
+  // next combat-round action is forfeited — the backstab already spent the
+  // attacker's action, and an ambushed victim loses its round. Served (reset to
+  // 0) by processCombatRound; expires on its own so it can never go stale for
+  // an entity that leaves or never enters combat.
+  roundSkipUntil: number;
 }
 
 /**

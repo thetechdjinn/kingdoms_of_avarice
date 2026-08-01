@@ -1543,6 +1543,14 @@ async function processCombatRound(): Promise<void> {
     // Process each participant in combat order
     for (const { entity, isNpc } of participants) {
       try {
+        // Surprise round (backstab): the attacker's action was already spent on
+        // the backstab itself, and an ambushed victim loses its round. Serve
+        // the skip once; the timestamp expires on its own if never served.
+        if (entity.combatState.roundSkipUntil > Date.now()) {
+          entity.combatState.roundSkipUntil = 0;
+          continue;
+        }
+
         // blocksCombat: stunned/paralyzed entities skip their turn
         if (getEffectModifiers(entity).blocksCombat) {
           continue;

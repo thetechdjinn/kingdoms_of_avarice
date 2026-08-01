@@ -33,6 +33,28 @@ import { calculateEffectiveVision, calculateNpcEffectiveVision, canSee } from '.
 import { getWorldRef, findNpcInRoom, NpcCombatInstance, checkHostileAggro, setMerchantHostile } from '../npcManager.js';
 import { withNpcName, withNpcNameCapitalized } from '../../utils/textFormat.js';
 import { handleActualDeath } from '../combat.js';
+import { getCombatSettings } from '../../db/repositories/settingsRepository.js';
+
+/**
+ * Mark a backstab's surprise round on both combatants. The backstab is the
+ * attacker's action for the upcoming combat round, so their normal swings are
+ * forfeited. The victim also loses its round (it was ambushed) — unless it had
+ * already engaged in combat before the backstab landed, in which case it was
+ * alert and keeps its swings. The window covers exactly the next combat tick
+ * and then expires on its own.
+ */
+async function applySurpriseRound(
+  attacker: AuthenticatedSocket,
+  victim: { combatState: { roundSkipUntil: number } },
+  victimWasInCombat: boolean
+): Promise<void> {
+  const settings = await getCombatSettings();
+  const skipUntil = Date.now() + settings.round_interval_ms + 1000;
+  attacker.combatState.roundSkipUntil = skipUntil;
+  if (!victimWasInCombat) {
+    victim.combatState.roundSkipUntil = skipUntil;
+  }
+}
 
 // ============================================================================
 // STEALTH ROLL
@@ -532,10 +554,17 @@ export async function handleBackstab(
     breakStealth(target, 'attacked', true);
   }
 
+  // Was the target already fighting before the backstab landed? An engaged
+  // player is alert and keeps their swings in the surprise round.
+  const targetWasInCombat = target.combatState.targets.size > 0;
+
   // Engage combat
   socket.combatState.targets.add(target.playerId);
   socket.regenState.inCombat = true;
   target.regenState.inCombat = true;
+
+  // Backstab is a surprise attack: it is the only attack of this combat round
+  await applySurpriseRound(socket, target, targetWasInCombat);
 
   // Clear resting state for both players
   socket.regenState.enhancedRegen.clear();
@@ -587,6 +616,10 @@ export async function handleBackstab(
     // Notify the target
     sendMessage(target, MessageType.OUTPUT, targetMsg);
 
+    // Send the backstab line NOW, before dropped/death processing, so the
+    // attacker sees it before any collapse/slain broadcasts.
+    sendMessage(socket, MessageType.OUTPUT, attackerMsg);
+
     // Handle state changes (dropped/death)
     if (damageApplied.stateChange === 'dropped') {
       initializeDroppedState(target, currentRoomId);
@@ -608,10 +641,7 @@ export async function handleBackstab(
       sendVitals(target);
     }
 
-    return {
-      type: MessageType.OUTPUT,
-      message: attackerMsg,
-    };
+    return { type: MessageType.OUTPUT, message: '' }; // Backstab message already sent
   } else {
     // Miss messages - use weapon's miss verb
     const attackerMsg = `You ${missVerb} ${colors.combatDefender(target.username)}, but miss!`;
@@ -662,12 +692,19 @@ async function handleBackstabNpc(
   // Break stealth regardless of hit/miss
   breakStealth(socket, 'attack', true);
 
+  // Was the NPC already fighting before the backstab landed? An engaged NPC is
+  // alert and keeps its swings in the surprise round.
+  const npcWasInCombat = npcTarget.combatState.targets.size > 0;
+
   // Engage combat (mirrors combatCommands.ts attack flow)
   socket.combatState.targets.add(npcTarget.entityId);
   npcTarget.combatState.targets.add(socket.playerId);
   socket.regenState.inCombat = true;
   npcTarget.regenState.inCombat = true;
   npcTarget.behaviorState = 'combat';
+
+  // Backstab is a surprise attack: it is the only attack of this combat round
+  await applySurpriseRound(socket, npcTarget, npcWasInCombat);
 
   // If attacking a merchant, mark them as hostile
   if (npcTarget.template.merchantEnabled && socket.characterId) {
@@ -706,6 +743,11 @@ async function handleBackstabNpc(
 
     broadcastToRoom(currentRoomId, roomMsg, [socket.playerId]);
 
+    // Send the backstab line NOW, before death processing. Returning it as the
+    // command response would deliver it only after this handler finishes, which
+    // put it after the slain/loot/XP messages on a killing backstab.
+    sendMessage(socket, MessageType.OUTPUT, attackerMsg);
+
     // NPCs have no bleed-out phase — treat both dropped and death as immediate death
     if (damageApplied.stateChange === 'dropped' || damageApplied.stateChange === 'death') {
       const deferredRewards: Array<() => Promise<void>> = [];
@@ -718,7 +760,7 @@ async function handleBackstabNpc(
     // Other hostile NPCs notice
     setImmediate(() => checkHostileAggro(currentRoomId, socket));
 
-    return { type: MessageType.OUTPUT, message: attackerMsg };
+    return { type: MessageType.OUTPUT, message: '' }; // Backstab message already sent
   } else {
     const attackerMsg = `You ${missVerb} ${colors.combatDefender(npcDisplayName)}, but miss!`;
     const roomMsg = `${colors.combatAttacker(socket.username)} ${missVerb3p} ${colors.combatDefender(npcDisplayName)} from the shadows, but misses!`;
