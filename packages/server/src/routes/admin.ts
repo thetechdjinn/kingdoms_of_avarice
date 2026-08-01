@@ -80,87 +80,11 @@ export function setupAdminRoutes(app: Express): void {
       return;
     }
 
-    // Validate specific settings
-    if (key === 'max_characters_per_player') {
-      const numValue = Number(value);
-      if (isNaN(numValue) || numValue < 1 || numValue > 100) {
-        res.status(400).json({ success: false, message: 'Max characters must be between 1 and 100' });
-        return;
-      }
-    } else if (key === 'ip_access_mode') {
-      if (value !== 'allowlist' && value !== 'blocklist') {
-        res.status(400).json({ success: false, message: 'IP access mode must be "allowlist" or "blocklist"' });
-        return;
-      }
-    } else if (key === 'currency_runic_name') {
-      if (typeof value !== 'string') {
-        res.status(400).json({ success: false, message: 'Runic name must be a string' });
-        return;
-      }
-      const trimmedName = value.trim();
-      if (trimmedName.length === 0) {
-        res.status(400).json({ success: false, message: 'Runic name cannot be empty' });
-        return;
-      }
-      if (trimmedName.length > 20) {
-        res.status(400).json({ success: false, message: 'Runic name must be 20 characters or less' });
-        return;
-      }
-      // Only allow letters, spaces, and hyphens
-      if (!/^[a-zA-Z][a-zA-Z\s-]*$/.test(trimmedName)) {
-        res.status(400).json({ success: false, message: 'Runic name must start with a letter and contain only letters, spaces, and hyphens' });
-        return;
-      }
-    } else if (key === 'character_save_interval_ms') {
-      const numValue = Number(value);
-      if (isNaN(numValue) || numValue < 10000 || numValue > 600000) {
-        res.status(400).json({ success: false, message: 'Save interval must be between 10000ms (10s) and 600000ms (10min)' });
-        return;
-      }
-    } else if (key === 'health_tick_interval_ms' || key === 'mana_tick_interval_ms') {
-      const numValue = Number(value);
-      if (isNaN(numValue) || numValue < 1000 || numValue > 60000) {
-        res.status(400).json({ success: false, message: 'Tick interval must be between 1000ms and 60000ms' });
-        return;
-      }
-    } else if (key.match(/^(health|mana)_regen_(base|enhanced)_percent$/)) {
-      const numValue = Number(value);
-      if (isNaN(numValue) || numValue < 0 || numValue > 100) {
-        res.status(400).json({ success: false, message: 'Regen percent must be between 0 and 100' });
-        return;
-      }
-    } else if (key === 'blind_accuracy_penalty') {
-      const numValue = Number(value);
-      if (isNaN(numValue) || !Number.isInteger(numValue) || numValue < 1 || numValue > 50) {
-        res.status(400).json({ success: false, message: 'Blind accuracy penalty must be a whole number between 1 and 50' });
-        return;
-      }
-    } else if (key === 'crit_soft_cap') {
-      const numValue = Number(value);
-      if (isNaN(numValue) || !Number.isInteger(numValue) || numValue < 5 || numValue > 60) {
-        res.status(400).json({ success: false, message: 'Critical hit soft cap must be a whole number between 5 and 60' });
-        return;
-      }
-    } else if (key === 'xp_overcap_percent') {
-      const numValue = Number(value);
-      if (isNaN(numValue) || !Number.isInteger(numValue) || numValue < 0 || numValue > 200) {
-        res.status(400).json({ success: false, message: 'XP overcap percent must be a whole number between 0 and 200' });
-        return;
-      }
-    } else if (key in settingsRepo.BACKSTAB_SETTING_RANGES) {
-      const numValue = Number(value);
-      const range = settingsRepo.BACKSTAB_SETTING_RANGES[key as settingsRepo.BackstabSettingKey];
-      if (isNaN(numValue)) {
-        res.status(400).json({ success: false, message: 'Value must be a valid number' });
-        return;
-      }
-      if (numValue < range.min || numValue > range.max) {
-        res.status(400).json({
-          success: false,
-          message: `Value must be between ${range.min} and ${range.max}`
-        });
-        return;
-      }
+    // Validate via the shared validator (also used by the data importer)
+    const validationError = settingsRepo.validateSettingValue(key, value);
+    if (validationError) {
+      res.status(400).json({ success: false, message: validationError });
+      return;
     }
 
     try {

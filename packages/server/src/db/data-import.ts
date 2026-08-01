@@ -33,6 +33,7 @@ import * as doorRepo from './repositories/doorRepository.js';
 import * as npcSpellRepo from './repositories/npcSpellRepository.js';
 import * as spawnConfigRepo from './repositories/spawnRepository.js';
 import * as questRepo from './repositories/questRepository.js';
+import * as settingsRepo from './repositories/settingsRepository.js';
 import type { QuestTriggerType, ItemCondition } from '@koa/shared';
 import { ItemLocationType } from '@koa/shared';
 import { isExportableSetting } from './data-export.js';
@@ -355,10 +356,14 @@ async function importItems(data: unknown[]): Promise<ImportResult> {
           consumableData = { ...consumableData, spell_id: spellId };
           delete consumableData.spell_mnemonic;
         } else if (consumableData.spell_id != null) {
+          // Raw IDs are DB-local and cannot be trusted across databases; on a
+          // renumbered target the consumable would cast the WRONG spell.
           result.errors.push(
             `Item "${name}": consumable_data has a raw spell_id (${consumableData.spell_id}) from an old export; ` +
-            `it may point at the wrong spell in this database. Re-export from the source database to get spell_mnemonic.`
+            `re-export from the source database to get spell_mnemonic. Skipping item`
           );
+          result.skipped++;
+          continue;
         }
       }
 
@@ -1172,6 +1177,11 @@ async function importEnchantments(data: unknown[]): Promise<ImportResult> {
       // template IDs. Raw template_id values from old exports are DB-local and
       // cannot be trusted across databases — refuse them.
       let reagents: unknown = item.reagents ?? null;
+      if (reagents != null && !Array.isArray(reagents)) {
+        result.errors.push(`Enchantment "${name}": reagents must be an array, skipping enchantment`);
+        result.skipped++;
+        continue;
+      }
       if (Array.isArray(reagents) && reagents.length > 0) {
         const resolved: Array<{ template_id: number; quantity: number }> = [];
         let failed = false;
@@ -1184,7 +1194,13 @@ async function importEnchantments(data: unknown[]): Promise<ImportResult> {
               failed = true;
               break;
             }
-            resolved.push({ template_id: templateId, quantity: (r.quantity as number) ?? 1 });
+            const quantity = (r.quantity as number) ?? 1;
+            if (!Number.isInteger(quantity) || quantity < 1) {
+              result.errors.push(`Enchantment "${name}": reagent "${r.itemName}" has invalid quantity ${JSON.stringify(r.quantity)}, skipping enchantment`);
+              failed = true;
+              break;
+            }
+            resolved.push({ template_id: templateId, quantity });
           } else if (r.template_id != null) {
             result.errors.push(`Enchantment "${name}": reagent has a raw template_id (${r.template_id}) from an old export; re-export to get itemName. Skipping enchantment`);
             failed = true;
@@ -1248,6 +1264,18 @@ async function importSettings(data: unknown[]): Promise<ImportResult> {
       // Values are stored as jsonb-style TEXT. Scalars export as raw strings
       // ('10', '"runic"'); objects/arrays were parsed on read, re-encode them.
       const value = typeof item.value === 'string' ? item.value : JSON.stringify(item.value);
+
+      // Enforce the same per-key validation as the admin settings API, so an
+      // imported file cannot persist out-of-range values or strings carrying
+      // terminal control sequences.
+      let parsedForValidation: unknown = value;
+      try { parsedForValidation = JSON.parse(value); } catch { /* raw string */ }
+      const validationError = settingsRepo.validateSettingValue(key, parsedForValidation);
+      if (validationError) {
+        result.errors.push(`Setting "${key}": ${validationError}, skipping`);
+        result.skipped++;
+        continue;
+      }
       const existing = await query<{ key: string }>('SELECT key FROM game_settings WHERE key = $1', [key]);
       await query(
         `INSERT INTO game_settings (key, value) VALUES ($1, $2)

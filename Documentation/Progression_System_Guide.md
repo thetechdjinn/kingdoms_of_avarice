@@ -327,8 +327,10 @@ Bootstrap JSON data files live in `packages/server/src/game/data/`:
 - `races.json` - 14 races with stat ranges, traits, and combat bonuses
 - `progression_table.json` - Level 1-10 requirements
 
-This data is loaded on server startup as a fallback; the database (seeded from
-`data/global/progression/` via `npm run data:import`) is authoritative.
+Class definitions are loaded into memory from these bundled JSON files on
+every server startup (they are treated as static); races and the progression
+table are read from the database, which is seeded from
+`data/global/progression/` via `npm run data:import`.
 
 Essence event definitions are canonical game content, not sample data: they
 ship in `data/global/essence_events.json` and load through the standard

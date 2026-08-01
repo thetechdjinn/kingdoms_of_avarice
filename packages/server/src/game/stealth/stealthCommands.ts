@@ -48,9 +48,11 @@ async function applySurpriseRound(
   attacker: AuthenticatedSocket,
   victim: { combatState: { roundSkipUntil: number } } | null
 ): Promise<number> {
-  // Window must cover exactly one tick of the ACTUAL combat scheduler — the
-  // DB round-interval setting is not what drives the loop cadence.
-  const skipUntil = Date.now() + getCombatRoundIntervalMs() + 1000;
+  // Consumption happens at the next PROCESSED combat round; the deadline only
+  // exists so a flag can never go stale on an entity that leaves combat before
+  // a round processes. Three intervals of headroom keeps the skip alive even
+  // when a long-running round causes the scheduler to skip overlapping ticks.
+  const skipUntil = Date.now() + getCombatRoundIntervalMs() * 3 + 1000;
   attacker.combatState.roundSkipUntil = skipUntil;
   if (victim) {
     victim.combatState.roundSkipUntil = skipUntil;

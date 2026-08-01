@@ -9,6 +9,7 @@ import * as craftingRepo from '../db/repositories/craftingRepository.js';
 import * as characterRepo from '../db/repositories/characterRepository.js';
 import * as settingsRepo from '../db/repositories/settingsRepository.js';
 import { withTransaction } from '../db/index.js';
+import { flushPlayer } from './sessionState.js';
 import { calculateEncumbranceRatio, getEquipmentCombatStats, invalidateEquipmentCache } from './combatStats.js';
 import { isHidden, breakStealth, isStealthing } from './stealth/stealthState.js';
 import { rollStealthCheck } from './stealth/stealthCheck.js';
@@ -3964,6 +3965,10 @@ export async function dropAllItemsOnDeath(socket: AuthenticatedSocket, roomId: n
   // online player's money — the DB row can lag behind between flushes. Reading
   // the DB here dropped stale amounts, and leaving the pocket uncleared meant
   // the next flush wrote the dead player's money BACK (duplicating it).
+  // Flush dirty session state first so the relative deductions below run
+  // against a database row that matches the pocket (dying right after an
+  // unflushed bank withdrawal must not persist negative denominations).
+  await flushPlayer(socket);
   {
     const currencyTypes: Array<{ type: string; amount: number }> = [
       { type: 'copper', amount: socket.pocket.copper ?? 0 },

@@ -925,15 +925,28 @@ async function handleNpcDotDeath(npc: NpcCombatInstance): Promise<void> {
     colors.boldRed(`${npc.entityName} collapses and dies!`)
   );
 
-  // Process death (XP, loot, despawn, respawn)
-  await processNpcDeath(npc, null, roomId, connectedPlayersRef);
+  // Snapshot XP participants BEFORE clearing combat state (clearCombatState
+  // and markAsCorpse both wipe target lists). Same pattern as the normal kill
+  // path in combat.ts: players targeting this NPC from the same room.
+  const participants: CombatEntity[] = [];
+  for (const [, socket] of connectedPlayersRef) {
+    if (socket.combatState.targets.has(npc.entityId) && getEntityRoomId(socket) === roomId) {
+      participants.push(socket);
+    }
+  }
 
-  // Full combat-state cleanup, same as the normal kill path: removes this NPC
-  // from everyone's target lists AND releases players the NPC was targeting
-  // (a player who broke off one-sidedly stays flagged in-combat until every
-  // enemy disengages — this NPC dying may be that release).
+  // Full combat-state cleanup BEFORE death processing (markAsCorpse clears the
+  // NPC's targets, so running this after would find nothing to release):
+  // removes this NPC from everyone's target lists AND releases players the
+  // NPC was targeting (a player who broke off one-sidedly stays flagged
+  // in-combat until every enemy disengages — this NPC dying may be that
+  // release).
   const { clearCombatState } = await import('./combatCommands.js');
   clearCombatState(npc, connectedPlayersRef);
+
+  // Process death (XP, loot, despawn, respawn) with the pre-collected
+  // participants, since the target lists are already cleared.
+  await processNpcDeath(npc, null, roomId, connectedPlayersRef, [], participants);
 }
 
 /**

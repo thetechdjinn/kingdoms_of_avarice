@@ -1,6 +1,13 @@
 # Turso / libSQL Migration Notes
 
-Reference for if and when a PostgreSQL → Turso migration is undertaken. The findings below come from prototype testing against `@libsql/client` with local file-backed databases. The prototypes themselves are not preserved — only the verified conclusions.
+> **STATUS: the migration is COMPLETE.** The app runs on the newer Rust engine
+> `@tursodatabase/database` (local embedded file), NOT `@libsql/client`. The
+> notes below are the historical planning/spike record; where the shipped
+> driver behaves differently, ⚠️ warnings are inline (most importantly `$N`
+> parameter binding). Current behavior is documented in
+> `packages/server/src/db/turso/index.ts` and CLAUDE.md.
+
+Reference from when the PostgreSQL → Turso migration was being planned. The findings below come from prototype testing against `@libsql/client` with local file-backed databases. The prototypes themselves are not preserved — only the verified conclusions.
 
 ## Verified compatibility
 

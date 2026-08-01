@@ -155,15 +155,11 @@ Bank functionality requires being in a room with the bank feature enabled. Bank 
 
 ## Future Features
 
+Shops (buying/selling with automatic denomination conversion) and training
+(payment drawn from the pocket across all denominations, with change) are
+implemented.
+
 The following features are planned but not yet implemented:
-
-### Shops
-- Buying and selling items
-- Currency auto-conversion during transactions
-
-### Training
-- Paying gold to train to the next level
-- Currency auto-conversion during training transactions
 
 ### Thievery
 - Stealing random amounts of coins from other players/NPCs
