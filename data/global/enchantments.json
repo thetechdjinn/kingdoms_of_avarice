@@ -1,0 +1,56 @@
+{
+  "version": "1.0",
+  "exported_at": "2026-08-01T22:33:26.921Z",
+  "type": "enchantments",
+  "data": [
+    {
+      "name": "Flame",
+      "description": "Adds fire damage to weapons.",
+      "skill_type": "enchanting",
+      "skill_level": 5,
+      "applicable_types": [
+        "weapon"
+      ],
+      "stat_modifiers": null,
+      "special_effects": [
+        {
+          "type": "fire_damage",
+          "value": 5,
+          "chance": 25
+        }
+      ],
+      "mana_cost": 50,
+      "reagents": null
+    },
+    {
+      "name": "Protection",
+      "description": "Increases armor defense.",
+      "skill_type": "enchanting",
+      "skill_level": 0,
+      "applicable_types": [
+        "armor"
+      ],
+      "stat_modifiers": {
+        "constitution": 2
+      },
+      "special_effects": null,
+      "mana_cost": 20,
+      "reagents": null
+    },
+    {
+      "name": "Sharpness",
+      "description": "Increases weapon damage.",
+      "skill_type": "enchanting",
+      "skill_level": 0,
+      "applicable_types": [
+        "weapon"
+      ],
+      "stat_modifiers": {
+        "strength": 2
+      },
+      "special_effects": null,
+      "mana_cost": 20,
+      "reagents": null
+    }
+  ]
+}

@@ -33,7 +33,10 @@ import * as doorRepo from './repositories/doorRepository.js';
 import * as npcSpellRepo from './repositories/npcSpellRepository.js';
 import * as spawnConfigRepo from './repositories/spawnRepository.js';
 import * as questRepo from './repositories/questRepository.js';
-import type { QuestTriggerType } from '@koa/shared';
+import * as settingsRepo from './repositories/settingsRepository.js';
+import type { QuestTriggerType, ItemCondition } from '@koa/shared';
+import { ItemLocationType } from '@koa/shared';
+import * as craftingRepo from './repositories/craftingRepository.js';
 
 const DATA_DIR = join(__dirname, '..', '..', '..', '..', 'data');
 
@@ -316,11 +319,52 @@ async function importProgressionTable(data: unknown[]): Promise<ImportResult> {
 async function importItems(data: unknown[]): Promise<ImportResult> {
   const result: ImportResult = { file: 'items.json', created: 0, updated: 0, skipped: 0, errors: [] };
 
+  // Spell lookup for consumable_data.spell_mnemonic → local spell ID resolution
+  const allSpells = await spellRepo.getAllSpells();
+  const spellMnemonicToId = new Map<string, number>();
+  for (const spell of allSpells) {
+    spellMnemonicToId.set(spell.mnemonic.toLowerCase(), spell.id);
+  }
+
   for (const raw of data) {
     const item = raw as Record<string, unknown>;
     try {
       const name = item.name as string;
       if (!name) { result.skipped++; continue; }
+
+      // Resolve portable spell mnemonic in consumable_data to this database's
+      // spell ID. Raw spell_id values from old exports are DB-local and cannot
+      // be trusted across databases — imported as-is but flagged.
+      let consumableData = (item.consumable_data ?? item.consumableData) as Record<string, unknown> | undefined;
+      if (consumableData && typeof consumableData === 'object') {
+        const mnemonic = consumableData.spell_mnemonic as string | null | undefined;
+        if ('spell_mnemonic' in consumableData && !mnemonic) {
+          // The exporter writes spell_mnemonic: null when it could not resolve
+          // the spell — the item is known-broken; refuse it loudly.
+          result.errors.push(`Item "${name}": consumable spell reference is unresolved (spell_mnemonic is null), skipping item`);
+          result.skipped++;
+          continue;
+        }
+        if (mnemonic) {
+          const spellId = spellMnemonicToId.get(mnemonic.toLowerCase());
+          if (!spellId) {
+            result.errors.push(`Item "${name}": consumable spell mnemonic "${mnemonic}" not found, skipping item`);
+            result.skipped++;
+            continue;
+          }
+          consumableData = { ...consumableData, spell_id: spellId };
+          delete consumableData.spell_mnemonic;
+        } else if (consumableData.spell_id != null) {
+          // Raw IDs are DB-local and cannot be trusted across databases; on a
+          // renumbered target the consumable would cast the WRONG spell.
+          result.errors.push(
+            `Item "${name}": consumable_data has a raw spell_id (${consumableData.spell_id}) from an old export; ` +
+            `re-export from the source database to get spell_mnemonic. Skipping item`
+          );
+          result.skipped++;
+          continue;
+        }
+      }
 
       const existing = await itemRepo.getTemplateByName(name);
 
@@ -342,7 +386,7 @@ async function importItems(data: unknown[]): Promise<ImportResult> {
         container_weight_limit: (item.container_weight_limit ?? item.containerWeightLimit) as number | undefined,
         weapon_data: (item.weapon_data ?? item.weaponData) as Record<string, unknown> | undefined,
         armor_data: migrateArmorData((item.armor_data ?? item.armorData) as Record<string, unknown> | undefined),
-        consumable_data: (item.consumable_data ?? item.consumableData) as Record<string, unknown> | undefined,
+        consumable_data: consumableData,
         light_data: (item.light_data ?? item.lightData) as Record<string, unknown> | undefined,
         tool_data: (item.tool_data ?? item.toolData) as Record<string, unknown> | undefined,
         requirements: item.requirements as Record<string, unknown> | undefined,
@@ -546,7 +590,7 @@ async function importRooms(data: unknown[], filePath: string): Promise<ImportRes
 async function processDeferredRoomExits(): Promise<void> {
   if (deferredRoomFiles.length === 0) return;
 
-  console.log('\n  Resolving cross-area exits, doors, and spawns...');
+  console.log('\n  Resolving cross-area exits, doors, spawns, and room items...');
   const tagToId = await roomRepo.getTagToIdMap();
 
   // Build NPC name → ID lookup for spawn import
@@ -554,6 +598,13 @@ async function processDeferredRoomExits(): Promise<void> {
   const npcNameToId = new Map<string, number>();
   for (const tmpl of npcTemplates) {
     npcNameToId.set(tmpl.name.toLowerCase(), tmpl.id);
+  }
+
+  // Item name → ID lookup for room item placement import
+  const allItemTemplates = await itemRepo.getAllTemplates();
+  const itemTemplateNameToId = new Map<string, number>();
+  for (const tmpl of allItemTemplates) {
+    itemTemplateNameToId.set(tmpl.name.toLowerCase(), tmpl.id);
   }
 
   for (const { filePath, data: fileData } of deferredRoomFiles) {
@@ -720,6 +771,57 @@ async function processDeferredRoomExits(): Promise<void> {
       for (const existing of existingDoors) {
         if (!importedDoorDirections.has(existing.entryDirection.toLowerCase())) {
           await doorRepo.deleteDoor(existing.id);
+        }
+      }
+
+      // Import room item placements (furniture, signs, placed loot).
+      // MERGE-ONLY and count-aware: the export writes one entry per authored
+      // instance, so a room may legitimately list the same template twice.
+      // Create only the deficit between listed and existing instances, and
+      // never delete unlisted instances — players drop items into rooms at
+      // runtime and those must survive a reimport.
+      const roomItems = (item.items as unknown[]) || [];
+      const placementsByTemplate = new Map<number, { itemName: string; entries: Array<{ quantity: number; condition: string }> }>();
+      for (const riRaw of roomItems) {
+        const ri = riRaw as Record<string, unknown>;
+        const itemName = ri.itemName as string;
+        if (!itemName) {
+          result.errors.push(`Room "${tag}" item placement: missing itemName`);
+          continue;
+        }
+        const templateId = itemTemplateNameToId.get(itemName.toLowerCase());
+        if (!templateId) {
+          result.errors.push(`Room "${tag}" item placement: item "${itemName}" not found`);
+          continue;
+        }
+        if (!placementsByTemplate.has(templateId)) {
+          placementsByTemplate.set(templateId, { itemName, entries: [] });
+        }
+        placementsByTemplate.get(templateId)!.entries.push({
+          quantity: (ri.quantity as number) ?? 1,
+          condition: (ri.condition as string) ?? 'pristine',
+        });
+      }
+      for (const [templateId, placement] of placementsByTemplate) {
+        try {
+          const existing = await query<{ n: number }>(
+            `SELECT COUNT(*) AS n FROM item_instances WHERE location_type = 'room' AND location_id = $1 AND template_id = $2`,
+            [fromId, templateId]
+          );
+          const existingCount = Number(existing.rows[0]?.n ?? 0);
+          // The repository initializes template-driven fields (consumable
+          // charges, custom_data) that a raw INSERT would miss.
+          for (let i = existingCount; i < placement.entries.length; i++) {
+            await itemRepo.createInstance({
+              template_id: templateId,
+              location_type: ItemLocationType.ROOM,
+              location_id: fromId,
+              quantity: placement.entries[i].quantity,
+              condition: placement.entries[i].condition as ItemCondition,
+            });
+          }
+        } catch (err) {
+          result.errors.push(`Room "${tag}" item placement "${placement.itemName}": ${(err as Error).message}`);
         }
       }
 
@@ -1002,6 +1104,182 @@ async function importNpcs(data: unknown[]): Promise<ImportResult> {
     }
   }
 
+  return result;
+}
+
+async function importEssenceEvents(data: unknown[]): Promise<ImportResult> {
+  const result: ImportResult = { file: 'essence_events.json', created: 0, updated: 0, skipped: 0, errors: [] };
+
+  for (const raw of data) {
+    const item = raw as Record<string, unknown>;
+    try {
+      const eventId = (item.event_id ?? item.eventId) as string;
+      if (!eventId) { result.skipped++; continue; }
+
+      const existing = await query<{ id: number }>('SELECT id FROM essence_events WHERE event_id = $1', [eventId]);
+      const params = [
+        eventId,
+        (item.display_name ?? item.displayName) as string | null,
+        item.description as string | null,
+        (item.emitted_tags ?? item.emittedTags ?? []) as string[],
+        (item.base_essence_value ?? item.baseEssenceValue ?? 0) as number,
+        (item.base_xp_value ?? item.baseXpValue ?? 0) as number,
+      ];
+      if (existing.rows.length > 0) {
+        await query(
+          `UPDATE essence_events SET display_name = $2, description = $3, emitted_tags = $4,
+             base_essence_value = $5, base_xp_value = $6, updated_at = CURRENT_TIMESTAMP
+           WHERE event_id = $1`,
+          params
+        );
+        result.updated++;
+      } else {
+        await query(
+          `INSERT INTO essence_events (event_id, display_name, description, emitted_tags, base_essence_value, base_xp_value)
+           VALUES ($1, $2, $3, $4, $5, $6)`,
+          params
+        );
+        result.created++;
+      }
+    } catch (err) {
+      result.errors.push(`Essence event "${item.event_id}": ${(err as Error).message}`);
+      result.skipped++;
+    }
+  }
+  return result;
+}
+
+async function importEnchantments(data: unknown[]): Promise<ImportResult> {
+  const result: ImportResult = { file: 'enchantments.json', created: 0, updated: 0, skipped: 0, errors: [] };
+
+  // Item lookup for portable reagent references
+  const allItems = await itemRepo.getAllTemplates();
+  const itemNameToId = new Map<string, number>();
+  for (const tmpl of allItems) {
+    itemNameToId.set(tmpl.name.toLowerCase(), tmpl.id);
+  }
+
+  for (const raw of data) {
+    const item = raw as Record<string, unknown>;
+    try {
+      const name = item.name as string;
+      if (!name) { result.skipped++; continue; }
+
+      // Resolve portable reagents ({itemName, quantity}) to this database's
+      // template IDs. Raw template_id values from old exports are DB-local and
+      // cannot be trusted across databases — refuse them.
+      let reagents: unknown = item.reagents ?? null;
+      if (reagents != null && !Array.isArray(reagents)) {
+        result.errors.push(`Enchantment "${name}": reagents must be an array, skipping enchantment`);
+        result.skipped++;
+        continue;
+      }
+      if (Array.isArray(reagents) && reagents.length > 0) {
+        const resolved: Array<{ template_id: number; quantity: number }> = [];
+        let failed = false;
+        for (const rRaw of reagents) {
+          const r = rRaw as Record<string, unknown>;
+          if (r.itemName) {
+            const templateId = itemNameToId.get((r.itemName as string).toLowerCase());
+            if (!templateId) {
+              result.errors.push(`Enchantment "${name}": reagent item "${r.itemName}" not found, skipping enchantment`);
+              failed = true;
+              break;
+            }
+            const quantity = (r.quantity as number) ?? 1;
+            if (!Number.isInteger(quantity) || quantity < 1) {
+              result.errors.push(`Enchantment "${name}": reagent "${r.itemName}" has invalid quantity ${JSON.stringify(r.quantity)}, skipping enchantment`);
+              failed = true;
+              break;
+            }
+            resolved.push({ template_id: templateId, quantity });
+          } else if (r.template_id != null) {
+            result.errors.push(`Enchantment "${name}": reagent has a raw template_id (${r.template_id}) from an old export; re-export to get itemName. Skipping enchantment`);
+            failed = true;
+            break;
+          } else {
+            // The exporter writes itemName: null when it could not resolve the
+            // reagent — importing without it would silently weaken the
+            // enchantment's requirements.
+            result.errors.push(`Enchantment "${name}": reagent item reference is unresolved (itemName is null), skipping enchantment`);
+            failed = true;
+            break;
+          }
+        }
+        if (failed) { result.skipped++; continue; }
+        reagents = resolved;
+      }
+
+      const existed = await craftingRepo.upsertEnchantment({
+        name,
+        description: (item.description as string | null) ?? null,
+        skill_type: ((item.skill_type ?? item.skillType) as string) || 'enchanting',
+        skill_level: ((item.skill_level ?? item.skillLevel) as number) ?? 0,
+        applicable_types: (item.applicable_types ?? item.applicableTypes ?? []) as string[],
+        stat_modifiers: (item.stat_modifiers ?? item.statModifiers ?? null) as craftingRepo.UpsertEnchantmentInput['stat_modifiers'],
+        special_effects: (item.special_effects ?? item.specialEffects ?? null) as craftingRepo.UpsertEnchantmentInput['special_effects'],
+        mana_cost: ((item.mana_cost ?? item.manaCost) as number) ?? 0,
+        reagents: reagents as craftingRepo.UpsertEnchantmentInput['reagents'],
+      });
+      if (existed) {
+        result.updated++;
+      } else {
+        result.created++;
+      }
+    } catch (err) {
+      result.errors.push(`Enchantment "${item.name}": ${(err as Error).message}`);
+      result.skipped++;
+    }
+  }
+  return result;
+}
+
+async function importSettings(data: unknown[]): Promise<ImportResult> {
+  const result: ImportResult = { file: 'settings.json', created: 0, updated: 0, skipped: 0, errors: [] };
+
+  for (const raw of data) {
+    const item = raw as Record<string, unknown>;
+    try {
+      const key = item.key as string;
+      if (!key) { result.skipped++; continue; }
+
+      // Enforce the exporter's exclusion filter on import too: a legacy or
+      // hand-edited file must not smuggle in installation-specific keys
+      // (ip_access_mode could lock a deployment out; room-ID settings are
+      // derived from tags by configureGameSettings).
+      if (!settingsRepo.isExportableSetting(key)) {
+        result.errors.push(`Setting "${key}" is installation-specific and not importable, skipping`);
+        result.skipped++;
+        continue;
+      }
+
+      // Values are stored as jsonb-style TEXT. Scalars export as raw strings
+      // ('10', '"runic"'); objects/arrays were parsed on read, re-encode them.
+      const value = typeof item.value === 'string' ? item.value : JSON.stringify(item.value);
+
+      // Enforce the same per-key validation as the admin settings API, so an
+      // imported file cannot persist out-of-range values or strings carrying
+      // terminal control sequences.
+      let parsedForValidation: unknown = value;
+      try { parsedForValidation = JSON.parse(value); } catch { /* raw string */ }
+      const validationError = settingsRepo.validateSettingValue(key, parsedForValidation);
+      if (validationError) {
+        result.errors.push(`Setting "${key}": ${validationError}, skipping`);
+        result.skipped++;
+        continue;
+      }
+      const existing = await query<{ key: string }>('SELECT key FROM game_settings WHERE key = $1', [key]);
+      await settingsRepo.setSettingRaw(key, value);
+      if (existing.rows.length > 0) {
+        result.updated++;
+      } else {
+        result.created++;
+      }
+    } catch (err) {
+      result.errors.push(`Setting "${item.key}": ${(err as Error).message}`);
+      result.skipped++;
+    }
+  }
   return result;
 }
 
@@ -1350,6 +1628,15 @@ async function importFile(relativePath: string): Promise<void> {
       break;
     case 'drop_tables':
       importResult = await importDropTables(file.data);
+      break;
+    case 'essence_events':
+      importResult = await importEssenceEvents(file.data);
+      break;
+    case 'enchantments':
+      importResult = await importEnchantments(file.data);
+      break;
+    case 'settings':
+      importResult = await importSettings(file.data);
       break;
     case 'rooms':
       importResult = await importRooms(file.data, relativePath);

@@ -31,8 +31,34 @@ import { getEquipmentCombatStats } from '../combatStats.js';
 import { getEffectModifiers } from '../statusEffects.js';
 import { calculateEffectiveVision, calculateNpcEffectiveVision, canSee } from '../vision.js';
 import { getWorldRef, findNpcInRoom, NpcCombatInstance, checkHostileAggro, setMerchantHostile } from '../npcManager.js';
-import { withNpcName, withNpcNameCapitalized } from '../../utils/textFormat.js';
-import { handleActualDeath } from '../combat.js';
+import { withNpcName, withNpcNameCapitalized, wordWrap } from '../../utils/textFormat.js';
+import { handleActualDeath, getCombatRoundIntervalMs } from '../combat.js';
+import { handleAttack } from '../combatCommands.js';
+
+/**
+ * Mark a backstab's surprise round. The backstab is the attacker's action for
+ * the upcoming combat round, so their normal swings are forfeited. Pass the
+ * victim to suppress its round too (an ambushed NPC loses its swings), or null
+ * to leave it alone: an NPC that was already fighting is alert and keeps its
+ * round, and a PLAYER victim is never suppressed — they only swing if they
+ * actively engage, and reacting before the round tick earns them their swings.
+ * The window covers exactly the next combat tick and then expires on its own.
+ */
+async function applySurpriseRound(
+  attacker: AuthenticatedSocket,
+  victim: { combatState: { roundSkipUntil: number } } | null
+): Promise<number> {
+  // Consumption happens at the next PROCESSED combat round; the deadline only
+  // exists so a flag can never go stale on an entity that leaves combat before
+  // a round processes. Three intervals of headroom keeps the skip alive even
+  // when a long-running round causes the scheduler to skip overlapping ticks.
+  const skipUntil = Date.now() + getCombatRoundIntervalMs() * 3 + 1000;
+  attacker.combatState.roundSkipUntil = skipUntil;
+  if (victim) {
+    victim.combatState.roundSkipUntil = skipUntil;
+  }
+  return skipUntil;
+}
 
 // ============================================================================
 // STEALTH ROLL
@@ -413,6 +439,21 @@ export async function handleBackstab(
     }
   }
 
+  // You cannot backstab someone who already engaged you: they are watching you,
+  // so there is no surprise. Fall through to a normal attack instead. (Being
+  // attacked normally breaks stealth, so this mostly covers see_hidden NPCs
+  // that aggroed a hidden player without breaking their stealth.)
+  const targetEngagedAttacker = target
+    ? target.combatState.targets.has(socket.playerId)
+    : npcTarget!.combatState.targets.has(socket.playerId);
+  if (targetEngagedAttacker) {
+    const engagedName = target ? target.username : withNpcNameCapitalized(npcTarget!.entityName, npcTarget!.isProperName);
+    sendMessage(socket, MessageType.OUTPUT,
+      colors.yellow(wordWrap(`${engagedName} is already attacking you - there is no chance for surprise! You attack instead.`, 80)));
+    breakStealth(socket, 'attack', true);
+    return handleAttack(socket, args, connectedPlayers);
+  }
+
   // Fetch equipment once — shared by both player and NPC paths
   const equipped = await itemRepo.getCharacterEquipped(socket.characterId!);
   const mainHandWeapon = equipped.find(item => item.equipped_slot === EquipmentSlot.MAIN_HAND);
@@ -537,6 +578,11 @@ export async function handleBackstab(
   socket.regenState.inCombat = true;
   target.regenState.inCombat = true;
 
+  // Backstab is the attacker's action for this combat round. The player victim
+  // is never round-suppressed: if they engage before the next round tick, they
+  // get their swings even though the backstab landed.
+  await applySurpriseRound(socket, null);
+
   // Clear resting state for both players
   socket.regenState.enhancedRegen.clear();
   target.regenState.enhancedRegen.clear();
@@ -587,6 +633,10 @@ export async function handleBackstab(
     // Notify the target
     sendMessage(target, MessageType.OUTPUT, targetMsg);
 
+    // Send the backstab line NOW, before dropped/death processing, so the
+    // attacker sees it before any collapse/slain broadcasts.
+    sendMessage(socket, MessageType.OUTPUT, attackerMsg);
+
     // Handle state changes (dropped/death)
     if (damageApplied.stateChange === 'dropped') {
       initializeDroppedState(target, currentRoomId);
@@ -608,10 +658,7 @@ export async function handleBackstab(
       sendVitals(target);
     }
 
-    return {
-      type: MessageType.OUTPUT,
-      message: attackerMsg,
-    };
+    return { type: MessageType.OUTPUT, message: '' }; // Backstab message already sent
   } else {
     // Miss messages - use weapon's miss verb
     const attackerMsg = `You ${missVerb} ${colors.combatDefender(target.username)}, but miss!`;
@@ -662,12 +709,20 @@ async function handleBackstabNpc(
   // Break stealth regardless of hit/miss
   breakStealth(socket, 'attack', true);
 
+  // Was the NPC already fighting before the backstab landed? An engaged NPC is
+  // alert and keeps its swings in the surprise round.
+  const npcWasInCombat = npcTarget.combatState.targets.size > 0;
+
   // Engage combat (mirrors combatCommands.ts attack flow)
   socket.combatState.targets.add(npcTarget.entityId);
   npcTarget.combatState.targets.add(socket.playerId);
   socket.regenState.inCombat = true;
   npcTarget.regenState.inCombat = true;
   npcTarget.behaviorState = 'combat';
+
+  // Backstab is a surprise attack: it is the only attack of this combat round.
+  // An NPC already fighting (someone else) is alert and keeps its swings.
+  const surpriseUntil = await applySurpriseRound(socket, npcWasInCombat ? null : npcTarget);
 
   // If attacking a merchant, mark them as hostile
   if (npcTarget.template.merchantEnabled && socket.characterId) {
@@ -706,6 +761,11 @@ async function handleBackstabNpc(
 
     broadcastToRoom(currentRoomId, roomMsg, [socket.playerId]);
 
+    // Send the backstab line NOW, before death processing. Returning it as the
+    // command response would deliver it only after this handler finishes, which
+    // put it after the slain/loot/XP messages on a killing backstab.
+    sendMessage(socket, MessageType.OUTPUT, attackerMsg);
+
     // NPCs have no bleed-out phase — treat both dropped and death as immediate death
     if (damageApplied.stateChange === 'dropped' || damageApplied.stateChange === 'death') {
       const deferredRewards: Array<() => Promise<void>> = [];
@@ -715,18 +775,20 @@ async function handleBackstabNpc(
       }
     }
 
-    // Other hostile NPCs notice
-    setImmediate(() => checkHostileAggro(currentRoomId, socket));
+    // Other hostile NPCs notice — but they only learned the player is here
+    // when the backstab landed, too late to act in this combat round.
+    setImmediate(() => checkHostileAggro(currentRoomId, socket, surpriseUntil));
 
-    return { type: MessageType.OUTPUT, message: attackerMsg };
+    return { type: MessageType.OUTPUT, message: '' }; // Backstab message already sent
   } else {
     const attackerMsg = `You ${missVerb} ${colors.combatDefender(npcDisplayName)}, but miss!`;
     const roomMsg = `${colors.combatAttacker(socket.username)} ${missVerb3p} ${colors.combatDefender(npcDisplayName)} from the shadows, but misses!`;
 
     broadcastToRoom(currentRoomId, roomMsg, [socket.playerId]);
 
-    // Other hostile NPCs notice
-    setImmediate(() => checkHostileAggro(currentRoomId, socket));
+    // Other hostile NPCs notice — but they only learned the player is here
+    // when the backstab landed, too late to act in this combat round.
+    setImmediate(() => checkHostileAggro(currentRoomId, socket, surpriseUntil));
 
     return { type: MessageType.OUTPUT, message: attackerMsg };
   }

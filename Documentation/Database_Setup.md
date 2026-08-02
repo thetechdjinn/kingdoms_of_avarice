@@ -55,7 +55,9 @@ The intended authoring loop is: edit content in the in-game editors (writes to t
 
 ### Re-importing is safe for player data
 
-`npm run data:import` is **content-only**. It writes exclusively to content tables (item **templates**, spells, status effects, rooms, room exits, NPCs, factions, drop tables, actions, classes, races, progression, quests). It does **not** touch any player state: characters, item instances, bank balances, and progression are never read or written by the importer.
+`npm run data:import` is **content-only**. It writes to content tables (item **templates**, spells, status effects, rooms, room exits, NPCs, factions, drop tables, actions, classes, races, progression, quests, essence events, enchantments, and tunable game settings). It does **not** touch any player state: characters, inventories, bank balances, and character progression are never read or written by the importer.
+
+One nuance on `item_instances`: authored **room placements** (furniture, signs, placed loot listed in a room's `items` array) are imported merge-only and count-aware — the importer creates only the deficit between the number of listed placements of a template and the instances already in the room, and instances are **never deleted**, so items players drop in rooms survive a reimport. Quantity/condition changes to existing instances are not reconciled (there is no authored-placement identity yet). Installation-specific settings (`ip_access_mode`, the `default_*_room_id` keys) are refused by the importer even if present in a settings file.
 
 Because of this, `data:import` is **safe to re-run on a live server** to pick up new content after pulling an update. New records are created; every character, their inventory, and their currency are left exactly as they were.
 

@@ -392,6 +392,7 @@ export function setupGameSocket(wss: WebSocketServer): void {
       combatAction: 'melee',
       activeSpell: null,
       combatOrderPosition: 0,
+      roundSkipUntil: 0,
     };
 
     // Cache character stats for combat (avoid DB lookups during combat rounds)
@@ -599,7 +600,9 @@ export function setupGameSocket(wss: WebSocketServer): void {
               gameWorld,
               connectedPlayers
             );
-            sendMessage(authWs, response.type, response.message);
+            if (response.message) {
+              sendMessage(authWs, response.type, response.message);
+            }
             sendVitals(authWs);
           } catch (fallbackError) {
             console.error('Fallback command processing also failed:', fallbackError);

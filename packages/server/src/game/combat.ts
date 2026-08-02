@@ -35,7 +35,7 @@ import {
 } from './combatCalculations.js';
 import { getCombatSettings, getBlindAccuracyPenalty } from '../db/repositories/settingsRepository.js';
 import { entityCanSee } from './vision.js';
-import { clearCombatState, breakCasterCombat } from './combatCommands.js';
+import { clearCombatState, breakCasterCombat, isTargetedByAnyEnemy } from './combatCommands.js';
 import {
   applyDamage,
   initializeDroppedState,
@@ -182,6 +182,13 @@ let connectedPlayersRef: Map<number, AuthenticatedSocket>;
  * Start the global combat loop
  * Called during server initialization
  */
+/** The actual cadence the combat loop is scheduled at. Surprise-round windows
+ * must be derived from THIS value — the combat_round_interval_ms DB setting is
+ * not what drives the scheduler. */
+export function getCombatRoundIntervalMs(): number {
+  return COMBAT_ROUND_MS;
+}
+
 export function startCombatLoop(connectedPlayers: Map<number, AuthenticatedSocket>): void {
   if (combatInterval) {
     console.log('[Combat] Combat loop already running');
@@ -531,6 +538,7 @@ async function processAttackerCombat(
     // If no targets remain after spell combat, end combat
     if (attacker.combatState.targets.size === 0) {
       attacker.regenState.inCombat = false;
+      attacker.combatState.roundSkipUntil = 0;
       attacker.combatState.combatAction = 'melee';
       attacker.combatState.activeSpell = null;
       sendCombatMessage(attacker, MessageType.SYSTEM, colors.yellow('*COMBAT OFF*'));
@@ -626,6 +634,16 @@ async function processAttackerCombat(
       // Target left the room, remove from targets
       targets.delete(targetId);
       sendCombatMessage(attacker, MessageType.SYSTEM, `${withNpcNameCapitalized(target.entityName, target.isProperName)} is no longer here.`);
+      // Dropping them may have been the last engagement holding them in
+      // combat — release them if nothing else targets them and they have no
+      // targets of their own (e.g. they broke off, then escaped the room).
+      if (isPlayerEntity(target) && connectedPlayersRef
+          && target.combatState.targets.size === 0
+          && !isTargetedByAnyEnemy(target.entityId, null, connectedPlayersRef)) {
+        target.regenState.inCombat = false;
+        target.combatState.combatOrderPosition = 0;
+        target.combatState.roundSkipUntil = 0;
+      }
       continue;
     }
 
@@ -843,7 +861,7 @@ async function handleEntityDeath(
     // Drop all items on death
     try {
       const { dropAllItemsOnDeath } = await import('./itemCommands.js');
-      await dropAllItemsOnDeath(victim.characterId, roomId);
+      await dropAllItemsOnDeath(victim as AuthenticatedSocket, roomId);
     } catch (error) {
       console.error('[Combat] Failed to drop items on death:', error);
     }
@@ -1543,6 +1561,14 @@ async function processCombatRound(): Promise<void> {
     // Process each participant in combat order
     for (const { entity, isNpc } of participants) {
       try {
+        // Surprise round (backstab): the attacker's action was already spent on
+        // the backstab itself, and an ambushed victim loses its round. Serve
+        // the skip once; the timestamp expires on its own if never served.
+        if (entity.combatState.roundSkipUntil > Date.now()) {
+          entity.combatState.roundSkipUntil = 0;
+          continue;
+        }
+
         // blocksCombat: stunned/paralyzed entities skip their turn
         if (getEffectModifiers(entity).blocksCombat) {
           continue;

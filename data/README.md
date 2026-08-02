@@ -11,20 +11,20 @@ data/
     spells.json               # Spell definitions
     status_effects.json       # Status effect definitions
     actions.json              # Social action definitions
-    items.json                # Item templates (weapons, armor, consumables, etc.)
+    items.json                # Item templates (consumable spell refs travel as spell_mnemonic)
     factions.json             # Faction definitions
     drop_tables.json          # Drop tables and entries
+    essence_events.json       # Essence event definitions
+    enchantments.json         # Enchantment definitions
+    settings.json             # Tunable game settings (combat, currency, regen, ...)
+    quests.json               # Quests with steps (references travel as names/tags)
     progression/              # Character progression system
       classes.json            # Class definitions
       races.json              # Race definitions
-      abilities.json          # Ability definitions
-      talents.json            # Talent definitions
-      game_events.json        # Game event definitions
       progression_table.json  # Level/XP requirements
-      class_abilities.json    # Class-ability mappings
   areas/                      # Per-area content
     arindale/
-      rooms.json              # Rooms with exits, features, and doors
+      rooms.json              # Rooms with exits, features, doors, spawns, placed items
       npcs.json               # NPC templates with attacks, spells, merchant data
     arindale_sewer/
       rooms.json
@@ -76,5 +76,40 @@ npm run data:import    # Populates all game content from these JSON files
 - **Upserts** all data (creates new records, updates existing ones)
 - Doors are synced per room (stale doors removed)
 - NPC attacks and spells are fully replaced on each import
+- Room item placements are merge-only (never deletes instances, so items
+  players drop in rooms survive a reimport)
 - Does NOT delete items, NPCs, or spells missing from the import
-- Infrastructure data (game_settings, currency templates, roles) is handled by migrations, not import
+- Schema, roles, and currency templates are handled by migrations, not import
+
+## Pipeline coverage — READ BEFORE ADDING NEW CONTENT TYPES
+
+The export/import pipeline only knows about the tables listed above. Content
+in an uncovered table will **silently fail to ship** to new deployments: it
+will exist in your local database, export cleanly to nothing, and be missing
+everywhere else.
+
+**Currently NOT covered (empty tables today — extend the pipeline BEFORE
+authoring content in them):**
+
+- `crafting_recipes` — no export or import support
+- `npc_factions` (per-NPC faction membership rows; only the NPC's
+  `primary_faction` travels today) — no export or import support
+
+**Deliberately excluded (never export):** players, characters, inventories,
+`ip_access`, `ip_access_mode`, and the `default_*_room_id` settings (re-derived
+from room tags at import).
+
+**Room item placement caveat:** the exporter treats every non-currency
+`item_instances` row with `location_type='room'` as an authored placement.
+Currency stacks on the floor (death drops) are excluded automatically, but an
+ordinary item a player dropped in a room at export time cannot be
+distinguished from authored content yet — export from a clean/quiesced world,
+or add an authored-placement flag before exporting from a live server.
+
+**When adding any new content table:** add an exporter in
+`packages/server/src/db/data-export.ts`, an importer + dispatch case in
+`packages/server/src/db/data-import.ts`, and the file in the manifest
+`import_order` — converting every DB id to a portable reference (name, tag, or
+mnemonic), never exporting raw numeric ids. Raw ids renumber across databases
+and will point at the wrong rows after import (this exact bug once made every
+spell tome teach the wrong spell).

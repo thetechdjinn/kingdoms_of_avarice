@@ -11,7 +11,10 @@
  * so callers of query()/withTransaction() do not change at cutover (Phase 2.7).
  *
  * VERIFIED against @tursodatabase/database 0.6.1:
- *  - pg-style `$1, $2` placeholders bind positionally with spread args.
+ *  - pg-style `$N` placeholders are treated as NAMED parameters whose index
+ *    comes from first-occurrence order, NOT from N. execOn() therefore binds a
+ *    named-args object keyed by number ({'1': v1, ...}) to get true $N
+ *    semantics; never spread positional args.
  *  - `RETURNING` works; `.reader` distinguishes row-returning statements from
  *    write-only ones (used to map rowCount correctly).
  *  - json1 (`->>`, `json_each`, `json_extract`, `json_patch`), AUTOINCREMENT,
@@ -115,14 +118,37 @@ function maybeParseJson(value: unknown): unknown {
   }
 }
 
+/**
+ * JSON-encode a plain-object parameter for binding. Companion to the array
+ * seam in execOn(): the driver cannot bind JS objects, arrays are JSON-encoded
+ * automatically by execOn, and objects must be encoded by the caller via this
+ * helper so the encoding rule lives in one place.
+ */
+export function jsonParam(value: unknown): unknown {
+  if (value == null) return null;
+  if (typeof value === 'object' && !Array.isArray(value)) return JSON.stringify(value);
+  return value;
+}
+
 async function execOn<T>(db: Database, text: string, params?: unknown[]): Promise<QueryResultLike<T>> {
   const stmt = await db.prepare(text);
   // Former Postgres array columns (text[]) are stored as JSON TEXT. SQLite can't
   // bind a JS array, so JSON-encode any array param here (a single, uniform seam
   // for every write path). Already-stringified JSON args pass through untouched.
   const args = (params ?? []).map((p) => (Array.isArray(p) ? JSON.stringify(p) : p));
+  // The engine assigns `$N` placeholders indices by FIRST-OCCURRENCE order in
+  // the SQL, ignoring the number itself (verified on 0.6.1: `SELECT $2, $1`
+  // spread-bound with [a, b] gives $2=a, $1=b). Spreading args positionally
+  // therefore mis-binds any query whose placeholders are not written in strict
+  // numeric order — silently putting values in the wrong columns. Binding a
+  // named-args object keyed by the number (`{'1': v}` binds the parameter
+  // NAMED $1) is order-independent and also handles repeated placeholders, so
+  // it restores true pg-style $N semantics for every query.
+  const named: Record<string, unknown> = {};
+  for (let i = 0; i < args.length; i++) named[String(i + 1)] = args[i];
+  const bound = args.length > 0 ? [named] : [];
   if (stmt.reader) {
-    const rows = (await stmt.all(...args)) as Record<string, unknown>[];
+    const rows = (await stmt.all(...bound)) as Record<string, unknown>[];
     // Deserialize jsonb/array columns (pg auto-parsed these; the Turso driver
     // returns raw TEXT, so do it here uniformly).
     for (const row of rows) {
@@ -130,7 +156,7 @@ async function execOn<T>(db: Database, text: string, params?: unknown[]): Promis
     }
     return { rows: rows as T[], rowCount: rows.length };
   }
-  const info = await stmt.run(...args);
+  const info = await stmt.run(...bound);
   return { rows: [], rowCount: info.changes ?? 0, lastInsertRowid: info.lastInsertRowid };
 }
 

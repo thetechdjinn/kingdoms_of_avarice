@@ -273,7 +273,9 @@ async function executeCommandAndRespond(
       gameWorldRef,
       connectedPlayersRef
     );
-    sendMessageFn(player, response.type, response.message);
+    if (response.message) {
+      sendMessageFn(player, response.type, response.message);
+    }
     sendVitalsFn(player);
   } catch (error) {
     console.error(`[TickProcessor] Error processing command '${command}':`, error);

@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "exported_at": "2026-04-04T16:30:52.983Z",
+  "exported_at": "2026-08-01T22:33:27.037Z",
   "import_order": [
     "global/spells.json",
     "global/status_effects.json",
@@ -11,6 +11,9 @@
     "global/items.json",
     "global/factions.json",
     "global/drop_tables.json",
+    "global/essence_events.json",
+    "global/enchantments.json",
+    "global/settings.json",
     "areas/arindale/rooms.json",
     "areas/arindale/npcs.json",
     "areas/arindale_sewer/rooms.json",

@@ -70,6 +70,86 @@ const DEFAULT_REGEN_SETTINGS: RegenSettings = {
  * Combat-related settings stored in the database
  * These can be tweaked without code changes for balance tuning
  */
+// Settings that are environment- or database-specific and must not travel
+// between installs: room IDs are re-derived from tags by the importer,
+// ip_access_mode could lock a fresh install out, and migration/seed flags
+// describe the state of one particular database. Shared by the data exporter
+// (which skips them) and the data importer (which refuses them).
+const SETTING_EXPORT_EXCLUDED_KEYS = new Set([
+  'default_starting_room_id',
+  'default_respawn_room_id',
+  'ip_access_mode',
+]);
+const SETTING_EXPORT_EXCLUDED_PATTERNS = [/_migrated$/, /_seeded$/, /^migration_/, /^phase\d+_/];
+
+export function isExportableSetting(key: string): boolean {
+  if (SETTING_EXPORT_EXCLUDED_KEYS.has(key)) return false;
+  return !SETTING_EXPORT_EXCLUDED_PATTERNS.some(p => p.test(key));
+}
+
+/**
+ * Write a setting value VERBATIM as stored jsonb-style text. Unlike
+ * setSetting() (which JSON-stringifies its input), this preserves the exact
+ * textual representation — used by the data importer, whose files carry the
+ * stored text form ('10', '"runic"', '{...}') and must round-trip unchanged.
+ */
+export async function setSettingRaw(key: string, rawValue: string): Promise<void> {
+  await query(
+    `INSERT INTO game_settings (key, value) VALUES ($1, $2)
+     ON CONFLICT (key) DO UPDATE SET value = $2, updated_at = CURRENT_TIMESTAMP`,
+    [key, rawValue]
+  );
+}
+
+/**
+ * Validate a setting value for a given key. Returns an error message, or null
+ * if the value is acceptable. Shared by the admin settings API and the data
+ * importer so imported files cannot bypass the same rules.
+ */
+export function validateSettingValue(key: string, value: unknown): string | null {
+  if (key === 'max_characters_per_player') {
+    const n = Number(value);
+    if (isNaN(n) || n < 1 || n > 100) return 'Max characters must be between 1 and 100';
+  } else if (key === 'ip_access_mode') {
+    if (value !== 'allowlist' && value !== 'blocklist') return 'IP access mode must be "allowlist" or "blocklist"';
+  } else if (key === 'currency_runic_name') {
+    if (typeof value !== 'string') return 'Runic name must be a string';
+    const trimmed = value.trim();
+    if (trimmed.length === 0) return 'Runic name cannot be empty';
+    if (trimmed.length > 20) return 'Runic name must be 20 characters or less';
+    if (!/^[a-zA-Z][a-zA-Z\s-]*$/.test(trimmed)) return 'Runic name must start with a letter and contain only letters, spaces, and hyphens';
+  } else if (key === 'character_save_interval_ms') {
+    const n = Number(value);
+    if (isNaN(n) || n < 10000 || n > 600000) return 'Save interval must be between 10000ms (10s) and 600000ms (10min)';
+  } else if (key === 'health_tick_interval_ms' || key === 'mana_tick_interval_ms') {
+    const n = Number(value);
+    if (isNaN(n) || n < 1000 || n > 60000) return 'Tick interval must be between 1000ms and 60000ms';
+  } else if (key.match(/^(health|mana)_regen_(base|enhanced)_percent$/)) {
+    const n = Number(value);
+    if (isNaN(n) || n < 0 || n > 100) return 'Regen percent must be between 0 and 100';
+  } else if (key === 'blind_accuracy_penalty') {
+    const n = Number(value);
+    if (isNaN(n) || !Number.isInteger(n) || n < 1 || n > 50) return 'Blind accuracy penalty must be a whole number between 1 and 50';
+  } else if (key === 'crit_soft_cap') {
+    const n = Number(value);
+    if (isNaN(n) || !Number.isInteger(n) || n < 5 || n > 60) return 'Critical hit soft cap must be a whole number between 5 and 60';
+  } else if (key === 'xp_overcap_percent') {
+    const n = Number(value);
+    if (isNaN(n) || !Number.isInteger(n) || n < 0 || n > 200) return 'XP overcap percent must be a whole number between 0 and 200';
+  } else if (key in BACKSTAB_SETTING_RANGES) {
+    const n = Number(value);
+    const range = BACKSTAB_SETTING_RANGES[key as BackstabSettingKey];
+    if (isNaN(n)) return 'Value must be a valid number';
+    if (n < range.min || n > range.max) return `Value must be between ${range.min} and ${range.max}`;
+  }
+  // String values must not carry control characters (terminal escape
+  // sequences would otherwise reach player terminals via displayed settings).
+  if (typeof value === 'string' && /[\x00-\x1f\x7f]/.test(value)) {
+    return 'Value must not contain control characters';
+  }
+  return null;
+}
+
 export interface CombatSettings {
   base_energy: number;
   default_weapon_speed: number;

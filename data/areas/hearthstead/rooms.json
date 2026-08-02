@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "exported_at": "2026-04-04T16:30:52.965Z",
+  "exported_at": "2026-08-01T22:33:26.975Z",
   "type": "rooms",
   "data": [
     {
@@ -70,25 +70,25 @@
           "exitDirection": "south",
           "defaultState": "closed",
           "autoResetSeconds": 10,
-          "hasLock": false,
+          "hasLock": 0,
           "keyItemTag": null,
           "pickDifficultyMin": 0,
           "pickDifficultyMax": 0,
           "bashDifficulty": 0,
-          "isHidden": true,
+          "isHidden": 1,
           "triggerText": "swim river",
           "passageMessageSelf": "You wade into the river and swim across to the far bank.",
           "passageMessageRoom": "{player} wades into the river and swims across.",
           "passageMessageArrival": null,
           "itemDisplayName": null,
-          "isTemporary": false,
+          "isTemporary": 0,
           "spawnTriggerText": null,
           "durationSeconds": null,
           "appearMessage": null,
           "disappearMessage": null,
           "requiredLevel": null,
           "maxLevel": null,
-          "requiredClasses": null,
+          "requiredClasses": [],
           "requiredQuestFlag": null,
           "requiredItemTag": null,
           "denialMessage": null
@@ -111,41 +111,6 @@
         {
           "direction": "northeast",
           "toTag": "hs_road_5"
-        }
-      ],
-      "doors": [
-        {
-          "name": "river",
-          "displayName": null,
-          "doorType": "triggered_passageway",
-          "description": null,
-          "entryDirection": "south",
-          "exitTag": "hs_road_r",
-          "exitDirection": "north",
-          "defaultState": "closed",
-          "autoResetSeconds": 10,
-          "hasLock": false,
-          "keyItemTag": null,
-          "pickDifficultyMin": 0,
-          "pickDifficultyMax": 0,
-          "bashDifficulty": 0,
-          "isHidden": true,
-          "triggerText": "swim river",
-          "passageMessageSelf": "You wade into the river and swim across to the far bank.",
-          "passageMessageRoom": "{player} wades into the river and swims across.",
-          "passageMessageArrival": null,
-          "itemDisplayName": null,
-          "isTemporary": false,
-          "spawnTriggerText": null,
-          "durationSeconds": null,
-          "appearMessage": null,
-          "disappearMessage": null,
-          "requiredLevel": null,
-          "maxLevel": null,
-          "requiredClasses": null,
-          "requiredQuestFlag": null,
-          "requiredItemTag": null,
-          "denialMessage": null
         }
       ]
     },
@@ -304,6 +269,13 @@
           "direction": "north",
           "toTag": "hs_hamlet_st1"
         }
+      ],
+      "items": [
+        {
+          "itemName": "a signpost",
+          "quantity": 1,
+          "condition": "pristine"
+        }
       ]
     },
     {
@@ -437,6 +409,13 @@
         {
           "direction": "east",
           "toTag": "hs_hamlet_i2"
+        }
+      ],
+      "items": [
+        {
+          "itemName": "bulletin board",
+          "quantity": 1,
+          "condition": "pristine"
         }
       ]
     },

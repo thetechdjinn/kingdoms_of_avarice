@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "exported_at": "2026-04-04T16:30:52.915Z",
+  "exported_at": "2026-08-01T22:33:26.893Z",
   "type": "races",
   "data": [
     {
@@ -52,7 +52,7 @@
         }
       ],
       "allowed_classes": [],
-      "playable": true,
+      "playable": 1,
       "dodge_bonus": 0,
       "base_hp": 20
     },
@@ -101,7 +101,7 @@
         }
       ],
       "allowed_classes": [],
-      "playable": true,
+      "playable": 1,
       "dodge_bonus": 0,
       "base_hp": 31
     },
@@ -150,7 +150,7 @@
         }
       ],
       "allowed_classes": [],
-      "playable": true,
+      "playable": 1,
       "dodge_bonus": 0,
       "base_hp": 20
     },
@@ -195,7 +195,7 @@
         }
       ],
       "allowed_classes": [],
-      "playable": true,
+      "playable": 1,
       "dodge_bonus": 0,
       "base_hp": 20
     },
@@ -240,7 +240,7 @@
         }
       ],
       "allowed_classes": [],
-      "playable": true,
+      "playable": 1,
       "dodge_bonus": 0,
       "base_hp": 26
     },
@@ -285,7 +285,7 @@
         }
       ],
       "allowed_classes": [],
-      "playable": true,
+      "playable": 1,
       "dodge_bonus": 0,
       "base_hp": 26
     },
@@ -326,54 +326,9 @@
         }
       ],
       "allowed_classes": [],
-      "playable": true,
+      "playable": 1,
       "dodge_bonus": 0,
       "base_hp": 20
-    },
-    {
-      "race_id": "halfling",
-      "display_name": "Halfling",
-      "description": "Small but incredibly nimble, halflings are naturally stealthy and hard to hit. They are weak but make excellent thieves.",
-      "base_stats": {
-        "wisdom": {
-          "max": 100,
-          "min": 40
-        },
-        "agility": {
-          "max": 150,
-          "min": 60
-        },
-        "charisma": {
-          "max": 100,
-          "min": 40
-        },
-        "strength": {
-          "max": 60,
-          "min": 20
-        },
-        "intellect": {
-          "max": 90,
-          "min": 30
-        },
-        "constitution": {
-          "max": 100,
-          "min": 40
-        }
-      },
-      "traits": [
-        {
-          "id": "stealth",
-          "value": true
-        },
-        {
-          "id": "base_vision",
-          "value": 100
-        }
-      ],
-      "allowed_classes": [],
-      "playable": true,
-      "dodge_bonus": 10,
-      "base_hp": 25
     },
     {
       "race_id": "half_ogre",
@@ -416,7 +371,7 @@
         }
       ],
       "allowed_classes": [],
-      "playable": true,
+      "playable": 1,
       "dodge_bonus": 0,
       "base_hp": 37
     },
@@ -457,9 +412,54 @@
         }
       ],
       "allowed_classes": [],
-      "playable": true,
+      "playable": 1,
       "dodge_bonus": 0,
       "base_hp": 31
+    },
+    {
+      "race_id": "halfling",
+      "display_name": "Halfling",
+      "description": "Small but incredibly nimble, halflings are naturally stealthy and hard to hit. They are weak but make excellent thieves.",
+      "base_stats": {
+        "wisdom": {
+          "max": 100,
+          "min": 40
+        },
+        "agility": {
+          "max": 150,
+          "min": 60
+        },
+        "charisma": {
+          "max": 100,
+          "min": 40
+        },
+        "strength": {
+          "max": 60,
+          "min": 20
+        },
+        "intellect": {
+          "max": 90,
+          "min": 30
+        },
+        "constitution": {
+          "max": 100,
+          "min": 40
+        }
+      },
+      "traits": [
+        {
+          "id": "stealth",
+          "value": true
+        },
+        {
+          "id": "base_vision",
+          "value": 100
+        }
+      ],
+      "allowed_classes": [],
+      "playable": 1,
+      "dodge_bonus": 10,
+      "base_hp": 25
     },
     {
       "race_id": "human",
@@ -498,7 +498,7 @@
         }
       ],
       "allowed_classes": [],
-      "playable": true,
+      "playable": 1,
       "dodge_bonus": 0,
       "base_hp": 26
     },
@@ -543,7 +543,7 @@
         }
       ],
       "allowed_classes": [],
-      "playable": true,
+      "playable": 1,
       "dodge_bonus": 0,
       "base_hp": 31
     },
@@ -588,7 +588,7 @@
         }
       ],
       "allowed_classes": [],
-      "playable": true,
+      "playable": 1,
       "dodge_bonus": 0,
       "base_hp": 20
     }

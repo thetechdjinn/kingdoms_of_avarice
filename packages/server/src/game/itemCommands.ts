@@ -9,6 +9,7 @@ import * as craftingRepo from '../db/repositories/craftingRepository.js';
 import * as characterRepo from '../db/repositories/characterRepository.js';
 import * as settingsRepo from '../db/repositories/settingsRepository.js';
 import { withTransaction } from '../db/index.js';
+import { flushPlayer } from './sessionState.js';
 import { calculateEncumbranceRatio, getEquipmentCombatStats, invalidateEquipmentCache } from './combatStats.js';
 import { isHidden, breakStealth, isStealthing } from './stealth/stealthState.js';
 import { rollStealthCheck } from './stealth/stealthCheck.js';
@@ -3929,10 +3930,11 @@ export function isCurrencyItem(item: ItemInstance): boolean {
  * Items with no_drop flag are kept in inventory.
  * Currency is converted to ground item stacks.
  *
- * @param characterId - The character ID of the dead player
+ * @param socket - The dead player's socket (pocket is the currency source of truth)
  * @param roomId - The room where items should be dropped
  */
-export async function dropAllItemsOnDeath(characterId: number, roomId: number): Promise<void> {
+export async function dropAllItemsOnDeath(socket: AuthenticatedSocket, roomId: number): Promise<void> {
+  const characterId = socket.characterId!;
   // Get all inventory items (including equipped)
   const inventoryItems = await itemRepo.getCharacterInventory(characterId);
   const equippedItems = await itemRepo.getPlayerEquipped(characterId);
@@ -3959,15 +3961,21 @@ export async function dropAllItemsOnDeath(characterId: number, roomId: number): 
   // Invalidate equipment cache since all gear was dropped
   invalidateEquipmentCache(characterId);
 
-  // Get character currency and drop it
-  const character = await characterRepo.findCharacterById(characterId);
-  if (character) {
+  // Drop currency. Memory-first: socket.pocket is the source of truth for an
+  // online player's money — the DB row can lag behind between flushes. Reading
+  // the DB here dropped stale amounts, and leaving the pocket uncleared meant
+  // the next flush wrote the dead player's money BACK (duplicating it).
+  // Flush dirty session state first so the relative deductions below run
+  // against a database row that matches the pocket (dying right after an
+  // unflushed bank withdrawal must not persist negative denominations).
+  await flushPlayer(socket);
+  {
     const currencyTypes: Array<{ type: string; amount: number }> = [
-      { type: 'copper', amount: character.copper ?? 0 },
-      { type: 'silver', amount: character.silver ?? 0 },
-      { type: 'gold', amount: character.gold ?? 0 },
-      { type: 'platinum', amount: character.platinum ?? 0 },
-      { type: 'runic', amount: character.runic ?? 0 },
+      { type: 'copper', amount: socket.pocket.copper ?? 0 },
+      { type: 'silver', amount: socket.pocket.silver ?? 0 },
+      { type: 'gold', amount: socket.pocket.gold ?? 0 },
+      { type: 'platinum', amount: socket.pocket.platinum ?? 0 },
+      { type: 'runic', amount: socket.pocket.runic ?? 0 },
     ];
 
     for (const currency of currencyTypes) {
@@ -3991,14 +3999,23 @@ export async function dropAllItemsOnDeath(characterId: number, roomId: number): 
       }
     }
 
-    // Clear character's currency
-    await characterRepo.updateCharacterStats(characterId, {
-      copper: 0,
-      silver: 0,
-      gold: 0,
-      platinum: 0,
-      runic: 0,
+    // Remove exactly the snapshotted coins — DB and pocket cache together, so
+    // the next flush cannot resurrect the dropped money. Relative deductions
+    // (not an absolute zero) so currency credited concurrently during death
+    // processing is kept rather than erased; same pattern as the merchant and
+    // training flows. Don't mark dirty: the DB is already current.
+    await withTransaction(async (client) => {
+      for (const currency of currencyTypes) {
+        if (currency.amount > 0) {
+          await characterRepo.addCurrency(characterId, currency.type as keyof Currency, -currency.amount, client);
+        }
+      }
     });
+    for (const currency of currencyTypes) {
+      if (currency.amount > 0) {
+        socket.pocket[currency.type as keyof Currency] -= currency.amount;
+      }
+    }
   }
 }
 

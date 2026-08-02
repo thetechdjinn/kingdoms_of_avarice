@@ -11,7 +11,7 @@ import { markVitalsDirty, markRoomDirty, flushPlayer } from './sessionState.js';
 import * as doorStateManager from '../services/doorStateManager.js';
 import * as playerRepo from '../db/repositories/playerRepository.js';
 import { handleGet, handleDrop, handleInventory, handleExamine, getRoomItemsDescription, handleWield, handleWear, handleRemove, handleEquipment, handlePut, handleGetFrom, handleLookIn, handleUse, handleRead, handleLight, handleExtinguish, handleRefuel, handleRepair, handleSearch, handleRecipes, handleCraft, handleEnchantments, handleEnchant, handleDropCurrency, handleGetCurrency } from './itemCommands.js';
-import { handleAttack, handleFlee, handleBreak } from './combatCommands.js';
+import { handleAttack, handleFlee, handleBreak, isTargetedByAnyEnemy } from './combatCommands.js';
 import { isSpellMnemonic, handleSpellCommand, handleSpellbook } from './spellCommands.js';
 import { isActionCommand, handleActionCommand, handleEmoteCommand, getActionHelpList } from './actionCommands.js';
 import { handleTrain } from './trainingCommands.js';
@@ -35,7 +35,7 @@ import { calculateStealth, calculatePerception, characterHasStealth, getEncumbra
 import { calculateEncumbranceRatio, getEquipmentCombatStats } from './combatStats.js';
 import { getRespawnRoomId } from '../services/respawnService.js';
 import { findPlayerInRoom } from './playerUtils.js';
-import { getNpcsInRoom, findNpcInRoom, checkHostileAggro, isPlayerTargetedByAnyNpc, getResponseForKeywords } from './npcManager.js';
+import { getNpcsInRoom, findNpcInRoom, checkHostileAggro, getResponseForKeywords } from './npcManager.js';
 import {
   handleGossip, handleAuction, handleTelepath, handleBlock, handleUnblock,
   handleShout, handleBroadcastCreate, handleJoinBroadcast, handleLeaveBroadcast, handleBroadcast,
@@ -423,7 +423,7 @@ export async function processCommand(
   }
 
   if (command === 'rest' || command === 're') {
-    return handleRest(socket);
+    return handleRest(socket, _connectedPlayers);
   }
 
   // Aid command - stabilize a fallen ally
@@ -1096,16 +1096,23 @@ function handleExit(socket: AuthenticatedSocket): CommandResponse {
   return { type: MessageType.SYSTEM, message: 'You sit down and meditate...' };
 }
 
-function handleRest(socket: AuthenticatedSocket): CommandResponse {
+function handleRest(
+  socket: AuthenticatedSocket,
+  connectedPlayers: Map<number, AuthenticatedSocket>
+): CommandResponse {
   // Check if already resting
   if (socket.regenState.enhancedRegen.has('mana') && socket.regenState.enhancedRegen.has('health')) {
     return { type: MessageType.SYSTEM, message: 'You are already resting.' };
   }
 
-  // Check if in combat (self-heal stale flag if no targets exist on either side)
+  // Check if in combat (self-heal stale flag if no targets exist on either
+  // side — the check must consider BOTH player and NPC attackers, or a
+  // one-sided break during PvP would let the target rest mid-fight)
   if (socket.regenState.inCombat) {
-    if (socket.combatState.targets.size === 0 && !isPlayerTargetedByAnyNpc(socket.playerId)) {
+    if (socket.combatState.targets.size === 0
+        && !isTargetedByAnyEnemy(socket.playerId, null, connectedPlayers)) {
       socket.regenState.inCombat = false;
+      socket.combatState.roundSkipUntil = 0;
     } else {
       return { type: MessageType.ERROR, message: 'You cannot rest while in combat!' };
     }

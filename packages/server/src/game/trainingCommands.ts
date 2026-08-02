@@ -6,7 +6,7 @@
  * - train stats : Open ANSI form to allocate CP to stats
  */
 
-import { MessageType, CPStatName, CP_STAT_NAMES, getCPCostForNextPoint, getTotalCPCost, DEFAULT_STARTING_CP, TrainingFormPayload, TrainingSubmitPayload, formatCurrency, HairStyle, HairColor, EyeColor, HAIR_STYLES, HAIR_COLORS, EYE_COLORS, Gender, calculateStartingHp } from '@koa/shared';
+import { MessageType, CPStatName, CP_STAT_NAMES, getCPCostForNextPoint, getTotalCPCost, DEFAULT_STARTING_CP, TrainingFormPayload, TrainingSubmitPayload, formatCurrency, HairStyle, HairColor, EyeColor, HAIR_STYLES, HAIR_COLORS, EYE_COLORS, Gender, calculateStartingHp, Currency } from '@koa/shared';
 import { AuthenticatedSocket, broadcastToAll, sendVitals } from './socket.js';
 import { CommandResponse } from './commands.js';
 import { colors } from '../utils/colors.js';
@@ -17,6 +17,10 @@ import * as settingsRepo from '../db/repositories/settingsRepository.js';
 import { getPlayerLocation } from './adminCommands.js';
 import { checkLevelUp, performLevelUp } from './progression.js';
 import { calculateTrainingCost } from '@koa/shared';
+import { calculateTotalWealth } from './itemCommands.js';
+import { deductCopperFromWallet } from '../utils/currency.js';
+import { withTransaction } from '../db/index.js';
+import { flushPlayer } from './sessionState.js';
 
 // Map from internal stat names to character DB column names
 const STAT_TO_COLUMN: Record<CPStatName, string> = {
@@ -527,14 +531,25 @@ async function handleImmediateLevelUp(
     return { type: MessageType.ERROR, message: 'Unable to check level requirements.' };
   }
 
-  // Currency check
+  // Flush any dirty session state first so the relative currency deductions
+  // below run against a database row that matches the pocket. Without this, a
+  // bank withdrawal (dirty-cached) followed immediately by training could
+  // persist transiently negative denominations until the next flush.
+  await flushPlayer(socket);
+
+  // Currency check — memory-first: socket.pocket is the source of truth for an
+  // online player's money and the check counts total wealth across ALL
+  // denominations (mirrors the merchant buy flow in merchantCommands.ts).
+  // Reading the DB character row here would miss coins not yet flushed, and
+  // checking only the copper column ignored silver/gold/platinum/runic.
   const currencyStr = formatCurrency(trainingCost);
-  const characterCopper = character.copper || 0;
+  const pocket: Currency = { ...socket.pocket };
+  const totalWealth = calculateTotalWealth(pocket);
   let currencyReady = false;
-  if (characterCopper >= trainingCost) {
+  if (totalWealth >= trainingCost) {
     currencyReady = true;
   } else {
-    missing.push(`Currency: need ${currencyStr}, have ${formatCurrency(characterCopper)}`);
+    missing.push(`Currency: need ${currencyStr}, have ${formatCurrency(totalWealth)}`);
   }
 
   // Check if all requirements are met
@@ -551,19 +566,33 @@ async function handleImmediateLevelUp(
 
   // All requirements met - perform the level up immediately
   try {
-    // Deduct currency first (training costs are in copper)
-    await characterRepo.updateCharacterStats(characterId, {
-      copper: characterCopper - trainingCost,
+    // Deduct currency first (training costs are in copper). Same pattern as
+    // the merchant buy flow: compute the denomination breakdown from the
+    // pocket, persist the deductions atomically, then mirror the pocket to
+    // the persisted state (no dirty flag — the DB is already current).
+    const deductions = deductCopperFromWallet(pocket, trainingCost);
+    await withTransaction(async (client) => {
+      for (const [field, qty] of deductions) {
+        await characterRepo.addCurrency(characterId, field, -qty, client);
+      }
     });
+    for (const [field, qty] of deductions) {
+      socket.pocket[field] -= qty;
+    }
 
     // Perform the level up (this updates XP, essence, level, and CP)
     const result = await performLevelUp(characterId);
 
     if (!result.success) {
-      // Refund currency if level up failed
-      await characterRepo.updateCharacterStats(characterId, {
-        copper: characterCopper,
+      // Refund the exact coins that were deducted, DB first then cache
+      await withTransaction(async (client) => {
+        for (const [field, qty] of deductions) {
+          await characterRepo.addCurrency(characterId, field, qty, client);
+        }
       });
+      for (const [field, qty] of deductions) {
+        socket.pocket[field] += qty;
+      }
       return { type: MessageType.ERROR, message: 'Level up failed. Please try again.' };
     }
 

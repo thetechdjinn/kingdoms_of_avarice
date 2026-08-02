@@ -146,6 +146,7 @@ function createFreshCombatState(): CombatState {
     combatAction: 'melee',
     activeSpell: null,
     combatOrderPosition: 0,
+    roundSkipUntil: 0,
   };
 }
 
@@ -182,17 +183,7 @@ export function resetNpcBehaviorState(npc: NpcCombatInstance): void {
   npc.hasCalledForHelp = false;
   npc.regenState.inCombat = false;
   npc.combatRoundCount = 0;
-}
-
-/**
- * Check if any NPC is currently targeting a given player.
- * Used to determine whether a player should remain in combat after an NPC drops them.
- */
-export function isPlayerTargetedByAnyNpc(playerId: number): boolean {
-  for (const npc of npcInstances.values()) {
-    if (npc.combatState.targets.has(playerId)) return true;
-  }
-  return false;
+  npc.combatState.roundSkipUntil = 0;
 }
 
 /**
@@ -619,6 +610,7 @@ export function removeNpcInstance(entityId: number): void {
         player.combatState.targets.delete(entityId);
         if (player.combatState.targets.size === 0) {
           player.regenState.inCombat = false;
+          player.combatState.roundSkipUntil = 0;
         }
       }
     }
@@ -729,10 +721,22 @@ export async function saveAllInstances(): Promise<void> {
  * Initiate mutual aggro between an NPC and a player.
  * Shared helper used by both checkNpcAggroOnArrival and checkHostileAggro.
  */
-function initiateAggro(npc: NpcCombatInstance, player: CombatEntity, roomId: number): void {
+function initiateAggro(
+  npc: NpcCombatInstance,
+  player: CombatEntity,
+  roomId: number,
+  surpriseRoundUntil?: number
+): void {
   npc.combatState.targets.add(player.entityId);
   npc.regenState.inCombat = true;
   npc.behaviorState = 'combat';
+
+  // The NPC only just learned the player is here (e.g. a stealthed player
+  // revealed themselves by backstabbing someone else in the room) — too late
+  // to act in the current combat round.
+  if (surpriseRoundUntil !== undefined) {
+    npc.combatState.roundSkipUntil = surpriseRoundUntil;
+  }
 
   // Mark the player as in combat (stops regen) but do NOT add the NPC to
   // the player's targets — players must manually choose to attack back.
@@ -912,17 +916,33 @@ async function handleNpcDotDeath(npc: NpcCombatInstance): Promise<void> {
     colors.boldRed(`${npc.entityName} collapses and dies!`)
   );
 
-  // Process death (XP, loot, despawn, respawn)
-  await processNpcDeath(npc, null, roomId, connectedPlayersRef);
-
-  // Clear combat state for all players who were fighting this NPC
+  // Snapshot XP participants BEFORE clearing combat state (clearCombatState
+  // and markAsCorpse both wipe target lists). Same pattern as the normal kill
+  // path in combat.ts: players targeting this NPC from the same room.
+  const participants: CombatEntity[] = [];
   for (const [, socket] of connectedPlayersRef) {
-    if (socket.combatState.targets.has(npc.entityId)) {
-      socket.combatState.targets.delete(npc.entityId);
-      if (socket.combatState.targets.size === 0) {
-        socket.regenState.inCombat = false;
-      }
+    if (socket.combatState.targets.has(npc.entityId) && getEntityRoomId(socket) === roomId) {
+      participants.push(socket);
     }
+  }
+
+  // Full combat-state cleanup BEFORE death processing (markAsCorpse clears the
+  // NPC's targets, so running this after would find nothing to release):
+  // removes this NPC from everyone's target lists AND releases players the
+  // NPC was targeting (a player who broke off one-sidedly stays flagged
+  // in-combat until every enemy disengages — this NPC dying may be that
+  // release).
+  const { clearCombatState } = await import('./combatCommands.js');
+  clearCombatState(npc, connectedPlayersRef);
+
+  // Process death (XP, loot, despawn, respawn) with the pre-collected
+  // participants, since the target lists are already cleared. processNpcDeath
+  // only QUEUES XP/essence/quest-kill rewards into deferredRewards — executing
+  // them is the caller's job (same as the normal and backstab kill paths).
+  const deferredRewards: Array<() => Promise<void>> = [];
+  await processNpcDeath(npc, null, roomId, connectedPlayersRef, deferredRewards, participants);
+  for (const reward of deferredRewards) {
+    await reward();
   }
 }
 
@@ -955,6 +975,7 @@ export function shouldNpcAggro(
 export function checkHostileAggro(
   roomId: number,
   player: CombatEntity,
+  surpriseRoundUntil?: number,
 ): void {
   // Skip players in training form
   if (isPlayerEntity(player) && (player as AuthenticatedSocket).isTraining) return;
@@ -977,7 +998,7 @@ export function checkHostileAggro(
       setMerchantHostile((player as AuthenticatedSocket).characterId!, npc.templateId);
     }
 
-    initiateAggro(npc, player, roomId);
+    initiateAggro(npc, player, roomId, surpriseRoundUntil);
   }
 }
 

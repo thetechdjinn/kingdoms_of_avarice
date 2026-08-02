@@ -18,7 +18,7 @@ const __dirname = dirname(__filename);
 
 dotenv.config({ path: join(__dirname, '..', '..', '..', '..', '.env') });
 
-import { closePool } from './index.js';
+import { closePool, query } from './index.js';
 import * as roomRepo from './repositories/roomRepository.js';
 import * as itemRepo from './repositories/itemRepository.js';
 import * as spellRepo from './repositories/spellRepository.js';
@@ -34,6 +34,7 @@ import * as doorRepo from './repositories/doorRepository.js';
 import * as npcSpellRepo from './repositories/npcSpellRepository.js';
 import * as spawnConfigRepo from './repositories/spawnRepository.js';
 import * as questRepo from './repositories/questRepository.js';
+import { isExportableSetting } from './repositories/settingsRepository.js';
 
 const DATA_DIR = join(__dirname, '..', '..', '..', '..', 'data');
 
@@ -114,11 +115,79 @@ async function exportActions(): Promise<number> {
   return data.length;
 }
 
-async function exportItems(): Promise<number> {
+async function exportItems(spellIdToMnemonic: Map<number, string>, warnings: string[]): Promise<number> {
   const items = await itemRepo.getAllTemplates();
-  const data = items.map(item => stripMeta(item as unknown as Record<string, unknown>));
+  const data = items.map(item => {
+    const obj = stripMeta(item as unknown as Record<string, unknown>);
+    // consumable_data.spell_id is a DB-local ID that changes across databases.
+    // Export the spell's mnemonic instead so the importer can re-resolve it.
+    const consumable = obj.consumable_data as Record<string, unknown> | null | undefined;
+    if (consumable && consumable.spell_id != null) {
+      const mnemonic = spellIdToMnemonic.get(Number(consumable.spell_id)) ?? null;
+      if (!mnemonic) {
+        const msg = `Item "${item.name}" consumable references unknown spell ID ${consumable.spell_id}`;
+        warnings.push(msg);
+        console.warn(`    WARNING: ${msg}`);
+      }
+      const portable: Record<string, unknown> = { ...consumable, spell_mnemonic: mnemonic };
+      delete portable.spell_id;
+      obj.consumable_data = portable;
+    }
+    return obj;
+  });
   writeJson(join(DATA_DIR, 'global', 'items.json'), envelope('items', data));
   console.log(`  items: ${data.length} exported`);
+  return data.length;
+}
+
+async function exportEssenceEvents(): Promise<number> {
+  const result = await query<Record<string, unknown>>(
+    'SELECT event_id, display_name, description, emitted_tags, base_essence_value, base_xp_value FROM essence_events ORDER BY event_id'
+  );
+  writeJson(join(DATA_DIR, 'global', 'essence_events.json'), envelope('essence_events', result.rows));
+  console.log(`  essence_events: ${result.rows.length} exported`);
+  return result.rows.length;
+}
+
+async function exportEnchantments(itemIdToName: Map<number, string>, warnings: string[]): Promise<number> {
+  const result = await query<Record<string, unknown>>(
+    'SELECT name, description, skill_type, skill_level, applicable_types, stat_modifiers, special_effects, mana_cost, reagents FROM enchantments ORDER BY name'
+  );
+  // Reagents reference item templates by DB-local ID ({template_id, quantity});
+  // export them as portable item names so a fresh database re-resolves them.
+  const data = result.rows.map(row => {
+    const reagents = row.reagents as Array<{ template_id: number; quantity: number }> | null;
+    if (!Array.isArray(reagents) || reagents.length === 0) return row;
+    const portable = reagents.map(r => {
+      const itemName = itemIdToName.get(r.template_id) ?? null;
+      if (!itemName) {
+        const msg = `Enchantment "${row.name}" reagent references unknown item ID ${r.template_id}`;
+        warnings.push(msg);
+        console.warn(`    WARNING: ${msg}`);
+      }
+      return { itemName, quantity: r.quantity };
+    });
+    return { ...row, reagents: portable };
+  });
+  writeJson(join(DATA_DIR, 'global', 'enchantments.json'), envelope('enchantments', data));
+  console.log(`  enchantments: ${data.length} exported`);
+  return data.length;
+}
+
+async function exportSettings(): Promise<number> {
+  const result = await query<{ key: string; value: unknown }>(
+    'SELECT key, value FROM game_settings ORDER BY key'
+  );
+  const data = result.rows
+    .filter(row => isExportableSetting(row.key))
+    .map(row => ({
+      key: row.key,
+      // The driver JSON-parses object/array values on read; store scalars as
+      // their raw jsonb text so the importer can write values back verbatim.
+      value: row.value,
+    }));
+  writeJson(join(DATA_DIR, 'global', 'settings.json'), envelope('settings', data));
+  console.log(`  settings: ${data.length} exported`);
   return data.length;
 }
 
@@ -189,11 +258,37 @@ async function exportProgression(): Promise<Record<string, number>> {
 
 async function exportRooms(
   idToTagMap: Map<number, string>,
+  itemIdToName: Map<number, string>,
   warnings: string[]
 ): Promise<Map<string, number[]>> {
   const rooms = await roomRepo.getAllRooms();
   const allExits = await roomRepo.getAllExits();
   const allDoors = await doorRepo.getAllDoors();
+
+  // Room-placed item instances (furniture, signs, placed loot) — content that
+  // lives in item_instances rather than a template/config table.
+  const roomItemsResult = await query<{ template_id: number; location_id: number; quantity: number; condition: string }>(
+    `SELECT template_id, location_id, quantity, condition FROM item_instances WHERE location_type = 'room' ORDER BY id`
+  );
+  const itemsByRoom = new Map<number, Array<{ itemName: string | null; quantity: number; condition: string }>>();
+  // Currency stacks on the floor are transient (death drops, player drops),
+  // never authored placements — exclude them. NOTE: non-currency player drops
+  // in rooms at export time CANNOT be distinguished from authored placements
+  // yet; export from a quiesced/clean world, or an authored-placement flag is
+  // needed (see data/README.md pipeline notes).
+  const currencyTemplateNames = new Set(['copper coins', 'silver coins', 'gold coins', 'platinum coins', 'runic coins']);
+  for (const inst of roomItemsResult.rows) {
+    const itemName = itemIdToName.get(inst.template_id) ?? null;
+    if (itemName && currencyTemplateNames.has(itemName)) continue;
+    if (!itemName) {
+      const msg = `Room item instance references unknown item template ID ${inst.template_id}`;
+      warnings.push(msg);
+      console.warn(`    WARNING: ${msg}`);
+      continue;
+    }
+    if (!itemsByRoom.has(inst.location_id)) itemsByRoom.set(inst.location_id, []);
+    itemsByRoom.get(inst.location_id)!.push({ itemName, quantity: inst.quantity, condition: inst.condition });
+  }
 
   // Group exits by from_room_id
   const exitsByRoom = new Map<number, Array<{ direction: string; toRoomId: number }>>();
@@ -306,6 +401,11 @@ async function exportRooms(
     };
     if (roomDoors.length > 0) {
       roomData.doors = roomDoors;
+    }
+
+    const roomItems = itemsByRoom.get(room.id) || [];
+    if (roomItems.length > 0) {
+      roomData.items = roomItems;
     }
 
     const roomSpawns = (spawnsByRoom.get(room.id) || []).map(spawn => {
@@ -763,13 +863,16 @@ export async function runExport(): Promise<ExportResult> {
   counts.actions = await exportActions();
   const progCounts = await exportProgression();
   Object.assign(counts, progCounts);
-  counts.items = await exportItems();
+  counts.items = await exportItems(spellIdToMnemonic, warnings);
   counts.factions = await exportFactions();
   counts.drop_tables = await exportDropTables(itemIdToName);
+  counts.essence_events = await exportEssenceEvents();
+  counts.enchantments = await exportEnchantments(itemIdToName, warnings);
+  counts.settings = await exportSettings();
   counts.quests = await exportQuests(npcIdToName, itemIdToName, idToTagMap, factionIdToName, warnings);
 
   console.log('\nExporting area data...');
-  const areaRoomIds = await exportRooms(idToTagMap, warnings);
+  const areaRoomIds = await exportRooms(idToTagMap, itemIdToName, warnings);
   const areasWithNpcs = await exportNpcs(npcTemplates, idToTagMap, itemIdToName, spellIdToMnemonic, dropTableIdToName, factionIdToName, warnings);
 
   // Count rooms and NPCs
@@ -789,6 +892,9 @@ export async function runExport(): Promise<ExportResult> {
     'global/items.json',
     'global/factions.json',
     'global/drop_tables.json',
+    'global/essence_events.json',
+    'global/enchantments.json',
+    'global/settings.json',
   ];
 
   // Add area files in sorted order (union of room areas and NPC-only areas)
